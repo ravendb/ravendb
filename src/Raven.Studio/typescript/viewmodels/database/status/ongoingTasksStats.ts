@@ -8,24 +8,35 @@ import generalUtils = require("common/generalUtils");
 import rangeAggregator = require("common/helpers/graph/rangeAggregator");
 import liveReplicationStatsWebSocketClient = require("common/liveReplicationStatsWebSocketClient");
 import liveEtlStatsWebSocketClient = require("common/liveEtlStatsWebSocketClient");
+import liveSubscriptionStatsWebSocketClient = require("common/liveSubscriptionStatsWebSocketClient");
 import messagePublisher = require("common/messagePublisher");
 import inProgressAnimator = require("common/helpers/graph/inProgressAnimator");
-
 import colorsManager = require("common/colorsManager");
 import etlScriptDefinitionCache = require("models/database/stats/etlScriptDefinitionCache");
+import subscriptionQueryDefinitionCache = require("models/database/stats/subscriptionQueryDefinitionCache");
 import fileImporter = require("common/fileImporter");
+
+type treeActionType = "toggleTrack" | "trackItem" | "gapItem" | "previewEtlScript" |
+                      "subscriptionErrorItem" | "subscriptionPendingItem" | "subscriptionConnectionItem" | "previewSubscriptionQuery";
 
 type rTreeLeaf = {
     minX: number;
     minY: number;
     maxX: number;
     maxY: number;
-    actionType: "toggleTrack" | "trackItem" | "gapItem" | "previewScript";
+    actionType: treeActionType;
     arg: any;
 }
 
-type taskOperation = Raven.Client.Documents.Replication.ReplicationPerformanceOperation | Raven.Server.Documents.ETL.Stats.EtlPerformanceOperation;
-type performanceBaseWithCache = ReplicationPerformanceBaseWithCache | EtlPerformanceBaseWithCache;
+type taskOperation = Raven.Client.Documents.Replication.ReplicationPerformanceOperation |
+                     Raven.Server.Documents.ETL.Stats.EtlPerformanceOperation |
+                     Raven.Server.Documents.Subscriptions.Stats.SubscriptionConnectionPerformanceOperation |
+                     Raven.Server.Documents.Subscriptions.Stats.SubscriptionBatchPerformanceOperation;
+
+type performanceBaseWithCache = ReplicationPerformanceBaseWithCache |
+                                EtlPerformanceBaseWithCache |
+                                SubscriptionConnectionPerformanceStatsWithCache |
+                                SubscriptionBatchPerformanceStatsWithCache;
 type trackInfo = {
     name: string;
     type: ongoingTaskStatType;
@@ -36,6 +47,7 @@ type trackInfo = {
 type exportFileFormat = {
     Replication: Raven.Server.Documents.Replication.LiveReplicationPerformanceCollector.ReplicationPerformanceStatsBase<Raven.Client.Documents.Replication.ReplicationPerformanceBase>[];
     Etl: Raven.Server.Documents.ETL.Stats.EtlTaskPerformanceStats[];
+    Subscription: Raven.Server.Documents.Subscriptions.SubscriptionTaskPerformanceStats[];
 }
 
 type trackItemContext = {
@@ -49,13 +61,22 @@ type previewEtlScriptItemContext = {
     etlType: Raven.Client.Documents.Operations.ETL.EtlType;
 }
 
+type previewSubscriptionQueryItemContext = {
+    taskId: number;
+    taskName: string;
+}
+
 class hitTest {
     cursor = ko.observable<string>("auto");
     private rTree = rbush<rTreeLeaf>();
     private container: d3.Selection<any>;
     private onToggleTrack: (trackName: string) => void;
-    private onPreviewScript: (context: previewEtlScriptItemContext) => void;
-    private handleTrackTooltip: (context: trackItemContext, x: number, y: number) => void; 
+    private onPreviewEtlScript: (context: previewEtlScriptItemContext) => void;
+    private onPreviewSubscriptionScript: (context: previewSubscriptionQueryItemContext) => void;
+    private handleTrackTooltip: (context: trackItemContext, x: number, y: number) => void;
+    private handleSubscriptionErrorTooltip: (context: subscriptionErrorItemInfo, x: number, y: number) => void;
+    private handleSubscriptionPendingTooltip: (context: subscriptionPendingItemInfo, x: number, y: number) => void;
+    private handleSubscriptionConnectionTooltip: (context: subscriptionConnectionItemInfo, x: number, y: number) => void;
     private handleGapTooltip: (item: timeGapInfo, x: number, y: number) => void;
     private removeTooltip: () => void;
 
@@ -65,66 +86,70 @@ class hitTest {
 
     init(container: d3.Selection<any>,
         onToggleTrack: (trackName: string) => void,
-        onPreviewScript: (context: previewEtlScriptItemContext) => void,
+        onPreviewEtlScript: (context: previewEtlScriptItemContext) => void,
+        onPreviewSubscriptionScript: (context: previewSubscriptionQueryItemContext) => void,
         handleTrackTooltip: (context: trackItemContext, x: number, y: number) => void,
+        handleSubscriptionErrorTooltip: (context: subscriptionErrorItemInfo, x: number, y: number) => void,
+        handleSubscriptionPendingTooltip: (context: subscriptionPendingItemInfo, x: number, y: number) => void,
+        handleSubscriptionConnectionTooltip: (context: subscriptionConnectionItemInfo, x: number, y: number) => void,
         handleGapTooltip: (item: timeGapInfo, x: number, y: number) => void,
         removeTooltip: () => void) {
         this.container = container;
         this.onToggleTrack = onToggleTrack;
-        this.onPreviewScript = onPreviewScript;
+        this.onPreviewEtlScript = onPreviewEtlScript;
+        this.onPreviewSubscriptionScript = onPreviewSubscriptionScript;
         this.handleTrackTooltip = handleTrackTooltip;
+        this.handleSubscriptionErrorTooltip = handleSubscriptionErrorTooltip;
+        this.handleSubscriptionPendingTooltip = handleSubscriptionPendingTooltip;
+        this.handleSubscriptionConnectionTooltip = handleSubscriptionConnectionTooltip;
         this.handleGapTooltip = handleGapTooltip;
         this.removeTooltip = removeTooltip;
     }
 
-    registerTrackItem(x: number, y: number, width: number, height: number, rootStats: performanceBaseWithCache, item: taskOperation) {
-        const data = {
-            minX: x,
-            minY: y,
-            maxX: x + width,
-            maxY: y + height,
-            actionType: "trackItem",
-            arg: {
-                rootStats, item
-            } as trackItemContext
-        } as rTreeLeaf;
-        this.rTree.insert(data);
+    registerTrackItem(x: number, y: number, width: number, height: number, rootStats: performanceBaseWithCache, op: taskOperation) {
+        const trackInfoItem = { rootStats: rootStats, item: op } as trackItemContext;
+        this.insertItem(x, y, width, height, "trackItem", trackInfoItem);
     }
 
-    registerPreviewScript(x: number, y: number, width: number, height: number, taskInfo: previewEtlScriptItemContext) {
-        const data = {
-            minX: x,
-            minY: y,
-            maxX: x + width,
-            maxY: y + height,
-            actionType: "previewScript",
-            arg: taskInfo
-        } as rTreeLeaf;
-        this.rTree.insert(data);
+    registerPreviewEtlScript(x: number, y: number, width: number, height: number, taskInfo: previewEtlScriptItemContext) {
+        this.insertItem(x, y, width, height, "previewEtlScript", taskInfo);
+    }
+
+    registerPreviewSubscriptionQuery(x: number, y: number, width: number, height: number, taskInfo: previewSubscriptionQueryItemContext) {
+        this.insertItem(x, y, width, height, "previewSubscriptionQuery", taskInfo);
     }
 
     registerToggleTrack(x: number, y: number, width: number, height: number, trackName: string) {
-        const data = {
-            minX: x,
-            minY: y,
-            maxX: x + width,
-            maxY: y + height,
-            actionType: "toggleTrack",
-            arg: trackName
-        } as rTreeLeaf;
-        this.rTree.insert(data);
+        this.insertItem(x, y, width, height, "toggleTrack", trackName);
     }
 
-    registerGapItem(x: number, y: number, width: number, height: number, element: timeGapInfo) {
-        const data = {
+    registerGapItem(x: number, y: number, width: number, height: number, gapInfo: timeGapInfo) {
+        this.insertItem(x, y, width, height, "gapItem", gapInfo);
+    }
+
+    registerSubscriptionExceptionItem(x: number, y: number, width: number, height: number, exceptionItem: subscriptionErrorItemInfo) {
+        this.insertItem(x, y, width, height, "subscriptionErrorItem", exceptionItem);
+    }
+
+    registerSubscriptionPendingItem(x: number, y: number, width: number, height: number, pendingItem: subscriptionPendingItemInfo) {
+        this.insertItem(x, y, width, height, "subscriptionPendingItem", pendingItem);
+    }
+
+    registerSubscriptionConnectionItem(x: number, y: number, width: number, height: number, connectionItem: subscriptionConnectionItemInfo) {
+        this.insertItem(x, y, width, height, "subscriptionConnectionItem", connectionItem);
+    }
+
+    private insertItem(x: number, y: number, width: number, height: number, action: treeActionType, args: any) {
+        const item =  {
             minX: x,
             minY: y,
             maxX: x + width,
             maxY: y + height,
-            actionType: "gapItem",
-            arg: element
+            actionType: action,
+            arg: args
         } as rTreeLeaf;
-        this.rTree.insert(data);
+        
+        this.rTree.insert(item);
     }
 
     onClick() {
@@ -136,15 +161,22 @@ class hitTest {
 
         const items = this.findItems(clickLocation[0], clickLocation[1]);
 
-        const previewScript = items.find(x => x.actionType === "previewScript");
-        if (previewScript) {
-            this.onPreviewScript(previewScript.arg as previewEtlScriptItemContext);
-        } else {
-            const toggleTrack = items.find(x => x.actionType === "toggleTrack");
-            if (toggleTrack) {
-                this.onToggleTrack(toggleTrack.arg as string);
-            }
-        }
+        const previewEtlScript = items.find(x => x.actionType === "previewEtlScript");
+        if (previewEtlScript) {
+            this.onPreviewEtlScript(previewEtlScript.arg as previewEtlScriptItemContext);
+            return;
+        } 
+        
+       const previewSubscriptionScript = items.find(x => x.actionType === "previewSubscriptionQuery");
+       if (previewSubscriptionScript) {
+           this.onPreviewSubscriptionScript(previewSubscriptionScript.arg as previewSubscriptionQueryItemContext);
+           return;
+       }
+       
+       const toggleTrack = items.find(x => x.actionType === "toggleTrack");
+       if (toggleTrack) {
+           this.onToggleTrack(toggleTrack.arg as string);
+       }
     }
 
     onMouseDown() {
@@ -159,27 +191,57 @@ class hitTest {
         const clickLocation = d3.mouse(this.container.node());
         const items = this.findItems(clickLocation[0], clickLocation[1]);
 
-        const overToggleTrack = items.filter(x => x.actionType === "toggleTrack").length > 0;
-        
-        const currentPreviewItem = items.filter(x => x.actionType === "previewScript").map(x => x.arg as previewEtlScriptItemContext)[0];
-        if (currentPreviewItem) {
+        const overToggleTrack = items.find(x => x.actionType === "toggleTrack");
+
+        const currentPreviewEtlItem = items.find(x => x.actionType === "previewEtlScript");
+        if (currentPreviewEtlItem) {
             this.cursor("pointer");
-        } else {
-            const currentItem = items.filter(x => x.actionType === "trackItem").map(x => x.arg as trackItemContext)[0];
-            if (currentItem) {
-                this.handleTrackTooltip(currentItem, clickLocation[0], clickLocation[1]);
-                this.cursor("auto");
-            } else {
-                const currentGapItem = items.filter(x => x.actionType === "gapItem").map(x => x.arg as timeGapInfo)[0];
-                if (currentGapItem) {
-                    this.handleGapTooltip(currentGapItem, clickLocation[0], clickLocation[1]);
-                    this.cursor("auto");
-                } else {
-                    this.removeTooltip();
-                    this.cursor(overToggleTrack ? "pointer" : graphHelper.prefixStyle("grab"));
-                }
-            }
+            return;
         }
+        
+        const currentPreviewSubscriptionItem = items.find(x => x.actionType === "previewSubscriptionQuery");
+        if (currentPreviewSubscriptionItem) {
+            this.cursor("pointer");
+            return;
+        }
+
+        const currentTrackEventItem = items.find(x => x.actionType === "subscriptionErrorItem");
+        if (currentTrackEventItem) {
+            this.handleSubscriptionErrorTooltip(currentTrackEventItem.arg as subscriptionErrorItemInfo , clickLocation[0], clickLocation[1]);
+            this.cursor("auto");
+            return;
+        }
+
+        const currentTrackPendingItem = items.find(x => x.actionType === "subscriptionPendingItem");
+        if (currentTrackPendingItem) {
+            this.handleSubscriptionPendingTooltip(currentTrackPendingItem.arg as subscriptionPendingItemInfo, clickLocation[0], clickLocation[1]);
+            this.cursor("auto");
+            return;
+        }
+
+        const currentTrackConnectionItem = items.find(x => x.actionType === "subscriptionConnectionItem");
+        if (currentTrackConnectionItem) {
+            this.handleSubscriptionConnectionTooltip(currentTrackConnectionItem.arg as subscriptionConnectionItemInfo, clickLocation[0], clickLocation[1]);
+            this.cursor("auto");
+            return;
+        }
+        
+        const currentTrackItem = items.find(x => x.actionType === "trackItem");
+        if (currentTrackItem) {
+            this.handleTrackTooltip(currentTrackItem.arg as trackItemContext, clickLocation[0], clickLocation[1]);
+            this.cursor("auto");
+            return;
+        }
+        
+        const currentGapItem = items.find(x => x.actionType === "gapItem");
+        if (currentGapItem) {
+            this.handleGapTooltip(currentGapItem.arg as timeGapInfo, clickLocation[0], clickLocation[1]);
+            this.cursor("auto");
+            return;
+        }
+        
+        this.removeTooltip();
+        this.cursor(overToggleTrack ? "pointer" : graphHelper.prefixStyle("grab"));
     }
 
     private findItems(x: number, y: number): Array<rTreeLeaf> {
@@ -198,6 +260,7 @@ class ongoingTasksStats extends viewModelBase {
     static readonly brushSectionHeight = 40;
     private static readonly brushSectionTrackWorkHeight = 22;
     private static readonly brushSectionLineWidth = 1;
+    private static readonly startConnectionLineExtraHeight = 6; // number of pixels to grow above track height 
     private static readonly trackHeight = 18; // height used for callstack item
     private static readonly stackPadding = 1; // space between call stacks
     private static readonly trackMargin = 4;
@@ -205,8 +268,8 @@ class ongoingTasksStats extends viewModelBase {
     private static readonly closedTrackPadding = 2;
     private static readonly openedTrackPadding = 4;
     private static readonly axisHeight = 35;
-    private static readonly scriptNameLeftPadding = 14;
-    private static readonly scriptPreviewIconWidth = 16;
+    private static readonly textLeftPadding = 14;
+    private static readonly previewIconWidth = 16;
 
     private static readonly maxReplicationRecursion = 3;
     private static readonly maxEtlRecursion = 2;
@@ -227,15 +290,31 @@ class ongoingTasksStats extends viewModelBase {
         + ongoingTasksStats.trackHeight
         + ongoingTasksStats.closedTrackPadding;
 
+    private static readonly openedSubscriptionTrackHeight = 2 * ongoingTasksStats.openedTrackPadding
+        + ongoingTasksStats.trackHeight * 5
+        + ongoingTasksStats.openedTrackPadding
+        + ongoingTasksStats.stackPadding;
+
+    private static readonly closedSubscriptionTrackHeight = ongoingTasksStats.openedTrackPadding
+        + ongoingTasksStats.trackHeight * 2
+        + ongoingTasksStats.openedTrackPadding * 2;
+
+    private static readonly olapLoadLocalPrefix = "Load/Local/";
+    private static readonly olapLoadLocalChild = "Load/Local/Child";
+    
+    private static readonly olapUploadPrefix = "Load/Upload/";
+    private static readonly olapUploadChild = "Load/Upload/Child";
+    
     /* observables */
 
     hasAnyData = ko.observable<boolean>(false);
-    private firstDataChunkReceived = false;
     loading: KnockoutComputed<boolean>;
     private searchText = ko.observable<string>("");
 
     private liveViewReplicationClient = ko.observable<liveReplicationStatsWebSocketClient>();
     private liveViewEtlClient = ko.observable<liveEtlStatsWebSocketClient>();
+    private liveViewSubscriptionClient = ko.observable<liveSubscriptionStatsWebSocketClient>();
+    
     private autoScroll = ko.observable<boolean>(false);
     private clearSelectionVisible = ko.observable<boolean>(false); 
     
@@ -252,8 +331,10 @@ class ongoingTasksStats extends viewModelBase {
     // The live data from endpoint
     private replicationData: Raven.Server.Documents.Replication.LiveReplicationPerformanceCollector.ReplicationPerformanceStatsBase<Raven.Client.Documents.Replication.ReplicationPerformanceBase>[] = [];
     private etlData: Raven.Server.Documents.ETL.Stats.EtlTaskPerformanceStats[] = [];
+    private subscriptionData: Raven.Server.Documents.Subscriptions.SubscriptionTaskPerformanceStats[] = [];
     
-    private definitionsCache: etlScriptDefinitionCache;
+    private etlDefinitionsCache: etlScriptDefinitionCache;
+    private subscriptionDefinitionCache: subscriptionQueryDefinitionCache;
 
     private bufferIsFull = ko.observable<boolean>(false);
     private bufferUsage = ko.observable<string>("0.0");
@@ -268,6 +349,7 @@ class ongoingTasksStats extends viewModelBase {
     private updatesPaused = false;
 
     private inProgressAnimator: inProgressAnimator;
+    private firstDataChunkDrawn = false;
 
     /* d3 */
 
@@ -285,7 +367,7 @@ class ongoingTasksStats extends viewModelBase {
     private brushContainer: d3.Selection<any>;
     private zoom: d3.behavior.Zoom<any>;
     private yScale: d3.scale.Ordinal<string, number>;
-    private tooltip: d3.Selection<taskOperation | timeGapInfo | performanceBaseWithCache>;
+    private tooltip: d3.Selection<taskOperation | timeGapInfo | performanceBaseWithCache | subscriptionErrorItemInfo | subscriptionPendingItemInfo>;
 
     /* colors */
 
@@ -323,7 +405,19 @@ class ongoingTasksStats extends viewModelBase {
             "ETL": undefined as string,
             "Extract": undefined as string,
             "Transform": undefined as string,
-            "Load" : undefined as string
+            "Load" : undefined as string,
+            "Load/Local" : undefined as string,
+            "Load/Local/Child" : undefined as string,
+            "Load/Upload" : undefined as string,
+            "Load/Upload/Child" : undefined as string,
+            "ConnectionPending": undefined as string,
+            "ConnectionActive": undefined as string,
+            "Batch": undefined as string,
+            "BatchSendDocuments": undefined as string,
+            "BatchWaitForAcknowledge": undefined as string,
+            "ConnectionAborted": undefined as string,
+            "ConnectionRejected": undefined as string,
+            "AggregatedBatchesInfo": undefined as string
         }
     };
     
@@ -357,11 +451,13 @@ class ongoingTasksStats extends viewModelBase {
         this.loading = ko.pureComputed(() => {
             const replicationClient = this.liveViewReplicationClient();
             const etlClient = this.liveViewEtlClient();
+            const subscriptionClient = this.liveViewSubscriptionClient();
 
             const replicationLoading = replicationClient ? replicationClient.loading() : true;
             const etlLoading = etlClient ? etlClient.loading() : true;
+            const subscriptionLoading = subscriptionClient ? subscriptionClient.loading() : true;
             
-            return replicationLoading || etlLoading;
+            return replicationLoading || etlLoading || subscriptionLoading;
         });
     }
 
@@ -376,7 +472,7 @@ class ongoingTasksStats extends viewModelBase {
     deactivate() {
         super.deactivate();
 
-        if (this.liveViewReplicationClient() || this.liveViewEtlClient()) {
+        if (this.liveViewReplicationClient() || this.liveViewEtlClient() || this.liveViewSubscriptionClient()) {
             this.cancelLiveView();
         }
     }
@@ -394,12 +490,18 @@ class ongoingTasksStats extends viewModelBase {
 
         this.initCanvases();
 
-        this.definitionsCache = new etlScriptDefinitionCache(this.activeDatabase());
+        const activeDatabase = this.activeDatabase();
+        this.etlDefinitionsCache = new etlScriptDefinitionCache(activeDatabase);
+        this.subscriptionDefinitionCache = new subscriptionQueryDefinitionCache(activeDatabase);
 
         this.hitTest.init(this.svg,
             (replicationName) => this.onToggleTrack(replicationName),
-            (context) => this.handlePreviewScript(context),
+            (context) => this.handlePreviewEtlScript(context),
+            (context) => this.handlePreviewSubscriptionScript(context),
             (context, x, y) => this.handleTrackTooltip(context, x, y),
+            (context, x, y) => this.handleSubscriptionErrorTooltip(context, x, y),
+            (context, x, y) => this.handleSubscriptionPendingTooltip(context, x, y),
+            (context, x, y) => this.handleSubscriptionConnectionTooltip(context, x, y),
             (gapItem, x, y) => this.handleGapTooltip(gapItem, x, y),
             () => this.hideTooltip());
 
@@ -481,6 +583,9 @@ class ongoingTasksStats extends viewModelBase {
                 if (this.liveViewEtlClient()) {
                     this.liveViewEtlClient().pauseUpdates();
                 }
+                if (this.liveViewSubscriptionClient()) {
+                    this.liveViewSubscriptionClient().pauseUpdates();
+                }
                 this.updatesPaused = true;
             });
         selection
@@ -492,6 +597,9 @@ class ongoingTasksStats extends viewModelBase {
                 }
                 if (this.liveViewEtlClient()) {
                     this.liveViewEtlClient().resumeUpdates();
+                }
+                if (this.liveViewSubscriptionClient()) {
+                    this.liveViewSubscriptionClient().resumeUpdates();
                 }
                 this.updatesPaused = false;
             });
@@ -529,8 +637,8 @@ class ongoingTasksStats extends viewModelBase {
 
     private onDataUpdated() {
         let timeRange: [Date, Date];
-        if (this.firstDataChunkReceived) {
-            const timeToRemap: [number,  number] = this.brush.empty() ? this.xBrushNumericScale.domain() as [number, number] : this.brush.extent() as [number, number];
+        if (this.firstDataChunkDrawn) {
+            const timeToRemap: [number, number] = this.brush.empty() ? this.xBrushNumericScale.domain() as [number, number] : this.brush.extent() as [number, number];
             // noinspection JSSuspiciousNameCombination
             timeRange = timeToRemap.map(x => this.xBrushTimeScale.invert(x)) as [Date, Date];
         }
@@ -539,8 +647,8 @@ class ongoingTasksStats extends viewModelBase {
 
         const [workData, maxConcurrentActions] = this.prepareTimeData();
 
-        if (this.firstDataChunkReceived) {
-            const newBrush = timeRange.map(x => this.xBrushTimeScale(x)) as [number,  number];
+        if (this.firstDataChunkDrawn) {
+            const newBrush = timeRange.map(x => this.xBrushTimeScale(x)) as [number, number];
             this.setZoomAndBrush(newBrush, brush => brush.extent(newBrush));
         }
 
@@ -548,17 +656,17 @@ class ongoingTasksStats extends viewModelBase {
             this.scrollToRight();
         }
 
-        this.draw(workData, maxConcurrentActions, !this.firstDataChunkReceived);
+        this.draw(workData, maxConcurrentActions, !this.firstDataChunkDrawn);
 
-        if (!this.firstDataChunkReceived) {
-            this.firstDataChunkReceived = true;
+        if (!this.firstDataChunkDrawn) {
+            this.firstDataChunkDrawn = true;
         }
     }
     
     private enableLiveView() {
-        this.firstDataChunkReceived = false;
+        this.firstDataChunkDrawn = false;
         
-        // since we are fetching data from 2 different sources
+        // since we are fetching data from 3 different sources
         // let's throttle updates to avoid jumpy UI
         const onDataUpdatedThrottle = _.debounce(() => {
             if (!this.updatesPaused) {
@@ -574,13 +682,18 @@ class ongoingTasksStats extends viewModelBase {
             this.etlData = d;
             onDataUpdatedThrottle();
         }, this.dateCutoff));
+        this.liveViewSubscriptionClient(new liveSubscriptionStatsWebSocketClient(this.activeDatabase(), d => {
+            this.subscriptionData = d;
+            onDataUpdatedThrottle();
+        }, this.dateCutoff));
     }
 
     private checkBufferUsage() {
         const replicationDataCount = _.sumBy(this.replicationData, x => x.Performance.length);
         const etlDataCount = _.sumBy(this.etlData, t => _.sumBy(t.Stats, s => s.Performance.length));
+        const subscriptionDataCount = _.sumBy(this.subscriptionData, x => x.BatchPerformance.length + x.ConnectionPerformance.length);
         
-        const dataCount = replicationDataCount + etlDataCount;
+        const dataCount = replicationDataCount + etlDataCount + subscriptionDataCount;
 
         const usage = Math.min(100, dataCount * 100.0 / ongoingTasksStats.bufferSize);
         this.bufferUsage(usage.toFixed(1));
@@ -630,27 +743,33 @@ class ongoingTasksStats extends viewModelBase {
     }
 
     private cancelLiveView() {
-        if (!!this.liveViewReplicationClient()) {
+        if (this.liveViewReplicationClient()) {
             this.liveViewReplicationClient().dispose();
             this.liveViewReplicationClient(null);
         }
 
-        if (!!this.liveViewEtlClient()) {
+        if (this.liveViewEtlClient()) {
             this.liveViewEtlClient().dispose();
             this.liveViewEtlClient(null);
+        }
+
+        if (this.liveViewSubscriptionClient()) {
+            this.liveViewSubscriptionClient().dispose();
+            this.liveViewSubscriptionClient(null);
         }
     }
 
     private draw(workData: workData[], maxConcurrentActions: number, resetFilter: boolean) {
-        this.hasAnyData(this.replicationData.length > 0 || this.etlData.length > 0);
+        const anySubscriptionData = this.subscriptionData.some(x => x.BatchPerformance.length || x.ConnectionPerformance.length);
+        this.hasAnyData(this.replicationData.length > 0 || this.etlData.length > 0 || anySubscriptionData);
 
         this.prepareBrushSection(workData, maxConcurrentActions);
         this.prepareMainSection(resetFilter);
 
         const canvas = this.canvas.node() as HTMLCanvasElement;
         const context = canvas.getContext("2d");
-
-        context.clearRect(0, 0, this.totalWidth, ongoingTasksStats.brushSectionHeight);
+        
+        context.clearRect(0, 0, this.totalWidth + 2 /* aliasing */, ongoingTasksStats.brushSectionHeight);
         context.drawImage(this.brushSection, 0, 0);
         this.drawMainSection();
     }
@@ -772,6 +891,7 @@ class ongoingTasksStats extends viewModelBase {
     private findAndSetTaskNames() {
         this.replicationData = _.orderBy(this.replicationData, [x => x.Type, x => x.Description], ["desc", "asc"]);
         this.etlData = _.orderBy(this.etlData, [x => x.EtlType, x => x.TaskName], ["asc", "asc"]);
+        this.subscriptionData = _.orderBy(this.subscriptionData, [x => x.TaskName]);
         
         this.etlData.forEach(etl => {
             etl.Stats = _.orderBy(etl.Stats, [x => x.TransformationName], ["asc"]);
@@ -779,35 +899,46 @@ class ongoingTasksStats extends viewModelBase {
         
         const trackInfos = [] as trackInfo[];
         
-        this.replicationData.forEach(replication => {
+        this.replicationData.forEach(replicationTask => {
             trackInfos.push({
-                name: replication.Description,
-                type: replication.Type,
+                name: replicationTask.Description,
+                type: replicationTask.Type,
                 openedHeight: ongoingTasksStats.openedReplicationTrackHeight,
                 closedHeight: ongoingTasksStats.closedReplicationTrackHeight
             })
         });
         
-        this.etlData.forEach(taskInfo => {
-            const scriptsCount = taskInfo.Stats.length;
+        this.etlData.forEach(etlTask => {
+            const scriptsCount = etlTask.Stats.length;
 
             const closedHeight = ongoingTasksStats.openedTrackPadding
                 + (scriptsCount + 1) * ongoingTasksStats.trackHeight
                 + scriptsCount * ongoingTasksStats.betweenScriptsPadding
                 + ongoingTasksStats.openedTrackPadding;
             
+            const heightCount = etlTask.EtlType === "Olap"? 3 : 1; 
+            
             const openedHeight = 2 * ongoingTasksStats.openedTrackPadding
-                + ongoingTasksStats.trackHeight
+                + ongoingTasksStats.trackHeight * heightCount
                 + (scriptsCount - 1) * ongoingTasksStats.betweenScriptsPadding
                 + scriptsCount * ongoingTasksStats.singleOpenedEtlItemHeight
                 + ongoingTasksStats.openedTrackPadding;
             
             trackInfos.push({
-                name: taskInfo.TaskName,
-                type: taskInfo.EtlType,
-                openedHeight: openedHeight, 
+                name: etlTask.TaskName,
+                type: etlTask.EtlType,
+                openedHeight: openedHeight,
                 closedHeight: closedHeight
             });
+        });
+
+        this.subscriptionData.forEach(subscriptionTask => {
+            trackInfos.push({
+                name: subscriptionTask.TaskName,
+                type: "SubscriptionConnection",
+                openedHeight: ongoingTasksStats.openedSubscriptionTrackHeight,
+                closedHeight: ongoingTasksStats.closedSubscriptionTrackHeight
+            })
         });
         
         this.tracksInfo(trackInfos);
@@ -934,11 +1065,13 @@ class ongoingTasksStats extends viewModelBase {
         const onPerf = (perfStatsWithCache: performanceBaseWithCache) => {
             const start = perfStatsWithCache.StartedAsDate;
             let end: Date;
+            
             if (perfStatsWithCache.Completed) {
                 end = perfStatsWithCache.CompletedAsDate;
             } else {
                 end = new Date(start.getTime() + perfStatsWithCache.DurationInMs);
             }
+            
             result.push([start, end]);
         };
         
@@ -950,6 +1083,11 @@ class ongoingTasksStats extends viewModelBase {
             etlStats.Stats.forEach(etlStat => {
                 etlStat.Performance.forEach(perfStat => onPerf(perfStat as performanceBaseWithCache));
             })
+        });
+
+        this.subscriptionData.forEach(subscriptionStats => {
+            subscriptionStats.ConnectionPerformance.forEach(perfStat => onPerf(perfStat as performanceBaseWithCache));
+            subscriptionStats.BatchPerformance.forEach(perfStat => onPerf(perfStat as performanceBaseWithCache));
         });
 
         return result;
@@ -972,7 +1110,7 @@ class ongoingTasksStats extends viewModelBase {
         context.save();
         try {
             context.translate(0, ongoingTasksStats.brushSectionHeight);
-            context.clearRect(0, 0, this.totalWidth, this.totalHeight - ongoingTasksStats.brushSectionHeight);
+            context.clearRect(0, 0, this.totalWidth + 2 /* aliasing */, this.totalHeight - ongoingTasksStats.brushSectionHeight);
 
             this.drawTracksBackground(context);
 
@@ -1041,6 +1179,9 @@ class ongoingTasksStats extends viewModelBase {
         this.etlData.forEach(x => {
             drawBackground(x.TaskName);
         });
+        this.subscriptionData.forEach(x => {
+            drawBackground(x.TaskName);
+        });
 
         context.restore();
     }
@@ -1079,10 +1220,10 @@ class ongoingTasksStats extends viewModelBase {
 
                 context.save();
 
-                // 1. Draw perf items
+                // Draw perf items
                 this.drawStripes(context, [perfWithCache.Details], x1, stripesYStart, yOffset, extentFunc, perfWithCache, trackName);
 
-                // 2. Draw a separating line between adjacent perf items if needed
+                // Draw a separating line between adjacent perf items if needed
                 if (perfIdx >= 1 && perfCompleted === perf.Started) {
                     context.fillStyle = this.colors.separatorLine;
                     context.fillRect(x1, yStart + (isOpened ? yOffset : 0), 1, ongoingTasksStats.trackHeight);
@@ -1094,18 +1235,193 @@ class ongoingTasksStats extends viewModelBase {
                 perfCompleted = perf.Completed;
 
                 if (!perf.Completed) {
-                    this.findInProgressAction(perf, extentFunc, x1, stripesYStart, yOffset);
+                    this.findInProgressAction([perf.Details], extentFunc, x1, stripesYStart, yOffset);
                 }
             }
         };
-        
-        this.replicationData.forEach(replicationTrack => {
-            const trackName = replicationTrack.Description;
-            if (_.includes(this.filteredTrackNames(), trackName)) {
-                const isOpened = _.includes(this.expandedTracks(), trackName);
-                drawTrack(trackName, this.yScale(trackName), isOpened, replicationTrack.Performance as performanceBaseWithCache[]);
+
+        const drawSubscriptionTrack = (trackName: string, yStart: number, isOpened: boolean,
+                                       subscriptionItem: Raven.Server.Documents.Subscriptions.SubscriptionTaskPerformanceStats) => {
+            
+            yStart += isOpened ? ongoingTasksStats.openedTrackPadding : ongoingTasksStats.closedTrackPadding;
+
+            const connectionPerformance = subscriptionItem.ConnectionPerformance as performanceBaseWithCache[];
+            const batchPerformance = subscriptionItem.BatchPerformance as performanceBaseWithCache[];
+            
+            const connectionPerfLength = connectionPerformance.length;
+            const batchPerfLength = batchPerformance.length;
+            
+            let lastErrorPosition = -1000;
+            
+            // Draw connections
+            for (let perfIdx = 0; perfIdx < connectionPerfLength; perfIdx++) {
+                const connPerf = connectionPerformance[perfIdx];
+                const perfWithCache = connPerf as SubscriptionConnectionPerformanceStatsWithCache;
+                
+                const startDateAsInt = perfWithCache.StartedAsDate.getTime();
+                const endDateAsInt = startDateAsInt + connPerf.DurationInMs;
+                
+                if (endDateAsInt < visibleStartDateAsInt || visibleEndDateAsInt < startDateAsInt)
+                    continue;
+                
+                const yOffset = isOpened ? ongoingTasksStats.trackHeight * 2 + ongoingTasksStats.stackPadding * 2 : 0;
+                const stripesYStart = yStart + (isOpened ? yOffset : 0);
+                
+                context.save();
+                
+                // Draw connection items (but only if we have actual connection (not just 'trying to connect')
+                if (perfWithCache.Details.Operations.length > 1) {
+                    const pendingDuration = perfWithCache.Details.Operations[0].DurationInMs;
+                    const startActiveConnectionDateAsInt = startDateAsInt + pendingDuration;
+
+                    const x1ForActive = xScale(new Date(startActiveConnectionDateAsInt));
+                    const dxForActive = extentFunc(perfWithCache.Details.Operations[1].DurationInMs);
+
+                    this.drawActiveSubscriptionConnectionStripe(context, x1ForActive, stripesYStart, yOffset, dxForActive, perfWithCache, trackName);
+                    
+                    if (!connPerf.Completed) {
+                        const activeInfo = perfWithCache.Details.Operations[1];
+                        this.findInProgressAction([activeInfo], extentFunc, x1ForActive, stripesYStart, yOffset);
+                    }
+                }
+
+                // Draw errors on top of connection stripe
+                if (perfWithCache.Exception) {
+                    const xForCompleted = xScale(perfWithCache.CompletedAsDate);
+                    // don't draw errors more often than every 5 pixels
+                    if (Math.abs(lastErrorPosition - xForCompleted) > 5) {
+                        this.drawConnectionError(context, xForCompleted, stripesYStart - ongoingTasksStats.trackHeight + 10, perfWithCache.ErrorType);
+
+                        const iconWidth = 16;
+                        this.hitTest.registerSubscriptionExceptionItem(xForCompleted - iconWidth/2, stripesYStart - ongoingTasksStats.trackHeight, iconWidth, ongoingTasksStats.trackHeight,
+                            {
+                                title: perfWithCache.ErrorType === "ConnectionRejected" ? "Connection rejected" : "Connection aborted",
+                                exceptionText: perfWithCache.Exception,
+                                clientUri: perfWithCache.ClientUri,
+                                strategy: perfWithCache.Strategy
+                            });
+                        
+                        lastErrorPosition = xForCompleted;
+                    }
+                }
+                
+                // Draw pending duration on top of connection stripe - but only when strategy is 'WaitForFree'
+                if (perfWithCache.Strategy === "WaitForFree") {
+                    const pendingInfo = perfWithCache.Details.Operations[0];
+                    const dxForPending = extentFunc(pendingInfo.DurationInMs);
+
+                    context.strokeStyle = this.colors.tracks.ConnectionPending;
+                    context.fillStyle = context.strokeStyle;
+                    const x1ForPending = xScale(perfWithCache.StartedAsDate);
+                    const yForPending = stripesYStart - ongoingTasksStats.trackHeight + 12;
+
+                    context.beginPath();
+                    context.arc(x1ForPending, yForPending, 3, 0, 2 * Math.PI);
+                    context.fill();
+
+                    if (dxForPending >= 4) {
+                        graphHelper.drawDashLine(context, x1ForPending, yForPending + 0.5, dxForPending);
+                        this.hitTest.registerSubscriptionPendingItem(x1ForPending, stripesYStart - ongoingTasksStats.trackHeight, dxForPending, ongoingTasksStats.trackHeight,
+                            {
+                                title: "Pending Connection",
+                                clientUri: perfWithCache.ClientUri,
+                                duration: pendingInfo.DurationInMs
+                            });
+                    }
+                }
+                context.restore();
             }
             
+            let batchPerfCompleted: string = null;
+            
+            // Draw batches
+            for (let perfIdx = 0; perfIdx < batchPerfLength; perfIdx++) {
+                const batchPerf = batchPerformance[perfIdx];
+
+                const perfWithCache = batchPerf as SubscriptionBatchPerformanceStatsWithCache;
+                
+                const startDate = perfWithCache.StartedAsDate;
+                
+                const x1 = xScale(startDate);
+                const startDateAsInt = startDate.getTime();
+
+                const endDateAsInt = startDateAsInt + batchPerf.DurationInMs;
+                if (endDateAsInt < visibleStartDateAsInt || visibleEndDateAsInt < startDateAsInt)
+                    continue;
+
+                const yOffset = isOpened ? ongoingTasksStats.trackHeight + ongoingTasksStats.stackPadding : 0;
+                const stripesYStart = yStart + (isOpened ? yOffset + ongoingTasksStats.trackHeight * 2 + ongoingTasksStats.stackPadding * 3 : 0);
+                
+                context.save();
+
+                // Draw batch items
+                this.drawStripes(context, [perfWithCache.Details], x1, stripesYStart, yOffset, extentFunc, perfWithCache, trackName);
+
+                // Draw a separating line between adjacent batch items if needed 
+                if (perfIdx >= 1 && batchPerfCompleted === batchPerf.Started) {
+                    // no need to draw if first batch is the agg one..because colors are different..
+                    if (perfIdx != 1 || !(batchPerformance[0] as SubscriptionBatchPerformanceStatsWithCache).AggregatedBatchesCount) {
+                        context.fillStyle = this.colors.separatorLine;
+                        context.fillRect(x1, stripesYStart, 1, ongoingTasksStats.trackHeight);
+                    }
+                }
+
+                context.restore();
+
+                batchPerfCompleted = batchPerf.Completed;
+                
+                const parentConnection = connectionPerformance.find(x => 
+                    (x as SubscriptionConnectionPerformanceStatsWithCache).ConnectionId === perfWithCache.ConnectionId) as SubscriptionConnectionPerformanceStatsWithCache;
+                
+                if (!batchPerf.Completed && !parentConnection.Exception) {
+                    this.findInProgressAction([batchPerf.Details], extentFunc, x1, stripesYStart, yOffset);
+                }
+            }
+            
+            // draw start lines - the reason we do that in separate loop is we want them to be in front
+            for (let perfIdx = 0; perfIdx < connectionPerfLength; perfIdx++) {
+                const connPerf = connectionPerformance[perfIdx];
+                const perfWithCache = connPerf as SubscriptionConnectionPerformanceStatsWithCache;
+
+                const startDateAsInt = perfWithCache.StartedAsDate.getTime();
+                const endDateAsInt = startDateAsInt + connPerf.DurationInMs;
+
+                if (endDateAsInt < visibleStartDateAsInt || visibleEndDateAsInt < startDateAsInt)
+                    continue;
+
+                context.save();
+
+                if (perfWithCache.Details.Operations.length > 1) {
+                    const pendingDuration = perfWithCache.Details.Operations[0].DurationInMs;
+                    const startActiveConnectionDateAsInt = startDateAsInt + pendingDuration;
+
+                    const x1ForActive = xScale(new Date(startActiveConnectionDateAsInt));
+
+                    const yOffset = isOpened ? ongoingTasksStats.trackHeight * 2 + ongoingTasksStats.stackPadding * 2 : 0;
+                    const yStartLine = yStart + (isOpened ? yOffset : 0);
+                    
+                    // draw the 'start connection line'
+                    context.fillStyle = this.colors.tracks.ConnectionPending; 
+                    context.fillRect(x1ForActive, yStartLine - ongoingTasksStats.startConnectionLineExtraHeight, 1, ongoingTasksStats.trackHeight + ongoingTasksStats.startConnectionLineExtraHeight);
+                }
+
+                context.restore();
+            }
+
+            // Draw query text
+            const extraPadding = isOpened ? ongoingTasksStats.trackHeight : 0;
+            this.drawQuery(context, yStart + extraPadding, {
+                taskId: subscriptionItem.TaskId,
+                taskName: subscriptionItem.TaskName
+            });
+        };
+        
+        this.replicationData.forEach(replicationItem => {
+            const trackName = replicationItem.Description;
+            if (_.includes(this.filteredTrackNames(), trackName)) {
+                const isOpened = _.includes(this.expandedTracks(), trackName);
+                drawTrack(trackName, this.yScale(trackName), isOpened, replicationItem.Performance as performanceBaseWithCache[]);
+            }
         });
         
         this.etlData.forEach(etlItem => {
@@ -1121,7 +1437,9 @@ class ongoingTasksStats extends viewModelBase {
                     const openedTrackItemOffset = ongoingTasksStats.betweenScriptsPadding + ongoingTasksStats.singleOpenedEtlItemHeight;
                     const closedTrackItemOffset = ongoingTasksStats.betweenScriptsPadding + ongoingTasksStats.trackHeight;
                     const offset = isOpened ? idx * openedTrackItemOffset : (idx + 1) * closedTrackItemOffset;
+                    
                     drawTrack(trackName, yStartBase + offset, isOpened, etlStat.Performance as performanceBaseWithCache[]);
+                    
                     this.drawScriptName(context, yStartBase + offset + extraPadding, {
                         transformationName: etlStat.TransformationName,
                         etlType: etlItem.EtlType,
@@ -1130,28 +1448,52 @@ class ongoingTasksStats extends viewModelBase {
                 });
             }
         })
+        
+        this.subscriptionData.forEach(subscriptionItem => {
+            const trackName = subscriptionItem.TaskName;
+            if (_.includes(this.filteredTrackNames(), trackName)) {
+                const isOpened = _.includes(this.expandedTracks(), trackName);
+                const yStartBase = this.yScale(trackName);
+                
+                const openedTrackItemOffset = ongoingTasksStats.stackPadding;
+                const closedTrackItemOffset = ongoingTasksStats.betweenScriptsPadding + ongoingTasksStats.trackHeight;
+                const offset = isOpened ? openedTrackItemOffset : closedTrackItemOffset;
+                
+                drawSubscriptionTrack(trackName, yStartBase + offset, isOpened, subscriptionItem);
+            }
+        });
     }
     
     private drawScriptName(context: CanvasRenderingContext2D, yStart: number, taskInfo: previewEtlScriptItemContext) {
+        const areaWidth = this.drawText(context, yStart, taskInfo.transformationName);
+        this.hitTest.registerPreviewEtlScript(2, yStart, areaWidth, ongoingTasksStats.trackHeight, taskInfo);
+    }
+    
+    private drawQuery(context: CanvasRenderingContext2D, yStart: number, taskInfo: previewSubscriptionQueryItemContext) {
+        const areaWidth = this.drawText(context, yStart, "Query");
+        this.hitTest.registerPreviewSubscriptionQuery(2, yStart, areaWidth, ongoingTasksStats.trackHeight, taskInfo);
+    }
+    
+    private drawText(context: CanvasRenderingContext2D, yStart: number, text: string) {
         const textShift = 12.5;
         context.font = "bold 12px Lato";
-        const transformationNameWidth = context.measureText(taskInfo.transformationName).width + 8;
+        const textWidth = context.measureText(text).width + 8;
 
-        const areaWidth = transformationNameWidth + ongoingTasksStats.scriptNameLeftPadding * 2 + ongoingTasksStats.scriptPreviewIconWidth;
-        
+        const areaWidth = textWidth + ongoingTasksStats.textLeftPadding * 2 + ongoingTasksStats.previewIconWidth;
+
         context.fillStyle = this.colors.trackNameBg;
-        context.fillRect(2, yStart, areaWidth, ongoingTasksStats.trackHeight);
+        context.fillRect(2, yStart, areaWidth, ongoingTasksStats.trackHeight + 2);
 
         context.fillStyle = this.colors.trackNameFg;
-        context.fillText(taskInfo.transformationName, ongoingTasksStats.scriptNameLeftPadding + 4, yStart + textShift);
-        
+        context.fillText(text, ongoingTasksStats.textLeftPadding + 4, yStart + textShift);
+
         context.font = "16px icomoon";
-        context.fillText('\ue9a3',ongoingTasksStats.scriptNameLeftPadding + transformationNameWidth + ongoingTasksStats.scriptPreviewIconWidth / 2, yStart + 16);
+        context.fillText('\ue9a3', ongoingTasksStats.textLeftPadding + textWidth + ongoingTasksStats.previewIconWidth / 2, yStart + 16);
         
-        this.hitTest.registerPreviewScript(2, yStart, areaWidth, ongoingTasksStats.trackHeight, taskInfo);
+        return areaWidth;
     }
 
-    private findInProgressAction(perf: performanceBaseWithCache, extentFunc: (duration: number) => number,
+    private findInProgressAction(perfDetails: taskOperation[], extentFunc: (duration: number) => number,
                                  xStart: number, yStart: number, yOffset: number): void {
 
         const extractor = (perfs: taskOperation[], xStart: number, yStart: number, yOffset: number) => {
@@ -1163,18 +1505,25 @@ class ongoingTasksStats extends viewModelBase {
 
                 this.inProgressAnimator.register([currentX, yStart, dx, ongoingTasksStats.trackHeight]);
 
-                if (op.Operations.length > 0) {
+                if (op.Operations && op.Operations.length > 0) {
                     extractor(op.Operations, currentX, yStart + yOffset, yOffset);
                 }
                 currentX += dx;
             });
         };
 
-        extractor([perf.Details], xStart, yStart, yOffset);
+        extractor(perfDetails, xStart, yStart, yOffset);
     }
 
     private getColorForOperation(operationName: string): string {
         const { tracks } = this.colors;
+        
+        if (operationName.startsWith(ongoingTasksStats.olapLoadLocalPrefix)) {
+            operationName = ongoingTasksStats.olapLoadLocalChild;
+        }
+        if (operationName.startsWith(ongoingTasksStats.olapUploadPrefix)) {
+            operationName = ongoingTasksStats.olapUploadChild;
+        }
 
         if (operationName in tracks) {
             return (tracks as dictionary<string>)[operationName];
@@ -1201,8 +1550,40 @@ class ongoingTasksStats extends viewModelBase {
                 return "Raven ETL";
             case "Sql":
                 return "SQL ETL";
+            case "Olap":
+                return "OLAP ETL";
+            case "SubscriptionConnection":
+                return "Subscription";
+            case "SubscriptionBatch":
+                return "Documents Batch";
+            case "AggregatedBatchesInfo":
+                return "Aggregated History Batches Info";
         }
         return "";
+    }
+
+    private drawConnectionError(context: CanvasRenderingContext2D, x: number, y: number,
+                                errorType: Raven.Server.Documents.TcpHandlers.SubscriptionError) {
+        let dyForLine: number = 8;
+       
+        let errorIcon: string;
+        let iconStyle: string;
+        
+        if (errorType === "ConnectionRejected") {
+            errorIcon = "\uea45";
+            iconStyle = this.colors.tracks.ConnectionRejected;
+            dyForLine = 5;
+        } else {
+            errorIcon = "\uea44";
+            iconStyle = this.colors.tracks.ConnectionAborted;
+        }
+
+        context.strokeStyle = this.colors.tracks.ConnectionAborted;
+        graphHelper.drawLine(context, Math.round(x) + 0.5, y, dyForLine);
+        
+        context.fillStyle = iconStyle;
+        context.font = "16px icomoon";
+        context.fillText(errorIcon, x - 8, y);
     }
 
     private drawStripes(context: CanvasRenderingContext2D, operations: Array<taskOperation>,
@@ -1210,8 +1591,8 @@ class ongoingTasksStats extends viewModelBase {
         perfItemWithCache: performanceBaseWithCache, trackName: string) {
 
         let currentX = xStart;
-        const length = operations.length;
-        for (let i = 0; i < length; i++) {
+        
+        for (let i = 0; i < operations.length; i++) {
             const op = operations[i];
             const dx = extentFunc(op.DurationInMs);
             const isRootOperation = perfItemWithCache.Details === op;
@@ -1236,17 +1617,54 @@ class ongoingTasksStats extends viewModelBase {
             }
 
             // 3. Draw inner/nested operations/stripes..
-            if (op.Operations.length > 0) {
+            if (op.Operations && op.Operations.length > 0) {
                 this.drawStripes(context, op.Operations, currentX, yStart + yOffset, yOffset, extentFunc, perfItemWithCache, trackName);
             }
-
+            
             // 4. Handle errors if exist... 
             if (perfItemWithCache.HasErrors && isRootOperation) {
                 context.fillStyle = this.colors.itemWithError;
-                graphHelper.drawErrorMark(context, currentX, yStart, dx);
+                graphHelper.drawTriangle(context, currentX, yStart, dx);
             }
 
             currentX += dx;
+        }
+    }
+    
+    private mapItemToRegister(perfItemWithCache: SubscriptionConnectionPerformanceStatsWithCache, duration: number) {
+        return {
+            title: "Client Connection",
+            strategy: perfItemWithCache.Strategy,
+            batchCount: perfItemWithCache.BatchCount,
+            totalBatchSize: perfItemWithCache.TotalBatchSizeInBytes,
+            connectionId: perfItemWithCache.ConnectionId,
+            duration: duration,
+            exceptionText: perfItemWithCache.Exception,
+            clientUri: perfItemWithCache.ClientUri
+        };
+    }
+
+    private drawActiveSubscriptionConnectionStripe(context: CanvasRenderingContext2D,
+                                    xStart: number, yStart: number, yOffset: number, dx: number,
+                                    perfItemWithCache: SubscriptionConnectionPerformanceStatsWithCache, trackName: string) {
+
+        const activeConnectionInfo = perfItemWithCache.Details.Operations[1];
+        const operationDuration = activeConnectionInfo.DurationInMs;
+
+        // Draw item
+        context.fillStyle = this.getColorForOperation(activeConnectionInfo.Name);
+        context.fillRect(xStart, yStart, dx, ongoingTasksStats.trackHeight);
+        
+        // Track is open
+        if (yOffset !== 0) {
+            if (dx >= 0.8) { // Don't show tooltip for very small items
+                this.hitTest.registerSubscriptionConnectionItem(xStart, yStart, dx, ongoingTasksStats.trackHeight, this.mapItemToRegister(perfItemWithCache, operationDuration));
+            }
+        }
+        // Track is closed
+        else if (dx >= 0.8) {
+            this.hitTest.registerSubscriptionConnectionItem(xStart, yStart, dx, ongoingTasksStats.trackHeight, this.mapItemToRegister(perfItemWithCache, operationDuration));
+            this.hitTest.registerToggleTrack(xStart, yStart, dx, ongoingTasksStats.trackHeight, trackName);
         }
     }
     
@@ -1311,8 +1729,12 @@ class ongoingTasksStats extends viewModelBase {
         context.stroke();
     }
     
-    private handlePreviewScript(context: previewEtlScriptItemContext) {
-        this.definitionsCache.showDefinitionFor(context.etlType, context.taskId, context.transformationName);
+    private handlePreviewEtlScript(context: previewEtlScriptItemContext) {
+        this.etlDefinitionsCache.showDefinitionFor(context.etlType, context.taskId, context.transformationName);
+    }
+
+    private handlePreviewSubscriptionScript(context: previewSubscriptionQueryItemContext) {
+        this.subscriptionDefinitionCache.showDefinitionFor(context.taskId, context.taskName);
     }
 
     private onToggleTrack(trackName: string) {
@@ -1339,22 +1761,62 @@ class ongoingTasksStats extends viewModelBase {
         const currentDatum = this.tooltip.datum();
 
         if (currentDatum !== element) {
-            const tooltipHtml = "Gap start time: " + (element).start.toLocaleTimeString() +
-                "<br/>Gap duration: " + generalUtils.formatMillis((element).durationInMillis);
+            const tooltipHtml = '<div class="tooltip-li">Gap start time: <div class="value">' + element.start.toLocaleTimeString() + '</div></div>' +
+                '<div class="tooltip-li">Gap duration: <div class="value">' + generalUtils.formatMillis(element.durationInMillis) + '</div></div>';
             this.handleTooltip(element, x, y, tooltipHtml);
         }
     }
 
+    private handleSubscriptionPendingTooltip(itemInfo: subscriptionPendingItemInfo, x: number, y: number) {
+        const currentDatum = this.tooltip.datum();
+
+        if (currentDatum !== itemInfo) {
+            let tooltipHtml = `<div class="tooltip-header"> ${itemInfo.title} </div>`;
+            tooltipHtml += `<div class="tooltip-li">Duration: <div class="value">${generalUtils.formatMillis(itemInfo.duration)} </div></div>`;
+            tooltipHtml += `<div class="tooltip-li">Client URI: <div class="value">${itemInfo.clientUri} </div></div>`;
+            this.handleTooltip(itemInfo, x, y, tooltipHtml);
+        }
+    }
+
+    private handleSubscriptionConnectionTooltip(itemInfo: subscriptionConnectionItemInfo, x: number, y: number) {
+        const currentDatum = this.tooltip.datum();
+
+        if (currentDatum !== itemInfo) {
+            let tooltipHtml = `<div class="tooltip-header"> ${itemInfo.title} </div>`;
+            tooltipHtml += `<div class="tooltip-li">Duration: <div class="value">${generalUtils.formatMillis(itemInfo.duration)} </div></div>`;
+            tooltipHtml += `<div class="tooltip-li">Client URI: <div class="value">${itemInfo.clientUri} </div></div>`;
+            tooltipHtml += `<div class="tooltip-li">Strategy: <div class="value">${itemInfo.strategy} </div></div>`;
+            tooltipHtml += `<div class="tooltip-li">Number of batches acknowledged: <div class="value">${itemInfo.batchCount.toLocaleString()} </div></div>`;
+            tooltipHtml += `<div class="tooltip-li">Size of all batches: <div class="value">${generalUtils.formatBytesToSize(itemInfo.totalBatchSize)} </div></div>`;
+            
+            if (itemInfo.exceptionText) {
+                tooltipHtml += `<div class="tooltip-li">Message: <div class="value">${itemInfo.exceptionText}</div></div>`;
+            }
+            
+            this.handleTooltip(itemInfo, x, y, tooltipHtml);
+        }
+    }
+
+    private handleSubscriptionErrorTooltip(itemInfo: subscriptionErrorItemInfo, x: number, y: number) {
+        const currentDatum = this.tooltip.datum();
+
+        if (currentDatum !== itemInfo) {
+            let tooltipHtml = `<div class="tooltip-header">  ${itemInfo.title} </div>`;
+            tooltipHtml += `<div class="tooltip-li">Client URI: <div class="value">${itemInfo.clientUri} </div></div>`;
+            tooltipHtml += `<div class="tooltip-li">Strategy: <div class="value">${itemInfo.strategy} </div></div>`;
+            tooltipHtml += `<div class="tooltip-li">Message: <div class="value">${itemInfo.exceptionText} </div></div>`;
+            this.handleTooltip(itemInfo, x, y, tooltipHtml);
+        }
+    }
+    
     private handleTrackTooltip(context: trackItemContext, x: number, y: number) {
         const currentDatum = this.tooltip.datum();
 
         if (currentDatum !== context.item) {
             const type = context.rootStats.Type;
-            const isReplication = type === "OutgoingPull"
-                || type === "OutgoingPush"    
-                || type === "IncomingPull"
-                || type === "IncomingPush";
-            const isEtl = type === "Raven" || type === "Sql";
+            const isReplication = type === "OutgoingPull" || type === "OutgoingPush" || type === "IncomingPull" || type === "IncomingPush";
+            const isEtl = type === "Raven" || type === "Sql" || type === "Olap";
+            const isSubscription = type === "SubscriptionConnection" || type === "SubscriptionBatch" || type === "AggregatedBatchesInfo";
             const isRootItem = context.rootStats.Details === context.item;
             
             let sectionName = context.item.Name;
@@ -1362,51 +1824,72 @@ class ongoingTasksStats extends viewModelBase {
                 sectionName = this.getTaskTypeDescription(type);
             }
             
-            let tooltipHtml = `<strong>*** ${sectionName} ***</strong><br/>`;
-            tooltipHtml += (isRootItem ? "Total duration" : "Duration") + ": " + generalUtils.formatMillis(context.item.DurationInMs) + "<br/>";
+            let tooltipHtml = `<div class="tooltip-header"> ${sectionName} </div>`;
+            tooltipHtml += '<div class="tooltip-li">' + (isRootItem ? "Total duration" : "Duration") + ': <div class="value">' + generalUtils.formatMillis(context.item.DurationInMs) + "</div></div>";
             
             if (isRootItem) {
                 switch (type) {
                     case "IncomingPush":
                     case "IncomingPull": {
                         const elementWithData = context.rootStats as any as Raven.Client.Documents.Replication.IncomingReplicationPerformanceStats;
-                        tooltipHtml += `Received last Etag: ${elementWithData.ReceivedLastEtag}<br/>`;
-                        tooltipHtml += `Network input count: ${elementWithData.Network.InputCount.toLocaleString()}<br/>`;
-                        tooltipHtml += `Documents read count: ${elementWithData.Network.DocumentReadCount.toLocaleString()}<br/>`;
-                        tooltipHtml += `Attachments read count: ${elementWithData.Network.AttachmentReadCount.toLocaleString()}<br/>`;
+                        tooltipHtml += `<div class="tooltip-li">Received last Etag: <div class="value">${elementWithData.ReceivedLastEtag} </div></div>`;
+                        tooltipHtml += `<div class="tooltip-li">Network input count: <div class="value">${elementWithData.Network.InputCount.toLocaleString()} </div></div>`;
+                        tooltipHtml += `<div class="tooltip-li">Documents read count: <div class="value">${elementWithData.Network.DocumentReadCount.toLocaleString()} </div></div>`;
+                        tooltipHtml += `<div class="tooltip-li">Attachments read count: <div class="value">${elementWithData.Network.AttachmentReadCount.toLocaleString()} </div></div>`;
                     }
                         break;
                     case "OutgoingPush":
                     case "OutgoingPull": {
                         const elementWithData = context.rootStats as any as Raven.Client.Documents.Replication.OutgoingReplicationPerformanceStats;
-                        tooltipHtml += `Sent last Etag: ${elementWithData.SendLastEtag}<br/>`;
-                        tooltipHtml += `Storage input count: ${elementWithData.Storage.InputCount.toLocaleString()}<br/>`;
-                        tooltipHtml += `Documents output count: ${elementWithData.Network.DocumentOutputCount.toLocaleString()}<br/>`;
-                        tooltipHtml += `Attachments read count: ${elementWithData.Network.AttachmentOutputCount.toLocaleString()}<br/>`;
+                        tooltipHtml += `<div class="tooltip-li">Sent last Etag: <div class="value">${elementWithData.SendLastEtag}</div></div>`;
+                        tooltipHtml += `<div class="tooltip-li">Storage input count: <div class="value">${elementWithData.Storage.InputCount.toLocaleString()}</div></div>`;
+                        tooltipHtml += `<div class="tooltip-li">Documents output count: <div class="value">${elementWithData.Network.DocumentOutputCount.toLocaleString()}</div></div>`;
+                        tooltipHtml += `<div class="tooltip-li">Attachments read count: <div class="value">${elementWithData.Network.AttachmentOutputCount.toLocaleString()}</div></div>`;
                     }
                         break;
                     case "Raven":
                     case "Sql":
+                    case "Olap": {
                         const elementWithData = context.rootStats as EtlPerformanceBaseWithCache;
                         if (elementWithData.BatchCompleteReason) {
-                            tooltipHtml += `Batch complete reason: ${elementWithData.BatchCompleteReason}<br/>`;
+                            tooltipHtml += `<div class="tooltip-li">Batch complete reason: <div class="value">${elementWithData.BatchCompleteReason} </div></div>`;
                         }
-                        
+
                         if (elementWithData.CurrentlyAllocated && elementWithData.CurrentlyAllocated.SizeInBytes) {
-                            tooltipHtml += `Currently allocated: ${generalUtils.formatBytesToSize(elementWithData.CurrentlyAllocated.SizeInBytes)} <br/>`;
+                            tooltipHtml += `<div class="tooltip-li">Currently allocated: <div class="value">${generalUtils.formatBytesToSize(elementWithData.CurrentlyAllocated.SizeInBytes)} </div></div>`;
                         }
 
                         if (elementWithData.BatchSize && elementWithData.BatchSize.SizeInBytes) {
-                            tooltipHtml += `Batch size: ${generalUtils.formatBytesToSize(elementWithData.BatchSize.SizeInBytes)} <br/>`;
+                            tooltipHtml += `<div class="tooltip-li">Batch size: <div class="value">${generalUtils.formatBytesToSize(elementWithData.BatchSize.SizeInBytes)} </div></div>`;
                         }
+                    }
+                        break;
+                    case "SubscriptionBatch": {
+                        const elementWithData = context.rootStats as SubscriptionBatchPerformanceStatsWithCache;
+                       
+                        tooltipHtml += `<div class="tooltip-li">Documents sent in batch: <div class="value">${elementWithData.NumberOfDocuments.toLocaleString()} </div></div>`;
+                        tooltipHtml += `<div class="tooltip-li">Documents size: <div class="value">${generalUtils.formatBytesToSize(elementWithData.SizeOfDocumentsInBytes)} </div></div>`;
+                        tooltipHtml += `<div class="tooltip-li">Included Documents: <div class="value">${elementWithData.NumberOfIncludedDocuments.toLocaleString()} </div></div>`;
+                        tooltipHtml += `<div class="tooltip-li">Included Counters: <div class="value">${elementWithData.NumberOfIncludedCounters.toLocaleString()} </div></div>`;
+                        tooltipHtml += `<div class="tooltip-li">Included Time Series entries: <div class="value">${elementWithData.NumberOfIncludedTimeSeriesEntries.toLocaleString()} </div></div>`;
+
+                        if (elementWithData.Exception) {
+                            tooltipHtml += `<div class="tooltip-li">Message: <div class="value">${elementWithData.Exception} </div></div>`;
+                        }
+                    }
+                        break;
+                    case "AggregatedBatchesInfo": {
+                        const elementWithData = context.rootStats as SubscriptionBatchPerformanceStatsWithCache;
+                        tooltipHtml += `<div class="tooltip-li">Number of batches sent: <div class="value">${elementWithData.AggregatedBatchesCount.toLocaleString()} </div></div>`;
+                    }
                         break;
                 }
                 
                 if (isReplication) {
                     const baseElement = context.rootStats as Raven.Client.Documents.Replication.ReplicationPerformanceBase;
                     if (baseElement.Errors) {
-                        tooltipHtml += `<span style=color:Crimson;"><strong>Errors:</strong></span><br/>`;
-                        baseElement.Errors.forEach(err => tooltipHtml += `Errors: ${err.Error}<br/>`);
+                        tooltipHtml += `<div class="tooltip-header text-danger">Errors:</div>`;
+                        baseElement.Errors.forEach(err => tooltipHtml += `<div class="tooltip-li">Errors: <div class="value">${err.Error} </div></div>`);
                     }
                 }
             } else { // child item
@@ -1416,59 +1899,110 @@ class ongoingTasksStats extends viewModelBase {
                         case "Extract":
                             _.forIn(baseElement.NumberOfExtractedItems, (value: number, key: Raven.Server.Documents.ETL.EtlItemType) => {
                                 if (value) {
-                                    tooltipHtml += `Extracted ${ongoingTasksStats.etlItemTypeToUi(key)}: ${value.toLocaleString()}<br/>`;
+                                    tooltipHtml += `<div class="tooltip-li">Extracted <div class="value">${ongoingTasksStats.etlItemTypeToUi(key)}: ${value.toLocaleString()} </div></div>`;
                                 }
                             });
 
                             _.forIn(baseElement.LastFilteredOutEtags, (value: number, key: Raven.Server.Documents.ETL.EtlItemType) => {
                                 if (value) {
-                                    tooltipHtml += `Last filtered out Etag for ${key}: ${value}<br/>`;
+                                    tooltipHtml += `<div class="tooltip-li">Last filtered out Etag for ${key}: <div class="value">${value} </div></div>`;
                                 }
                             });
                             break;
                         case "Transform":
                             _.forIn(baseElement.NumberOfTransformedItems, (value: number, key: Raven.Server.Documents.ETL.EtlItemType) => {
                                 if (value) {
-                                    tooltipHtml += `Transformed ${ongoingTasksStats.etlItemTypeToUi(key)}: ${value.toLocaleString()}<br/>`;
+                                    tooltipHtml += `<div class="tooltip-li">Transformed ${ongoingTasksStats.etlItemTypeToUi(key)}: <div class="value">${value.toLocaleString()} </div></div>`;
                                     
                                     if (baseElement.DurationInMs) {
                                         const durationInSec = context.item.DurationInMs / 1000;
-                                        tooltipHtml += `${ongoingTasksStats.etlItemTypeToUi(key)} Processing Speed: ${Math.floor(value / durationInSec).toLocaleString()} docs/sec<br/>`;
+                                        tooltipHtml += `<div class="tooltip-li">${ongoingTasksStats.etlItemTypeToUi(key)} Processing Speed: <div class="value">${Math.floor(value / durationInSec).toLocaleString()} docs/sec </div></div>`;
                                     }
                                 }
                             });
 
                             _.forIn(baseElement.NumberOfTransformedTombstones, (value: number, key: Raven.Server.Documents.ETL.EtlItemType) => {
                                 if (value) {
-                                    tooltipHtml += `Transformed ${ongoingTasksStats.etlItemTypeToUi(key)} tombstones: ${value.toLocaleString()}<br/>`;
+                                    tooltipHtml += `<div class="tooltip-li">Transformed ${ongoingTasksStats.etlItemTypeToUi(key)} tombstones: <div class="value">${value.toLocaleString()} </div></div>`;
                                 }
                             });
                             
                             if (baseElement.TransformationErrorCount) {
-                                tooltipHtml += `Transformation error count: ${baseElement.TransformationErrorCount.toLocaleString()}<br/>`;
+                                tooltipHtml += `<div class="tooltip-li">Transformation error count: <div class="value">${baseElement.TransformationErrorCount.toLocaleString()} </div></div>`;
                             }
 
                             _.forIn(baseElement.LastTransformedEtags, (value: number, key: Raven.Server.Documents.ETL.EtlItemType) => {
                                 if (value) {
-                                    tooltipHtml += `Last transformed Etag for ${key}: ${value}<br/>`;
+                                    tooltipHtml += `<div class="tooltip-li">Last transformed Etag for ${key}: <div class="value">${value} </div></div>`;
                                 }
                             });
                             break;
                         case "Load":
                             if (baseElement.SuccessfullyLoaded != null) {
-                                tooltipHtml += `Successfully loaded: ${baseElement.SuccessfullyLoaded ? "Yes": "No"}<br/>`;
+                                tooltipHtml += `<div class="tooltip-li">Successfully loaded: <div class="value">${baseElement.SuccessfullyLoaded ? "Yes" : "No"} </div></div>`;
                             }
 
                             if (baseElement.LastLoadedEtag) {
-                                tooltipHtml += `Last loaded Etag: ${baseElement.LastLoadedEtag}<br/>`;
+                                tooltipHtml += `<div class="tooltip-li">Last loaded Etag: <div class="value">${baseElement.LastLoadedEtag} </div></div>`;
                             }
                             break;
                     }
+                    
+                    if (type === "Olap") {
+                        const olapItem = context.item as unknown as Raven.Server.Documents.ETL.Providers.OLAP.OlapEtlPerformanceOperation;
+                        if (olapItem.FileName) {
+                            tooltipHtml += `<div class="tooltip-li">File Name: <div class="value">${olapItem.FileName} </div></div>`;
+                        }
+                        if (olapItem.S3Upload) {
+                            tooltipHtml += `<hr />`;
+                            tooltipHtml += ongoingTasksStats.uploadProgressTooltip("S3", olapItem.S3Upload, context.item.DurationInMs);
+                        }
+                        if (olapItem.AzureUpload) {
+                            tooltipHtml += `<hr />`;
+                            tooltipHtml += ongoingTasksStats.uploadProgressTooltip("Azure", olapItem.AzureUpload, context.item.DurationInMs);
+                        }
+                        if (olapItem.GoogleCloudUpload) {
+                            tooltipHtml += `<hr />`;
+                            tooltipHtml += ongoingTasksStats.uploadProgressTooltip("Google Cloud", olapItem.GoogleCloudUpload, context.item.DurationInMs);
+                        }
+                        if (olapItem.GlacierUpload) {
+                            tooltipHtml += `<hr />`;
+                            tooltipHtml += ongoingTasksStats.uploadProgressTooltip("Glacier", olapItem.GlacierUpload, context.item.DurationInMs);
+                        }
+                        if (olapItem.FtpUpload) {
+                            tooltipHtml += `<hr />`;
+                            tooltipHtml += ongoingTasksStats.uploadProgressTooltip("FTP", olapItem.FtpUpload, context.item.DurationInMs);
+                        }
+                    }
+                    
+                } else if (isSubscription) {
+                    // used for batches stripes only 
+                    const title = context.item.Name === "BatchWaitForAcknowledge" ? "Waiting for ACK" : "Sending Documents";
+                    
+                    tooltipHtml = `<div class="tooltip-header"> ${title} </div>`;
+                    tooltipHtml += '<div class="tooltip-li">Duration: <div class="value">' + generalUtils.formatMillis(context.item.DurationInMs) + ' </div></div>';
                 }
             }
             
-            this.handleTooltip(context.item, x, y, tooltipHtml); 
+            this.handleTooltip(context.item, x, y, tooltipHtml);
         }
+    }
+    
+    static uploadProgressTooltip(header: string, progress: Raven.Client.Documents.Operations.Backups.UploadProgress, duration: number) {
+        let tooltipHtml = `<div class="tooltip-header">${header}</div>`;
+        tooltipHtml += `<div class="tooltip-li">Upload State: <div class="value">${progress.UploadState}</div></div>`;
+        tooltipHtml += `<div class="tooltip-li">Upload Type: <div class="value">${progress.UploadType}</div></div>`;
+        if (progress.UploadState === "Done") {
+            tooltipHtml += `<div class="tooltip-li">File Size: <div class="value">${generalUtils.formatBytesToSize(progress.TotalInBytes)}</div></div>`;
+            if (duration > 0) {
+                tooltipHtml += `<div class="tooltip-li">Upload speed: <div class="value">${generalUtils.formatBytesToSize(progress.TotalInBytes * 1000 / duration)}/s</div></div>`;
+            }
+        } else {
+            tooltipHtml += `<div class="tooltip-li">Progress: <div class="value">${generalUtils.formatBytesToSize(progress.UploadedInBytes)}/${generalUtils.formatBytesToSize(progress.TotalInBytes)}</div></div>`;
+            tooltipHtml += `<div class="tooltip-li">Upload speed: <div class="value">${generalUtils.formatBytesToSize(progress.BytesPutsPerSec)}/s</div></div>`;
+        }
+        
+        return tooltipHtml;
     }
     
     static etlItemTypeToUi(value: Raven.Server.Documents.ETL.EtlItemType) {
@@ -1482,35 +2016,31 @@ class ongoingTasksStats extends viewModelBase {
         }
     }
 
-    private handleTooltip(element: taskOperation | timeGapInfo | performanceBaseWithCache,
+    private handleTooltip(element: taskOperation | timeGapInfo | performanceBaseWithCache | subscriptionErrorItemInfo | subscriptionPendingItemInfo,
                           x: number, y: number, tooltipHtml: string) {
         if (element && !this.dialogVisible) {
-            const canvas = this.canvas.node() as HTMLCanvasElement;
-            const context = canvas.getContext("2d");
-            context.font = this.tooltip.style("font");
+            this.tooltip
+                .style('display', undefined)
+                .html(tooltipHtml)
+                .datum(element);
 
-            const longestLine = generalUtils.findLongestLine(tooltipHtml);
-            const tooltipWidth = context.measureText(longestLine).width + 60;
-
-            const numberOfLines = generalUtils.findNumberOfLines(tooltipHtml);
-            const tooltipHeight = numberOfLines * 30 + 60;
-
+            const $tooltip = $(this.tooltip.node());
+            const tooltipWidth = $tooltip.width();
+            const tooltipHeight = $tooltip.height();
+            
             x = Math.min(x, Math.max(this.totalWidth - tooltipWidth, 0));
             y = Math.min(y, Math.max(this.totalHeight - tooltipHeight, 0));
 
             this.tooltip
                 .style("left", (x + 10) + "px")
-                .style("top", (y + 10) + "px")
-                .style('display', undefined);
+                .style("top", (y + 10) + "px");
 
             this.tooltip
                 .transition()
                 .duration(250)
                 .style("opacity", 1);
 
-            this.tooltip
-                .html(tooltipHtml)
-                .datum(element);
+           
         } else {
             this.hideTooltip();
         }
@@ -1519,7 +2049,8 @@ class ongoingTasksStats extends viewModelBase {
     private hideTooltip() {
         this.tooltip.transition()
             .duration(250)
-            .style("opacity", 0);
+            .style("opacity", 0)
+            .each("end", () => this.tooltip.style("display", "none"));
 
         this.tooltip.datum(null);
     }
@@ -1542,7 +2073,8 @@ class ongoingTasksStats extends viewModelBase {
                 // maybe we imported old format let's try to convert
                 importedData = {
                     Replication: importedData as any, // we force casting here
-                    Etl: []
+                    Etl: [],
+                    Subscription: []
                 }
             }
 
@@ -1552,6 +2084,7 @@ class ongoingTasksStats extends viewModelBase {
             } else {
                 this.replicationData = importedData.Replication;
                 this.etlData = importedData.Etl;
+                this.subscriptionData = importedData.Subscription;
 
                 this.fillCache();
                 this.prepareBrush(); 
@@ -1579,6 +2112,15 @@ class ongoingTasksStats extends viewModelBase {
                     liveEtlStatsWebSocketClient.fillCache(perfStat, etlTaskData.EtlType);
                 });
             })
+        });
+
+        this.subscriptionData.forEach(subscriptionStat => {
+            subscriptionStat.ConnectionPerformance.forEach(perfStat => {
+                liveSubscriptionStatsWebSocketClient.fillConnectionCache(perfStat);
+            });
+            subscriptionStat.BatchPerformance.forEach(perfStat => {
+                liveSubscriptionStatsWebSocketClient.fillBatchCache(perfStat);
+            });
         });
     }
 
@@ -1652,10 +2194,13 @@ class ongoingTasksStats extends viewModelBase {
         }
 
         const keysToIgnore: Array<keyof performanceBaseWithCache> = ["StartedAsDate", "CompletedAsDate"];
+        
         const filePayload: exportFileFormat = {
             Replication: this.replicationData,
-            Etl: this.etlData
+            Etl: this.etlData,
+            Subscription: this.subscriptionData
         };
+        
         fileDownloader.downloadAsJson(filePayload, exportFileName + ".json", exportFileName, (key, value) => {
             if (_.includes(keysToIgnore, key)) {
                 return undefined;
@@ -1664,7 +2209,7 @@ class ongoingTasksStats extends viewModelBase {
         });
     }
 
-    clearBrush() { 
+    clearBrush() {
         this.autoScroll(false);
         this.brush.clear();
         this.brushContainer.call(this.brush);
@@ -1674,4 +2219,3 @@ class ongoingTasksStats extends viewModelBase {
 }
 
 export = ongoingTasksStats;
-

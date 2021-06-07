@@ -70,7 +70,7 @@ namespace Raven.Client.ServerWide.Operations.Certificates
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Post,
-                    Content = new BlittableJsonContent(stream => ctx.Write(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(definition, ctx)))
+                    Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(definition, ctx)).ConfigureAwait(false))
                 };
 
                 return request;

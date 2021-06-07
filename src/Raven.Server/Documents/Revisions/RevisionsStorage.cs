@@ -129,8 +129,8 @@ namespace Raven.Server.Documents.Revisions
                  };
             }
 
-            var revisionsSchema = _documentsStorage.DocumentPut.DocumentsCompression.CompressRevisions ? 
-                CompressedRevisionsSchema : 
+            var revisionsSchema = _documentsStorage.DocumentPut.DocumentsCompression.CompressRevisions ?
+                CompressedRevisionsSchema :
                 RevisionsSchema;
 
             return tx.OpenTable(revisionsSchema, tableName);
@@ -149,7 +149,7 @@ namespace Raven.Server.Documents.Revisions
                 Slice.From(ctx, nameof(ResolvedFlagByEtagSlice), ByteStringType.Immutable, out ResolvedFlagByEtagSlice);
                 Slice.From(ctx, RevisionsTombstones, ByteStringType.Immutable, out RevisionsTombstonesSlice);
                 Slice.From(ctx, CollectionName.GetTablePrefix(CollectionTableType.Revisions), ByteStringType.Immutable, out RevisionsPrefix);
-                
+
                 AddRevisionIndexes(RevisionsSchema, changeVectorSlice);
                 AddRevisionIndexes(CompressedRevisionsSchema, changeVectorSlice);
 
@@ -164,41 +164,41 @@ namespace Raven.Server.Documents.Revisions
         {
             revisionsSchema.DefineKey(new TableSchema.SchemaIndexDef
             {
-                StartIndex = (int)RevisionsTable.ChangeVector, 
+                StartIndex = (int)RevisionsTable.ChangeVector,
                 Count = 1,
-                Name = changeVectorSlice, 
+                Name = changeVectorSlice,
                 IsGlobal = true
             });
             revisionsSchema.DefineIndex(new TableSchema.SchemaIndexDef
             {
-                StartIndex = (int)RevisionsTable.LowerId, 
+                StartIndex = (int)RevisionsTable.LowerId,
                 Count = 3,
-                Name = IdAndEtagSlice, 
+                Name = IdAndEtagSlice,
                 IsGlobal = true
             });
             revisionsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
             {
                 StartIndex = (int)RevisionsTable.Etag,
-                Name = AllRevisionsEtagsSlice, 
+                Name = AllRevisionsEtagsSlice,
                 IsGlobal = true
             });
             revisionsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
             {
-                StartIndex = (int)RevisionsTable.Etag, 
+                StartIndex = (int)RevisionsTable.Etag,
                 Name = CollectionRevisionsEtagsSlice
             });
             revisionsSchema.DefineIndex(new TableSchema.SchemaIndexDef
             {
                 StartIndex = (int)RevisionsTable.DeletedEtag,
                 Count = 1,
-                Name = DeleteRevisionEtagSlice, 
+                Name = DeleteRevisionEtagSlice,
                 IsGlobal = true
             });
             revisionsSchema.DefineIndex(new TableSchema.SchemaIndexDef
             {
                 StartIndex = (int)RevisionsTable.Resolved,
-                Count = 2, 
-                Name = ResolvedFlagByEtagSlice, 
+                Count = 2,
+                Name = ResolvedFlagByEtagSlice,
                 IsGlobal = true
             });
         }
@@ -394,7 +394,7 @@ namespace Raven.Server.Documents.Revisions
             if (configuration == null)
                 configuration = GetRevisionsConfiguration(collectionName.Name);
 
-            if (configuration.Disabled && 
+            if (configuration.Disabled &&
                 nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) == false)
                 return false;
 
@@ -422,7 +422,7 @@ namespace Raven.Server.Documents.Revisions
                 PutFromRevisionIfChangeVectorIsGreater(context, document, id, changeVector, lastModifiedTicks, flags, nonPersistentFlags);
 
                 if (table.VerifyKeyExists(changeVectorSlice)) // we might create
-                    return true; 
+                    return true;
 
                 flags |= DocumentFlags.Revision;
                 var etag = _database.DocumentsStorage.GenerateNextEtag();
@@ -493,8 +493,8 @@ namespace Raven.Server.Documents.Revisions
 
                     dvj[name] = new DynamicJsonValue
                     {
-                        ["Count"] = count, 
-                        ["Start"] = start, 
+                        ["Count"] = count,
+                        ["Start"] = start,
                         ["End"] = end
                     };
                 }
@@ -550,7 +550,7 @@ namespace Raven.Server.Documents.Revisions
                 }
 
                 nonPersistentFlags |= NonPersistentDocumentFlags.SkipRevisionCreation;
-                flags = flags.Strip(DocumentFlags.Revision | DocumentFlags.HasCounters | DocumentFlags.HasTimeSeries) | DocumentFlags.HasRevisions;
+                flags = flags.Strip(DocumentFlags.Revision | DocumentFlags.DeleteRevision | DocumentFlags.HasCounters | DocumentFlags.HasTimeSeries) | DocumentFlags.HasRevisions;
 
                 if (document == null)
                 {

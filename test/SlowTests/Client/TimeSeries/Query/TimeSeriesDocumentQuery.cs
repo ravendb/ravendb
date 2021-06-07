@@ -1017,7 +1017,7 @@ where Tag = 'watches/fitbit'
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = DateTime.Today.ToUniversalTime();
 
                 using (var session = store.OpenSession())
                 {

@@ -75,18 +75,18 @@ namespace Raven.Client.Documents.Operations
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethods.Patch,
-                    Content = new BlittableJsonContent(stream =>
+                    Content = new BlittableJsonContent(async stream =>
+                    {
+                        await using (var writer = new AsyncBlittableJsonTextWriter(ctx, stream))
                         {
-                            using (var writer = new BlittableJsonTextWriter(ctx, stream))
-                            {
-                                writer.WriteStartObject();
+                            writer.WriteStartObject();
 
-                                writer.WritePropertyName("Query");
-                                writer.WriteIndexQuery(_conventions, ctx, _queryToUpdate);
-                                writer.WriteEndObject();
-                            }
+                            writer.WritePropertyName("Query");
+                            writer.WriteIndexQuery(_conventions, ctx, _queryToUpdate);
+
+                            writer.WriteEndObject();
                         }
-                    )
+                    })
                 };
 
                 url = path.ToString();

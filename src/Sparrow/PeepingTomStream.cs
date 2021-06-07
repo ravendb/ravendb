@@ -42,7 +42,7 @@ namespace Sparrow
         {
             var totalToRead = read < BufferWindowSize ? read : BufferWindowSize;
 
-            var pDest = _buffer.Pointer;
+            var pDest = _buffer.Address;
             fixed (byte* pSrc = buffer)
             {
                 var pBufferWindowStart = pDest + _pos;
@@ -92,7 +92,7 @@ namespace Sparrow
             // representing single character, so 0x80 represent start of char in utf8)
             var originalStart = start;
 
-            for (var p = _buffer.Pointer; (*(p + start) & 0x80) != 0 && size > 0;)
+            for (var p = _buffer.Address; (*(p + start) & 0x80) != 0 && size > 0;)
             {
                 start++;
 
@@ -115,7 +115,7 @@ namespace Sparrow
             var buf = new byte[size];
             if (size == 0)
                 return buf;
-            byte* pSrc = _buffer.Pointer;
+            byte* pSrc = _buffer.Address;
             fixed (byte* pDest = buf)
             {
                 var firstSize = size - start;

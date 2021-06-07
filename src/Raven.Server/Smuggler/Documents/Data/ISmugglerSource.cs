@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
+using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.Replication;
@@ -15,37 +16,73 @@ namespace Raven.Server.Smuggler.Documents.Data
 {
     public interface ISmugglerSource
     {
-        IDisposable Initialize(DatabaseSmugglerOptionsServerSide options, SmugglerResult result, out long buildVersion);
-        DatabaseItemType GetNextType();
-        DatabaseRecord GetDatabaseRecord();
-        IEnumerable<DocumentItem> GetDocuments(List<string> collectionsToExport, INewDocumentActions actions);
-        IEnumerable<DocumentItem> GetRevisionDocuments(List<string> collectionsToExport, INewDocumentActions actions);
-        IEnumerable<DocumentItem> GetLegacyAttachments(INewDocumentActions actions);
-        IEnumerable<string> GetLegacyAttachmentDeletions();
-        IEnumerable<string> GetLegacyDocumentDeletions();
-        IEnumerable<Tombstone> GetTombstones(List<string> collectionsToExport, INewDocumentActions actions);
-        IEnumerable<DocumentConflict> GetConflicts(List<string> collectionsToExport, INewDocumentActions actions);
-        IEnumerable<IndexDefinitionAndType> GetIndexes();
-        IEnumerable<(string Prefix, long Value, long Index)> GetIdentities();
-        IEnumerable<(CompareExchangeKey Key, long Index, BlittableJsonReaderObject Value)> GetCompareExchangeValues();
-        IEnumerable<(CompareExchangeKey Key, long Index)> GetCompareExchangeTombstones();
-        IEnumerable<CounterGroupDetail> GetCounterValues(List<string> collectionsToExport, ICounterActions actions);
-        IEnumerable<CounterDetail> GetLegacyCounterValues();
-        IEnumerable<SubscriptionState> GetSubscriptions();
-        IEnumerable<(string Hub, ReplicationHubAccess Access)> GetReplicationHubCertificates();
-        IEnumerable<TimeSeriesItem> GetTimeSeries(List<string> collectionsToExport);
+        Task<SmugglerInitializeResult> InitializeAsync(DatabaseSmugglerOptionsServerSide options, SmugglerResult result);
 
-        long SkipType(DatabaseItemType type, Action<long> onSkipped, CancellationToken token);
+        Task<DatabaseItemType> GetNextTypeAsync();
+
+        Task<DatabaseRecord> GetDatabaseRecordAsync();
+
+        IAsyncEnumerable<DocumentItem> GetDocumentsAsync(List<string> collectionsToExport, INewDocumentActions actions);
+
+        IAsyncEnumerable<DocumentItem> GetRevisionDocumentsAsync(List<string> collectionsToExport, INewDocumentActions actions);
+
+        IAsyncEnumerable<DocumentItem> GetLegacyAttachmentsAsync(INewDocumentActions actions);
+
+        IAsyncEnumerable<string> GetLegacyAttachmentDeletionsAsync();
+
+        IAsyncEnumerable<string> GetLegacyDocumentDeletionsAsync();
+
+        IAsyncEnumerable<Tombstone> GetTombstonesAsync(List<string> collectionsToExport, INewDocumentActions actions);
+
+        IAsyncEnumerable<DocumentConflict> GetConflictsAsync(List<string> collectionsToExport, INewDocumentActions actions);
+
+        IAsyncEnumerable<IndexDefinitionAndType> GetIndexesAsync();
+
+        IAsyncEnumerable<(string Prefix, long Value, long Index)> GetIdentitiesAsync();
+
+        IAsyncEnumerable<(CompareExchangeKey Key, long Index, BlittableJsonReaderObject Value)> GetCompareExchangeValuesAsync(INewCompareExchangeActions actions);
+
+        IAsyncEnumerable<(CompareExchangeKey Key, long Index)> GetCompareExchangeTombstonesAsync();
+
+        IAsyncEnumerable<CounterGroupDetail> GetCounterValuesAsync(List<string> collectionsToExport, ICounterActions actions);
+
+        IAsyncEnumerable<CounterDetail> GetLegacyCounterValuesAsync();
+
+        IAsyncEnumerable<SubscriptionState> GetSubscriptionsAsync();
+
+        IAsyncEnumerable<(string Hub, ReplicationHubAccess Access)> GetReplicationHubCertificatesAsync();
+
+        IAsyncEnumerable<TimeSeriesItem> GetTimeSeriesAsync(List<string> collectionsToExport);
+
+        Task<long> SkipTypeAsync(DatabaseItemType type, Action<long> onSkipped, CancellationToken token);
 
         SmugglerSourceType GetSourceType();
-        
     }
+
     public enum SmugglerSourceType
     {
         None,
         FullExport,
         IncrementalExport,
         Import
+    }
+
+    public class SmugglerInitializeResult : IDisposable
+    {
+        private readonly IDisposable _disposable;
+
+        public readonly long BuildNumber;
+
+        public SmugglerInitializeResult(IDisposable disposable, long buildNumber)
+        {
+            _disposable = disposable ?? throw new ArgumentNullException(nameof(disposable));
+            BuildNumber = buildNumber;
+        }
+
+        public void Dispose()
+        {
+            _disposable.Dispose();
+        }
     }
 
     public class IndexDefinitionAndType

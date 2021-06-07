@@ -61,7 +61,6 @@ abstract class abstractWebSocketClient<T> {
     }
     
     private connectWebSocket(connectArgs: any) {
-        
         const wsProtocol = window.location.protocol === "https:" ? "wss://" : "ws://";
         const queryString = this.webSocketUrlFactory(connectArgs);
         const queryStringWithStudioMarker = queryString.includes("?") ? queryString + "&fromStudio=true" : queryString + "?fromStudio=true";
@@ -95,7 +94,7 @@ abstract class abstractWebSocketClient<T> {
             }
 
             if (this.autoReconnect) {
-                this.connect(() => this.connectWebSocket(connectArgs));
+                setTimeout(() => this.connect(() => this.connectWebSocket(connectArgs)), 1000);
             }
         };
         

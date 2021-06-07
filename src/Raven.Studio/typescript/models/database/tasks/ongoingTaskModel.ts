@@ -29,6 +29,8 @@ abstract class ongoingTaskModel {
                 return "External Replication" as TasksNamesInUI;
             case "SqlEtl":
                 return "SQL ETL" as TasksNamesInUI;
+            case "OlapEtl":
+                return "OLAP ETL" as TasksNamesInUI;
             case "PullReplicationAsHub":
                 return "Replication Hub" as TasksNamesInUI;
             case "PullReplicationAsSink":
@@ -58,7 +60,7 @@ abstract class ongoingTaskModel {
                     return "state-offline";
                 }
             }
-        });            
+        });
 
         this.badgeText = ko.pureComputed(() => {
 

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Http;
 using Raven.Client.Json.Serialization;
@@ -78,11 +79,13 @@ namespace Raven.Client.Documents.Operations.ConnectionStrings
     {
         public Dictionary<string, RavenConnectionString> RavenConnectionStrings { get; set; }
         public Dictionary<string, SqlConnectionString> SqlConnectionStrings { get; set; }
+        public Dictionary<string, OlapConnectionString> OlapConnectionStrings { get; set; }
 
         public DynamicJsonValue ToJson()
         {
             var ravenConnections = new DynamicJsonValue();
             var sqlConnections = new DynamicJsonValue();
+            var olapConnections = new DynamicJsonValue();
 
             foreach (var kvp in RavenConnectionStrings)
             {
@@ -92,11 +95,16 @@ namespace Raven.Client.Documents.Operations.ConnectionStrings
             {
                 sqlConnections[kvp.Key] = kvp.Value.ToJson();
             }
+            foreach (var kvp in OlapConnectionStrings)
+            {
+                olapConnections[kvp.Key] = kvp.Value.ToJson();
+            }
 
             return new DynamicJsonValue
             {
                 [nameof(RavenConnectionStrings)] = ravenConnections,
-                [nameof(SqlConnectionStrings)] = sqlConnections
+                [nameof(SqlConnectionStrings)] = sqlConnections,
+                [nameof(OlapConnectionStrings)] = olapConnections
             };
         }
     }

@@ -64,6 +64,15 @@ namespace Raven.Server.ServerWide.Commands
                         sqlEtl.Disabled = Disable;
                     }
                     break;
+                
+                case OngoingTaskType.OlapEtl:
+
+                    var olapEtl = record?.OlapEtls?.Find(x => x.TaskId == TaskId);
+                    if (olapEtl != null)
+                    {
+                        olapEtl.Disabled = Disable;
+                    }
+                    break;
 
                 case OngoingTaskType.RavenEtl:
 

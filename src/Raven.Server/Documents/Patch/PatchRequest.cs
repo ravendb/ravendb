@@ -14,6 +14,7 @@ namespace Raven.Server.Documents.Patch
         Conflict,        
         SqlEtl,
         RavenEtl,
+        OlapEtl,
         Smuggler,
         EtlBehaviorFunctions
     }
@@ -78,7 +79,8 @@ namespace Raven.Server.Documents.Patch
                 case PatchRequestType.SqlEtl:
                 case PatchRequestType.Smuggler:
                 case PatchRequestType.RavenEtl:
-                    // modify and return the document
+                case PatchRequestType.OlapEtl:
+                // modify and return the document
                 case PatchRequestType.Patch:
                     return $@"
  function __actual_func(args) {{ 

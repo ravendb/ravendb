@@ -16,13 +16,13 @@ namespace Raven.Client.Documents.Operations.ETL
 
         internal const string AttachmentMarker = "$attachment/";
 
-        
-
         internal const string GenericDeleteDocumentsBehaviorFunctionKey = "$deleteDocumentsBehavior<>";
 
         internal const string GenericDeleteDocumentsBehaviorFunctionName = "deleteDocumentsBehavior";
 
         private static readonly Regex LoadToMethodRegex = new Regex($@"{LoadTo}(\w+)", RegexOptions.Compiled);
+
+        private static readonly Regex LoadToMethodRegexAlt = new Regex($@"{LoadTo}\(\'(\w+)\'|{LoadTo}\(\""(\w+)\""", RegexOptions.Compiled);
 
         private static readonly Regex LoadAttachmentMethodRegex = new Regex(LoadAttachment, RegexOptions.Compiled);
         private static readonly Regex AddAttachmentMethodRegex = new Regex(AddAttachment, RegexOptions.Compiled);
@@ -250,7 +250,6 @@ namespace Raven.Client.Documents.Operations.ETL
 
         internal bool IsLoadingAttachments { get; private set; }
 
-
         public Transformation()
         {
             Counters = new CountersTransformation(this);
@@ -385,6 +384,7 @@ namespace Raven.Client.Documents.Operations.ETL
                                 targetName = "Collection";
                                 break;
                             case EtlType.Sql:
+                            case EtlType.Olap:
                                 targetName = "Table";
                                 break;
                             default:
@@ -461,15 +461,25 @@ namespace Raven.Client.Documents.Operations.ETL
                 return _collections;
 
             var match = LoadToMethodRegex.Matches(Script);
+            var matchAlt = LoadToMethodRegexAlt.Matches(Script);
 
-            if (match.Count == 0)
+            if (match.Count == 0 && matchAlt.Count == 0)
                 return null;
 
-            _collections = new string[match.Count];
+            _collections = new string[match.Count + matchAlt.Count];
 
             for (var i = 0; i < match.Count; i++)
             {
                 _collections[i] = match[i].Value.Substring(LoadTo.Length);
+            }
+
+            for (var i = 0; i < matchAlt.Count; i++)
+            {
+                var group1 = matchAlt[i].Groups[1];
+                var group2 = matchAlt[i].Groups[2];
+                var collection = group1.Success ? group1.Value : group2.Value;
+
+                _collections[match.Count + i] = collection;
             }
 
             return _collections;

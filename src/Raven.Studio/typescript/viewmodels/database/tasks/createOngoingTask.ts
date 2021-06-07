@@ -3,12 +3,7 @@ import appUrl = require("common/appUrl");
 import router = require("plugins/router");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase"); 
 
-
 class createOngoingTask extends dialogViewModelBase {
-
-    compositionComplete() {
-        super.compositionComplete();
-    }
 
     newReplicationTask() {
         eventsCollector.default.reportEvent("ExternalReplication", "new");
@@ -41,6 +36,13 @@ class createOngoingTask extends dialogViewModelBase {
     newSqlEtlTask() {
         eventsCollector.default.reportEvent("SqlETL", "new");
         const url = appUrl.forEditSqlEtl(this.activeDatabase());
+        router.navigate(url);
+        this.close();
+    }
+
+    newOlapEtlTask() {
+        eventsCollector.default.reportEvent("OlapETL", "new");
+        const url = appUrl.forEditOlapEtl(this.activeDatabase());
         router.navigate(url);
         this.close();
     }

@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions.Changes;
+using Raven.Client.Exceptions.Database;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Util;
@@ -355,6 +356,10 @@ namespace Raven.Client.Documents.Changes
 
             _client?.Dispose();
 
+            foreach (var state in _counters.ForceEnumerateInThreadSafeManner())
+            {
+                state.Value.Dispose();
+            }
             _counters.Clear();
 
             try
@@ -387,7 +392,7 @@ namespace Raven.Client.Documents.Changes
                     try
                     {
                         if (Connected)
-                            await Send(unwatchCommand, value, values).ConfigureAwait(false);
+                            await SendAsync(unwatchCommand, value, values).ConfigureAwait(false);
                     }
                     catch (WebSocketException)
                     {
@@ -401,7 +406,7 @@ namespace Raven.Client.Documents.Changes
 
                 async Task OnConnect()
                 {
-                    await Send(watchCommand, value, values).ConfigureAwait(false);
+                    await SendAsync(watchCommand, value, values).ConfigureAwait(false);
                 }
 
                 newValue = true;
@@ -421,7 +426,7 @@ namespace Raven.Client.Documents.Changes
             return counter;
         }
 
-        private async Task Send(string command, string value, string[] values)
+        private async Task SendAsync(string command, string value, string[] values)
         {
             var taskCompletionSource = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
             int currentCommandId;
@@ -430,7 +435,7 @@ namespace Raven.Client.Documents.Changes
             {
                 currentCommandId = ++_commandId;
                 using (_requestExecutor.ContextPool.AllocateOperationContext(out var context))
-                using (var writer = new BlittableJsonTextWriter(context, _ms))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, _ms))
                 {
                     writer.WriteStartObject();
                     writer.WritePropertyName("CommandId");
@@ -475,9 +480,11 @@ namespace Raven.Client.Documents.Changes
         {
             try
             {
-                (_nodeIndex, _serverNode) = nodeTag == null || _requestExecutor.Conventions.DisableTopologyUpdates
-                    ? await _requestExecutor.GetPreferredNode().ConfigureAwait(false)
-                    : await _requestExecutor.GetRequestedNode(nodeTag).ConfigureAwait(false);
+                var task = nodeTag == null || _requestExecutor.Conventions.DisableTopologyUpdates
+                    ? _requestExecutor.GetPreferredNode()
+                    : _requestExecutor.GetRequestedNode(nodeTag);
+
+                (_nodeIndex, _serverNode) = await task.ConfigureAwait(false);
             }
             catch (OperationCanceledException e)
             {
@@ -540,6 +547,11 @@ namespace Raven.Client.Documents.Changes
                         try
                         {
                             _serverNode = await _requestExecutor.HandleServerNotResponsive(_url.AbsoluteUri, _serverNode, _nodeIndex, e).ConfigureAwait(false);
+                        }
+                        catch (DatabaseDoesNotExistException databaseDoesNotExistException)
+                        {
+                            e = databaseDoesNotExistException;
+                            throw;
                         }
                         catch (Exception)
                         {
@@ -646,6 +658,7 @@ namespace Raven.Client.Documents.Changes
                                             json.TryGet("Exception", out string exceptionAsString);
                                             NotifyAboutError(new Exception(exceptionAsString));
                                             break;
+
                                         case "Confirm":
                                             if (json.TryGet("CommandId", out int commandId) &&
                                                 _confirmations.TryRemove(commandId, out var tcs))
@@ -654,6 +667,7 @@ namespace Raven.Client.Documents.Changes
                                             }
 
                                             break;
+
                                         default:
                                             json.TryGet("Value", out BlittableJsonReaderObject value);
                                             NotifySubscribers(type, value, _counters.ForceEnumerateInThreadSafeManner().Select(x => x.Value).ToList());
@@ -683,6 +697,7 @@ namespace Raven.Client.Documents.Changes
                         state.Send(documentChange);
                     }
                     break;
+
                 case nameof(CounterChange):
                     var counterChange = CounterChange.FromJson(value);
                     foreach (var state in states)
@@ -690,6 +705,7 @@ namespace Raven.Client.Documents.Changes
                         state.Send(counterChange);
                     }
                     break;
+
                 case nameof(TimeSeriesChange):
                     var timeSeriesChange = TimeSeriesChange.FromJson(value);
                     foreach (var state in states)
@@ -697,6 +713,7 @@ namespace Raven.Client.Documents.Changes
                         state.Send(timeSeriesChange);
                     }
                     break;
+
                 case nameof(IndexChange):
                     var indexChange = IndexChange.FromJson(value);
                     foreach (var state in states)
@@ -704,6 +721,7 @@ namespace Raven.Client.Documents.Changes
                         state.Send(indexChange);
                     }
                     break;
+
                 case nameof(OperationStatusChange):
                     var operationStatusChange = OperationStatusChange.FromJson(value);
                     foreach (var state in states)
@@ -711,6 +729,7 @@ namespace Raven.Client.Documents.Changes
                         state.Send(operationStatusChange);
                     }
                     break;
+
                 case nameof(TopologyChange):
                     var topologyChange = TopologyChange.FromJson(value);
 
@@ -731,6 +750,7 @@ namespace Raven.Client.Documents.Changes
                         }).ConfigureAwait(false);
                     }
                     break;
+
                 default:
                     throw new NotSupportedException(type);
             }

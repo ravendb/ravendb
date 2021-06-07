@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             var sp = Stopwatch.StartNew();
             var threadsUsage = new ThreadsUsage();
 
-            using (var sw = new StringWriter())
+            await using (var sw = new StringWriter())
             {
                 OutputResultToStream(sw, threadIds.ToHashSet(), includeStackObjects);
 
@@ -51,7 +51,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
                 using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 {
-                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
                         context.Write(writer, DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(result, context));
                     }
@@ -64,7 +64,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     try
                     {
@@ -88,8 +88,6 @@ namespace Raven.Server.Documents.Handlers.Debugging
                                 ["Error"] = e.ToString()
                             });
                     }
-
-                    writer.Flush();
                 }
             }
         }

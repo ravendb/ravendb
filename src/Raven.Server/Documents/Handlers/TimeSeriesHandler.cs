@@ -3,16 +3,14 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session.TimeSeries;
-using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
-using Raven.Server.Documents.Queries;
-using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Json;
@@ -22,7 +20,6 @@ using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.TrafficWatch;
-using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server;
@@ -31,8 +28,8 @@ namespace Raven.Server.Documents.Handlers
 {
     public class TimeSeriesHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/timeseries/stats", "GET", AuthorizationStatus.ValidUser)]
-        public Task Stats()
+        [RavenAction("/databases/*/timeseries/stats", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        public async Task Stats()
         {
             var documentId = GetStringQueryString("docId");
 
@@ -43,11 +40,11 @@ namespace Raven.Server.Documents.Handlers
                 if (document == null)
                 {
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                    return Task.CompletedTask;
+                    return;
                 }
 
                 var timeSeriesNames = GetTimesSeriesNames(document);
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
 
@@ -98,8 +95,6 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteEndObject();
                 }
             }
-
-            return Task.CompletedTask;
         }
 
         internal static List<string> GetTimesSeriesNames(Document document)
@@ -125,7 +120,7 @@ namespace Raven.Server.Documents.Handlers
             return timeSeriesNames;
         }
 
-        [RavenAction("/databases/*/timeseries/ranges", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/timeseries/ranges", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task ReadRanges()
         {
             var documentId = GetStringQueryString("docId");
@@ -159,11 +154,11 @@ namespace Raven.Server.Documents.Handlers
 
                 HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + actualEtag + "\"";
 
-                await WriteResponse(context, documentId, ranges);
+                await WriteResponse(context, documentId, ranges, Database.DatabaseShutdown);
             }
         }
 
-        [RavenAction("/databases/*/timeseries", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/timeseries", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task Read()
         {
             var documentId = GetStringQueryString("docId");
@@ -218,12 +213,10 @@ namespace Raven.Server.Documents.Handlers
                     totalCount = stats.Count;
                 }
 
-                using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream(), Database.DatabaseShutdown))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     if (rangeResult != null)
                         WriteRange(writer, rangeResult, totalCount);
-
-                    await writer.MaybeOuterFlushAsync();
                 }
             }
         }
@@ -407,9 +400,9 @@ namespace Raven.Server.Documents.Handlers
             return ComputeHttpEtags.FinalizeHash(size, state);
         }
 
-        private async Task WriteResponse(DocumentsOperationContext context, string documentId, Dictionary<string, List<TimeSeriesRangeResult>> ranges)
+        private async Task WriteResponse(DocumentsOperationContext context, string documentId, Dictionary<string, List<TimeSeriesRangeResult>> ranges, CancellationToken token)
         {
-            using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream(), Database.DatabaseShutdown))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
                 {
@@ -418,15 +411,13 @@ namespace Raven.Server.Documents.Handlers
 
                     writer.WriteComma();
                     writer.WritePropertyName(nameof(TimeSeriesDetails.Values));
-                    await WriteTimeSeriesRangeResultsAsync(context, writer, documentId, ranges);
+                    await WriteTimeSeriesRangeResultsAsync(context, writer, documentId, ranges, token);
                 }
                 writer.WriteEndObject();
-
-                await writer.OuterFlushAsync();
             }
         }
 
-        internal static async Task WriteTimeSeriesRangeResultsAsync(DocumentsOperationContext context, AsyncBlittableJsonTextWriter writer, string documentId, Dictionary<string, List<TimeSeriesRangeResult>> dictionary)
+        internal static async Task WriteTimeSeriesRangeResultsAsync(DocumentsOperationContext context, AsyncBlittableJsonTextWriter writer, string documentId, Dictionary<string, List<TimeSeriesRangeResult>> dictionary, CancellationToken token)
         {
             if (dictionary == null)
             {
@@ -469,7 +460,7 @@ namespace Raven.Server.Documents.Handlers
 
                     WriteRange(writer, ranges[i], totalCount);
 
-                    await writer.MaybeOuterFlushAsync();
+                    await writer.MaybeFlushAsync(token);
                 }
                 writer.WriteEndArray();
             }
@@ -477,7 +468,7 @@ namespace Raven.Server.Documents.Handlers
             writer.WriteEndObject();
         }
 
-        internal static void WriteTimeSeriesRangeResults(DocumentsOperationContext context, BlittableJsonTextWriter writer, string documentId, Dictionary<string, List<TimeSeriesRangeResult>> dictionary)
+        internal static void WriteTimeSeriesRangeResults(DocumentsOperationContext context, AsyncBlittableJsonTextWriter writer, string documentId, Dictionary<string, List<TimeSeriesRangeResult>> dictionary)
         {
             if (dictionary == null)
             {
@@ -526,7 +517,7 @@ namespace Raven.Server.Documents.Handlers
             writer.WriteEndObject();
         }
 
-        private static void WriteRange(AbstractBlittableJsonTextWriter writer, TimeSeriesRangeResult rangeResult, long? totalCount)
+        private static void WriteRange(AsyncBlittableJsonTextWriter writer, TimeSeriesRangeResult rangeResult, long? totalCount)
         {
             writer.WriteStartObject();
             {
@@ -566,7 +557,7 @@ namespace Raven.Server.Documents.Handlers
             writer.WriteEndObject();
         }
 
-        private static void WriteEntries(AbstractBlittableJsonTextWriter writer, TimeSeriesEntry[] entries)
+        private static void WriteEntries(AsyncBlittableJsonTextWriter writer, TimeSeriesEntry[] entries)
         {
             writer.WriteStartArray();
 
@@ -594,7 +585,7 @@ namespace Raven.Server.Documents.Handlers
             writer.WriteEndArray();
         }
 
-        [RavenAction("/databases/*/timeseries", "POST", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/timeseries", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public async Task Batch()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -622,8 +613,8 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/timeseries/config", "GET", AuthorizationStatus.ValidUser)]
-        public Task GetTimeSeriesConfig()
+        [RavenAction("/databases/*/timeseries/config", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        public async Task GetTimeSeriesConfig()
         {
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
@@ -636,7 +627,7 @@ namespace Raven.Server.Documents.Handlers
 
                 if (timeSeriesConfig != null)
                 {
-                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
                         context.Write(writer, timeSeriesConfig.ToJson());
                     }
@@ -646,7 +637,6 @@ namespace Raven.Server.Documents.Handlers
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                 }
             }
-            return Task.CompletedTask;
         }
 
         [RavenAction("/databases/*/admin/timeseries/config", "POST", AuthorizationStatus.DatabaseAdmin)]
@@ -692,7 +682,7 @@ namespace Raven.Server.Documents.Handlers
             var collection = GetStringQueryString("collection", required: true);
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (var json = context.ReadForDisk(RequestBodyStream(), "time-series policy config"))
+            using (var json = await context.ReadForDiskAsync(RequestBodyStream(), "time-series policy config"))
             {
                 var policy = JsonDeserializationCluster.TimeSeriesPolicy(json);
 
@@ -727,7 +717,7 @@ namespace Raven.Server.Documents.Handlers
                 var (index, _) = await ServerStore.SendToLeaderAsync(editTimeSeries);
 
                 await WaitForIndexToBeApplied(context, index);
-                SendConfigurationResponse(context, index);
+                await SendConfigurationResponseAsync(context, index);
             }
         }
 
@@ -769,18 +759,18 @@ namespace Raven.Server.Documents.Handlers
                     var (index, _) = await ServerStore.SendToLeaderAsync(editTimeSeries);
 
                     await WaitForIndexToBeApplied(context, index);
-                    SendConfigurationResponse(context, index);
+                    await SendConfigurationResponseAsync(context, index);
                 }
             }
         }
 
-        [RavenAction("/databases/*/timeseries/names/config", "POST", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/timeseries/names/config", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public async Task ConfigTimeSeriesNames()
         {
             await ServerStore.EnsureNotPassiveAsync();
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (var json = context.ReadForDisk(RequestBodyStream(), "time-series value names"))
+            using (var json = await context.ReadForDiskAsync(RequestBodyStream(), "time-series value names"))
             {
                 var parameters = JsonDeserializationServer.Parameters.TimeSeriesValueNamesParameters(json);
                 parameters.Validate();
@@ -811,17 +801,16 @@ namespace Raven.Server.Documents.Handlers
                 var (index, _) = await ServerStore.SendToLeaderAsync(editTimeSeries);
 
                 await WaitForIndexToBeApplied(context, index);
-                SendConfigurationResponse(context, index);
+                await SendConfigurationResponseAsync(context, index);
             }
         }
 
-        private void SendConfigurationResponse(TransactionOperationContext context, long index)
+        private async Task SendConfigurationResponseAsync(TransactionOperationContext context, long index)
         {
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 var response = new DynamicJsonValue { ["RaftCommandIndex"] = index, };
                 context.Write(writer, response);
-                writer.Flush();
             }
         }
 
@@ -998,8 +987,8 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/timeseries/debug/segments-summary", "GET", AuthorizationStatus.ValidUser)]
-        public Task GetSegmentSummary()
+        [RavenAction("/databases/*/timeseries/debug/segments-summary", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        public async Task GetSegmentSummary()
         {
             var documentId = GetStringQueryString("docId");
             var name = GetStringQueryString("name");
@@ -1009,15 +998,15 @@ namespace Raven.Server.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var segmantsSummary = Database.DocumentsStorage.TimeSeriesStorage.GetSegmentsSummary(context, documentId, name, from, to);
+                var segmentsSummary = Database.DocumentsStorage.TimeSeriesStorage.GetSegmentsSummary(context, documentId, name, from, to);
 
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
                     writer.WritePropertyName("Results");
                     writer.WriteStartArray();
                     var first = true;
-                    foreach (var summery in segmantsSummary)
+                    foreach (var summery in segmentsSummary)
                     {
                         if (!first)
                             writer.WriteComma();
@@ -1028,7 +1017,6 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteEndObject();
                 }
             }
-            return Task.CompletedTask;
         }
     }
 }

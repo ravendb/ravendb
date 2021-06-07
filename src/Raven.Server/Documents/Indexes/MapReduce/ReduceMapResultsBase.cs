@@ -77,13 +77,13 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         public string Name { get; } = "Reduce";
 
-        public bool Execute(QueryOperationContext queryContext, TransactionOperationContext indexContext, Lazy<IndexWriteOperation> writeOperation,
+        public (bool MoreWorkFound, Index.CanContinueBatchResult BatchContinuationResult) Execute(QueryOperationContext queryContext, TransactionOperationContext indexContext, Lazy<IndexWriteOperation> writeOperation,
                             IndexingStatsScope stats, CancellationToken token)
         {
             if (_mapReduceContext.StoreByReduceKeyHash.Count == 0)
             {
                 WriteLastEtags(indexContext); // we need to write etags here, because if we filtered everything during map then we will loose last indexed etag information and this will cause an endless indexing loop
-                return false;
+                return (false, Index.CanContinueBatchResult.None);
             }
 
             ReduceResultsSchema.Create(indexContext.Transaction.InnerTransaction, PageNumberToReduceResultTableName, 32);
@@ -151,13 +151,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             WriteLastEtags(indexContext);
             _mapReduceContext.StoreNextMapResultId();
 
-            return false;
-        }
-
-        public bool CanContinueBatch(QueryOperationContext queryContext, TransactionOperationContext indexingContext, 
-            IndexingStatsScope stats, IndexWriteOperation indexWriteOperation, long currentEtag, long maxEtag, long count)
-        {
-            throw new NotSupportedException();
+            return (false, Index.CanContinueBatchResult.None);
         }
 
         private void WriteLastEtags(TransactionOperationContext indexContext)

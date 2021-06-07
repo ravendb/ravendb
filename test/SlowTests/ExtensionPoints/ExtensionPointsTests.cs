@@ -255,7 +255,7 @@ exit 129";
         }
 
         [Fact]
-        public void CertificateAndMasterKeyExecTest()
+        public async Task CertificateAndMasterKeyExecTest()
         {
             string script;
             IDictionary<string, string> customSettings = new ConcurrentDictionary<string, string>();
@@ -330,6 +330,8 @@ exit 0";
             {
                 return;
             }
+
+            await Server.ServerStore.EnsureNotPassiveAsync();
             Server.ServerStore.PutSecretKey(base64Key, dbName, true);
             X509Certificate2 serverCertificate;
             try

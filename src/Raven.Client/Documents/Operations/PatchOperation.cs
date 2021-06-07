@@ -106,10 +106,7 @@ namespace Raven.Client.Documents.Operations
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethods.Patch,
-                    Content = new BlittableJsonContent(stream =>
-                    {
-                        ctx.Write(stream, _patch);
-                    })
+                    Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, _patch).ConfigureAwait(false))
                 };
                 AddChangeVectorIfNotNull(_changeVector, request);
                 return request;

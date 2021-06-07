@@ -67,6 +67,18 @@ abstract class timeSeriesContainer<T> {
         this.onChange = onChange;
     }
     
+    isEqual(other: timeSeriesContainer<T>) {
+        if (other.name !== this.name) {
+            return false;
+        }
+        
+        if (other.documentId !== this.documentId) {
+            return false;
+        }
+        
+        return true;
+    }
+    
     get sectionName() {
         return this.documentId + " - " + this.name;
     }
@@ -294,6 +306,27 @@ class timeSeriesPlotDetails extends viewModelBase {
 
         this.colorClassScale = d3.scale.ordinal<string>()
             .range(_.range(1, 11).map(x => "color-" + x));
+    }
+    
+    isEqual(other: timeSeriesPlotDetails) {
+        if (other.pointTimeSeries.length !== this.pointTimeSeries.length ||
+            other.rangeTimeSeries.length !== this.rangeTimeSeries.length) {
+            return false;
+        }
+
+        for (let i = 0; i < other.pointTimeSeries.length; i++) {
+            if (!other.pointTimeSeries[i].isEqual(this.pointTimeSeries[i])) {
+                return false;
+            }
+        }
+
+        for (let i = 0; i < other.rangeTimeSeries.length; i++) {
+            if (!other.rangeTimeSeries[i].isEqual(this.rangeTimeSeries[i])) {
+                return false;
+            }
+        }
+        
+        return true;
     }
     
     getColorClass(series: graphSeries<any>) {

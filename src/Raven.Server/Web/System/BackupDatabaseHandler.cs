@@ -12,12 +12,12 @@ namespace Raven.Server.Web.System
 {
     public sealed class BackupDatabaseHandler : RequestHandler
     {
-        [RavenAction("/periodic-backup", "GET", AuthorizationStatus.ValidUser)]
-        public Task GetPeriodicBackup()
+        [RavenAction("/periodic-backup", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        public async Task GetPeriodicBackup()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-            if (TryGetAllowedDbs(name, out var _, requireAdmin: false) == false)
-                return Task.CompletedTask;
+            if (await CanAccessDatabaseAsync(name, requireAdmin: false, requireWrite: false) == false)
+                return;
 
             var taskId = GetLongQueryString("taskId", required: true).Value;
             if (taskId == 0)
@@ -25,7 +25,7 @@ namespace Raven.Server.Web.System
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             using (var rawRecord = ServerStore.Cluster.ReadRawDatabaseRecord(context, name))
             {
                 var periodicBackup = rawRecord.GetPeriodicBackupConfiguration(taskId);
@@ -33,35 +33,29 @@ namespace Raven.Server.Web.System
                     throw new InvalidOperationException($"Periodic backup task ID: {taskId} doesn't exist");
 
                 context.Write(writer, periodicBackup.ToJson());
-                writer.Flush();
             }
-
-            return Task.CompletedTask;
         }
 
-        [RavenAction("/periodic-backup/status", "GET", AuthorizationStatus.ValidUser)]
-        public Task GetPeriodicBackupStatus()
+        [RavenAction("/periodic-backup/status", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        public async Task GetPeriodicBackupStatus()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
-            if (TryGetAllowedDbs(name, out var _, requireAdmin: false) == false)
-                return Task.CompletedTask;
+            if (await CanAccessDatabaseAsync(name, requireAdmin: false, requireWrite: false) == false)
+                return;
 
             var taskId = GetLongQueryString("taskId", required: true);
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             using (var statusBlittable = ServerStore.Cluster.Read(context, PeriodicBackupStatus.GenerateItemName(name, taskId.Value)))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
                 writer.WritePropertyName(nameof(GetPeriodicBackupStatusOperationResult.Status));
                 writer.WriteObject(statusBlittable);
                 writer.WriteEndObject();
-                writer.Flush();
             }
-
-            return Task.CompletedTask;
         }
 
         [RavenAction("/admin/debug/periodic-backup/timers", "GET", AuthorizationStatus.Operator)]
@@ -72,7 +66,7 @@ namespace Raven.Server.Web.System
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 WriteStartOfTimers(writer);
 

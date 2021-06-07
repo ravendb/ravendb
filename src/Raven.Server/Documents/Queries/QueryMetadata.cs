@@ -16,6 +16,7 @@ using Raven.Client.Documents.Session.Loaders;
 using Raven.Client.Exceptions;
 using Raven.Client.Util;
 using Raven.Server.Documents.Indexes.Spatial;
+using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Counters;
 using Raven.Server.Documents.Queries.Explanation;
@@ -28,6 +29,8 @@ using Raven.Server.Extensions;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Utils;
+using Spatial4n.Core.Shapes;
+using Spatial4n.Core.Shapes.Nts;
 using BinaryExpression = Raven.Server.Documents.Queries.AST.BinaryExpression;
 
 namespace Raven.Server.Documents.Queries
@@ -2426,12 +2429,12 @@ namespace Raven.Server.Documents.Queries
 
                         if (_metadata.AddSpatialProperties && _metadata.IsDynamic)
                         {
-                            var unitsStr = args.Count == 4 ? (args[3] as ValueExpression).Token.ToString() : null;
-                            var circleShape = new Circle(
-                                (args[0] as ValueExpression).Token.ToString(),
-                                (args[1] as ValueExpression).Token.ToString(),
-                                (args[2] as ValueExpression).Token.ToString(),
-                                unitsStr);
+                            var fieldNameAsString = fieldName.ToString();
+                            var spatialOptions = SpatialOptions.Default;
+                            var spatialField = new SpatialField(fieldNameAsString, spatialOptions);
+
+                            var circle = (ICircle)QueryBuilder.HandleCircle(_metadata.Query, shapeExpression, _metadata, parameters, fieldNameAsString, spatialField, out var units);
+                            var circleShape = new Circle(circle, units, spatialOptions);
 
                             AddSpatialShapeToMetadata(circleShape);
                         }
@@ -2442,20 +2445,21 @@ namespace Raven.Server.Documents.Queries
 
                         if (_metadata.AddSpatialProperties && _metadata.IsDynamic)
                         {
-                            SpatialShape? shapeType = GetShapeString(args[0]);
-                            switch (shapeType)
-                            {
-                                case SpatialShape.Circle:
-                                    var unitsStrWkt = args.Count == 2 ? (args[1] as ValueExpression).Token.ToString() : null;
-                                    var circleShapeWkt = new Circle((args[0] as ValueExpression).Token.ToString(), unitsStrWkt);
-                                    AddSpatialShapeToMetadata(circleShapeWkt);
-                                    break;
+                            var fieldNameAsString = fieldName.ToString();
+                            var spatialOptions = SpatialOptions.Default;
+                            var spatialField = new SpatialField(fieldNameAsString, spatialOptions);
+                            var shape = QueryBuilder.HandleWkt(_metadata.Query, shapeExpression, _metadata, parameters, fieldNameAsString, spatialField, out var units);
 
-                                case SpatialShape.Polygon:
-                                    var polygonShape = new Polygon((args[0] as ValueExpression).Token.ToString());
-                                    AddSpatialShapeToMetadata(polygonShape);
-                                    break;
-                            }
+                            SpatialShapeBase shapeBase = null;
+                            if (shape is ICircle circle)
+                                shapeBase = new Circle(circle, units, spatialOptions);
+                            else if (shape is IRectangle rectangle)
+                                shapeBase = new Polygon(rectangle);
+                            else if (shape is NtsGeometry geometry && geometry.Geometry is NetTopologySuite.Geometries.Polygon polygon)
+                                shapeBase = new Polygon(polygon);
+                            
+                            if (shapeBase != null)
+                                AddSpatialShapeToMetadata(shapeBase);
                         }
                         break;
 
@@ -2515,29 +2519,6 @@ namespace Raven.Server.Documents.Queries
                 {
                     _metadata.SpatialProperties.Add(spatialProperty);
                 }
-            }
-
-            private SpatialShape? GetShapeString(QueryExpression expression)
-            {
-                var expresionString = (expression as ValueExpression).Token.ToString();
-                var tokens = expresionString.Split('(');
-                if (tokens.Length == 0)
-                {
-                    throw new ArgumentException("Invalid WKT string format");
-                }
-
-                var firstToken = tokens[0].ToUpper().Trim();
-                if (firstToken == "POLYGON")
-                {
-                    return SpatialShape.Polygon;
-                }
-
-                if (firstToken == "CIRCLE")
-                {
-                    return SpatialShape.Circle;
-                }
-
-                return null;
             }
 
             private void AddSpatialShapeToMetadata(SpatialShapeBase spatialShape)

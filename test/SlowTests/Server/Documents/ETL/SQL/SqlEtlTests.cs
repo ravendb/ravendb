@@ -26,7 +26,9 @@ using Raven.Server.Documents.ETL.Providers.SQL;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
 using Raven.Server.Documents.ETL.Providers.SQL.Test;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.SqlMigration;
 using Raven.Tests.Core.Utils.Entities;
+using SlowTests.Server.Documents.Migration;
 using Sparrow.Server;
 using Tests.Infrastructure.ConnectionString;
 using Xunit;
@@ -68,36 +70,38 @@ loadToOrders(orderData);
         {
             using (var store = GetDocumentStore())
             {
-                CreateRdbmsSchema(store);
-
-                int testCount = 5000;
-
-                using (var bulkInsert = store.BulkInsert())
+                using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
-                    for (int i = 0; i < testCount; i++)
+                    CreateRdbmsSchema(connectionString);
+                    int testCount = 5000;
+
+                    using (var bulkInsert = store.BulkInsert())
                     {
-                        await bulkInsert.StoreAsync(new Order
+                        for (int i = 0; i < testCount; i++)
                         {
-                            OrderLines = new List<OrderLine>
+                            await bulkInsert.StoreAsync(new Order
+                            {
+                                OrderLines = new List<OrderLine>
                             {
                                 new OrderLine {Cost = 3, Product = "Milk", Quantity = 3},
                                 new OrderLine {Cost = 4, Product = "Bear", Quantity = 2},
                             }
-                        });
+                            });
+                        }
                     }
+
+                    var etlDone = WaitForEtl(store, (n, s) => GetOrdersCount(connectionString) == testCount);
+
+                    SetupSqlEtl(store, connectionString, defaultScript);
+
+                    etlDone.Wait(TimeSpan.FromMinutes(5));
+
+                    Assert.Equal(testCount, GetOrdersCount(connectionString));
                 }
-
-                var etlDone = WaitForEtl(store, (n, s) => GetOrdersCount(store) == testCount);
-
-                SetupSqlEtl(store, defaultScript);
-
-                etlDone.Wait(TimeSpan.FromMinutes(5));
-
-                Assert.Equal(testCount, GetOrdersCount(store));
             }
         }
 
-        protected void CreateRdbmsSchema(DocumentStore store, string command = @"
+        protected void CreateRdbmsSchema(string connectionString, string command = @"
 CREATE TABLE [dbo].[OrderLines]
 (
     [Id] int identity primary key,
@@ -116,15 +120,9 @@ CREATE TABLE [dbo].[Orders]
 )
 ")
         {
-            Console.WriteLine($"CreateRdbmsSchema (1). Src: {store.Database}. Test: {Context.UniqueTestName}");
-
-            CreateRdbmsDatabase(store);
-
-            Console.WriteLine($"CreateRdbmsSchema (2). Src: {store.Database}. Test: {Context.UniqueTestName}");
-
             using (var con = new SqlConnection())
             {
-                con.ConnectionString = GetConnectionString(store);
+                con.ConnectionString = connectionString;
                 con.Open();
 
                 using (var dbCommand = con.CreateCommand())
@@ -132,18 +130,13 @@ CREATE TABLE [dbo].[Orders]
                     dbCommand.CommandText = command;
                     dbCommand.ExecuteNonQuery();
                 }
+                con.Close();
             }
-
-            Console.WriteLine($"CreateRdbmsSchema (3). Src: {store.Database}. Test: {Context.UniqueTestName}");
         }
 
         public override void Dispose()
         {
-            Console.WriteLine($"Dispose (1). Names: {string.Join(";", _dbNames)}. Test: {Context.UniqueTestName}");
-
             base.Dispose();
-
-            Console.WriteLine($"Dispose (2). Names: {string.Join(";", _dbNames)}. Test: {Context.UniqueTestName}");
 
             using (var con = new SqlConnection())
             {
@@ -152,8 +145,6 @@ CREATE TABLE [dbo].[Orders]
 
                 foreach (var dbName in _dbNames)
                 {
-                    Console.WriteLine($"Dispose (3). Name: {dbName}. Test: {Context.UniqueTestName}");
-
                     using (var dbCommand = con.CreateCommand())
                     {
                         dbCommand.CommandText = $@"
@@ -161,38 +152,8 @@ ALTER DATABASE [SqlReplication-{dbName}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE
 DROP DATABASE [SqlReplication-{dbName}]";
                         dbCommand.ExecuteNonQuery();
                     }
-
-                    Console.WriteLine($"Dispose (4). Name: {dbName}. Test: {Context.UniqueTestName}");
                 }
             }
-
-            Console.WriteLine($"Dispose (5). Names: {string.Join(";", _dbNames)}. Test: {Context.UniqueTestName}");
-        }
-
-        private void CreateRdbmsDatabase(DocumentStore store)
-        {
-            Console.WriteLine($"CreateRdbmsSchemaInner (1). Src: {store.Database}. Test: {Context.UniqueTestName}");
-
-            using (var con = new SqlConnection())
-            {
-                con.ConnectionString = MssqlConnectionString.Instance.VerifiedConnectionString.Value;
-                con.Open();
-
-                using (var dbCommand = con.CreateCommand())
-                {
-                    _dbNames.Add(store.Database);
-                    dbCommand.CommandText = $@"
-USE master
-IF EXISTS(select * from sys.databases where name='SqlReplication-{store.Database}')
-DROP DATABASE [SqlReplication-{store.Database}]
-
-CREATE DATABASE [SqlReplication-{store.Database}]
-";
-                    dbCommand.ExecuteNonQuery();
-                }
-            }
-
-            Console.WriteLine($"CreateRdbmsSchemaInner (2). Src: {store.Database}. Test: {Context.UniqueTestName}");
         }
 
         [Fact]
@@ -200,38 +161,40 @@ CREATE DATABASE [SqlReplication-{store.Database}]
         {
             using (var store = GetDocumentStore())
             {
-                CreateRdbmsSchema(store);
-
-                using (var session = store.OpenAsyncSession())
+                using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
-                    await session.StoreAsync(new Order
+                    CreateRdbmsSchema(connectionString);
+
+                    using (var session = store.OpenAsyncSession())
                     {
-                        OrderLines = new List<OrderLine>
+                        await session.StoreAsync(new Order
                         {
-                            new OrderLine{Cost = 3, Product = "Milk", Quantity = 3},
-                            new OrderLine{Cost = 4, Product = "Bear", Quantity = 2},
-                        }
-                    });
-                    await session.SaveChangesAsync();
-                }
+                            OrderLines = new List<OrderLine>
+                            {
+                                new OrderLine {Cost = 3, Product = "Milk", Quantity = 3}, new OrderLine {Cost = 4, Product = "Bear", Quantity = 2},
+                            }
+                        });
+                        await session.SaveChangesAsync();
+                    }
 
-                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                    var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
 
-                SetupSqlEtl(store, defaultScript);
+                    SetupSqlEtl(store, connectionString, defaultScript);
 
-                etlDone.Wait(TimeSpan.FromMinutes(5));
+                    etlDone.Wait(TimeSpan.FromMinutes(5));
 
-                using (var con = new SqlConnection())
-                {
-                    con.ConnectionString = GetConnectionString(store);
-                    con.Open();
-
-                    using (var dbCommand = con.CreateCommand())
+                    using (var con = new SqlConnection())
                     {
-                        dbCommand.CommandText = " SELECT COUNT(*) FROM Orders";
-                        Assert.Equal(1, dbCommand.ExecuteScalar());
-                        dbCommand.CommandText = " SELECT COUNT(*) FROM OrderLines";
-                        Assert.Equal(2, dbCommand.ExecuteScalar());
+                        con.ConnectionString = connectionString;
+                        con.Open();
+
+                        using (var dbCommand = con.CreateCommand())
+                        {
+                            dbCommand.CommandText = " SELECT COUNT(*) FROM Orders";
+                            Assert.Equal(1, dbCommand.ExecuteScalar());
+                            dbCommand.CommandText = " SELECT COUNT(*) FROM OrderLines";
+                            Assert.Equal(2, dbCommand.ExecuteScalar());
+                        }
                     }
                 }
             }
@@ -242,42 +205,45 @@ CREATE DATABASE [SqlReplication-{store.Database}]
         {
             using (var store = GetDocumentStore())
             {
-                CreateRdbmsSchema(store);
-
-                using (var session = store.OpenAsyncSession())
+                using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
-                    await session.StoreAsync(new Order
-                    {
-                        OrderLines = new List<OrderLine>
-                        {
-                            new OrderLine{Cost = 3, Product = "Milk", Quantity = 3},
-                            new OrderLine{Cost = 4, Product = "Bear", Quantity = 2},
-                        }
-                    });
-                    await session.SaveChangesAsync();
-                }
-                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                    CreateRdbmsSchema(connectionString);
 
-                SetupSqlEtl(store, @"var orderData = {
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        await session.StoreAsync(new Order
+                        {
+                            OrderLines = new List<OrderLine>
+                            {
+                                new OrderLine {Cost = 3, Product = "Milk", Quantity = 3}, new OrderLine {Cost = 4, Product = "Bear", Quantity = 2},
+                            }
+                        });
+                        await session.SaveChangesAsync();
+                    }
+
+                    var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+
+                    SetupSqlEtl(store, connectionString, @"var orderData = {
     Id: id(this),
     OrderLinesCount: this.OrderLines_Missing.length,
     TotalCost: 0
 };
 loadToOrders(orderData);");
 
-                etlDone.Wait(TimeSpan.FromMinutes(5));
+                    etlDone.Wait(TimeSpan.FromMinutes(5));
 
-                using (var con = new SqlConnection())
-                {
-                    con.ConnectionString = GetConnectionString(store);
-                    con.Open();
-
-                    using (var dbCommand = con.CreateCommand())
+                    using (var con = new SqlConnection())
                     {
-                        dbCommand.CommandText = " SELECT COUNT(*) FROM Orders";
-                        Assert.Equal(1, dbCommand.ExecuteScalar());
-                        dbCommand.CommandText = " SELECT OrderLinesCount FROM Orders";
-                        Assert.Equal(0, dbCommand.ExecuteScalar());
+                        con.ConnectionString = connectionString;
+                        con.Open();
+
+                        using (var dbCommand = con.CreateCommand())
+                        {
+                            dbCommand.CommandText = " SELECT COUNT(*) FROM Orders";
+                            Assert.Equal(1, dbCommand.ExecuteScalar());
+                            dbCommand.CommandText = " SELECT OrderLinesCount FROM Orders";
+                            Assert.Equal(0, dbCommand.ExecuteScalar());
+                        }
                     }
                 }
             }
@@ -288,45 +254,46 @@ loadToOrders(orderData);");
         {
             using (var store = GetDocumentStore())
             {
-                CreateRdbmsSchema(store);
-
-
-                using (var session = store.OpenAsyncSession())
+                using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
-                    await session.StoreAsync(new Order
+                    CreateRdbmsSchema(connectionString);
+
+                    using (var session = store.OpenAsyncSession())
                     {
-                        Address = null,
-                        OrderLines = new List<OrderLine>
+                        await session.StoreAsync(new Order
                         {
-                            new OrderLine{Cost = 3, Product = "Milk", Quantity = 3},
-                            new OrderLine{Cost = 4, Product = "Bear", Quantity = 2},
-                        }
-                    });
-                    await session.SaveChangesAsync();
-                }
+                            Address = null,
+                            OrderLines = new List<OrderLine>
+                            {
+                                new OrderLine {Cost = 3, Product = "Milk", Quantity = 3}, new OrderLine {Cost = 4, Product = "Bear", Quantity = 2},
+                            }
+                        });
+                        await session.SaveChangesAsync();
+                    }
 
-                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                    var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
 
-                SetupSqlEtl(store, @"var orderData = {
+                    SetupSqlEtl(store, connectionString, @"var orderData = {
     Id: id(this),
     City: this.Address.City,
     TotalCost: 0
 };
 loadToOrders(orderData);");
 
-                etlDone.Wait(TimeSpan.FromMinutes(5));
+                    etlDone.Wait(TimeSpan.FromMinutes(5));
 
-                using (var con = new SqlConnection())
-                {
-                    con.ConnectionString = GetConnectionString(store);
-                    con.Open();
-
-                    using (var dbCommand = con.CreateCommand())
+                    using (var con = new SqlConnection())
                     {
-                        dbCommand.CommandText = " SELECT COUNT(*) FROM Orders";
-                        Assert.Equal(1, dbCommand.ExecuteScalar());
-                        dbCommand.CommandText = " SELECT City FROM Orders";
-                        Assert.Equal(DBNull.Value, dbCommand.ExecuteScalar());
+                        con.ConnectionString = connectionString;
+                        con.Open();
+
+                        using (var dbCommand = con.CreateCommand())
+                        {
+                            dbCommand.CommandText = " SELECT COUNT(*) FROM Orders";
+                            Assert.Equal(1, dbCommand.ExecuteScalar());
+                            dbCommand.CommandText = " SELECT City FROM Orders";
+                            Assert.Equal(DBNull.Value, dbCommand.ExecuteScalar());
+                        }
                     }
                 }
             }
@@ -337,45 +304,43 @@ loadToOrders(orderData);");
         {
             using (var store = GetDocumentStore())
             {
-                CreateRdbmsSchema(store);
-
-                using (var session = store.OpenAsyncSession())
+                using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
-                    await session.StoreAsync(new Order
+                    CreateRdbmsSchema(connectionString);
+
+                    using (var session = store.OpenAsyncSession())
                     {
-                        OrderLines = new List<OrderLine>
-                        {
-                            new OrderLine {Cost = 4, Product = "Bear", Quantity = 2},
-                        }
-                    });
-                    await session.SaveChangesAsync();
+                        await session.StoreAsync(new Order { OrderLines = new List<OrderLine> { new OrderLine { Cost = 4, Product = "Bear", Quantity = 2 }, } });
+                        await session.SaveChangesAsync();
+                    }
+
+                    var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+
+                    SetupSqlEtl(store, connectionString, "if(this.OrderLines.length > 0) { \r\n" + defaultScript + " \r\n}");
+
+                    etlDone.Wait(TimeSpan.FromMinutes(5));
+
+                    AssertCounts(1, 1, connectionString);
+
+                    etlDone.Reset();
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        var order = await session.LoadAsync<Order>("orders/1-A");
+                        order.OrderLines.Clear();
+                        await session.SaveChangesAsync();
+                    }
+
+                    etlDone.Wait(TimeSpan.FromMinutes(5));
+                    AssertCounts(0, 0, connectionString);
                 }
-
-                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
-
-                SetupSqlEtl(store, "if(this.OrderLines.length > 0) { \r\n" + defaultScript + " \r\n}");
-
-                etlDone.Wait(TimeSpan.FromMinutes(5));
-
-                AssertCounts(1, 1, store);
-
-                etlDone.Reset();
-                using (var session = store.OpenAsyncSession())
-                {
-                    var order = await session.LoadAsync<Order>("orders/1-A");
-                    order.OrderLines.Clear();
-                    await session.SaveChangesAsync();
-                }
-                etlDone.Wait(TimeSpan.FromMinutes(5));
-                AssertCounts(0, 0, store);
             }
         }
 
-        protected static int GetOrdersCount(DocumentStore store)
+        protected static int GetOrdersCount(string connectionString)
         {
             using (var con = new SqlConnection())
             {
-                con.ConnectionString = GetConnectionString(store);
+                con.ConnectionString = connectionString;
                 con.Open();
 
                 using (var dbCommand = con.CreateCommand())
@@ -391,40 +356,43 @@ loadToOrders(orderData);");
         {
             using (var store = GetDocumentStore())
             {
-                CreateRdbmsSchema(store);
-
-                using (var session = store.OpenAsyncSession())
+                using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
-                    await session.StoreAsync(new Order
+                    CreateRdbmsSchema(connectionString);
+
+
+                    using (var session = store.OpenAsyncSession())
                     {
-                        OrderLines = new List<OrderLine>
+                        await session.StoreAsync(new Order
                         {
-                            new OrderLine{Cost = 3, Product = "Milk", Quantity = 3},
-                            new OrderLine{Cost = 4, Product = "Bear", Quantity = 2},
-                        }
-                    });
-                    await session.SaveChangesAsync();
+                            OrderLines = new List<OrderLine>
+                            {
+                                new OrderLine {Cost = 3, Product = "Milk", Quantity = 3}, new OrderLine {Cost = 4, Product = "Bear", Quantity = 2},
+                            }
+                        });
+                        await session.SaveChangesAsync();
+                    }
+
+                    var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+
+                    SetupSqlEtl(store, connectionString, defaultScript);
+
+                    etlDone.Wait(TimeSpan.FromMinutes(5));
+
+                    AssertCounts(1, 2, connectionString);
+
+                    etlDone.Reset();
+
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        var order = await session.LoadAsync<Order>("orders/1-A");
+                        order.OrderLines.Clear();
+                        await session.SaveChangesAsync();
+                    }
+
+                    etlDone.Wait(TimeSpan.FromMinutes(5));
+                    AssertCounts(1, 0, connectionString);
                 }
-
-                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
-
-                SetupSqlEtl(store, defaultScript);
-
-                etlDone.Wait(TimeSpan.FromMinutes(5));
-
-                AssertCounts(1, 2, store);
-
-                etlDone.Reset();
-
-                using (var session = store.OpenAsyncSession())
-                {
-                    var order = await session.LoadAsync<Order>("orders/1-A");
-                    order.OrderLines.Clear();
-                    await session.SaveChangesAsync();
-                }
-
-                etlDone.Wait(TimeSpan.FromMinutes(5));
-                AssertCounts(1, 0, store);
             }
         }
 
@@ -433,37 +401,39 @@ loadToOrders(orderData);");
         {
             using (var store = GetDocumentStore())
             {
-                CreateRdbmsSchema(store);
-
-                using (var session = store.OpenAsyncSession())
+                using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
-                    await session.StoreAsync(new Order
+                    CreateRdbmsSchema(connectionString);
+
+                    using (var session = store.OpenAsyncSession())
                     {
-                        OrderLines = new List<OrderLine>
+                        await session.StoreAsync(new Order
                         {
-                            new OrderLine{Cost = 3, Product = "Milk", Quantity = 3},
-                            new OrderLine{Cost = 4, Product = "Bear", Quantity = 2},
-                        }
-                    });
-                    await session.SaveChangesAsync();
+                            OrderLines = new List<OrderLine>
+                            {
+                                new OrderLine {Cost = 3, Product = "Milk", Quantity = 3}, new OrderLine {Cost = 4, Product = "Bear", Quantity = 2},
+                            }
+                        });
+                        await session.SaveChangesAsync();
+                    }
+
+                    var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+
+                    SetupSqlEtl(store, connectionString, defaultScript);
+
+                    etlDone.Wait(TimeSpan.FromMinutes(5));
+
+                    AssertCounts(1, 2, connectionString);
+
+                    etlDone.Reset();
+
+                    using (var commands = store.Commands())
+                        await commands.DeleteAsync("orders/1-A", null);
+
+                    etlDone.Wait(TimeSpan.FromMinutes(5));
+
+                    AssertCounts(0, 0, connectionString);
                 }
-
-                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
-
-                SetupSqlEtl(store, defaultScript);
-
-                etlDone.Wait(TimeSpan.FromMinutes(5));
-
-                AssertCounts(1, 2, store);
-
-                etlDone.Reset();
-
-                using (var commands = store.Commands())
-                    await commands.DeleteAsync("orders/1-A", null);
-
-                etlDone.Wait(TimeSpan.FromMinutes(5));
-
-                AssertCounts(0, 0, store);
             }
         }
 
@@ -472,47 +442,43 @@ loadToOrders(orderData);");
         {
             using (var store = GetDocumentStore())
             {
-                CreateRdbmsSchema(store);
-
-                using (var session = store.OpenAsyncSession())
+                using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
-                    await session.StoreAsync(new Order
+                    CreateRdbmsSchema(connectionString);
+                    using (var session = store.OpenAsyncSession())
                     {
-                        Id = "orders/1",
-                        OrderLines = new List<OrderLine>
+                        await session.StoreAsync(new Order
                         {
-                            new OrderLine{Cost = 3, Product = "Milk", Quantity = 3},
-                            new OrderLine{Cost = 4, Product = "Bear", Quantity = 2},
-                        }
-                    });
-                    await session.SaveChangesAsync();
-                }
+                            Id = "orders/1",
+                            OrderLines = new List<OrderLine>
+                            {
+                                new OrderLine {Cost = 3, Product = "Milk", Quantity = 3}, new OrderLine {Cost = 4, Product = "Bear", Quantity = 2},
+                            }
+                        });
+                        await session.SaveChangesAsync();
+                    }
 
-                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                    var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
 
-                SetupSqlEtl(store, defaultScript, insertOnly: true);
+                    SetupSqlEtl(store, connectionString, defaultScript, insertOnly: true);
 
-                etlDone.Wait(TimeSpan.FromMinutes(5));
+                    etlDone.Wait(TimeSpan.FromMinutes(5));
 
-                AssertCounts(1, 2, store);
+                    AssertCounts(1, 2, connectionString);
 
-                etlDone.Reset();
+                    etlDone.Reset();
 
-                using (var session = store.OpenAsyncSession())
-                {
-                    var order = await session.LoadAsync<Order>("orders/1");
-                    order.OrderLines.Add(new OrderLine
+                    using (var session = store.OpenAsyncSession())
                     {
-                        Cost = 5,
-                        Product = "Sugar",
-                        Quantity = 7
-                    });
-                    await session.SaveChangesAsync();
-                }
+                        var order = await session.LoadAsync<Order>("orders/1");
+                        order.OrderLines.Add(new OrderLine { Cost = 5, Product = "Sugar", Quantity = 7 });
+                        await session.SaveChangesAsync();
+                    }
 
-                etlDone.Wait(TimeSpan.FromMinutes(5));
-                // we end up with duplicates
-                AssertCounts(2, 5, store);
+                    etlDone.Wait(TimeSpan.FromMinutes(5));
+                    // we end up with duplicates
+                    AssertCounts(2, 5, connectionString);
+                }
             }
         }
 
@@ -522,62 +488,66 @@ loadToOrders(orderData);");
             using (var client = new ClientWebSocket())
             using (var store = GetDocumentStore())
             {
-                CreateRdbmsSchema(store);
-
-                using (var session = store.OpenAsyncSession())
+                using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
-                    await session.StoreAsync(new Order());
-                    await session.SaveChangesAsync();
-                }
-
-                var str = string.Format("{0}/admin/logs/watch", store.Urls.First().Replace("http", "ws"));
-                var sb = new StringBuilder();
-
-                var mre = new AsyncManualResetEvent();
-
-                await client.ConnectAsync(new Uri(str), CancellationToken.None);
-                var task = Task.Run(async () =>
-                {
-                    ArraySegment<byte> buffer = new ArraySegment<byte>(new byte[1024]);
-                    while (client.State == WebSocketState.Open)
+                    CreateRdbmsSchema(connectionString);
+                    using (var session = store.OpenAsyncSession())
                     {
-                        var value = await ReadFromWebSocket(buffer, client);
-                        lock (sb)
-                        {
-                            mre.Set();
-                            sb.AppendLine(value);
-                        }
-                        const string expectedValue = "skipping document: orders/";
-                        if (value.Contains(expectedValue) || sb.ToString().Contains(expectedValue))
-                            return;
-
+                        await session.StoreAsync(new Order());
+                        await session.SaveChangesAsync();
                     }
-                });
-                await mre.WaitAsync(TimeSpan.FromSeconds(60));
-                SetupSqlEtl(store, @"output ('Tralala'); 
+
+                    var str = string.Format("{0}/admin/logs/watch", store.Urls.First().Replace("http", "ws"));
+                    var sb = new StringBuilder();
+
+                    var mre = new AsyncManualResetEvent();
+
+                    await client.ConnectAsync(new Uri(str), CancellationToken.None);
+                    var task = Task.Run(async () =>
+                    {
+                        ArraySegment<byte> buffer = new ArraySegment<byte>(new byte[1024]);
+                        while (client.State == WebSocketState.Open)
+                        {
+                            var value = await ReadFromWebSocket(buffer, client);
+                            lock (sb)
+                            {
+                                mre.Set();
+                                sb.AppendLine(value);
+                            }
+
+                            const string expectedValue = "skipping document: orders/";
+                            if (value.Contains(expectedValue) || sb.ToString().Contains(expectedValue))
+                                return;
+
+                        }
+                    });
+                    await mre.WaitAsync(TimeSpan.FromSeconds(60));
+                    SetupSqlEtl(store, connectionString, @"output ('Tralala'); 
 
 undefined();
 
 var nameArr = this.StepName.split('.'); loadToOrders({});");
 
-                using (var session = store.OpenAsyncSession())
-                {
-                    for (var i = 0; i < 100; i++)
-                        await session.StoreAsync(new Order());
-
-                    await session.SaveChangesAsync();
-                }
-
-                var condition = await task.WaitWithTimeout(TimeSpan.FromSeconds(60));
-                if (condition == false)
-                {
-                    var msg = "Could not process SQL Replication script for OrdersAndLines, skipping document: orders/";
-                    var tempFileName = Path.GetTempFileName();
-                    lock (sb)
+                    using (var session = store.OpenAsyncSession())
                     {
-                        File.WriteAllText(tempFileName, sb.ToString());
+                        for (var i = 0; i < 100; i++)
+                            await session.StoreAsync(new Order());
+
+                        await session.SaveChangesAsync();
                     }
-                    throw new InvalidOperationException($"{msg}. Full log is: \r\n{tempFileName}");
+
+                    var condition = await task.WaitWithTimeout(TimeSpan.FromSeconds(60));
+                    if (condition == false)
+                    {
+                        var msg = "Could not process SQL Replication script for OrdersAndLines, skipping document: orders/";
+                        var tempFileName = Path.GetTempFileName();
+                        lock (sb)
+                        {
+                            File.WriteAllText(tempFileName, sb.ToString());
+                        }
+
+                        throw new InvalidOperationException($"{msg}. Full log is: \r\n{tempFileName}");
+                    }
                 }
             }
         }
@@ -589,74 +559,72 @@ var nameArr = this.StepName.split('.'); loadToOrders({});");
         {
             using (var store = GetDocumentStore())
             {
-                CreateRdbmsSchema(store);
-
-                using (var session = store.OpenAsyncSession())
+                using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
-                    await session.StoreAsync(new Order
+                    CreateRdbmsSchema(connectionString);
+                    using (var session = store.OpenAsyncSession())
                     {
-                        OrderLines = new List<OrderLine>
+                        await session.StoreAsync(new Order
                         {
-                            new OrderLine{Cost = 3, Product = "Milk", Quantity = 3},
-                            new OrderLine{Cost = 4, Product = "Bear", Quantity = 2},
-                        }
-                    });
-                    await session.SaveChangesAsync();
-                }
-
-                var result1 = store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(new SqlConnectionString()
-                {
-                    Name = "simulate",
-                    ConnectionString = GetConnectionString(store),
-                    FactoryName = "System.Data.SqlClient",
-                }));
-                Assert.NotNull(result1.RaftCommandIndex);
-
-                var database = GetDatabase(store.Database).Result;
-
-                using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                {
-                    var result = (SqlEtlTestScriptResult)SqlEtl.TestScript(new TestSqlEtlScript
-                    {
-                        PerformRolledBackTransaction = performRolledBackTransaction,
-                        DocumentId = "orders/1-A",
-                        Configuration = new SqlEtlConfiguration()
-                        {
-                            Name = "simulate",
-                            ConnectionStringName = "simulate",
-                            SqlTables =
+                            OrderLines = new List<OrderLine>
                             {
-                                new SqlEtlTable {TableName = "Orders", DocumentIdColumn = "Id"},
-                                new SqlEtlTable {TableName = "OrderLines", DocumentIdColumn = "OrderId"},
-                                new SqlEtlTable {TableName = "NotUsedInScript", DocumentIdColumn = "OrderId"},
-                            },
-                            Transforms =
-                            {
-                                new Transformation()
-                                {
-                                    Collections = {"Orders"},
-                                    Name = "OrdersAndLines",
-                                    Script = defaultScript + "output('test output')"
-                                }
+                                new OrderLine {Cost = 3, Product = "Milk", Quantity = 3}, new OrderLine {Cost = 4, Product = "Bear", Quantity = 2},
                             }
-                        }
-                    }, database, database.ServerStore, context);
+                        });
+                        await session.SaveChangesAsync();
+                    }
 
-                    Assert.Equal(0, result.TransformationErrors.Count);
-                    Assert.Equal(0, result.LoadErrors.Count);
-                    Assert.Equal(0, result.SlowSqlWarnings.Count);
+                    var result1 = store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(new SqlConnectionString()
+                    {
+                        Name = "simulate", ConnectionString = connectionString, FactoryName = "System.Data.SqlClient",
+                    }));
+                    Assert.NotNull(result1.RaftCommandIndex);
 
-                    Assert.Equal(2, result.Summary.Count);
+                    var database = GetDatabase(store.Database).Result;
 
-                    var orderLines = result.Summary.First(x => x.TableName == "OrderLines");
+                    using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                    {
+                        var result = (SqlEtlTestScriptResult)SqlEtl.TestScript(
+                            new TestSqlEtlScript
+                            {
+                                PerformRolledBackTransaction = performRolledBackTransaction,
+                                DocumentId = "orders/1-A",
+                                Configuration = new SqlEtlConfiguration()
+                                {
+                                    Name = "simulate",
+                                    ConnectionStringName = "simulate",
+                                    SqlTables =
+                                    {
+                                        new SqlEtlTable {TableName = "Orders", DocumentIdColumn = "Id"},
+                                        new SqlEtlTable {TableName = "OrderLines", DocumentIdColumn = "OrderId"},
+                                        new SqlEtlTable {TableName = "NotUsedInScript", DocumentIdColumn = "OrderId"},
+                                    },
+                                    Transforms =
+                                    {
+                                        new Transformation()
+                                        {
+                                            Collections = {"Orders"}, Name = "OrdersAndLines", Script = defaultScript + "output('test output')"
+                                        }
+                                    }
+                                }
+                            }, database, database.ServerStore, context);
 
-                    Assert.Equal(3, orderLines.Commands.Length); // delete and two inserts
+                        Assert.Equal(0, result.TransformationErrors.Count);
+                        Assert.Equal(0, result.LoadErrors.Count);
+                        Assert.Equal(0, result.SlowSqlWarnings.Count);
 
-                    var orders = result.Summary.First(x => x.TableName == "Orders");
+                        Assert.Equal(2, result.Summary.Count);
 
-                    Assert.Equal(2, orders.Commands.Length); // delete and insert
+                        var orderLines = result.Summary.First(x => x.TableName == "OrderLines");
 
-                    Assert.Equal("test output", result.DebugOutput[0]);
+                        Assert.Equal(3, orderLines.Commands.Length); // delete and two inserts
+
+                        var orders = result.Summary.First(x => x.TableName == "Orders");
+
+                        Assert.Equal(2, orders.Commands.Length); // delete and insert
+
+                        Assert.Equal("test output", result.DebugOutput[0]);
+                    }
                 }
             }
         }
@@ -668,78 +636,70 @@ var nameArr = this.StepName.split('.'); loadToOrders({});");
         {
             using (var store = GetDocumentStore())
             {
-                CreateRdbmsSchema(store);
-
-                using (var session = store.OpenAsyncSession())
+                using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
-                    await session.StoreAsync(new Order
+                    CreateRdbmsSchema(connectionString);
+
+                    using (var session = store.OpenAsyncSession())
                     {
-                        OrderLines = new List<OrderLine>
+                        await session.StoreAsync(new Order
                         {
-                            new OrderLine{Cost = 3, Product = "Milk", Quantity = 3},
-                            new OrderLine{Cost = 4, Product = "Bear", Quantity = 2},
-                        }
-                    });
-                    await session.SaveChangesAsync();
-                }
-
-                var result1 = store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(new SqlConnectionString()
-                {
-                    Name = "simulate",
-                    ConnectionString = GetConnectionString(store),
-                    FactoryName = "System.Data.SqlClient",
-                }));
-                Assert.NotNull(result1.RaftCommandIndex);
-
-                var database = GetDatabase(store.Database).Result;
-
-                using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                {
-                    var result = (SqlEtlTestScriptResult)SqlEtl.TestScript(new TestSqlEtlScript
-                    {
-                        PerformRolledBackTransaction = performRolledBackTransaction,
-                        DocumentId = "orders/1-A",
-                        IsDelete = true,
-                        Configuration = new SqlEtlConfiguration()
-                        {
-                            Name = "simulate",
-                            ConnectionStringName = "simulate",
-                            SqlTables =
+                            OrderLines = new List<OrderLine>
                             {
-                                new SqlEtlTable {TableName = "Orders", DocumentIdColumn = "Id"},
-                                new SqlEtlTable {TableName = "OrderLines", DocumentIdColumn = "OrderId"},
-                                new SqlEtlTable {TableName = "NotUsedInScript", DocumentIdColumn = "OrderId"},
-                            },
-                            Transforms =
-                            {
-                                new Transformation()
-                                {
-                                    Collections = {"Orders"},
-                                    Name = "OrdersAndLines",
-                                    Script = defaultScript
-                                }
+                                new OrderLine {Cost = 3, Product = "Milk", Quantity = 3}, new OrderLine {Cost = 4, Product = "Bear", Quantity = 2},
                             }
-                        }
-                    }, database, database.ServerStore, context);
+                        });
+                        await session.SaveChangesAsync();
+                    }
 
-                    Assert.Equal(0, result.TransformationErrors.Count);
-                    Assert.Equal(0, result.LoadErrors.Count);
-                    Assert.Equal(0, result.SlowSqlWarnings.Count);
+                    var result1 = store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(new SqlConnectionString()
+                    {
+                        Name = "simulate",
+                        ConnectionString = connectionString,
+                        FactoryName = "System.Data.SqlClient",
+                    }));
+                    Assert.NotNull(result1.RaftCommandIndex);
 
-                    Assert.Equal(2, result.Summary.Count);
+                    var database = GetDatabase(store.Database).Result;
 
-                    var orderLines = result.Summary.First(x => x.TableName == "OrderLines");
+                    using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                    {
+                        var result = (SqlEtlTestScriptResult)SqlEtl.TestScript(
+                            new TestSqlEtlScript
+                            {
+                                PerformRolledBackTransaction = performRolledBackTransaction,
+                                DocumentId = "orders/1-A",
+                                IsDelete = true,
+                                Configuration = new SqlEtlConfiguration()
+                                {
+                                    Name = "simulate",
+                                    ConnectionStringName = "simulate",
+                                    SqlTables =
+                                    {
+                                        new SqlEtlTable {TableName = "Orders", DocumentIdColumn = "Id"},
+                                        new SqlEtlTable {TableName = "OrderLines", DocumentIdColumn = "OrderId"},
+                                        new SqlEtlTable {TableName = "NotUsedInScript", DocumentIdColumn = "OrderId"},
+                                    },
+                                    Transforms = { new Transformation() { Collections = { "Orders" }, Name = "OrdersAndLines", Script = defaultScript } }
+                                }
+                            }, database, database.ServerStore, context);
 
-                    Assert.Equal(1, orderLines.Commands.Length); // delete
+                        Assert.Equal(0, result.TransformationErrors.Count);
+                        Assert.Equal(0, result.LoadErrors.Count);
+                        Assert.Equal(0, result.SlowSqlWarnings.Count);
+                        Assert.Equal(2, result.Summary.Count);
 
-                    var orders = result.Summary.First(x => x.TableName == "Orders");
+                        var orderLines = result.Summary.First(x => x.TableName == "OrderLines");
+                        Assert.Equal(1, orderLines.Commands.Length); // delete
 
-                    Assert.Equal(1, orders.Commands.Length); // delete
-                }
+                        var orders = result.Summary.First(x => x.TableName == "Orders");
+                        Assert.Equal(1, orders.Commands.Length); // delete
+                    }
 
-                using (var session = store.OpenAsyncSession())
-                {
-                    Assert.NotNull(session.Query<Order>("orders/1-A"));
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        Assert.NotNull(session.Query<Order>("orders/1-A"));
+                    }
                 }
             }
         }
@@ -749,7 +709,9 @@ var nameArr = this.StepName.split('.'); loadToOrders({});");
         {
             using (var store = GetDocumentStore())
             {
-                CreateRdbmsSchema(store, @"
+                using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
+                {
+                    CreateRdbmsSchema(connectionString, @"
 CREATE TABLE [dbo].[Orders]
 (
     [Id] [nvarchar](50) NOT NULL,
@@ -758,19 +720,19 @@ CREATE TABLE [dbo].[Orders]
 )
 ");
 
-                var attachmentBytes = new byte[] { 1, 2, 3 };
+                    var attachmentBytes = new byte[] {1, 2, 3};
 
-                using (var session = store.OpenAsyncSession())
-                {
-                    await session.StoreAsync(new Order());
-                    await session.SaveChangesAsync();
-                }
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        await session.StoreAsync(new Order());
+                        await session.SaveChangesAsync();
+                    }
 
-                store.Operations.Send(new PutAttachmentOperation("orders/1-A", "test-attachment", new MemoryStream(attachmentBytes), "image/png"));
+                    store.Operations.Send(new PutAttachmentOperation("orders/1-A", "test-attachment", new MemoryStream(attachmentBytes), "image/png"));
 
-                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses > 0);
+                    var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses > 0);
 
-                SetupSqlEtl(store, @"
+                    SetupSqlEtl(store, connectionString, @"
 var orderData = {
     Id: id(this),
     Name: this['@metadata']['@attachments'][0].Name,
@@ -780,31 +742,32 @@ var orderData = {
 loadToOrders(orderData);
 ");
 
-                etlDone.Wait(TimeSpan.FromMinutes(5));
+                    etlDone.Wait(TimeSpan.FromMinutes(5));
 
-                using (var con = new SqlConnection())
-                {
-                    con.ConnectionString = GetConnectionString(store);
-                    con.Open();
-
-                    using (var dbCommand = con.CreateCommand())
+                    using (var con = new SqlConnection())
                     {
-                        dbCommand.CommandText = " SELECT COUNT(*) FROM Orders";
-                        Assert.Equal(1, dbCommand.ExecuteScalar());
-                    }
+                        con.ConnectionString = connectionString;
+                        con.Open();
 
-                    using (var dbCommand = con.CreateCommand())
-                    {
-                        dbCommand.CommandText = " SELECT Pic FROM Orders WHERE Id = 'orders/1-A'";
+                        using (var dbCommand = con.CreateCommand())
+                        {
+                            dbCommand.CommandText = " SELECT COUNT(*) FROM Orders";
+                            Assert.Equal(1, dbCommand.ExecuteScalar());
+                        }
 
-                        var sqlDataReader = dbCommand.ExecuteReader();
+                        using (var dbCommand = con.CreateCommand())
+                        {
+                            dbCommand.CommandText = " SELECT Pic FROM Orders WHERE Id = 'orders/1-A'";
 
-                        Assert.True(sqlDataReader.Read());
-                        var stream = sqlDataReader.GetStream(0);
+                            var sqlDataReader = dbCommand.ExecuteReader();
 
-                        var bytes = stream.ReadData();
+                            Assert.True(sqlDataReader.Read());
+                            var stream = sqlDataReader.GetStream(0);
 
-                        Assert.Equal(attachmentBytes, bytes);
+                            var bytes = stream.ReadData();
+
+                            Assert.Equal(attachmentBytes, bytes);
+                        }
                     }
                 }
             }
@@ -815,7 +778,9 @@ loadToOrders(orderData);
         {
             using (var store = GetDocumentStore())
             {
-                CreateRdbmsSchema(store, @"
+                using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
+                {
+                    CreateRdbmsSchema(connectionString, @"
 CREATE TABLE [dbo].[Orders]
 (
     [Id] [nvarchar](50) NOT NULL,
@@ -824,23 +789,23 @@ CREATE TABLE [dbo].[Orders]
 )
 ");
 
-                var attachmentBytes = new byte[] { 1, 2, 3 };
+                    var attachmentBytes = new byte[] {1, 2, 3};
 
-                using (var session = store.OpenAsyncSession())
-                {
-                    await session.StoreAsync(new Order(), "orders/1-A");
-                    await session.StoreAsync(new Order(), "orders/2-A");
-                    await session.StoreAsync(new Order(), "orders/3-A");
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        await session.StoreAsync(new Order(), "orders/1-A");
+                        await session.StoreAsync(new Order(), "orders/2-A");
+                        await session.StoreAsync(new Order(), "orders/3-A");
 
-                    await session.SaveChangesAsync();
-                }
+                        await session.SaveChangesAsync();
+                    }
 
-                store.Operations.Send(new PutAttachmentOperation("orders/1-A", "abc.jpg", new MemoryStream(attachmentBytes), "image/png"));
-                store.Operations.Send(new PutAttachmentOperation("orders/2-A", "photo.jpg", new MemoryStream(attachmentBytes), "image/png"));
+                    store.Operations.Send(new PutAttachmentOperation("orders/1-A", "abc.jpg", new MemoryStream(attachmentBytes), "image/png"));
+                    store.Operations.Send(new PutAttachmentOperation("orders/2-A", "photo.jpg", new MemoryStream(attachmentBytes), "image/png"));
 
-                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses > 0);
+                    var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses > 0);
 
-                SetupSqlEtl(store, @"
+                    SetupSqlEtl(store, connectionString, @"
 var orderData = {
     Id: id(this),
     Name: 'photo.jpg',
@@ -850,31 +815,32 @@ var orderData = {
 loadToOrders(orderData);
 ");
 
-                etlDone.Wait(TimeSpan.FromMinutes(5));
+                    etlDone.Wait(TimeSpan.FromMinutes(5));
 
-                using (var con = new SqlConnection())
-                {
-                    con.ConnectionString = GetConnectionString(store);
-                    con.Open();
-
-                    using (var dbCommand = con.CreateCommand())
+                    using (var con = new SqlConnection())
                     {
-                        dbCommand.CommandText = " SELECT COUNT(*) FROM Orders";
-                        Assert.Equal(1, dbCommand.ExecuteScalar());
-                    }
+                        con.ConnectionString = connectionString;
+                        con.Open();
 
-                    using (var dbCommand = con.CreateCommand())
-                    {
-                        dbCommand.CommandText = " SELECT Pic FROM Orders WHERE Id = 'orders/2-A'";
+                        using (var dbCommand = con.CreateCommand())
+                        {
+                            dbCommand.CommandText = " SELECT COUNT(*) FROM Orders";
+                            Assert.Equal(1, dbCommand.ExecuteScalar());
+                        }
 
-                        var sqlDataReader = dbCommand.ExecuteReader();
+                        using (var dbCommand = con.CreateCommand())
+                        {
+                            dbCommand.CommandText = " SELECT Pic FROM Orders WHERE Id = 'orders/2-A'";
 
-                        Assert.True(sqlDataReader.Read());
-                        var stream = sqlDataReader.GetStream(0);
+                            var sqlDataReader = dbCommand.ExecuteReader();
 
-                        var bytes = stream.ReadData();
+                            Assert.True(sqlDataReader.Read());
+                            var stream = sqlDataReader.GetStream(0);
 
-                        Assert.Equal(attachmentBytes, bytes);
+                            var bytes = stream.ReadData();
+
+                            Assert.Equal(attachmentBytes, bytes);
+                        }
                     }
                 }
             }
@@ -885,7 +851,9 @@ loadToOrders(orderData);
         {
             using (var store = GetDocumentStore())
             {
-                CreateRdbmsSchema(store, @"
+                using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
+                {
+                    CreateRdbmsSchema(connectionString, @"
 CREATE TABLE [dbo].[Attachments]
 (
     [Id] int identity primary key,
@@ -895,32 +863,29 @@ CREATE TABLE [dbo].[Attachments]
 )
 ");
 
-                using (var session = store.OpenAsyncSession())
-                {
-                    await session.StoreAsync(new User());
-                    await session.SaveChangesAsync();
-                }
-
-                store.Operations.Send(new PutAttachmentOperation("users/1-A", "profile.jpg", new MemoryStream(new byte[] { 1, 2, 3, 4, 5, 6, 7 }), "image/jpeg"));
-                store.Operations.Send(new PutAttachmentOperation("users/1-A", "profile-small.jpg", new MemoryStream(new byte[] { 1, 2, 3 }), "image/jpeg"));
-
-                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses > 0);
-
-                AddEtl(store, new SqlEtlConfiguration()
-                {
-                    Name = "LoadingMultipleAttachments",
-                    ConnectionStringName = "test",
-                    SqlTables =
+                    using (var session = store.OpenAsyncSession())
                     {
-                        new SqlEtlTable {TableName = "Attachments", DocumentIdColumn = "UserId", InsertOnlyMode = false},
-                    },
-                    Transforms =
+                        await session.StoreAsync(new User());
+                        await session.SaveChangesAsync();
+                    }
+
+                    store.Operations.Send(new PutAttachmentOperation("users/1-A", "profile.jpg", new MemoryStream(new byte[] { 1, 2, 3, 4, 5, 6, 7 }), "image/jpeg"));
+                    store.Operations.Send(new PutAttachmentOperation("users/1-A", "profile-small.jpg", new MemoryStream(new byte[] { 1, 2, 3 }), "image/jpeg"));
+
+                    var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses > 0);
+
+                    AddEtl(store, new SqlEtlConfiguration()
                     {
-                        new Transformation()
+                        Name = "LoadingMultipleAttachments",
+                        ConnectionStringName = "test",
+                        SqlTables = { new SqlEtlTable { TableName = "Attachments", DocumentIdColumn = "UserId", InsertOnlyMode = false }, },
+                        Transforms =
                         {
-                            Name = "Attachments",
-                            Collections = {"Users"},
-                            Script = @"
+                            new Transformation()
+                            {
+                                Name = "Attachments",
+                                Collections = {"Users"},
+                                Script = @"
 
 var attachments = this['@metadata']['@attachments'];
 
@@ -935,26 +900,22 @@ for (var i = 0; i < attachments.length; i++)
     loadToAttachments(attachment);
 }
 "
+                            }
                         }
-                    }
-                }, new SqlConnectionString
-                {
-                    Name = "test",
-                    FactoryName = "System.Data.SqlClient",
-                    ConnectionString = GetConnectionString(store)
-                });
+                    }, new SqlConnectionString { Name = "test", FactoryName = "System.Data.SqlClient", ConnectionString = connectionString });
 
-                etlDone.Wait(TimeSpan.FromMinutes(5));
+                    etlDone.Wait(TimeSpan.FromMinutes(5));
 
-                using (var con = new SqlConnection())
-                {
-                    con.ConnectionString = GetConnectionString(store);
-                    con.Open();
-
-                    using (var dbCommand = con.CreateCommand())
+                    using (var con = new SqlConnection())
                     {
-                        dbCommand.CommandText = " SELECT COUNT(*) FROM Attachments";
-                        Assert.Equal(2, dbCommand.ExecuteScalar());
+                        con.ConnectionString = connectionString;
+                        con.Open();
+
+                        using (var dbCommand = con.CreateCommand())
+                        {
+                            dbCommand.CommandText = " SELECT COUNT(*) FROM Attachments";
+                            Assert.Equal(2, dbCommand.ExecuteScalar());
+                        }
                     }
                 }
             }
@@ -965,7 +926,9 @@ for (var i = 0; i < attachments.length; i++)
         {
             using (var store = GetDocumentStore())
             {
-                CreateRdbmsSchema(store, @"
+                using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
+                {
+                    CreateRdbmsSchema(connectionString, @"
 CREATE TABLE [dbo].[Orders]
 (
     [Id] [nvarchar](50) NOT NULL,
@@ -973,15 +936,15 @@ CREATE TABLE [dbo].[Orders]
 )
 ");
 
-                using (var session = store.OpenAsyncSession())
-                {
-                    await session.StoreAsync(new Order());
-                    await session.SaveChangesAsync();
-                }
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        await session.StoreAsync(new Order());
+                        await session.SaveChangesAsync();
+                    }
 
-                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses > 0);
+                    var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses > 0);
 
-                SetupSqlEtl(store, @"
+                    SetupSqlEtl(store, connectionString, @"
 
 var orderData = {
     Id: id(this),
@@ -991,24 +954,25 @@ var orderData = {
 loadToOrders(orderData);
 ");
 
-                etlDone.Wait(TimeSpan.FromMinutes(5));
+                    etlDone.Wait(TimeSpan.FromMinutes(5));
 
-                using (var con = new SqlConnection())
-                {
-                    con.ConnectionString = GetConnectionString(store);
-                    con.Open();
-
-                    using (var dbCommand = con.CreateCommand())
+                    using (var con = new SqlConnection())
                     {
-                        dbCommand.CommandText = " SELECT COUNT(*) FROM Orders";
-                        Assert.Equal(1, dbCommand.ExecuteScalar());
+                        con.ConnectionString = connectionString;
+                        con.Open();
 
-                        dbCommand.CommandText = " SELECT Pic FROM Orders WHERE Id = 'orders/1-A'";
+                        using (var dbCommand = con.CreateCommand())
+                        {
+                            dbCommand.CommandText = " SELECT COUNT(*) FROM Orders";
+                            Assert.Equal(1, dbCommand.ExecuteScalar());
 
-                        var sqlDataReader = dbCommand.ExecuteReader();
+                            dbCommand.CommandText = " SELECT Pic FROM Orders WHERE Id = 'orders/1-A'";
 
-                        Assert.True(sqlDataReader.Read());
-                        Assert.True(sqlDataReader.IsDBNull(0));
+                            var sqlDataReader = dbCommand.ExecuteReader();
+
+                            Assert.True(sqlDataReader.Read());
+                            Assert.True(sqlDataReader.IsDBNull(0));
+                        }
                     }
                 }
             }
@@ -1019,58 +983,56 @@ loadToOrders(orderData);
         {
             using (var store = GetDocumentStore())
             {
-                CreateRdbmsSchema(store);
-
-                using (var session = store.OpenAsyncSession())
+                using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
-                    await session.StoreAsync(new Order
+                    CreateRdbmsSchema(connectionString);
+
+                    using (var session = store.OpenAsyncSession())
                     {
-                        OrderLines = new List<OrderLine>
+                        await session.StoreAsync(new Order
                         {
-                            new OrderLine{Cost = 3, Product = "Milk", Quantity = 3},
-                            new OrderLine{Cost = 4, Product = "Bear", Quantity = 2},
-                        }
-                    });
+                            OrderLines = new List<OrderLine>
+                            {
+                                new OrderLine {Cost = 3, Product = "Milk", Quantity = 3}, new OrderLine {Cost = 4, Product = "Bear", Quantity = 2},
+                            }
+                        });
 
-                    await session.StoreAsync(new FavouriteOrder
+                        await session.StoreAsync(new FavouriteOrder {OrderLines = new List<OrderLine> {new OrderLine {Cost = 3, Product = "Milk", Quantity = 3},}});
+
+                        await session.SaveChangesAsync();
+                    }
+
+                    var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+
+                    SetupSqlEtl(store, connectionString, defaultScript, collections: new List<string> {"Orders", "FavouriteOrders"});
+
+                    etlDone.Wait(TimeSpan.FromMinutes(5));
+
+                    using (var con = new SqlConnection())
                     {
-                        OrderLines = new List<OrderLine>
+                        con.ConnectionString = connectionString;
+                        con.Open();
+
+                        using (var dbCommand = con.CreateCommand())
                         {
-                            new OrderLine{Cost = 3, Product = "Milk", Quantity = 3},
+                            dbCommand.CommandText = " SELECT COUNT(*) FROM Orders";
+                            Assert.Equal(2, dbCommand.ExecuteScalar());
+                            dbCommand.CommandText = " SELECT COUNT(*) FROM OrderLines";
+                            Assert.Equal(3, dbCommand.ExecuteScalar());
                         }
-                    });
-
-                    await session.SaveChangesAsync();
-                }
-
-                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
-
-                SetupSqlEtl(store, defaultScript, collections: new List<string> { "Orders", "FavouriteOrders" });
-
-                etlDone.Wait(TimeSpan.FromMinutes(5));
-
-                using (var con = new SqlConnection())
-                {
-                    con.ConnectionString = GetConnectionString(store);
-                    con.Open();
-
-                    using (var dbCommand = con.CreateCommand())
-                    {
-                        dbCommand.CommandText = " SELECT COUNT(*) FROM Orders";
-                        Assert.Equal(2, dbCommand.ExecuteScalar());
-                        dbCommand.CommandText = " SELECT COUNT(*) FROM OrderLines";
-                        Assert.Equal(3, dbCommand.ExecuteScalar());
                     }
                 }
             }
         }
 
-        [Fact]
-        public async Task CanUseVarcharAndNVarcharFunctions()
-        {
-            using (var store = GetDocumentStore())
+            [Fact]
+            public async Task CanUseVarcharAndNVarcharFunctions()
             {
-                CreateRdbmsSchema(store, @"
+                using (var store = GetDocumentStore())
+                {
+                    using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
+                    {
+                        CreateRdbmsSchema(connectionString, @"
 CREATE TABLE [dbo].[Users]
 (
     [Id] [nvarchar](50) NOT NULL,
@@ -1080,33 +1042,27 @@ CREATE TABLE [dbo].[Users]
     [LastName2] [nvarchar](30) NULL
 )
 ");
-                using (var session = store.OpenAsyncSession())
-                {
-                    await session.StoreAsync(new User
-                    {
-                        Name = "Joe Doń"
-                    });
-
-                    await session.SaveChangesAsync();
-                }
-
-                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses > 0);
-
-                AddEtl(store, new SqlEtlConfiguration()
-                {
-                    Name = "CanUserNonVarcharAndNVarcharFunctions",
-                    ConnectionStringName = "test",
-                    SqlTables =
-                    {
-                        new SqlEtlTable {TableName = "Users", DocumentIdColumn = "Id", InsertOnlyMode = false},
-                    },
-                    Transforms =
-                    {
-                        new Transformation()
+                        using (var session = store.OpenAsyncSession())
                         {
-                            Name = "varchartest",
-                            Collections = {"Users"},
-                            Script = @"
+                            await session.StoreAsync(new User {Name = "Joe Doń"});
+
+                            await session.SaveChangesAsync();
+                        }
+
+                        var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses > 0);
+
+                        AddEtl(store, new SqlEtlConfiguration()
+                        {
+                            Name = "CanUserNonVarcharAndNVarcharFunctions",
+                            ConnectionStringName = "test",
+                            SqlTables = {new SqlEtlTable {TableName = "Users", DocumentIdColumn = "Id", InsertOnlyMode = false},},
+                            Transforms =
+                            {
+                                new Transformation()
+                                {
+                                    Name = "varchartest",
+                                    Collections = {"Users"},
+                                    Script = @"
 
 var names = this.Name.split(' ');
 
@@ -1118,69 +1074,64 @@ loadToUsers(
     LastName2:  nvarchar(names[1]),
 });
 "
+                                }
+                            }
+                        }, new SqlConnectionString {Name = "test", FactoryName = "System.Data.SqlClient", ConnectionString = connectionString });
+
+                        etlDone.Wait(TimeSpan.FromMinutes(5));
+
+                        using (var con = new SqlConnection())
+                        {
+                            con.ConnectionString = connectionString;
+                            con.Open();
+
+                            using (var dbCommand = con.CreateCommand())
+                            {
+                                dbCommand.CommandText = " SELECT COUNT(*) FROM Users";
+                                Assert.Equal(1, dbCommand.ExecuteScalar());
+                            }
                         }
-                    }
-                }, new SqlConnectionString
-                {
-                    Name = "test",
-                    FactoryName = "System.Data.SqlClient",
-                    ConnectionString = GetConnectionString(store)
-                });
-
-                etlDone.Wait(TimeSpan.FromMinutes(5));
-
-                using (var con = new SqlConnection())
-                {
-                    con.ConnectionString = GetConnectionString(store);
-                    con.Open();
-
-                    using (var dbCommand = con.CreateCommand())
-                    {
-                        dbCommand.CommandText = " SELECT COUNT(*) FROM Users";
-                        Assert.Equal(1, dbCommand.ExecuteScalar());
                     }
                 }
             }
-        }
 
-        [Fact]
-        public void Should_stop_batch_if_size_limit_exceeded_RavenDB_12800()
-        {
-            using (var store = GetDocumentStore(new Options
-            {
-                ModifyDatabaseRecord = x => x.Settings[RavenConfiguration.GetKey(c => c.Etl.MaxBatchSize)] = "5"
-            }))
-            {
-                CreateRdbmsSchema(store, @"
+            [Fact]
+                public void Should_stop_batch_if_size_limit_exceeded_RavenDB_12800()
+                {
+                    using (var store = GetDocumentStore(new Options { ModifyDatabaseRecord = x => x.Settings[RavenConfiguration.GetKey(c => c.Etl.MaxBatchSize)] = "5" }))
+                    {
+                        using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
+                        {
+                            CreateRdbmsSchema(connectionString, @"
 CREATE TABLE [dbo].[Orders]
 (
     [Id] [nvarchar](50) NOT NULL,
     [Pic] [varbinary](max) NULL
 )
 ");
-                using (var session = store.OpenSession())
-                {
+                            using (var session = store.OpenSession())
+                            {
 
-                    for (int i = 0; i < 10; i++)
-                    {
-                        var order = new Orders.Order();
-                        session.Store(order);
+                                for (int i = 0; i < 10; i++)
+                                {
+                                    var order = new Orders.Order();
+                                    session.Store(order);
 
-                        var r = new Random(i);
+                                    var r = new Random(i);
 
-                        var bytes = new byte[1024 * 1024 * 1];
+                                    var bytes = new byte[1024 * 1024 * 1];
 
-                        r.NextBytes(bytes);
+                                    r.NextBytes(bytes);
 
-                        session.Advanced.Attachments.Store(order, "my-attachment", new MemoryStream(bytes));
-                    }
+                                    session.Advanced.Attachments.Store(order, "my-attachment", new MemoryStream(bytes));
+                                }
 
-                    session.SaveChanges();
-                }
+                                session.SaveChanges();
+                            }
 
-                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses > 0);
+                            var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses > 0);
 
-                SetupSqlEtl(store, @"
+                            SetupSqlEtl(store, connectionString, @"
 
 var orderData = {
     Id: id(this),
@@ -1190,19 +1141,20 @@ var orderData = {
 loadToOrders(orderData);
 ");
 
-                etlDone.Wait(TimeSpan.FromMinutes(5));
+                            etlDone.Wait(TimeSpan.FromMinutes(5));
 
-                var database = GetDatabase(store.Database).Result;
+                            var database = GetDatabase(store.Database).Result;
 
-                var etlProcess = (SqlEtl)database.EtlLoader.Processes.First();
+                            var etlProcess = (SqlEtl)database.EtlLoader.Processes.First();
 
-                var stats = etlProcess.GetPerformanceStats();
+                            var stats = etlProcess.GetPerformanceStats();
 
-                Assert.Contains("Stopping the batch because maximum batch size limit was reached (5 MBytes)", stats.Select(x => x.BatchCompleteReason).ToList());
-            }
-        }
+                            Assert.Contains("Stopping the batch because maximum batch size limit was reached (5 MBytes)", stats.Select(x => x.BatchCompleteReason).ToList());
+                        }
+                    }
+                }
 
-        private async Task<string> ReadFromWebSocket(ArraySegment<byte> buffer, WebSocket source)
+                private async Task<string> ReadFromWebSocket(ArraySegment<byte> buffer, WebSocket source)
         {
             using (var ms = new MemoryStream())
             {
@@ -1226,11 +1178,11 @@ loadToOrders(orderData);
             }
         }
 
-        private static void AssertCounts(int ordersCount, int orderLineCounts, DocumentStore store)
+        private static void AssertCounts(int ordersCount, int orderLineCounts, string connectionString)
         {
             using (var con = new SqlConnection())
             {
-                con.ConnectionString = GetConnectionString(store);
+                con.ConnectionString = connectionString;
                 con.Open();
 
                 using (var dbCommand = con.CreateCommand())
@@ -1243,7 +1195,7 @@ loadToOrders(orderData);
             }
         }
 
-        protected void SetupSqlEtl(DocumentStore store, string script, bool insertOnly = false, List<string> collections = null)
+        protected void SetupSqlEtl(DocumentStore store, string connectionString, string script, bool insertOnly = false, List<string> collections = null)
         {
             var connectionStringName = $"{store.Database}@{store.Urls.First()} to SQL DB";
 
@@ -1268,14 +1220,9 @@ loadToOrders(orderData);
             }, new SqlConnectionString
             {
                 Name = connectionStringName,
-                ConnectionString = GetConnectionString(store),
+                ConnectionString = connectionString,
                 FactoryName = "System.Data.SqlClient"
             });
-        }
-
-        public static string GetConnectionString(DocumentStore store)
-        {
-            return MssqlConnectionString.Instance.VerifiedConnectionString.Value + $";Initial Catalog=SqlReplication-{store.Database};";
         }
 
         private class Order

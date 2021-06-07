@@ -131,27 +131,24 @@ mark,
 .bg-primary {
   // Given the contrast here, this is the only class to have its color inverted
   // automatically.
-  .bg-variant(@brand-primary, @gray-lighter);
+  .bg-variant(@brand-primary, @gray-lighter, @text-emphasis);
   background-color:@brand-primary;
   background-image:none;
 }
 .bg-success {
-    .bg-variant(@state-success-bg, @bg-success-color);
+    .bg-variant(@state-success-bg, @bg-success-color, @bg-success-color-emphasis);
 }
 .bg-info {
-    .bg-variant(@state-info-bg, @bg-info-color);
+    .bg-variant(@state-info-bg, @bg-info-color, @bg-info-color-emphasis);
 }
 .bg-warning {
-    .bg-variant(@state-warning-bg, @bg-warning-color);
+    .bg-variant(@state-warning-bg, @bg-warning-color, @bg-warning-color-emphasis);
 }
 .bg-danger {
-    .bg-variant(@state-danger-bg, @bg-danger-color);
-}
-.bg-danger {
-    .bg-variant(@state-danger-bg, @bg-danger-color);
+    .bg-variant(@state-danger-bg, @bg-danger-color, @bg-danger-color-emphasis);
 }
 .bg-experimental {
-    .bg-variant(@state-experimental-bg, @state-experimental-text);
+    .bg-variant(@state-experimental-bg, @state-experimental-text, @bg-experimental-color-emphasis);
 }
 
 // Page header

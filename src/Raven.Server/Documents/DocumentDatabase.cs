@@ -47,6 +47,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Server;
+using Sparrow.Server.Json.Sync;
 using Sparrow.Server.Meters;
 using Sparrow.Server.Utils;
 using Sparrow.Threading;
@@ -866,10 +867,10 @@ namespace Raven.Server.Documents
             }
         }
 
-        public void RunIdleOperations(CleanupMode mode = CleanupMode.Regular)
+        public void RunIdleOperations(DatabaseCleanupMode mode = DatabaseCleanupMode.Regular)
         {
-            Debug.Assert(mode != CleanupMode.None, "mode != CleanupMode.None");
-            if (mode == CleanupMode.None)
+            Debug.Assert(mode != DatabaseCleanupMode.None, "mode != CleanupMode.None");
+            if (mode == DatabaseCleanupMode.None)
                 return;
 
             if (Monitor.TryEnter(_idleLocker) == false)
@@ -1001,7 +1002,7 @@ namespace Raven.Server.Documents
                                 options: databaseSmugglerOptionsServerSide,
                                 token: cancellationToken);
 
-                            smugglerResult = smuggler.Execute();
+                            smugglerResult = smuggler.ExecuteAsync().Result;
                         }
 
                         outputStream.Flush();
@@ -1587,6 +1588,31 @@ namespace Raven.Server.Documents
                 key: resourceName));
         }
 
+        internal void HandleRecoverableFailure(object sender, RecoverableFailureEventArgs e)
+        {
+            var title = $"Recoverable Voron error in '{Name}' database";
+            var message = $"Failure {e.FailureMessage} in the following environment: {e.EnvironmentPath}";
+
+            try
+            {
+                _serverStore.NotificationCenter.Add(AlertRaised.Create(
+                    Name,
+                    title,
+                    message,
+                    AlertType.RecoverableVoronFailure,
+                    NotificationSeverity.Warning,
+                    key: e.EnvironmentId.ToString(),
+                    details: new ExceptionDetails(e.Exception)));
+            }
+            catch (Exception)
+            {
+                // exception in raising an alert can't prevent us from unloading a database
+            }
+
+            if (_logger.IsOperationsEnabled)
+                _logger.Operations($"{title}. {message}", e.Exception);
+        }
+
         public long GetEnvironmentsHash()
         {
             long hash = 0;
@@ -1630,7 +1656,7 @@ namespace Raven.Server.Documents
         }
     }
 
-    public enum CleanupMode
+    public enum DatabaseCleanupMode
     {
         None,
         Regular,

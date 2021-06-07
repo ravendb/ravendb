@@ -100,13 +100,14 @@ class revisionsBin extends viewModelBase {
         const grid = this.gridController();
 
         grid.headerVisible(true);
+        
+        const checkColumn = new checkedColumn(false);
+        const idColumn = new hyperlinkColumn<document>(grid, x => x.getId(), x => appUrl.forEditDoc(x.getId(), this.activeDatabase()), "Id", "300px");
+        const changeVectorColumn = new textColumn<document>(grid, x => x.__metadata.changeVector(), "Change Vector", "210px");
+        const deletionDateColumn = new textColumn<document>(grid, x => generalUtils.formatUtcDateAsLocal(x.__metadata.lastModified()), "Deletion date", "300px");
 
-        grid.init((s, _) => this.fetchRevisionsBinEntries(s), () => [
-            new checkedColumn(false),
-            new hyperlinkColumn<document>(grid, x => x.getId(), x => appUrl.forEditDoc(x.getId(), this.activeDatabase()), "Id", "300px"),
-            new textColumn<document>(grid, x => x.__metadata.changeVector(), "Change Vector", "210px"), 
-            new textColumn<document>(grid, x => generalUtils.formatUtcDateAsLocal(x.__metadata.lastModified()), "Deletion date", "300px")
-        ]);
+        const gridColumns = this.isAdminAccessOrAbove() ? [checkColumn, idColumn, changeVectorColumn, deletionDateColumn] : [idColumn, changeVectorColumn, deletionDateColumn];
+        grid.init((s, _) => this.fetchRevisionsBinEntries(s), () => gridColumns);
 
         grid.dirtyResults.subscribe(dirty => this.dirtyResult(dirty));
 

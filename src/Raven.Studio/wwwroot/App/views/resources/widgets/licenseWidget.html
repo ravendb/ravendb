@@ -1,0 +1,56 @@
+<div>
+    <div class="cluster-dashboard-item-header">
+        <h3> <i class="icon-license-information"></i> <span>License</span></h3>
+        <button class="btn btn-warning btn-sm" data-bind="click: remove">
+            <i class="icon-trash"></i>
+        </button>
+    </div>
+
+    <div class="license-information">
+        <div class="license-item">
+            <i class="icon-license"></i>
+            <div>
+                <h4>License type</h4>
+                <div class="license-item-value" data-bind="text: licenseTypeText"></div>
+            </div>
+        </div>
+
+        <div class="license-item">
+            <i class="icon-calendar"></i>
+            <div>
+                <h4 data-bind="text: expiresText"></h4>
+                <div class="license-item-value" data-bind="visible: formattedExpiration">
+                    <strong data-bind="html: formattedExpiration"></strong>
+                    <small data-bind="text: automaticRenewText"></small>
+                </div>
+            </div>
+        </div>
+
+        <div class="license-item">
+            <i class="icon-support"></i>
+            <div>
+                <h4>Support type</h4>
+                <div class="license-item-value" data-bind="text: supportLabel"></div>
+            </div>
+        </div>
+
+        <div class="license-item" data-bind="visible: canLoadCertificateInfo()">
+            <i class="icon-certificate"></i>
+            <div>
+                
+                <h4>Server Certificate Expiration</h4>
+                <div class="global-spinner spinner-sm" data-bind="visible: spinners.serverCertificate"></div>
+                
+                <div data-bind="with: serverCertificateInfo">
+                    <div class="license-item-value">
+                        <span data-bind="text: dateFormatted"></span>
+                        <br/>
+                        <small data-bind="text: durationFormatted, attr: { class: expirationClass }"></small>
+                    </div>    
+                </div>
+            </div>
+        </div>
+
+        <a data-bind="attr: { href: aboutPageUrl }" class="btn btn-sm license-link">License details</a>
+    </div>
+</div>

@@ -13,6 +13,7 @@ import router = require("plugins/router");
 class searchBox {
 
     searchQuery = ko.observable<string>();
+    searchQueryHasFocus = ko.observable<boolean>(false);
     showSearchSmallScreen = ko.observable<boolean>(false);
 
     recentDocumentsList = ko.pureComputed(() => {
@@ -74,6 +75,7 @@ class searchBox {
                 ]);
                 return false; // prevent default
             } else if (e.key === "Enter") {
+                this.searchQueryHasFocus(false);
                 this.dispatchGoToItem();
                 return false;
             }
@@ -81,10 +83,12 @@ class searchBox {
             return true;
         });
 
-        this.searchQuery.throttle(250).subscribe(query => {
+        this.searchQuery.subscribe(() => {
             this.highlightedItem(null);
             this.matchedDocumentIds([]);
-            
+        })
+        
+        this.searchQuery.throttle(250).subscribe(query => {
             if (query) {
                 this.spinners.startsWith(true);
                 new getDocumentsMetadataByIDPrefixCommand(query, 10, activeDatabaseTracker.default.database())
@@ -204,6 +208,10 @@ class searchBox {
                     this.goToDocument(this.matchedDocumentIds()[highlight.index]);
                     break;
             }
+        } else if (this.searchQuery()) {
+            // user hit enter but values still loading
+            // try to load document by name
+            this.goToDocument(this.searchQuery());
         }
     }
     

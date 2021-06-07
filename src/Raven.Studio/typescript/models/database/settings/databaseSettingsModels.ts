@@ -2,6 +2,7 @@
 import jsonUtil = require("common/jsonUtil");
 import getFolderPathOptionsCommand = require("commands/resources/getFolderPathOptionsCommand");
 import genUtils = require("common/generalUtils");
+import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 
 type configurationOrigin = "Default" | "Server" | "Database";
 
@@ -10,7 +11,9 @@ export abstract class settingsEntry {
     data: Raven.Server.Config.ConfigurationEntryDatabaseValue;
 
     keyName = ko.observable<string>();
+    
     showEntry = ko.observable<boolean>();
+    entryMatchesFilter = ko.observable<boolean>();
 
     isServerWideOnlyEntry = ko.observable<boolean>();
     serverOrDefaultValue: KnockoutComputed<string>;
@@ -278,7 +281,7 @@ export class pathEntry extends databaseEntry<string> {
     }
 
     getFolderPathOptions(path?: string) {
-        getFolderPathOptionsCommand.forServerLocal(path, true)
+        getFolderPathOptionsCommand.forServerLocal(path, true, activeDatabaseTracker.default.database()) 
             .execute()
             .done((result: Raven.Server.Web.Studio.FolderPathOptions) => {
                 this.folderPathOptions(result.List);

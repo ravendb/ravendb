@@ -108,11 +108,11 @@ class expiration extends viewModelBase {
         }
     }
     
-    toDto() {
+    toDto() : Raven.Client.Documents.Operations.Expiration.ExpirationConfiguration {
         return {
             Disabled: !this.enabled(),
             DeleteFrequencyInSec: this.specifyDeleteFrequency() ? this.deleteFrequencyInSec() : null
-        } as Raven.Client.Documents.Operations.Expiration.ExpirationConfiguration;
+        };
     }
 
     saveChanges() {

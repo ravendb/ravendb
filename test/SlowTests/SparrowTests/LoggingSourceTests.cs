@@ -2,10 +2,12 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Net.WebSockets;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
@@ -69,7 +71,7 @@ namespace SlowTests.SparrowTests
             {
                 for (var i = 0; i < 5; i++)
                 {
-                    await logger.OperationsAsync("Some message");
+                    await logger.OperationsWithWait("Some message");
                 }
                 Thread.Sleep(10);
             }
@@ -79,7 +81,7 @@ namespace SlowTests.SparrowTests
             {
                 for (var i = 0; i < 10; i++)
                 {
-                    await logger.OperationsAsync("Some message");
+                    await logger.OperationsWithWait("Some message");
                 }
                 afterEndFiles = Directory.GetFiles(path);
                 return DoesContainFilesThatShouldNotBeFound(afterEndFiles, toCheckLogFiles, compressing);
@@ -144,7 +146,7 @@ namespace SlowTests.SparrowTests
                 retentionSize);
 
             var logger = new Logger(loggingSource, "Source" + testName, "Logger" + testName);
-            await logger.OperationsAsync("Some message");
+            await logger.OperationsWithWait("Some message");
 
             var todayLog = string.Empty;
             WaitForValue(() =>
@@ -192,7 +194,7 @@ namespace SlowTests.SparrowTests
             loggingSource.SetupLogMode(LogMode.Operations, path, retentionTimeConfiguration, retentionSize, false);
 
             var logger = new Logger(loggingSource, "Source" + testName, "Logger" + testName);
-            await logger.OperationsAsync("Some message");
+            await logger.OperationsWithWait("Some message");
 
             var result = WaitForValue(() =>
             {
@@ -252,7 +254,7 @@ namespace SlowTests.SparrowTests
             {
                 for (var i = 0; i < 5; i++)
                 {
-                    await logger.OperationsAsync("Some message");
+                    await logger.OperationsWithWait("Some message");
                 }
                 Thread.Sleep(10);
             }
@@ -262,7 +264,7 @@ namespace SlowTests.SparrowTests
             {
                 for (var i = 0; i < 10; i++)
                 {
-                    await logger.OperationsAsync("Some message");
+                    await logger.OperationsWithWait("Some message");
                 }
                 afterEndFiles = Directory.GetFiles(path);
                 return DoesContainFilesThatShouldNotBeFound(afterEndFiles, toCheckLogFiles, compressing);
@@ -324,7 +326,7 @@ namespace SlowTests.SparrowTests
             {
                 for (var j = 0; j < 5; j++)
                 {
-                    await logger.OperationsAsync("Some message");
+                    await logger.OperationsWithWait("Some message");
                 }
                 Thread.Sleep(10);
             }
@@ -342,11 +344,14 @@ namespace SlowTests.SparrowTests
 
                 return Math.Abs(size - retentionSize) <= threshold;
             }, true, 10_000, 1_000);
+            string errorMessage = isRetentionPolicyApplied 
+                ? string.Empty
+                : $"{TempInfoToInvestigate(loggingSource, path)}. " +
+                  $"ActualSize({size}), retentionSize({retentionSize}), threshold({threshold})" + 
+                  Environment.NewLine + 
+                  FileNamesWithSize(afterEndFiles);
 
-            Assert.True(isRetentionPolicyApplied,
-                $"{TempInfoToInvestigate(loggingSource)}. ActualSize({size}), retentionSize({retentionSize}), threshold({threshold})" +
-                Environment.NewLine +
-                FileNamesWithSize(afterEndFiles));
+            Assert.True(isRetentionPolicyApplied, errorMessage);
 
             loggingSource.EndLogging();
         }
@@ -358,13 +363,50 @@ namespace SlowTests.SparrowTests
             return logsAroundError;
         }
 
-        private static string TempInfoToInvestigate(LoggingSource loggingSource)
+        private static string TempInfoToInvestigate(LoggingSource loggingSource, string path)
         {
             if (loggingSource.Compressing)
             {
+                var loggedInfo = new StringBuilder();
+                var logDirectory = new DirectoryInfo(path);
+                var logs = logDirectory.GetFiles();
+                foreach (var fileInfo in logs)
+                {
+                    using var file = fileInfo.OpenRead();
+
+                    Stream stream;
+                    if (fileInfo.Name.EndsWith(".log.gz"))
+                    {
+                        stream = new GZipStream(file, CompressionMode.Decompress);
+                    }
+                    else if (fileInfo.Name.EndsWith(".log"))
+                    {
+                        stream = file;
+                    }
+                    else
+                    {
+                        continue;
+                    }
+
+                    using var reader = new StreamReader(stream);
+
+                    string line;
+                    while ((line = reader.ReadLine()) != null && line.Contains("Something went wrong while compressing log files") == false)
+                    {
+
+                    }
+                    if(line == null)
+                        continue;
+                    do
+                    {
+                        loggedInfo.AppendLine(line);
+                    } while ((line = reader.ReadLine()) != null);
+                    break;
+                }
+
                 var compressLoggingThread = loggingSource.GetType().GetField("_compressLoggingThread", BindingFlags.NonPublic | BindingFlags.Instance)?.GetValue(loggingSource) as Thread;
                 if(compressLoggingThread != null)
-                    return $"compressLoggingThread.IsAlive {compressLoggingThread.IsAlive}";
+                    return $"compressLoggingThread: {{IsAlive :{compressLoggingThread.IsAlive}, ThreadState :{compressLoggingThread.ThreadState}}} \n{loggedInfo}";
             }
 
             return "";
@@ -395,7 +437,7 @@ namespace SlowTests.SparrowTests
 
             for (var i = 0; i < 1000; i++)
             {
-                await logger.OperationsAsync("Some message");
+                await logger.OperationsWithWait("Some message");
             }
 
             var beforeEndFiles = Directory.GetFiles(path);
@@ -437,7 +479,7 @@ namespace SlowTests.SparrowTests
 
                 for (var i = 0; i < 100; i++)
                 {
-                    var task = logger.OperationsAsync("Some message");
+                    var task = logger.OperationsWithWait("Some message");
                     await Task.WhenAny(task, Task.Delay(taskTimeout));
                     if (task.IsCompleted == false)
                         throw new TimeoutException($"The log task took more then one second");
@@ -470,7 +512,7 @@ namespace SlowTests.SparrowTests
 
                     for (var i = 0; i < 100; i++)
                     {
-                        var task = secondLogger.OperationsAsync("Some message");
+                        var task = secondLogger.OperationsWithWait("Some message");
                         Task.WhenAny(task, Task.Delay(taskTimeout)).GetAwaiter().GetResult();
                         if (task.IsCompleted == false)
                             throw new TimeoutException($"The log task took more then one second");
@@ -535,7 +577,7 @@ namespace SlowTests.SparrowTests
             var beforeCloseOperation = Guid.NewGuid().ToString();
             var beforeCloseInformation = Guid.NewGuid().ToString();
 
-            var logTasks = Task.WhenAll(logger.OperationsAsync(beforeCloseOperation), logger.InfoAsync(beforeCloseInformation));
+            var logTasks = Task.WhenAll(logger.OperationsWithWait(beforeCloseOperation), logger.InfoWithWait(beforeCloseInformation));
             await Task.WhenAny(logTasks, Task.Delay(timeout));
             Assert.True(logTasks.IsCompleted, $"Waited over {timeout.TotalSeconds} seconds for log tasks to finish");
 
@@ -551,7 +593,7 @@ namespace SlowTests.SparrowTests
             var afterCloseOperation = Guid.NewGuid().ToString();
             var afterCloseInformation = Guid.NewGuid().ToString();
 
-            logTasks = Task.WhenAll(logger.OperationsAsync(afterCloseOperation), logger.InfoAsync(afterCloseInformation));
+            logTasks = Task.WhenAll(logger.OperationsWithWait(afterCloseOperation), logger.InfoWithWait(afterCloseInformation));
             await Task.WhenAny(logTasks, Task.Delay(timeout));
             Assert.True(logTasks.IsCompleted || logMode == LogMode.None,
                 $"Waited over {timeout.TotalSeconds} seconds for log tasks to finish");
@@ -598,7 +640,7 @@ namespace SlowTests.SparrowTests
             var beforeDetachOperation = Guid.NewGuid().ToString();
             var beforeDetachInformation = Guid.NewGuid().ToString();
 
-            var logTasks = Task.WhenAll(logger.OperationsAsync(beforeDetachOperation), logger.InfoAsync(beforeDetachInformation));
+            var logTasks = Task.WhenAll(logger.OperationsWithWait(beforeDetachOperation), logger.InfoWithWait(beforeDetachInformation));
             await Task.WhenAny(logTasks, Task.Delay(timeout));
             Assert.True(logTasks.IsCompleted, $"Waited over {timeout.TotalSeconds} seconds for log tasks to finish");
 
@@ -609,7 +651,7 @@ namespace SlowTests.SparrowTests
             var afterDetachOperation = Guid.NewGuid().ToString();
             var afterDetachInformation = Guid.NewGuid().ToString();
 
-            logTasks = Task.WhenAll(logger.OperationsAsync(afterDetachOperation), logger.InfoAsync(afterDetachInformation));
+            logTasks = Task.WhenAll(logger.OperationsWithWait(afterDetachOperation), logger.InfoWithWait(afterDetachInformation));
             await Task.WhenAny(logTasks, Task.Delay(timeout));
             Assert.True(logTasks.IsCompleted || logMode == LogMode.None,
                 $"Waited over {timeout.TotalSeconds} seconds for log tasks to finish");
@@ -679,7 +721,7 @@ namespace SlowTests.SparrowTests
             var uniqForOperation = Guid.NewGuid().ToString();
             var uniqForInformation = Guid.NewGuid().ToString();
 
-            var logTasks = Task.WhenAll(logger.OperationsAsync(uniqForOperation), logger.InfoAsync(uniqForInformation));
+            var logTasks = Task.WhenAll(logger.OperationsWithWait(uniqForOperation), logger.InfoWithWait(uniqForInformation));
             var timeout = TimeSpan.FromSeconds(10);
             await Task.WhenAny(logTasks, Task.Delay(timeout));
             Assert.True(logTasks.IsCompleted, $"Waited over {timeout.TotalSeconds} seconds for log tasks to finish");

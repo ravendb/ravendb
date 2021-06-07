@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Threading.Tasks;
 using Raven.Server.Routing;
 using Sparrow.Server.Platform.Posix;
 
@@ -27,23 +28,23 @@ namespace Raven.Server.ServerWide
             if (path.StartsWith("."))
                 path = path.Substring(1);
 
-            path = string.IsNullOrWhiteSpace(prefix) == false ?
-                Path.Combine(prefix, $"{path}.json") :
+            path = string.IsNullOrWhiteSpace(prefix) == false ? 
+                $"{prefix}/{path}.json" : // .ZIP File Format Specification 4.4.17 file name: (Variable)
                 $"{path}.json";
 
             return path;
         }
 
-        public static void WriteExceptionAsZipEntry(Exception e, ZipArchive archive, string entryName)
+        public static async Task WriteExceptionAsZipEntryAsync(Exception e, ZipArchive archive, string entryName)
         {
             var entry = archive.CreateEntry($"{entryName}.error");
             entry.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
 
-            using (var entryStream = entry.Open())
-            using (var sw = new StreamWriter(entryStream))
+            await using (var entryStream = entry.Open())
+            await using (var sw = new StreamWriter(entryStream))
             {
-                sw.Write(e);
-                sw.Flush();
+                await sw.WriteAsync(e.ToString());
+                await sw.FlushAsync();
             }
         }
 
@@ -57,18 +58,21 @@ namespace Raven.Server.ServerWide
                     case RavenServer.AuthenticationStatus.ClusterAdmin:
                         authorized = true;
                         break;
+
                     case RavenServer.AuthenticationStatus.Operator:
                         if (route.AuthorizationStatus != AuthorizationStatus.ClusterAdmin)
                             authorized = true;
                         break;
+
                     case RavenServer.AuthenticationStatus.Allowed:
                         if (route.AuthorizationStatus == AuthorizationStatus.ClusterAdmin || route.AuthorizationStatus == AuthorizationStatus.Operator)
                             break;
                         if (route.TypeOfRoute == RouteInformation.RouteType.Databases
-                            && (db == null || authenticateConnection.CanAccess(db, route.AuthorizationStatus == AuthorizationStatus.DatabaseAdmin) == false))
+                            && (db == null || authenticateConnection.CanAccess(db, requireAdmin: route.AuthorizationStatus == AuthorizationStatus.DatabaseAdmin, requireWrite: route.EndpointType == EndpointType.Write) == false))
                             break;
                         authorized = true;
                         break;
+
                     default:
                         if (route.AuthorizationStatus == AuthorizationStatus.UnauthenticatedClients)
                             authorized = true;

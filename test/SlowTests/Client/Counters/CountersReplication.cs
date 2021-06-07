@@ -568,7 +568,8 @@ namespace SlowTests.Client.Counters
                     await session.SaveChangesAsync();
     }
 
-                await Backup(backupPath, store1);
+                var config = Backup.CreateBackupConfiguration(backupPath);
+                await Backup.UpdateConfigAndRunBackupAsync(Server, config, store1);
                 await Restore(backupPath, store2);
                 await Restore(backupPath, store3);
 
@@ -639,7 +640,8 @@ namespace SlowTests.Client.Counters
                         await session.SaveChangesAsync();
                     }
 
-                    await Backup(backupPath, store1);
+                    var config = Backup.CreateBackupConfiguration(backupPath);
+                    await Backup.UpdateConfigAndRunBackupAsync(server, config, store1);
                     await Restore(backupPath, store2);
 
                     var stats = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
@@ -786,24 +788,6 @@ namespace SlowTests.Client.Counters
 
                 EnsureReplicating(storeA, storeB);
             }
-        }
-
-        private static async Task Backup(string backupPath, DocumentStore backupStore)
-        {
-            var config = new PeriodicBackupConfiguration
-            {
-                BackupType = BackupType.Backup, LocalSettings = new LocalSettings {FolderPath = backupPath}, IncrementalBackupFrequency = "* * * 1 *" // sometime in January..
-            };
-
-            var backupTaskId = (await backupStore.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-            await backupStore.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-
-            var getPeriodicBackupStatus = new GetPeriodicBackupStatusOperation(backupTaskId);
-            SpinWait.SpinUntil(() =>
-            {
-                var getPeriodicBackupResult = backupStore.Maintenance.Send(getPeriodicBackupStatus);
-                return getPeriodicBackupResult.Status?.LastEtag > 0;
-            }, TimeSpan.FromSeconds(15));
         }
 
         private static async Task Restore(string backupPath, DocumentStore restoreStore)

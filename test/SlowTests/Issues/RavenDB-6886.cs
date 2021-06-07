@@ -1,9 +1,12 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Raven.Server.Exceptions;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -27,17 +30,13 @@ namespace SlowTests.Issues
         public async Task Cluster_identity_for_single_document_should_work()
         {
             const int clusterSize = 3;
-            const string databaseName = "Cluster_identity_for_single_document_should_work";
-            var leaderServer = await CreateRaftClusterAndGetLeader(clusterSize);
+            var cluster = await CreateRaftCluster(clusterSize, watcherCluster: true);
             using (var leaderStore = GetDocumentStore(new Options
             {
-                Server = leaderServer,
-                ModifyDatabaseName = s => databaseName,
-                DeleteDatabaseOnDispose = false,
-                CreateDatabase = false
+                Server = cluster.Leader,
+                ReplicationFactor = 3
             }))
             {
-                await CreateDatabasesInCluster(clusterSize, databaseName, leaderStore);
                 using (var session = leaderStore.OpenSession())
                 {
                     //id ending with "/" should trigger cluster identity id so
@@ -145,20 +144,60 @@ namespace SlowTests.Issues
                 Assert.True(WaitForDocument<User>(leaderStore, "marker A", doc => true));
                 Assert.True(WaitForDocument<User>(leaderStore, "marker B", doc => true));
 
-                using (var session = leaderStore.OpenSession())
+                await WaitForRollingAutoIndexDeployment(leaderStore,async () =>
                 {
-                    var users = session.Query<User>()
-                        .Customize(x => x.WaitForNonStaleResults())
-                        .Where(x => x.Name.StartsWith("J"))
-                        .ToList();
-
-                    Assert.Equal(docsInEachNode * 3, users.Count);
-                    for (var i = 1; i <= docsInEachNode * 3; i++)
+                    using (var session = leaderStore.OpenAsyncSession())
                     {
-                        Assert.True(users.Any(u => u.Id == "users/" + i));
+                        var users = await session.Query<User>()
+                            .Customize(x => x.WaitForNonStaleResults())
+                            .Where(x => x.Name.StartsWith("J"))
+                            .ToListAsync();
+
+                        Assert.Equal(docsInEachNode * 3, users.Count);
+                        for (var i = 1; i <= docsInEachNode * 3; i++)
+                        {
+                            Assert.True(users.Any(u => u.Id == "users/" + i));
+                        }
                     }
-                }
+                });
             }
+        }
+
+        public async Task WaitForRollingAutoIndexDeployment(IDocumentStore store, Func<Task> act, TimeSpan? timeout = null)
+        {
+            try
+            {
+                await act();
+            }
+            catch
+            {
+                // expected
+
+                await WaitForRollingIndexDeployment(store, timeout);
+                await act();
+            }
+
+            await WaitForRollingIndexDeployment(store, timeout);
+        }
+
+        public async Task WaitForRollingIndexDeployment(IDocumentStore store, TimeSpan? timeout = null)
+        {
+            timeout ??= TimeSpan.FromSeconds(15);
+            var sp = Stopwatch.StartNew();
+            while (sp.Elapsed < timeout)
+            {
+                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                if (record.RollingIndexes == null)
+                    return;
+
+                var any = record.RollingIndexes.Values.Any(i => i.ActiveDeployments.Values.Any(d => d.State != RollingIndexState.Done));
+                if (any == false)
+                    return;
+
+                await Task.Delay(250);
+            }
+
+            throw new TimeoutException("Waited too long for rolling index deployment");
         }
 
         [Fact]
@@ -227,19 +266,24 @@ namespace SlowTests.Issues
                 Assert.True(WaitForDocument<User>(leaderStore, "marker A", doc => true, timeout: 5000));
                 Assert.True(WaitForDocument<User>(leaderStore, "marker B", doc => true, timeout: 5000));
 
-                using (var session = leaderStore.OpenSession())
+                await WaitForRollingAutoIndexDeployment(leaderStore,() =>
                 {
-                    var users = session.Query<User>()
-                        .Customize(x => x.WaitForNonStaleResults())
-                        .Where(x => x.Name.StartsWith("J"))
-                        .OrderBy(x => x.Id)
-                        .ToList();
+                    using (var session = leaderStore.OpenSession())
+                    {
+                        var users = session.Query<User>()
+                            .Customize(x => x.WaitForNonStaleResults())
+                            .Where(x => x.Name.StartsWith("J"))
+                            .OrderBy(x => x.Id)
+                            .ToList();
 
-                    Assert.Equal(3, users.Count);
-                    Assert.Equal("users/1", users[0].Id);
-                    Assert.Equal("users/2", users[1].Id);
-                    Assert.Equal("users/3", users[2].Id);
-                }
+                        Assert.Equal(3, users.Count);
+                        Assert.Equal("users/1", users[0].Id);
+                        Assert.Equal("users/2", users[1].Id);
+                        Assert.Equal("users/3", users[2].Id);
+                    }
+
+                    return Task.CompletedTask;
+                });
             }
         }
 
@@ -321,18 +365,23 @@ namespace SlowTests.Issues
                 Assert.True(WaitForDocument<User>(leaderStore, "marker A", doc => true, timeout: 5000));
                 Assert.True(WaitForDocument<User>(leaderStore, "marker B", doc => true, timeout: 5000));
 
-                using (var session = leaderStore.OpenSession())
+                await WaitForRollingAutoIndexDeployment(leaderStore,() =>
                 {
-                    var users = session.Query<User>()
-                        .Customize(x => x.WaitForNonStaleResults())
-                        .Where(x => x.Name.StartsWith("J"))
-                        .OrderBy(x => x.Id)
-                        .ToList();
+                    using (var session = leaderStore.OpenSession())
+                    {
+                        var users = session.Query<User>()
+                            .Customize(x => x.WaitForNonStaleResults())
+                            .Where(x => x.Name.StartsWith("J"))
+                            .OrderBy(x => x.Id)
+                            .ToList();
 
-                    Assert.Equal(15, users.Count);
-                    for (int i = 1; i <= 15; i++)
-                        Assert.True(users.Any(x => x.Id == "users/" + i));
-                }
+                        Assert.Equal(15, users.Count);
+                        for (int i = 1; i <= 15; i++)
+                            Assert.True(users.Any(x => x.Id == "users/" + i));
+                    }
+
+                    return Task.CompletedTask;
+                });
             }
         }
 
@@ -341,17 +390,13 @@ namespace SlowTests.Issues
         public async Task Cluster_identity_for_multiple_documents_on_leader_should_work()
         {
             const int clusterSize = 3;
-            const string databaseName = "Cluster_identity_for_multiple_documents_on_leader_should_work";
-            var leaderServer = await CreateRaftClusterAndGetLeader(clusterSize);
+            var cluster = await CreateRaftCluster(clusterSize, watcherCluster: true);
             using (var leaderStore = GetDocumentStore(new Options
             {
-                Server = leaderServer,
-                ModifyDatabaseName = s => databaseName,
-                DeleteDatabaseOnDispose = false,
-                CreateDatabase = false
+                Server = cluster.Leader,
+                ReplicationFactor = 3
             }))
             {
-                await CreateDatabasesInCluster(clusterSize, databaseName, leaderStore);
                 using (var session = leaderStore.OpenSession())
                 {
                     //id ending with "/" should trigger cluster identity id so
@@ -370,19 +415,24 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                using (var session = leaderStore.OpenSession())
+                await WaitForRollingAutoIndexDeployment(leaderStore,() =>
                 {
-                    var users = session.Query<User>()
-                        .Customize(x => x.WaitForNonStaleResults())
-                        .Where(x => x.Name.StartsWith("J"))
-                        .OrderBy(x => x.Id)
-                        .ToList();
+                    using (var session = leaderStore.OpenSession())
+                    {
+                        var users = session.Query<User>()
+                            .Customize(x => x.WaitForNonStaleResults())
+                            .Where(x => x.Name.StartsWith("J"))
+                            .OrderBy(x => x.Id)
+                            .ToList();
 
-                    Assert.Equal(3, users.Count);
-                    Assert.Equal("users/1", users[0].Id);
-                    Assert.Equal("users/2", users[1].Id);
-                    Assert.Equal("users/3", users[2].Id);
-                }
+                        Assert.Equal(3, users.Count);
+                        Assert.Equal("users/1", users[0].Id);
+                        Assert.Equal("users/2", users[1].Id);
+                        Assert.Equal("users/3", users[2].Id);
+                    }
+
+                    return Task.CompletedTask;
+                });
             }
         }
 

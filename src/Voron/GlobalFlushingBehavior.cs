@@ -13,6 +13,8 @@ namespace Voron
     {
         private const string FlushingThreadName = "Voron Global Flushing Thread";
 
+        public static int NumberOfConcurrentSyncsPerPhysicalDrive = 3;
+
         internal static readonly Lazy<GlobalFlushingBehavior> GlobalFlusher = new Lazy<GlobalFlushingBehavior>(() =>
         {
             var flusher = new GlobalFlushingBehavior();
@@ -52,7 +54,6 @@ namespace Voron
 
         public bool HasLowNumberOfFlushingResources => _concurrentFlushesAvailable.CurrentCount <= _lowNumberOfFlushingResources;
 
-
         private void VoronEnvironmentFlushing()
         {
             NativeMemory.EnsureRegistered();
@@ -66,7 +67,7 @@ namespace Voron
                 while (true)
                 {
                     avoidDuplicates.Clear();
-                    
+
                     if (_flushWriterEvent.Wait(5000) == false)
                     {
                         if (_envsToSync.Count == 0)
@@ -136,7 +137,7 @@ namespace Voron
 
             foreach (var mountPoint in _mountPoints)
             {
-                int parallelSyncsPerIo = Math.Min(StorageEnvironment.NumOfConcurrentSyncsPerPhysDrive, mountPoint.Value.StorageEnvironments.Count);
+                int parallelSyncsPerIo = Math.Min(NumberOfConcurrentSyncsPerPhysicalDrive, mountPoint.Value.StorageEnvironments.Count);
 
                 for (int i = 0; i < parallelSyncsPerIo; i++)
                 {
@@ -158,7 +159,7 @@ namespace Voron
         private void SyncEnvironment(EnvSyncReq req)
         {
             var storageEnvironment = req.Env;
-            if (storageEnvironment  == null || storageEnvironment.Disposed || storageEnvironment.Options.ManualSyncing)
+            if (storageEnvironment == null || storageEnvironment.Disposed || storageEnvironment.Options.ManualSyncing)
                 return;
 
             try
@@ -194,15 +195,19 @@ namespace Voron
                 if (avoidDuplicates.Add(envToFlush) == false)
                     continue; // avoid duplicates
                 if (envToFlush.Disposed || envToFlush.Options.ManualFlushing)
-                    continue;
+                {
+                    if (_forTestingPurposes == null || _forTestingPurposes.AllowToFlushEvenIfManualFlushingSet.Contains(envToFlush) == false)
+                    {
+                        continue;
+                    }
+                }
 
-                var sizeOfUnflushedTransactionsInJournalFile = envToFlush.SizeOfUnflushedTransactionsInJournalFile;
+                var numberOfNewPagesSinceLastFlush = envToFlush.Journal.Applicator.TotalCommittedSinceLastFlushPages;
 
-                if (sizeOfUnflushedTransactionsInJournalFile == 0)
+                if (envToFlush.Journal.Applicator.ShouldFlush == false)
                     continue; // nothing to do
 
-
-                if (sizeOfUnflushedTransactionsInJournalFile < envToFlush.Options.MaxNumberOfPagesInJournalBeforeFlush)
+                if (numberOfNewPagesSinceLastFlush < envToFlush.Options.MaxNumberOfPagesInJournalBeforeFlush)
                 {
                     // we haven't reached the point where we have to flush, but we might want to, if we have enough 
                     // resources available, if we have more than half the flushing capacity, we can do it now, otherwise, we'll wait
@@ -212,12 +217,11 @@ namespace Voron
 
                     // At the same time, we want to avoid excessive flushes, so we'll limit it to once in a while if we don't
                     // have a lot to flush
-                    if ((DateTime.UtcNow - envToFlush.LastFlushTime).TotalSeconds < StorageEnvironment.TimeToSyncAfterFlushInSec)
+                    if ((DateTime.UtcNow - envToFlush.LastFlushTime).TotalSeconds < envToFlush.TimeToSyncAfterFlushInSec)
                         continue;
                 }
 
                 envToFlush.LastFlushTime = DateTime.UtcNow;
-                Interlocked.Add(ref envToFlush.SizeOfUnflushedTransactionsInJournalFile, -sizeOfUnflushedTransactionsInJournalFile);
 
                 _concurrentFlushesAvailable.Wait();
                 limit--;
@@ -292,6 +296,41 @@ namespace Voron
         {
             AddEnvironmentSyncRequest(env, true);
             _flushWriterEvent.Set();
+        }
+
+        private TestingStuff _forTestingPurposes;
+
+        internal TestingStuff ForTestingPurposesOnly()
+        {
+            if (_forTestingPurposes != null)
+                return _forTestingPurposes;
+
+            return _forTestingPurposes = new TestingStuff(this);
+        }
+
+        internal class TestingStuff
+        {
+            internal readonly List<StorageEnvironment> AllowToFlushEvenIfManualFlushingSet = new List<StorageEnvironment>();
+
+            private GlobalFlushingBehavior _parent;
+
+            public TestingStuff(GlobalFlushingBehavior globalFlushingBehavior)
+            {
+                _parent = globalFlushingBehavior;
+            }
+
+            internal void AddEnvironmentToFlushQueue(StorageEnvironment env)
+            {
+                _parent._maybeNeedToFlush.Enqueue(new EnvSyncReq
+                {
+                    Reference = env.SelfReference,
+                });
+            }
+
+            internal void ForceFlushEnvironment()
+            {
+                _parent.FlushEnvironments(new HashSet<StorageEnvironment>());
+            }
         }
     }
 }

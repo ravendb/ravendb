@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Counters;
@@ -75,7 +76,7 @@ namespace Raven.Server.Smuggler.Documents
             _type = _startDocumentEtag == 0 ? SmugglerSourceType.FullExport : SmugglerSourceType.IncrementalExport;
         }
 
-        public IDisposable Initialize(DatabaseSmugglerOptionsServerSide options, SmugglerResult result, out long buildVersion)
+        public Task<SmugglerInitializeResult> InitializeAsync(DatabaseSmugglerOptionsServerSide options, SmugglerResult result)
         {
             _currentTypeIndex = 0;
 
@@ -107,8 +108,7 @@ namespace Raven.Server.Smuggler.Documents
                 }
             }
 
-            buildVersion = ServerVersion.Build;
-            return new DisposableAction(() =>
+            var disposable = new DisposableAction(() =>
             {
                 _disposeServerTransaction?.Dispose();
                 _returnServerContext?.Dispose();
@@ -116,14 +116,16 @@ namespace Raven.Server.Smuggler.Documents
                 _disposeTransaction?.Dispose();
                 _returnContext?.Dispose();
             });
+
+            return Task.FromResult(new SmugglerInitializeResult(disposable, ServerVersion.Build));
         }
 
-        public DatabaseItemType GetNextType()
+        public Task<DatabaseItemType> GetNextTypeAsync()
         {
-            return _types[_currentTypeIndex++];
+            return Task.FromResult(_types[_currentTypeIndex++]);
         }
 
-        public DatabaseRecord GetDatabaseRecord()
+        public Task<DatabaseRecord> GetDatabaseRecordAsync()
         {
             var databaseRecord = _database.ReadDatabaseRecord();
 
@@ -153,10 +155,13 @@ namespace Raven.Server.Smuggler.Documents
                 }
             }
 
-            return databaseRecord;
+            return Task.FromResult(databaseRecord);
         }
 
-        public IEnumerable<DocumentItem> GetDocuments(List<string> collectionsToExport, INewDocumentActions actions)
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
+
+        public async IAsyncEnumerable<DocumentItem> GetDocumentsAsync(List<string> collectionsToExport, INewDocumentActions actions)
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
             Debug.Assert(_context != null);
 
@@ -200,7 +205,10 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        public IEnumerable<DocumentItem> GetRevisionDocuments(List<string> collectionsToExport, INewDocumentActions actions)
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
+
+        public async IAsyncEnumerable<DocumentItem> GetRevisionDocumentsAsync(List<string> collectionsToExport, INewDocumentActions actions)
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
             Debug.Assert(_context != null);
 
@@ -250,19 +258,19 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        public IEnumerable<DocumentItem> GetLegacyAttachments(INewDocumentActions actions)
+        public IAsyncEnumerable<DocumentItem> GetLegacyAttachmentsAsync(INewDocumentActions actions)
         {
-            return Enumerable.Empty<DocumentItem>();
+            return AsyncEnumerable.Empty<DocumentItem>();
         }
 
-        public IEnumerable<string> GetLegacyAttachmentDeletions()
+        public IAsyncEnumerable<string> GetLegacyAttachmentDeletionsAsync()
         {
-            return Enumerable.Empty<string>();
+            return AsyncEnumerable.Empty<string>();
         }
 
-        public IEnumerable<string> GetLegacyDocumentDeletions()
+        public IAsyncEnumerable<string> GetLegacyDocumentDeletionsAsync()
         {
-            return Enumerable.Empty<string>();
+            return AsyncEnumerable.Empty<string>();
         }
 
         public Stream GetAttachmentStream(LazyStringValue hash, out string tag)
@@ -275,7 +283,10 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        public IEnumerable<Tombstone> GetTombstones(List<string> collectionsToExport, INewDocumentActions actions)
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
+
+        public async IAsyncEnumerable<Tombstone> GetTombstonesAsync(List<string> collectionsToExport, INewDocumentActions actions)
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
             Debug.Assert(_context != null);
 
@@ -316,7 +327,10 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        public IEnumerable<DocumentConflict> GetConflicts(List<string> collectionsToExport, INewDocumentActions actions)
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
+
+        public async IAsyncEnumerable<DocumentConflict> GetConflictsAsync(List<string> collectionsToExport, INewDocumentActions actions)
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
             Debug.Assert(_context != null);
 
@@ -353,7 +367,10 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        public IEnumerable<IndexDefinitionAndType> GetIndexes()
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
+
+        public async IAsyncEnumerable<IndexDefinitionAndType> GetIndexesAsync()
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
             var allIndexes = _database.IndexStore.GetIndexes().ToList();
             var sideBySideIndexes = allIndexes.Where(x => x.Name.StartsWith(Constants.Documents.Indexing.SideBySideIndexNamePrefix)).ToList();
@@ -405,28 +422,31 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        public IEnumerable<(string Prefix, long Value, long Index)> GetIdentities()
+        public IAsyncEnumerable<(string Prefix, long Value, long Index)> GetIdentitiesAsync()
         {
             Debug.Assert(_serverContext != null);
 
-            return _database.ServerStore.Cluster.GetIdentitiesFromPrefix(_serverContext, _database.Name, _startRaftIndex, long.MaxValue);
+            return _database.ServerStore.Cluster.GetIdentitiesFromPrefix(_serverContext, _database.Name, _startRaftIndex, long.MaxValue).ToAsyncEnumerable();
         }
 
-        public IEnumerable<(CompareExchangeKey Key, long Index, BlittableJsonReaderObject Value)> GetCompareExchangeValues()
+        public IAsyncEnumerable<(CompareExchangeKey Key, long Index, BlittableJsonReaderObject Value)> GetCompareExchangeValuesAsync(INewCompareExchangeActions actions)
         {
             Debug.Assert(_serverContext != null);
 
-            return _database.ServerStore.Cluster.GetCompareExchangeFromPrefix(_serverContext, _database.Name, _startRaftIndex, long.MaxValue);
+            return _database.ServerStore.Cluster.GetCompareExchangeFromPrefix(_serverContext, _database.Name, _startRaftIndex, long.MaxValue).ToAsyncEnumerable();
         }
 
-        public IEnumerable<(CompareExchangeKey Key, long Index)> GetCompareExchangeTombstones()
+        public IAsyncEnumerable<(CompareExchangeKey Key, long Index)> GetCompareExchangeTombstonesAsync()
         {
             Debug.Assert(_serverContext != null);
 
-            return _database.ServerStore.Cluster.GetCompareExchangeTombstonesByKey(_serverContext, _database.Name);
+            return _database.ServerStore.Cluster.GetCompareExchangeTombstonesByKey(_serverContext, _database.Name).ToAsyncEnumerable();
         }
 
-        public IEnumerable<CounterGroupDetail> GetCounterValues(List<string> collectionsToExport, ICounterActions actions)
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
+
+        public async IAsyncEnumerable<CounterGroupDetail> GetCounterValuesAsync(List<string> collectionsToExport, ICounterActions actions)
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
             Debug.Assert(_context != null);
 
@@ -467,25 +487,28 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        public IEnumerable<CounterDetail> GetLegacyCounterValues()
+        public IAsyncEnumerable<CounterDetail> GetLegacyCounterValuesAsync()
         {
             // used only in StreamSource
-            return Enumerable.Empty<CounterDetail>();
+            return AsyncEnumerable.Empty<CounterDetail>();
         }
 
-        public IEnumerable<(string Hub, ReplicationHubAccess Access)> GetReplicationHubCertificates()
+        public IAsyncEnumerable<(string Hub, ReplicationHubAccess Access)> GetReplicationHubCertificatesAsync()
         {
-            return _database.ServerStore.Cluster.GetReplicationHubCertificateForDatabase(_serverContext, _database.Name);
+            return _database.ServerStore.Cluster.GetReplicationHubCertificateForDatabase(_serverContext, _database.Name).ToAsyncEnumerable();
         }
 
-        public IEnumerable<SubscriptionState> GetSubscriptions()
+        public IAsyncEnumerable<SubscriptionState> GetSubscriptionsAsync()
         {
             Debug.Assert(_serverContext != null);
 
-            return _database.SubscriptionStorage.GetAllSubscriptions(_serverContext, false, 0, int.MaxValue);
+            return _database.SubscriptionStorage.GetAllSubscriptions(_serverContext, false, 0, int.MaxValue).ToAsyncEnumerable();
         }
 
-        public IEnumerable<TimeSeriesItem> GetTimeSeries(List<string> collectionsToExport)
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
+
+        public async IAsyncEnumerable<TimeSeriesItem> GetTimeSeriesAsync(List<string> collectionsToExport)
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
             Debug.Assert(_context != null);
 
@@ -557,9 +580,9 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        public long SkipType(DatabaseItemType type, Action<long> onSkipped, CancellationToken token)
+        public Task<long> SkipTypeAsync(DatabaseItemType type, Action<long> onSkipped, CancellationToken token)
         {
-            return 0; // no-op
+            return Task.FromResult(0L); // no-op
         }
 
         public SmugglerSourceType GetSourceType()

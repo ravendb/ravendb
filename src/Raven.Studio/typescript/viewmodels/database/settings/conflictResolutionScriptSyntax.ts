@@ -1,6 +1,9 @@
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
+import copyToClipboard = require("common/copyToClipboard");
 
 class conflictResolutionScriptSyntax extends dialogViewModelBase {
+
+    dialogContainer: Element;
     
     static readonly sampleScript = `// The following variables are available in script context:
 // docs - array of conflicted documents
@@ -16,6 +19,16 @@ docs[0].MaxRecord = maxRecord;
 return docs[0];
      ` ;
 
+    compositionComplete() {
+        super.compositionComplete();
+        this.bindToCurrentInstance("copySample");
+        this.dialogContainer = document.getElementById("conflictResolutionSyntaxDialog");
+    }
+
+    copySample() {
+        copyToClipboard.copy(conflictResolutionScriptSyntax.sampleScript, "Sample has been copied to clipboard", this.dialogContainer);
+    }
+    
     scriptHtml = ko.pureComputed(() => {
         return Prism.highlight(conflictResolutionScriptSyntax.sampleScript, (Prism.languages as any).javascript);
     });

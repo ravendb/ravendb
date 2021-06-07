@@ -6,6 +6,7 @@ using Raven.Server.Dashboard;
 using Raven.Server.NotificationCenter.Notifications;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Server.Json.Sync;
 
 namespace Raven.Server.Utils.Cpu
 {
@@ -21,6 +22,7 @@ namespace Raven.Server.Utils.Cpu
         private DateTime _lastRestart;
 
         private ExtensionPointData _data;
+
         public ExtensionPointData BadData = new ExtensionPointData
         {
             ProcessCpuUsage = -1,
@@ -30,7 +32,6 @@ namespace Raven.Server.Utils.Cpu
         public ExtensionPointData Data => IsDisposed ? BadData : _data;
 
         public bool IsDisposed { get; private set; }
-
 
         public CpuUsageExtensionPoint(
             JsonContextPool contextPool,
@@ -126,7 +127,6 @@ namespace Raven.Server.Utils.Cpu
             }
         }
 
-
         private async Task ReadProcess()
         {
             try
@@ -166,7 +166,7 @@ namespace Raven.Server.Utils.Cpu
             {
                 try
                 {
-                    using (var blittable = context.ReadForMemory(data, "cpuUsageExtensionPointData"))
+                    using (var blittable = context.Sync.ReadForMemory(data, "cpuUsageExtensionPointData"))
                     {
                         if (TryGetCpuUsage(blittable, nameof(ExtensionPointData.MachineCpuUsage), out var machineCpuUsage)
                             && TryGetCpuUsage(blittable, nameof(ExtensionPointData.ProcessCpuUsage), out var processCpuUsage))

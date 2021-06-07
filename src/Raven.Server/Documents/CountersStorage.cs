@@ -566,11 +566,7 @@ namespace Raven.Server.Documents
 
             counters.Modifications = new DynamicJsonValue(counters)
             {
-                [lowerName] = new BlittableJsonReaderObject.RawBlob
-                {
-                    Length = newVal.Length,
-                    Ptr = newVal.Ptr
-                }
+                [lowerName] = new BlittableJsonReaderObject.RawBlob(newVal.Ptr, newVal.Length)
             };
         }
 
@@ -582,7 +578,7 @@ namespace Raven.Server.Documents
 
             if (dbIdIndex < existingCount)
             {
-                var counter = (CounterValues*)existingCounter.Ptr + dbIdIndex; // existingCounter.Ptr + sizeof(CounterValues) * dbIdIndex
+                var counter = (CounterValues*)existingCounter.Address + dbIdIndex; // existingCounter.Ptr + sizeof(CounterValues) * dbIdIndex
                 try
                 {
                     value = checked(counter->Value + delta); //inc
@@ -702,11 +698,7 @@ namespace Raven.Server.Documents
                 Memory.Copy(newVal.Ptr, ptr, newSize * SizeOfCounterValues);
             }
 
-            newBlob = new BlittableJsonReaderObject.RawBlob
-            {
-                Ptr = newVal.Ptr,
-                Length = newVal.Length
-            };
+            newBlob = new BlittableJsonReaderObject.RawBlob(newVal.Ptr, newVal.Length);
             return scope;
         }
 
@@ -756,12 +748,12 @@ namespace Raven.Server.Documents
                         {
                             using (ReWriteBlob(context, blob, usedDbIdsIndexes, out var newBlob))
                             {
-                                builder.WriteRawBlob(newBlob.Ptr, newBlob.Length);
+                                builder.WriteRawBlob(newBlob.Address, newBlob.Length);
                             }
                         }
                         else
                         {
-                            builder.WriteRawBlob(blob.Ptr, blob.Length);
+                            builder.WriteRawBlob(blob.Address, blob.Length);
                         }
                     }
                     else if (prop.Value is LazyStringValue lsv)
@@ -1157,6 +1149,7 @@ namespace Raven.Server.Documents
                                     // conflict => resolve to raw blob
                                     localCounterValues = new BlittableJsonReaderObject.RawBlob();
                                     break;
+
                                 case ConflictStatus.AlreadyMerged:
                                     //delete is more up do date (no change)
                                     return false;
@@ -1208,6 +1201,7 @@ namespace Raven.Server.Documents
                                 case ConflictStatus.Update:
                                     //delete is more up do date
                                     break;
+
                                 case ConflictStatus.Conflict:
                                     // conflict => resolve to raw blob and merge change vectors
                                     MergeBlobAndDeleteVector(context, dbIdsHolder, localCounterValues, deletedCv);
@@ -1215,9 +1209,11 @@ namespace Raven.Server.Documents
                                     localCounters.Modifications ??= new DynamicJsonValue(localCounters);
                                     localCounters.Modifications[counterName] = localCounterValues;
                                     return true;
+
                                 case ConflictStatus.AlreadyMerged:
                                     // raw blob is more up to date (no change)
                                     return false;
+
                                 default:
                                     return false;
                             }
@@ -1289,8 +1285,10 @@ namespace Raven.Server.Documents
             {
                 case LazyStringValue lsv:
                     return lsv;
+
                 case LazyCompressedStringValue compressed:
                     return compressed.ToLazyStringValue();
+
                 default:
                     throw new InvalidDataException($"Unexpected type in '{CounterNames}' object. property : '{key}', type : '{value.GetType().Name}'");
             }
@@ -1305,7 +1303,7 @@ namespace Raven.Server.Documents
                     var dbIdIndex = dbIdsHolder.GetOrAddDbIdIndex(dbIdLsv);
                     if (dbIdIndex < localCounterValues.Length / SizeOfCounterValues)
                     {
-                        var current = (CounterValues*)localCounterValues.Ptr + dbIdIndex;
+                        var current = (CounterValues*)localCounterValues.Address + dbIdIndex;
                         if (entry.Etag > current->Etag)
                         {
                             current->Etag = entry.Etag;
@@ -1329,7 +1327,7 @@ namespace Raven.Server.Documents
             {
                 for (int index = 0; index < count; index++)
                 {
-                    localValue = ((CounterValues*)localCounterValues.Ptr)[index].Value;
+                    localValue = ((CounterValues*)localCounterValues.Address)[index].Value;
                     value = checked(value + localValue);
                 }
             }
@@ -1375,13 +1373,13 @@ namespace Raven.Server.Documents
             for (var index = 0; index < sourceCount; index++)
             {
                 var sourceDbId = sourceDbIds.GetByIndex<LazyStringValue>(index);
-                var sourceValue = &((CounterValues*)source.Ptr)[index];
+                var sourceValue = &((CounterValues*)source.Address)[index];
 
                 int localDbIdIndex = localDbIds.GetOrAddDbIdIndex(sourceDbId);
 
                 if (localDbIdIndex < existingCount)
                 {
-                    var localValuePtr = (CounterValues*)existingCounter.Ptr + localDbIdIndex;
+                    var localValuePtr = (CounterValues*)existingCounter.Address + localDbIdIndex;
                     if (localValuePtr->Etag >= sourceValue->Etag)
                         continue;
 
@@ -1423,7 +1421,9 @@ namespace Raven.Server.Documents
             var scope = context.Allocator.Allocate((dbIdIndex + 1) * SizeOfCounterValues, out var newVal);
             _counterModificationMemoryScopes.Add(scope);
 
-            Memory.Copy(newVal.Ptr, existingCounter.Ptr, existingCounter.Length);
+            if (existingCounter.Length > 0)
+                Memory.Copy(newVal.Ptr, existingCounter.Address, existingCounter.Length);
+
             var empties = dbIdIndex - existingCounter.Length / SizeOfCounterValues;
             if (empties > 0)
             {
@@ -1434,7 +1434,7 @@ namespace Raven.Server.Documents
             newEntry->Value = sourceValue;
             newEntry->Etag = sourceEtag;
 
-            existingCounter.Ptr = newVal.Ptr;
+            existingCounter.Address = newVal.Ptr;
             existingCounter.Length = newVal.Length;
 
             return existingCounter;
@@ -1677,7 +1677,7 @@ namespace Raven.Server.Documents
 
         internal static CounterValues GetPartialValue(int index, BlittableJsonReaderObject.RawBlob counterValues)
         {
-            return *((CounterValues*)counterValues.Ptr + index);
+            return *((CounterValues*)counterValues.Address + index);
         }
 
         internal IEnumerable<CounterGroupDetail> GetCounterValuesForDocument(DocumentsOperationContext context, string docId)
@@ -1801,7 +1801,7 @@ namespace Raven.Server.Documents
 
                 if (i != dbIdIndex)
                 {
-                    var etag = ((CounterValues*)counterToDelete.Ptr + i)->Etag;
+                    var etag = ((CounterValues*)counterToDelete.Address + i)->Etag;
                     if (etag <= 0)
                         continue;
 
@@ -1960,7 +1960,7 @@ namespace Raven.Server.Documents
 
                 for (int dbIdIndex = 0; dbIdIndex < existingCount; dbIdIndex++)
                 {
-                    var current = (CounterValues*)blob.Ptr + dbIdIndex;
+                    var current = (CounterValues*)blob.Address + dbIdIndex;
 
                     dja.Add(current->Value);
                     dja.Add(current->Etag);
@@ -1991,7 +1991,7 @@ namespace Raven.Server.Documents
             {
                 var found = false;
 
-                var current = (CounterValues*)counterValues.Ptr + i;
+                var current = (CounterValues*)counterValues.Address + i;
                 var etag = current->Etag;
                 if (etag == 0)
                     continue;

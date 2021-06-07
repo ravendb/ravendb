@@ -1,11 +1,15 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.ServerWide;
+using Raven.Server.Config;
+using Raven.Server.Documents.Indexes;
 using Raven.Server.Rachis;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json.Parsing;
+using Index = Raven.Server.Documents.Indexes.Index;
 
 namespace Raven.Server.ServerWide.Commands.Indexes
 {
@@ -13,18 +17,21 @@ namespace Raven.Server.ServerWide.Commands.Indexes
     {
         public IndexDefinition Definition;
 
+        public IndexDeploymentMode? DefaultDeploymentMode;
+
         public PutIndexCommand()
         {
             // for deserialization
         }
 
-        public PutIndexCommand(IndexDefinition definition, string databaseName, string source, DateTime createdAt, string uniqueRequestId, int revisionsToKeep)
+        public PutIndexCommand(IndexDefinition definition, string databaseName, string source, DateTime createdAt, string uniqueRequestId, int revisionsToKeep, IndexDeploymentMode deploymentMode)
             : base(databaseName, uniqueRequestId)
         {
             Definition = definition;
             Source = source;
             CreatedAt = createdAt;
             RevisionsToKeep = revisionsToKeep;
+            DefaultDeploymentMode = deploymentMode;
         }
 
         public DateTime CreatedAt { get; set; }
@@ -43,7 +50,9 @@ namespace Raven.Server.ServerWide.Commands.Indexes
                 {
                     throw new InvalidOperationException($"Can not add index: {Definition.Name} because an index with the same name but different casing already exist");
                 }
-                record.AddIndex(Definition, Source, CreatedAt, etag, RevisionsToKeep);
+
+                record.AddIndex(Definition, Source, CreatedAt, etag, RevisionsToKeep, DefaultDeploymentMode ?? IndexDeploymentMode.Parallel);
+
             }
             catch (Exception e)
             {
@@ -57,6 +66,7 @@ namespace Raven.Server.ServerWide.Commands.Indexes
             json[nameof(Source)] = Source;
             json[nameof(CreatedAt)] = CreatedAt;
             json[nameof(RevisionsToKeep)] = RevisionsToKeep;
+            json[nameof(DefaultDeploymentMode)] = DefaultDeploymentMode;
         }
     }
 }

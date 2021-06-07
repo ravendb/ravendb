@@ -24,6 +24,7 @@ using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using Org.BouncyCastle.Pkcs;
+using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Security;
@@ -35,7 +36,6 @@ using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
-using Raven.Server.Config.Categories;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.TcpHandlers;
@@ -50,6 +50,7 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Maintenance;
+using Raven.Server.TrafficWatch;
 using Raven.Server.Utils;
 using Raven.Server.Utils.Cpu;
 using Raven.Server.Web.ResponseCompression;
@@ -58,6 +59,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Server.Debugging;
+using Sparrow.Server.Json.Sync;
 using Sparrow.Threading;
 using Voron;
 using DateTime = System.DateTime;
@@ -162,7 +164,7 @@ namespace Raven.Server
 
                 void ConfigureKestrel(KestrelServerOptions options)
                 {
-                    options.AllowSynchronousIO = true;
+                    options.AllowSynchronousIO = Configuration.Http.AllowSynchronousIo;
 
                     options.Limits.MaxRequestLineSize = (int)Configuration.Http.MaxRequestLineSize.GetValue(SizeUnit.Bytes);
                     options.Limits.MaxRequestBodySize = null; // no limit!
@@ -756,7 +758,7 @@ namespace Raven.Server
                     try
                     {
                         ms.Position = 0;
-                        var response = context.ReadForMemory(ms, "cpu-credits-from-script");
+                        var response = context.Sync.ReadForMemory(ms, "cpu-credits-from-script");
                         if (response.TryGet("Error", out string err))
                         {
                             throw new InvalidOperationException("Error from server: " + err);
@@ -1432,7 +1434,11 @@ namespace Raven.Server
             public CertificateDefinition Definition;
             public int WrittenToAuditLog;
 
-            public bool CanAccess(string db, bool requireAdmin)
+            public AuthenticateConnection()
+            {
+            }
+
+            public bool CanAccess(string database, bool requireAdmin, bool requireWrite)
             {
                 if (Status == AuthenticationStatus.Expired || Status == AuthenticationStatus.NotYetValid)
                     return false;
@@ -1440,16 +1446,16 @@ namespace Raven.Server
                 if (Status == AuthenticationStatus.Operator || Status == AuthenticationStatus.ClusterAdmin)
                     return true;
 
-                if (db == null)
+                if (database == null)
                     return false;
 
                 if (Status != AuthenticationStatus.Allowed)
                     return false;
 
-                if (_caseSensitiveAuthorizedDatabases.TryGetValue(db, out var mode))
-                    return mode == DatabaseAccess.Admin || !requireAdmin;
+                if (_caseSensitiveAuthorizedDatabases.TryGetValue(database, out var mode))
+                    return CheckAccess(mode, requireAdmin, requireWrite);
 
-                if (AuthorizedDatabases.TryGetValue(db, out mode) == false)
+                if (AuthorizedDatabases.TryGetValue(database, out mode) == false)
                     return false;
 
                 // Technically speaking, since this is per connection, this is single threaded. But I'm
@@ -1458,10 +1464,29 @@ namespace Raven.Server
                 // is pretty small for most cases anyway
                 _caseSensitiveAuthorizedDatabases = new Dictionary<string, DatabaseAccess>(_caseSensitiveAuthorizedDatabases)
                 {
-                    {db, mode}
+                    {database, mode}
                 };
 
-                return mode == DatabaseAccess.Admin || !requireAdmin;
+                return CheckAccess(mode, requireAdmin, requireWrite);
+
+                static bool CheckAccess(DatabaseAccess mode, bool requireAdmin, bool requireWrite)
+                {
+                    if (requireAdmin)
+                        return mode == DatabaseAccess.Admin;
+
+                    switch (mode)
+                    {
+                        case DatabaseAccess.Read:
+                            return requireWrite == false;
+
+                        case DatabaseAccess.ReadWrite:
+                        case DatabaseAccess.Admin:
+                            return true;
+
+                        default:
+                            throw new NotImplementedException($"Unknown database access mode '{mode}'.");
+                    }
+                }
             }
 
             ClaimsPrincipal IHttpAuthenticationFeature.User { get; set; }
@@ -1488,6 +1513,33 @@ namespace Raven.Server
             private void ThrowException()
             {
                 throw new InsufficientTransportLayerProtectionException(WrongProtocolMessage);
+            }
+
+            public void SetBasedOnCertificateDefinition(CertificateDefinition definition)
+            {
+                Definition = definition;
+
+                if (definition.SecurityClearance == SecurityClearance.ClusterAdmin)
+                {
+                    Status = AuthenticationStatus.ClusterAdmin;
+                }
+                else if (definition.SecurityClearance == SecurityClearance.ClusterNode)
+                {
+                    Status = AuthenticationStatus.ClusterAdmin;
+                }
+                else if (definition.SecurityClearance == SecurityClearance.Operator)
+                {
+                    Status = AuthenticationStatus.Operator;
+                }
+                else
+                {
+                    Status = AuthenticationStatus.Allowed;
+
+                    foreach (var kvp in definition.Permissions)
+                    {
+                        AuthorizedDatabases.Add(kvp.Key, kvp.Value);
+                    }
+                }
             }
         }
 
@@ -1535,27 +1587,8 @@ namespace Raven.Server
                     if (cert != null)
                     {
                         var definition = JsonDeserializationServer.CertificateDefinition(cert);
-                        authenticationStatus.Definition = definition;
-                        if (definition.SecurityClearance == SecurityClearance.ClusterAdmin)
-                        {
-                            authenticationStatus.Status = AuthenticationStatus.ClusterAdmin;
-                        }
-                        else if (definition.SecurityClearance == SecurityClearance.ClusterNode)
-                        {
-                            authenticationStatus.Status = AuthenticationStatus.ClusterAdmin;
-                        }
-                        else if (definition.SecurityClearance == SecurityClearance.Operator)
-                        {
-                            authenticationStatus.Status = AuthenticationStatus.Operator;
-                        }
-                        else
-                        {
-                            authenticationStatus.Status = AuthenticationStatus.Allowed;
-                            foreach (var kvp in definition.Permissions)
-                            {
-                                authenticationStatus.AuthorizedDatabases.Add(kvp.Key, kvp.Value);
-                            }
-                        }
+
+                        authenticationStatus.SetBasedOnCertificateDefinition(definition);
                     }
                 }
             }
@@ -1836,8 +1869,14 @@ namespace Raven.Server
                 if (ServerStore.Initialized == false)
                     await ServerStore.InitializationCompleted.WaitAsync();
 
+                EndPoint remoteEndPoint = null;
+                X509Certificate2 cert = null;
+                TcpConnectionHeaderMessage header = null;
+
                 try
                 {
+                    remoteEndPoint = tcpClient.Client.RemoteEndPoint;
+
                     tcpClient.NoDelay = true;
                     tcpClient.ReceiveBufferSize = (int)Configuration.Cluster.TcpReceiveBufferSize.GetValue(SizeUnit.Bytes);
                     tcpClient.SendBufferSize = (int)Configuration.Cluster.TcpSendBufferSize.GetValue(SizeUnit.Bytes);
@@ -1849,8 +1888,6 @@ namespace Raven.Server
                     tcpClient.ReceiveTimeout = tcpClient.SendTimeout = sendTimeout;
 
                     Stream stream = tcpClient.GetStream();
-                    X509Certificate2 cert;
-
                     (stream, cert) = await AuthenticateAsServerIfSslNeeded(stream);
 
                     if (_forTestingPurposes != null && _forTestingPurposes.ThrowExceptionInListenToNewTcpConnection)
@@ -1867,33 +1904,27 @@ namespace Raven.Server
                             Certificate = cert
                         };
 
-                        var remoteEndPoint = tcpClient.Client.RemoteEndPoint;
-
                         try
                         {
-                            var header = await NegotiateOperationVersion(stream, buffer, tcpClient, tcpAuditLog, cert, tcp);
+                            if (_forTestingPurposes != null && _forTestingPurposes.ThrowExceptionInTrafficWatchTcp)
+                                throw new Exception("Simulated TCP failure.");
 
-                            if (header.Operation == TcpConnectionHeaderMessage.OperationTypes.TestConnection ||
-                                header.Operation == TcpConnectionHeaderMessage.OperationTypes.Ping)
-                            {
-                                tcp = null;
-                                return;
-                            }
+                            header = await NegotiateOperationVersion(stream, buffer, tcpClient, tcpAuditLog, cert, tcp);
 
-                            if (await DispatchServerWideTcpConnection(tcp, header, buffer))
-                            {
-                                tcp = null; //do not keep reference -> tcp will be disposed by server-wide connection handlers
-                                return;
-                            }
+                            await DispatchTcpConnection(header, tcp, buffer, cert);
 
-                            await DispatchDatabaseTcpConnection(tcp, header, buffer, cert);
+                            if (TrafficWatchManager.HasRegisteredClients)
+                                DispatchTcpMessageToTrafficWatch(remoteEndPoint, header, cert);
                         }
                         catch (Exception e)
                         {
+                            if (TrafficWatchManager.HasRegisteredClients)
+                                DispatchTcpMessageToTrafficWatch(remoteEndPoint, header, cert, e);
+
                             if (_tcpLogger.IsInfoEnabled)
                                 _tcpLogger.Info("Failed to process TCP connection run", e);
 
-                            SendErrorIfPossible(tcp, e);
+                            await SendErrorIfPossible(tcp, e);
                             try
                             {
                                 tcp?.Dispose();
@@ -1912,6 +1943,9 @@ namespace Raven.Server
                 }
                 catch (Exception e)
                 {
+                    if (TrafficWatchManager.HasRegisteredClients)
+                        DispatchTcpMessageToTrafficWatch(remoteEndPoint, header, cert, e);
+
                     try
                     {
                         tcpClient.Dispose();
@@ -1927,6 +1961,25 @@ namespace Raven.Server
                     }
                 }
             });
+        }
+
+        private async Task DispatchTcpConnection(TcpConnectionHeaderMessage header, TcpConnectionOptions tcp, JsonOperationContext.MemoryBuffer buffer, X509Certificate2 certificate)
+        {
+            if (header.Operation == TcpConnectionHeaderMessage.OperationTypes.TestConnection ||
+                header.Operation == TcpConnectionHeaderMessage.OperationTypes.Ping)
+            {
+                tcp.Dispose();
+                tcp = null;
+                return;
+            }
+
+            if (await DispatchServerWideTcpConnection(tcp, header, buffer))
+            {
+                tcp = null; //do not keep reference -> tcp will be disposed by server-wide connection handlers
+                return;
+            }
+
+            await DispatchDatabaseTcpConnection(tcp, header, buffer, certificate);
         }
 
         private async Task<TcpConnectionHeaderMessage> NegotiateOperationVersion(
@@ -1951,7 +2004,7 @@ namespace Raven.Server
                         "tcp-header",
                         BlittableJsonDocumentBuilder.UsageMode.None,
                         buffer,
-                        ServerStore.ServerShutdown,
+                        token: ServerStore.ServerShutdown,
                         // we don't want to allow external (and anonymous) users to send us unlimited data
                         // a maximum of 2 KB for the header is big enough to include any valid header that
                         // we can currently think of
@@ -2014,13 +2067,13 @@ namespace Raven.Server
                             $"Didn't agree on {header.Operation} protocol version: {header.OperationVersion} will request to use version: {supported}.");
                     }
 
-                    RespondToTcpConnection(stream, context, $"Not supporting version {header.OperationVersion} for {header.Operation}", TcpConnectionStatus.TcpVersionMismatch,
+                    await RespondToTcpConnection(stream, context, $"Not supporting version {header.OperationVersion} for {header.Operation}", TcpConnectionStatus.TcpVersionMismatch,
                         supported);
                 }
 
                 bool authSuccessful = TryAuthorize(Configuration, tcp.Stream, header, tcpClient, out var err);
                 //At this stage the error is not relevant.
-                RespondToTcpConnection(stream, context, null,
+                await RespondToTcpConnection(stream, context, null,
                     authSuccessful ? TcpConnectionStatus.Ok : TcpConnectionStatus.AuthorizationFailed,
                     supported);
 
@@ -2131,7 +2184,7 @@ namespace Raven.Server
             }
         }
 
-        private static void RespondToTcpConnection(Stream stream, JsonOperationContext context, string error, TcpConnectionStatus status, int version)
+        private static async ValueTask RespondToTcpConnection(Stream stream, JsonOperationContext context, string error, TcpConnectionStatus status, int version)
         {
             var message = new DynamicJsonValue
             {
@@ -2144,14 +2197,13 @@ namespace Raven.Server
                 message[nameof(TcpConnectionHeaderResponse.Message)] = error;
             }
 
-            using (var writer = new BlittableJsonTextWriter(context, stream))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, stream))
             {
                 context.Write(writer, message);
-                writer.Flush();
             }
         }
 
-        private void SendErrorIfPossible(TcpConnectionOptions tcp, Exception e)
+        private async ValueTask SendErrorIfPossible(TcpConnectionOptions tcp, Exception e)
         {
             var tcpStream = tcp?.Stream;
             if (tcpStream == null)
@@ -2160,7 +2212,7 @@ namespace Raven.Server
             try
             {
                 using (var context = JsonOperationContext.ShortTermSingleUse())
-                using (var errorWriter = new BlittableJsonTextWriter(context, tcpStream))
+                await using (var errorWriter = new AsyncBlittableJsonTextWriter(context, tcpStream))
                 {
                     context.Write(errorWriter, new DynamicJsonValue
                     {
@@ -2208,7 +2260,7 @@ namespace Raven.Server
             if (tcp.Operation == TcpConnectionHeaderMessage.OperationTypes.Cluster)
             {
                 var tcpClient = tcp.TcpClient.Client;
-                ServerStore.ClusterAcceptNewConnection(tcp, header, () => tcpClient.Disconnect(false), tcpClient.RemoteEndPoint);
+                ServerStore.ClusterAcceptNewConnection(tcp, header, tcp.Dispose, tcpClient.RemoteEndPoint);
                 return true;
             }
 
@@ -2382,7 +2434,7 @@ namespace Raven.Server
                                 msg = "Cannot allow access. Database name is empty.";
                                 return false;
                             }
-                            if (auth.CanAccess(header.DatabaseName, requireAdmin: false))
+                            if (auth.CanAccess(header.DatabaseName, requireAdmin: false, requireWrite: false))
                                 return true;
                             msg = $"The certificate {certificate.FriendlyName} does not allow access to {header.DatabaseName}";
                             return false;
@@ -2497,6 +2549,24 @@ namespace Raven.Server
             throw new DatabaseLoadTimeoutException($"Timeout when loading database {header.DatabaseName}, try again later");
         }
 
+        private static void DispatchTcpMessageToTrafficWatch(EndPoint remoteEndPoint, TcpConnectionHeaderMessage header, X509Certificate2 certificate, Exception exception = null)
+        {
+            var clientIP = remoteEndPoint == null ? "N/A" : ((IPEndPoint)remoteEndPoint).Address.ToString();
+
+            var twn = new TrafficWatchTcpChange
+            {
+                TimeStamp = DateTime.UtcNow,
+                DatabaseName = header?.DatabaseName ?? "N/A",
+                CertificateThumbprint = certificate?.Thumbprint,
+                CustomInfo = header?.Info ?? exception?.ToString(),
+                ClientIP = clientIP,
+                Source = header?.SourceNodeTag,
+                Operation = header?.Operation ?? TcpConnectionHeaderMessage.OperationTypes.None,
+                OperationVersion = header?.OperationVersion ?? -1
+            };
+            TrafficWatchManager.DispatchMessage(twn);
+        }
+
         public RequestRouter Router { get; private set; }
         public MetricCounters Metrics { get; }
 
@@ -2604,6 +2674,7 @@ namespace Raven.Server
         internal class TestingStuff
         {
             internal bool ThrowExceptionInListenToNewTcpConnection = false;
+            internal bool ThrowExceptionInTrafficWatchTcp = false;
         }
     }
 }

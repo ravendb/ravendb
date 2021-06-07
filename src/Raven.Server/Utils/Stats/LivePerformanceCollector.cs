@@ -79,11 +79,10 @@ namespace Raven.Server.Utils.Stats
             ms.SetLength(0);
 
             using (contextPool.AllocateOperationContext(out TContext context))
-            using (var writer = new AsyncBlittableJsonTextWriter(context, ms, CancellationToken))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ms))
             {
                 WriteStats(tuple.Item2, writer, context);
-
-                await writer.OuterFlushAsync();
+                await writer.FlushAsync(CancellationToken);
             }
 
             ms.TryGetBuffer(out ArraySegment<byte> bytes);
@@ -92,7 +91,7 @@ namespace Raven.Server.Utils.Stats
             return true;
         }
 
-        protected abstract void WriteStats(List<T> stats, AsyncBlittableJsonTextWriter writer, JsonOperationContext context); 
+        protected abstract void WriteStats(List<T> stats, AsyncBlittableJsonTextWriter writer, JsonOperationContext context);
 
         public virtual void Dispose()
         {

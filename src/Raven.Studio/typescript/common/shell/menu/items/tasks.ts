@@ -27,7 +27,8 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
             title: 'Import Data',
             nav: true,
             css: 'icon-import-database',
-            dynamicHash: appUrls.importDatabaseFromFileUrl
+            dynamicHash: appUrls.importDatabaseFromFileUrl,
+            requiredAccess: "DatabaseReadWrite"
         }),
         new leafMenuItem({
             route: 'databases/tasks/exportDatabase',
@@ -43,7 +44,8 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
             title: 'Create Sample Data',
             nav: true,
             css: 'icon-create-sample-data',
-            dynamicHash: appUrls.sampleDataUrl
+            dynamicHash: appUrls.sampleDataUrl,
+            requiredAccess: "DatabaseReadWrite"
         }),
         new leafMenuItem({
             route: 'databases/tasks/editExternalReplicationTask',
@@ -99,6 +101,14 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
             title: 'SQL ETL Task',
             nav: false,
             dynamicHash: appUrls.editSqlEtlTaskUrl,
+            itemRouteToHighlight: 'databases/tasks/ongoingTasks'
+        }),
+        new leafMenuItem({
+            route: 'databases/tasks/editOlapEtlTask',
+            moduleId: 'viewmodels/database/tasks/editOlapEtlTask',
+            title: 'OLAP ETL Task',
+            nav: false,
+            dynamicHash: appUrls.editOlapEtlTaskUrl,
             itemRouteToHighlight: 'databases/tasks/ongoingTasks'
         })
     ];

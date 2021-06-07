@@ -1,4 +1,4 @@
-<div class="layout-container" data-bind="css: { 'collapse-menu': collapseMenu() || smallScreen(), 'pin-notifications': notificationCenter.pinNotifications(), 'show-notifications': notificationCenter.showNotifications(), 'show-search': searchBox.showSearchSmallScreen() }">
+<div class="layout-container" data-bind="css: { 'cloud-cluster-admin': applyColorCustomization, 'collapse-menu': collapseMenu() || smallScreen(), 'pin-notifications': notificationCenter.pinNotifications(), 'show-notifications': notificationCenter.showNotifications(), 'show-search': searchBox.showSearchSmallScreen() }">
     <div class="browser-alert" data-bind="visible: browserAlert">
         <div class="browser-message">
             <i class="icon-unsupported-browser icon-xl"></i>
@@ -27,6 +27,9 @@
     <aside class="top-alert" data-bind="visible: developerLicense">
         Developer License - Not for Production Use
     </aside>
+<aside class="top-alert" data-bind="visible: applyColorCustomization">
+    !!! Running as Cloud Cluster Admin !!!  <a href="#" data-bind="click: disableColorCustomization">Disable color customization</a>
+</aside>
     <nav class="navbar">
         <div class="navbar-header">
             <a class="navbar-brand" data-bind="attr: { href: appUrls.serverDashboard }"><i class="icon-logo"></i></a>
@@ -39,8 +42,12 @@
             <div class="inputs-container">
                 <div class="database-switcher-container" data-bind="with: databaseSwitcher">
                     <div class="form-control btn-toggle database-switcher">
-                        <span class="database on-base-background" data-bind="text: $root.activeDatabase() ? $root.activeDatabase().name:''"></span>
-                        <span data-bind="visible: $root.activeDatabase() ? $root.activeDatabase().environment() : false, text: $root.activeDatabase() ? $root.activeDatabase().environment(): '', attr: { class: 'label text-uppercase ' + ($root.activeDatabase() ? $root.activeDatabase().environmentClass() : '') }"></span>
+                        <span class="database on-base-background" data-bind="text: $root.activeDatabase() ? $root.activeDatabase().name : ''"></span>
+                        <span data-bind="visible: $root.activeDatabase() ? $root.activeDatabase().environment() : false, 
+                                         text: $root.activeDatabase() ? $root.activeDatabase().environment(): '',
+                                         attr: { class: 'margin-right label text-uppercase ' + ($root.activeDatabase() ? $root.activeDatabase().environmentClass() : '') }"></span>
+                        <strong data-bind="text: $root.activeDatabase() ? $root.activeDatabase().databaseAccessText() : '',
+                                           attr: { class: 'on-base-background ' + ($root.activeDatabase() ? $root.activeDatabase().databaseAccessColor() : '') } "></strong>
                     </div>
                     <a data-bind="attr: { href: $root.appUrls.databases }" title="View all databases" class="resources-link"><i class="icon-resources"></i></a>
                     <div class="box-container">
@@ -54,8 +61,10 @@
                                     <li data-bind="visible: !disabled() && relevant()">
                                         <a href="#" data-bind="click: $parent.selectDatabase.bind($parent), attr: {title: name}, css: { active: name === $parent.highlightedItem() , database: true }">
                                             <div class="name" data-bind="text: name"></div>
-                                            <div data-bind="text: environment, visible: environment, attr: { class: 'label text-uppercase ' + environmentClass() }"></div>
+                                            <div data-bind="text: environment, visible: environment, attr: { class: 'margin-left label text-uppercase ' + environmentClass() }"></div>
                                             <div data-bind="visible: errored" class="label label-danger">Errored</div>
+                                            <div class="flex-separator"></div>
+                                            <small data-bind="text: databaseAccessText, visible: databaseAccessText, attr: { class: databaseAccessColor() }"></small>
                                         </a>
                                     </li>
                                     <!-- /ko -->
@@ -63,9 +72,11 @@
                                     <li data-bind="visible: !relevant()">
                                         <a class="database non-relevant" data-bind="attr: {title: name}">
                                             <div class="name" data-bind="text: name"></div>
-                                            <div data-bind="text: environment, visible: environment, attr: { class: 'label text-uppercase ' + environmentClass() }"></div>
+                                            <div data-bind="text: environment, visible: environment, attr: { class: 'margin-left label text-uppercase ' + environmentClass() }"></div>
                                             <div class="label label-default">Non-relevant (Remote)</div>
                                             <div data-bind="visible: errored" class="label label-danger">Errored</div>
+                                            <div class="flex-separator"></div>
+                                            <small data-bind="text: databaseAccessText, visible: databaseAccessText, attr: { class: databaseAccessColor() }"></small>
                                         </a>
                                     </li>
                                     <!-- /ko -->
@@ -73,9 +84,11 @@
                                     <li data-bind="visible: disabled() && relevant()">
                                         <a class="database disabled" data-bind="attr: {title: name}">
                                             <div class="name" data-bind="text: name"></div>
-                                            <div data-bind="text: environment, visible: environment, attr: { class: 'label text-uppercase ' + environmentClass() }"></div>
+                                            <div data-bind="text: environment, visible: environment, attr: { class: 'margin-left label text-uppercase ' + environmentClass() }"></div>
                                             <div class="label label-default">Disabled</div>
                                             <div data-bind="visible: errored" class="label label-danger">Errored</div>
+                                            <div class="flex-separator"></div>
+                                            <small data-bind="text: databaseAccessText, visible: databaseAccessText, attr: { class: databaseAccessColor() }"></small>
                                         </a>
                                     </li>
                                     <!-- /ko -->
@@ -85,8 +98,8 @@
                     </div>
                 </div>
                 <div class="search-container" data-bind="visible: $root.activeDatabase">
-                    <input type="search" class="form-control omnisearch on-base-background" placeholder="go to document" data-bind="textInput: $root.searchBox.searchQuery" />
-                    <div class="icon-search"></div>
+                    <input type="search" class="form-control omnisearch on-base-background" autocomplete="off" placeholder="go to document" id="search-box-input" data-bind="textInput: $root.searchBox.searchQuery, hasFocus: $root.searchBox.searchQueryHasFocus" />
+                    <label for="search-box-input" class="icon-search"></label>
                     <div class="autocomplete-list box-container" data-bind="with: $root.searchBox, visible: $root.searchBox.showMatchedDocumentsSection() || $root.searchBox.recentDocumentsList().length">
                         <div class="scroller">
                             <section data-bind="visible: showMatchedDocumentsSection">
@@ -198,7 +211,8 @@
         </li>
         <li>
             <!-- ko with: $root.collectionsTracker.getRevisionsBinCollection() -->
-            <a data-bind="click: $parent.menu.navigate.bind($parent.menu), attr: { href: $root.urlForRevisionsBin() }, css: { 'active': $parent.item.isOpen($parent.menu.activeItem, $data) }">
+            <a data-bind="click: $parent.menu.navigate.bind($parent.menu), attr: { href: $root.urlForRevisionsBin() }, 
+                          css: { 'active': $parent.item.isOpen($parent.menu.activeItem, $data) }">
                 <i class="icon-revisions-bin"></i>
                 <span>Revisions Bin</span>
             </a>
@@ -212,7 +226,8 @@
             <ul>
                 <!-- ko foreach: $root.collectionsTracker.collections -->
                 <li>
-                    <a data-bind="click: $parent.menu.navigate.bind($parent.menu), attr: { href: $root.urlForCollection($data), title: name }, css: { 'active': $parent.item.isOpen($parent.menu.activeItem, $data) }, visible: !isAllDocuments">
+                    <a data-bind="click: $parent.menu.navigate.bind($parent.menu), attr: { href: $root.urlForCollection($data), title: name },
+                                  css: { 'active': $parent.item.isOpen($parent.menu.activeItem, $data) }, visible: !isAllDocuments">
                         <span data-bind="text: name"></span>
                         <div class="collection-count" data-bind="attr: {title: documentCount().toLocaleString()}, css: { 'bounce' : hasBounceClass }">
                             <div class="value label label-default" data-bind="text: countPrefix"></div>
@@ -228,7 +243,9 @@
 
     <script type="text/html" id="leafMenuItem">
         <li data-bind="with: item">
-            <a data-bind="click: $parent.menu.navigate.bind($parent.menu), visible: nav, attr: { href: path, title: disableWithReason && disableWithReason(), 'data-toggle': disableWithReason && disableWithReason() ? 'tooltip' : undefined }, css: { 'active': $parent.menu.activeItem() === $data, 'disabled': disableWithReason && disableWithReason() }">
+            <a data-bind="click: $parent.menu.navigate.bind($parent.menu), visible: nav,
+                          attr: { href: path, title: $root.disableReason($data)(), 'data-toggle':  $root.disableReason($data)() ? 'tooltip' : undefined },
+                          css: { 'active': $parent.menu.activeItem() === $data, 'disabled': $root.disableReason($data)() }">
                 <i data-bind="css: css"></i>
                 <span data-bind="text: title"></span>
                 <div data-bind="if: badgeData() != null">
@@ -294,7 +311,7 @@
         </button>
     </nav>
     <div id="page-host-root" class="content-container">
-        <div id="page-host" class="page-host" data-bind="router: { cacheViews: false }"></div>
+        <div id="page-host" class="page-host" data-bind="router: { cacheViews: false }" style="overflow-y: scroll"></div>
     </div>
     <div class="notification-center-container" data-bind="compose: 'notifications/notificationCenter.html'"></div>
 

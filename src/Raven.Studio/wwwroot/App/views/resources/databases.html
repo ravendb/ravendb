@@ -3,12 +3,12 @@
         <div class="databasesToolbar">
             <div class="databasesToolbar-actions">
                 <div class="btn-group-label" data-bind="css: { active: selectedDatabases().length }, visible: accessManager.canSetState || accessManager.canDelete" data-label="Selection" role="group">
-                    <button class="btn btn-danger" data-bind="visible: accessManager.canDelete, enable: selectedDatabases().length, click: deleteSelectedDatabases">
+                    <button class="btn btn-danger" data-bind="visible: accessManager.canDelete, enable: selectedDatabasesWithoutLock().length, click: deleteSelectedDatabases">
                         <i class="icon-trash"></i>
                         <span>Delete</span>
                     </button>
                     <div class="btn-group" data-bind="visible: accessManager.canSetState">
-                        <button type="button" class="btn btn-default dropdown-toggle" title="Change the options of selected databases"
+                        <button type="button" class="btn btn-default dropdown-toggle" title="Set the status (enabled/disabled) of selected databases"
                                 data-bind="enable: selectedDatabases().length && !spinners.globalToggleDisable(), css: { 'btn-spinner': spinners.globalToggleDisable() }" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                             <i class="icon-play"></i><span>Set state...</span>
                             <span class="caret"></span>
@@ -25,6 +25,35 @@
                                 <a href="#" title="Disable">
                                     <i class="icon-lock"></i>
                                     <span>Disable</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="btn-group" data-bind="visible: accessManager.canDelete">
+                        <button type="button" class="btn btn-default dropdown-toggle" title="Set the delete lock mode for the selected databases"
+                                data-bind="enable: selectedDatabases().length && !spinners.globalToggleDisable(), 
+                                                       css: { 'btn-spinner': spinners.globalToggleDisable() }" data-toggle="dropdown" aria-haspopup="true">
+                            <i class="icon-lock"></i><span>Set delete lock mode...</span>
+                            <span class="caret"></span>
+                            <span class="sr-only">Toggle Dropdown</span>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li data-bind="click: unlockSelectedDatabases">
+                                <a href="#" title="Allow to delete selected databases">
+                                    <i class="icon-trash-cutout icon-addon-check"></i>
+                                    <span>Allow databases delete</span>
+                                </a>
+                            </li>
+                            <li data-bind="click: lockSelectedDatabases">
+                                <a href="#" title="Prevent deletion of selected databases. An error will not be thrown if an app attempts to delete.">
+                                    <i class="icon-trash-cutout icon-addon-cancel"></i>
+                                    <span>Prevent databases delete</span>
+                                </a>
+                            </li>
+                            <li data-bind="click: lockErrorSelectedDatabases">
+                                <a href="#" title="Prevent deletion of selected databases. An error will be thrown if an app attempts to delete.">
+                                    <i class="icon-trash-cutout icon-addon-exclamation"></i>
+                                    <span>Prevent databases delete (Error)</span>
                                 </a>
                             </li>
                         </ul>
@@ -191,8 +220,9 @@
                                         <i class="icon-database-cutout icon-addon-cancel" data-bind="visible: !inProgressAction() && !disabled()"></i>
                                         <span data-bind="visible: !inProgressAction() && !disabled()">Disable</span>
                                     </button>
-                                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" 
-                                            data-bind="disable: isBeingDeleted() || inProgressAction(), visible: online() || $root.isAboveUserAccess()">
+                                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
+                                            data-bind="disable: isBeingDeleted() || inProgressAction(), 
+                                                       visible: online() && $root.isAdminAccessByDbName($data.name)">
                                         <span class="caret"></span>
                                         <span class="sr-only">Toggle Dropdown</span>
                                     </button>
@@ -207,18 +237,18 @@
                                                 <i class="icon-play"></i> Resume indexing
                                             </a>
                                         </li>
-                                        <li data-bind="visible: $root.accessManager.canDisableIndexing() && !indexingDisabled()">
+                                        <li data-bind="visible: !indexingDisabled() && $root.accessManager.canDisableIndexing()">
                                             <a href="#" data-bind="click: $root.toggleDisableDatabaseIndexing">
                                                 <i class="icon-cancel"></i> Disable indexing
                                             </a>
                                         </li>
-                                        <li data-bind="visible: indexingDisabled()">
+                                        <li data-bind="visible: indexingDisabled() && $root.accessManager.canDisableIndexing()">
                                             <a href="#" data-bind="click: $root.toggleDisableDatabaseIndexing">
                                                 <i class="icon-play"></i> Enable indexing
                                             </a>
                                         </li>
-                                        <li class="divider" data-bind="visible: $root.createIsLocalDatabaseObservable(name)"></li>
-                                        <li data-bind="visible: $root.accessManager.canCompactDatabase() && $root.createIsLocalDatabaseObservable(name)()">
+                                        <li class="divider" data-bind="visible: $root.createIsLocalDatabaseObservable(name) &&  $root.accessManager.canCompactDatabase()"></li>
+                                        <li data-bind="visible: $root.createIsLocalDatabaseObservable(name)() && $root.accessManager.canCompactDatabase()">
                                             <a data-bind="visible: disabled" title="The database is disabled" class="has-disable-reason disabled" data-placement="top">
                                                 <i class="icon-compact"></i> Compact database
                                             </a>
@@ -231,9 +261,36 @@
                                 <button class="btn btn-success" data-bind="click: _.partial($root.updateDatabaseInfo, name), enable: canNavigateToDatabase(), disable: isBeingDeleted" title="Refresh database statistics">
                                     <i class="icon-refresh-stats"></i>
                                 </button>
-                                <button class="btn btn-danger" data-bind="click: $root.deleteDatabase, disable: isBeingDeleted, css: { 'btn-spinner': isBeingDeleted }, visible: $root.accessManager.canDelete" title="Remove database">
-                                    <i class="icon-trash"></i>
-                                </button>
+                                <div class="btn-group" data-bind="visible: $root.accessManager.canDelete">
+                                    <button class="btn" data-bind="click: $root.deleteDatabase, disable: isBeingDeleted() || lockMode() !== 'Unlock',
+                                                                   css: { 'btn-danger': lockMode() === 'Unlock', 'btn-default': lockMode() !== 'Unlock', 'btn-spinner': isBeingDeleted() || _.includes($root.spinners.localLockChanges(), name) },
+                                                                   attr: { title: lockMode() === 'Unlock' ? 'Remove database' : 'Database cannot be deleted because of the set lock mode' }">
+                                        <i class="icon-trash" data-bind="visible: lockMode() === 'Unlock'"></i>
+                                        <i class="icon-trash-cutout icon-addon-cancel" data-bind="visible: lockMode() === 'PreventDeletesIgnore'"></i>
+                                        <i class="icon-trash-cutout icon-addon-exclamation" data-bind="visible: lockMode() === 'PreventDeletesError'"></i>
+                                    </button>
+                                    <button type="button" class="btn dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" data-bind="css: { 'btn-danger': lockMode() === 'Unlock', 'btn-default': lockMode() !== 'Unlock' }">
+                                        <span class="caret"></span>
+                                        <span class="sr-only">Toggle Dropdown</span>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-right">
+                                        <li>
+                                            <a href="#" data-bind="click: $root.allowDatabaseDelete" title="Allow to delete database">
+                                                <i class="icon-trash-cutout icon-addon-check"></i> Allow database delete
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a href="#" data-bind="click: $root.preventDatabaseDelete" title="Prevent deletion of database. An error will not be thrown if an app attempts to delete the database.">
+                                                <i class="icon-trash-cutout icon-addon-cancel"></i> Prevent database delete 
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a href="#" data-bind="click: $root.preventDatabaseDeleteWithError" title="Prevent deletion of database. An error will be thrown if an app attempts to delete the database.">
+                                                <i class="icon-trash-cutout icon-addon-exclamation"></i> Prevent database delete (Error)
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -264,8 +321,14 @@
         <div class="addons-container flex-wrap">
             <div class="database-properties">
                 <div class="encryption">
-                    <small title="This database is encrypted" data-bind="visible: isEncrypted"><i class="icon-encryption text-success"></i></small>
-                    <small title="This database is not encrypted" data-bind="visible: !isEncrypted()"><i class="icon-unlock text-muted"></i></small>
+                    <small title="This database is encrypted" data-bind="visible: isEncrypted"><i class="icon-key text-success"></i></small>
+                    <small title="This database is not encrypted" data-bind="visible: !isEncrypted()"><i class="icon-unencrypted text-muted"></i></small>
+                </div>
+                <div data-bind="if: databaseAccessText">
+                    <div class="database-access" title="Database access level">
+                        <i data-bind="attr: { class: databaseAccessColor() + ' ' + databaseAccessClass() }"></i>
+                        <small data-bind="text: databaseAccessText" ></small>
+                    </div>
                 </div>
                 <div class="storage">
                     <small><i class="icon-drive"></i></small>

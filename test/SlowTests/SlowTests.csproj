@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net5.0</TargetFramework>
-    <RuntimeFrameworkVersion>5.0.3</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>5.0.6</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>SlowTests</AssemblyName>
     <PackageId>SlowTests</PackageId>
@@ -14,6 +14,10 @@
   </ItemGroup>
   <ItemGroup Condition="'$(OS)' != 'Windows_NT'">
     <Compile Include="..\..\src\CommonAssemblyInfo.Linux.cs" Link="Properties\CommonAssemblyInfo.Linux.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Remove="Data\RavenDB_16328\MyAnalyzer.cs" />
+    <Compile Remove="Data\RavenDB_14939\MyAnalyzer.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Remove="Data\legacy-counters.4.1.5.ravendbdump" />
@@ -37,7 +41,9 @@
     <None Remove="Data\RavenDB_15700\BewerberStatus.csv" />
     <None Remove="Data\RavenDB_15700\Bewerbung.csv" />
     <None Remove="Data\RavenDB_15700\Vakanz.csv" />
+    <None Remove="Data\RavenDB_15753\cat.jpg" />
     <None Remove="Data\RavenDB_15898\1.ravendbdump" />
+    <None Remove="Data\RavenDB_16378\RavenDB-16401-NRE.ravendb-snapshot" />
     <None Remove="Smuggler\Data\DocumentWithRevisions.ravendbdump" />
     <None Remove="Smuggler\Data\RevisionsWithoutADocument.ravendbdump" />
   </ItemGroup>
@@ -71,6 +77,8 @@
     <EmbeddedResource Include="Data\mssql.basic.insert.sql" />
     <EmbeddedResource Include="Data\mysql.basic.create.sql" />
     <EmbeddedResource Include="Data\mysql.basic.insert.sql" />
+    <EmbeddedResource Include="Data\RavenDB_16328\MyAnalyzer.cs" />
+    <EmbeddedResource Include="Data\RavenDB_14939\MyAnalyzer.cs" />
     <EmbeddedResource Include="Data\RavenDB_15159\12119.smaps.gz" />
     <EmbeddedResource Include="Data\RavenDB_15294\northwind-4.2.103.zip" />
   </ItemGroup>
@@ -98,7 +106,9 @@
     <EmbeddedResource Include="Data\RavenDB_15700\BewerberStatus.csv" />
     <EmbeddedResource Include="Data\RavenDB_15700\Bewerbung.csv" />
     <EmbeddedResource Include="Data\RavenDB_15700\Vakanz.csv" />
+    <EmbeddedResource Include="Data\RavenDB_15753\cat.jpg" />
     <EmbeddedResource Include="Data\RavenDB_15898\1.ravendbdump" />
+    <EmbeddedResource Include="Data\RavenDB_16378\RavenDB-16401-NRE.ravendb-snapshot" />
     <EmbeddedResource Include="Data\RavenDB_8355\MySorter.cs" />
     <EmbeddedResource Include="Data\RavenDB_8355\MySorterWithDiagnostics.cs" />
     <EmbeddedResource Include="Data\RavenDB_9912\1.ravendbdump" />
@@ -128,7 +138,7 @@
   </ItemGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.9.0-preview-20201020-06" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.9.4" />
     <PackageReference Include="System.DirectoryServices.Protocols" Version="5.0.0" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.4.3">
       <PrivateAssets>all</PrivateAssets>

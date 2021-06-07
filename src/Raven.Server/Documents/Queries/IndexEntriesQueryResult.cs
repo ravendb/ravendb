@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.TimeSeries;
@@ -13,9 +15,10 @@ namespace Raven.Server.Documents.Queries
     {
         public static readonly IndexEntriesQueryResult NotModifiedResult = new IndexEntriesQueryResult { NotModified = true };
 
-        public override void AddResult(BlittableJsonReaderObject result)
+        public override ValueTask AddResultAsync(BlittableJsonReaderObject result, CancellationToken token)
         {
             Results.Add(result);
+            return default;
         }
 
         public override void AddHighlightings(Dictionary<string, Dictionary<string, string[]>> highlightings)
@@ -28,9 +31,9 @@ namespace Raven.Server.Documents.Queries
             throw new NotSupportedException();
         }
 
-        public override void HandleException(Exception e)
+        public override ValueTask HandleExceptionAsync(Exception e, CancellationToken token)
         {
-            throw new NotSupportedException();
+            return default;
         }
 
         public override void AddCounterIncludes(IncludeCountersCommand includeCountersCommand)
@@ -70,6 +73,5 @@ namespace Raven.Server.Documents.Queries
         public override bool SupportsInclude => false;
         public override bool SupportsHighlighting => false;
         public override bool SupportsExplanations => false;
-
     }
 }

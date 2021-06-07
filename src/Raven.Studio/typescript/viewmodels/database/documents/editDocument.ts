@@ -42,6 +42,7 @@ import forceRevisionCreationCommand = require("commands/database/documents/force
 import getTimeSeriesStatsCommand = require("commands/database/documents/timeSeries/getTimeSeriesStatsCommand");
 import studioSettings = require("common/settings/studioSettings");
 import globalSettings = require("common/settings/globalSettings");
+import accessManager = require("common/shell/accessManager");
 
 interface revisionToCompare {
     date: string;
@@ -123,7 +124,7 @@ class editDocument extends viewModelBase {
             docId => this.loadDocument(docId), (saveResult: saveDocumentResponseDto, localDoc: any, forceRevisionCreation: boolean) => this.onDocumentSaved(saveResult, localDoc, forceRevisionCreation));
     
     // it represents effective actions provider - normally it uses normalActionProvider, in clone document node it overrides actions on attachments/counter to 'in-memory' implementation 
-    private crudActionsProvider = ko.observable<editDocumentCrudActions>(this.normalActionProvider); 
+    private crudActionsProvider = ko.observable<editDocumentCrudActions>(this.normalActionProvider);
 
     connectedDocuments = new connectedDocuments(this.document, 
         this.activeDatabase, 
@@ -131,7 +132,8 @@ class editDocument extends viewModelBase {
         changeVector => this.enterCompareModeAndCompareByChangeVector(changeVector), 
         this.isCreatingNewDocument, 
         this.crudActionsProvider, 
-        this.inReadOnlyMode);
+        this.inReadOnlyMode,
+        this.isReadOnlyAccess);
 
     isSaveEnabled: KnockoutComputed<boolean>;
     
@@ -323,7 +325,7 @@ class editDocument extends viewModelBase {
 
     private initializeObservables(): void {
         
-        this.dirtyFlag = new ko.DirtyFlag([this.documentText, this.userSpecifiedId], false, jsonUtil.newLineNormalizingHashFunction); 
+        this.dirtyFlag = new ko.DirtyFlag([this.documentText, this.userSpecifiedId], false, jsonUtil.newLineNormalizingHashFunction);
           
         this.isSaveEnabled = ko.pureComputed(() => {
             const isSaving = this.isSaving();
@@ -932,7 +934,14 @@ class editDocument extends viewModelBase {
                 // if revisions is enabled try to load revisions bin entry
                 if (xhr.status === 404 && db.hasRevisionsConfiguration()) {
                     this.loadRevisionsBinEntry(id)
-                        .done(doc => loadTask.resolve(doc))
+                        .done(doc => {
+                            if (doc) {
+                                loadTask.resolve(doc);
+                            } else {
+                                messagePublisher.reportWarning("Could not find document: " + id);
+                                loadTask.reject();
+                            }
+                        })
                         .fail(() => loadTask.reject());
                 } else {
                     this.dirtyFlag().reset();

@@ -85,8 +85,12 @@ namespace Raven.Client.Documents.Smuggler
             if (_requestExecutor == null)
                 throw new InvalidOperationException("Cannot use Smuggler without a database defined, did you forget to call ForDatabase?");
 
-            using (_requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            IDisposable returnContext = null;
+            Task requestTask = null;
+
+            try
             {
+                returnContext = _requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context);
                 var getOperationIdCommand = new GetNextOperationIdCommand();
                 await _requestExecutor.ExecuteAsync(getOperationIdCommand, context, sessionInfo: null, token: token).ConfigureAwait(false);
                 var operationId = getOperationIdCommand.Result;
@@ -94,11 +98,13 @@ namespace Raven.Client.Documents.Smuggler
                 var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
                 var cancellationTokenRegistration = token.Register(() => tcs.TrySetCanceled(token));
 
-                var command = new ExportCommand(_requestExecutor.Conventions, context, options, handleStreamResponse, operationId, tcs, getOperationIdCommand.NodeTag);
-                var requestTask = _requestExecutor.ExecuteAsync(command, context, sessionInfo: null, token: token)
+                var command = new ExportCommand(context, options, handleStreamResponse, operationId, tcs, getOperationIdCommand.NodeTag);
+
+                requestTask = _requestExecutor.ExecuteAsync(command, context, sessionInfo: null, token: token)
                     .ContinueWith(t =>
                     {
                         cancellationTokenRegistration.Dispose();
+                        returnContext?.Dispose();
                         if (t.IsFaulted)
                         {
                             tcs.TrySetException(t.Exception);
@@ -125,6 +131,13 @@ namespace Raven.Client.Documents.Smuggler
                     operationId,
                     getOperationIdCommand.NodeTag,
                     additionalTask);
+            }
+            catch (Exception e)
+            {
+                if (requestTask == null)
+                    returnContext?.Dispose();
+
+                throw e.ExtractSingleInnerException();
             }
         }
 
@@ -213,6 +226,8 @@ namespace Raven.Client.Documents.Smuggler
         private async Task<Operation> ImportInternalAsync(DatabaseSmugglerImportOptions options, Stream stream, bool leaveOpen, CancellationToken token = default)
         {
             var disposeStream = leaveOpen ? null : new DisposeStreamOnce(stream);
+            IDisposable returnContext = null;
+            Task requestTask = null;
 
             try
             {
@@ -223,21 +238,21 @@ namespace Raven.Client.Documents.Smuggler
                 if (_requestExecutor == null)
                     throw new InvalidOperationException("Cannot use Smuggler without a database defined, did you forget to call ForDatabase?");
 
-                using (_requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-                {
-                    var getOperationIdCommand = new GetNextOperationIdCommand();
-                    await _requestExecutor.ExecuteAsync(getOperationIdCommand, context, sessionInfo: null, token: token).ConfigureAwait(false);
-                    var operationId = getOperationIdCommand.Result;
+                returnContext = _requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context);
+                var getOperationIdCommand = new GetNextOperationIdCommand();
+                await _requestExecutor.ExecuteAsync(getOperationIdCommand, context, sessionInfo: null, token: token).ConfigureAwait(false);
+                var operationId = getOperationIdCommand.Result;
 
-                    var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-                    var cancellationTokenRegistration = token.Register(() => tcs.TrySetCanceled(token));
+                var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+                var cancellationTokenRegistration = token.Register(() => tcs.TrySetCanceled(token));
 
-                    var command = new ImportCommand(_requestExecutor.Conventions, context, options, stream, operationId, tcs, this, getOperationIdCommand.NodeTag);
+                var command = new ImportCommand(context, options, stream, operationId, tcs, this, getOperationIdCommand.NodeTag);
 
-                    var task = _requestExecutor.ExecuteAsync(command, context, sessionInfo: null, token: token);
-                    var requestTask = task
+                var task = _requestExecutor.ExecuteAsync(command, context, sessionInfo: null, token: token);
+                requestTask = task
                         .ContinueWith(t =>
                         {
+                            returnContext?.Dispose();
                             cancellationTokenRegistration.Dispose();
                             using (disposeStream)
                             {
@@ -251,22 +266,28 @@ namespace Raven.Client.Documents.Smuggler
                             }
                         }, token);
 
-                    try
-                    {
-                        await tcs.Task.ConfigureAwait(false);
-                    }
-                    catch (Exception)
-                    {
-                        await requestTask.ConfigureAwait(false);
-                        await tcs.Task.ConfigureAwait(false);
-                    }
-
-                    return new Operation(_requestExecutor, () => _store.Changes(_databaseName, getOperationIdCommand.NodeTag), _requestExecutor.Conventions, operationId,
-                        nodeTag: getOperationIdCommand.NodeTag, additionalTask: task);
+                try
+                {
+                    await tcs.Task.ConfigureAwait(false);
                 }
+                catch (Exception)
+                {
+                    await requestTask.ConfigureAwait(false);
+                    await tcs.Task.ConfigureAwait(false);
+                }
+
+                return new Operation(_requestExecutor, () => _store.Changes(_databaseName, getOperationIdCommand.NodeTag), _requestExecutor.Conventions, operationId,
+                    nodeTag: getOperationIdCommand.NodeTag, additionalTask: task);
+
             }
             catch (Exception e)
             {
+                if (requestTask == null)
+                {
+                    // handle the possible double dispose of return context
+                    returnContext?.Dispose();
+                }
+
                 disposeStream?.Dispose();
                 throw e.ExtractSingleInnerException();
             }
@@ -279,7 +300,7 @@ namespace Raven.Client.Documents.Smuggler
             private readonly long _operationId;
             private readonly TaskCompletionSource<object> _tcs;
 
-            public ExportCommand(DocumentConventions conventions, JsonOperationContext context, DatabaseSmugglerExportOptions options, Func<Stream, Task> handleStreamResponse, long operationId, TaskCompletionSource<object> tcs, string nodeTag)
+            public ExportCommand(JsonOperationContext context, DatabaseSmugglerExportOptions options, Func<Stream, Task> handleStreamResponse, long operationId, TaskCompletionSource<object> tcs, string nodeTag)
             {
                 if (options == null)
                     throw new ArgumentNullException(nameof(options));
@@ -304,9 +325,9 @@ namespace Raven.Client.Documents.Smuggler
                 return new HttpRequestMessage
                 {
                     Method = HttpMethod.Post,
-                    Content = new BlittableJsonContent(stream =>
+                    Content = new BlittableJsonContent(async stream =>
                     {
-                        ctx.Write(stream, _options);
+                        await ctx.WriteAsync(stream, _options).ConfigureAwait(false);
                         _tcs.TrySetResult(null);
                     })
                 };
@@ -333,7 +354,7 @@ namespace Raven.Client.Documents.Smuggler
 
             public override bool IsReadRequest => false;
 
-            public ImportCommand(DocumentConventions conventions, JsonOperationContext context, DatabaseSmugglerImportOptions options, Stream stream, long operationId, TaskCompletionSource<object> tcs, DatabaseSmuggler parent, string nodeTag)
+            public ImportCommand(JsonOperationContext context, DatabaseSmugglerImportOptions options, Stream stream, long operationId, TaskCompletionSource<object> tcs, DatabaseSmuggler parent, string nodeTag)
             {
                 _stream = stream ?? throw new ArgumentNullException(nameof(stream));
                 if (options == null)
@@ -358,7 +379,7 @@ namespace Raven.Client.Documents.Smuggler
 
                 var form = new MultipartFormDataContent
                 {
-                    {new BlittableJsonContent(stream => { ctx.Write(stream, _options); }), Constants.Smuggler.ImportOptions},
+                    {new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, _options).ConfigureAwait(false)), Constants.Smuggler.ImportOptions},
                     {new StreamContentWithConfirmation(_stream, _tcs, _parent), "file", "name"}
                 };
 

@@ -1,16 +1,15 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
-using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Primitives;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Exceptions;
@@ -23,7 +22,6 @@ using Raven.Client.Exceptions.Routing;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Properties;
 using Raven.Server.Config;
-using Raven.Server.Documents.Handlers;
 using Raven.Server.Exceptions;
 using Raven.Server.Rachis;
 using Raven.Server.Routing;
@@ -66,7 +64,6 @@ namespace Raven.Server
                     appBuilder => appBuilder.UseResponseCompression());
             }
 
-
             if (IsServerRunningInASafeManner() == false)
             {
                 app.Use(_ => UnsafeRequestHandler);
@@ -90,11 +87,12 @@ namespace Raven.Server
             "/debug/server-id"
         };
 
-        private Task UnsafeRequestHandler(HttpContext context)
+        private async Task UnsafeRequestHandler(HttpContext context)
         {
             if (RoutesAllowedInUnsafeMode.Contains(context.Request.Path.Value))
             {
-                return RequestHandler(context);
+                await RequestHandler(context);
+                return;
             }
 
             context.Response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
@@ -102,12 +100,13 @@ namespace Raven.Server
             if (IsHtmlAcceptable(context))
             {
                 context.Response.Headers["Content-Type"] = "text/html; charset=utf-8";
-                return context.Response.WriteAsync(HtmlUtil.RenderUnsafePage());
+                await context.Response.WriteAsync(HtmlUtil.RenderUnsafePage());
+                return;
             }
 
             context.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
             using (_server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
-            using (var writer = new BlittableJsonTextWriter(ctx, context.Response.Body))
+            await using (var writer = new AsyncBlittableJsonTextWriter(ctx, context.Response.Body))
             {
                 writer.WriteStartObject();
                 writer.WritePropertyName("Message");
@@ -126,8 +125,6 @@ namespace Raven.Server
                 writer.WriteEndArray();
                 writer.WriteEndObject();
             }
-
-            return Task.CompletedTask;
         }
 
         public static bool IsHtmlAcceptable(HttpContext context)
@@ -206,7 +203,7 @@ namespace Raven.Server
 
                     MaybeAddAdditionalExceptionData(djv, e);
 
-                    using (var writer = new BlittableJsonTextWriter(ctx, context.Response.Body))
+                    await using (var writer = new AsyncBlittableJsonTextWriter(ctx, context.Response.Body))
                     {
                         var json = ctx.ReadObject(djv, "exception");
                         writer.WriteObject(json);
@@ -215,7 +212,6 @@ namespace Raven.Server
 #if EXCEPTION_ERROR_HUNT
                     File.Delete(f);
 #endif
-
                 }
             }
             finally
@@ -243,9 +239,9 @@ namespace Raven.Server
 
         private static void CheckVersionAndWrapException(HttpContext context, ref Exception e)
         {
-            if (RequestRouter.TryGetClientVersion(context, out var version) == false) 
+            if (RequestRouter.TryGetClientVersion(context, out var version) == false)
                 return;
-            
+
             if (version.Major == '3')
             {
                 e = new ClientVersionMismatchException(
@@ -276,7 +272,7 @@ namespace Raven.Server
         }
 
         /// <summary>
-        /// LogTrafficWatch gets HttpContext, elapsed time and database name 
+        /// LogTrafficWatch gets HttpContext, elapsed time and database name
         /// </summary>
         /// <param name="context"></param>
         /// <param name="elapsedMilliseconds"></param>
@@ -288,7 +284,7 @@ namespace Raven.Server
             (string CustomInfo, TrafficWatchChangeType Type) twTuple =
                 ((string, TrafficWatchChangeType)?)contextItem ?? ("N/A", TrafficWatchChangeType.None);
 
-            var twn = new TrafficWatchChange
+            var twn = new TrafficWatchHttpChange
             {
                 TimeStamp = DateTime.UtcNow,
                 RequestId = requestId, // counted only for traffic watch
@@ -300,7 +296,8 @@ namespace Raven.Server
                 DatabaseName = database ?? "N/A",
                 CustomInfo = twTuple.CustomInfo,
                 Type = twTuple.Type,
-                ClientIP = context.Connection.RemoteIpAddress.ToString()
+                ClientIP = context.Connection.RemoteIpAddress?.ToString(),
+                CertificateThumbprint = context.Connection.ClientCertificate?.Thumbprint
             };
 
             TrafficWatchManager.DispatchMessage(twn);
@@ -336,7 +333,7 @@ namespace Raven.Server
             }
 
             if (exception is LowMemoryException ||
-                exception is HighDirtyMemoryException || 
+                exception is HighDirtyMemoryException ||
                 exception is OutOfMemoryException ||
                 exception is VoronUnrecoverableErrorException ||
                 exception is VoronErrorException ||
@@ -363,7 +360,8 @@ namespace Raven.Server
                 exception is NodeIsPassiveException ||
                 exception is ClientVersionMismatchException ||
                 exception is DatabaseSchemaErrorException || 
-                exception is DatabaseIdleException)
+                exception is DatabaseIdleException
+                )
             {
                 response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
                 return;
@@ -379,6 +377,12 @@ namespace Raven.Server
             if (exception is AuthorizationException)
             {
                 response.StatusCode = (int)HttpStatusCode.Forbidden;
+                return;
+            }
+
+            if (exception is PendingRollingIndexException)
+            {
+                response.StatusCode = 425; // TooEarly
                 return;
             }
 

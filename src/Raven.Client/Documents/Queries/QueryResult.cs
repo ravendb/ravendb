@@ -21,10 +21,15 @@ namespace Raven.Client.Documents.Queries
         /// </summary>
         public int TotalResults { get; set; }
 
-       /// <summary>
-       /// The total results for the query, taking into account the 
-       /// offset / limit clauses for this query
-       /// </summary>
+        /// <summary>
+        /// Gets or sets the total results as int64 for this query
+        /// </summary>
+        public long LongTotalResults { get; set; }
+
+        /// <summary>
+        /// The total results for the query, taking into account the 
+        /// offset / limit clauses for this query
+        /// </summary>
         public int? CappedMaxResults { get; set; }
 
         /// <summary>
@@ -68,6 +73,7 @@ namespace Raven.Client.Documents.Queries
                 IsStale = IsStale,
                 SkippedResults = SkippedResults,
                 TotalResults = TotalResults,
+                LongTotalResults = LongTotalResults,
                 Highlightings = Highlightings?.ToDictionary(pair => pair.Key, x => new Dictionary<string, string[]>(x.Value)),
                 Explanations = Explanations?.ToDictionary(x => x.Key, x => x.Value),
                 Timings = Timings?.Clone(),

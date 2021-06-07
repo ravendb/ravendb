@@ -3,13 +3,13 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import router = require("plugins/router");
 import serverWideBackupEditModel = require("models/database/tasks/serverWide/serverWideBackupEditModel");
 import testPeriodicBackupCredentialsCommand = require("commands/serverWide/testPeriodicBackupCredentialsCommand");
-import getServerWideBackupConfigCommand = require("commands/resources/serverWide/getServerWideBackupConfigCommand");
-import getServerWideTaskInfoCommand = require("commands/resources/serverWide/getServerWideTaskInfoCommand");
+import getServerWideBackupConfigCommand = require("commands/serverWide/tasks/getServerWideBackupConfigCommand");
+import getServerWideTaskInfoCommand = require("commands/serverWide/tasks/getServerWideTaskInfoCommand");
 import popoverUtils = require("common/popoverUtils");
 import eventsCollector = require("common/eventsCollector");
 import backupSettings = require("models/database/tasks/periodicBackup/backupSettings");
 import cronEditor = require("viewmodels/common/cronEditor");
-import saveServerWideBackupCommand = require("commands/resources/serverWide/saveServerWideBackupCommand");
+import saveServerWideBackupCommand = require("commands/serverWide/tasks/saveServerWideBackupCommand");
 import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
@@ -132,22 +132,22 @@ class editServerWideBackup extends viewModelBase {
 
         popoverUtils.longWithHover($(".bucket-info"),
             {
-                content: tasksCommonContent.textForPopover("Bucket") 
+                content: tasksCommonContent.textForPopover("Bucket", "Server-Wide Backup")
             });
 
         popoverUtils.longWithHover($(".bucket-gcs-info"),
             {
-                content: tasksCommonContent.textForPopoverGCS("Bucket")
+                content: tasksCommonContent.textForPopoverGCS("Bucket", "Server-Wide Backup")
             });
 
         popoverUtils.longWithHover($(".storage-container-info"),
             {
-                content: tasksCommonContent.textForPopover("Storage container") 
+                content: tasksCommonContent.textForPopover("Storage container", "Server-Wide Backup") 
             });
 
         popoverUtils.longWithHover($(".vault-info"),
             {
-                content: tasksCommonContent.textForPopover("Vault") 
+                content: tasksCommonContent.textForPopover("Vault", "Server-Wide Backup") 
             });
 
         popoverUtils.longWithHover($(".ftp-host-info"),

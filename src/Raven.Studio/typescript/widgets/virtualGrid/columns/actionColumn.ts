@@ -6,6 +6,7 @@ import virtualGridController = require("widgets/virtualGrid/virtualGridControlle
 import generalUtils = require("common/generalUtils");
 
 type actionColumnOpts<T> = {
+    hide?: (item: T) => boolean;
     extraClass?: (item: T) => string;
     title?: (item:T) => string;
 }
@@ -55,6 +56,7 @@ class actionColumn<T> implements virtualColumn {
     }
 
     renderCell(item: T, isSelected: boolean, isSorted: boolean): string {
+        const extraStyle = this.opts.hide ? this.opts.hide(item) ? 'display: none;' : `display: block;` : '';
         const extraButtonHtml = this.opts.title ? ` title="${generalUtils.escapeHtml(this.opts.title(item))}" ` : '';
         let extraCssClasses = this.opts.extraClass ? this.opts.extraClass(item) : '';
         
@@ -62,7 +64,7 @@ class actionColumn<T> implements virtualColumn {
            extraCssClasses += " sorted"; 
         }
         
-        return `<div class="cell action-cell" style="width: ${this.width}">
+        return `<div class="cell action-cell" style="width: ${this.width}; ${extraStyle}">
             <button type="button" ${extraButtonHtml} data-action="${this.actionUniqueId}" class="btn btn-sm btn-block ${extraCssClasses}">${this.buttonText(item)}</button>
         </div>`;
     }
@@ -70,7 +72,6 @@ class actionColumn<T> implements virtualColumn {
     toDto(): virtualColumnDto {
         throw new Error("Action column does not support serialization");
     }
-
 }
 
 export = actionColumn;

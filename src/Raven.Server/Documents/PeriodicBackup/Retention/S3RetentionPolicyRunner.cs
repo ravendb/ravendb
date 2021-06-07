@@ -46,7 +46,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
             var backupFiles = new GetBackupFolderFilesResult();
             // backups are ordered in lexicographical order
             // if the "directory" was created manually it will appear before the first file
-            var files = _client.ListObjects(folder, null, false, 2);
+            var files = _client.ListObjects(folder, null, false, take: 2);
             backupFiles.FirstFile = files.FileInfoDetails?.Select(x => x.FullPath).FirstOrDefault();
 
             var startAfter = $"{folder}{startDateOfRetentionRange.ToString(BackupTask.DateTimeFormat, CultureInfo.InvariantCulture)}{Constants.Documents.PeriodicBackup.IncrementalBackupExtension}";

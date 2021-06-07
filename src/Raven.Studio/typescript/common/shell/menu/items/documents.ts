@@ -12,7 +12,7 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
             nav: false,
             route: "databases/documents",
             moduleId: "viewmodels/database/documents/documents",
-            css: 'icon-documents',
+            css: "icon-documents",
             dynamicHash: appUrls.documents
         }),
         new leafMenuItem({
@@ -20,7 +20,7 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
             nav: false,
             route: "databases/documents/revisions/bin",
             moduleId: "viewmodels/database/documents/revisionsBin",
-            css: 'icon-revisions-bin',
+            css: "icon-revisions-bin",
             dynamicHash: appUrls.revisionsBin
         }),
         new collectionMenuItem(),
@@ -29,24 +29,25 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
             nav: true,
             route: "databases/patch(/:recentPatchHash)",
             moduleId: "viewmodels/database/patch/patch",
-            css: 'icon-patch',
-            dynamicHash: appUrls.patch
+            css: "icon-patch",
+            dynamicHash: appUrls.patch,
+            requiredAccess: "DatabaseReadWrite"
         }),
         new leafMenuItem({
-            route: 'databases/query/index(/:indexNameOrRecentQueryIndex)',
-            moduleId: 'viewmodels/database/query/query',
-            title: 'Query',
+            route: "databases/query/index(/:indexNameOrRecentQueryIndex)",
+            moduleId: "viewmodels/database/query/query",
+            title: "Query",
             nav: true,
-            css: 'icon-documents-query',
+            css: "icon-documents-query",
             alias: true,
-            dynamicHash: appUrls.query('')
+            dynamicHash: appUrls.query("")
         }),
         new leafMenuItem({
             title: "Conflicts",
             nav: true,
             route: "databases/documents/conflicts",
             moduleId: "viewmodels/database/conflicts/conflicts",
-            css: 'icon-conflicts',
+            css: "icon-conflicts",
             dynamicHash: appUrls.conflicts,
             badgeData: collectionsTracker.default.conflictsCount
         }),
@@ -76,7 +77,7 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
             nav: true,
             route: "databases/cmpXchg",
             moduleId: "viewmodels/database/cmpXchg/cmpXchg",
-            css: 'icon-cmp-xchg',
+            css: "icon-cmp-xchg",
             dynamicHash: appUrls.cmpXchg
         })
     ];

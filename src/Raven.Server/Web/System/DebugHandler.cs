@@ -8,8 +8,8 @@ namespace Raven.Server.Web.System
 {
     public sealed class DebugHandler : RequestHandler
     {
-        [RavenAction("/debug/routes", "GET", AuthorizationStatus.ValidUser)]
-        public Task Routes()
+        [RavenAction("/debug/routes", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        public async Task Routes()
         {
             var debugRoutes = Server.Router.AllRoutes
                 .Where(x => x.IsDebugInformationEndpoint)
@@ -22,7 +22,7 @@ namespace Raven.Server.Web.System
                 .OrderBy(x => x.Key);
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
                 writer.WritePropertyName("Debug");
@@ -70,8 +70,6 @@ namespace Raven.Server.Web.System
 
                 writer.WriteEndObject();
             }
-
-            return Task.CompletedTask;
         }
     }
 }

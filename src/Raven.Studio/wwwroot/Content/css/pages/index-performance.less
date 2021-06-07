@@ -2,6 +2,7 @@
 
     .tooltip-inner {
         max-width: 400px;
+        white-space: nowrap;
     }
 
     .tooltip-title {
@@ -9,11 +10,7 @@
     }
 
     .axis {
-        color: @layout-border;
-    }
-
-    .axisText {
-        color: @on-base-background-color;
+        color: fadeout(@text-color, 30%);
     }
 
     .gaps {
@@ -68,6 +65,10 @@
 
         .aggregationBlittableJson {
             color: #ec407a;
+        }
+        
+        .concurrentlyRunning {
+            color: rgba(136, 136, 136, 0.2);
         }
 
         .references {

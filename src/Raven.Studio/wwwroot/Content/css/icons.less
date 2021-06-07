@@ -114,6 +114,20 @@
     }
 }
 
+.make-icon(unencrypted, "\ea47");
+.make-icon(olap-etl, "\ea46");
+.make-icon(access-admin, "\ea48");
+.make-icon(access-read, "\ea49");
+.make-icon(access-read-write, "\ea4a");
+.make-icon(lock-cutout, "\ea4c");
+.make-icon(server-wide-custom-analyzers, "\ea4d");
+.make-icon(server-wide-custom-sorters, "\ea4e");
+.make-icon(trash-cutout, "\ea4f");
+.make-icon(custom-analyzers, "\ea41");
+.make-icon(accept, "\ea42");
+.make-icon(cluster-dashbaord, "\ea43");
+.make-icon(disconect, "\ea44");
+.make-icon(rejected, "\ea45");
 .make-icon(database-id, "\ea3f");
 .make-icon(spatial-map-view, "\ea40");
 .make-icon(load-map-reduce, "\ea3e");
@@ -457,7 +471,6 @@
 .make-icon(running-queries, "\ea1f");
 .make-icon(stats-running-queries, "\ea1f");
 .make-icon(manage-server-running-queries, "\ea1f");
-.make-icon(spatial-map-view, "\ea3a");
 /* ONLY MENU ICON COLORS */
 #main-menu {
     .make-icon-color(resources, @color-3, @color-3);
@@ -471,8 +484,9 @@
     .make-icon-color(tasks-menu, @color-1, @color-1);
     .make-icon-color(settings, @color-2, @color-2);
     .make-icon-color(stats-menu, @color-3, @color-3);
-    .make-icon-color(resources, @color-4-2, @color-4-2);
-    .make-icon-color(dashboard, @color-4-3, @color-4-3);
+    .make-icon-color(resources, @color-4-1, @color-4-1);
+    .make-icon-color(dashboard, @color-4-2, @color-4-2);
+    .make-icon-color(cluster-dashbaord, @color-4-3, @color-4-3);
     .make-icon-color(manage-server, @color-5, @color-5);
     .make-icon-color(info, @color-5-1, @color-5-1);
     //Documents section
@@ -506,9 +520,10 @@
     .make-icon-color(documents-compression, @color-4-1, @color-4-1);
     .make-icon-color(timeseries-settings, @color-4-2, @color-4-2);
     .make-icon-color(custom-sorters, @color-4-3, @color-4-3);
-    .make-icon-color(manage-dbgroup, @color-5, @color-5);
-    .make-icon-color(database-record, @color-5-1, @color-5-1);
-    .make-icon-color(database-id, @color-5-2, @color-5-2);
+    .make-icon-color(custom-analyzers, @color-5, @color-5);
+    .make-icon-color(manage-dbgroup, @color-5-1, @color-5-1);
+    .make-icon-color(database-record, @color-5-2, @color-5-2);
+    .make-icon-color(database-id, @color-5-3, @color-5-3);
     //Stats section
     .make-icon-color(stats, @color-3-1, @color-3-1);
     .make-icon-color(io-test, @color-3-2, @color-3-2);
@@ -522,16 +537,18 @@
     .make-icon-color(administrator-js-console, @color-1, @color-1);
     .make-icon-color(certificate, @color-1-1, @color-1-1);
     .make-icon-color(server-wide-tasks, @color-1-2, @color-1-2);
+    .make-icon-color(server-wide-custom-analyzers, @color-1-3, @color-1-3);
+    .make-icon-color(server-wide-custom-sorters, @color-2, @color-2);
     //.make-icon-color(server-wide-backup, @color-1-3, @color-1-3);
     //.make-icon-color(global, @color-4-1, @color-4-1);
-    .make-icon-color(admin-logs, @color-1-3, @color-1-3);
-    .make-icon-color(traffic-watch, @color-2, @color-2);
-    .make-icon-color(gather-debug-information, @color-2-1, @color-2-1);
-    .make-icon-color(system-storage, @color-2-2, @color-2-2);
-    .make-icon-color(manage-server-io-test, @color-2-3, @color-2-3);
-    .make-icon-color(stack-traces, @color-3, @color-3);
-    .make-icon-color(manage-server-running-queries, @color-3-1, @color-3-1);
-    .make-icon-color(debug-advanced, @color-3-2, @color-3-2);
+    .make-icon-color(admin-logs, @color-2-1, @color-2-1);
+    .make-icon-color(traffic-watch, @color-2-2, @color-2-2);
+    .make-icon-color(gather-debug-information, @color-2-3, @color-2-3);
+    .make-icon-color(system-storage, @color-3, @color-3);
+    .make-icon-color(manage-server-io-test, @color-3-1, @color-3-1);
+    .make-icon-color(stack-traces, @color-3-2, @color-3-2);
+    .make-icon-color(manage-server-running-queries, @color-3-3, @color-3-3);
+    .make-icon-color(debug-advanced, @color-4, @color-4);
     //other
     .make-icon-color(system, #3c6fb4, #3c6fb4);
     .make-icon-color(plus, #b0d47d, #b0d47d);

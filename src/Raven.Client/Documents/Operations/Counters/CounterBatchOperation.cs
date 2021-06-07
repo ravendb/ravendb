@@ -39,11 +39,7 @@ namespace Raven.Client.Documents.Operations.Counters
                 {
                     Method = HttpMethod.Post,
 
-                    Content = new BlittableJsonContent(stream =>
-                    {
-                        var config = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_counterBatch, ctx);
-                        ctx.Write(stream, config);
-                    })
+                    Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_counterBatch, ctx)).ConfigureAwait(false))
                 };
             }
 

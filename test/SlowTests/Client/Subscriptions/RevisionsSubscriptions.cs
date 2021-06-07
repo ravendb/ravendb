@@ -438,7 +438,7 @@ select { Id: id(d.Current), Age: d.Current.Age }
                     var acks = 0;
                     await Task.Delay(5000);
 
-                    using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    using (Server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                     using (context.OpenReadTransaction())
                     {
                         foreach (var entry in Server.ServerStore.Engine.LogHistory.GetHistoryLogs(context))

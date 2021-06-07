@@ -35,9 +35,9 @@ namespace Raven.Server.Web.System
     public class AdminMonitoringHandler : RequestHandler
     {
         [RavenAction("/admin/monitoring/v1/server", "GET", AuthorizationStatus.Operator)]
-        public Task MonitoringServer()
+        public async Task MonitoringServer()
         {
-            AssertMonitoring();
+            ServerStore.LicenseManager.AssertCanUseMonitoringEndpoints();
 
             var result = new ServerMetrics();
 
@@ -58,28 +58,27 @@ namespace Raven.Server.Web.System
             result.Certificate = GetCertificateMetrics();
             result.Cluster = GetClusterMetrics();
             result.Databases = GetAllDatabasesMetrics();
-            
+
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 context.Write(writer, result.ToJson());
             }
-            return Task.CompletedTask;
         }
 
         private ConfigurationMetrics GetConfigMetrics()
         {
             var configuration = Server.Configuration;
-            
+
             var result = new ConfigurationMetrics();
             result.ServerUrls = configuration.Core.ServerUrls;
             result.PublicServerUrl = configuration.Core.PublicServerUrl?.UriValue;
             result.TcpServerUrls = configuration.Core.TcpServerUrls?.Length > 0
                 ? configuration.Core.TcpServerUrls
                 : null;
-            
+
             if (configuration.Core.PublicTcpServerUrl.HasValue)
-                result.PublicTcpServerUrls = new [] { configuration.Core.PublicTcpServerUrl.Value.UriValue };
+                result.PublicTcpServerUrls = new[] { configuration.Core.PublicTcpServerUrl.Value.UriValue };
             else if (configuration.Core.ExternalPublicTcpServerUrl != null && configuration.Core.ExternalPublicTcpServerUrl.Length > 0)
                 result.PublicTcpServerUrls = configuration.Core.ExternalPublicTcpServerUrl.Select(x => x.UriValue).ToArray();
             return result;
@@ -97,7 +96,7 @@ namespace Raven.Server.Web.System
         private NetworkMetrics GetNetworkMetrics()
         {
             var result = new NetworkMetrics();
-            
+
             var properties = TcpExtensions.GetIPGlobalPropertiesSafely();
             var ipv4Stats = properties.GetTcpIPv4StatisticsSafely();
             var ipv6Stats = properties.GetTcpIPv6StatisticsSafely();
@@ -111,7 +110,7 @@ namespace Raven.Server.Web.System
             result.TotalRequests = Server.Metrics.Requests.RequestsPerSec.Count;
             result.RequestsPerSec = Server.Metrics.Requests.RequestsPerSec.OneMinuteRate;
 
-            result.LastRequestTimeInSec = Server.Statistics.LastRequestTime.HasValue 
+            result.LastRequestTimeInSec = Server.Statistics.LastRequestTime.HasValue
                 ? (SystemTime.UtcNow - Server.Statistics.LastRequestTime.Value).TotalSeconds
                 : (double?)null;
 
@@ -121,29 +120,29 @@ namespace Raven.Server.Web.System
 
             return result;
         }
-        
+
         private CpuMetrics GetCpuMetrics()
         {
             var result = new CpuMetrics();
-            
+
             using (var currentProcess = Process.GetCurrentProcess())
                 result.AssignedProcessorCount = (int)Bits.NumberOfSetBits(currentProcess.ProcessorAffinity.ToInt64());
-            
+
             result.ProcessorCount = Environment.ProcessorCount;
-            
+
             ThreadPool.GetAvailableThreads(out var workerThreads, out var completionPortThreads);
             result.ThreadPoolAvailableWorkerThreads = workerThreads;
             result.ThreadPoolAvailableCompletionPortThreads = completionPortThreads;
-            
+
             var cpuUsage = Server.MetricCacher.GetValue(MetricCacher.Keys.Server.CpuUsage, Server.CpuUsageCalculator.Calculate);
 
             result.ProcessUsage = cpuUsage.ProcessCpuUsage;
             result.MachineUsage = cpuUsage.MachineCpuUsage;
             result.MachineIoWait = cpuUsage.MachineIoWait;
-            
+
             return result;
         }
-        
+
         private MemoryMetrics GetMemoryMetrics()
         {
             var result = new MemoryMetrics();
@@ -152,16 +151,16 @@ namespace Raven.Server.Web.System
             result.InstalledMemoryInMb = memoryInfoResult.InstalledMemory.GetValue(SizeUnit.Megabytes);
             result.PhysicalMemoryInMb = memoryInfoResult.TotalPhysicalMemory.GetValue(SizeUnit.Megabytes);
             result.AllocatedMemoryInMb = memoryInfoResult.WorkingSet.GetValue(SizeUnit.Megabytes);
-            result.LowMemorySeverity = LowMemoryNotification.Instance.IsLowMemory(memoryInfoResult, 
-                new LowMemoryMonitor(), out _); 
+            result.LowMemorySeverity = LowMemoryNotification.Instance.IsLowMemory(memoryInfoResult,
+                new LowMemoryMonitor(), out _);
 
             result.TotalSwapSizeInMb = memoryInfoResult.TotalSwapSize.GetValue(SizeUnit.Megabytes);
             result.TotalSwapUsageInMb = memoryInfoResult.TotalSwapUsage.GetValue(SizeUnit.Megabytes);
             result.WorkingSetSwapUsageInMb = memoryInfoResult.WorkingSetSwapUsage.GetValue(SizeUnit.Megabytes);
-            
+
             var totalDirtyInBytes = MemoryInformation.GetDirtyMemoryState().TotalDirtyInBytes;
             result.TotalDirtyInMb = new Size(totalDirtyInBytes, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes);
-            
+
             return result;
         }
 
@@ -171,8 +170,8 @@ namespace Raven.Server.Web.System
             var licenseStatus = Server.ServerStore.LicenseManager.LicenseStatus;
             result.Type = licenseStatus.Type;
             result.ExpirationLeftInSec = licenseStatus.Expiration.HasValue
-                ? Math.Max(0, (licenseStatus.Expiration.Value - SystemTime.UtcNow).TotalSeconds) 
-                : (double?) null;
+                ? Math.Max(0, (licenseStatus.Expiration.Value - SystemTime.UtcNow).TotalSeconds)
+                : (double?)null;
             result.UtilizedCpuCores = Server.ServerStore.LicenseManager.GetCoresLimitForNode(out _);
             result.MaxCores = licenseStatus.MaxCores;
             return result;
@@ -182,9 +181,9 @@ namespace Raven.Server.Web.System
         {
             var result = new DiskMetrics();
             var environmentStats = Server.ServerStore._env.Stats();
-            result.SystemStoreUsedDataFileSizeInMb = new Size(environmentStats.UsedDataFileSizeInBytes, SizeUnit.Megabytes).GetValue(SizeUnit.Bytes);
-            result.SystemStoreTotalDataFileSizeInMb = new Size(environmentStats.AllocatedDataFileSizeInBytes, SizeUnit.Megabytes).GetValue(SizeUnit.Bytes);
-            
+            result.SystemStoreUsedDataFileSizeInMb = new Size(environmentStats.UsedDataFileSizeInBytes, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes);
+            result.SystemStoreTotalDataFileSizeInMb = new Size(environmentStats.AllocatedDataFileSizeInBytes, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes);
+
             if (ServerStore.Configuration.Core.RunInMemory == false)
             {
                 var diskSpaceResult = Server.MetricCacher.GetValue<DiskSpaceResult>(MetricCacher.Keys.Server.DiskSpaceInfo);
@@ -216,7 +215,7 @@ namespace Raven.Server.Web.System
             {
                 result.ServerCertificateExpirationLeftInSec = -1;
             }
-            
+
             result.WellKnownAdminCertificates = ServerStore.Configuration.Security.WellKnownAdminCertificates;
             return result;
         }
@@ -226,18 +225,18 @@ namespace Raven.Server.Web.System
             var result = new ClusterMetrics();
 
             var nodeTag = ServerStore.NodeTag;
-            
+
             result.NodeTag = nodeTag;
 
             if (string.IsNullOrWhiteSpace(nodeTag) == false)
             {
                 result.NodeState = ServerStore.CurrentRachisState;
             }
-            
+
             result.CurrentTerm = ServerStore.Engine.CurrentTerm;
             result.Index = ServerStore.LastRaftCommitIndex;
             result.Id = ServerStore.Engine.ClusterId;
-            
+
             return result;
         }
 
@@ -258,32 +257,30 @@ namespace Raven.Server.Web.System
         }
 
         [RavenAction("/admin/monitoring/v1/databases", "GET", AuthorizationStatus.Operator)]
-        public Task MonitoringDatabases()
+        public async Task MonitoringDatabases()
         {
-            AssertMonitoring();
+            ServerStore.LicenseManager.AssertCanUseMonitoringEndpoints();
 
             var databases = GetDatabases();
-            
+
             var result = new DatabasesMetrics();
 
             result.PublicServerUrl = Server.Configuration.Core.PublicServerUrl?.UriValue;
             result.NodeTag = ServerStore.NodeTag;
-            
+
             foreach (DocumentDatabase documentDatabase in databases)
             {
                 var metrics = GetDatabaseMetrics(documentDatabase);
                 result.Results.Add(metrics);
             }
-            
+
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 context.Write(writer, result.ToJson());
             }
-            
-            return Task.CompletedTask;
         }
-        
+
         private List<DocumentDatabase> GetDatabases()
         {
             var names = GetStringValuesQueryString("name", required: false);
@@ -321,28 +318,28 @@ namespace Raven.Server.Web.System
             var result = new DatabaseMetrics();
 
             result.DatabaseName = database.Name;
-            
+
             result.DatabaseId = database.DocumentsStorage.Environment.DbId.ToString();
             result.UptimeInSec = (int)(SystemTime.UtcNow - database.StartTime).TotalSeconds;
             var lastBackup = database.PeriodicBackupRunner?.GetBackupInfo()?.LastBackup;
-            result.TimeSinceLastBackupInSec = lastBackup.HasValue 
-                ? (SystemTime.UtcNow - lastBackup.Value).TotalSeconds 
+            result.TimeSinceLastBackupInSec = lastBackup.HasValue
+                ? (SystemTime.UtcNow - lastBackup.Value).TotalSeconds
                 : (double?)null;
-            
+
             result.Counts = GetDatabaseCounts(database);
             result.Indexes = GetDatabaseIndexesMetrics(database);
             result.Storage = GetDatabaseStorageMetrics(database);
             result.Statistics = GetDatabaseStatistics(database);
-           
+
             return result;
         }
 
         private DatabaseCounts GetDatabaseCounts(DocumentDatabase database)
         {
             var result = new DatabaseCounts();
-            
+
             var documentsStorage = database.DocumentsStorage;
-            
+
             using (var context = QueryOperationContext.Allocate(database, needsServerContext: true))
             using (context.OpenReadTransaction())
             {
@@ -352,9 +349,9 @@ namespace Raven.Server.Web.System
                 result.Attachments = attachments.AttachmentCount;
                 result.UniqueAttachments = attachments.StreamsCount;
             }
-            
+
             result.Alerts = database.NotificationCenter.GetAlertCount();
-                
+
             var topology = database.ServerStore.LoadDatabaseTopology(database.Name);
             result.Rehabs = topology.Rehabs?.Count ?? 0;
             result.PerformanceHints = database.NotificationCenter.GetPerformanceHintCount();
@@ -362,15 +359,15 @@ namespace Raven.Server.Web.System
 
             return result;
         }
-        
+
         private DatabaseIndexesMetrics GetDatabaseIndexesMetrics(DocumentDatabase database)
         {
             var result = new DatabaseIndexesMetrics();
-            
+
             var indexes = database.IndexStore.GetIndexes().ToList();
-            
+
             result.Count = database.IndexStore.Count;
-            
+
             var indexErrorsCount = 0L;
             foreach (var index in indexes)
                 indexErrorsCount += index.GetErrorCount();
@@ -382,29 +379,29 @@ namespace Raven.Server.Web.System
             result.IdleCount = indexes.Count(x => x.State == IndexState.Idle);
             result.DisabledCount = indexes.Count(x => x.State == IndexState.Disabled);
             result.ErroredCount = indexes.Count(x => x.State == IndexState.Error);
-            
+
             using (var context = QueryOperationContext.Allocate(database, needsServerContext: true))
             using (context.OpenReadTransaction())
             {
                 result.StaleCount = indexes
-                    .Count(x => x.IsStale(context));                
+                    .Count(x => x.IsStale(context));
             }
-            
+
             return result;
         }
 
         private DatabaseStorageMetrics GetDatabaseStorageMetrics(DocumentDatabase database)
         {
             var result = new DatabaseStorageMetrics();
-            
+
             var documentsAllocatedDataFileSizeInBytes = 0L;
             var documentsUsedDataFileSizeInBytes = 0L;
 
             var indexesAllocatedDataFileSizeInBytes = 0L;
             var indexesUsedDataFileSizeInBytes = 0L;
-            
+
             var totalAllocatedDataFileSizeInBytes = 0L;
-            
+
             foreach (StorageEnvironmentWithType storageEnvironmentWithType in database.GetAllStoragesEnvironment())
             {
                 var stats = storageEnvironmentWithType.Environment.Stats();
@@ -416,6 +413,7 @@ namespace Raven.Server.Web.System
                         documentsAllocatedDataFileSizeInBytes += stats.AllocatedDataFileSizeInBytes;
                         documentsUsedDataFileSizeInBytes += stats.UsedDataFileSizeInBytes;
                         break;
+
                     case StorageEnvironmentWithType.StorageEnvironmentType.Index:
                         indexesAllocatedDataFileSizeInBytes += stats.AllocatedDataFileSizeInBytes;
                         indexesUsedDataFileSizeInBytes += stats.UsedDataFileSizeInBytes;
@@ -423,12 +421,12 @@ namespace Raven.Server.Web.System
                 }
             }
 
-            result.DocumentsAllocatedDataFileInMb = new Size(documentsAllocatedDataFileSizeInBytes, SizeUnit.Megabytes).GetValue(SizeUnit.Bytes);
-            result.DocumentsUsedDataFileInMb = new Size(documentsUsedDataFileSizeInBytes, SizeUnit.Megabytes).GetValue(SizeUnit.Bytes);
-            result.IndexesAllocatedDataFileInMb = new Size(indexesAllocatedDataFileSizeInBytes, SizeUnit.Megabytes).GetValue(SizeUnit.Bytes);
-            result.IndexesUsedDataFileInMb = new Size(indexesUsedDataFileSizeInBytes, SizeUnit.Megabytes).GetValue(SizeUnit.Bytes);
-            result.TotalAllocatedStorageFileInMb = new Size(totalAllocatedDataFileSizeInBytes, SizeUnit.Megabytes).GetValue(SizeUnit.Bytes);
-            
+            result.DocumentsAllocatedDataFileInMb = new Size(documentsAllocatedDataFileSizeInBytes, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes);
+            result.DocumentsUsedDataFileInMb = new Size(documentsUsedDataFileSizeInBytes, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes);
+            result.IndexesAllocatedDataFileInMb = new Size(indexesAllocatedDataFileSizeInBytes, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes);
+            result.IndexesUsedDataFileInMb = new Size(indexesUsedDataFileSizeInBytes, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes);
+            result.TotalAllocatedStorageFileInMb = new Size(totalAllocatedDataFileSizeInBytes, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes);
+
             result.TotalFreeSpaceInMb = -1;
 
             if (database.Configuration.Core.RunInMemory == false)
@@ -457,17 +455,17 @@ namespace Raven.Server.Web.System
         }
 
         [RavenAction("/admin/monitoring/v1/indexes", "GET", AuthorizationStatus.Operator)]
-        public Task MonitoringIndexes()
+        public async Task MonitoringIndexes()
         {
-            AssertMonitoring();
+            ServerStore.LicenseManager.AssertCanUseMonitoringEndpoints();
 
             var databases = GetDatabases();
 
             var result = new IndexesMetrics();
-            
+
             result.PublicServerUrl = Server.Configuration.Core.PublicServerUrl?.UriValue;
             result.NodeTag = ServerStore.NodeTag;
-            
+
             foreach (DocumentDatabase documentDatabase in databases)
             {
                 var perDatabaseMetrics = new PerDatabaseIndexMetrics
@@ -480,16 +478,15 @@ namespace Raven.Server.Web.System
                     var indexMetrics = GetIndexMetrics(index);
                     perDatabaseMetrics.Indexes.Add(indexMetrics);
                 }
-                
+
                 result.Results.Add(perDatabaseMetrics);
             }
-            
+
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 context.Write(writer, result.ToJson());
             }
-            return Task.CompletedTask;
         }
 
         private IndexMetrics GetIndexMetrics(Index index)
@@ -497,7 +494,7 @@ namespace Raven.Server.Web.System
             var result = new IndexMetrics();
 
             result.IndexName = index.Name;
-            
+
             result.Priority = index.Definition.Priority;
             result.State = index.State;
             result.Errors = (int)index.GetErrorCount();
@@ -524,19 +521,19 @@ namespace Raven.Server.Web.System
 
             result.Type = index.Type;
             result.EntriesCount = stats.EntriesCount;
-            
+
             return result;
         }
 
         [RavenAction("/admin/monitoring/v1/collections", "GET", AuthorizationStatus.Operator)]
-        public Task MonitoringCollections()
+        public async Task MonitoringCollections()
         {
-            AssertMonitoring();
+            ServerStore.LicenseManager.AssertCanUseMonitoringEndpoints();
 
             var databases = GetDatabases();
 
             var result = new CollectionsMetrics();
-            
+
             result.PublicServerUrl = Server.Configuration.Core.PublicServerUrl?.UriValue;
             result.NodeTag = ServerStore.NodeTag;
 
@@ -546,7 +543,7 @@ namespace Raven.Server.Web.System
                 {
                     DatabaseName = documentDatabase.Name
                 };
-                
+
                 using (documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
@@ -556,25 +553,15 @@ namespace Raven.Server.Web.System
                         perDatabaseMetrics.Collections.Add(new CollectionMetrics(details));
                     }
                 }
-                
+
                 result.Results.Add(perDatabaseMetrics);
             }
-            
+
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-               context.Write(writer, result.ToJson());
+                context.Write(writer, result.ToJson());
             }
-          
-            return Task.CompletedTask;
-        }
-        
-        private void AssertMonitoring()
-        {
-            /* TODO:  uncomment + add section in studio
-            if (ServerStore.LicenseManager.CanUseMonitoringEndpoints(withNotification: false) == false)
-                throw new InvalidOperationException("Your license does not allow monitoring endpoints to be used.");
-              */  
         }
     }
 }

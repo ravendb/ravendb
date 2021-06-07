@@ -14,7 +14,6 @@ using System.Threading.Tasks;
 using Lambda2Js;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session;
@@ -167,8 +166,11 @@ namespace Raven.Client.Documents.Subscriptions
                         JavascriptConversionExtensions.StringSupport.Instance,
                         JavascriptConversionExtensions.NestedConditionalSupport.Instance,
                         new JavascriptConversionExtensions.ReplaceParameterWithNewName(project.Parameters[0], "doc"),
+                        new JavascriptConversionExtensions.IdentityPropertySupport(conventions),
                         JavascriptConversionExtensions.CounterSupport.Instance,
-                        JavascriptConversionExtensions.CompareExchangeSupport.Instance
+                        JavascriptConversionExtensions.CompareExchangeSupport.Instance,
+                        new JavascriptConversionExtensions.LoadSupport(),
+                        JavascriptConversionExtensions.MemberInit.Instance
                     ));
 
                 queryBuilder

@@ -1,11 +1,11 @@
 // Contextual backgrounds
 
-.bg-variant(@color, @bg-text-color) {
+.bg-variant(@color, @bg-text-color, @bg-text-color-emphasis) {
     background-color: @color;
     color: @bg-text-color;
 
     strong {
-        color: lighten(@bg-text-color, 12%);
+        color: @bg-text-color-emphasis;
     }
 
     a {

@@ -23,8 +23,8 @@ namespace Raven.Server.Documents.Handlers.Streaming
 {
     public class StreamingHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/streams/docs", "GET", AuthorizationStatus.ValidUser, DisableOnCpuCreditsExhaustion = true)]
-        public Task StreamDocsGet()
+        [RavenAction("/databases/*/streams/docs", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, DisableOnCpuCreditsExhaustion = true)]
+        public async Task StreamDocsGet()
         {
             var start = GetStart();
             var pageSize = GetPageSize();
@@ -64,22 +64,20 @@ namespace Raven.Server.Documents.Handlers.Streaming
                     },
                     initialState);
 
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                using (var token = CreateOperationToken())
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
                     writer.WritePropertyName("Results");
 
-                    writer.WriteDocuments(context, documentsEnumerator, metadataOnly: false, numberOfResults: out long _);
+                    await writer.WriteDocumentsAsync(context, documentsEnumerator, metadataOnly: false, token.Token);
 
                     writer.WriteEndObject();
                 }
             }
-
-            return Task.CompletedTask;
         }
 
-        
-        [RavenAction("/databases/*/streams/timeseries", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/streams/timeseries", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task Stream()
         {
             var documentId = GetStringQueryString("docId");
@@ -88,8 +86,8 @@ namespace Raven.Server.Documents.Handlers.Streaming
             var toStr = GetStringQueryString("to", required: false);
             var offset = GetTimeSpanQueryString("offset", required: false);
 
-            var from = string.IsNullOrEmpty(fromStr) 
-                ? DateTime.MinValue 
+            var from = string.IsNullOrEmpty(fromStr)
+                ? DateTime.MinValue
                 : TimeSeriesHandler.ParseDate(fromStr, name);
 
             var to = string.IsNullOrEmpty(toStr)
@@ -101,7 +99,7 @@ namespace Raven.Server.Documents.Handlers.Streaming
             {
                 var reader = new TimeSeriesReader(context, documentId, name, from, to, offset);
 
-                using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream(), Database.DatabaseShutdown))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
                     writer.WritePropertyName("Results");
@@ -110,23 +108,23 @@ namespace Raven.Server.Documents.Handlers.Streaming
                     {
                         context.Write(writer, entry.ToTimeSeriesEntryJson());
                         writer.WriteComma();
-                        await writer.MaybeOuterFlushAsync();
+                        await writer.MaybeFlushAsync(Database.DatabaseShutdown);
                     }
                     writer.WriteEndArray();
                     writer.WriteEndObject();
 
-                    await writer.MaybeOuterFlushAsync();
+                    await writer.MaybeFlushAsync(Database.DatabaseShutdown);
                 }
             }
         }
 
-        [RavenAction("/databases/*/streams/queries", "HEAD", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/streams/queries", "HEAD", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public Task SteamQueryHead()
         {
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/streams/queries", "GET", AuthorizationStatus.ValidUser, DisableOnCpuCreditsExhaustion = true)]
+        [RavenAction("/databases/*/streams/queries", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, DisableOnCpuCreditsExhaustion = true)]
         public async Task StreamQueryGet()
         {
             // ReSharper disable once ArgumentsStyleLiteral
@@ -152,7 +150,7 @@ namespace Raven.Server.Documents.Handlers.Streaming
                         }
                     }
                 }
-                var query = IndexQueryServerSide.Create(HttpContext, GetStart(), GetPageSize(), queryContext.Documents, tracker, overrideQuery);
+                var query = await IndexQueryServerSide.CreateAsync(HttpContext, GetStart(), GetPageSize(), queryContext.Documents, tracker, overrideQuery: overrideQuery);
                 query.IsStream = true;
 
                 var format = GetStringQueryString("format", false);
@@ -166,7 +164,7 @@ namespace Raven.Server.Documents.Handlers.Streaming
                 {
                     if (string.Equals(debug, "entries", StringComparison.OrdinalIgnoreCase))
                     {
-                        using (var writer = GetIndexEntriesQueryResultWriter(format, HttpContext.Response, ResponseBodyStream(), propertiesArray, fileNamePrefix))
+                        await using (var writer = GetIndexEntriesQueryResultWriter(format, HttpContext.Response, ResponseBodyStream(), propertiesArray, fileNamePrefix))
                         {
                             try
                             {
@@ -175,7 +173,7 @@ namespace Raven.Server.Documents.Handlers.Streaming
                             catch (IndexDoesNotExistException)
                             {
                                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                                writer.WriteError($"Index {query.Metadata.IndexName} does not exist");
+                                await writer.WriteErrorAsync($"Index {query.Metadata.IndexName} does not exist");
                             }
                         }
                     }
@@ -186,7 +184,7 @@ namespace Raven.Server.Documents.Handlers.Streaming
                 }
                 else
                 {
-                    using (var writer = GetQueryResultWriter(format, HttpContext.Response, queryContext.Documents, ResponseBodyStream(), propertiesArray, fileNamePrefix))
+                    await using (var writer = GetQueryResultWriter(format, HttpContext.Response, queryContext.Documents, ResponseBodyStream(), propertiesArray, fileNamePrefix))
                     {
                         try
                         {
@@ -195,13 +193,13 @@ namespace Raven.Server.Documents.Handlers.Streaming
                         catch (IndexDoesNotExistException)
                         {
                             HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                            writer.WriteError($"Index {query.Metadata.IndexName} does not exist");
+                            await writer.WriteErrorAsync($"Index {query.Metadata.IndexName} does not exist");
                         }
                         catch (Exception e)
                         {
                             try
                             {
-                                writer.WriteError($"Failed to execute stream query. Error: {e}");
+                                await writer.WriteErrorAsync($"Failed to execute stream query. Error: {e}");
                             }
                             catch (Exception ie)
                             {
@@ -218,7 +216,7 @@ namespace Raven.Server.Documents.Handlers.Streaming
             }
         }
 
-        [RavenAction("/databases/*/streams/queries", "POST", AuthorizationStatus.ValidUser, DisableOnCpuCreditsExhaustion = true)]
+        [RavenAction("/databases/*/streams/queries", "POST", AuthorizationStatus.ValidUser, EndpointType.Read, DisableOnCpuCreditsExhaustion = true)]
         public async Task StreamQueryPost()
         {
             // ReSharper disable once ArgumentsStyleLiteral
@@ -254,7 +252,7 @@ namespace Raven.Server.Documents.Handlers.Streaming
                 {
                     if (string.Equals(debug, "entries", StringComparison.OrdinalIgnoreCase))
                     {
-                        using (var writer = GetIndexEntriesQueryResultWriter(format, HttpContext.Response, ResponseBodyStream(), propertiesArray, fileNamePrefix))
+                        await using (var writer = GetIndexEntriesQueryResultWriter(format, HttpContext.Response, ResponseBodyStream(), propertiesArray, fileNamePrefix))
                         {
                             try
                             {
@@ -263,7 +261,7 @@ namespace Raven.Server.Documents.Handlers.Streaming
                             catch (IndexDoesNotExistException)
                             {
                                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                                writer.WriteError($"Index {query.Metadata.IndexName} does not exist");
+                                await writer.WriteErrorAsync($"Index {query.Metadata.IndexName} does not exist");
                             }
                         }
                     }
@@ -274,7 +272,7 @@ namespace Raven.Server.Documents.Handlers.Streaming
                 }
                 else
                 {
-                    using (var writer = GetQueryResultWriter(format, HttpContext.Response, queryContext.Documents, ResponseBodyStream(), propertiesArray, fileNamePrefix))
+                    await using (var writer = GetQueryResultWriter(format, HttpContext.Response, queryContext.Documents, ResponseBodyStream(), propertiesArray, fileNamePrefix))
                     {
                         try
                         {
@@ -283,7 +281,7 @@ namespace Raven.Server.Documents.Handlers.Streaming
                         catch (IndexDoesNotExistException)
                         {
                             HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                            writer.WriteError($"Index {query.Metadata.IndexName} does not exist");
+                            await writer.WriteErrorAsync($"Index {query.Metadata.IndexName} does not exist");
                         }
                     }
                 }
@@ -312,7 +310,7 @@ namespace Raven.Server.Documents.Handlers.Streaming
                 ThrowUnsupportedException("Using json output format with custom fields is not supported.");
             }
 
-            return new StreamJsonDocumentQueryResultWriter(response, responseBodyStream, context);
+            return new StreamJsonDocumentQueryResultWriter(responseBodyStream, context);
         }
 
         private void ThrowUnsupportedException(string message)

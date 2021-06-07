@@ -16,7 +16,10 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.ETL
 {
-    public abstract class EtlTransformer<TExtracted, TTransformed> : IDisposable where TExtracted : ExtractedItem
+    public abstract class EtlTransformer<TExtracted, TTransformed, TStatsScope, TEtlPerformanceOperation> : IDisposable 
+        where TExtracted : ExtractedItem
+        where TStatsScope : AbstractEtlStatsScope<TStatsScope, TEtlPerformanceOperation>
+        where TEtlPerformanceOperation : EtlPerformanceOperation
     {
         public DocumentDatabase Database { get; }
         protected readonly DocumentsOperationContext Context;
@@ -58,12 +61,11 @@ namespace Raven.Server.Documents.ETL
 
             DocumentScript.ScriptEngine.SetValue(Transformation.LoadTo, new ClrFunctionInstance(DocumentScript.ScriptEngine, Transformation.LoadTo, LoadToFunctionTranslator));
 
-            for (var i = 0; i < LoadToDestinations.Length; i++)
+            foreach (var collection in LoadToDestinations)
             {
-                var collection = LoadToDestinations[i];
                 var name = Transformation.LoadTo + collection;
-                var clrFunctionInstance = new ClrFunctionInstance(DocumentScript.ScriptEngine, name, (value, values) => LoadToFunctionTranslator(collection, value, values));
-                DocumentScript.ScriptEngine.SetValue(name, clrFunctionInstance);
+                DocumentScript.ScriptEngine.SetValue(name, new ClrFunctionInstance(DocumentScript.ScriptEngine, name, 
+                    (value, values) => LoadToFunctionTranslator(collection, value, values)));
             }
 
             DocumentScript.ScriptEngine.SetValue(Transformation.LoadAttachment, new ClrFunctionInstance(DocumentScript.ScriptEngine, Transformation.LoadAttachment, LoadAttachment));
@@ -379,9 +381,9 @@ namespace Raven.Server.Documents.ETL
 
         protected abstract void LoadToFunction(string tableName, ScriptRunnerResult colsAsObject);
 
-        public abstract List<TTransformed> GetTransformedResults();
+        public abstract IEnumerable<TTransformed> GetTransformedResults();
 
-        public abstract void Transform(TExtracted item, EtlStatsScope stats, EtlProcessState state);
+        public abstract void Transform(TExtracted item, TStatsScope stats, EtlProcessState state);
 
         public static void ThrowLoadParameterIsMandatory(string parameterName)
         {

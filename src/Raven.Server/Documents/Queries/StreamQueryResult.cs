@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Operations.Counters;
@@ -85,14 +87,14 @@ namespace Raven.Server.Documents.Queries
             throw new NotSupportedException();
         }
 
-        public override void HandleException(Exception e)
+        public override async ValueTask HandleExceptionAsync(Exception e, CancellationToken token)
         {
             StartResponseIfNeeded();
 
             _anyExceptions = true;
 
             _writer.EndResults();
-            _writer.WriteError(e);
+            await _writer.WriteErrorAsync(e);
 
             throw e;
         }
@@ -113,7 +115,7 @@ namespace Raven.Server.Documents.Queries
         public override bool SupportsHighlighting => false;
         public override bool SupportsExplanations => false;
 
-        public void Flush()// intentionally not using Disposable here, because we need better error handling
+        public void Flush() // intentionally not using Disposable here, because we need better error handling
         {
             StartResponseIfNeeded();
 

@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using FastTests.Server.Documents.Revisions;
@@ -276,7 +277,7 @@ namespace SlowTests.Server.Documents.Revisions
 
                 var db = await GetDocumentDatabaseInstanceFor(store1);
 
-                using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown))
+                using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
                     await db.DocumentsStorage.RevisionsStorage.EnforceConfiguration(_ => { }, token);
 
                 WaitForMarker(store1, store2);
@@ -445,7 +446,7 @@ namespace SlowTests.Server.Documents.Revisions
                         }
 
                         loaded.Name = RandomString(5);
-                        
+
                         await session.StoreAsync(loaded, "foo/bar");
                         await session.SaveChangesAsync();
                     }
@@ -630,17 +631,17 @@ namespace SlowTests.Server.Documents.Revisions
                     Assert.Equal(0, revisions.Count);
                 }
 
-/*
-                // TODO : RavenDB-13359
-                using (var session = store2.OpenAsyncSession())
-                {
-                    var doc = await session.LoadAsync<User>("users/1-A");
-                    var md = session.Advanced.GetMetadataFor(doc);
-                    md.TryGetValue(Constants.Documents.Metadata.Flags, out var flags);
+                /*
+                                // TODO : RavenDB-13359
+                                using (var session = store2.OpenAsyncSession())
+                                {
+                                    var doc = await session.LoadAsync<User>("users/1-A");
+                                    var md = session.Advanced.GetMetadataFor(doc);
+                                    md.TryGetValue(Constants.Documents.Metadata.Flags, out var flags);
 
-                    Assert.DoesNotContain(nameof(DocumentFlags.HasRevisions), flags);
-                }
-*/
+                                    Assert.DoesNotContain(nameof(DocumentFlags.HasRevisions), flags);
+                                }
+                */
 
                 // modify doc on store1 to create another revision
                 using (var session = store1.OpenAsyncSession())
@@ -812,7 +813,7 @@ namespace SlowTests.Server.Documents.Revisions
                 // expired revisions should be deleted
                 // assert that both stores have 10 revision tombstones
 
-                foreach (var store in new [] {store1, store2})
+                foreach (var store in new[] { store1, store2 })
                 {
                     var documentDatabase = await GetDocumentDatabaseInstanceFor(store);
                     using (documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))

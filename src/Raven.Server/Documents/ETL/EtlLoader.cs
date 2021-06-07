@@ -8,8 +8,10 @@ using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.ServerWide;
+using Raven.Server.Documents.ETL.Providers.OLAP;
 using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Server.Documents.ETL.Providers.SQL;
 using Raven.Server.NotificationCenter.Notifications;
@@ -61,9 +63,11 @@ namespace Raven.Server.Documents.ETL
 
         public List<SqlEtlConfiguration> SqlDestinations;
 
+        public List<OlapEtlConfiguration> OlapDestinations;
+
         public void Initialize(DatabaseRecord record)
         {
-            LoadProcesses(record, record.RavenEtls, record.SqlEtls, toRemove: null);
+            LoadProcesses(record, record.RavenEtls, record.SqlEtls, record.OlapEtls, toRemove: null);
         }
 
         public event Action<EtlProcess> ProcessAdded;
@@ -83,6 +87,7 @@ namespace Raven.Server.Documents.ETL
         private void LoadProcesses(DatabaseRecord record,
             List<RavenEtlConfiguration> newRavenDestinations,
             List<SqlEtlConfiguration> newSqlDestinations,
+            List<OlapEtlConfiguration> newOlapDestinations,
             List<EtlProcess> toRemove)
         {
             lock (_loadProcessedLock)
@@ -90,7 +95,7 @@ namespace Raven.Server.Documents.ETL
                 _databaseRecord = record;
                 RavenDestinations = _databaseRecord.RavenEtls;
                 SqlDestinations = _databaseRecord.SqlEtls;
-
+                OlapDestinations = _databaseRecord.OlapEtls;
                 var processes = new List<EtlProcess>(_processes);
 
                 if (toRemove != null && toRemove.Count > 0)
@@ -112,6 +117,9 @@ namespace Raven.Server.Documents.ETL
 
                 if (newSqlDestinations != null && newSqlDestinations.Count > 0)
                     newProcesses.AddRange(GetRelevantProcesses<SqlEtlConfiguration, SqlConnectionString>(newSqlDestinations, ensureUniqueConfigurationNames));
+
+                if (newOlapDestinations != null && newOlapDestinations.Count > 0)
+                    newProcesses.AddRange(GetRelevantProcesses<OlapEtlConfiguration, OlapConnectionString>(newOlapDestinations, ensureUniqueConfigurationNames));
 
                 processes.AddRange(newProcesses);
                 _processes = processes.ToArray();
@@ -191,6 +199,7 @@ namespace Raven.Server.Documents.ETL
             {
                 SqlEtlConfiguration sqlConfig = null;
                 RavenEtlConfiguration ravenConfig = null;
+                OlapEtlConfiguration olapConfig = null;
 
                 var connectionStringNotFound = false;
 
@@ -213,7 +222,13 @@ namespace Raven.Server.Documents.ETL
                             connectionStringNotFound = true;
 
                         break;
-
+                    case EtlType.Olap:
+                        olapConfig = config as OlapEtlConfiguration;
+                        if (_databaseRecord.OlapConnectionStrings.TryGetValue(config.ConnectionStringName, out var olapConnection))
+                            olapConfig.Initialize(olapConnection);
+                        else
+                            connectionStringNotFound = true;
+                        break;
                     default:
                         ThrownUnknownEtlConfiguration(config.GetType());
                         break;
@@ -244,9 +259,10 @@ namespace Raven.Server.Documents.ETL
 
                     if (sqlConfig != null)
                         process = new SqlEtl(transform, sqlConfig, _database, _serverStore);
-
                     if (ravenConfig != null)
-                        process = new RavenEtl(transform, ravenConfig, _database, _serverStore);
+                        process = new RavenEtl(transform, ravenConfig, _database, _serverStore); 
+                    if (olapConfig != null)
+                        process = new OlapEtl(transform, olapConfig, _database, _serverStore);
 
                     yield return process;
                 }
@@ -401,6 +417,8 @@ namespace Raven.Server.Documents.ETL
 
             var myRavenEtl = new List<RavenEtlConfiguration>();
             var mySqlEtl = new List<SqlEtlConfiguration>();
+            var myOlapEtl = new List<OlapEtlConfiguration>();
+
 
             var responsibleNodes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
@@ -420,6 +438,14 @@ namespace Raven.Server.Documents.ETL
                 }
             }
 
+            foreach (var config in record.OlapEtls)
+            {
+                if (IsMyEtlTask<OlapEtlConfiguration, OlapConnectionString>(record, config, ref responsibleNodes))
+                {
+                    myOlapEtl.Add(config);
+                }
+            }
+
             var toRemove = _processes.GroupBy(x => x.ConfigurationName).ToDictionary(x => x.Key, x => x.ToList());
 
             foreach (var processesPerConfig in _processes.GroupBy(x => x.ConfigurationName))
@@ -428,49 +454,77 @@ namespace Raven.Server.Documents.ETL
 
                 Debug.Assert(processesPerConfig.All(x => x.GetType() == process.GetType()));
 
-                if (process is RavenEtl ravenEtl)
+                switch (process)
                 {
-                    RavenEtlConfiguration existing = null;
-
-                    foreach (var config in myRavenEtl)
+                    case RavenEtl ravenEtl:
                     {
-                        var diff = ravenEtl.Configuration.Compare(config);
+                        RavenEtlConfiguration existing = null;
 
-                        if (diff == EtlConfigurationCompareDifferences.None)
+                        foreach (var config in myRavenEtl)
                         {
-                            existing = config;
-                            break;
+                            var diff = ravenEtl.Configuration.Compare(config);
+
+                            if (diff == EtlConfigurationCompareDifferences.None)
+                            {
+                                existing = config;
+                                break;
+                            }
                         }
-                    }
 
-                    if (existing != null)
-                    {
-                        toRemove.Remove(processesPerConfig.Key);
-                        myRavenEtl.Remove(existing);
-                    }
-                }
-                else if (process is SqlEtl sqlEtl)
-                {
-                    SqlEtlConfiguration existing = null;
-                    foreach (var config in mySqlEtl)
-                    {
-                        var diff = sqlEtl.Configuration.Compare(config);
-
-                        if (diff == EtlConfigurationCompareDifferences.None)
+                        if (existing != null)
                         {
-                            existing = config;
-                            break;
+                            toRemove.Remove(processesPerConfig.Key);
+                            myRavenEtl.Remove(existing);
                         }
+
+                        break;
                     }
-                    if (existing != null)
+                    case SqlEtl sqlEtl:
                     {
-                        toRemove.Remove(processesPerConfig.Key);
-                        mySqlEtl.Remove(existing);
+                        SqlEtlConfiguration existing = null;
+                        foreach (var config in mySqlEtl)
+                        {
+                            var diff = sqlEtl.Configuration.Compare(config);
+
+                            if (diff == EtlConfigurationCompareDifferences.None)
+                            {
+                                existing = config;
+                                break;
+                            }
+                        }
+                        if (existing != null)
+                        {
+                            toRemove.Remove(processesPerConfig.Key);
+                            mySqlEtl.Remove(existing);
+                        }
+
+                        break;
                     }
-                }
-                else
-                {
-                    throw new InvalidOperationException($"Unknown ETL process type: {process.GetType()}");
+                    case OlapEtl olapEtl:
+                    {
+                        OlapEtlConfiguration existing = null;
+
+                        foreach (var config in myOlapEtl)
+                        {
+                            var diff = olapEtl.Configuration.Compare(config);
+
+                            if (diff == EtlConfigurationCompareDifferences.None && olapEtl.Configuration.Equals(config))
+                            {
+                                existing = config;
+                                break;
+                            }
+                        }
+
+                        if (existing != null)
+                        {
+                            toRemove.Remove(processesPerConfig.Key);
+                            myOlapEtl.Remove(existing);
+                        }
+
+                        break;
+                    }
+                    default:
+                        throw new InvalidOperationException($"Unknown ETL process type: {process.GetType()}");
                 }
             }
 
@@ -494,7 +548,7 @@ namespace Raven.Server.Documents.ETL
                 }
             });
 
-            LoadProcesses(record, myRavenEtl, mySqlEtl, toRemove.SelectMany(x => x.Value).ToList());
+            LoadProcesses(record, myRavenEtl, mySqlEtl, myOlapEtl, toRemove.SelectMany(x => x.Value).ToList());
 
             Parallel.ForEach(toRemove, x =>
             {

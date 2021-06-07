@@ -72,9 +72,9 @@ namespace Raven.Client.Documents.Operations.Attachments
                 {
                     request.Method = HttpMethod.Post;
 
-                    request.Content = new BlittableJsonContent(stream =>
+                    request.Content = new BlittableJsonContent(async stream =>
                     {
-                        using (var writer = new BlittableJsonTextWriter(_context, stream))
+                        await using (var writer = new AsyncBlittableJsonTextWriter(_context, stream))
                         {
                             writer.WriteStartObject();
 

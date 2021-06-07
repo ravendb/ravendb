@@ -13,8 +13,8 @@ namespace Raven.Server.Documents.Handlers
 {
     public class StatsHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/stats/detailed", "GET", AuthorizationStatus.ValidUser)]
-        public Task DetailedStats()
+        [RavenAction("/databases/*/stats/detailed", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        public async Task DetailedStats()
         {
             using (var context = QueryOperationContext.Allocate(Database, needsServerContext: true))
             {
@@ -30,15 +30,13 @@ namespace Raven.Server.Documents.Handlers
                     stats.CountOfCompareExchangeTombstones = ServerStore.Cluster.GetNumberOfCompareExchangeTombstones(serverContext, Database.Name);
                 }
 
-                using (var writer = new BlittableJsonTextWriter(context.Documents, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context.Documents, ResponseBodyStream()))
                     writer.WriteDetailedDatabaseStatistics(context.Documents, stats);
             }
-
-            return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/stats", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
-        public Task Stats()
+        [RavenAction("/databases/*/stats", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
+        public async Task Stats()
         {
             using (var context = QueryOperationContext.Allocate(Database, needsServerContext: true))
             {
@@ -46,20 +44,18 @@ namespace Raven.Server.Documents.Handlers
 
                 FillDatabaseStatistics(stats, context);
 
-                using (var writer = new BlittableJsonTextWriter(context.Documents, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context.Documents, ResponseBodyStream()))
                     writer.WriteDatabaseStatistics(context.Documents, stats);
             }
-
-            return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/healthcheck", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/healthcheck", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public Task DatabaseHealthCheck()
         {
             NoContentStatus();
             return Task.CompletedTask;
         }
-        
+
         private void FillDatabaseStatistics(DatabaseStatistics stats, QueryOperationContext context)
         {
             using (context.OpenReadTransaction())
@@ -128,23 +124,21 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/metrics", "GET", AuthorizationStatus.ValidUser)]
-        public Task Metrics()
+        [RavenAction("/databases/*/metrics", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        public async Task Metrics()
         {
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 context.Write(writer, Database.Metrics.ToJson());
             }
-
-            return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/metrics/puts", "GET", AuthorizationStatus.ValidUser)]
-        public Task PutsMetrics()
+        [RavenAction("/databases/*/metrics/puts", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        public async Task PutsMetrics()
         {
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 var empty = GetBoolValueQueryString("empty", required: false) ?? true;
 
@@ -168,15 +162,13 @@ namespace Raven.Server.Documents.Handlers
                     }
                 });
             }
-
-            return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/metrics/bytes", "GET", AuthorizationStatus.ValidUser)]
-        public Task BytesMetrics()
+        [RavenAction("/databases/*/metrics/bytes", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        public async Task BytesMetrics()
         {
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 var empty = GetBoolValueQueryString("empty", required: false) ?? true;
 
@@ -200,8 +192,6 @@ namespace Raven.Server.Documents.Handlers
                     }
                 });
             }
-
-            return Task.CompletedTask;
         }
     }
 }

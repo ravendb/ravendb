@@ -4,7 +4,7 @@ import copyToClipboard = require("common/copyToClipboard");
 class transformationScriptSyntax extends dialogViewModelBase {
 
     etlType = ko.observable<Raven.Client.Documents.Operations.ETL.EtlType>();
-    htmlElement: HTMLElement;
+    dialogContainer: Element;
 
     constructor(etlType: Raven.Client.Documents.Operations.ETL.EtlType) {
         super();
@@ -14,19 +14,38 @@ class transformationScriptSyntax extends dialogViewModelBase {
     compositionComplete() {
         super.compositionComplete();
         this.bindToCurrentInstance("copySample");
-        this.htmlElement = document.getElementById("transformationScriptSyntaxDialog");
+        this.dialogContainer = document.getElementById("transformationScriptSyntaxDialog");
     }
 
     copySample(sampleTitle?: string) {
         let sampleText;
         
-        if (this.etlType() === "Raven") {
-            sampleText = transformationScriptSyntax.ravenEtlSamples.find(x => x.title === sampleTitle).text;
-        } else {
-            sampleText = transformationScriptSyntax.sqlEtlSampleText;
+        switch (this.etlType()) {
+            case "Raven":
+                sampleText = transformationScriptSyntax.ravenEtlSamples.find(x => x.title === sampleTitle).text;
+                break;
+            case "Sql":
+                sampleText = transformationScriptSyntax.sqlEtlSampleText;
+                break;
+            case "Olap":
+                switch (sampleTitle) {
+                    case "olapEtlSamplePartition":
+                        sampleText = transformationScriptSyntax.olapEtlSamplePartitionText;
+                        break;
+                    case "olapEtlSampleNoPartition":
+                        sampleText = transformationScriptSyntax.olapEtlSampleNoPartitionText;
+                        break;
+                    case "olapEtlSampleKey":
+                        sampleText = transformationScriptSyntax.olapEtlSampleKeyText;
+                        break;
+                    case "olapEtlSampleCustomPartition":
+                        sampleText = transformationScriptSyntax.olapEtlSampleCustomPartitionText;
+                        break;
+                }
+                break;
         }
         
-        copyToClipboard.copy(sampleText, "Sample has been copied to clipboard", this.htmlElement);
+        copyToClipboard.copy(sampleText, "Sample has been copied to clipboard", this.dialogContainer);
     }
 
     static readonly ravenEtlSamples: Array<sampleCode> = [
@@ -107,9 +126,55 @@ orderData.TotalCost = Math.round(orderData.TotalCost * 100) / 100;
 // Load to SQL table 'Orders'
 loadToOrders(orderData);`;
 
-    sqlEtlSampleHtml = ko.pureComputed(() => {
-        return Prism.highlight(transformationScriptSyntax.sqlEtlSampleText, (Prism.languages as any).javascript);
-    });
+    sqlEtlSampleHtml = transformationScriptSyntax.highlightJavascript(transformationScriptSyntax.sqlEtlSampleText);
+
+    static readonly olapEtlSamplePartitionText =
+`var orderDate = new Date(this.OrderedAt);
+var year = orderDate.getFullYear();
+var month = orderDate.getMonth() + 1;
+
+loadToOrders(partitionBy(['year', year], ['month', month]), {
+    // The order of params in the partitionBy method determines the parquet file path
+    Company: this.Company,
+    ShipVia: this.ShipVia
+    // Note: 2 more field are always created per table by default:
+    //       * _id: The ID column - can be overriden in the task definition
+    //       * _lastModifiedTime: The document's last modification time column - cannot be overriden
+});`;
+    
+    olapEtlSamplePartitionHtml = transformationScriptSyntax.highlightJavascript(transformationScriptSyntax.olapEtlSamplePartitionText);
+
+    static readonly olapEtlSampleNoPartitionText =
+`loadToOrders(noPartition(), {
+    // Data will Not be partitioned
+    Company: this.Company
+});`;
+    
+    olapEtlSampleNoPartitionHtml = transformationScriptSyntax.highlightJavascript(transformationScriptSyntax.olapEtlSampleNoPartitionText);
+
+    static readonly olapEtlSampleKeyText = 
+`var key = new Date(this.OrderedAt);
+loadToOrders(partitionBy(key), {
+    // The partition that will be created will be: "_partition={key}"
+    Company: this.Company
+});`;
+    
+    olapEtlSampleKeyHtml = transformationScriptSyntax.highlightJavascript(transformationScriptSyntax.olapEtlSampleKeyText);
+
+    static readonly olapEtlSampleCustomPartitionText =
+`var orderDate = new Date(this.OrderedAt);
+var year = orderDate.getFullYear();
+
+loadToOrders(partitionBy(['year', year], ['customPartitionName', $customPartitionValue]), {
+    // The 'customPartitionValue' is set in the OLAP task definition
+    Company: this.Company
+});`;
+
+    olapEtlSampleCustomPartitionHtml = transformationScriptSyntax.highlightJavascript(transformationScriptSyntax.olapEtlSampleCustomPartitionText);
+
+    static highlightJavascript(source: string) {
+        return Prism.highlight(source, (Prism.languages as any).javascript);
+    }
 }
 
 export = transformationScriptSyntax;

@@ -98,10 +98,6 @@ namespace Raven.Server.Documents.Indexes.Static
             IFunction theFuncAst;
             switch (MapFunc)
             {
-                case ArrowFunctionInstance afi:
-                    theFuncAst = afi.FunctionDeclaration;
-                    break;
-
                 case ScriptFunctionInstance sfi:
                     theFuncAst = sfi.FunctionDeclaration;
                     break;

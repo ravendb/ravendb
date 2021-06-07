@@ -1,0 +1,26 @@
+<div class="row margin-bottom" data-bind="validationElement: storageContainer">
+    <label class="control-label col-xs-12 col-sm-6 col-lg-4">
+        Storage container <i class="required"></i> <small><i class="storage-container-info icon-info text-info"></i></small>
+    </label>
+    <div class="col-xs-12 col-sm-6 col-lg-8">
+        <input data-bind="textInput: storageContainer" type="text" class="form-control" />
+    </div>
+</div>
+<div class="row margin-bottom" data-bind="validationElement: remoteFolderName">
+    <label class="control-label col-xs-12 col-sm-6 col-lg-4">Remote folder name</label>
+    <div class="col-xs-12 col-sm-6 col-lg-8">
+        <input data-bind="textInput: remoteFolderName" type="text" class="form-control" />
+    </div>
+</div>
+<div class="row margin-bottom" data-bind="validationElement: accountName">
+    <label class="control-label col-xs-12 col-sm-6 col-lg-4">Account name <i class="required"></i></label>
+    <div class="col-xs-12 col-sm-6 col-lg-8">
+        <input data-bind="textInput: accountName" class="form-control" />
+    </div>
+</div>
+<div class="row margin-bottom" data-bind="validationElement: accountKey">
+    <label class="control-label col-xs-12 col-sm-6 col-lg-4">Account key <i class="required"></i></label>
+    <div class="col-xs-12 col-sm-6 col-lg-8" >
+        <input data-bind="textInput: accountKey" type="password" class="form-control" />
+    </div>
+</div>

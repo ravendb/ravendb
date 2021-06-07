@@ -84,6 +84,7 @@ class documents extends viewModelBase {
             const currentCollection = this.currentCollection();
             return currentCollection && !currentCollection.isAllDocuments && !currentCollection.isRevisionsBin;
         });
+        
         this.selectedItemsCount = ko.pureComputed(() => {
             let selectedDocsCount = 0;
             const controll = this.gridController();
@@ -92,12 +93,14 @@ class documents extends viewModelBase {
             }
             return selectedDocsCount;
         });
+        
         this.deleteEnabled = ko.pureComputed(() => {
             const deleteInProgress = this.spinners.delete();
             const selectedDocsCount = this.selectedItemsCount();
 
             return !deleteInProgress && selectedDocsCount > 0;
         });
+        
         this.copyDisabledReason = ko.pureComputed<disabledReason>(() => {
             const count = this.selectedItemsCount();
             if (count === 0) {
@@ -109,9 +112,10 @@ class documents extends viewModelBase {
 
             return {
                 disabled: true,
-                reason: `You can copy to up ${documents.copyLimit} documents.`
+                reason: `You can only copy up to ${documents.copyLimit} documents`
             }
         });
+        
         this.dataChanged = ko.pureComputed(() => {
             const resultDirty = this.dirtyResult();
             const collectionChanged = this.dirtyCurrentCollection();

@@ -48,7 +48,7 @@ class captureClusterStackTracesCommand extends commandBase {
                         .loadAsync(buffer)
                         .then(nodeZipContents => {
                             const stackTracesFile = nodeZipContents.folder("server-wide")
-                                .file("stacktraces.json");
+                                .file("admin.threads.stack-trace.json");
                             
                             if (stackTracesFile) {
                                 stackTracesFile

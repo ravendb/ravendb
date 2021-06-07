@@ -9,6 +9,7 @@ using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Server;
+using Sparrow.Server.Json.Sync;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -23,7 +24,7 @@ namespace SlowTests.Client.Subscriptions
         [Fact]
         public async Task ReadDocWithCompressedStringFromOneContextAndWriteToAnother()
         {
-            using (var documentStore = this.GetDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 Server.ServerStore.Observer.Suspended = true;
                 var originalDoc = new Doc
@@ -47,14 +48,14 @@ namespace SlowTests.Client.Subscriptions
                     var doc = database.DocumentsStorage.Get(context, "doc/1");
                     MemoryStream ms = new MemoryStream();
                     using (var newContext = JsonOperationContext.ShortTermSingleUse())
-                    using (var writer = new BlittableJsonTextWriter(newContext, ms))
+                    await using (var writer = new AsyncBlittableJsonTextWriter(newContext, ms))
                     {
                         writer.WriteDocument(newContext, doc, metadataOnly: false);
-                        writer.Flush();
+                        await writer.FlushAsync();
                         var bjro = GetReaderFromMemoryStream(ms, context);
-                        var desereializedDoc = (Doc)DocumentConventions.Default.Serialization.DefaultConverter.FromBlittable(typeof(Doc), bjro);
+                        var deserializedDoc = (Doc)DocumentConventions.Default.Serialization.DefaultConverter.FromBlittable(typeof(Doc), bjro);
 
-                        Assert.Equal(originalDoc.StrVal, desereializedDoc.StrVal);
+                        Assert.Equal(originalDoc.StrVal, deserializedDoc.StrVal);
                         Assert.Equal(originalDoc.LongByteArray, originalDoc.LongByteArray);
                     }
                 }
@@ -67,14 +68,14 @@ namespace SlowTests.Client.Subscriptions
             fixed (byte* ptr = buffer)
             {
                 ms.Position = 0;
-                return context.ReadForDisk(ms, string.Empty);
+                return context.Sync.ReadForDisk(ms, string.Empty);
             }
         }
 
         [Fact]
         public async Task SubscriptionShouldRespectDocumentsWithCompressedData()
         {
-            using (var documentStore = this.GetDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 Server.ServerStore.Observer.Suspended = true;
                 var originalDoc = new Doc
@@ -98,14 +99,14 @@ namespace SlowTests.Client.Subscriptions
                     var doc = database.DocumentsStorage.Get(context, "doc/1");
                     MemoryStream ms = new MemoryStream();
                     using (var newContext = JsonOperationContext.ShortTermSingleUse())
-                    using (var writer = new BlittableJsonTextWriter(newContext, ms))
+                    await using (var writer = new AsyncBlittableJsonTextWriter(newContext, ms))
                     {
                         writer.WriteDocument(newContext, doc, metadataOnly: false);
-                        writer.Flush();
+                        await writer.FlushAsync();
                         var bjro = GetReaderFromMemoryStream(ms, context);
-                        var desereializedDoc = (Doc)DocumentConventions.Default.Serialization.DefaultConverter.FromBlittable(typeof(Doc), bjro);
+                        var deserializedDoc = (Doc)DocumentConventions.Default.Serialization.DefaultConverter.FromBlittable(typeof(Doc), bjro);
 
-                        Assert.Equal(originalDoc.StrVal, desereializedDoc.StrVal);
+                        Assert.Equal(originalDoc.StrVal, deserializedDoc.StrVal);
                         Assert.Equal(originalDoc.LongByteArray, originalDoc.LongByteArray);
                     }
                 }
@@ -117,7 +118,7 @@ namespace SlowTests.Client.Subscriptions
 
                 var subsId = await documentStore.Subscriptions.CreateAsync(subscriptionCreationParams).ConfigureAwait(false);
                 var amre = new AsyncManualResetEvent();
-                using (var subscription = documentStore.Subscriptions.GetSubscriptionWorker<Doc>(new SubscriptionWorkerOptions(subsId)
+                await using (var subscription = documentStore.Subscriptions.GetSubscriptionWorker<Doc>(new SubscriptionWorkerOptions(subsId)
                 {
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
                 }))

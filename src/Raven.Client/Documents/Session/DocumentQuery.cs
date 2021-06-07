@@ -21,7 +21,7 @@ namespace Raven.Client.Documents.Session
     /// <summary>
     /// A query against a Raven index
     /// </summary>
-    public partial class DocumentQuery<T> : AbstractDocumentQuery<T, DocumentQuery<T>>, IDocumentQuery<T>, IRawDocumentQuery<T>, IGraphQuery<T>, IDocumentQueryGenerator
+    public partial class DocumentQuery<T> : AbstractDocumentQuery<T, DocumentQuery<T>>, IDocumentQuery<T>, IRawDocumentQuery<T>, IGraphQuery<T>, IDocumentQueryGenerator, IAbstractDocumentQueryImpl<T>
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="DocumentQuery{T}"/> class.
@@ -1064,6 +1064,14 @@ namespace Raven.Client.Documents.Session
             Take(0);
             var queryResult = GetQueryResult();
             return queryResult.TotalResults;
+        }
+
+        /// <inheritdoc />
+        long IDocumentQueryBase<T>.LongCount()
+        {
+            Take(0);
+            var queryResult = GetQueryResult();
+            return queryResult.LongTotalResults;
         }
 
         /// <inheritdoc />

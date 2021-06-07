@@ -40,6 +40,7 @@ namespace Raven.Server.Documents
                 : StorageEnvironmentOptions.ForPath(path.FullPath, tempPath, null, db.IoChanges, db.CatastrophicFailureNotification);
 
             options.OnNonDurableFileSystemError += db.HandleNonDurableFileSystemError;
+            options.OnRecoverableFailure += db.HandleRecoverableFailure;
             options.OnRecoveryError += db.HandleOnConfigurationRecoveryError;
             options.OnIntegrityErrorOfAlreadySyncedData += db.HandleOnConfigurationIntegrityErrorOfAlreadySyncedData;
             options.CompressTxAboveSizeInBytes = db.Configuration.Storage.CompressTxAboveSize.GetValue(SizeUnit.Bytes);
@@ -48,7 +49,6 @@ namespace Raven.Server.Documents
             options.ForceUsing32BitsPager = db.Configuration.Storage.ForceUsing32BitsPager;
             options.EnablePrefetching = db.Configuration.Storage.EnablePrefetching;
             options.TimeToSyncAfterFlushInSec = (int)db.Configuration.Storage.TimeToSyncAfterFlush.AsTimeSpan.TotalSeconds;
-            options.NumOfConcurrentSyncsPerPhysDrive = db.Configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
             options.Encryption.MasterKey = db.MasterKey?.ToArray();
 
             options.DoNotConsiderMemoryLockFailureAsCatastrophicError = db.Configuration.Security.DoNotConsiderMemoryLockFailureAsCatastrophicError;

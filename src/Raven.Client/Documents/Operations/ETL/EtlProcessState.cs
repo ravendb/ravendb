@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Sparrow.Json.Parsing;
@@ -27,7 +28,9 @@ namespace Raven.Client.Documents.Operations.ETL
         // When there is time-series without document (that can happen if the time-series was replicated but its document didn't yet)
         // we mark the time-series of the document as skipped so when we load the document we will load all its time-series with it
         public HashSet<string> SkippedTimeSeriesDocs { get; set; }
-        
+
+        public DateTime? LastBatchTime { get; set; }
+
         public long GetLastProcessedEtagForNode(string nodeTag)
         {
             if (LastProcessedEtagPerNode.TryGetValue(nodeTag, out var etag))
@@ -46,6 +49,7 @@ namespace Raven.Client.Documents.Operations.ETL
                 [nameof(ChangeVector)] = ChangeVector,
                 [nameof(NodeTag)] = NodeTag,
                 [nameof(SkippedTimeSeriesDocs)] = SkippedTimeSeriesDocs,
+                [nameof(LastBatchTime)] = LastBatchTime
             };
 
             return json;

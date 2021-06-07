@@ -105,23 +105,41 @@ class graphHelper {
         return config;
     }
     
-    static drawErrorMark(ctx: CanvasRenderingContext2D, x: number, y: number, dx: number) {
-        const markWidth = 8;
+    static drawLine(ctx: CanvasRenderingContext2D, x: number, y: number, dy: number) {
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x, y + dy);
+        ctx.stroke();
+    }
+    
+    static drawTriangle(ctx: CanvasRenderingContext2D, x: number, y: number, dx: number, dy: number = 8) {
+        const markWidth = dy;
         if (dx > markWidth) {
             // draw full triangle
             ctx.beginPath();
-            ctx.moveTo(x+ dx, y);
+            ctx.moveTo(x + dx, y);
             ctx.lineTo(x + dx - markWidth, y);
             ctx.lineTo(x + dx, y + markWidth);
             ctx.fill();
         } else if (dx > 1) {
+            // draw truncated triangle
             ctx.beginPath();
-            ctx.moveTo(x+ dx, y);
+            ctx.moveTo(x + dx, y);
             ctx.lineTo(x, y);
             ctx.lineTo(x, y + markWidth - dx);
             ctx.lineTo(x + dx, y + markWidth);
             ctx.fill();
         }
+    }
+    
+    static drawDashLine(ctx: CanvasRenderingContext2D, x: number, y: number, dx: number) {
+        ctx.setLineDash([6, 2]);
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + dx, y);
+        ctx.stroke();
     }
     
     static drawScroll(ctx: CanvasRenderingContext2D, scrollLocation: { left: number, top: number }, topScrollOffset: number, visibleHeight: number, 

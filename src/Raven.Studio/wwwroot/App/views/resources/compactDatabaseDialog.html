@@ -49,6 +49,11 @@
                 </div>
             </div>
             <div class="modal-footer">
+                <div class="text-left margin-left text-warning bg-warning padding padding-xs margin-right">
+                    <i class="icon-warning"></i>
+                    <span data-bind="visible: numberOfNodes() === 1">During compaction the database will be offline</span>
+                    <span data-bind="visible: numberOfNodes() > 1, text: 'During compaction the database will be offline on this node - ' + currentNodeTag()"></span>
+                </div>
                 <div class="padding text-right">
                     <button data-dismiss="modal" class="btn btn-default">
                         <i class="icon-cancel"></i><span>Cancel</span>

@@ -134,7 +134,7 @@ namespace Orders
     {
         public string Code { get; set; }
         public string Name { get; set; }
-	public string Area { get; set; }
+        public string Area { get; set; }
     }
 
     public class Shipper

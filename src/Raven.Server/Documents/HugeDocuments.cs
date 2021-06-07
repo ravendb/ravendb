@@ -115,7 +115,9 @@ namespace Raven.Server.Documents
                     details = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.FromBlittable<HugeDocumentsDetails>(detailsJson, HugeDocumentsId);
                 }
 
-                string message = $"We have detected that some documents has surpassed the configured size threshold ({new Size(_maxWarnSize, SizeUnit.Bytes)}). It might have performance impact. You can alter warning limits by changing '{RavenConfiguration.GetKey(x => x.PerformanceHints.HugeDocumentSize)}' configuration value.";
+                string message = $"We have detected that some documents have surpassed the configured threshold size ({new Size(_maxWarnSize, SizeUnit.Bytes)}). " +
+                                 "This may cause a performance impact. " +
+                                 $"You can alter the warning limits by changing '{RavenConfiguration.GetKey(x => x.PerformanceHints.HugeDocumentSize)}' configuration value.";
 
                 return PerformanceHint.Create(
                     _database,

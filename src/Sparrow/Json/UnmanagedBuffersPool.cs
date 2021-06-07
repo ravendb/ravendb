@@ -129,10 +129,8 @@ namespace Sparrow.Json
             NativeMemory.ThreadStats stats;
             if (index == -1)
             {
-                return new AllocatedMemoryData()
+                return new AllocatedMemoryData(NativeMemory.AllocateMemory(size, out stats), size)
                 {
-                    SizeInBytes = size,
-                    Address = NativeMemory.AllocateMemory(size, out stats),
                     AllocatingThread = stats
                 };
             }
@@ -143,10 +141,8 @@ namespace Sparrow.Json
             {
                 return list;
             }
-            return new AllocatedMemoryData()
+            return new AllocatedMemoryData(NativeMemory.AllocateMemory(actualSize, out stats), actualSize)
             {
-                SizeInBytes = actualSize,
-                Address = NativeMemory.AllocateMemory(actualSize, out stats),
                 AllocatingThread = stats
             };
 #endif

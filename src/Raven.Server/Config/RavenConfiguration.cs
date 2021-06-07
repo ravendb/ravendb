@@ -24,6 +24,7 @@ using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
+using Sparrow.Logging;
 using Voron.Util.Settings;
 
 namespace Raven.Server.Config
@@ -32,6 +33,8 @@ namespace Raven.Server.Config
     {
 #if !RVN
         internal static readonly RavenConfiguration Default = new RavenConfiguration("__default", ResourceType.Server);
+
+        private readonly Logger _logger;
 
         private readonly string _customConfigPath;
 
@@ -103,6 +106,8 @@ namespace Raven.Server.Config
 
         private RavenConfiguration(string resourceName, ResourceType resourceType, string customConfigPath = null)
         {
+            _logger = LoggingSource.Instance.GetLogger<RavenConfiguration>(resourceName);
+
             ResourceName = resourceName;
             ResourceType = resourceType;
             _customConfigPath = customConfigPath;
@@ -131,7 +136,7 @@ namespace Raven.Server.Config
             Logs = new LogsConfiguration();
             Server = new ServerConfiguration();
             Embedded = new EmbeddedConfiguration();
-            Databases = new DatabaseConfiguration();
+            Databases = new DatabaseConfiguration(Storage.ForceUsing32BitsPager);
             Memory = new MemoryConfiguration();
             Studio = new StudioConfiguration();
             Licensing = new LicenseConfiguration();
@@ -213,7 +218,18 @@ namespace Raven.Server.Config
             if (ResourceType != ResourceType.Server)
                 return;
 
-            SecurityConfiguration.Validate(this);
+            try
+            {
+                SecurityConfiguration.Validate(this);
+            }
+            catch (Exception e)
+            {
+                if (_logger.IsOperationsEnabled)
+                    _logger.OperationsWithWait("Invalid security configuration. Stopping RavenDB server startup", e)
+                        .Wait(UnhandledExceptions.TimeToWaitForLog); // using async version to wait and ensure that we'll wait for the log to be written to disk since we're gonna break the service startup
+
+                throw;
+            }
         }
 
         public void SetSetting(string key, string value)
@@ -521,7 +537,13 @@ namespace Raven.Server.Config
             if (cfg == null || keyName == null)
                 return false;
 
-            return cfg.AsEnumerable().Any(x => string.Equals(x.Key, keyName, StringComparison.OrdinalIgnoreCase));
+            foreach (var kvp in cfg.AsEnumerable())
+            {
+                if (string.Equals(kvp.Key, keyName, StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+
+            return false;
         }
 #endif
     }

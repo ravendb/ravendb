@@ -73,7 +73,7 @@ namespace Raven.Client.Documents.Session
         public event EventHandler<AfterSaveChangesEventArgs> OnAfterSaveChanges;
 
         public event EventHandler<BeforeDeleteEventArgs> OnBeforeDelete;
-        
+
         public event EventHandler<BeforeQueryEventArgs> OnBeforeQuery;
 
         public event EventHandler<BeforeConversionToDocumentEventArgs> OnBeforeConversionToDocument;
@@ -83,6 +83,8 @@ namespace Raven.Client.Documents.Session
         public event EventHandler<BeforeConversionToEntityEventArgs> OnBeforeConversionToEntity;
 
         public event EventHandler<AfterConversionToEntityEventArgs> OnAfterConversionToEntity;
+
+        public event EventHandler<SessionDisposingEventArgs> OnSessionDisposing;
 
         /// <summary>
         /// Entities whose id we already know do not exists, because they are a missing include, or a missing load, etc.
@@ -1014,7 +1016,7 @@ more responsive application.
 
                     if (shouldIgnoreEntityChanges != null)
                     {
-                        if(shouldIgnoreEntityChanges(this, entity.Value.Entity, entity.Value.Id))
+                        if (shouldIgnoreEntityChanges(this, entity.Value.Entity, entity.Value.Id))
                             continue;
                     }
 
@@ -1180,7 +1182,7 @@ more responsive application.
         public void WaitForReplicationAfterSaveChanges(TimeSpan? timeout = null, bool throwOnTimeout = true,
             int replicas = 1, bool majority = false)
         {
-            var realTimeout = timeout ?? TimeSpan.FromSeconds(15);
+            var realTimeout = timeout ?? Conventions.WaitForReplicationAfterSaveChangesTimeout;
             if (_saveChangesOptions == null)
                 _saveChangesOptions = new BatchOptions();
 
@@ -1199,7 +1201,7 @@ more responsive application.
         public void WaitForIndexesAfterSaveChanges(TimeSpan? timeout = null, bool throwOnTimeout = false,
             string[] indexes = null)
         {
-            var realTimeout = timeout ?? TimeSpan.FromSeconds(15);
+            var realTimeout = timeout ?? Conventions.WaitForIndexesAfterSaveChangesTimeout;
             if (_saveChangesOptions == null)
                 _saveChangesOptions = new BatchOptions();
 
@@ -1340,24 +1342,32 @@ more responsive application.
             if (_isDisposed)
                 return;
 
-            var asyncTasksCounter = Interlocked.Read(ref _asyncTasksCounter);
-            if (asyncTasksCounter != 0)
-                throw new InvalidOperationException($"Disposing session with active async task is forbidden, please make sure that all asynchronous session methods returning Task are awaited. Number of active async tasks: {asyncTasksCounter}");
-
-            _isDisposed = true;
-
-            if (isDisposing && RunningOn.FinalizerThread == false)
+            try
             {
-                GC.SuppressFinalize(this);
+                OnSessionDisposing?.Invoke(this, new SessionDisposingEventArgs(this));
 
-                _releaseOperationContext?.Dispose();
+                var asyncTasksCounter = Interlocked.Read(ref _asyncTasksCounter);
+                if (asyncTasksCounter != 0)
+                    throw new InvalidOperationException($"Disposing session with active async task is forbidden, please make sure that all asynchronous session methods returning Task are awaited. Number of active async tasks: {asyncTasksCounter}");
+
             }
-            else
+            finally
             {
-                // when we are disposed from the finalizer then we have to dispose the context immediately instead of returning it to the pool because
-                // the finalizer of ArenaMemoryAllocator could be already called so we cannot return such context to the pool (RavenDB-7571)
+                _isDisposed = true;
 
-                Context?.Dispose();
+                if (isDisposing && RunningOn.FinalizerThread == false)
+                {
+                    GC.SuppressFinalize(this);
+
+                    _releaseOperationContext?.Dispose();
+                }
+                else
+                {
+                    // when we are disposed from the finalizer then we have to dispose the context immediately instead of returning it to the pool because
+                    // the finalizer of ArenaMemoryAllocator could be already called so we cannot return such context to the pool (RavenDB-7571)
+
+                    Context?.Dispose();
+                }
             }
         }
 
@@ -1376,7 +1386,7 @@ more responsive application.
 
             _knownMissingIds.Add(id);
         }
-        
+
         public void RegisterMissing(IEnumerable<string> ids)
         {
             if (NoTracking)
@@ -2319,7 +2329,7 @@ more responsive application.
 
         internal StreamResult<T> CreateStreamResult<T>(
             BlittableJsonReaderObject json,
-            FieldsToFetchToken fieldsToFetch, 
+            FieldsToFetchToken fieldsToFetch,
             bool isProjectInto)
         {
             var metadata = json.GetMetadata();
@@ -2346,9 +2356,9 @@ more responsive application.
 
             var result = new TimeSeriesStreamResult<T>
             {
-                ChangeVector = changeVector, 
-                Id = id, 
-                Metadata = new MetadataAsDictionary(metadata), 
+                ChangeVector = changeVector,
+                Id = id,
+                Metadata = new MetadataAsDictionary(metadata),
                 Result = new T()
             };
             enumerator.ExposeTimeSeriesStream(result.Result);

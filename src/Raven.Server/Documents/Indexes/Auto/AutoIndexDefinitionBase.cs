@@ -1,27 +1,23 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Session;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Auto
 {
     public abstract class AutoIndexDefinitionBase : IndexDefinitionBase<AutoIndexField>
     {
-        public IndexState State { get; set; }
-
-        protected AutoIndexDefinitionBase(string indexName, string collection, AutoIndexField[] fields, long? indexVersion = null)
-            : base(indexName, new [] { collection }, IndexLockMode.Unlock, IndexPriority.Normal, fields, indexVersion ?? IndexVersion.CurrentVersion)
+        protected AutoIndexDefinitionBase(string indexName, string collection, AutoIndexField[] fields, IndexDeploymentMode? deploymentMode, long? indexVersion = null)
+            : base(indexName, new [] { collection }, IndexLockMode.Unlock, IndexPriority.Normal, IndexState.Normal, fields, indexVersion ?? IndexVersion.CurrentVersion, deploymentMode)
         {
             if (string.IsNullOrEmpty(collection))
                 throw new ArgumentNullException(nameof(collection));
         }
 
-        protected abstract override void PersistFields(JsonOperationContext context, BlittableJsonTextWriter writer);
+        protected abstract override void PersistFields(JsonOperationContext context, AbstractBlittableJsonTextWriter writer);
 
-        protected override void PersistMapFields(JsonOperationContext context, BlittableJsonTextWriter writer)
+        protected override void PersistMapFields(JsonOperationContext context, AbstractBlittableJsonTextWriter writer)
         {
             writer.WritePropertyName(nameof(MapFields));
             writer.WriteStartArray();

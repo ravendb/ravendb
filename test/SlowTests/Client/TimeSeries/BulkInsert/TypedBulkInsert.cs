@@ -303,7 +303,7 @@ namespace SlowTests.Client.TimeSeries.BulkInsert
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
                 const string documentId = "users/ayende";
 
                 using (var session = store.OpenSession())
@@ -350,7 +350,7 @@ namespace SlowTests.Client.TimeSeries.BulkInsert
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
                 const string documentId = "users/ayende";
 
                 using (var session = store.OpenSession())

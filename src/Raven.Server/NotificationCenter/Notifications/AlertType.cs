@@ -10,9 +10,9 @@ namespace Raven.Server.NotificationCenter.Notifications
 
         SqlEtl_ConnectionError,
         SqlEtl_ProviderError,
-        
+
         Etl_InvalidScript,
-        
+
         PeriodicBackup,
         Replication,
         Server_NewVersionAvailable,
@@ -36,6 +36,7 @@ namespace Raven.Server.NotificationCenter.Notifications
         WarnIndexOutputsPerDocument,
         ErrorSavingReduceOutputDocuments,
         CatastrophicDatabaseFailure,
+        RecoverableVoronFailure,
         NonDurableFileSystem,
         RecoveryError,
         RestoreError,
@@ -72,6 +73,8 @@ namespace Raven.Server.NotificationCenter.Notifications
         HighClientCreationRate,
         RollupExceedNumberOfValues,
 
-        LowSwapSize
+        LowSwapSize,
+
+        UnrecoverableClusterError
     }
 }

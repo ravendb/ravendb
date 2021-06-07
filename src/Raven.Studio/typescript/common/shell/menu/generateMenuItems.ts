@@ -29,6 +29,7 @@ function generateNoActiveDatabaseMenuItems() {
         new separatorMenuItem('Server'),
         getDatabasesMenuItem(appUrls),
         rootItems.dashboard(),
+        rootItems.clusterDashboard(),
         getManageServerMenuItem(),
         rootItems.about()
     ];
@@ -46,6 +47,7 @@ function generateActiveDatabaseMenuItems() {
         new separatorMenuItem('Server'),
         getDatabasesMenuItem(appUrls),
         rootItems.dashboard(),
+        rootItems.clusterDashboard(),
         getManageServerMenuItem(),
         rootItems.about()
     ];

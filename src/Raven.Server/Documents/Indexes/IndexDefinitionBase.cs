@@ -10,6 +10,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Server;
+using Sparrow.Server.Json.Sync;
 using Voron;
 using Voron.Impl;
 
@@ -27,6 +28,10 @@ namespace Raven.Server.Documents.Indexes
 
         public IndexPriority Priority { get; set; }
 
+        public IndexState State { get; set; }
+
+        public IndexDeploymentMode DeploymentMode { get; set; }
+
         public virtual bool HasDynamicFields => false;
 
         public virtual bool HasCompareExchange => false;
@@ -39,7 +44,7 @@ namespace Raven.Server.Documents.Indexes
 
         public abstract void Persist(TransactionOperationContext context, StorageEnvironmentOptions options);
 
-        protected abstract void PersistMapFields(JsonOperationContext context, BlittableJsonTextWriter writer);
+        protected abstract void PersistMapFields(JsonOperationContext context, AbstractBlittableJsonTextWriter writer);
 
         public static readonly byte[] EncryptionContext = Encoding.UTF8.GetBytes("Indexes!");
 
@@ -58,7 +63,7 @@ namespace Raven.Server.Documents.Indexes
             return name.Substring(0, 64) + "." + Hashing.XXHash32.Calculate(name);
         }
 
-        public void Persist(JsonOperationContext context, BlittableJsonTextWriter writer)
+        public void Persist(JsonOperationContext context, AbstractBlittableJsonTextWriter writer)
         {
             writer.WriteStartObject();
 
@@ -79,7 +84,7 @@ namespace Raven.Server.Documents.Indexes
                     writer.WriteComma();
 
                 isFirst = false;
-                writer.WriteString((collection));
+                writer.WriteString(collection);
             }
 
             writer.WriteEndArray();
@@ -91,6 +96,10 @@ namespace Raven.Server.Documents.Indexes
 
             writer.WritePropertyName(nameof(Priority));
             writer.WriteInteger((int)Priority);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(State));
+            writer.WriteInteger((int)State);
             writer.WriteComma();
 
             PersistFields(context, writer);
@@ -105,7 +114,7 @@ namespace Raven.Server.Documents.Indexes
 
         internal abstract void Reset();
 
-        protected abstract void PersistFields(JsonOperationContext context, BlittableJsonTextWriter writer);
+        protected abstract void PersistFields(JsonOperationContext context, AbstractBlittableJsonTextWriter writer);
 
         protected internal abstract IndexDefinition GetOrCreateIndexDefinitionInternal();
 
@@ -140,9 +149,10 @@ namespace Raven.Server.Documents.Indexes
         private long _indexVersion;
         private int? _cachedHashCode;
 
-        protected IndexDefinitionBase(string name, IEnumerable<string> collections, IndexLockMode lockMode, IndexPriority priority, T[] mapFields, long indexVersion)
+        protected IndexDefinitionBase(string name, IEnumerable<string> collections, IndexLockMode lockMode, IndexPriority priority, IndexState state, T[] mapFields, long indexVersion, IndexDeploymentMode? deploymentMode)
         {
             Name = name;
+            DeploymentMode = deploymentMode ?? IndexDeploymentMode.Parallel;
             Collections = new HashSet<string>(collections, StringComparer.OrdinalIgnoreCase);
 
             MapFields = new Dictionary<string, IndexFieldBase>(StringComparer.Ordinal);
@@ -165,6 +175,7 @@ namespace Raven.Server.Documents.Indexes
 
             LockMode = lockMode;
             Priority = priority;
+            State = state;
             _indexVersion = indexVersion;
         }
 
@@ -373,7 +384,7 @@ namespace Raven.Server.Documents.Indexes
         {
             var metadata = ReadMetadataFile(options);
 
-            var metadataJson = context.ReadForDisk(metadata, string.Empty);
+            var metadataJson = context.Sync.ReadForDisk(metadata, string.Empty);
 
             return metadataJson.TryGet("Name", out name);
         }
@@ -449,6 +460,14 @@ namespace Raven.Server.Documents.Indexes
                 throw new InvalidOperationException("No persisted priority");
 
             return (IndexPriority)priorityAsInt;
+        }
+
+        protected static IndexState ReadState(BlittableJsonReaderObject reader)
+        {
+            if (reader.TryGet(nameof(State), out int StateAsInt) == false)
+                return IndexState.Normal;
+
+            return (IndexState)StateAsInt;
         }
 
         protected static long ReadVersion(BlittableJsonReaderObject reader)

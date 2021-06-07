@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using Raven.Server.ServerWide.Commands;
+using Raven.Server.ServerWide.Commands.Analyzers;
 using Raven.Server.ServerWide.Commands.ConnectionStrings;
 using Raven.Server.ServerWide.Commands.ETL;
 using Raven.Server.ServerWide.Commands.Indexes;
@@ -121,7 +122,23 @@ namespace Raven.Server.ServerWide
             [nameof(UnregisterReplicationHubAccessCommand)] = 51_000,
             [nameof(PutServerWideExternalReplicationCommand)] = 51_000,
             [nameof(DeleteServerWideTaskCommand)] = 51_000,
-            [nameof(ToggleServerWideTaskStateCommand)] = 51_000
+            [nameof(ToggleServerWideTaskStateCommand)] = 51_000,
+
+            [nameof(PutAnalyzersCommand)] = 52_000,
+            [nameof(DeleteAnalyzerCommand)] = 52_000,
+            [nameof(AddOlapEtlCommand)] = 52_000,
+            [nameof(UpdateOlapEtlCommand)] = 52_000,
+            [nameof(PutOlapConnectionStringCommand)] = 52_000,
+            [nameof(RemoveOlapConnectionStringCommand)] = 52_000,
+
+            [nameof(PutServerWideAnalyzerCommand)] = 52_000,
+            [nameof(DeleteServerWideAnalyzerCommand)] = 52_000,
+
+            [nameof(PutServerWideSorterCommand)] = 52_000,
+            [nameof(DeleteServerWideSorterCommand)] = 52_000,
+
+            [nameof(EditLockModeCommand)] = 52_000,
+            [nameof(PutRollingIndexCommand)] = 52_000,
         };
 
         public static bool CanPutCommand(string command)

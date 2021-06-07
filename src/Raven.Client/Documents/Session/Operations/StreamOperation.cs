@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.TimeSeries;
+using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Util;
 using Sparrow;
 using Sparrow.Json;
@@ -102,6 +103,15 @@ namespace Raven.Client.Documents.Session.Operations
             return new QueryStreamCommand(_session.Conventions, query);
         }
 
+        public void EnsureIsAcceptable(string indexName, StreamResult result)
+        {
+            if (result != null)
+                return;
+
+            if (indexName != null)
+                IndexDoesNotExistException.ThrowFor(indexName);
+        }
+
         public StreamCommand CreateRequest(string startsWith, string matches, int start, int pageSize, string exclude, string startAfter = null)
         {
             var sb = new StringBuilder("streams/docs?");
@@ -164,7 +174,7 @@ namespace Raven.Client.Documents.Session.Operations
             return enumerator;
         }
 
-        internal class TimeSeriesStreamEnumerator : IAsyncEnumerator<BlittableJsonReaderObject>, IEnumerator<BlittableJsonReaderObject> 
+        internal class TimeSeriesStreamEnumerator : IAsyncEnumerator<BlittableJsonReaderObject>, IEnumerator<BlittableJsonReaderObject>
         {
             private readonly JsonOperationContext _context;
             private readonly PeepingTomStream _peepingTomStream;
@@ -202,7 +212,7 @@ namespace Raven.Client.Documents.Session.Operations
                 if (_state.CurrentTokenType != JsonParserToken.StartArray)
                     UnmanagedJsonParserHelper.ThrowInvalidJson(_peepingTomStream);
             }
-            
+
             private bool _done;
             private bool _disposed;
 
@@ -227,7 +237,6 @@ namespace Raven.Client.Documents.Session.Operations
 
                 _disposed = true;
             }
-
 
             public async ValueTask<bool> MoveNextAsync()
             {
@@ -306,7 +315,7 @@ namespace Raven.Client.Documents.Session.Operations
             private readonly JsonOperationContext _builderContext;
             private readonly IDisposable _returnContext;
             private BlittableJsonDocumentBuilder _builder;
-            
+
 #if NETSTANDARD2_0 || NETCOREAPP2_1
             public ValueTask DisposeAsync()
 #else
@@ -364,7 +373,7 @@ namespace Raven.Client.Documents.Session.Operations
                 }
 
                 _builder.Renew("readArray/singleResult", BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-                    
+
                 if (_isTimeSeriesStream)
                     UnmanagedJsonParserHelper.ReadProperty(_builder, _peepingTomStream, _parser, _buffer);
                 else
@@ -373,7 +382,7 @@ namespace Raven.Client.Documents.Session.Operations
                 Current = _builder.CreateReader();
 
                 _builder.Reset();
-                    
+
                 if (_isTimeSeriesStream)
                 {
                     _timeSeriesIt = new TimeSeriesStreamEnumerator(_builderContext, _peepingTomStream, _parser, _state, _buffer);
@@ -414,7 +423,7 @@ namespace Raven.Client.Documents.Session.Operations
                     await UnmanagedJsonParserHelper.ReadObjectAsync(_builder, _peepingTomStream, _parser, _buffer, _token).ConfigureAwait(false);
 
                 Current = _builder.CreateReader();
-                    
+
                 _builder.Reset();
 
                 if (_isTimeSeriesStream)
@@ -589,7 +598,7 @@ namespace Raven.Client.Documents.Session.Operations
                     _builderContext.CachedProperties.ClearRenew();
                     return;
                 }
-                
+
                 ++_docsCountOnCachedRenewSession;
             }
 

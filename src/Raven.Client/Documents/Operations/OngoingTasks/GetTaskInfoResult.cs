@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.ServerWide.Operations;
@@ -14,6 +15,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
         Replication,
         RavenEtl,
         SqlEtl,
+        OlapEtl,
         Backup,
         Subscription,
         PullReplicationAsHub,
@@ -264,6 +266,47 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
         }
 
         public SqlEtlConfiguration Configuration { get; set; }
+
+        public override DynamicJsonValue ToJson()
+        {
+            var json = base.ToJson();
+
+            json[nameof(Configuration)] = Configuration?.ToJson();
+
+            return json;
+        }
+    }
+    
+    public class OngoingTaskOlapEtlListView : OngoingTask
+    {
+        public OngoingTaskOlapEtlListView()
+        {
+            TaskType = OngoingTaskType.OlapEtl;
+        }
+
+        public string ConnectionStringName { get; set; }
+        
+        public string Destination { get; set; }
+
+        public override DynamicJsonValue ToJson()
+        {
+            var json = base.ToJson();
+
+            json[nameof(ConnectionStringName)] = ConnectionStringName;
+            json[nameof(Destination)] = Destination;
+
+            return json;
+        }
+    }
+
+    public class OngoingTaskOlapEtlDetails : OngoingTask
+    {
+        public OngoingTaskOlapEtlDetails()
+        {
+            TaskType = OngoingTaskType.OlapEtl;
+        }
+
+        public OlapEtlConfiguration Configuration { get; set; }
 
         public override DynamicJsonValue ToJson()
         {

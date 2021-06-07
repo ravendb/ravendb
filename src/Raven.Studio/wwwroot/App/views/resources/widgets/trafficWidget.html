@@ -1,0 +1,121 @@
+<div>
+    <div class="cluster-dashboard-item-header">
+        <h3> <i class="icon-traffic"></i> <span>Traffic</span></h3>
+        <button class="btn btn-warning btn-sm" data-bind="click: remove">
+            <i class="icon-trash"></i>
+        </button>
+        <button class="btn btn-default btn-sm" data-bind="click: toggleFullscreen">
+            <i data-bind="css: { 'icon-fullscreen': !fullscreen(), 'icon-exit-fullscreen': fullscreen }"></i>
+        </button>
+    </div>
+
+    <div class="property-container">
+        <h4>Requests/s</h4>
+        <div class="property">
+            <div class="flex-horizontal">
+                <div class="nodes-container" data-bind="foreach: nodeStats">
+                    <div data-bind="attr: { class: 'nodes-item node-' + tag }, css: { 'no-data': !currentItem(), 'spinner': spinner }">
+                        <div class="nodes-item-header">
+                            <div class="node-label" data-bind="text: tag"></div>
+                            <div class="node-value">
+                                <span data-bind="text: requestsFormatted"></span>
+                                <span class="supplementary-info"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="graph-container requests-chart">
+            </div>
+        </div>
+    </div>
+
+    <div class="property-container" data-bind="css: { 'property-collapse': !showWritesDetails() }">
+        <h4>Writes/s</h4>
+        <div class="property">
+            <div class="flex-horizontal">
+                <button class="collapse-arrow property-control" data-bind="click: toggleWritesDetails">
+                    <i class="icon-arrow-down"></i>
+                    <i class="icon-arrow-up"></i>
+                </button>
+
+                <div class="nodes-container" data-bind="foreach: nodeStats">
+                    <div data-bind="attr: { class: 'nodes-item node-' + tag }, css: { 'no-data': !currentItem(), 'spinner': spinner }">
+                        <div class="nodes-item-header">
+                            <div class="node-label" data-bind="text: tag"></div>
+                            <div class="node-value">
+                                <span data-bind="text: totalWritesPerSecondSize"></span>
+                                <span class="supplementary-info">Items</span>
+                            </div>
+                        </div>
+                        <div class="details-list">
+                            <div class="details-item">
+                                <div class="details-item-name">Documents</div>
+                                <div class="details-item-value" data-bind="text: documentWritesPerSecond"></div>
+                            </div>
+                            <div class="details-item">
+                                <div class="details-item-name">Attachments</div>
+                                <div class="details-item-value" data-bind="text: attachmentWritesPerSecond"></div>
+                            </div>
+                            <div class="details-item">
+                                <div class="details-item-name">Counters</div>
+                                <div class="details-item-value" data-bind="text: counterWritesPerSecond"></div>
+                            </div>
+                            <div class="details-item">
+                                <div class="details-item-name">Time Series</div>
+                                <div class="details-item-value" data-bind="text: timeSeriesWritesPerSecond"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="graph-container writes-chart">
+            </div>
+        </div>
+    </div>
+
+    <div class="property-container" data-bind="css: { 'property-collapse': !showDataWrittenDetails() }">
+        <h4>Data Written/s</h4>
+        <div class="property">
+            <div class="flex-horizontal">
+                <button class="collapse-arrow property-control" data-bind="click: toggleDataWrittenDetails">
+                    <i class="icon-arrow-down"></i>
+                    <i class="icon-arrow-up"></i>
+                </button>
+
+                <div class="nodes-container" data-bind="foreach: nodeStats">
+                    <div data-bind="attr: { class: 'nodes-item node-' + tag }, css: { 'no-data': !currentItem(), 'spinner': spinner }">
+                        <div class="nodes-item-header">
+                            <div class="node-label" data-bind="text: tag"></div>
+                            <div class="node-value">
+                                <span data-bind="text: totalWriteBytesPerSecondSize"></span>
+                                <span class="supplementary-info" data-bind="text: totalWriteBytesPerSecondUnit"></span>
+                            </div>
+                        </div>
+                        <div class="details-list">
+                            <div class="details-item">
+                                <div class="details-item-name">Documents</div>
+                                <div class="details-item-value" data-bind="text: documentsWriteBytesPerSecond"></div>
+                            </div>
+                            <div class="details-item">
+                                <div class="details-item-name">Attachments</div>
+                                <div class="details-item-value" data-bind="text: attachmentsWriteBytesPerSecond"></div>
+                            </div>
+                            <div class="details-item">
+                                <div class="details-item-name">Counters</div>
+                                <div class="details-item-value" data-bind="text: countersWriteBytesPerSecond"></div>
+                            </div>
+                            <div class="details-item">
+                                <div class="details-item-name">Time Series</div>
+                                <div class="details-item-value" data-bind="text: timeSeriesWriteBytesPerSecond"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="graph-container data-written-chart">
+            </div>
+        </div>
+    </div>
+</div>

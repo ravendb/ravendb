@@ -1,5 +1,4 @@
 ﻿using System;
-using System.IO;
 using System.Runtime.CompilerServices;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Operations.Backups;
@@ -11,17 +10,26 @@ namespace Tests.Infrastructure
     {
         private const string S3CredentialEnvironmentVariable = "S3_CREDENTIAL";
 
-        public static S3Settings S3Settings { get; }
+        private static readonly S3Settings _s3Settings;
+
+        public static S3Settings S3Settings => new S3Settings(_s3Settings);
 
         private static readonly string ParsingError;
+
+        private static readonly bool EnvVariableMissing;
 
         static AmazonS3FactAttribute()
         {
             var s3SettingsString = Environment.GetEnvironmentVariable(S3CredentialEnvironmentVariable);
+            if (s3SettingsString == null)
+            {
+                EnvVariableMissing = true;
+                return;
+            }
 
             try
             {
-                S3Settings = JsonConvert.DeserializeObject<S3Settings>(s3SettingsString);
+                _s3Settings = JsonConvert.DeserializeObject<S3Settings>(s3SettingsString);
             }
             catch (Exception e)
             {
@@ -31,15 +39,21 @@ namespace Tests.Infrastructure
 
         public AmazonS3FactAttribute([CallerMemberName] string memberName = "")
         {
-            if (string.IsNullOrEmpty(ParsingError) == false)
+            if (EnvVariableMissing)
             {
-                Skip = $"Failed to parse amazon S3 settings, error: {ParsingError}";
+                Skip = $"Test is missing '{S3CredentialEnvironmentVariable}' environment variable.";
                 return;
             }
 
-            if (S3Settings == null)
+            if (string.IsNullOrEmpty(ParsingError) == false)
             {
-                Skip = $"S3 {memberName} tests missing S3 settings.";
+                Skip = $"Failed to parse the Amazon S3 settings, error: {ParsingError}";
+                return;
+            }
+
+            if (_s3Settings == null)
+            {
+                Skip = $"S3 {memberName} tests missing Amazon S3 settings.";
                 return;
             }
         }

@@ -87,6 +87,8 @@ namespace FastTests
         static unsafe TestBase()
         {
             IgnoreProcessorAffinityChanges(ignore: true);
+            LicenseManager.AddLicenseStatusToLicenseLimitsException = true;
+
             NativeMemory.GetCurrentUnmanagedThreadId = () => (ulong)Pal.rvn_get_current_thread_id();
             Lucene.Net.Util.UnmanagedStringArray.Segment.AllocateMemory = NativeMemory.AllocateMemory;
             Lucene.Net.Util.UnmanagedStringArray.Segment.FreeMemory = NativeMemory.Free;
@@ -177,17 +179,20 @@ namespace FastTests
 
         protected TestCertificatesHolder GenerateAndSaveSelfSignedCertificate(bool createNew = false)
         {
-            var selfSignedCertificatePaths = _selfSignedCertificates;
-            if (selfSignedCertificatePaths != null && createNew == false)
-                return ReturnCertificatesHolder(selfSignedCertificatePaths);
+            if (createNew)
+                return ReturnCertificatesHolder(Generate());
+
+            var selfSignedCertificates = _selfSignedCertificates;
+            if (selfSignedCertificates != null)
+                return ReturnCertificatesHolder(selfSignedCertificates);
 
             lock (typeof(TestBase))
             {
-                selfSignedCertificatePaths = _selfSignedCertificates;
-                if (selfSignedCertificatePaths == null || createNew)
-                    _selfSignedCertificates = selfSignedCertificatePaths = Generate();
+                selfSignedCertificates = _selfSignedCertificates;
+                if (selfSignedCertificates == null)
+                    _selfSignedCertificates = selfSignedCertificates = Generate();
 
-                return ReturnCertificatesHolder(selfSignedCertificatePaths);
+                return ReturnCertificatesHolder(selfSignedCertificates);
             }
 
             TestCertificatesHolder ReturnCertificatesHolder(TestCertificatesHolder certificates)

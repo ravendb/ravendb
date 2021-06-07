@@ -3,17 +3,17 @@ import copyToClipboard = require("common/copyToClipboard");
 
 class mapIndexSyntax extends dialogViewModelBase {
 
-    htmlElement: HTMLElement;
+    dialogContainer: Element;
 
     compositionComplete() {
         super.compositionComplete();
         this.bindToCurrentInstance("copySample");
-        this.htmlElement = document.getElementById("mapIndexSyntaxDialog");
+        this.dialogContainer = document.getElementById("mapIndexSyntaxDialog");
     }
 
     copySample(sampleTitle: string) {
         const sampleText = mapIndexSyntax.samples.find(x => x.title === sampleTitle).text;
-        copyToClipboard.copy(sampleText, "Sample has been copied to clipboard", this.htmlElement);
+        copyToClipboard.copy(sampleText, "Sample has been copied to clipboard", this.dialogContainer);
     }
 
     static readonly samples: Array<sampleCode> = [

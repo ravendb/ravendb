@@ -28,6 +28,7 @@ import eventsCollector = require("common/eventsCollector");
 import storageKeyProvider = require("common/storage/storageKeyProvider");
 import compactDatabaseDialog = require("viewmodels/resources/compactDatabaseDialog");
 import notificationCenter = require("common/notifications/notificationCenter");
+import saveDatabaseLockModeCommand = require("commands/resources/saveDatabaseLockModeCommand");
 
 type databaseState = "errored" | "disabled" | "online" | "offline" | "remote";
 
@@ -52,11 +53,15 @@ class databases extends viewModelBase {
 
     selectionState: KnockoutComputed<checkbox>;
     selectedDatabases = ko.observableArray<string>([]);
+    selectedDatabasesWithoutLock: KnockoutComputed<databaseInfo[]>;
+
+    lockModeCommon: KnockoutComputed<string>;
     
     databasesByState: KnockoutComputed<Record<databaseState, number>>;
 
     spinners = {
-        globalToggleDisable: ko.observable<boolean>(false)
+        globalToggleDisable: ko.observable<boolean>(false),
+        localLockChanges: ko.observableArray<string>([]),
     };
 
     private static compactView = ko.observable<boolean>(false);
@@ -65,7 +70,6 @@ class databases extends viewModelBase {
     statsSubscription: changeSubscription;
 
     accessManager = accessManager.default.databasesView;
-    isAboveUserAccess = accessManager.default.operatorAndAbove;
     
     databaseNameWidth = ko.observable<number>(350);
 
@@ -82,6 +86,7 @@ class databases extends viewModelBase {
 
         this.bindToCurrentInstance("newDatabase", "toggleDatabase", "togglePauseDatabaseIndexing", 
             "toggleDisableDatabaseIndexing", "deleteDatabase", "activateDatabase", "updateDatabaseInfo",
+            "allowDatabaseDelete", "preventDatabaseDelete", "preventDatabaseDeleteWithError",
             "compactDatabase", "databasePanelClicked", "openNotificationCenter");
 
         this.initObservables();
@@ -101,6 +106,20 @@ class databases extends viewModelBase {
             if (selectedCount > 0)
                 return "some_checked";
             return "unchecked";
+        });
+
+        this.lockModeCommon = ko.pureComputed(() => {
+            const selectedDatabases = this.getSelectedDatabases();
+            if (selectedDatabases.length === 0)
+                return "None";
+
+            const firstLockMode = selectedDatabases[0].lockMode();
+            for (let i = 1; i < selectedDatabases.length; i++) {
+                if (selectedDatabases[i].lockMode() !== firstLockMode) {
+                    return "Mixed";
+                }
+            }
+            return firstLockMode;
         });
         
         this.databasesByState = ko.pureComputed(() => {
@@ -129,6 +148,11 @@ class databases extends viewModelBase {
             }
             
             return result;
+        });
+        
+        this.selectedDatabasesWithoutLock = ko.pureComputed(() => {
+            const selected = this.getSelectedDatabases();
+            return selected.filter(x => x.lockMode() === "Unlock");
         });
     }
 
@@ -495,7 +519,10 @@ class databases extends viewModelBase {
     }
 
     deleteSelectedDatabases() {
-       this.deleteDatabases(this.getSelectedDatabases());
+        const withoutLock = this.selectedDatabasesWithoutLock();
+        if (withoutLock.length) {
+            this.deleteDatabases(withoutLock);
+        }
     }
 
     private deleteDatabases(toDelete: databaseInfo[]) {
@@ -504,8 +531,7 @@ class databases extends viewModelBase {
         confirmDeleteViewModel
             .result
             .done((confirmResult: deleteDatabaseConfirmResult) => {
-                if (confirmResult.can) {   
-
+                if (confirmResult.can) {
                     const dbsList = toDelete.map(x => {
                         x.isBeingDeleted(true);
                         const asDatabase = x.asDatabase();
@@ -515,7 +541,7 @@ class databases extends viewModelBase {
                         changesContext.default.disconnectIfCurrent(asDatabase, "DatabaseDeleted");
                         return asDatabase;
                     });
-                                    
+                    
                     new deleteDatabaseCommand(dbsList, !confirmResult.keepFiles)
                         .execute();
                 }
@@ -711,9 +737,76 @@ class databases extends viewModelBase {
     openNotificationCenter(dbInfo: databaseInfo) {
         if (!this.activeDatabase() || this.activeDatabase().name !== dbInfo.name) {
             this.activateDatabase(dbInfo);
-}
+        }
 
         this.notificationCenter.showNotifications.toggle();
+    }
+
+    allowDatabaseDelete(db: databaseInfo) {
+        eventsCollector.default.reportEvent("databases", "set-lock-mode", "Unlock");
+        this.updateDatabaseLockMode(db, "Unlock");
+    }
+
+    preventDatabaseDelete(db: databaseInfo) {
+        eventsCollector.default.reportEvent("indexes", "set-lock-mode", "LockedIgnore");
+        this.updateDatabaseLockMode(db, "PreventDeletesIgnore");
+    }
+
+    preventDatabaseDeleteWithError(db: databaseInfo) {
+        eventsCollector.default.reportEvent("indexes", "set-lock-mode", "LockedError");
+        this.updateDatabaseLockMode(db, "PreventDeletesError");
+    }
+
+    private updateDatabaseLockMode(db: databaseInfo, newLockMode: Raven.Client.ServerWide.DatabaseLockMode) {
+        if (db.lockMode() !== newLockMode) {
+            this.spinners.localLockChanges.push(db.name);
+
+            new saveDatabaseLockModeCommand([db.asDatabase()], newLockMode)
+                .execute()
+                .done(() => db.lockMode(newLockMode))
+                .always(() => this.spinners.localLockChanges.remove(db.name));
+        }
+    }
+
+    unlockSelectedDatabases() {
+        this.setLockModeSelectedDatabases("Unlock", "allow deletes");
+    }
+
+    lockSelectedDatabases() {
+        this.setLockModeSelectedDatabases("PreventDeletesIgnore", "prevent deletes");
+    }
+
+    lockErrorSelectedDatabases() {
+        this.setLockModeSelectedDatabases("PreventDeletesError", "prevent deletes (with error)");
+    }
+
+    private setLockModeSelectedDatabases(lockMode: Raven.Client.ServerWide.DatabaseLockMode, lockModeStrForTitle: string) {
+        if (this.lockModeCommon() === lockMode)
+            return;
+
+        this.confirmationMessage("Are you sure?", `Do you want to <strong>${generalUtils.escapeHtml(lockModeStrForTitle)}</strong> of selected databases?`, {
+            html: true
+        })
+            .done(can => {
+                if (can) {
+                    eventsCollector.default.reportEvent("databases", "set-lock-mode-selected", lockMode);
+                    
+                    const databases = this.getSelectedDatabases();
+
+                    if (databases.length) {
+                        this.spinners.globalToggleDisable(true);
+
+                        new saveDatabaseLockModeCommand(databases.map(x => x.asDatabase()), lockMode)
+                            .execute()
+                            .done(() => databases.forEach(i => i.lockMode(lockMode)))
+                            .always(() => this.spinners.globalToggleDisable(false));
+                    }
+                }
+            });
+    }
+
+    isAdminAccessByDbName(dbName: string) {
+        return accessManager.default.isAdminByDbName(dbName);
     }
 }
 

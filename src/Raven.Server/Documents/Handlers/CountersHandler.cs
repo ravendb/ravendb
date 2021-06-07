@@ -117,6 +117,7 @@ namespace Raven.Server.Documents.Handlers
                                 countersToRemove.Remove(operation.CounterName);
                             }
                             break;
+
                         case CounterOperationType.Delete:
                             if (_fromEtl && doc == null)
                                 break;
@@ -126,6 +127,7 @@ namespace Raven.Server.Documents.Handlers
                             countersToAdd.Remove(operation.CounterName);
                             countersToRemove.Add(operation.CounterName);
                             break;
+
                         case CounterOperationType.Put:
                             if (_fromEtl == false || doc == null)
                                 break;
@@ -135,11 +137,14 @@ namespace Raven.Server.Documents.Handlers
                             countersToAdd.Add(operation.CounterName);
                             countersToRemove.Remove(operation.CounterName);
                             break;
+
                         case CounterOperationType.None:
                             break;
+
                         case CounterOperationType.Get:
                             GetCounterValue(context, _database, docId, operation.CounterName, _replyWithAllNodesValues, CountersDetail);
                             break;
+
                         default:
                             ThrowInvalidBatchOperationType(operation);
                             break;
@@ -527,11 +532,7 @@ namespace Raven.Server.Documents.Handlers
 
                         lastCv = kvp.Value[kvp.Value.Count - 1].ChangeVector;
 
-                        counters[name] = new BlittableJsonReaderObject.RawBlob
-                        {
-                            Ptr = newVal.Ptr,
-                            Length = CountersStorage.SizeOfCounterValues * kvp.Value.Count
-                        };
+                        counters[name] = new BlittableJsonReaderObject.RawBlob(newVal.Ptr, CountersStorage.SizeOfCounterValues * kvp.Value.Count);
                     }
 
                     var values = context.ReadObject(new DynamicJsonValue
@@ -586,8 +587,8 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/counters", "GET", AuthorizationStatus.ValidUser)]
-        public Task Get()
+        [RavenAction("/databases/*/counters", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        public async Task Get()
         {
             var docId = GetStringValuesQueryString("docId");
             var full = GetBoolValueQueryString("full", required: false) ?? false;
@@ -601,14 +602,11 @@ namespace Raven.Server.Documents.Handlers
                     countersDetail = GetInternal(Database, context, counters, docId, full);
                 }
 
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     context.Write(writer, countersDetail.ToJson());
-                    writer.Flush();
                 }
             }
-
-            return Task.CompletedTask;
         }
 
         public static CountersDetail GetInternal(DocumentDatabase database, DocumentsOperationContext context, Microsoft.Extensions.Primitives.StringValues counters, string docId, bool full)
@@ -626,7 +624,7 @@ namespace Raven.Server.Documents.Handlers
             return result;
         }
 
-        [RavenAction("/databases/*/counters", "POST", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/counters", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public async Task Batch()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -658,10 +656,9 @@ namespace Raven.Server.Documents.Handlers
                         cmd.ExecuteDirectly(context);
                     }
                 }
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     context.Write(writer, cmd.CountersDetail.ToJson());
-                    writer.Flush();
                 }
             }
         }

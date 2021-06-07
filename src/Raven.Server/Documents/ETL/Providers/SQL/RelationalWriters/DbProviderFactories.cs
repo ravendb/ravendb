@@ -38,7 +38,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                     Start = "[",
                     End = "]"
                 };
-            if (factory is NpgsqlFactory)
+            if (factory is NpgsqlFactory || factory is OracleClientFactory)
                 return new DbCommandBuilder
                 {
                     Start = "\"",

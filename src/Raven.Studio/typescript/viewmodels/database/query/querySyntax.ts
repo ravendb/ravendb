@@ -3,17 +3,17 @@ import copyToClipboard = require("common/copyToClipboard");
 
 class querySyntax extends dialogViewModelBase {
 
-    htmlElement: HTMLElement;
+    dialogContainer: Element;
 
     compositionComplete() {
         super.compositionComplete();
         this.bindToCurrentInstance("copySample");
-        this.htmlElement = document.getElementById("querySyntaxDialog");
+        this.dialogContainer = document.getElementById("querySyntaxDialog");
     }
 
     copySample(sampleTitle: string) {
         const sampleText = querySyntax.samples.find(x => x.title === sampleTitle).text;
-        copyToClipboard.copy(sampleText, "Sample has been copied to clipboard", this.htmlElement);
+        copyToClipboard.copy(sampleText, "Sample has been copied to clipboard", this.dialogContainer);
     }
 
     static readonly samples: Array<sampleCode> = [

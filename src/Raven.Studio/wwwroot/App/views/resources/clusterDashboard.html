@@ -1,0 +1,19 @@
+<div class="content-margin">
+    <div class="cluster-dashboard-container masonry-grid" data-bind="css: { initialized: initialized }">
+        <div class="grid-sizer"></div>
+        <div class="gutter-sizer"></div>
+        
+        <div data-bind="foreach: widgets">
+            <div class="cluster-dashboard-item" data-bind="compose: $data, attr: { 'data-widget-id': id }, css: { 'fullscreen': fullscreen }"></div>    
+        </div>
+
+        <button class="add-widget" data-bind="click: addWidgetModal, visible: initialized() && bootstrapped()">
+            <i class="icon-plus"></i>
+        </button>
+    </div>
+    <div class="tooltip" style="opacity: 0; display: none">
+    </div>
+    <style type="text/css" id="cluster-dashboard-node-styles">
+        /* this stylesheet is generated automatically based on cluster topology */
+    </style>
+</div>

@@ -4,9 +4,12 @@ using System.Linq;
 using System.Threading;
 using Raven.Client.Util;
 using Raven.Server.Config;
+using Raven.Server.Dashboard;
 using Raven.Server.Documents;
 using Raven.Server.NotificationCenter.BackgroundWork;
 using Raven.Server.NotificationCenter.Notifications;
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Server.Collections;
@@ -35,7 +38,6 @@ namespace Raven.Server.NotificationCenter
             OutOfMemory = new OutOfMemoryNotifications(this);
         }
 
-
         public bool IsInitialized { get; set; }
 
         public void Initialize(DocumentDatabase database = null)
@@ -54,7 +56,7 @@ namespace Raven.Server.NotificationCenter
         public readonly EtlNotifications EtlNotifications;
         public readonly SlowWriteNotifications SlowWrites;
         public readonly OutOfMemoryNotifications OutOfMemory;
-        
+
         public readonly NotificationCenterOptions Options;
         private readonly RavenConfiguration _config;
 
@@ -99,11 +101,11 @@ namespace Raven.Server.NotificationCenter
 
                 foreach (var watcher in Watchers)
                 {
-                    if (watcher.Filter != null && watcher.Filter(notification.Database) == false)
+                    if (watcher.Filter != null && watcher.Filter(notification.Database, false) == false)
                     {
                         continue;
                     }
-                    
+
                     // serialize to avoid race conditions
                     // please notice we call ToJson inside a loop since DynamicJsonValue is not thread-safe
                     watcher.NotificationsQueue.Enqueue(notification.ToJson());
@@ -153,11 +155,13 @@ namespace Raven.Server.NotificationCenter
             return _notificationsStorage.GetPerformanceHintCount();
         }
 
-        public void Dismiss(string id)
+        public void Dismiss(string id, RavenTransaction existingTransaction = null, bool sendNotificationEvenIfDoesntExist = true)
         {
-            _notificationsStorage.Delete(id);
+            var deleted = _notificationsStorage.Delete(id, existingTransaction);
+            if (deleted == false && sendNotificationEvenIfDoesntExist == false)
+                return;
 
-            // send this notification even when notification doesn't exist 
+            // send this notification even when notification doesn't exist
             // we don't persist all notifications
             Add(NotificationUpdated.Create(id, NotificationUpdateType.Dismissed));
         }
@@ -189,6 +193,6 @@ namespace Raven.Server.NotificationCenter
 
         public IWebsocketWriter Writer;
 
-        public Func<string, bool> Filter;
+        public CanAccessDatabase Filter;
     }
 }

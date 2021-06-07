@@ -30,7 +30,12 @@
                                                                                   DatabaseRecordItemType.HubPullReplications |
                                                                                   DatabaseRecordItemType.SinkPullReplications |
                                                                                   DatabaseRecordItemType.TimeSeries |
-                                                                                  DatabaseRecordItemType.DocumentsCompression;
+                                                                                  DatabaseRecordItemType.DocumentsCompression |
+                                                                                  DatabaseRecordItemType.Analyzers |
+                                                                                  DatabaseRecordItemType.LockMode |
+                                                                                  DatabaseRecordItemType.OlapConnectionStrings |
+                                                                                  DatabaseRecordItemType.OlapEtls;
+
         private const int DefaultMaxStepsForTransformScript = 10 * 1000;
 
         public DatabaseSmugglerOptions()

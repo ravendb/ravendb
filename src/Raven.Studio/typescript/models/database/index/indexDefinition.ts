@@ -60,6 +60,9 @@ class indexDefinition {
     lockMode: Raven.Client.Documents.Indexes.IndexLockMode;
 
     priority = ko.observable<Raven.Client.Documents.Indexes.IndexPriority>();
+    deploymentMode = ko.observable<Raven.Client.Documents.Indexes.IndexDeploymentMode>();
+
+    customAnalyzers = ko.observableArray<string>();
 
     validationGroup: KnockoutValidationGroup;
 
@@ -70,6 +73,7 @@ class indexDefinition {
         this.maps(dto.Maps.map(x => new mapItem(x)));
         this.reduce(dto.Reduce);
         this.hasReduce(!!dto.Reduce);
+        this.deploymentMode(dto.DeploymentMode);
         //this.isTestIndex(dto.IsTestIndex);
         
         this.outputReduceToCollection(!!dto.OutputReduceToCollection);
@@ -106,7 +110,8 @@ class indexDefinition {
         }
         
         this.hasDuplicateFieldsNames = ko.pureComputed(() => {
-            return _.uniqBy(this.fields(), field => field.name()).length !== this.fields().length;
+            const nonEmptyFields = this.fields().filter(x => x.name());
+            return _.uniqBy(nonEmptyFields, field => field.name()).length !== nonEmptyFields.length;
         });
         
         if (!this.isAutoIndex()) {
@@ -281,6 +286,7 @@ class indexDefinition {
             SourceType: "None",
             LockMode: this.lockMode,
             Priority: this.priority(),
+            DeploymentMode: this.deploymentMode(),
             Configuration: this.configurationToDto(),
             Fields: this.fieldToDto(),
             OutputReduceToCollection: this.hasReduce() &&
@@ -311,14 +317,19 @@ class indexDefinition {
 
     addField() {
         const field = indexFieldOptions.empty();
+        
+        field.addCustomAnalyzers(this.customAnalyzers());
+        
         if (this.defaultFieldOptions()) {
             field.parent(this.defaultFieldOptions());
         }
+        
         this.fields.unshift(field);
     }
 
     addDefaultField() {
         const fieldOptions = indexFieldOptions.defaultFieldOptions();
+        fieldOptions.addCustomAnalyzers(this.customAnalyzers());
         this.defaultFieldOptions(fieldOptions);
 
         this.fields().forEach(field => {
@@ -357,6 +368,17 @@ class indexDefinition {
         this.maps(maps.map(x => new mapItem(x)));
         this.reduce(reduce);
     }
+
+    registerCustomAnalyzers(analyzerNames: string[]) {
+        this.customAnalyzers(analyzerNames);
+        
+        this.fields().forEach(x => x.addCustomAnalyzers(analyzerNames));
+
+        const defaultFieldOptions = this.defaultFieldOptions();
+        if (defaultFieldOptions) {
+            defaultFieldOptions.addCustomAnalyzers(analyzerNames);
+        }
+    }
     
     static empty(): indexDefinition {
         return new indexDefinition({
@@ -366,6 +388,7 @@ class indexDefinition {
             LockMode: "Unlock",
             Reduce: undefined,
             Priority: "Normal",
+            DeploymentMode: "Rolling",
             Configuration: null,
             Type: "Map",
             SourceType: "None",

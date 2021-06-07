@@ -224,24 +224,33 @@ namespace Raven.Server.NotificationCenter
             }
         }
 
-        public bool Delete(string id)
+        public bool Delete(string id, RavenTransaction existingTransaction = null)
         {
             if (Logger.IsInfoEnabled)
                 Logger.Info($"Deleting notification '{id}'.");
+
+            if (existingTransaction != null)
+            {
+                return DeleteFromTable(existingTransaction);
+            }
 
             bool deleteResult;
 
             using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var tx = context.OpenWriteTransaction())
             {
+                deleteResult = DeleteFromTable(tx);
+                tx.Commit();
+            }
+
+            bool DeleteFromTable(RavenTransaction tx)
+            {
                 var table = tx.InnerTransaction.OpenTable(_actionsSchema, NotificationsSchema.NotificationsTree);
 
                 using (Slice.From(tx.InnerTransaction.Allocator, id, out Slice alertSlice))
                 {
-                    deleteResult = table.DeleteByKey(alertSlice);
+                    return table.DeleteByKey(alertSlice);
                 }
-
-                tx.Commit();
             }
 
             return deleteResult;

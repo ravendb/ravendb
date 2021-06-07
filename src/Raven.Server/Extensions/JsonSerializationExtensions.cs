@@ -16,10 +16,12 @@ namespace Raven.Server.Extensions
             result[nameof(IndexDefinition.SourceType)] = definition.SourceType.ToString();
             result[nameof(IndexDefinition.LockMode)] = definition.LockMode?.ToString();
             result[nameof(IndexDefinition.Priority)] = definition.Priority?.ToString();
+            result[nameof(IndexDefinition.State)] = definition.State?.ToString();
             result[nameof(IndexDefinition.OutputReduceToCollection)] = definition.OutputReduceToCollection;
             result[nameof(IndexDefinition.PatternForOutputReduceToCollectionReferences)] = definition.PatternForOutputReduceToCollectionReferences;
             result[nameof(IndexDefinition.PatternReferencesCollectionName)] = definition.PatternReferencesCollectionName;
             result[nameof(IndexDefinition.ReduceOutputIndex)] = definition.ReduceOutputIndex;
+            result[nameof(IndexDefinition.DeploymentMode)] = definition.DeploymentMode;
             result[nameof(IndexDefinition.Name)] = definition.Name;
             result[nameof(IndexDefinition.Reduce)] = definition.Reduce;
             result[nameof(IndexDefinition.Type)] = definition.Type.ToString();

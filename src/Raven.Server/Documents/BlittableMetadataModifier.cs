@@ -42,6 +42,7 @@ namespace Raven.Server.Documents
         // Change vector is null when importing from v3.5.
         // We'll generate a new change vector in this format: "RV:{revisionsCount}-{firstEtagOfLegacyRevision}"
         public bool ReadFirstEtagOfLegacyRevision;
+
         public bool ReadLegacyEtag;
         public DatabaseItemType OperateOnTypes;
         public string LegacyEtag { get; private set; }
@@ -309,6 +310,7 @@ namespace Raven.Server.Documents
                         ThrowExpectedFieldTypeOfString(Constants.Documents.Metadata.Id, state, reader);
                     Id = CreateLazyStringValueFromParserState(state);
                     break;
+
                 case 5: // @etag
                     if (state.StringBuffer[0] != (byte)'@' ||
                         *(int*)(state.StringBuffer + 1) != 1734440037)
@@ -451,6 +453,7 @@ namespace Raven.Server.Documents
 
                     aboutToReadPropertyName = true;
                     return true;
+
                 case 13: //Last-Modified
                     if (*(long*)state.StringBuffer != 7237087983830262092 ||
                         *(int*)(state.StringBuffer + sizeof(long)) != 1701406313 ||
@@ -502,6 +505,7 @@ namespace Raven.Server.Documents
 
                     aboutToReadPropertyName = true;
                     return true;
+
                 case 15: //Raven-Read-Only
                     if (*(long*)state.StringBuffer != 7300947898092904786 ||
                         *(int*)(state.StringBuffer + sizeof(long)) != 1328374881 ||
@@ -528,6 +532,7 @@ namespace Raven.Server.Documents
                     state.StringSize = collection.Size;
                     aboutToReadPropertyName = true;
                     return true;
+
                 case 19: //Raven-Last-Modified or Raven-Delete-Marker
                     if (*(int*)state.StringBuffer != 1702256978 ||
                         *(short*)(state.StringBuffer + sizeof(int)) != 11630)
@@ -562,10 +567,10 @@ namespace Raven.Server.Documents
 
                     if (isLegacyLastModified)
                     {
-                    if (state.CurrentTokenType != JsonParserToken.String)
-                        ThrowExpectedFieldTypeOfString(LegacyLastModified, state, reader);
+                        if (state.CurrentTokenType != JsonParserToken.String)
+                            ThrowExpectedFieldTypeOfString(LegacyLastModified, state, reader);
 
-                    LastModified = ReadDateTime(state, reader, State.ReadingLegacyLastModified);
+                        LastModified = ReadDateTime(state, reader, State.ReadingLegacyLastModified);
                     }
                     else
                     {
@@ -574,6 +579,7 @@ namespace Raven.Server.Documents
                     }
 
                     break;
+
                 case 21: //Raven-Expiration-Date
                     if (*(long*)state.StringBuffer != 8666383010116297042 ||
                         *(long*)(state.StringBuffer + sizeof(long)) != 7957695015158966640 ||
@@ -589,6 +595,7 @@ namespace Raven.Server.Documents
                     state.StringSize = expires.Size;
                     aboutToReadPropertyName = true;
                     return true;
+
                 case 23: //Raven-Document-Revision
                     if (*(long*)state.StringBuffer != 8017583188798234962 ||
                         *(long*)(state.StringBuffer + sizeof(long)) != 5921517102558967139 ||
@@ -646,6 +653,7 @@ namespace Raven.Server.Documents
                              state.CurrentTokenType == JsonParserToken.StartObject)
                         ThrowInvalidMetadataProperty(state, reader);
                     break;
+
                 case 29: //Non-Authoritative-Information
                     if (*(long*)state.StringBuffer != 7526769800038477646 ||
                         *(long*)(state.StringBuffer + sizeof(long)) != 8532478930943832687 ||
@@ -698,6 +706,7 @@ namespace Raven.Server.Documents
                             case LegacyHasRevisionsDocumentState:
                                 NonPersistentFlags |= NonPersistentDocumentFlags.LegacyHasRevisions;
                                 break;
+
                             case LegacyRevisionState:
                                 NonPersistentFlags |= NonPersistentDocumentFlags.LegacyRevision;
                                 break;
@@ -705,6 +714,7 @@ namespace Raven.Server.Documents
                     }
 
                     break;
+
                 case 32: //Raven-Replication-Merged-History
                     if (*(long*)state.StringBuffer != 7300947898092904786 ||
                         *(long*)(state.StringBuffer + sizeof(long)) != 8028075772393122928 ||
@@ -726,6 +736,7 @@ namespace Raven.Server.Documents
             {
                 case State.None:
                     break;
+
                 case State.IgnoreProperty:
                     if (reader.Read() == false)
                         return false;
@@ -734,6 +745,7 @@ namespace Raven.Server.Documents
                         state.CurrentTokenType == JsonParserToken.StartObject)
                         ThrowInvalidMetadataProperty(state, reader);
                     break;
+
                 case State.IgnoreArray:
                     if (_verifyStartArray)
                     {
@@ -751,6 +763,7 @@ namespace Raven.Server.Documents
                             return false;
                     }
                     break;
+
                 case State.IgnoreRevisionStatusProperty:
                     if (reader.Read() == false)
                         return false;
@@ -764,11 +777,13 @@ namespace Raven.Server.Documents
                         case LegacyHasRevisionsDocumentState:
                             NonPersistentFlags |= NonPersistentDocumentFlags.LegacyHasRevisions;
                             break;
+
                         case LegacyRevisionState:
                             NonPersistentFlags |= NonPersistentDocumentFlags.LegacyRevision;
                             break;
                     }
                     break;
+
                 case State.ReadingId:
                     if (reader.Read() == false)
                         return false;
@@ -777,6 +792,7 @@ namespace Raven.Server.Documents
                         ThrowExpectedFieldTypeOfString(Constants.Documents.Metadata.Id, state, reader);
                     Id = CreateLazyStringValueFromParserState(state);
                     break;
+
                 case State.ReadingFlags:
                     if (reader.Read() == false)
                         return false;
@@ -785,6 +801,7 @@ namespace Raven.Server.Documents
                         ThrowExpectedFieldTypeOfString(Constants.Documents.Metadata.Flags, state, reader);
                     Flags = ReadFlags(state);
                     break;
+
                 case State.ReadingLastModified:
                 case State.ReadingLegacyLastModified:
                     if (reader.Read() == false)
@@ -794,6 +811,7 @@ namespace Raven.Server.Documents
                         ThrowExpectedFieldTypeOfString(Constants.Documents.Metadata.LastModified, state, reader);
                     LastModified = ReadDateTime(state, reader, _state);
                     break;
+
                 case State.ReadingLegacyDeleteMarker:
                     if (reader.Read() == false)
                         return false;
@@ -802,6 +820,7 @@ namespace Raven.Server.Documents
                         NonPersistentFlags |= NonPersistentDocumentFlags.LegacyDeleteMarker;
 
                     break;
+
                 case State.ReadingChangeVector:
                     if (reader.Read() == false)
                         return false;
@@ -811,6 +830,7 @@ namespace Raven.Server.Documents
                     ChangeVector = CreateLazyStringValueFromParserState(state);
 
                     break;
+
                 case State.ReadingFirstEtagOfLegacyRevision:
                     if (reader.Read() == false)
                         return false;
@@ -820,6 +840,7 @@ namespace Raven.Server.Documents
                     FirstEtagOfLegacyRevision = LegacyEtag = CreateLazyStringValueFromParserState(state);
                     ChangeVector = ChangeVectorUtils.NewChangeVector("RV", ++LegacyRevisionsCount, new Guid(FirstEtagOfLegacyRevision).ToBase64Unpadded());
                     break;
+
                 case State.ReadingEtag:
                     if (reader.Read() == false)
                         return false;

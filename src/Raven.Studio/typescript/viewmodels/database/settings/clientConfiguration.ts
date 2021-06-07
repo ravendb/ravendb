@@ -5,12 +5,14 @@ import saveClientConfigurationCommand = require("commands/resources/saveClientCo
 import getClientConfigurationCommand = require("commands/resources/getClientConfigurationCommand");
 import appUrl = require("common/appUrl");
 import eventsCollector = require("common/eventsCollector");
+import accessManager = require("common/shell/accessManager");
 
 class clientConfiguration extends viewModelBase {
     model: clientConfigurationModel;
     globalModel: clientConfigurationModel;
     hasGlobalConfiguration = ko.observable<boolean>(false);
-    globalConfigUrl = appUrl.forGlobalClientConfiguration();
+    serverWideClientConfigurationUrl = appUrl.forGlobalClientConfiguration();
+    canNavigateToServerSettings: KnockoutComputed<boolean>;
     
     overrideServer = ko.observable<boolean>(false);
     canEditSettings: KnockoutComputed<boolean>;
@@ -32,7 +34,9 @@ class clientConfiguration extends viewModelBase {
         super.activate(args);
 
         this.bindToCurrentInstance("saveConfiguration", "setReadMode");
-
+        
+        this.canNavigateToServerSettings = accessManager.default.isClusterAdminOrClusterNode;
+        
         const globalTask = new getGlobalClientConfigurationCommand()
             .execute()
             .done(dto => {

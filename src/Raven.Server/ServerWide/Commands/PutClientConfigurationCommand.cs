@@ -1,5 +1,6 @@
 ﻿using Raven.Client;
 using Raven.Client.Documents.Operations.Configuration;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
@@ -17,7 +18,7 @@ namespace Raven.Server.ServerWide.Commands
             Value = value;
         }
 
-        public override void UpdateValue(long index)
+        public override void UpdateValue(ClusterOperationContext context, long index)
         {
             Value.Etag = index;
         }

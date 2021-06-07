@@ -57,6 +57,15 @@ class clusterTopologyManager {
         this.topology().updateWith(e);
         this.throttledLicenseUpdate();
     }
+    
+    public getClusterNodeByTag(nodeTag: string) {
+        const topology = this.topology();
+        if (!topology) {
+            return null;
+        }
+        
+        return topology.nodes().find(x => x.tag() === nodeTag);
+    }
 
     private initObservables() {
         this.currentTerm = ko.pureComputed(() => {

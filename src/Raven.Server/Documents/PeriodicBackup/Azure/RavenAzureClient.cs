@@ -37,13 +37,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
         private readonly string _serverUrlForContainer;
         private readonly string _serverUrlForAccountName;
         private const string AzureStorageVersion = "2019-02-02";
-        private const int MaxUploadPutBlobInBytes = 256 * 1024 * 1024; // 256MB
-        private const int OnePutBlockSizeLimitInBytes = 100 * 1024 * 1024; // 100MB
         private const long TotalBlocksSizeLimitInBytes = 475L * 1024 * 1024 * 1024 * 1024L / 100; // 4.75TB
         private readonly Logger _logger;
-
-        public static bool TestMode;
-
+        internal int MaxUploadPutBlobInBytes = 256 * 1024 * 1024; // 256MB
+        internal int OnePutBlockSizeLimitInBytes = 100 * 1024 * 1024; // 100MB
 
         public string RemoteFolderName { get; }
 
@@ -85,9 +82,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             _accountName = azureSettings.AccountName;
             _containerName = azureSettings.StorageContainer;
 
+            _serverUrlForContainer = $"https://{_accountName}.blob.core.windows.net/{_containerName.ToLower()}";
+            _serverUrlForAccountName = $"https://{_accountName}.blob.core.windows.net";
             _logger = logger;
-            _serverUrlForContainer = GetUrlForContainer();
-            _serverUrlForAccountName = GetUrlForAccountName();
         }
 
         private static byte[] GetAccountKeyBytes(string accountKey)
@@ -121,18 +118,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             {
                 throw new ArgumentException($"{nameof(AzureSettings.SasToken)} isn't in the correct format", e);
             }
-        }
-
-        private string GetUrlForContainer()
-        {
-            var template = TestMode == false ? "https://{0}.blob.core.windows.net/{1}" : "http://localhost:10000/{0}/{1}";
-            return string.Format(template, _accountName, _containerName.ToLower());
-        }
-
-        private string GetUrlForAccountName()
-        {
-            var template = TestMode == false ? "https://{0}.blob.core.windows.net" : "http://localhost:10000/{0}";
-            return string.Format(template, _accountName);
         }
 
         private string GetUrl(string baseUrl, string parameters = null)
@@ -585,19 +570,46 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             }
         }
 
-        public void DeleteMultipleBlobs(List<string> blobs)
+        public void DeleteBlobs(List<string> blobs)
         {
             if (blobs.Count == 0)
                 return;
 
-            if (_hasSasToken)
+            var client = GetClient();
+
+            foreach (var blob in blobs)
             {
-                // Multi-Delete isn't supported when using a SAS token
-                // https://issues.hibernatingrhinos.com/issue/RavenDB-14936
-                // https://github.com/Azure/azure-sdk-for-net/issues/11762
-                DeleteBlobsWithSasToken(blobs);
-                return;
+                var url = GetUrl($"{_serverUrlForContainer}/{blob}");
+
+                var now = SystemTime.UtcNow;
+
+                var requestMessage = new HttpRequestMessage(HttpMethods.Delete, url)
+                {
+                    Headers =
+                    {
+                        {"x-ms-date", now.ToString("R")},
+                        {"x-ms-version", AzureStorageVersion}
+                    }
+                };
+
+                SetAuthorizationHeader(client, HttpMethods.Delete, url, requestMessage.Headers);
+                var response = client.SendAsync(requestMessage, CancellationToken).Result;
+                if (response.IsSuccessStatusCode)
+                    continue;
+
+                if (response.StatusCode == HttpStatusCode.NotFound)
+                    continue;
+
+                throw StorageException.FromResponseMessage(response);
             }
+        }
+
+        private void DeleteMultipleBlobs(List<string> blobs)
+        {
+            // TODO: RavenDB-16264
+            // Multi-Delete isn't supported when using a SAS token
+            // https://issues.hibernatingrhinos.com/issue/RavenDB-14936
+            // https://github.com/Azure/azure-sdk-for-net/issues/11762
 
             const string xMsDate = "x-ms-date";
             const string xMsClientRequestId = "x-ms-client-request-id";
@@ -761,35 +773,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             }
 
             throw new InvalidOperationException(message);
-        }
-
-        private void DeleteBlobsWithSasToken(List<string> blobs)
-        {
-            foreach (var blob in blobs)
-            {
-                var url = GetUrl($"{_serverUrlForContainer}/{blob}");
-
-                var now = SystemTime.UtcNow;
-
-                var requestMessage = new HttpRequestMessage(HttpMethods.Delete, url)
-                {
-                    Headers =
-                    {
-                        {"x-ms-date", now.ToString("R")},
-                        {"x-ms-version", AzureStorageVersion}
-                    }
-                };
-
-                var client = GetClient();
-                var response = client.SendAsync(requestMessage, CancellationToken).Result;
-                if (response.IsSuccessStatusCode)
-                    continue;
-
-                if (response.StatusCode == HttpStatusCode.NotFound)
-                    continue;
-
-                throw StorageException.FromResponseMessage(response);
-            }
         }
 
         public List<string> GetContainerNames(int maxResults)

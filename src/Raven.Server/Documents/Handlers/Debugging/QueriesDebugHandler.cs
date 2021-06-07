@@ -11,7 +11,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
 {
     public class QueriesDebugHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/debug/queries/kill", "POST", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/debug/queries/kill", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public Task KillQuery()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("indexName");
@@ -31,11 +31,11 @@ namespace Raven.Server.Documents.Handlers.Debugging
             return NoContent();
         }
 
-        [RavenAction("/databases/*/debug/queries/running", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
-        public Task RunningQueries()
+        [RavenAction("/databases/*/debug/queries/running", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
+        public async Task RunningQueries()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream(), Database.DatabaseShutdown))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
 
@@ -65,15 +65,13 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
                 writer.WriteEndObject();
             }
-
-            return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/debug/queries/cache/list", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
-        public Task QueriesCacheList()
+        [RavenAction("/databases/*/debug/queries/cache/list", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
+        public async Task QueriesCacheList()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 var queryCache = Database.QueryMetadataCache.GetQueryCache();
 
@@ -172,8 +170,6 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 writer.WriteArray("Results", queriesList, context);
                 writer.WriteEndObject();
             }
-
-            return Task.CompletedTask;
         }
     }
 }

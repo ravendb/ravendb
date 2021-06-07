@@ -11,19 +11,18 @@ namespace Raven.Server.Documents.Handlers
 {
     public class IoMetricsHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/debug/io-metrics", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
-        public Task IoMetrics()
+        [RavenAction("/databases/*/debug/io-metrics", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
+        public async Task IoMetrics()
         {
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 var result = IoMetricsUtil.GetIoMetricsResponse(Database.GetAllStoragesEnvironment(), Database.GetAllPerformanceMetrics());
                 context.Write(writer, result.ToJson());
             }
-            return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/debug/io-metrics/live", "GET", AuthorizationStatus.ValidUser, SkipUsagesCount = true)]
+        [RavenAction("/databases/*/debug/io-metrics/live", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, SkipUsagesCount = true)]
         public async Task IoMetricsLive()
         {
             using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
@@ -31,7 +30,7 @@ namespace Raven.Server.Documents.Handlers
                 var receiveBuffer = new ArraySegment<byte>(new byte[1024]);
                 var receive = webSocket.ReceiveAsync(receiveBuffer, Database.DatabaseShutdown);
 
-                using (var ms = new MemoryStream())
+                await using (var ms = new MemoryStream())
                 using (var collector = new DatabaseLiveIoStatsCollector(Database))
                 {
                     // 1. Send data to webSocket without making UI wait upon opening webSocket

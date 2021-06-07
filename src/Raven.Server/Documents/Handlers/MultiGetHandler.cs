@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Handlers
 {
     public class MultiGetHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/multi_get", "POST", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/multi_get", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task PostMultiGet()
         {
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
@@ -35,7 +35,7 @@ namespace Raven.Server.Documents.Handlers
                 if (input.TryGet("Requests", out BlittableJsonReaderArray requests) == false)
                     ThrowRequiredPropertyNameInRequest("Requests");
 
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
                     writer.WritePropertyName("Results");
@@ -76,7 +76,7 @@ namespace Raven.Server.Documents.Handlers
             return requestBody;
         }
 
-        private void HandleException(JsonOperationContext context, BlittableJsonTextWriter writer, Exception e, string url, string query)
+        private void HandleException(JsonOperationContext context, AsyncBlittableJsonTextWriter writer, Exception e, string url, string query)
         {
             var djv = new DynamicJsonValue
             {
@@ -90,7 +90,7 @@ namespace Raven.Server.Documents.Handlers
                 writer.WriteObject(json);
         }
 
-        private void HandleNoRoute(JsonOperationContext context, BlittableJsonTextWriter writer, string method, string url, string query, LazyStringValue statusProperty, LazyStringValue resultProperty)
+        private void HandleNoRoute(JsonOperationContext context, AsyncBlittableJsonTextWriter writer, string method, string url, string query, LazyStringValue statusProperty, LazyStringValue resultProperty)
         {
             writer.WritePropertyName(statusProperty);
             writer.WriteInteger((int)HttpStatusCode.BadRequest);
@@ -102,11 +102,11 @@ namespace Raven.Server.Documents.Handlers
             writer.WriteEndObject();
         }
 
-        private async Task HandleRequestAsync(
+        private async ValueTask HandleRequestAsync(
             BlittableJsonReaderObject request,
             JsonOperationContext context,
             MultiGetHttpResponseStream responseStream,
-            BlittableJsonTextWriter writer,
+            AsyncBlittableJsonTextWriter writer,
             HttpContext httpContext,
             HostString host,
             string scheme,
@@ -137,16 +137,16 @@ namespace Raven.Server.Documents.Handlers
 
             var requestHandler = routeInformation.GetRequestHandler();
             writer.WritePropertyName(resultProperty);
-            writer.Flush();
+            await writer.FlushAsync();
 
-            PrepareHttpContext(request, context, httpContext, method, query, host, scheme, trafficWatchStringBuilder, out var content);
+            var content = await PrepareHttpContextAsync(request, context, httpContext, method, query, host, scheme, trafficWatchStringBuilder);
 
             var bytesWrittenBeforeRequest = responseStream.BytesWritten;
             int statusCode;
             try
             {
                 if (Server.Configuration.Security.AuthenticationEnabled == false
-                    || Server.Router.TryAuthorize(routeInformation, httpContext, Database, out var status))
+                    || (await Server.Router.TryAuthorizeAsync(routeInformation, httpContext, Database)).Authorized)
                 {
                     await requestHandler(new RequestHandlerContext
                     {
@@ -188,7 +188,7 @@ namespace Raven.Server.Documents.Handlers
             trafficWatchStringBuilder?.Append(content).AppendLine();
         }
 
-        private void PrepareHttpContext(BlittableJsonReaderObject request, JsonOperationContext context, HttpContext httpContext, string method, string query, HostString host, string scheme, StringBuilder trafficWatchStringBuilder, out object content)
+        private async ValueTask<object> PrepareHttpContextAsync(BlittableJsonReaderObject request, JsonOperationContext context, HttpContext httpContext, string method, string query, HostString host, string scheme, StringBuilder trafficWatchStringBuilder)
         {
             httpContext.Response.StatusCode = 0;
             httpContext.Request.Headers.Clear();
@@ -210,7 +210,7 @@ namespace Raven.Server.Documents.Handlers
                 }
             }
             // initiated to use it at the end of for
-            content = null;
+            object content = null;
             if (method == HttpMethod.Post.Method && request.TryGet(nameof(GetRequest.Content), out content))
             {
                 if (content is LazyStringValue)
@@ -222,9 +222,9 @@ namespace Raven.Server.Documents.Handlers
                 else
                 {
                     var requestBody = new MemoryStream();
-                    var contentWriter = new BlittableJsonTextWriter(context, requestBody);
-                    context.Write(contentWriter, (BlittableJsonReaderObject)content);
-                    contentWriter.Flush();
+                    await using (var contentWriter = new AsyncBlittableJsonTextWriter(context, requestBody))
+                        context.Write(contentWriter, (BlittableJsonReaderObject)content);
+
                     HttpContext.Response.RegisterForDispose(requestBody);
                     httpContext.Request.Body = requestBody;
                     httpContext.Request.Body.Position = 0;
@@ -234,9 +234,11 @@ namespace Raven.Server.Documents.Handlers
             {
                 content = request.ToString();
             }
+
+            return content;
         }
 
-        private void WriteHeaders(BlittableJsonTextWriter writer, HttpContext httpContext, LazyStringValue headersProperty)
+        private void WriteHeaders(AsyncBlittableJsonTextWriter writer, HttpContext httpContext, LazyStringValue headersProperty)
         {
             writer.WritePropertyName(headersProperty);
             writer.WriteStartObject();

@@ -97,6 +97,31 @@ namespace Raven.Client.Documents.Session
             return AddLazyOperation<Dictionary<string, TResult>>(operation, null);
         }
 
+        Lazy<(T Entity, string ChangeVector)> ILazySessionOperations.ConditionalLoad<T>(string id, string changeVector)
+        {
+            if (string.IsNullOrEmpty(id))
+                throw new ArgumentNullException(nameof(id));
+
+            if (IsLoaded(id))
+            {
+                return new Lazy<(T Entity, string ChangeVector)>(() =>
+                {
+                    var entity = Load<T>(id);
+                    if (entity == null)
+                        return default;
+
+                    var cv = Advanced.GetChangeVectorFor(entity);
+                    return (entity, cv);
+                });
+            }
+
+            if (string.IsNullOrEmpty(changeVector))
+                throw new InvalidOperationException($"The requested document with id '{id} is not loaded into the session and could not conditional load when {nameof(changeVector)} is null or empty.");
+
+            var lazyLoadOperation = new LazyConditionalLoadOperation<T>(id, changeVector, this);
+            return AddLazyOperation<(T Entity, string ChangeVector)>(lazyLoadOperation, null);
+        }
+
         /// <summary>
         /// Begin a load while including the specified path 
         /// </summary>

@@ -408,6 +408,23 @@ namespace Sparrow.Json
                     if (TryParseNumber3(buffer, 20, out fractions) == false)
                         goto Failed;
                     goto Finished_DT;
+                case 25://"yyyy'-'MM'-'dd'T'HH':'mm':'ss'+'dd':'dd'",
+                    if (buffer[22] != ':' || (buffer[19] != '+' && buffer[19] != '-'))
+                        goto Failed;
+
+                    if (TryParseNumber2(buffer, 20, out int offsetHour) == false)
+                        goto Failed;
+                    if (TryParseNumber2(buffer, 23, out int offsetMinute) == false)
+                        goto Failed;
+
+                    var offset = new TimeSpan(offsetHour, offsetMinute, 0);
+                    if (buffer[19] == '-')
+                        offset = -offset;
+
+                    dt = default(DateTime);
+                    dto = new DateTimeOffset(DateToTicks(year, month, day, hour, minute, second, fractions), offset);
+                    result = Result.DateTimeOffset;
+                    goto Finished;
                 case 28://"yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff'Z'"
                     if (buffer[27] != 'Z')
                         goto Failed;
@@ -426,12 +443,12 @@ namespace Sparrow.Json
                     if (TryParseNumber(buffer + 20, 7, out fractions) == false)
                         goto Failed;
 
-                    if (TryParseNumber2(buffer, 28, out int offsetHour) == false)
+                    if (TryParseNumber2(buffer, 28, out offsetHour) == false)
                         goto Failed;
-                    if (TryParseNumber2(buffer, 31, out int offsetMinute) == false)
+                    if (TryParseNumber2(buffer, 31, out offsetMinute) == false)
                         goto Failed;
 
-                    var offset = new TimeSpan(offsetHour, offsetMinute, 0);
+                    offset = new TimeSpan(offsetHour, offsetMinute, 0);
                     if (buffer[27] == '-')
                         offset = -offset;
 
@@ -519,6 +536,23 @@ namespace Sparrow.Json
                     if (TryParseNumber3(buffer, 20, out fractions) == false)
                         goto Failed;
                     goto Finished_DT;
+                case 25://"yyyy'-'MM'-'dd'T'HH':'mm':'ss'+'dd':'dd'",
+                    if (buffer[22] != ':' || (buffer[19] != '+' && buffer[19] != '-'))
+                        goto Failed;
+
+                    if (TryParseNumber2(buffer, 20, out int offsetHour) == false)
+                        goto Failed;
+                    if (TryParseNumber2(buffer, 23, out int offsetMinute) == false)
+                        goto Failed;
+
+                    var offset = new TimeSpan(offsetHour, offsetMinute, 0);
+                    if (buffer[19] == '-')
+                        offset = -offset;
+
+                    dt = default(DateTime);
+                    dto = new DateTimeOffset(DateToTicks(year, month, day, hour, minute, second, fractions), offset);
+                    result = Result.DateTimeOffset;
+                    goto Finished;
                 case 28://"yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff'Z'"
                     if (buffer[27] != 'Z')
                         goto Failed;
@@ -530,19 +564,19 @@ namespace Sparrow.Json
                     if (TryParseNumber(buffer + 20, 7, out fractions) == false)
                         goto Failed;
                     goto Finished_DT;
-                case 33://"yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff'+'dd':'dd"
+                case 33://"yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff'+'dd':'dd'"
                     if (buffer[19] != '.' || buffer[30] != ':' || (buffer[27] != '+' && buffer[27] != '-'))
                         goto Failed;
 
                     if (TryParseNumber(buffer + 20, 7, out fractions) == false)
                         goto Failed;
 
-                    if (TryParseNumber2(buffer, 28, out int offsetHour) == false)
+                    if (TryParseNumber2(buffer, 28, out offsetHour) == false)
                         goto Failed;
-                    if (TryParseNumber2(buffer, 31, out int offsetMinute) == false)
+                    if (TryParseNumber2(buffer, 31, out offsetMinute) == false)
                         goto Failed;
 
-                    var offset = new TimeSpan(offsetHour, offsetMinute, 0);
+                    offset = new TimeSpan(offsetHour, offsetMinute, 0);
                     if (buffer[27] == '-')
                         offset = -offset;
 

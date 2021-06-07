@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes.Analysis;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
@@ -21,7 +22,6 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
-using Raven.Server.Config;
 using Raven.Server.Smuggler.Migration;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Issues;
@@ -36,11 +36,11 @@ namespace SlowTests.Smuggler
         {
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CanExportAndImportDatabaseRecord()
         {
             var file = Path.GetTempFileName();
-            var dummy = GenerateAndSaveSelfSignedCertificate(true);
+            var dummy = GenerateAndSaveSelfSignedCertificate(createNew: true);
             string privateKey;
             using (var pullReplicationCertificate =
                 new X509Certificate2(dummy.ServerCertificatePath, (string)null, X509KeyStorageFlags.MachineKeySet | X509KeyStorageFlags.Exportable))
@@ -57,7 +57,6 @@ namespace SlowTests.Smuggler
                     {
                         record.ConflictSolverConfig = new ConflictSolver
                         {
-
                             ResolveToLatest = false,
                             ResolveByCollection = new Dictionary<string, ScriptResolver>
                                 {
@@ -68,38 +67,36 @@ namespace SlowTests.Smuggler
                                         }
                                     }
                                 }
-                    };
+                        };
                         record.Sorters = new Dictionary<string, SorterDefinition>
                         {
                             {
                                 "MySorter", new SorterDefinition
                                 {
                                     Name = "MySorter",
-                                    Code = GetSorter("RavenDB_8355.MySorter.cs")
+                                    Code = GetCode("RavenDB_8355.MySorter.cs")
+                                }
+                            }
+                        };
+                        record.Analyzers = new Dictionary<string, AnalyzerDefinition>
+                        {
+                            {
+                                "MyAnalyzer", new AnalyzerDefinition
+                                {
+                                    Name = "MyAnalyzer",
+                                    Code = GetCode("RavenDB_14939.MyAnalyzer.cs")
                                 }
                             }
                         };
                     }
-
                 }))
                 using (var store2 = GetDocumentStore(new Options
                 {
                     ModifyDatabaseName = s => $"{s}_2"
                 }))
                 {
-                    var config = new PeriodicBackupConfiguration
-                    {
-                        Disabled = false,
-                        MentorNode = "A",
-                        Name = "Backup",
-                        BackupType = BackupType.Backup,
-                        FullBackupFrequency = "0 */1 * * *",
-                        IncrementalBackupFrequency = "0 */6 * * *",
-                        LocalSettings = new LocalSettings()
-                        {
-                            FolderPath = "FolderPath"
-                        }
-                    };
+                    var config = Backup.CreateBackupConfiguration(backupPath: "FolderPath", fullBackupFrequency: "0 */1 * * *", incrementalBackupFrequency: "0 */6 * * *", mentorNode: "A", name: "Backup");
+
                     store1.Maintenance.Send(new UpdateExternalReplicationOperation(new ExternalReplication("tempDatabase", "ExternalReplication")
                     {
                         TaskId = 1,
@@ -201,6 +198,11 @@ namespace SlowTests.Smuggler
                     Assert.Equal("MySorter", sd.Name);
                     Assert.NotEmpty(sd.Code);
 
+                    Assert.Equal(1, record.Analyzers.Count);
+                    Assert.Equal(true, record.Analyzers.TryGetValue("MyAnalyzer", out AnalyzerDefinition ad));
+                    Assert.Equal("MyAnalyzer", ad.Name);
+                    Assert.NotEmpty(ad.Code);
+
                     Assert.Equal(1, record.ExternalReplications.Count);
                     Assert.Equal("tempDatabase", record.ExternalReplications[0].Database);
                     Assert.Equal(true, record.ExternalReplications[0].Disabled);
@@ -238,11 +240,11 @@ namespace SlowTests.Smuggler
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CanMigrateDatabaseRecord()
         {
             var file = Path.GetTempFileName();
-            var dummy = GenerateAndSaveSelfSignedCertificate(true);
+            var dummy = GenerateAndSaveSelfSignedCertificate(createNew: true);
             string privateKey;
             using (var pullReplicationCertificate =
                 new X509Certificate2(dummy.ServerCertificatePath, (string)null, X509KeyStorageFlags.MachineKeySet | X509KeyStorageFlags.Exportable))
@@ -259,7 +261,6 @@ namespace SlowTests.Smuggler
                     {
                         record.ConflictSolverConfig = new ConflictSolver
                         {
-
                             ResolveToLatest = false,
                             ResolveByCollection = new Dictionary<string, ScriptResolver>
                                 {
@@ -277,12 +278,21 @@ namespace SlowTests.Smuggler
                                 "MySorter", new SorterDefinition
                                 {
                                     Name = "MySorter",
-                                    Code = GetSorter("RavenDB_8355.MySorter.cs")
+                                    Code = GetCode("RavenDB_8355.MySorter.cs")
+                                }
+                            }
+                        };
+                        record.Analyzers = new Dictionary<string, AnalyzerDefinition>
+                        {
+                            {
+                                "MyAnalyzer", new AnalyzerDefinition
+                                {
+                                    Name = "MyAnalyzer",
+                                    Code = GetCode("RavenDB_14939.MyAnalyzer.cs")
                                 }
                             }
                         };
                     }
-
                 }))
                 using (var store2 = GetDocumentStore(new Options
                 {
@@ -376,7 +386,8 @@ namespace SlowTests.Smuggler
                                                                DatabaseRecordItemType.RavenEtls |
                                                                DatabaseRecordItemType.SqlConnectionStrings |
                                                                DatabaseRecordItemType.SqlEtls |
-                                                               DatabaseRecordItemType.RavenConnectionStrings
+                                                               DatabaseRecordItemType.RavenConnectionStrings |
+                                                               DatabaseRecordItemType.Analyzers
                             }
                         }
                     }, Server.ServerStore);
@@ -385,7 +396,7 @@ namespace SlowTests.Smuggler
                     {
                         DatabaseName = store1.Database,
                         OperateOnTypes = DatabaseItemType.DatabaseRecord,
-                        OperateOnDatabaseRecordTypes = DatabaseRecordItemType.Expiration | 
+                        OperateOnDatabaseRecordTypes = DatabaseRecordItemType.Expiration |
                                                        DatabaseRecordItemType.ConflictSolverConfig |
                                                        DatabaseRecordItemType.Client |
                                                        DatabaseRecordItemType.ExternalReplications |
@@ -395,7 +406,8 @@ namespace SlowTests.Smuggler
                                                        DatabaseRecordItemType.RavenEtls |
                                                        DatabaseRecordItemType.SqlConnectionStrings |
                                                        DatabaseRecordItemType.SqlEtls |
-                                                       DatabaseRecordItemType.RavenConnectionStrings 
+                                                       DatabaseRecordItemType.RavenConnectionStrings |
+                                                       DatabaseRecordItemType.Analyzers
                     }, GetDocumentDatabaseInstanceFor(store2).Result);
 
                     WaitForValue(() =>
@@ -418,6 +430,11 @@ namespace SlowTests.Smuggler
                     Assert.Equal(true, record.Sorters.TryGetValue("MySorter", out SorterDefinition sd));
                     Assert.Equal("MySorter", sd.Name);
                     Assert.NotEmpty(sd.Code);
+
+                    Assert.Equal(1, record.Analyzers.Count);
+                    Assert.Equal(true, record.Analyzers.TryGetValue("MyAnalyzer", out AnalyzerDefinition ad));
+                    Assert.Equal("MyAnalyzer", ad.Name);
+                    Assert.NotEmpty(ad.Code);
 
                     Assert.Equal(1, record.ExternalReplications.Count);
                     Assert.Equal("tempDatabase", record.ExternalReplications[0].Database);
@@ -456,7 +473,7 @@ namespace SlowTests.Smuggler
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CanExportAndImportMergedDatabaseRecord()
         {
             var file = Path.GetTempFileName();
@@ -543,10 +560,8 @@ namespace SlowTests.Smuggler
                                     PurgeOnDelete = false,
                                     MinimumRevisionsToKeep = 20
                                 }
-
                             }
                         }
-
                     };
                     var revisionConfig2 = new RevisionsConfiguration
                     {
@@ -570,10 +585,8 @@ namespace SlowTests.Smuggler
                                     PurgeOnDelete = false,
                                     MinimumRevisionsToKeep = 20
                                 }
-
                             }
                         }
-
                     };
                     await store1.Maintenance.SendAsync(new ConfigureRevisionsOperation(revisionConfig));
                     await store2.Maintenance.SendAsync(new ConfigureRevisionsOperation(revisionConfig2));
@@ -790,7 +803,7 @@ namespace SlowTests.Smuggler
                     Assert.NotNull(putResult3.RaftCommandIndex);
                     Assert.NotNull(putResult4.RaftCommandIndex);
 
-                    var sqlEtl =new SqlEtlConfiguration
+                    var sqlEtl = new SqlEtlConfiguration
                     {
                         ConnectionStringName = "scon1",
                         Name = "setl1",
@@ -843,58 +856,11 @@ namespace SlowTests.Smuggler
                     await store2.Maintenance.SendAsync(new AddEtlOperation<SqlConnectionString>(sqlEtl3));
                     await store2.Maintenance.SendAsync(new AddEtlOperation<SqlConnectionString>(sqlEtl4));
 
-                    var config = new PeriodicBackupConfiguration
-                    {
-                        Disabled = false,
-                        MentorNode = "A",
-                        Name = "Backup",
-                        BackupType = BackupType.Backup,
-                        FullBackupFrequency = "0 1 * * *",
-                        IncrementalBackupFrequency = "0 6 * * *",
-                        LocalSettings = new LocalSettings()
-                        {
-                            FolderPath = "FolderPath"
-                        }
-                    };
-                    var config2 = new PeriodicBackupConfiguration
-                    {
-                        Disabled = false,
-                        MentorNode = "A",
-                        Name = "Backup2",
-                        BackupType = BackupType.Backup,
-                        FullBackupFrequency = "0 1 * * *",
-                        IncrementalBackupFrequency = "0 6 * * *",
-                        LocalSettings = new LocalSettings()
-                        {
-                            FolderPath = "FolderPath"
-                        }
-                    };
-                    var config3 = new PeriodicBackupConfiguration
-                    {
-                        Disabled = false,
-                        MentorNode = "A",
-                        Name = "Backup",
-                        BackupType = BackupType.Snapshot,
-                        FullBackupFrequency = "0 8 * * *",
-                        IncrementalBackupFrequency = "0 6 * * *",
-                        LocalSettings = new LocalSettings()
-                        {
-                            FolderPath = "FolderPath"
-                        }
-                    };
-                    var config4 = new PeriodicBackupConfiguration
-                    {
-                        Disabled = false,
-                        MentorNode = "A",
-                        Name = "Backup4",
-                        BackupType = BackupType.Backup,
-                        FullBackupFrequency = "0 1 * * *",
-                        IncrementalBackupFrequency = "0 6 * * *",
-                        LocalSettings = new LocalSettings()
-                        {
-                            FolderPath = "FolderPath"
-                        }
-                    };
+                    var config = Backup.CreateBackupConfiguration(backupPath: "FolderPath", fullBackupFrequency: "0 1 * * *", incrementalBackupFrequency: "0 6 * * *", mentorNode: "A", name: "Backup");
+                    var config2 = Backup.CreateBackupConfiguration(backupPath: "FolderPath", fullBackupFrequency: "0 1 * * *", incrementalBackupFrequency: "0 6 * * *", mentorNode: "A", name: "Backup2");
+                    var config3 = Backup.CreateBackupConfiguration(backupPath: "FolderPath", backupType: BackupType.Snapshot, fullBackupFrequency: "0 8 * * *", incrementalBackupFrequency: "0 6 * * *", mentorNode: "A", name: "Backup");
+                    var config4 = Backup.CreateBackupConfiguration(backupPath: "FolderPath", fullBackupFrequency: "0 1 * * *", incrementalBackupFrequency: "0 6 * * *", mentorNode: "A", name: "Backup4");
+                  
                     await store1.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
                     await store1.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config2));
                     await store2.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config3));
@@ -920,14 +886,13 @@ namespace SlowTests.Smuggler
                     {
                         if (backup.Configuration.Disabled)
                             disabled++;
-                        if (!backup.Configuration.Name.Equals("Backup")) continue;
+                        if (!backup.Configuration.Name.Equals("Backup"))
+                            continue;
                         Assert.Equal(true, backup.Configuration.IncrementalBackupFrequency.Equals("0 6 * * *"));
                         Assert.Equal(true, backup.Configuration.FullBackupFrequency.Equals("0 1 * * *"));
                         Assert.Equal(BackupType.Backup, backup.Configuration.BackupType);
                     }
                     Assert.Equal(2, disabled);
-
-                    
 
                     var record = await store2.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store2.Database));
 
@@ -1021,12 +986,11 @@ namespace SlowTests.Smuggler
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CanBackupAndRestoreDatabaseRecord()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            var file = Path.GetTempFileName();
-            var dummy = GenerateAndSaveSelfSignedCertificate(true);
+            var dummy = GenerateAndSaveSelfSignedCertificate(createNew: true);
             string privateKey;
             using (var pullReplicationCertificate =
                 new X509Certificate2(dummy.ServerCertificatePath, (string)null, X509KeyStorageFlags.MachineKeySet | X509KeyStorageFlags.Exportable))
@@ -1034,11 +998,8 @@ namespace SlowTests.Smuggler
                 privateKey = Convert.ToBase64String(pullReplicationCertificate.Export(X509ContentType.Pfx));
             }
 
-            try
-            {
                 using (var store = GetDocumentStore(new Options
                 {
-                    
                     ModifyDatabaseName = s => $"{s}_1",
 
                     ModifyDatabaseRecord = record =>
@@ -1062,7 +1023,7 @@ namespace SlowTests.Smuggler
                                 "MySorter", new SorterDefinition
                                 {
                                     Name = "MySorter",
-                                    Code = GetSorter("RavenDB_8355.MySorter.cs")
+                                    Code = GetCode("RavenDB_8355.MySorter.cs")
                                 }
                             }
                         };
@@ -1145,45 +1106,14 @@ namespace SlowTests.Smuggler
                         }, "users/1");
                         await session.SaveChangesAsync();
                     }
-
-                    var config = new PeriodicBackupConfiguration
-                    {
-                        Name = "Real",
-                        BackupType = BackupType.Backup,
-                        LocalSettings = new LocalSettings
-                        {
-                            FolderPath = backupPath
-                        },
-                        IncrementalBackupFrequency = "0 */5 * * *"
-                    };
-                    var config2 = new PeriodicBackupConfiguration
-                    {
-                        Disabled = false,
-                        MentorNode = "A",
-                        Name = "Backup",
-                        BackupType = BackupType.Backup,
-                        FullBackupFrequency = "0 */1 * * *",
-                        IncrementalBackupFrequency = "0 */6 * * *",
-                        LocalSettings = new LocalSettings()
-                        {
-                            FolderPath = backupPath
-                        }
-                    };
+                var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "0 */5 * * *", name: "Real");
+                var config2 = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "0 */1 * * *", incrementalBackupFrequency: "0 */6 * * *", mentorNode: "A", name: "Backup");
 
                     await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config2));
-                    var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                    await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-                    var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-                    
-                    var value = WaitForValue(() =>
-                    {
-                        var getPeriodicBackupResult = store.Maintenance.Send(operation);
-                        return getPeriodicBackupResult.Status?.LastEtag;
-                    }, 1);
-                    Assert.Equal(1, value);
-                    var databaseName = $"restored_database-{Guid.NewGuid()}";
+                Backup.UpdateConfigAndRunBackup(Server, config, store);
 
-                    using (RestoreDatabase(store, new RestoreBackupConfiguration
+                    var databaseName = $"restored_database-{Guid.NewGuid()}";
+                using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
                     {
                         BackupLocation = Directory.GetDirectories(backupPath).First(),
                         DatabaseName = databaseName,
@@ -1249,13 +1179,8 @@ namespace SlowTests.Smuggler
                     }
                 }
             }
-            finally
-            {
-                File.Delete(file);
-            }
-        }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CanRestoreSubscriptionsFromBackup()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -1265,31 +1190,15 @@ namespace SlowTests.Smuggler
                 store.Subscriptions.Create<User>(x => x.Name == "Marcin");
                 store.Subscriptions.Create<User>();
 
-                var config = new PeriodicBackupConfiguration
-                {
-                    BackupType = BackupType.Backup,
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "* * * * *" //every minute
-                };
-
-                var backupTaskId = store.Maintenance.Send(new UpdatePeriodicBackupOperation(config)).TaskId;
-                store.Maintenance.Send(new StartBackupOperation(true, backupTaskId));
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-                SpinWait.SpinUntil(() =>
-                {
-                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
-                    return getPeriodicBackupResult.Status?.LastEtag > 0;
-                }, TimeSpan.FromSeconds(15));
+                var config = Backup.CreateBackupConfiguration(backupPath);
+                Backup.UpdateConfigAndRunBackup(Server, config, store);
 
                 await ValidateSubscriptions(store);
 
                 // restore the database with a different name
                 var restoredDatabaseName = GetDatabaseName();
 
-                using (RestoreDatabase(store, new RestoreBackupConfiguration
+                using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
                 {
                     BackupLocation = Directory.GetDirectories(backupPath).First(),
                     DatabaseName = restoredDatabaseName
@@ -1351,7 +1260,7 @@ namespace SlowTests.Smuggler
             }
         }
 
-        [Theory]
+        [Theory, Trait("Category", "Smuggler")]
         [InlineData(true)]
         [InlineData(false)]
         public async Task CanDisableTasksAfterRestore(bool disableOngoingTasks)
@@ -1363,53 +1272,44 @@ namespace SlowTests.Smuggler
                 // etl
                 store.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
                 {
-                    Name = store.Database, TopologyDiscoveryUrls = new[] {"http://127.0.0.1:8080"}, Database = "Northwind",
+                    Name = store.Database,
+                    TopologyDiscoveryUrls = new[] { "http://127.0.0.1:8080" },
+                    Database = "Northwind",
                 }));
 
                 var etlConfiguration = new RavenEtlConfiguration
                 {
                     ConnectionStringName = store.Database,
-                    Transforms = {new Transformation() {Name = "loadAll", Collections = {"Users"}, Script = "loadToUsers(this)"}}
+                    Transforms = { new Transformation() { Name = "loadAll", Collections = { "Users" }, Script = "loadToUsers(this)" } }
                 };
                 await store.Maintenance.SendAsync(new AddEtlOperation<RavenConnectionString>(etlConfiguration));
 
                 // external replication
                 var connectionString = new RavenConnectionString
                 {
-                    Name = store.Database, Database = store.Database, TopologyDiscoveryUrls = new[] {"http://127.0.0.1:12345"}
+                    Name = store.Database,
+                    Database = store.Database,
+                    TopologyDiscoveryUrls = new[] { "http://127.0.0.1:12345" }
                 };
 
                 await store.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(connectionString));
                 await store.Maintenance.SendAsync(new UpdateExternalReplicationOperation(new ExternalReplication(store.Database, store.Database)));
 
                 // pull replication sink
-                var sink = new PullReplicationAsSink {HubName = "aa", ConnectionString = connectionString, ConnectionStringName = connectionString.Name};
+                var sink = new PullReplicationAsSink { HubName = "aa", ConnectionString = connectionString, ConnectionStringName = connectionString.Name };
                 await store.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(sink));
 
                 // pull replication hub
                 await store.Maintenance.ForDatabase(store.Database).SendAsync(new PutPullReplicationAsHubOperation("test"));
 
                 // backup
-                var config = new PeriodicBackupConfiguration
-                {
-                    BackupType = BackupType.Backup, LocalSettings = new LocalSettings {FolderPath = backupPath}, IncrementalBackupFrequency = "* * * * *"
-                };
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-
-                var value = WaitForValue(() =>
-                {
-                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
-                    return getPeriodicBackupResult.Status?.LastEtag;
-                }, 0);
-                Assert.Equal(0, value);
+                var config = Backup.CreateBackupConfiguration(backupPath);
+                Backup.UpdateConfigAndRunBackup(Server, config, store);
 
                 // restore the database with a different name
                 var restoredDatabaseName = GetDatabaseName();
 
-                using (RestoreDatabase(store,
+                using (Backup.RestoreDatabase(store,
                     new RestoreBackupConfiguration
                     {
                         BackupLocation = Directory.GetDirectories(backupPath).First(),
@@ -1507,7 +1407,7 @@ namespace SlowTests.Smuggler
             return assembly.GetManifestResourceStream("SlowTests.Data." + name);
         }
 
-        private static string GetSorter(string name)
+        private static string GetCode(string name)
         {
             using (var stream = GetDump(name))
             using (var reader = new StreamReader(stream))

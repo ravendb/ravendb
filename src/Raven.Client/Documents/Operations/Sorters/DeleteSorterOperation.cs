@@ -25,9 +25,9 @@ namespace Raven.Client.Documents.Operations.Sorters
         {
             private readonly string _sorterName;
 
-            public DeleteSorterCommand(string indexName)
+            public DeleteSorterCommand(string sorterName)
             {
-                _sorterName = indexName ?? throw new ArgumentNullException(nameof(indexName));
+                _sorterName = sorterName ?? throw new ArgumentNullException(nameof(sorterName));
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)

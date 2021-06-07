@@ -1,0 +1,55 @@
+<div>
+    <div class="cluster-dashboard-item-header">
+        <h3> <i class="icon-coffee"></i> <span>Let's get started</span></h3>
+        <button class="btn btn-warning btn-sm" data-bind="click: remove">
+            <i class="icon-trash"></i>
+        </button>
+        <button class="btn btn-default btn-sm" data-bind="click: toggleFullscreen">
+            <i data-bind="css: { 'icon-fullscreen': !fullscreen(), 'icon-exit-fullscreen': fullscreen }"></i>
+        </button>
+    </div>
+    <div class="property-container padding padding-lg">
+        <p class="lead text-center margin-bottom margin-bottom-lg">
+            Welcome to RavenDB.<br/>Here you can get an overview of the whole cluster. <br />Get started with these steps:
+
+        </p>
+        <div class="row">
+            <div class="col-sm-6 margin-top">
+                <div class="text-center">
+                    <img src="Content/img/new-database.svg" width="150px" alt="Create new database" /><br/>
+                    <div>Create <a href="#" data-bind="click: newDatabase">new database</a></div>
+                </div>
+            </div>
+            <div class="col-sm-6 margin-top">
+                <div class="text-center">
+                    <img src="Content/img/setup-cluster.svg" width="150px" alt="Setup cluster" /><br/>
+                    <a data-bind="attr: { href: clusterViewUrl }">Setup your cluster</a>
+                </div>
+            </div>
+            <div class="row">
+            </div>
+            <div class="col-sm-6 margin-top">
+                <div class="text-center">
+                    <img src="Content/img/connect.svg" width="150px" alt="Connect to your database" />
+                    <div>Learn how to <a data-bind="attr: { href: connectingToDatabaseUrl }" target="_blank">connect your client to the database <i class="icon-newtab"></i></a></div>
+                </div>
+            </div>
+            <div class="col-sm-6 margin-top">
+                <div class="text-center">
+                    <img src="Content/img/search-index.svg" width="150px" alt="Search/Index" />
+                    <div>
+                        Learn more about <a data-bind="attr: { href: queryingUrl }" target="_blank">Querying <i class="icon-newtab"></i></a> 
+                        and 
+                        <a data-bind="attr: { href: indexesUrl }" target="_blank">Indexes <i class="icon-newtab"></i></a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="text-center margin-top">
+            <button class="btn btn-default btn-sm" data-bind="click: remove">
+                <i class="icon-cancel"></i>
+                <span>hide this widget</span>
+            </button>
+        </div>
+    </div>
+</div>

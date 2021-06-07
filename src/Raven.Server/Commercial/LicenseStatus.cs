@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using Raven.Client.Properties;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
@@ -111,7 +112,7 @@ namespace Raven.Server.Commercial
         public bool HasEncryption => GetValue<bool>("encryption");
 
         public bool HasDocumentsCompression => GetValue<bool>("documentsCompression");
-
+        
         public bool HasExternalReplication => GetValue<bool>("externalReplication");
 
         public bool HasDelayedExternalReplication => GetValue<bool>("delayedExternalReplication");
@@ -119,10 +120,14 @@ namespace Raven.Server.Commercial
         public bool HasRavenEtl => GetValue<bool>("ravenEtl");
 
         public bool HasSqlEtl => GetValue<bool>("sqlEtl");
+        
+        public bool HasOlapEtl => GetValue<bool>("olapEtl");
 
         public bool HasSnmpMonitoring => GetValue<bool>("snmp");
         
         public bool HasMonitoringEndpoints => GetValue<bool>("monitoringEndpoints");
+
+        public bool HasReadOnlyCertificates => GetValue<bool>("readOnlyCertificates");
 
         public bool HasHighlyAvailableTasks => GetValue<bool>("highlyAvailableTasks");
 
@@ -167,7 +172,7 @@ namespace Raven.Server.Commercial
                 [nameof(MaxCores)] = MaxCores,
                 [nameof(MaxMemory)] = MaxMemory,
                 [nameof(MaxClusterSize)] = MaxClusterSizeInternal,
-                [nameof(Ratio)] = Ratio.ToString(),
+                [nameof(Ratio)] = Ratio.ToString(CultureInfo.InvariantCulture),
                 [nameof(Expiration)] = Expiration,
                 [nameof(Expired)] = Expired,
                 [nameof(Status)] = Status,
@@ -182,8 +187,10 @@ namespace Raven.Server.Commercial
                 [nameof(HasDelayedExternalReplication)] = HasDelayedExternalReplication,
                 [nameof(HasRavenEtl)] = HasRavenEtl,
                 [nameof(HasSqlEtl)] = HasSqlEtl,
+                [nameof(HasOlapEtl)] = HasOlapEtl,
                 [nameof(HasSnmpMonitoring)] = HasSnmpMonitoring,
                 [nameof(HasMonitoringEndpoints)] = HasMonitoringEndpoints,
+                [nameof(HasReadOnlyCertificates)] = HasReadOnlyCertificates,
                 [nameof(DistributedCluster)] = DistributedCluster,
                 [nameof(HasHighlyAvailableTasks)] = HasHighlyAvailableTasks,
                 [nameof(HasPullReplicationAsHub)] = HasPullReplicationAsHub,

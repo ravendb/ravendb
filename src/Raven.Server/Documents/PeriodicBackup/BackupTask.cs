@@ -4,6 +4,7 @@ using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Threading;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
@@ -27,6 +28,7 @@ using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Server.Json.Sync;
 using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
 
 namespace Raven.Server.Documents.PeriodicBackup
@@ -72,7 +74,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             _isBackupEncrypted = IsBackupEncrypted(_database, _configuration);
             _forTestingPurposes = forTestingPurposes;
             _backupResult = GenerateBackupResult();
-            TaskCancelToken = new OperationCancelToken(_database.DatabaseShutdown);
+            TaskCancelToken = new OperationCancelToken(_database.DatabaseShutdown, CancellationToken.None);
 
             _retentionPolicyParameters = new RetentionPolicyBaseParameters
             {
@@ -258,7 +260,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                         runningBackupStatus.Version = ++_previousBackupStatus.Version;
                         // save the backup status
                         AddInfo("Saving backup status");
-                    SaveBackupStatus(runningBackupStatus, _database, _logger, _backupResult);
+                        SaveBackupStatus(runningBackupStatus, _database, _logger, _backupResult);
                     }
                 }
             }
@@ -266,6 +268,13 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private T GetBackupConfigurationFromScript<T>(T backupSettings, Func<BlittableJsonReaderObject, T> deserializeSettingsFunc,
             Action<T> updateServerWideSettingsFunc)
+            where T : BackupSettings
+        {
+            return GetBackupConfigurationFromScript(backupSettings, deserializeSettingsFunc, _database, updateServerWideSettingsFunc, _isServerWide);
+        }
+
+        internal static T GetBackupConfigurationFromScript<T>(T backupSettings, Func<BlittableJsonReaderObject, T> deserializeSettingsFunc, DocumentDatabase documentDatabase,
+            Action<T> updateServerWideSettingsFunc, bool serverWide)
             where T : BackupSettings
         {
             if (backupSettings == null)
@@ -341,12 +350,12 @@ namespace Raven.Server.Documents.PeriodicBackup
                     throw new InvalidOperationException($"Unable to get backup configuration by executing {command} {arguments}, the exit code was {process.ExitCode}. Stderr: {GetStdError()}");
                 }
 
-                using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+                using (documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
                     ms.Position = 0;
-                    var configuration = context.ReadForMemory(ms, "backup-configuration-from-script");
+                    var configuration = context.Sync.ReadForMemory(ms, "backup-configuration-from-script");
                     var result = deserializeSettingsFunc(configuration);
-                    if (_isServerWide)
+                    if (serverWide)
                         updateServerWideSettingsFunc?.Invoke(result);
 
                     return result;
@@ -406,9 +415,9 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
-        private static string GetFormattedDate(DateTime dataTime)
+        private static string GetFormattedDate(DateTime dateTime)
         {
-            return dataTime.ToString(DateTimeFormat, CultureInfo.InvariantCulture);
+            return dateTime.ToString(DateTimeFormat, CultureInfo.InvariantCulture);
         }
 
         private BackupResult GenerateBackupResult()
@@ -490,9 +499,11 @@ namespace Raven.Server.Documents.PeriodicBackup
                 case BackupType.Backup:
                     return _isBackupEncrypted ?
                         Constants.Documents.PeriodicBackup.EncryptedFullBackupExtension : Constants.Documents.PeriodicBackup.FullBackupExtension;
+
                 case BackupType.Snapshot:
                     return _isBackupEncrypted ?
                         Constants.Documents.PeriodicBackup.EncryptedSnapshotExtension : Constants.Documents.PeriodicBackup.SnapshotExtension;
+
                 default:
                     throw new ArgumentOutOfRangeException(nameof(type), type, null);
             }
@@ -568,7 +579,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                         }
                         else
                         {
-                            if (_backupResult.GetLastEtag() == _previousBackupStatus.LastEtag && 
+                            if (_backupResult.GetLastEtag() == _previousBackupStatus.LastEtag &&
                                 _backupResult.GetLastRaftIndex() == _previousBackupStatus.LastRaftIndex.LastEtag)
                             {
                                 internalBackupResult.LastDocumentEtag = startDocumentEtag ?? 0;
@@ -743,16 +754,18 @@ namespace Raven.Server.Documents.PeriodicBackup
                     onProgress: _onProgress,
                     token: TaskCancelToken.Token);
 
-                smuggler.Execute();
+                smuggler.ExecuteAsync().Wait();
 
                 switch (outputStream)
                 {
                     case EncryptingXChaCha20Poly1305Stream encryptedStream:
                         encryptedStream.Flush(flushToDisk: true);
                         break;
+
                     case FileStream file:
                         file.Flush(flushToDisk: true);
                         break;
+
                     default:
                         throw new InvalidOperationException($" {outputStream.GetType()} not supported");
                 }
@@ -795,7 +808,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             TaskCancelToken.Token.ThrowIfCancellationRequested();
 
-            var uploaderSettings = new BackupUploaderSettings
+            var uploaderSettings = new UploaderSettings
             {
                 S3Settings = s3Settings,
                 GlacierSettings = glacierSettings,
@@ -803,7 +816,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 GoogleCloudSettings = googleCloudSettings,
                 FtpSettings = ftpSettings,
 
-                BackupPath = backupPath,
+                FilePath = backupPath,
                 FolderName = folderName,
                 FileName = fileName,
                 DatabaseName = _database.Name,
@@ -831,7 +844,6 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         public static void SaveBackupStatus(PeriodicBackupStatus status, DocumentDatabase documentDatabase, Logger logger, BackupResult backupResult)
         {
-
             try
             {
                 var command = new UpdatePeriodicBackupStatusCommand(documentDatabase.Name, RaftIdGenerator.NewId())

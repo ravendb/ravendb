@@ -4,11 +4,13 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
+using System.Threading;
+using Sparrow.Collections;
 using Sparrow.Json.Parsing;
 
 namespace Sparrow.Json
 {
-    public unsafe class BlittableJsonReaderArray : BlittableJsonReaderBase, IEnumerable<object>, IDisposable
+    public sealed unsafe class BlittableJsonReaderArray : BlittableJsonReaderBase, IEnumerable<object>, IDisposable
     {
         private bool _disposeParent;
         private readonly int _count;
@@ -45,13 +47,20 @@ namespace Sparrow.Json
             AssertContextNotDisposed();
 
             using (var memoryStream = new MemoryStream())
-            using (var tw = new BlittableJsonTextWriter(_context, memoryStream))
             {
-                tw.WriteValue(BlittableJsonToken.StartArray, this);
-                tw.Flush();
-                memoryStream.Position = 0;
+                var tw = new AsyncBlittableJsonTextWriter(_context, memoryStream);
+                try
+                {
+                    tw.WriteValue(BlittableJsonToken.StartArray, this);
+                    tw.FlushAsync().AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
+                    memoryStream.Position = 0;
 
-                return new StreamReader(memoryStream).ReadToEnd();
+                    return new StreamReader(memoryStream).ReadToEnd();
+                }
+                finally
+                {
+                    tw.DisposeAsync().AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
+                }
             }
         }
 
@@ -70,7 +79,7 @@ namespace Sparrow.Json
                 builder.Reset(usageMode);
                 builder.StartArrayDocument();
                 builder.StartWriteArray();
-                using (var itr = GetEnumerator())
+                using (var itr = new BlittableJsonArrayEnumerator(this))
                 {
                     while (itr.MoveNext())
                     {
@@ -80,18 +89,23 @@ namespace Sparrow.Json
                                 var clone = item.CloneOnTheSameContext();
                                 builder.WriteEmbeddedBlittableDocument(clone.BasePointer, clone.Size);
                                 break;
+
                             case LazyStringValue item:
                                 builder.WriteValue(item);
                                 break;
+
                             case long item:
                                 builder.WriteValue(item);
                                 break;
+
                             case LazyNumberValue item:
                                 builder.WriteValue(item);
                                 break;
+
                             case LazyCompressedStringValue item:
                                 builder.WriteValue(item);
                                 break;
+
                             default:
                                 throw new InvalidDataException($"Actual value type is {itr.Current.GetType()}. Should be known serialized type and should not happen. ");
                         }
@@ -108,7 +122,7 @@ namespace Sparrow.Json
         {
             AssertContextNotDisposed();
 
-            // this is required only in cases that we get a BlittableJsonReaderArray, which is an only child of an BlittableJsonReaderObject and we lose track of it's parent, 
+            // this is required only in cases that we get a BlittableJsonReaderArray, which is an only child of an BlittableJsonReaderObject and we lose track of it's parent,
             // like in BlittableJsonDocumentBuilder.CreateArrayReader.
             if (_disposeParent)
                 _parent?.Dispose();
@@ -123,7 +137,7 @@ namespace Sparrow.Json
         }
 
         public object this[int index] => GetValueTokenTupleByIndex(index).Item1;
-        
+
         public int BinarySearch(string key, StringComparison comparison)
         {
             AssertContextNotDisposed();
@@ -172,7 +186,6 @@ namespace Sparrow.Json
                 return lazyCompressedStringValue;
             BlittableJsonReaderObject.ConvertType(obj, out string result);
             return result;
-
         }
 
         public void AddItemsToStream<T>(ManualBlittableJsonDocumentBuilder<T> writer) where T : struct, IUnmanagedWriteBuffer
@@ -218,29 +231,68 @@ namespace Sparrow.Json
             return result;
         }
 
-        public IEnumerable<object> Items
+        public BlittableJsonArrayEnumerator Items
         {
             get
             {
                 AssertContextNotDisposed();
-
-                for (int i = 0; i < _count; i++)
-                    yield return this[i];
+                return new BlittableJsonArrayEnumerator(this);
             }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public IEnumerator<object> GetEnumerator()
+        public struct BlittableJsonArrayEnumerator : IEnumerator<object>, IEnumerable<object>
+        {
+            private readonly BlittableJsonReaderArray _reader;
+            private int _counter;
+
+            public BlittableJsonArrayEnumerator(BlittableJsonReaderArray reader)
+            {
+                _reader = reader;
+                _counter = -1;
+            }
+
+            public bool MoveNext()
+            {
+                _counter++;
+                return _counter < _reader._count;
+            }
+
+            public void Reset()
+            {
+                _counter = -1;
+            }
+
+            public object Current { get { return _reader[_counter]; } }
+
+            object IEnumerator.Current => Current;
+
+            public void Dispose() {}
+
+            public IEnumerator<object> GetEnumerator()
+            {
+                return this;
+            }
+
+            IEnumerator IEnumerable.GetEnumerator()
+            {
+                return GetEnumerator();
+            }
+        }
+
+
+        IEnumerator<object> IEnumerable<object>.GetEnumerator()
         {
             AssertContextNotDisposed();
 
-            return Items.GetEnumerator();
+            return new BlittableJsonArrayEnumerator(this);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         IEnumerator IEnumerable.GetEnumerator()
         {
-            return GetEnumerator();
+            AssertContextNotDisposed();
+
+            return new BlittableJsonArrayEnumerator(this);
         }
 
         public override bool Equals(object obj)
@@ -254,14 +306,13 @@ namespace Sparrow.Json
                 return true;
 
             var array = obj as BlittableJsonReaderArray;
-
             if (array != null)
                 return Equals(array);
 
             return false;
         }
 
-        protected bool Equals(BlittableJsonReaderArray other)
+        public bool Equals(BlittableJsonReaderArray other)
         {
             AssertContextNotDisposed();
 

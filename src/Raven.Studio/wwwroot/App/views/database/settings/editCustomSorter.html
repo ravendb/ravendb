@@ -1,6 +1,6 @@
-<form class="edit-subscription flex-vertical absolute-fill flex-form content-margin" data-bind="submit: save">
+<form class="flex-vertical absolute-fill flex-form content-margin" data-bind="submit: save">
     <div class="flex-header">
-        <button type="submit" class="btn btn-primary" data-bind="enable: dirtyFlag().isDirty">
+        <button type="submit" class="btn btn-primary" data-bind="enable: dirtyFlag().isDirty, requiredAccess: 'DatabaseAdmin'">
             <i class="icon-save"></i>
             <span>Save</span>
         </button>
@@ -8,11 +8,10 @@
             <i class="icon-cancel"></i>
             <span>Cancel</span>
         </button>
-        <label for="importFilePicker" class="btn btn-default pull-right">
+        <label for="importFilePicker" class="btn btn-default pull-right" title="Upload custom sorter from file" data-bind="requiredAccess: 'DatabaseAdmin'">
             <i class="icon-import"></i><span>Load from file</span>
         </label>
-
-        <div class="input-group file-input" title="Import custom sorter from file">
+        <div class="input-group file-input">
             <input type="file" id="importFilePicker" data-bind="event: { change: _.partial(fileSelected, $element) }" tabindex="-1" accept=".cs">
         </div>
     </div>
@@ -21,17 +20,17 @@
         <div class="form-group margin-top" data-bind="validationElement: name">
             <label class="control-label" for="sorterName">Sorter Name</label>
             <div class="flex-grow">
-                <input type="text" class="form-control" id="sorterName" placeholder="Enter a descriptive name for sorter"
-                       data-bind="textInput: name, enable: $root.isAddingNewSorter" autocomplete="off" >    
+                <input type="text" class="form-control" id="sorterName" placeholder="Enter sorter name"
+                       data-bind="textInput: name, enable: $root.isAddingNewSorter" autocomplete="off" >
             </div>
         </div>
         <label>Code:</label>
         <pre class="form-control margin-top flex-grow"
-             data-bind="aceEditor: { code: code, lang:'ace/mode/csharp' }, validationOptions: { errorsAsTitle: false }, validationElement: code" style="height: 300px;">
-            </pre>
+             data-bind="aceEditor: { code: code, lang:'ace/mode/csharp', readOnly: !$root.isAdminAccessOrAbove() }, 
+                        validationOptions: { errorsAsTitle: false }, validationElement: code" style="height: 300px;">
+        </pre>
         <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: code">
             <div class="help-block" data-bind="validationMessage: code"></div>
         </div>
     </div>
 </form>
-

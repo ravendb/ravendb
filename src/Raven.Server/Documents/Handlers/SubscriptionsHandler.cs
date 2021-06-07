@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
@@ -23,7 +24,7 @@ namespace Raven.Server.Documents.Handlers
 {
     public class SubscriptionsHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/subscriptions/try", "POST", AuthorizationStatus.ValidUser, DisableOnCpuCreditsExhaustion = true)]
+        [RavenAction("/databases/*/subscriptions/try", "POST", AuthorizationStatus.ValidUser, EndpointType.Write, DisableOnCpuCreditsExhaustion = true)]
         public async Task Try()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -67,6 +68,7 @@ namespace Raven.Server.Documents.Handlers
                         case Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange:
                             state.ChangeVectorForNextBatchStartingPoint = null;
                             break;
+
                         case Constants.Documents.SubscriptionChangeVectorSpecialStates.LastDocument:
                             using (context.OpenReadTransaction())
                             {
@@ -87,7 +89,7 @@ namespace Raven.Server.Documents.Handlers
                 var timeLimit = TimeSpan.FromSeconds(GetIntValueQueryString("timeLimit", false) ?? 15);
                 var startEtag = cv.Etag;
 
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 using (context.OpenReadTransaction())
                 {
                     writer.WriteStartObject();
@@ -149,13 +151,13 @@ namespace Raven.Server.Documents.Handlers
                     writer.WritePropertyName("Includes");
                     var includes = new List<Document>();
                     includeCmd.Fill(includes);
-                    writer.WriteIncludes(context, includes);
+                    await writer.WriteIncludesAsync(context, includes);
                     writer.WriteEndObject();
                 }
             }
         }
 
-        [RavenAction("/databases/*/subscriptions", "PUT", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/subscriptions", "PUT", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public async Task Create()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -170,29 +172,31 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/subscriptions", "DELETE", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/subscriptions", "DELETE", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public async Task Delete()
         {
             var subscriptionName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("taskName");
 
             await Database.SubscriptionStorage.DeleteSubscription(subscriptionName, GetRaftRequestIdFromQuery());
 
+            Database.SubscriptionStorage.RaiseNotificationForTaskRemoved(subscriptionName);
+
             await NoContent();
         }
 
-        [RavenAction("/databases/*/subscriptions/state", "GET", AuthorizationStatus.ValidUser)]
-        public Task GetSubscriptionState()
+        [RavenAction("/databases/*/subscriptions/state", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        public async Task GetSubscriptionState()
         {
             var subscriptionName = GetStringQueryString("name", false);
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 if (string.IsNullOrEmpty(subscriptionName))
                 {
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-                    return Task.CompletedTask;
+                    return;
                 }
 
                 var subscriptionState = Database
@@ -202,28 +206,26 @@ namespace Raven.Server.Documents.Handlers
                 if (subscriptionState == null)
                 {
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                    return Task.CompletedTask;
+                    return;
                 }
 
                 context.Write(writer, subscriptionState.ToJson());
-
-                return Task.CompletedTask;
             }
         }
 
-        [RavenAction("/databases/*/subscriptions/connection-details", "GET", AuthorizationStatus.ValidUser, CorsMode = CorsMode.Cluster)]
-        public Task GetSubscriptionConnectionDetails()
+        [RavenAction("/databases/*/subscriptions/connection-details", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, CorsMode = CorsMode.Cluster)]
+        public async Task GetSubscriptionConnectionDetails()
         {
             var subscriptionName = GetStringQueryString("name", false);
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 if (string.IsNullOrEmpty(subscriptionName))
                 {
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-                    return Task.CompletedTask;
+                    return;
                 }
 
                 var state = Database.SubscriptionStorage.GetSubscriptionConnection(context, subscriptionName);
@@ -235,12 +237,12 @@ namespace Raven.Server.Documents.Handlers
                 };
 
                 context.Write(writer, subscriptionConnectionDetails.ToJson());
-                return Task.CompletedTask;
+                return;
             }
         }
 
-        [RavenAction("/databases/*/subscriptions", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
-        public Task GetAll()
+        [RavenAction("/databases/*/subscriptions", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
+        public async Task GetAll()
         {
             var start = GetStart();
             var pageSize = GetPageSize();
@@ -272,13 +274,13 @@ namespace Raven.Server.Documents.Handlers
                     if (subscription == null)
                     {
                         HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                        return Task.CompletedTask;
+                        return;
                     }
 
                     subscriptions = new[] { subscription };
                 }
 
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
 
@@ -291,7 +293,7 @@ namespace Raven.Server.Documents.Handlers
                         [nameof(SubscriptionState.Disabled)] = x.Disabled,
                         [nameof(SubscriptionState.LastClientConnectionTime)] = x.LastClientConnectionTime,
                         [nameof(SubscriptionState.LastBatchAckTime)] = x.LastBatchAckTime,
-                        ["Connection"] = GetSubscriptionConnectionDJV(x.Connection),
+                        ["Connection"] = GetSubscriptionConnectionJson(x.Connection),
                         ["RecentConnections"] = x.RecentConnections?.Select(r => new DynamicJsonValue()
                         {
                             ["State"] = new DynamicJsonValue()
@@ -299,7 +301,7 @@ namespace Raven.Server.Documents.Handlers
                                 ["LatestChangeVectorClientACKnowledged"] = r.SubscriptionState.ChangeVectorForNextBatchStartingPoint,
                                 ["Query"] = r.SubscriptionState.Query
                             },
-                            ["Connection"] = GetSubscriptionConnectionDJV(r)
+                            ["Connection"] = GetSubscriptionConnectionJson(r)
                         }),
                         ["FailedConnections"] = x.RecentRejectedConnections?.Select(r => new DynamicJsonValue()
                         {
@@ -308,23 +310,44 @@ namespace Raven.Server.Documents.Handlers
                                 ["LatestChangeVectorClientACKnowledged"] = r.SubscriptionState.ChangeVectorForNextBatchStartingPoint,
                                 ["Query"] = r.SubscriptionState.Query
                             },
-                            ["Connection"] = GetSubscriptionConnectionDJV(r)
+                            ["Connection"] = GetSubscriptionConnectionJson(r)
                         }).ToList()
                     });
 
-                    writer.WriteArray(context, "Results", subscriptionsAsBlittable, (w, c, subscription) =>
-                    {
-                        c.Write(w, subscription);
-                    });
+                    writer.WriteArray(context, "Results", subscriptionsAsBlittable, (w, c, subscription) => c.Write(w, subscription));
 
                     writer.WriteEndObject();
                 }
             }
+        }
+        
+        [RavenAction("/databases/*/subscriptions/performance/live", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, SkipUsagesCount = true)]
+        public async Task PerformanceLive()
+        {
+            using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
+            {
+                var receiveBuffer = new ArraySegment<byte>(new byte[1024]);
+                var receive = webSocket.ReceiveAsync(receiveBuffer, Database.DatabaseShutdown);
 
-            return Task.CompletedTask;
+                using (var ms = new MemoryStream())
+                using (var collector = new LiveSubscriptionPerformanceCollector(Database))
+                {
+                    // 1. Send data to webSocket without making UI wait upon opening webSocket
+                    await collector.SendStatsOrHeartbeatToWebSocket(receive, webSocket, ContextPool, ms, 100);
+
+                    // 2. Send data to webSocket when available
+                    while (Database.DatabaseShutdown.IsCancellationRequested == false)
+                    {
+                        if (await collector.SendStatsOrHeartbeatToWebSocket(receive, webSocket, ContextPool, ms, 4000) == false)
+                        {
+                            break;
+                        }
+                    }
+                }
+            }
         }
 
-        private static DynamicJsonValue GetSubscriptionConnectionDJV(SubscriptionConnection x)
+        private static DynamicJsonValue GetSubscriptionConnectionJson(SubscriptionConnection x)
         {
             if (x == null)
                 return new DynamicJsonValue();
@@ -333,14 +356,14 @@ namespace Raven.Server.Documents.Handlers
             {
                 [nameof(SubscriptionConnection.ClientUri)] = x.ClientUri,
                 [nameof(SubscriptionConnection.Strategy)] = x.Strategy,
-                [nameof(SubscriptionConnection.Stats)] = GetConnectionStatsDJV(x.Stats),
+                [nameof(SubscriptionConnection.Stats)] = GetConnectionStatsJson(x.Stats),
                 [nameof(SubscriptionConnection.ConnectionException)] = x.ConnectionException?.Message,
                 ["TcpConnectionStats"] = x.TcpConnection.GetConnectionStats(),
                 [nameof(SubscriptionConnection.RecentSubscriptionStatuses)] = new DynamicJsonArray(x.RecentSubscriptionStatuses?.ToArray() ?? Array.Empty<string>())
             };
         }
 
-        private static DynamicJsonValue GetConnectionStatsDJV(SubscriptionConnectionStats x)
+        private static DynamicJsonValue GetConnectionStatsJson(SubscriptionConnectionStats x)
         {
             return new DynamicJsonValue()
             {
@@ -353,7 +376,7 @@ namespace Raven.Server.Documents.Handlers
             };
         }
 
-        [RavenAction("/databases/*/subscriptions/drop", "POST", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/subscriptions/drop", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public Task DropSubscriptionConnection()
         {
             var subscriptionId = GetLongQueryString("id", required: false);
@@ -380,7 +403,7 @@ namespace Raven.Server.Documents.Handlers
             return NoContent();
         }
 
-        [RavenAction("/databases/*/subscriptions/update", "POST", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/subscriptions/update", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public async Task Update()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -490,6 +513,7 @@ namespace Raven.Server.Documents.Handlers
 
                         options.ChangeVector = null;
                         break;
+
                     case Constants.Documents.SubscriptionChangeVectorSpecialStates.LastDocument:
                         options.ChangeVector = Database.DocumentsStorage.GetLastDocumentChangeVector(context.Transaction.InnerTransaction, context, sub.Collection);
                         break;
@@ -514,7 +538,7 @@ namespace Raven.Server.Documents.Handlers
 
             HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 context.Write(writer, new DynamicJsonValue
                 {

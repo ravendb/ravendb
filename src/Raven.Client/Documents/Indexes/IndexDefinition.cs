@@ -36,6 +36,11 @@ namespace Raven.Client.Documents.Indexes
         public IndexPriority? Priority { get; set; }
 
         /// <summary>
+        /// Index state
+        /// </summary>
+        public IndexState? State { get; set; }
+
+        /// <summary>
         /// Index lock mode:
         /// <para>- Unlock - all index definition changes acceptable</para>
         /// <para>- LockedIgnore - all index definition changes will be ignored, only log entry will be created</para>
@@ -182,8 +187,43 @@ namespace Raven.Client.Documents.Indexes
                 }
             }
 
+            if (State != other.State)
+            {
+                if ((State == null && other.State == IndexState.Normal))
+                {
+                    // same
+                }
+                else
+                {
+                    result |= IndexDefinitionCompareDifferences.State;
+                }
+            }
+
+            if (DeploymentMode != other.DeploymentMode)
+            {
+                if (other.DeploymentMode == null)
+                {
+                    // same
+                }
+                else
+                {
+                    result |= IndexDefinitionCompareDifferences.DeploymentMode;
+                }
+            }
+
             if (DictionaryExtensions.ContentEquals(AdditionalSources, other.AdditionalSources) == false)
-                result |= IndexDefinitionCompareDifferences.AdditionalSources;
+            {
+                var additionalSources = new Dictionary<string, string>();
+                foreach (var kvp in AdditionalSources)
+                    additionalSources[kvp.Key] = Normalize(kvp.Value);
+
+                var otherAdditionalSources = new Dictionary<string, string>();
+                foreach (var kvp in other.AdditionalSources)
+                    otherAdditionalSources[kvp.Key] = Normalize(kvp.Value);
+
+                if (DictionaryExtensions.ContentEquals(additionalSources, otherAdditionalSources) == false)
+                    result |= IndexDefinitionCompareDifferences.AdditionalSources;
+            }
 
             bool additionalAssembliesEquals;
             if (AdditionalAssemblies == null && other.AdditionalAssemblies == null)
@@ -305,10 +345,13 @@ namespace Raven.Client.Documents.Indexes
         {
             unchecked
             {
-                int result = Maps.Where(x => x != null).Aggregate(0, (acc, val) => acc * 397 ^ val.GetHashCode());
+                var result = Maps.GetEnumerableHashCode();
                 result = (result * 397) ^ Maps.Count;
                 result = (result * 397) ^ (Reduce?.GetHashCode() ?? 0);
                 result = (result * 397) ^ DictionaryHashCode(Fields);
+                result = (result * 397) ^ DictionaryHashCode(AdditionalSources);
+                result = (result * 397) ^ AdditionalAssemblies.Count;
+                result = (result * 397) ^ AdditionalAssemblies.GetEnumerableHashCode();
                 result = (result * 397) ^ (OutputReduceToCollection?.GetHashCode() ?? 0);
                 return result;
             }
@@ -453,6 +496,11 @@ namespace Raven.Client.Documents.Indexes
         /// </summary>
         public string PatternReferencesCollectionName { get; set; }
 
+        /// <summary>
+        /// Define index deployment mode
+        /// </summary>
+        public IndexDeploymentMode? DeploymentMode { get; set; }
+
         public override string ToString()
         {
             return Name;
@@ -497,6 +545,7 @@ namespace Raven.Client.Documents.Indexes
             definition.ReduceOutputIndex = ReduceOutputIndex;
             definition.PatternForOutputReduceToCollectionReferences = PatternForOutputReduceToCollectionReferences;
             definition.PatternReferencesCollectionName = PatternReferencesCollectionName;
+            definition.DeploymentMode = DeploymentMode;
 
             foreach (var kvp in _configuration)
                 definition.Configuration[kvp.Key] = kvp.Value;
@@ -513,6 +562,20 @@ namespace Raven.Client.Documents.Indexes
                     definition.AdditionalAssemblies.Add(additionalAssembly.Clone());
             }
         }
+
+        internal static readonly IndexDefinitionCompareDifferences ReIndexRequiredMask =
+            IndexDefinitionCompareDifferences.Maps | 
+            IndexDefinitionCompareDifferences.Reduce | 
+            IndexDefinitionCompareDifferences.Fields | 
+            IndexDefinitionCompareDifferences.Configuration | 
+            IndexDefinitionCompareDifferences.AdditionalSources | 
+            IndexDefinitionCompareDifferences.AdditionalAssemblies;
+    }
+
+    public enum IndexDeploymentMode
+    {
+        Parallel,
+        Rolling
     }
 
     [Flags]
@@ -528,7 +591,8 @@ namespace Raven.Client.Documents.Indexes
         State = 1 << 9,
         AdditionalSources = 1 << 10,
         AdditionalAssemblies = 1 << 11,
+        DeploymentMode = 1 << 12,
 
-        All = Maps | Reduce | Fields | Configuration | LockMode | Priority | State | AdditionalSources | AdditionalAssemblies
+        All = Maps | Reduce | Fields | Configuration | LockMode | Priority | State | AdditionalSources | AdditionalAssemblies | DeploymentMode,
     }
 }

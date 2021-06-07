@@ -3,6 +3,7 @@
     public enum EtlType
     {
         Raven,
-        Sql
+        Sql,
+        Olap
     }
 }

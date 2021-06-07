@@ -389,6 +389,38 @@ body {
 
 .tooltip {
     .slidein-style;
+
+    .tooltip-header {
+        text-transform: uppercase;
+        letter-spacing: .1em;
+        color: @text-emphasis;
+    }
+
+    .tooltip-li {
+        display: flex;
+        font-size: 12px;
+        text-align: left;
+        margin-top: @gutter-xxs/2;
+
+        .value {
+            display: block;
+            flex-grow: 1;
+            font-size: 12px;
+            text-align: right;
+            color: @text-emphasis;
+            margin-left: @gutter-sm;
+            white-space: normal;
+            min-width: 100px;
+            max-width: 300px;
+            max-height: 390px;
+            overflow: hidden;
+        }
+
+        & + .tooltip-li {
+            border-top: 1px solid fadeout(@text-color, 70%);
+            padding-top: @gutter-xxs/2;
+        }
+    }
 }
 
 .json-preview {
@@ -426,46 +458,52 @@ body {
         display: inline-block;
         width: 50px;
     }
+        
+        &.dataContainer-lg {
+            .dataLabel {
+                width: 80px;
+}
+    }
 }
 
-.flex-vertical, .flex-horizontal, .flex-row, .form-group {
-    .flex-noshrink {
-        flex-shrink: 0;
-    }
 
-    .flex-basis-0 {
-        flex-basis: 0;
-    }
-
-    .flex-grow {
-        flex-grow: 1;
-        position: relative;
-    }
-
-    &.flex-stretch-items {
-        align-items: stretch;
-    }
-
-    &.flex-wrap {
-        flex-wrap: wrap;
-    }
-
-    .flex-start {
-        align-self: flex-start;
-    }
-
-    .flex-end {
-        align-self: flex-end;
-    }
-
-    .flex-center {
-        align-self: center;
-    }
-
-    &.flex-content-center {
-        justify-content: center;
-    }
+.flex-noshrink {
+    flex-shrink: 0;
 }
+
+.flex-basis-0 {
+    flex-basis: 0;
+}
+
+.flex-grow {
+    flex-grow: 1;
+    position: relative;
+}
+
+.flex-stretch-items {
+    align-items: stretch !important;
+}
+
+.flex-wrap {
+    flex-wrap: wrap;
+}
+
+.flex-start {
+    align-self: flex-start;
+}
+
+.flex-end {
+    align-self: flex-end;
+}
+
+.flex-center {
+    align-self: center;
+}
+
+&.flex-content-center {
+    justify-content: center;
+}
+
 
 .flex-horizontal {
     display: flex;
@@ -487,11 +525,6 @@ body {
         position: relative;
         flex-shrink: 0;
         margin-bottom: @grid-gutter-width/4;
-    }
-
-    .flex-grow {
-        flex-grow: 1;
-        position: relative;
     }
 
     .flex-footer {
@@ -1151,6 +1184,7 @@ body {
     display: flex;
     flex-grow: 1;
     height: 100%;
+    overflow-x: hidden;
 }
 
 #menu-toggle {

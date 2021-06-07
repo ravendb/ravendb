@@ -1,9 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using Raven.Server.Documents.Indexes;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Indexes.Analysis;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Expiration;
 using Raven.Client.Documents.Operations.Refresh;
@@ -11,9 +15,10 @@ using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries.Sorting;
-using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
+using Raven.Server.Config;
+using Raven.Server.Json;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -30,6 +35,11 @@ namespace Raven.Server.ServerWide
         {
             _context = context;
             _record = record ?? throw new ArgumentNullException(nameof(record));
+        }
+
+        private RawDatabaseRecord(DatabaseRecord record)
+        {
+            _materializedRecord = record;
         }
 
         public BlittableJsonReaderObject Raw
@@ -132,8 +142,34 @@ namespace Raven.Server.ServerWide
                 return _topology;
             }
         }
-        
-         public bool IsSharded()
+
+        private DatabaseTopology[] _shards;
+
+        public DatabaseTopology[] Shards
+        {
+            get
+            {
+                if (_materializedRecord != null)
+                    return _materializedRecord.Shards;
+
+                if (_shards != null)
+                    return _shards;
+
+                if (_record.TryGet(nameof(DatabaseRecord.Shards), out BlittableJsonReaderArray array) == false || array == null)
+                    return null;
+
+                _shards = new DatabaseTopology[array.Length];
+                for (var index = 0; index < array.Length; index++)
+                {
+                    var shard = (BlittableJsonReaderObject)array[index];
+                    _shards[index] = JsonDeserializationCluster.DatabaseTopology(shard);
+                }
+
+                return _shards;
+            }
+        }
+
+        public bool IsSharded()
         {
             _record.TryGet(nameof(DatabaseRecord.Shards), out BlittableJsonReaderArray array);
             return array != null && array.Length > 0;
@@ -145,12 +181,23 @@ namespace Raven.Server.ServerWide
             var name = DatabaseName;
             var shardedTopology = (BlittableJsonReaderObject)array[index];
             var shardName = name + "$" + index;
+
+            var settings = new Dictionary<string, string>();
+            foreach (var setting in Settings)
+            {
+                settings.Add(setting.Key, setting.Value);
+            }
+            // TODO: get rid of the strings
+            var dir = settings["DataDir"] ?? ".";
+            settings["DataDir"] = Path.Combine(dir, shardName);
+
             _record.Modifications = new DynamicJsonValue(_record)
             {
                 [nameof(DatabaseRecord.DatabaseName)] = shardName,
                 [nameof(DatabaseRecord.Topology)] = shardedTopology,
                 [nameof(DatabaseRecord.ShardAllocations)] = null,
                 [nameof(DatabaseRecord.Shards)] = null,
+                [nameof(DatabaseRecord.Settings)] = DynamicJsonValue.Convert(settings)
             };
 
             return new RawDatabaseRecord(_context, _context.ReadObject(_record, shardName));
@@ -163,32 +210,16 @@ namespace Raven.Server.ServerWide
 
             return GetShardedDatabaseRecords();
         }
-
+        
         public IEnumerable<RawDatabaseRecord> GetShardedDatabaseRecords()
         {
             if(_record.TryGet(nameof(DatabaseRecord.Shards), out BlittableJsonReaderArray array) == false 
                || array == null)
                 yield break;
 
-            var name = DatabaseName;
-
             for (var index = 0; index < array.Length; index++)
             {
-                using (var clone = _record.CloneOnTheSameContext())
-                {
-                    var shardedTopology = (BlittableJsonReaderObject)array[index];
-                    var shardName = name + "$" + index;
-                    clone.Modifications = new DynamicJsonValue(clone)
-                    {
-                        [nameof(DatabaseRecord.DatabaseName)] = shardName,
-                        [nameof(DatabaseRecord.Topology)] = shardedTopology,
-                        [nameof(DatabaseRecord.ShardAllocations)] = null,
-                        [nameof(DatabaseRecord.Shards)] = null,
-                    };
-                    var modifiedClone = _context.ReadObject(clone, shardName);
-                    var shardRecord = new RawDatabaseRecord(_context, modifiedClone);
-                    yield return shardRecord;
-                }
+                yield return GetShardedDatabaseRecord(index);
             }
         }
 
@@ -205,6 +236,22 @@ namespace Raven.Server.ServerWide
                     _databaseState = DatabaseStateStatus.Normal;
 
                 return _databaseState.Value;
+            }
+        }
+
+        private DatabaseLockMode? _lockMode;
+
+        public DatabaseLockMode LockMode
+        {
+            get
+            {
+                if (_materializedRecord != null)
+                    return _materializedRecord.LockMode;
+
+                if (_lockMode == null && _record.TryGet(nameof(DatabaseRecord.LockMode), out _lockMode) == false)
+                    _lockMode = DatabaseLockMode.Unlock;
+
+                return _lockMode.Value;
             }
         }
 
@@ -480,6 +527,30 @@ namespace Raven.Server.ServerWide
             }
         }
 
+
+        private List<OlapEtlConfiguration> _olapEtls;
+
+        public List<OlapEtlConfiguration> OlapEtls
+        {
+            get
+            {
+                if (_materializedRecord != null)
+                    return _materializedRecord.OlapEtls;
+
+                if (_olapEtls == null)
+                {
+                    _olapEtls = new List<OlapEtlConfiguration>();
+                    if (_record.TryGet(nameof(DatabaseRecord.OlapEtls), out BlittableJsonReaderArray bjra) && bjra != null)
+                    {
+                        foreach (BlittableJsonReaderObject element in bjra)
+                            _olapEtls.Add(JsonDeserializationCluster.OlapEtlConfiguration(element));
+                    }
+                }
+
+                return _olapEtls;
+            }
+        }
+
         private Dictionary<string, string> _settings;
 
         public Dictionary<string, string> Settings
@@ -540,6 +611,38 @@ namespace Raven.Server.ServerWide
                 }
 
                 return _deletionInProgress;
+            }
+        }
+
+
+        private Dictionary<string, RollingIndex> _rollingIndexes;
+
+        public Dictionary<string, RollingIndex> RollingIndexes
+        {
+            get
+            {
+                if (_materializedRecord != null)
+                    return _materializedRecord.RollingIndexes;
+
+                if (_rollingIndexes == null)
+                {
+                    if (_record.TryGet(nameof(DatabaseRecord.RollingIndexes), out BlittableJsonReaderObject obj) && obj != null)
+                    {
+                        _rollingIndexes = new Dictionary<string, RollingIndex>();
+                        var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
+                        for (var i = 0; i < obj.Count; i++)
+                        {
+                            obj.GetPropertyByIndex(i, ref propertyDetails);
+
+                            if (propertyDetails.Value == null)
+                                continue;
+
+                            if (propertyDetails.Value is BlittableJsonReaderObject bjro)
+                                _rollingIndexes[propertyDetails.Name] = JsonDeserializationCluster.RollingIndexes(bjro);
+                        }
+                    }
+                }
+                return _rollingIndexes;
             }
         }
 
@@ -700,12 +803,44 @@ namespace Raven.Server.ServerWide
                                 continue;
 
                             if (propertyDetails.Value is BlittableJsonReaderObject bjro)
-                                _sorters[propertyDetails.Name] = JsonDeserializationCluster.SorterDefinition(bjro);
+                                _sorters[propertyDetails.Name] = JsonDeserializationServer.SorterDefinition(bjro);
                         }
                     }
                 }
 
                 return _sorters;
+            }
+        }
+
+        private Dictionary<string, AnalyzerDefinition> _analyzers;
+
+        public Dictionary<string, AnalyzerDefinition> Analyzers
+        {
+            get
+            {
+                if (_materializedRecord != null)
+                    return _materializedRecord.Analyzers;
+
+                if (_analyzers == null)
+                {
+                    _analyzers = new Dictionary<string, AnalyzerDefinition>();
+                    if (_record.TryGet(nameof(DatabaseRecord.Analyzers), out BlittableJsonReaderObject obj) && obj != null)
+                    {
+                        var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
+                        for (var i = 0; i < obj.Count; i++)
+                        {
+                            obj.GetPropertyByIndex(i, ref propertyDetails);
+
+                            if (propertyDetails.Value == null)
+                                continue;
+
+                            if (propertyDetails.Value is BlittableJsonReaderObject bjro)
+                                _analyzers[propertyDetails.Name] = JsonDeserializationServer.AnalyzerDefinition(bjro);
+                        }
+                    }
+                }
+
+                return _analyzers;
             }
         }
 
@@ -752,7 +887,7 @@ namespace Raven.Server.ServerWide
 
                 if (_ravenConnectionStrings == null)
                 {
-                    _ravenConnectionStrings = new Dictionary<string, RavenConnectionString>();
+                    _ravenConnectionStrings = new Dictionary<string, RavenConnectionString>();   
                     if (_record.TryGet(nameof(DatabaseRecord.RavenConnectionStrings), out BlittableJsonReaderObject obj) && obj != null)
                     {
                         var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
@@ -773,6 +908,39 @@ namespace Raven.Server.ServerWide
             }
         }
 
+        private Dictionary<string, OlapConnectionString> _olapConnectionStrings;
+
+        public Dictionary<string, OlapConnectionString> OlapConnectionString
+        {
+            get
+            {
+                if (_materializedRecord != null)
+                    return _materializedRecord.OlapConnectionStrings;
+
+                if (_olapConnectionStrings == null)
+                {
+                    _olapConnectionStrings = new Dictionary<string, OlapConnectionString>();
+                    if (_record.TryGet(nameof(DatabaseRecord.OlapConnectionStrings), out BlittableJsonReaderObject obj) && obj != null)
+                    {
+                        var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
+                        for (var i = 0; i < obj.Count; i++)
+                        {
+                            obj.GetPropertyByIndex(i, ref propertyDetails);
+
+                            if (propertyDetails.Value == null)
+                                continue;
+
+                            if (propertyDetails.Value is BlittableJsonReaderObject bjro)
+                                _olapConnectionStrings[propertyDetails.Name] = JsonDeserializationCluster.OlapConnectionString(bjro);
+                        }
+                    }
+                }
+
+                return _olapConnectionStrings;
+            }
+        }
+
+
         public void Dispose()
         {
             _record?.Dispose();
@@ -792,6 +960,8 @@ namespace Raven.Server.ServerWide
                 return _materializedRecord;
             }
         }
-
+        
+        public static implicit operator DatabaseRecord(RawDatabaseRecord raw) => raw.MaterializedRecord;
+        public static implicit operator RawDatabaseRecord(DatabaseRecord record) => new RawDatabaseRecord(record);
     }
 }

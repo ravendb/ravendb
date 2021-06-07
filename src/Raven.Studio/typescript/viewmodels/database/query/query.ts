@@ -70,6 +70,18 @@ class highlightSection {
 class timeSeriesTableDetails {
     constructor(public documentId: string, public name: string, public value: timeSeriesQueryResultDto) {
     }
+    
+    isEqual(table: timeSeriesTableDetails) {
+        if (table.documentId !== this.documentId) {
+            return false;
+        }
+        
+        if (table.name !== this.name) {
+            return false;
+        }
+        
+        return true;
+    }
 }
 
 class perCollectionIncludes {
@@ -567,17 +579,25 @@ class query extends viewModelBase {
             detectTimeSeries: true, 
             timeSeriesActionHandler: (type, documentId, name, value, event) => {
                 if (type === "plot") {
-                    const chart = new timeSeriesPlotDetails([{
-                        documentId,
-                        value,
-                        name
-                    }]);
-                    this.timeSeriesGraphs.push(chart);
-                    this.goToTimeSeriesTab(chart);
+                    const newChart = new timeSeriesPlotDetails([{ documentId, value, name}]);
+
+                    const existingChart = this.timeSeriesGraphs().find(x => x.isEqual(newChart));
+                    if (existingChart) {
+                        this.goToTimeSeriesTab(existingChart);
+                    } else {
+                        this.timeSeriesGraphs.push(newChart);
+                        this.goToTimeSeriesTab(newChart);
+                    }
                 } else {
-                    const table = new timeSeriesTableDetails(documentId, name, value);
-                    this.timeSeriesTables.push(table);
-                    this.goToTimeSeriesTab(table);
+                    const newTable = new timeSeriesTableDetails(documentId, name, value);
+
+                    const existingTable = this.timeSeriesTables().find(x => x.isEqual(newTable));
+                    if (existingTable) {
+                        this.goToTimeSeriesTab(existingTable);
+                    } else {
+                        this.timeSeriesTables.push(newTable);
+                        this.goToTimeSeriesTab(newTable);
+                    }
                 }
             }
         });
@@ -697,8 +717,8 @@ class query extends viewModelBase {
         const valuesCount = timeSeriesQueryResult.detectValuesCount(tab.value);
         const maybeArrayPresenter: (columnName: string) => (dto: timeSeriesQueryGroupedItemResultDto | timeSeriesRawItemResultDto) => string | number
             = valuesCount === 1
-            ? (columnName => dto => (dto as any)[columnName][0])
-            : (columnName => dto => "[" + (dto as any)[columnName].join(", ") + "]");
+            ? (columnName => dto => (dto as any)[columnName][0]?.toLocaleString() ?? "-")
+            : (columnName => dto => ((dto as any)[columnName]).map((x: number) => x?.toLocaleString() ?? "-").join("; "));
 
         const formatTimeSeriesDate = (input: string) => {
             const dateToFormat = moment.utc(input);
@@ -813,6 +833,7 @@ class query extends viewModelBase {
         }
         
         this.timeSeriesGraphs([]);
+        this.timeSeriesTables([]);
         
         this.graphTabIsDirty(true);
         this.columnsSelector.reset();
@@ -1238,7 +1259,7 @@ class query extends viewModelBase {
             const spatialShapes = queryResults.additionalResultInfo.SpatialShapes;
             for (let i = 0; i < spatialShapes.length; i++) {
                 const shape = spatialShapes[i];
-                switch (shape.ShapeType) {
+                switch (shape.Type) {
                     case "Circle": {
                         const circle = new spatialCircleModel(shape as Raven.Server.Documents.Indexes.Spatial.Circle);
                         spatialCirclesLayer.push(circle);
@@ -1278,10 +1299,17 @@ class query extends viewModelBase {
                 }
             });
         });
+
+        const newChart = new timeSeriesPlotDetails(timeSeries);
         
-        const chart = new timeSeriesPlotDetails(timeSeries);
-        this.timeSeriesGraphs.push(chart);
-        this.goToTimeSeriesTab(chart);
+        const existingChart = this.timeSeriesGraphs().find(x => x.isEqual(newChart));
+        
+        if (existingChart) {
+            this.goToTimeSeriesTab(existingChart);
+        } else {
+            this.timeSeriesGraphs.push(newChart);
+            this.goToTimeSeriesTab(newChart);
+        }
     }
 
     refresh() {
@@ -1480,6 +1508,9 @@ class query extends viewModelBase {
         this.resultsExpanded.toggle();
         this.gridController().reset(true);
         this.graphQueryResults.onResize();
+        if (this.currentTab() === this.spatialMap()) {
+            this.spatialMap().onResize();
+        }
     }
     
 

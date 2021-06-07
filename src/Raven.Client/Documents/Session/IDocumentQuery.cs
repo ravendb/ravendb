@@ -65,6 +65,11 @@ namespace Raven.Client.Documents.Session
         int Count();
 
         /// <summary>
+        /// Gets the total count of records for this query as int64 
+        /// </summary>
+        long LongCount();
+
+        /// <summary>
         ///     Register the query as a lazy query in the session and return a lazy
         ///     instance that will evaluate the query only when needed.
         ///     Also provide a function to execute when the value is evaluated
@@ -77,6 +82,10 @@ namespace Raven.Client.Documents.Session
         IDocumentQueryBase<T>
     {
         IRawDocumentQuery<T> Projection(ProjectionBehavior projectionBehavior);
+        /// <summary>
+        ///    Execute raw query aggregated by facet
+        /// </summary>
+        Dictionary<string, FacetResult> ExecuteAggregation();
     }
 
     public interface IGraphQuery<T> :
@@ -173,7 +182,7 @@ namespace Raven.Client.Documents.Session
 
         IAggregationDocumentQuery<T> AggregateBy(FacetBase facet);
 
-        IAggregationDocumentQuery<T> AggregateBy(IEnumerable<Facet> facets);
+        IAggregationDocumentQuery<T> AggregateBy(IEnumerable<FacetBase> facets);
 
         IAggregationDocumentQuery<T> AggregateUsing(string facetSetupDocumentId);
 

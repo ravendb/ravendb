@@ -38,7 +38,7 @@ namespace Raven.Server.Documents.Handlers
 {
     public class BatchHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/bulk_docs", "POST", AuthorizationStatus.ValidUser, DisableOnCpuCreditsExhaustion = true)]
+        [RavenAction("/databases/*/bulk_docs", "POST", AuthorizationStatus.ValidUser, EndpointType.Write, DisableOnCpuCreditsExhaustion = true)]
         public async Task BulkDocs()
         {
             var waitForIndexesTimeout = GetTimeSpanQueryString("waitForIndexesTimeout", required: false);
@@ -55,7 +55,7 @@ namespace Raven.Server.Documents.Handlers
                     await commandBuilder.BuildCommandsAsync(context, RequestBodyStream());
                 }
                 else if (contentType.StartsWith("multipart/mixed", StringComparison.OrdinalIgnoreCase) ||
-                    contentType.StartsWith("multipart/form-data", StringComparison.OrdinalIgnoreCase))
+                         contentType.StartsWith("multipart/form-data", StringComparison.OrdinalIgnoreCase))
                 {
                     await commandBuilder.ParseMultipart(context, RequestBodyStream(), HttpContext.Request.ContentType);
                 }
@@ -91,8 +91,9 @@ namespace Raven.Server.Documents.Handlers
                         return;
                     }
 
+
                     if (waitForIndexesTimeout != null)
-                        command.ModifiedCollections = new HashSet<string>();
+                        command.ModifiedCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
                     try
                     {
@@ -122,7 +123,7 @@ namespace Raven.Server.Documents.Handlers
                     }
 
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
-                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
                         context.Write(writer, new DynamicJsonValue {[nameof(BatchCommandResult.Results)] = command.Reply});
                     }
@@ -152,6 +153,7 @@ namespace Raven.Server.Documents.Handlers
                                 throw new NotSupportedException($"The document {document.Id} has time series, this is not supported in cluster wide transaction.");
                         }
                         break;
+
                     default:
                         throw new ArgumentOutOfRangeException($"The command type {document.Type} is not supported in cluster transaction.");
                 }
@@ -235,7 +237,7 @@ namespace Raven.Server.Documents.Handlers
             }
 
             HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 context.Write(writer, new DynamicJsonValue
                 {
@@ -365,7 +367,7 @@ namespace Raven.Server.Documents.Handlers
                 {
                     if (specificIndexes.Contains(index.Name))
                     {
-                        if (index.Collections.Count == 0 || index.Collections.Overlaps(modifiedCollections))
+                        if (index.WorksOnAnyCollection(modifiedCollections))
                             indexesToCheck.Add(index);
                     }
                 }
@@ -375,8 +377,7 @@ namespace Raven.Server.Documents.Handlers
                 foreach (var index in database.IndexStore.GetIndexes())
                 {
                     if (index.Collections.Contains(Constants.Documents.Collections.AllDocumentsCollection) ||
-                        index.Collections.Overlaps(modifiedCollections) ||
-                        index.Collections.Count == 0)
+                        index.WorksOnAnyCollection(modifiedCollections))
                     {
                         indexesToCheck.Add(index);
                     }
@@ -496,7 +497,7 @@ namespace Raven.Server.Documents.Handlers
 
                     if (options.WaitForIndexesTimeout != null)
                     {
-                        ModifiedCollections = new HashSet<string>();
+                        ModifiedCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                     }
 
                     if (commands != null)
@@ -563,6 +564,7 @@ namespace Raven.Server.Documents.Handlers
                                     }
 
                                     break;
+
                                 case CommandType.DELETE:
                                     if (current < count)
                                     {
@@ -604,6 +606,7 @@ namespace Raven.Server.Documents.Handlers
                                         }
                                     }
                                     break;
+
                                 default:
                                     throw new NotSupportedException($"{cmd.Type} is not supported in {nameof(ClusterTransactionMergedCommand)}.");
                             }
@@ -953,6 +956,7 @@ namespace Raven.Server.Documents.Handlers
                             acReplies.Add((acReply, nameof(Constants.Fields.CommandData.DocumentChangeVector)));
                             Reply.Add(acReply);
                             break;
+
                         case CommandType.TimeSeries:
                             EtlGetDocIdFromPrefixIfNeeded(ref cmd.Id, cmd, lastPutResult);
                             var tsCmd = new TimeSeriesHandler.ExecuteTimeSeriesBatchCommand(Database, cmd.Id, cmd.TimeSeries, cmd.FromEtl);
@@ -971,6 +975,7 @@ namespace Raven.Server.Documents.Handlers
                             });
 
                             break;
+
                         case CommandType.TimeSeriesCopy:
 
                             var reader = Database.DocumentsStorage.TimeSeriesStorage.GetReader(context, cmd.Id, cmd.Name, cmd.From ?? DateTime.MinValue, cmd.To ?? DateTime.MaxValue);
@@ -991,6 +996,7 @@ namespace Raven.Server.Documents.Handlers
                                 [nameof(BatchRequestParser.CommandData.Type)] = nameof(CommandType.TimeSeriesCopy),
                             });
                             break;
+
                         case CommandType.Counters:
                             EtlGetDocIdFromPrefixIfNeeded(ref cmd.Counters.DocumentId, cmd, lastPutResult);
 
@@ -1115,7 +1121,7 @@ namespace Raven.Server.Documents.Handlers
 
             private void EtlGetDocIdFromPrefixIfNeeded(ref string docId, BatchRequestParser.CommandData cmd, DocumentsStorage.PutOperationResults? lastPutResult)
             {
-                if (!cmd.FromEtl || docId[^1] != Database.IdentityPartsSeparator) 
+                if (!cmd.FromEtl || docId[^1] != Database.IdentityPartsSeparator)
                     return;
                 // counter/time-series sent by Raven ETL, only prefix is defined
 
@@ -1125,7 +1131,7 @@ namespace Raven.Server.Documents.Handlers
                 Debug.Assert(lastPutResult.HasValue && lastPutResult.Value.Id.StartsWith(docId));
                 docId = lastPutResult.Value.Id;
             }
-            
+
             public void Dispose()
             {
                 if (ParsedCommands.Count == 0)
@@ -1197,11 +1203,12 @@ namespace Raven.Server.Documents.Handlers
                     skipPatchIfChangeVectorMismatch: false,
                     patch: (ParsedCommands[i].Patch, ParsedCommands[i].PatchArgs),
                     patchIfMissing: (ParsedCommands[i].PatchIfMissing, ParsedCommands[i].PatchIfMissingArgs),
+                    identityPartsSeparator:database.IdentityPartsSeparator,
+                    createIfMissing:ParsedCommands[i].CreateIfMissing,
                     isTest: false,
                     debugMode: false,
                     collectResultsNeeded: true,
-                    returnDocument: ParsedCommands[i].ReturnDocument,
-                    identityPartsSeparator:database.IdentityPartsSeparator
+                    returnDocument: ParsedCommands[i].ReturnDocument
                 );
             }
 

@@ -19,8 +19,8 @@ class genUtils {
         '=': '&#x3D;'
     };
 
-    static dateFormat = "YYYY MMMM Do, h:mm A";
-    
+    static readonly basicDateFormat = "YYYY-MM-DD";
+    static readonly dateFormat = "YYYY MMMM Do, h:mm A";
     static readonly utcFullDateFormat = "YYYY-MM-DD[T]HH:mm:ss.SSS[Z]";
     
     /***  IP Address Methods  ***/
@@ -235,26 +235,31 @@ class genUtils {
     /***  Size Methods ***/
 
     // Format bytes to human size string
-    static formatBytesToSize(bytes: number, digitsAfterDecimalPoint = 2) : string {
+    static formatBytesToSize(bytes: number, digitsAfterDecimalPoint?: number, asArray?: false): string
+    static formatBytesToSize(bytes: number, digitsAfterDecimalPoint?: number, asArray?: true): [string, string]
+    static formatBytesToSize(bytes: number, digitsAfterDecimalPoint = 2, asArray: boolean = false): string|[string, string] {
         const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
         if (bytes === 0) {
-            return "0 Bytes";
+            return asArray ? ["0", "Bytes"] : "0 Bytes";
         }
         if (bytes === 1) {
-            return "1 Byte";
+            return asArray ? ["1", "Byte"] : "1 Byte";
         }
-        if (!bytes || bytes === -1) return 'n/a';
+        if (!bytes || bytes === -1) {
+            return asArray ? ['n/a', "-"] : "n/a";
+        }
         const i = Math.floor(Math.log(bytes) / Math.log(1024));
 
         if (i < 0) {
             // number < 1
-            return genUtils.formatAsCommaSeperatedString(bytes, digitsAfterDecimalPoint) + ' Bytes';
+            const numberPart = genUtils.formatAsCommaSeperatedString(bytes, digitsAfterDecimalPoint);
+            return asArray ? [numberPart, "Bytes"] : numberPart + " Bytes";
         }
 
         const res = bytes / Math.pow(1024, i);
         const newRes = genUtils.formatAsCommaSeperatedString(res, digitsAfterDecimalPoint);
-
-        return newRes + ' ' + sizes[i];
+        
+        return asArray ? [newRes, sizes[i]] : newRes + " " + sizes[i];
     }
 
     static getSizeInBytesAsUTF8(input: string) {
@@ -389,6 +394,9 @@ class genUtils {
     }
 
     private static sortAlphaNumericInternal(a: string, b: string): number {
+        if (a === b) {
+            return 0;
+        }
         const aInt = parseInt(a, 10);
         const bInt = parseInt(b, 10);
 
@@ -586,18 +594,6 @@ class genUtils {
         }
         return code;
     };
-    
-    static findLongestLine(htmlText: string, lineSeparator: string = "<br/>") : string {
-        // Find and return the longest line in an html text
-        const textLines = htmlText.split(lineSeparator);
-        return textLines.reduce((a, b) => (a.length > b.length) ? a : b, "");
-    }
-
-    static findNumberOfLines(htmlText: string, lineSeparator: string = "<br/>"): number {
-        // Find and return the number of lines in an html text
-        const textLines = htmlText.split(lineSeparator);
-        return textLines.length;
-    }
     
     static canConsumeDelegatedEvent(event: JQueryEventObject) {
         const target = event.target;

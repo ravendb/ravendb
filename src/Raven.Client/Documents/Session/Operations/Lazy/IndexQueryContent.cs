@@ -18,7 +18,7 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
             _query = query ?? throw new ArgumentNullException(nameof(query));
         }
 
-        public void WriteContent(BlittableJsonTextWriter writer, JsonOperationContext context)
+        public void WriteContent(AbstractBlittableJsonTextWriter writer, JsonOperationContext context)
         {
             writer.WriteIndexQuery(_conventions, context, _query);
         }

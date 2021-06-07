@@ -9,6 +9,7 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Indexes.Analysis;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
@@ -18,6 +19,7 @@ using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Expiration;
 using Raven.Client.Documents.Operations.Indexes;
@@ -48,7 +50,11 @@ using Raven.Client.Util;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Dashboard;
+using Raven.Server.Dashboard.Cluster;
+using Raven.Server.Dashboard.Cluster.Notifications;
 using Raven.Server.Documents.ETL;
+using Raven.Server.Documents.ETL.Providers.OLAP;
+using Raven.Server.Documents.ETL.Providers.OLAP.Test;
 using Raven.Server.Documents.ETL.Providers.Raven.Test;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
 using Raven.Server.Documents.ETL.Providers.SQL.Test;
@@ -133,9 +139,11 @@ namespace TypingsGenerator
                 .WithTypeMapping(TsPrimitive.Any, typeof(TreePage))
                 .WithTypeMapping(TsPrimitive.String, typeof(DateTime))
                 .WithTypeMapping(TsPrimitive.String, typeof(LazyStringValue))
+                .WithTypeMapping(TsPrimitive.Any, typeof(DynamicJsonValue))
                 .WithTypeMapping(new TsArray(TsPrimitive.Any, 1), typeof(BlittableJsonReaderArray))
                 .WithTypeMapping(new TsArray(TsPrimitive.Any, 1), typeof(DynamicJsonArray))
                 .WithTypeMapping(new TsArray(TsPrimitive.Any, 1), typeof(IEnumerable))
+                .WithTypeMapping(new TsArray(TsPrimitive.Any, 1), typeof(IList))
                 .WithTypeMapping(TsPrimitive.Any, typeof(TaskCompletionSource<object>))
                 .WithTypeMapping(TsPrimitive.Any, typeof(BlittableJsonReaderObject));
 
@@ -213,6 +221,7 @@ namespace TypingsGenerator
             // subscriptions
             scripter.AddType(typeof(SubscriptionConnectionStats));
             scripter.AddType(typeof(SubscriptionWorkerOptions));
+            scripter.AddType(typeof(SubscriptionError));
             scripter.AddType(typeof(SubscriptionTryout));
 
             // changes
@@ -249,6 +258,8 @@ namespace TypingsGenerator
             scripter.AddType(typeof(IndexErrors));
             scripter.AddType(typeof(StudioTasksHandler.FormattedExpression));
             scripter.AddType(typeof(StudioIndexHandler.IndexTypeInfo));
+            scripter.AddType(typeof(AdminIndexHandler.DumpIndexResult));
+            scripter.AddType(typeof(StudioDatabaseTasksHandler.IndexDefaults));
 
             // cluster
             scripter.AddType(typeof(ClusterTopology));
@@ -261,7 +272,7 @@ namespace TypingsGenerator
 
             // spatial query
             scripter.AddType(typeof(SpatialUnits));
-            scripter.AddType(typeof(SpatialShape));
+            scripter.AddType(typeof(SpatialShapeType));
             scripter.AddType(typeof(SpatialShapeBase));
             scripter.AddType(typeof(Circle));
             scripter.AddType(typeof(Polygon));
@@ -299,6 +310,19 @@ namespace TypingsGenerator
             scripter.AddType(typeof(IndexingSpeed));
             scripter.AddType(typeof(MachineResources));
             scripter.AddType(typeof(DrivesUsage));
+            
+            // cluster dashboard
+            scripter.AddType(typeof(WidgetRequest));
+            scripter.AddType(typeof(WidgetMessage));
+            scripter.AddType(typeof(CpuUsagePayload));
+            scripter.AddType(typeof(ServerTimePayload));
+            scripter.AddType(typeof(MemoryUsagePayload));
+            scripter.AddType(typeof(StorageUsagePayload));
+            scripter.AddType(typeof(DatabaseIndexingSpeedPayload));
+            scripter.AddType(typeof(DatabaseStorageUsagePayload));
+            scripter.AddType(typeof(IndexingSpeedPayload));
+            scripter.AddType(typeof(TrafficWatchPayload));
+            scripter.AddType(typeof(DatabaseTrafficWatchPayload));
 
             // expiration
             scripter.AddType(typeof(ExpirationConfiguration));
@@ -399,6 +423,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(SubscriptionCreationOptions));
             scripter.AddType(typeof(Constants.Documents.SubscriptionChangeVectorSpecialStates));
             scripter.AddType(typeof(SubscriptionOpeningStrategy));
+            scripter.AddType(typeof(SubscriptionTaskPerformanceStats));
 
             // ongoing tasks - ravenDB ETL
             scripter.AddType(typeof(EtlTaskProgress));
@@ -418,7 +443,17 @@ namespace TypingsGenerator
             scripter.AddType(typeof(TestSqlEtlScript));
             scripter.AddType(typeof(SqlEtlTable));
             scripter.AddType(typeof(SqlEtlTestScriptResult));
-
+            
+            // ongoing tasks - Olap ETL
+            scripter.AddType(typeof(OngoingTaskOlapEtlDetails));
+            scripter.AddType(typeof(OngoingTaskOlapEtlListView));
+            scripter.AddType(typeof(OlapEtlConfiguration));
+            scripter.AddType(typeof(OlapEtlTable));
+            scripter.AddType(typeof(EtlPerformanceOperation));
+            scripter.AddType(typeof(OlapEtlPerformanceOperation));
+            scripter.AddType(typeof(OlapEtlTestScriptResult));
+            scripter.AddType(typeof(TestOlapEtlScript));
+            
             // connection strings
             scripter.AddType(typeof(ConnectionString));
             scripter.AddType(typeof(RavenConnectionString));
@@ -446,7 +481,8 @@ namespace TypingsGenerator
             // adminJs console
             scripter.AddType(typeof(AdminJsScript));
 
-            scripter.AddType(typeof(TrafficWatchChange));
+            scripter.AddType(typeof(TrafficWatchHttpChange));
+            scripter.AddType(typeof(TrafficWatchTcpChange));
 
             scripter.AddType(typeof(NodeConnectionTestResult));
             scripter.AddType(typeof(ClientCertificateGenerationResult));
@@ -518,6 +554,10 @@ namespace TypingsGenerator
             scripter.AddType(typeof(ServerWideStudioConfiguration));
             scripter.AddType(typeof(StudioConfiguration));
 
+            // custom sorters & analyzers
+            scripter.AddType(typeof(SorterDefinition));
+            scripter.AddType(typeof(AnalyzerDefinition));
+            
             scripter.AddType(typeof(StudioTasksHandler.OfflineMigrationValidation));
 
             scripter.AddType(typeof(StartTransactionsRecordingOperation.Parameters));
@@ -527,8 +567,6 @@ namespace TypingsGenerator
             scripter.AddType(typeof(DataDirectoryResult));
 
             scripter.AddType(typeof(LiveRunningQueriesCollector.ExecutingQueryCollection));
-            scripter.AddType(typeof(SorterDefinition));
-            scripter.AddType(typeof(AdminIndexHandler.DumpIndexResult));
 
             return scripter;
         }

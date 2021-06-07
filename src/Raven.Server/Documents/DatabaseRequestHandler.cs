@@ -3,6 +3,7 @@ using System.Net;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Util;
+using Raven.Client.Documents.Changes;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -49,8 +50,7 @@ namespace Raven.Server.Documents
            Action<DynamicJsonValue, BlittableJsonReaderObject, long> fillJson = null,
            HttpStatusCode statusCode = HttpStatusCode.OK)
         {
-
-            if (TryGetAllowedDbs(Database.Name, out var _, requireAdmin: true) == false)
+            if (await CanAccessDatabaseAsync(Database.Name, requireAdmin: true, requireWrite: true) == false)
                 return;
 
             if (ResourceNameValidator.IsValidResourceName(Database.Name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
@@ -66,7 +66,7 @@ namespace Raven.Server.Documents
                 await WaitForIndexToBeApplied(context, index);
                 HttpContext.Response.StatusCode = (int)statusCode;
 
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     var json = new DynamicJsonValue
                     {
@@ -74,11 +74,10 @@ namespace Raven.Server.Documents
                     };
                     fillJson?.Invoke(json, configurationJson, index);
                     context.Write(writer, json);
-                    writer.Flush();
                 }
             }
         }
-        
+
         protected async Task WaitForIndexToBeApplied(TransactionOperationContext context, long index)
         {
             DatabaseTopology dbTopology;
@@ -100,27 +99,32 @@ namespace Raven.Server.Documents
 
         protected OperationCancelToken CreateTimeLimitedOperationToken()
         {
-            return new OperationCancelToken(Database.Configuration.Databases.OperationTimeout.AsTimeSpan, Database.DatabaseShutdown);
+            return new OperationCancelToken(Database.Configuration.Databases.OperationTimeout.AsTimeSpan, Database.DatabaseShutdown, HttpContext.RequestAborted);
         }
 
         protected OperationCancelToken CreateTimeLimitedQueryToken()
         {
-            return new OperationCancelToken(Database.Configuration.Databases.QueryTimeout.AsTimeSpan, Database.DatabaseShutdown);
+            return new OperationCancelToken(Database.Configuration.Databases.QueryTimeout.AsTimeSpan, Database.DatabaseShutdown, HttpContext.RequestAborted);
         }
 
         protected OperationCancelToken CreateTimeLimitedCollectionOperationToken()
         {
-            return new OperationCancelToken(Database.Configuration.Databases.CollectionOperationTimeout.AsTimeSpan, Database.DatabaseShutdown);
+            return new OperationCancelToken(Database.Configuration.Databases.CollectionOperationTimeout.AsTimeSpan, Database.DatabaseShutdown, HttpContext.RequestAborted);
         }
 
         protected OperationCancelToken CreateTimeLimitedQueryOperationToken()
         {
-            return new OperationCancelToken(Database.Configuration.Databases.QueryOperationTimeout.AsTimeSpan, Database.DatabaseShutdown);
+            return new OperationCancelToken(Database.Configuration.Databases.QueryOperationTimeout.AsTimeSpan, Database.DatabaseShutdown, HttpContext.RequestAborted);
         }
 
-        protected OperationCancelToken CreateOperationToken()
+        protected override OperationCancelToken CreateOperationToken()
         {
-            return new OperationCancelToken(Database.DatabaseShutdown);
+            return new OperationCancelToken(Database.DatabaseShutdown, HttpContext.RequestAborted);
+        }
+
+        protected override OperationCancelToken CreateOperationToken(TimeSpan cancelAfter)
+        {
+            return new OperationCancelToken(cancelAfter, Database.DatabaseShutdown, HttpContext.RequestAborted);
         }
 
         protected void AddPagingPerformanceHint(PagingOperationType operation, string action, string details, long numberOfResults, int pageSize, long duration)

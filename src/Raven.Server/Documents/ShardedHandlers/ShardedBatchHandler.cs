@@ -21,6 +21,7 @@ using Raven.Server.TrafficWatch;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Server.Json.Sync;
 
 namespace Raven.Server.Documents.ShardedHandlers
 {
@@ -151,9 +152,9 @@ namespace Raven.Server.Documents.ShardedHandlers
         {
             var request = base.CreateRequest(ctx, node, out url);
 
-            request.Content = new BlittableJsonContent(stream =>
+            request.Content = new BlittableJsonContent(async stream =>
             {
-                using (var writer = new BlittableJsonTextWriter(ctx, stream))
+                await using (var writer = new AsyncBlittableJsonTextWriter(ctx, stream))
                 {
                     writer.WriteStartObject();
                     writer.WriteArray("Commands", _commands);

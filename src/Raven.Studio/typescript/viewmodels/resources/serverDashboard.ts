@@ -79,9 +79,9 @@ class machineResourcesSection {
             const machine = data.values['machine'].toFixed(0) + "%";
             const process = data.values['process'].toFixed(0) + "%";
             return `<div class="tooltip-inner">
-                Time: <strong>${date}</strong><br />
-                Machine CPU usage: <strong>${machine}</strong><br />
-                Process CPU usage: <strong>${process}</strong>
+                <div class="tooltip-li">Time: <div class="value">${date}</div></div>
+                <div class="tooltip-li">Machine CPU usage: <div class="value">${machine}</div></div>
+                <div class="tooltip-li">Process CPU usage: <div class="value">${process}</div></div>
                 </div>`;
         }
         
@@ -95,10 +95,10 @@ class machineResourcesSection {
             const machine = generalUtils.formatBytesToSize(data.values['machine']); 
             const process = generalUtils.formatBytesToSize(data.values['process']);
             return `<div class="tooltip-inner">
-                Time: <strong>${date}</strong><br />
-                Usable physical memory: <strong>${physical}</strong><br />
-                Machine memory usage: <strong>${machine}</strong><br />
-                Process memory usage: <strong>${process}</strong>
+                <div class="tooltip-li">Time: <div class="value">${date}</div></div>
+                <div class="tooltip-li">Usable physical memory: <div class="value">${physical}</div></div>
+                <div class="tooltip-li">Machine memory usage: <div class="value">${machine}</div></div>
+                <div class="tooltip-li">Process memory usage: <div class="value">${process}</div></div>
                 </div>`;
         }
 
@@ -165,8 +165,8 @@ class indexingSpeedSection {
             const date = moment(data.date).format(serverDashboard.timeFormat);
             const indexed = data.values['indexing'];
             return `<div class="tooltip-inner">
-                Time: <strong>${date}</strong><br />
-                # Documents indexed/s: <strong>${indexed.toLocaleString()}</strong>
+                <div class="tooltip-li">Time: <div class="value">${date}</div></div>
+                <div class="tooltip-li">Indexed Items/s: <div class="value">${indexed.toLocaleString()}</div></div>
                 </div>`;
         }
         
@@ -179,9 +179,9 @@ class indexingSpeedSection {
             const map = data.values['map'];
             const reduce = data.values['reduce'];
             return `<div class="tooltip-inner">
-                Time: <strong>${date}</strong><br />
-                # Documents mapped/s: <strong>${map.toLocaleString()}</strong><br />
-                # Mapped entries reduced/s: <strong>${reduce.toLocaleString()}</strong>
+                <div class="tooltip-li">Time: <div class="value">${date}</div></div>
+                <div class="tooltip-li">Mapped Items/s: <div class="value">${map.toLocaleString()}</div></div>
+                <div class="tooltip-li">Reduced Mapped Entries/s: <div class="value">${reduce.toLocaleString()}</div></div>
                 </div>`;
         }
         return null;
@@ -395,19 +395,19 @@ class trafficSection {
     constructor() {
         this.writesPerSecondTooltip = ko.pureComputed(() => {
             return `<div>
-                    Documents: <strong>${this.totalDocsWritesPerSecond().toLocaleString()}</strong><br />
-                    Attachments: <strong>${this.totalAttachmentsWritesPerSecond().toLocaleString()}</strong><br />
-                    Counters: <strong>${this.totalCountersWritesPerSecond().toLocaleString()}</strong><br />
-                    Time Series: <strong>${this.totalTimeSeriesWritesPerSecond().toLocaleString()}</strong>
+                    <div class="tooltip-li">Documents: <div class="value">${this.totalDocsWritesPerSecond().toLocaleString()}</div></div>
+                    <div class="tooltip-li">Attachments: <div class="value">${this.totalAttachmentsWritesPerSecond().toLocaleString()}</div></div>
+                    <div class="tooltip-li">Counters: <div class="value">${this.totalCountersWritesPerSecond().toLocaleString()}</div></div>
+                    <div class="tooltip-li">Time Series: <div class="value">${this.totalTimeSeriesWritesPerSecond().toLocaleString()}</div></div>
                     </div>`;
         });
 
         this.writeBytesPerSecondTooltip = ko.pureComputed(() => {
             return `<div>
-                    Documents: <strong>${this.sizeFormatter(this.totalDocsWriteBytesPerSecond())}/s</strong><br />
-                    Attachments: <strong>${this.sizeFormatter(this.totalAttachmentsWriteBytesPerSecond())}/s</strong><br />
-                    Counters: <strong>${this.sizeFormatter(this.totalCountersWriteBytesPerSecond())}/s</strong><br />
-                    Time Series: <strong>${this.sizeFormatter(this.totalTimeSeriesWriteBytesPerSecond())}/s</strong>
+                    <div class="tooltip-li">Documents: <div class="value">${this.sizeFormatter(this.totalDocsWriteBytesPerSecond())}/s</div></div>
+                    <div class="tooltip-li">Attachments: <div class="value">${this.sizeFormatter(this.totalAttachmentsWriteBytesPerSecond())}/s</div></div>
+                    <div class="tooltip-li">Counters: <div class="value">${this.sizeFormatter(this.totalCountersWriteBytesPerSecond())}/s</div></div>
+                    <div class="tooltip-li">Time Series: <div class="value">${this.sizeFormatter(this.totalTimeSeriesWriteBytesPerSecond())}/s</div></div>
                     </div>`;
         });
 
@@ -498,10 +498,10 @@ class trafficSection {
             const written = data.values['written'];
 
             return `<div class="tooltip-inner">
-                Time: <strong>${date}</strong><br />
-                Requests/s: <strong>${requests.toLocaleString()}</strong><br />
-                Writes/s: <strong>${writes.toLocaleString()}</strong><br />
-                Data Written/s: <strong>${this.sizeFormatter(written)}</strong>
+                <div class="tooltip-li">Time: <div class="value">${date}</div></div>
+                <div class="tooltip-li">Requests/s: <div class="value">${requests.toLocaleString()}</div></div>
+                <div class="tooltip-li">Writes/s: <div class="value">${writes.toLocaleString()}</div></div>
+                <div class="tooltip-li">Data Written/s: <div class="value">${this.sizeFormatter(written)}</div></div>
                 </div>`;
         }
         return null;

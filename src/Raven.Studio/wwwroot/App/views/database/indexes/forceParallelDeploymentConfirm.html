@@ -1,0 +1,37 @@
+<div class="modal-dialog" role="document">
+    <div class="modal-content">
+        <div class="modal-body">
+            <div>
+                <h3><strong>Parallel Indexing - All Nodes</strong></h3>
+
+                <div>
+                    Indexing deployment will be continued in Parallel mode on all nodes.
+
+                    <div class="text-right margin-top">
+                        <button type="button" class="btn btn-warning" data-bind="click: _.partial(forceDeploymentMode, false)">
+                            <i class="icon-force"></i><span>Force Parallel - All</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div data-bind="visible: canForceCurrentNode">
+                <hr />
+                <h3><strong>Parallel Indexing - Current Node Only</strong></h3>
+        
+                <div>
+                    Indexing deployment on this node only will continue in parallel to all other nodes.<br />
+                    Indexing deployment on all other nodes will be continued in Rolling mode.
+
+                    <div class="text-right margin-top">
+                        <button type="button" class="btn btn-warning" data-bind="click: _.partial(forceDeploymentMode, true)">
+                            <i class="icon-force"></i><span>Force Parallel - Current</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-default pull-left" data-bind="click: cancel">Close</button>
+        </div>
+    </div>
+</div>

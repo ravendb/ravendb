@@ -93,12 +93,13 @@ class cmpXchg extends viewModelBase {
 
         grid.headerVisible(true);
 
-        grid.init((s, _) => this.fetchItems(s), () => [
-            new checkedColumn(true),
-            new hyperlinkColumn<Raven.Server.Web.System.CompareExchangeHandler.CompareExchangeListItem>(grid, x => x.Key, x => appUrl.forEditCmpXchg(x.Key, this.activeDatabase()), "Key", "20%"),
-            new textColumn<Raven.Server.Web.System.CompareExchangeHandler.CompareExchangeListItem>(grid, x => x.Value.Object, "Value", "20%"),
-            new textColumn<Raven.Server.Web.System.CompareExchangeHandler.CompareExchangeListItem>(grid, x => x.Value["@metadata"], "Metadata", "20%")
-        ]);
+        const checkColumn = new checkedColumn(true); 
+        const keyColumn = new hyperlinkColumn<Raven.Server.Web.System.CompareExchangeHandler.CompareExchangeListItem>(grid, x => x.Key, x => appUrl.forEditCmpXchg(x.Key, this.activeDatabase()), "Key", "20%");
+        const valueColumn = new textColumn<Raven.Server.Web.System.CompareExchangeHandler.CompareExchangeListItem>(grid, x => x.Value.Object, "Value", "20%");
+        const metadataColumn = new textColumn<Raven.Server.Web.System.CompareExchangeHandler.CompareExchangeListItem>(grid, x => x.Value["@metadata"], "Metadata", "20%");
+
+        const gridColumns = this.isReadOnlyAccess() ? [keyColumn, valueColumn, metadataColumn] : [checkColumn, keyColumn, valueColumn, metadataColumn];
+        grid.init((s, _) => this.fetchItems(s), () => gridColumns);
         
          this.columnPreview.install(".js-cmp-xchg-grid", ".js-cmp-xchg-tooltip", 
              (doc: Raven.Server.Web.System.CompareExchangeHandler.CompareExchangeListItem, column: virtualColumn, e: JQueryEventObject, onValue: (context: any, valueToCopy: string) => void) => {

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
-using Microsoft.AspNetCore.Http;
+using System.Threading;
+using System.Threading.Tasks;
 using Raven.Client.Documents.Session;
 using Raven.Server.Json;
 using Sparrow.Extensions;
@@ -10,21 +11,19 @@ namespace Raven.Server.Documents.Queries
 {
     public class StreamJsonDocumentQueryResultWriter : IStreamQueryResultWriter<Document>
     {
-        private BlittableJsonTextWriter _writer;
-        private HttpResponse _response;
-        private JsonOperationContext _context;
+        private readonly AsyncBlittableJsonTextWriter _writer;
+        private readonly JsonOperationContext _context;
         private bool _first = true;
 
-        public StreamJsonDocumentQueryResultWriter(HttpResponse response, Stream stream, JsonOperationContext context)
+        public StreamJsonDocumentQueryResultWriter(Stream stream, JsonOperationContext context)
         {
             _context = context;
-            _writer = new BlittableJsonTextWriter(context, stream);
-            _response = response;
+            _writer = new AsyncBlittableJsonTextWriter(context, stream);
         }
 
-        public void Dispose()
+        public ValueTask DisposeAsync()
         {
-            _writer.Dispose();
+            return _writer.DisposeAsync();
         }
 
         public void StartResponse()
@@ -43,7 +42,7 @@ namespace Raven.Server.Documents.Queries
             _writer.WriteEndArray();
         }
 
-        public void AddResult(Document res)
+        public async ValueTask AddResultAsync(Document res, CancellationToken token)
         {
             if (_first == false)
             {
@@ -53,7 +52,9 @@ namespace Raven.Server.Documents.Queries
             {
                 _first = false;
             }
+            
             _writer.WriteDocument(_context, res, metadataOnly: false);
+            await _writer.MaybeFlushAsync(token);
         }
 
         public void EndResponse()
@@ -61,18 +62,20 @@ namespace Raven.Server.Documents.Queries
             _writer.WriteEndObject();
         }
 
-        public void WriteError(Exception e)
+        public ValueTask WriteErrorAsync(Exception e)
         {
             _writer.WriteComma();
 
             _writer.WritePropertyName("Error");
             _writer.WriteString(e.ToString());
+            return default;
         }
 
-        public void WriteError(string error)
-        {            
+        public ValueTask WriteErrorAsync(string error)
+        {
             _writer.WritePropertyName("Error");
             _writer.WriteString(error);
+            return default;
         }
 
         public void WriteQueryStatistics(long resultEtag, bool isStale, string indexName, long totalResults, DateTime timestamp)

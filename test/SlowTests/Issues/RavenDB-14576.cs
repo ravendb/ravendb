@@ -69,9 +69,9 @@ namespace SlowTests.Issues
                 session.SaveChanges();
 
                 new JavascriptIndex2().Execute(store);
-                WaitForIndexing(store, timeout: TimeSpan.FromSeconds(5), allowErrors: true);
 
-                var indexErrors = store.Maintenance.Send(new GetIndexErrorsOperation());
+                var indexErrors = WaitForIndexingErrors(store);
+
                 var exceptions = indexErrors.First().Errors;
                 Assert.NotEmpty(exceptions);
                 var firstException = exceptions.First();

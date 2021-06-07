@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using FastTests;
 using Orders;
 using Raven.Client.Documents.Indexes;
@@ -21,7 +22,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public void FailingTest_Context()
+        public async Task FailingTest_Context()
         {
             const int size = 7000;
             var s = new string((char)0, size);
@@ -37,17 +38,17 @@ namespace SlowTests.Issues
 
                 AssertItem(json, string.Join(string.Empty, Enumerable.Range(0, size).Select(x => "\\u0000")));
 
-                using (var ms = new MemoryStream())
+                await using (var ms = new MemoryStream())
                 {
-                    json.WriteJsonTo(ms);
+                    await json.WriteJsonToAsync(ms);
                     ms.Position = 0;
 
                     var inputJson = json.ToString();
                     using (var sr = new StreamReader(ms, Encoding.UTF8, true, 4096, true))
-                        Assert.Equal(inputJson, sr.ReadToEnd());
+                        Assert.Equal(inputJson, await sr.ReadToEndAsync());
 
                     ms.Position = 0;
-                    json = context.ReadForMemory(ms, "json");
+                    json = await context.ReadForMemoryAsync(ms, "json");
                     AssertItem(json, s);
                 }
             }

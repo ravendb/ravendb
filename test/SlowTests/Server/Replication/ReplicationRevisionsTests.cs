@@ -50,12 +50,12 @@ namespace SlowTests.Server.Replication
                     await session.SaveChangesAsync();
                 }
                 await store.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(store.Database));
-            
+
                 await WaitAndAssertForValueAsync(
                         async () => (await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database))).Topology.Members?.Count, 2);
-                
+
                 await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(store.Database, true, nodeTags.First(n => n == firstNode)));
-                
+
                 await WaitAndAssertForValueAsync(
                         async () => (await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database))).Topology.Members?.Count, 1);
                 await WaitAndAssertForValueAsync(async () =>
@@ -115,7 +115,7 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task ReplicateRevision_WhenSourceDataFromIncrementalBackupAndDocDeleted_ShouldNotRecreateTheDoc()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder", forceCreateDir: true);
@@ -139,14 +139,8 @@ namespace SlowTests.Server.Replication
                     await session.SaveChangesAsync();
                 }
 
-                var config = new PeriodicBackupConfiguration
-                {
-                    MentorNode = secondNode.ServerStore.NodeTag,
-                    LocalSettings = new LocalSettings { FolderPath = backupPath },
-                    IncrementalBackupFrequency = "0 * * * *"
-                };
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                await (await SendAsync(store, new StartBackupOperation(true, backupTaskId))).WaitForCompletionAsync();
+                var config = Backup.CreateBackupConfiguration(backupPath, incrementalBackupFrequency: "0 * * * *", mentorNode: secondNode.ServerStore.NodeTag);
+                var backupTaskId = await Backup.CreateAndRunBackupInClusterAsync(config, store, isFullBackup: true);
 
                 await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(store.Database, true, firstNodeTag));
                 await WaitAndAssertForValueAsync(async () =>
@@ -167,7 +161,7 @@ namespace SlowTests.Server.Replication
                     await session.SaveChangesAsync();
                 }
 
-                await (await SendAsync(store, new StartBackupOperation(false, backupTaskId))).WaitForCompletionAsync();
+                await Backup.RunBackupInClusterAsync(store, backupTaskId, isFullBackup: false);
             }
 
             using (var store = GetDocumentStore(new Options { Server = leader, ReplicationFactor = 1 }))
@@ -198,19 +192,6 @@ namespace SlowTests.Server.Replication
                     var secondNodeDocs = await secondSession.Query<User>().ToArrayAsync();
                     Assert.Equal(0, secondNodeDocs.Length);
                 }
-            }
-        }
-
-        private static async Task<Operation> SendAsync(IDocumentStore store, IMaintenanceOperation<OperationIdResult<StartBackupOperationResult>> operation, CancellationToken token = default)
-        {
-            var re = store.GetRequestExecutor();
-            using (re.ContextPool.AllocateOperationContext(out var context))
-            {
-                var command = operation.GetCommand(re.Conventions, context);
-
-                await re.ExecuteAsync(command, context, null, token).ConfigureAwait(false);
-                var selectedNodeTag = command.SelectedNodeTag ?? command.Result.Result.ResponsibleNode;
-                return new Operation(re, () => store.Changes(store.Database, selectedNodeTag), re.Conventions, command.Result.OperationId, selectedNodeTag);
             }
         }
     }

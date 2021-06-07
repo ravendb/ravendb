@@ -70,6 +70,8 @@ namespace Raven.Client.Documents.Indexes.Spatial
         // about 4.78 meters at equator, should be good enough
         public const int DefaultQuadTreeLevel = 23;
 
+        internal static readonly SpatialOptions Default = new SpatialOptions();
+
         public SpatialOptions()
         {
             Type = SpatialFieldType.Geography;

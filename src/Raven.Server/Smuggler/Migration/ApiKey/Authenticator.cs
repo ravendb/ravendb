@@ -86,10 +86,10 @@ namespace Raven.Server.Smuggler.Migration.ApiKey
                         continue;
                     }
 
-                    using (var stream = await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false))
+                    await using (var stream = await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false))
                     using (var reader = new StreamReader(stream))
                     {
-                        var currentOauthToken = reader.ReadToEnd();
+                        var currentOauthToken = await reader.ReadToEndAsync();
                         return currentOauthToken;
                     }
                 }
@@ -136,7 +136,7 @@ namespace Raven.Server.Smuggler.Migration.ApiKey
                 var stream = await response.GetResponseStreamWithHttpDecompression().ConfigureAwait(false);
                 using (var reader = new StreamReader(stream))
                 {
-                    var currentOauthToken = reader.ReadToEnd();
+                    var currentOauthToken = await reader.ReadToEndAsync();
                     return currentOauthToken;
                 }
             }

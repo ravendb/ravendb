@@ -20,7 +20,6 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Migration;
 using Raven.Server.Utils;
-using Raven.Server.Utils.Metrics;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
@@ -32,36 +31,39 @@ namespace Raven.Server.Web.System
     {
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<DatabasesHandler>("Server");
 
-        [RavenAction("/databases", "GET", AuthorizationStatus.ValidUser)]
-        public Task Databases()
+        [RavenAction("/databases", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        public async Task Databases()
         {
             // if Studio requested information about single resource - handle it
             var dbName = GetStringQueryString("name", false);
             if (dbName != null)
-                return DbInfo(dbName);
+            {
+                await DbInfo(dbName);
+                return;
+            }
 
             var namesOnly = GetBoolValueQueryString("namesOnly", required: false) ?? false;
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 context.OpenReadTransaction();
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
 
                     var items = ServerStore.Cluster.GetAllRawDatabases(context,  GetStart(), GetPageSize());
 
-                    if (TryGetAllowedDbs(null, out var allowedDbs, requireAdmin: false) == false)
-                        return Task.CompletedTask;
+                    var allowedDbs = await GetAllowedDbsAsync(null, requireAdmin: false, requireWrite: false);
 
-                    if (allowedDbs != null)
+                    if (allowedDbs.HasAccess == false)
+                        return;
+
+                    if (allowedDbs.AuthorizedDatabases != null)
                     {
-                        items = items.Where(item => allowedDbs.ContainsKey(item.DatabaseName));
+                        items = items.Where(item => allowedDbs.AuthorizedDatabases.ContainsKey(item.DatabaseName));
                     }
 
-                    items = items.SelectMany(x => x.AsShardsOrNormal());
-
-                    writer.WriteArray(context, nameof(DatabasesInfo.Databases), items, (w, c, dbDoc) =>
+                    writer.WriteArray(context, nameof(DatabasesInfo.Databases), items.SelectMany(x => x.AsShardsOrNormal()), (w, c, dbDoc) =>
                     {
                         var databaseName = dbDoc.DatabaseName;
                         if (namesOnly)
@@ -75,12 +77,10 @@ namespace Raven.Server.Web.System
                     writer.WriteEndObject();
                 }
             }
-
-            return Task.CompletedTask;
         }
 
-        [RavenAction("/topology", "GET", AuthorizationStatus.ValidUser)]
-        public Task GetTopology()
+        [RavenAction("/topology", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        public async Task GetTopology()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
             var applicationIdentifier = GetStringQueryString("applicationIdentifier", required: false);
@@ -92,21 +92,19 @@ namespace Raven.Server.Web.System
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var dbId = Constants.Documents.Prefix + name;
                 using (context.OpenReadTransaction())
+                using (var rawRecord = ServerStore.Cluster.ReadRawDatabaseRecord(context, name))
                 {
-                    if (TryGetAllowedDbs(name, out var _, requireAdmin: false) == false)
-                        return Task.CompletedTask;
+                    if (await CanAccessDatabaseAsync(name, requireAdmin: false, requireWrite: false) == false)
+                        return;
 
-                    var dbRecord = ServerStore.Cluster.ReadDatabase(context, name);
-
-                    if (dbRecord == null)
+                    if (rawRecord == null)
                     {
                         // here we return 503 so clients will try to failover to another server
                         // if this is a newly created db that we haven't been notified about it yet
                         HttpContext.Response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
                         HttpContext.Response.Headers["Database-Missing"] = name;
-                        using (var writer = new BlittableJsonTextWriter(context, HttpContext.Response.Body))
+                        await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                         {
                             context.Write(writer,
                                 new DynamicJsonValue
@@ -115,7 +113,7 @@ namespace Raven.Server.Web.System
                                     ["Message"] = "Database " + name + " wasn't found"
                                 });
                         }
-                        return Task.CompletedTask;
+                        return;
                     }
 
                     var clusterTopology = ServerStore.GetClusterTopology(context);
@@ -123,29 +121,48 @@ namespace Raven.Server.Web.System
                     {
                         // we were kicked-out from the cluster
                         HttpContext.Response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
-                        return Task.CompletedTask;
+                        return;
                     }
+
+                    if (rawRecord.DeletionInProgress.Count > 0 &&
+                        rawRecord.Topologies.Sum(t => t.Topology.Count) == rawRecord.DeletionInProgress.Count)
+                    {
+                        // The database at deletion progress from all nodes
+                        HttpContext.Response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
+                        HttpContext.Response.Headers["Database-Missing"] = name;
+                        await using (var writer = new AsyncBlittableJsonTextWriter(context, HttpContext.Response.Body))
+                        {
+                            context.Write(writer, new DynamicJsonValue
+                            {
+                                ["Type"] = "Error", 
+                                ["Message"] = "Database " + name + " was deleted"
+                            });
+                        }
+
+                        return;
+                    }
+
 
                     clusterTopology.ReplaceCurrentNodeUrlWithClientRequestedNodeUrlIfNecessary(ServerStore, HttpContext);
 
-                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
                         long stampIndex;
                         IEnumerable<DynamicJsonValue> dbNodes;
-                        if (dbRecord.Shards?.Length > 0)
+                        if (rawRecord.Shards?.Length > 0)
                         {
                             dbNodes = clusterTopology.Members.Keys.Select(x => 
-                                TopologyNodeToJson(x, clusterTopology, dbRecord, ServerNode.Role.Member));
-                            stampIndex = dbRecord.Shards.Max(x => x.Stamp?.Index ?? -1);
+                                TopologyNodeToJson(x, clusterTopology, name, ServerNode.Role.Member));
+                            stampIndex = rawRecord.Shards.Max(x => x.Stamp?.Index ?? -1);
                         }
                         else
                         {
-                            dbNodes = dbRecord.Topology.Members.Select(x => 
-                                    TopologyNodeToJson(x, clusterTopology, dbRecord, ServerNode.Role.Member))
-                                .Concat(dbRecord.Topology.Rehabs.Select(x =>
-                                    TopologyNodeToJson(x, clusterTopology, dbRecord, ServerNode.Role.Rehab))
+                            dbNodes = rawRecord.Topology.Members.Select(x => 
+                                    TopologyNodeToJson(x, clusterTopology, name, ServerNode.Role.Member))
+                                .Concat(rawRecord.Topology.Rehabs.Select(x =>
+                                    TopologyNodeToJson(x, clusterTopology, name, ServerNode.Role.Rehab))
                                 );
-                            stampIndex = dbRecord.Topology.Stamp?.Index ?? -1;
+                            stampIndex = rawRecord.Topology.Stamp?.Index ?? -1;
                         }
 
                         context.Write(writer, new DynamicJsonValue
@@ -156,17 +173,16 @@ namespace Raven.Server.Web.System
                     }
                 }
             }
-            return Task.CompletedTask;
         }
         
-        private DynamicJsonValue TopologyNodeToJson(string tag, ClusterTopology clusterTopology, DatabaseRecord dbRecord, ServerNode.Role role)
+        private DynamicJsonValue TopologyNodeToJson(string tag, ClusterTopology clusterTopology, string name, ServerNode.Role role)
         {
             return new DynamicJsonValue
             {
                 [nameof(ServerNode.Url)] = GetUrl(tag, clusterTopology),
                 [nameof(ServerNode.ClusterTag)] = tag,
                 [nameof(ServerNode.ServerRole)] = role,
-                [nameof(ServerNode.Database)] = dbRecord.DatabaseName
+                [nameof(ServerNode.Database)] = name
             };
         }
         
@@ -199,30 +215,28 @@ namespace Raven.Server.Web.System
 
         // we can't use '/database/is-loaded` because that conflict with the `/databases/<db-name>`
         // route prefix
-        [RavenAction("/debug/is-loaded", "GET", AuthorizationStatus.ValidUser)]
-        public Task IsDatabaseLoaded()
+        [RavenAction("/debug/is-loaded", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        public async Task IsDatabaseLoaded()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
             HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
 
-            if (TryGetAllowedDbs(name, out var _, requireAdmin: false) == false)
-                return Task.CompletedTask;
+            if (await CanAccessDatabaseAsync(name, requireAdmin: false, requireWrite: false) == false)
+                return;
 
             var isLoaded = ServerStore.DatabasesLandlord.IsDatabaseLoaded(name);
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     context.Write(writer, new DynamicJsonValue
                     {
                         [nameof(IsDatabaseLoadedCommand.CommandResult.DatabaseName)] = name,
                         [nameof(IsDatabaseLoadedCommand.CommandResult.IsLoaded)] = isLoaded
                     });
-                    writer.Flush();
                 }
             }
-            return Task.CompletedTask;
         }
 
         [RavenAction("/admin/remote-server/build/version", "GET", AuthorizationStatus.Operator)]
@@ -245,15 +259,15 @@ namespace Raven.Server.Web.System
                 EnableBasicAuthenticationOverUnsecuredHttp = enableBasicAuthenticationOverUnsecuredHttp ?? false,
                 SkipServerCertificateValidation = skipServerCertificateValidation ?? false
             }, ServerStore);
-            
+
             var buildInfo = await migrator.GetBuildInfo();
             var authorized = new Reference<bool>();
             var isLegacyOAuthToken = new Reference<bool>();
             var databaseNames = await migrator.GetDatabaseNames(buildInfo.MajorVersion, authorized, isLegacyOAuthToken);
             var fileSystemNames = await migrator.GetFileSystemNames(buildInfo.MajorVersion);
-        
+
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 var json = new DynamicJsonValue
                 {
@@ -268,7 +282,6 @@ namespace Raven.Server.Web.System
                 };
 
                 context.Write(writer, json);
-                writer.Flush();
             }
         }
 
@@ -285,12 +298,12 @@ namespace Raven.Server.Web.System
             return url;
         }
 
-        private Task DbInfo(string dbName)
+        private async Task DbInfo(string dbName)
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 context.OpenReadTransaction();
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     var dbId = Constants.Documents.Prefix + dbName;
                     using (var dbRecord = ServerStore.Cluster.Read(context, dbId, out long _))
@@ -300,11 +313,11 @@ namespace Raven.Server.Web.System
                             HttpContext.Response.Headers.Remove("Content-Type");
                             HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                             HttpContext.Response.Headers["Database-Missing"] = dbName;
-                            return Task.CompletedTask;
+                            return;
                         }
+
                         WriteDatabaseInfo(dbName, dbRecord, context, writer);
                     }
-                    return Task.CompletedTask;
                 }
             }
         }
@@ -378,19 +391,20 @@ namespace Raven.Server.Web.System
                     WriteFaultedDatabaseInfo(databaseName, nodesTopology, exception, context, writer);
                     return;
                 }
-                
+
                 var db = online ? dbTask.Result : null;
 
                 var indexingStatus = db?.IndexStore?.Status;
                 if (indexingStatus == null)
                 {
                     // Looking for disabled indexing flag inside the database settings for offline database status
-                    if (dbRecord.Settings.TryGetValue(RavenConfiguration.GetKey(x => x.Indexing.Disabled), out var val) && 
+                    if (dbRecord.Settings.TryGetValue(RavenConfiguration.GetKey(x => x.Indexing.Disabled), out var val) &&
                         bool.TryParse(val, out var indexingDisabled) && indexingDisabled)
                         indexingStatus = IndexRunningStatus.Disabled;
                 }
 
                 var disabled = dbRecord.Disabled;
+                var lockMode = dbRecord.LockMode;
 
                 var studioEnvironment = StudioConfiguration.StudioEnvironment.None;
                 if (dbRecord.Studio != null && !dbRecord.Studio.Disabled)
@@ -406,9 +420,10 @@ namespace Raven.Server.Web.System
                         databaseInfoJson.Modifications = new DynamicJsonValue(databaseInfoJson)
                         {
                             [nameof(DatabaseInfo.Disabled)] = disabled,
+                            [nameof(DatabaseInfo.LockMode)] = lockMode,
                             [nameof(DatabaseInfo.IndexingStatus)] = indexingStatus,
                             [nameof(DatabaseInfo.NodesTopology)] = nodesTopology.ToJson(),
-                            [nameof(DatabaseInfo.DeletionInProgress)] = DynamicJsonValue.Convert(dbRecord.DeletionInProgress), 
+                            [nameof(DatabaseInfo.DeletionInProgress)] = DynamicJsonValue.Convert(dbRecord.DeletionInProgress),
                             [nameof(DatabaseInfo.Environment)] = studioEnvironment
                         };
 
@@ -418,7 +433,7 @@ namespace Raven.Server.Web.System
                         return;
                     }
 
-                    // we won't find it if it is a new database or after a dirty shutdown, 
+                    // we won't find it if it is a new database or after a dirty shutdown,
                     // so just report empty values then
                 }
 
@@ -428,10 +443,11 @@ namespace Raven.Server.Web.System
                 {
                     Name = databaseName,
                     Disabled = disabled,
+                    LockMode = lockMode,
                     TotalSize = size.Data,
                     TempBuffersSize = size.TempBuffers,
 
-                    IsAdmin = true, 
+                    IsAdmin = true,
                     IsEncrypted = dbRecord.Encrypted,
                     UpTime = online ? (TimeSpan?)GetUptime(db) : null,
                     BackupInfo = GetBackupInfo(db, context),
@@ -444,7 +460,7 @@ namespace Raven.Server.Web.System
 
                     DocumentsCount = db?.DocumentsStorage.GetNumberOfDocuments() ?? 0,
                     HasRevisionsConfiguration = db?.DocumentsStorage.RevisionsStorage.Configuration != null,
-                    HasExpirationConfiguration = (db?.ExpiredDocumentsCleaner?.ExpirationConfiguration?.Disabled ?? true) == false, 
+                    HasExpirationConfiguration = (db?.ExpiredDocumentsCleaner?.ExpirationConfiguration?.Disabled ?? true) == false,
                     HasRefreshConfiguration = (db?.ExpiredDocumentsCleaner?.RefreshConfiguration?.Disabled ?? true) == false,
                     IndexesCount = db?.IndexStore?.GetIndexes()?.Count() ?? 0,
                     IndexingStatus = indexingStatus ?? IndexRunningStatus.Running,
@@ -469,9 +485,9 @@ namespace Raven.Server.Web.System
         }
 
         private static void SetNodeStatus(
-            DatabaseTopology topology, 
-            string nodeTag, 
-            NodesTopology nodesTopology, 
+            DatabaseTopology topology,
+            string nodeTag,
+            NodesTopology nodesTopology,
             Dictionary<string, NodeStatus> nodeStatuses)
         {
             var nodeStatus = new DatabaseGroupNodeStatus

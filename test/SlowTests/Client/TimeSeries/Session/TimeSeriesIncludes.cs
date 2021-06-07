@@ -27,7 +27,7 @@ namespace SlowTests.Client.TimeSeries.Session
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
                 using (var session = store.OpenSession())
                 {
                     session.Store(new Company { Name = "HR" }, "companies/1-A");
@@ -83,7 +83,7 @@ namespace SlowTests.Client.TimeSeries.Session
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new Company { Name = "HR" }, "companies/1-A");
@@ -145,7 +145,7 @@ namespace SlowTests.Client.TimeSeries.Session
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 var documentId = "users/ayende";
 
@@ -400,7 +400,7 @@ namespace SlowTests.Client.TimeSeries.Session
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 using (var session = store.OpenSession())
                 {
@@ -466,7 +466,7 @@ namespace SlowTests.Client.TimeSeries.Session
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 using (var session = store.OpenSession())
                 {
@@ -559,7 +559,7 @@ namespace SlowTests.Client.TimeSeries.Session
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 using (var session = store.OpenSession())
                 {
@@ -651,7 +651,7 @@ namespace SlowTests.Client.TimeSeries.Session
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 using (var session = store.OpenSession())
                 {
@@ -724,7 +724,7 @@ namespace SlowTests.Client.TimeSeries.Session
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 using (var session = store.OpenSession())
                 {
@@ -804,7 +804,7 @@ namespace SlowTests.Client.TimeSeries.Session
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 using (var session = store.OpenSession())
                 {
@@ -857,7 +857,7 @@ namespace SlowTests.Client.TimeSeries.Session
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new Company { Name = "HR" }, "companies/1-A");
@@ -970,7 +970,7 @@ namespace SlowTests.Client.TimeSeries.Session
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 using (var session = store.OpenSession())
                 {
@@ -1027,7 +1027,7 @@ namespace SlowTests.Client.TimeSeries.Session
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 using (var session = store.OpenSession())
                 {
@@ -1081,7 +1081,7 @@ namespace SlowTests.Client.TimeSeries.Session
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 using (var session = store.OpenSession())
                 {
@@ -1289,7 +1289,7 @@ namespace SlowTests.Client.TimeSeries.Session
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 using (var session = store.OpenSession())
                 {
@@ -1355,7 +1355,7 @@ namespace SlowTests.Client.TimeSeries.Session
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 using (var session = store.OpenSession())
                 {
@@ -1449,7 +1449,7 @@ namespace SlowTests.Client.TimeSeries.Session
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 using (var session = store.OpenSession())
                 {
@@ -1539,7 +1539,7 @@ namespace SlowTests.Client.TimeSeries.Session
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 using (var session = store.OpenSession())
                 {
@@ -1621,7 +1621,7 @@ namespace SlowTests.Client.TimeSeries.Session
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 using (var session = store.OpenSession())
                 {
@@ -1632,7 +1632,7 @@ namespace SlowTests.Client.TimeSeries.Session
 
                     session.Store(new Order
                     {
-                        OrderedAt = DateTime.Today,
+                        OrderedAt = RavenTestHelper.UtcToday,
                         Employee = "employees/ayende"
                     }, "orders/1");
 
@@ -1660,7 +1660,7 @@ namespace SlowTests.Client.TimeSeries.Session
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
 
-                    Assert.Equal(DateTime.Today, result[0].OrderedAt);
+                    Assert.Equal(RavenTestHelper.UtcToday, result[0].OrderedAt);
 
                     // should not go to server
 
@@ -1684,7 +1684,7 @@ namespace SlowTests.Client.TimeSeries.Session
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 using (var session = store.OpenSession())
                 {
@@ -1773,7 +1773,7 @@ namespace SlowTests.Client.TimeSeries.Session
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 using (var session = store.OpenSession())
                 {
@@ -1866,7 +1866,7 @@ namespace SlowTests.Client.TimeSeries.Session
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 using (var session = store.OpenSession())
                 {
@@ -1962,7 +1962,7 @@ namespace SlowTests.Client.TimeSeries.Session
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 using (var session = store.OpenSession())
                 {
@@ -2269,7 +2269,7 @@ namespace SlowTests.Client.TimeSeries.Session
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today.AddHours(12);
+                var baseline = RavenTestHelper.UtcToday.AddHours(12);
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new Company { Name = "HR" }, "companies/1-A");
@@ -2399,7 +2399,7 @@ namespace SlowTests.Client.TimeSeries.Session
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today.AddHours(3);
+                var baseline = RavenTestHelper.UtcToday.AddHours(3);
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new Company { Name = "HR" }, "companies/1-A");
@@ -2669,7 +2669,7 @@ namespace SlowTests.Client.TimeSeries.Session
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = byTime ? DateTime.UtcNow.EnsureMilliseconds() : DateTime.Today;
+                var baseline = byTime ? DateTime.UtcNow.EnsureMilliseconds() : RavenTestHelper.UtcToday;
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new Company { Name = "HR" }, "companies/1-A");
@@ -2774,7 +2774,7 @@ namespace SlowTests.Client.TimeSeries.Session
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = byTime ? DateTime.UtcNow.EnsureMilliseconds() : DateTime.Today;
+                var baseline = byTime ? DateTime.UtcNow.EnsureMilliseconds() : RavenTestHelper.UtcToday;
 
                 using (var session = store.OpenSession())
                 {
@@ -2857,7 +2857,7 @@ namespace SlowTests.Client.TimeSeries.Session
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = byTime ? DateTime.UtcNow.EnsureMilliseconds() : DateTime.Today;
+                var baseline = byTime ? DateTime.UtcNow.EnsureMilliseconds() : RavenTestHelper.UtcToday;
 
                 using (var session = store.OpenSession())
                 {
@@ -2965,7 +2965,7 @@ namespace SlowTests.Client.TimeSeries.Session
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = byTime ? DateTime.UtcNow.EnsureMilliseconds() : DateTime.Today;
+                var baseline = byTime ? DateTime.UtcNow.EnsureMilliseconds() : RavenTestHelper.UtcToday;
 
                 using (var session = store.OpenSession())
                 {

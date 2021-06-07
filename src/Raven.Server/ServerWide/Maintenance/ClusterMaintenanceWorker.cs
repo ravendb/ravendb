@@ -16,6 +16,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Index = Raven.Server.Documents.Indexes.Index;
 using Sparrow.LowMemory;
+using Sparrow.Server.Json.Sync;
 using Sparrow.Server.LowMemory;
 
 namespace Raven.Server.ServerWide.Maintenance

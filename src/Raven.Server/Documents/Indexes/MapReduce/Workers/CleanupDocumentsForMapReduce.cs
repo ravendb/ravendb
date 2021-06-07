@@ -18,23 +18,23 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Workers
             _mapReduceIndex = mapReduceIndex;
         }
 
-        public override bool Execute(QueryOperationContext queryContext, TransactionOperationContext indexContext, Lazy<IndexWriteOperation> writeOperation, IndexingStatsScope stats, CancellationToken token)
+        public override (bool MoreWorkFound, Index.CanContinueBatchResult BatchContinuationResult) Execute(QueryOperationContext queryContext, TransactionOperationContext indexContext, Lazy<IndexWriteOperation> writeOperation, IndexingStatsScope stats, CancellationToken token)
         {
-            var moreWorkFound = base.Execute(queryContext, indexContext, writeOperation, stats, token);
+            var result = base.Execute(queryContext, indexContext, writeOperation, stats, token);
 
             if (_mapReduceIndex.OutputReduceToCollection?.HasDocumentsToDelete(indexContext) == true)
             {
-                moreWorkFound = true;
+                result.MoreWorkFound = true;
 
                 if (_mapReduceIndex.IsSideBySide() == false)
                 {
                     // we can start deleting reduce output documents only if index becomes a regular one
 
-                    moreWorkFound |= _mapReduceIndex.OutputReduceToCollection.DeleteDocuments(stats, indexContext);
+                    result.MoreWorkFound |= _mapReduceIndex.OutputReduceToCollection.DeleteDocuments(stats, indexContext);
                 }
             }
 
-            return moreWorkFound;
+            return result;
         }
     }
 }

@@ -45,7 +45,9 @@ namespace Raven.Server.Documents
             BlittableJsonReaderObject patchArgs, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
             return ExecuteOperation(collectionName, start, take, options, Context, onProgress,
-                key => new PatchDocumentCommand(Context, key, null, false, (patch, patchArgs), (null, null), Database.IdentityPartsSeparator, false, false, false, false), token);
+                key => new PatchDocumentCommand(Context, key, expectedChangeVector: null, skipPatchIfChangeVectorMismatch: false, patch: (patch, patchArgs),
+                    patchIfMissing: (null, null), createIfMissing: null, identityPartsSeparator: Database.IdentityPartsSeparator, isTest: false, debugMode: false,
+                    collectResultsNeeded: false, returnDocument: false), token);
         }
 
         protected async Task<IOperationResult> ExecuteOperation(string collectionName, long start, long take, CollectionOperationOptions options, DocumentsOperationContext context,

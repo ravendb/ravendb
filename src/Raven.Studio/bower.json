@@ -41,7 +41,9 @@
     "jszip-utils": "^0.0.2",
     "diff": "https://cdnjs.cloudflare.com/ajax/libs/jsdiff/4.0.1/diff.min.js",
     "leaflet": "^1.7.1",
-    "leaflet.markercluster": "^1.4.1"
+    "leaflet.markercluster": "^1.4.1",
+    "packery": "^2.1.2",
+    "draggabilly": "^2.3.0"
   },
   "resolutions": {
     "jquery": "^2.2.0",

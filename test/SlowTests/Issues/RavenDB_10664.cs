@@ -37,20 +37,10 @@ namespace SlowTests.Issues
                 await store.Maintenance.SendAsync(new UpdateExternalReplicationOperation(new ExternalReplication(dbName, csName)));
                 await store.Maintenance.SendAsync(new UpdateExternalReplicationOperation(new ExternalReplication(dbName, csName)));
                 
-                var backupConfig = new PeriodicBackupConfiguration
+                var backupConfig = Backup.CreateBackupConfiguration(backupPath: NewDataPath(suffix: "BackupFolder"), fullBackupFrequency: "* */1 * * *", incrementalBackupFrequency: "* */2 * * *", azureSettings: new AzureSettings
                 {
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = NewDataPath(suffix: "BackupFolder")
-                    },
-                    AzureSettings = new AzureSettings
-                    {
-                        StorageContainer = "abc"
-                    },
-                    FullBackupFrequency = "* */1 * * *",
-                    IncrementalBackupFrequency = "* */2 * * *",
-                    Disabled = true
-                };
+                    StorageContainer = "abc"
+                }, disabled: true);
 
                 await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(backupConfig));
                 await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(backupConfig));

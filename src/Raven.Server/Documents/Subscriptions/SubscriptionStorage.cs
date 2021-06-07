@@ -1,4 +1,10 @@
-﻿using System;
+﻿// -----------------------------------------------------------------------
+//  <copyright file="SubscriptionStorage.cs" company="Hibernating Rhinos LTD">
+//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+//  </copyright>
+// ----------------------------------------------------------------------
+
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,6 +16,7 @@ using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
+using Raven.Server.Documents.Subscriptions.Stats;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
@@ -21,7 +28,6 @@ using Sparrow.LowMemory;
 
 namespace Raven.Server.Documents.Subscriptions
 {
-
     public class SubscriptionStorage : IDisposable, ILowMemoryHandler
     {
         private readonly DocumentDatabase _db;
@@ -29,6 +35,11 @@ namespace Raven.Server.Documents.Subscriptions
         private readonly ConcurrentDictionary<long, SubscriptionConnectionState> _subscriptionConnectionStates = new ConcurrentDictionary<long, SubscriptionConnectionState>();
         private readonly Logger _logger;
         private readonly SemaphoreSlim _concurrentConnectionsSemiSemaphore;
+
+        public event Action<string> OnAddTask;
+        public event Action<string> OnRemoveTask;
+        public event Action<SubscriptionConnection> OnEndConnection;
+        public event Action<string, SubscriptionBatchStatsAggregator> OnEndBatch;
 
         public SubscriptionStorage(DocumentDatabase db, ServerStore serverStore)
         {
@@ -78,6 +89,8 @@ namespace Raven.Server.Documents.Subscriptions
                 // updated existing subscription
                 return subscriptionId.Value;
             }
+            
+            _db.SubscriptionStorage.RaiseNotificationForTaskAdded(options.Name);
 
             return etag;
         }
@@ -266,6 +279,7 @@ namespace Raven.Server.Documents.Subscriptions
             {
                 subscriptionConnectionState.RegisterRejectedConnection(subscriptionConnection, ex);
                 subscriptionConnection.ConnectionException = ex;
+                
                 try
                 {
                     subscriptionConnection.CancellationTokenSource.Cancel();
@@ -592,6 +606,26 @@ namespace Raven.Server.Documents.Subscriptions
         public void LowMemoryOver()
         {
             // nothing to do here
+        }
+        
+        public void RaiseNotificationForTaskAdded(string subscriptionName)
+        {
+            OnAddTask?.Invoke(subscriptionName);
+        }
+        
+        public void RaiseNotificationForTaskRemoved(string subscriptionName)
+        {
+            OnRemoveTask?.Invoke(subscriptionName);
+        }
+        
+        public void RaiseNotificationForConnectionEnded(SubscriptionConnection connection)
+        {
+            OnEndConnection?.Invoke(connection);
+        }
+        
+        public void RaiseNotificationForBatchEnded(string subscriptionName, SubscriptionBatchStatsAggregator batchAggregator)
+        {
+            OnEndBatch?.Invoke(subscriptionName, batchAggregator);
         }
     }
 }

@@ -5,18 +5,25 @@ using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Extensions;
 using Sparrow.Json;
+using Sparrow.Server.Json.Sync;
 using Voron;
 
 namespace Raven.Server.Documents.Indexes.Auto
 {
     public class AutoMapIndexDefinition : AutoIndexDefinitionBase
     {
-        public AutoMapIndexDefinition(string collection, AutoIndexField[] fields, long? indexVersion = null)
-            : base(AutoIndexNameFinder.FindMapIndexName(collection, fields), collection, fields, indexVersion)
+        public AutoMapIndexDefinition(string collection, AutoIndexField[] fields, IndexDeploymentMode? deploymentMode, long? indexVersion = null)
+            : base(AutoIndexNameFinder.FindMapIndexName(collection, fields), collection, fields, deploymentMode, indexVersion)
         {
         }
 
-        protected override void PersistFields(JsonOperationContext context, BlittableJsonTextWriter writer)
+        // For legacy tests
+        public AutoMapIndexDefinition(string collection, AutoIndexField[] fields, long? indexVersion = null)
+            : this(collection, fields, deploymentMode: null, indexVersion)
+        {
+        }
+
+        protected override void PersistFields(JsonOperationContext context, AbstractBlittableJsonTextWriter writer)
         {
             PersistMapFields(context, writer);
         }
@@ -29,6 +36,7 @@ namespace Raven.Server.Documents.Indexes.Auto
                 Type = IndexType.AutoMap,
                 LockMode = LockMode,
                 Priority = Priority,
+                State = State,
             };
 
             void AddFields(IEnumerable<string> mapFields, IEnumerable<(string Name, IndexFieldOptions Options)> indexFields)
@@ -100,7 +108,7 @@ namespace Raven.Server.Documents.Indexes.Auto
                     if (stream == null)
                         return null;
 
-                    using (var reader = context.ReadForDisk(stream, string.Empty))
+                    using (var reader = context.Sync.ReadForDisk(stream, string.Empty))
                     {
                         return LoadFromJson(reader);
                     }
@@ -139,7 +147,7 @@ namespace Raven.Server.Documents.Indexes.Auto
                 fields[i] = field;
             }
 
-            return new AutoMapIndexDefinition(collections[0], fields, version)
+            return new AutoMapIndexDefinition(collections[0], fields, deploymentMode: null, version)
             {
                 LockMode = lockMode,
                 Priority = priority

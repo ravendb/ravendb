@@ -3,10 +3,13 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using Newtonsoft.Json;
+using System.Linq.Expressions;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Indexes.Analysis;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Expiration;
 using Raven.Client.Documents.Operations.Refresh;
@@ -16,6 +19,7 @@ using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.ServerWide.Operations.Configuration;
+using Raven.Client.Util;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.ServerWide
@@ -25,7 +29,7 @@ namespace Raven.Client.ServerWide
         public long Etag { get; set; }
     }
 
-    // The DatabaseRecord resides in EVERY server/node inside the cluster regardless if the db is actually within the node 
+    // The DatabaseRecord resides in EVERY server/node inside the cluster regardless if the db is actually within the node
     public class DatabaseRecord
     {
         public DatabaseRecord()
@@ -47,7 +51,11 @@ namespace Raven.Client.ServerWide
 
         public Dictionary<string, DeletionInProgressStatus> DeletionInProgress;
 
+        public Dictionary<string, RollingIndex> RollingIndexes;
+
         public DatabaseStateStatus DatabaseState;
+
+        public DatabaseLockMode LockMode;
 
         public DatabaseTopology Topology;
 
@@ -68,6 +76,8 @@ namespace Raven.Client.ServerWide
         public DocumentsCompressionConfiguration DocumentsCompression;
 
         public Dictionary<string, SorterDefinition> Sorters = new Dictionary<string, SorterDefinition>();
+
+        public Dictionary<string, AnalyzerDefinition> Analyzers = new Dictionary<string, AnalyzerDefinition>();
 
         public Dictionary<string, IndexDefinition> Indexes;
 
@@ -99,9 +109,13 @@ namespace Raven.Client.ServerWide
 
         public Dictionary<string, SqlConnectionString> SqlConnectionStrings = new Dictionary<string, SqlConnectionString>();
 
+        public Dictionary<string, OlapConnectionString> OlapConnectionStrings = new Dictionary<string, OlapConnectionString>();
+
         public List<RavenEtlConfiguration> RavenEtls = new List<RavenEtlConfiguration>();
 
         public List<SqlEtlConfiguration> SqlEtls = new List<SqlEtlConfiguration>();
+
+        public List<OlapEtlConfiguration> OlapEtls = new List<OlapEtlConfiguration>();
 
         public ClientConfiguration Client;
 
@@ -126,7 +140,20 @@ namespace Raven.Client.ServerWide
             Sorters?.Remove(sorterName);
         }
 
-        public void AddIndex(IndexDefinition definition, string source, DateTime createdAt, long raftIndex, int revisionsToKeep)
+        public void AddAnalyzer(AnalyzerDefinition definition)
+        {
+            if (Analyzers == null)
+                Analyzers = new Dictionary<string, AnalyzerDefinition>(StringComparer.OrdinalIgnoreCase);
+
+            Analyzers[definition.Name] = definition;
+        }
+
+        public void DeleteAnalyzer(string sorterName)
+        {
+            Analyzers?.Remove(sorterName);
+        }
+
+        public void AddIndex(IndexDefinition definition, string source, DateTime createdAt, long raftIndex, int revisionsToKeep, IndexDeploymentMode globalDeploymentMode)
         {
             var lockMode = IndexLockMode.Unlock;
 
@@ -163,7 +190,7 @@ namespace Raven.Client.ServerWide
 
                 if (differences != null)
                 {
-                    if (differences.Value.HasFlag(IndexDefinitionCompareDifferences.Maps) == false && 
+                    if (differences.Value.HasFlag(IndexDefinitionCompareDifferences.Maps) == false &&
                         differences.Value.HasFlag(IndexDefinitionCompareDifferences.Reduce) == false &&
                         differences.Value.HasFlag(IndexDefinitionCompareDifferences.Fields) == false &&
                         differences.Value.HasFlag(IndexDefinitionCompareDifferences.AdditionalSources) == false &&
@@ -197,25 +224,105 @@ namespace Raven.Client.ServerWide
             {
                 history.RemoveRange(revisionsToKeep, history.Count - revisionsToKeep);
             }
+
+            if (IsRolling(definition.DeploymentMode, globalDeploymentMode))
+            {
+                if (differences == null || (differences.Value & IndexDefinition.ReIndexRequiredMask) != 0)
+                {
+                    InitializeRollingDeployment(definition.Name, createdAt);
+                    definition.DeploymentMode = IndexDeploymentMode.Rolling;
+                }
+            }
         }
 
         public void AddIndex(AutoIndexDefinition definition)
         {
+            AddIndex(definition, SystemTime.UtcNow, 0, globalDeploymentMode: IndexDeploymentMode.Parallel);
+        }
+
+        internal void AddIndex(AutoIndexDefinition definition, DateTime createdAt, long raftIndex, IndexDeploymentMode globalDeploymentMode)
+        {
+            IndexDefinitionCompareDifferences? differences = null;
+
             if (AutoIndexes.TryGetValue(definition.Name, out AutoIndexDefinition existingDefinition))
             {
-                var result = existingDefinition.Compare(definition);
+                differences = existingDefinition.Compare(definition);
 
-                if (result == IndexDefinitionCompareDifferences.None)
+                if (differences == IndexDefinitionCompareDifferences.None)
                     return;
 
-                result &= ~IndexDefinitionCompareDifferences.Priority;
-                result &= ~IndexDefinitionCompareDifferences.State;
+                differences &= ~IndexDefinitionCompareDifferences.Priority;
+                differences &= ~IndexDefinitionCompareDifferences.State;
 
-                if (result != IndexDefinitionCompareDifferences.None)
-                    throw new NotSupportedException($"Can not update auto-index: {definition.Name} (compare result: {result})");
+                if (differences != IndexDefinitionCompareDifferences.None)
+                    throw new NotSupportedException($"Can not update auto-index: {definition.Name} (compare result: {differences})");
             }
 
             AutoIndexes[definition.Name] = definition;
+            
+            if (globalDeploymentMode == IndexDeploymentMode.Rolling)
+            {
+                if (differences == null || (differences.Value & IndexDefinition.ReIndexRequiredMask) != 0)
+                    InitializeRollingDeployment(definition.Name, createdAt);
+            }
+        }
+
+        internal static bool IsRolling(IndexDeploymentMode? fromDefinition, IndexDeploymentMode fromSetting)
+        {
+            if (fromDefinition.HasValue == false)
+                return fromSetting == IndexDeploymentMode.Rolling;
+
+            return fromDefinition == IndexDeploymentMode.Rolling;
+        }
+
+        private void InitializeRollingDeployment(string indexName, DateTime createdAt)
+        {
+            RollingIndexes ??= new Dictionary<string, RollingIndex>();
+            
+            var rollingIndex = new RollingIndex();
+            RollingIndexes[indexName] = rollingIndex;
+
+            var chosenNode = ChooseFirstNode();
+
+            foreach (var node in Topology.AllNodes)
+            {
+                var deployment = new RollingIndexDeployment
+                {
+                    CreatedAt = createdAt
+                };
+
+                if (node.Equals(chosenNode))
+                {
+                    deployment.State = RollingIndexState.Running;
+                    deployment.StartedAt = createdAt;
+                }
+                else
+                {
+                    deployment.State = RollingIndexState.Pending;
+                }
+
+                rollingIndex.ActiveDeployments[node] = deployment;
+            }
+        }
+
+        private string ChooseFirstNode()
+        {
+            string chosenNode;
+
+            if (Topology.Members.Count > 0)
+            {
+                chosenNode = Topology.Members.Last();
+            }
+            else if (Topology.Promotables.Count > 0)
+            {
+                chosenNode = Topology.Promotables.Last();
+            }
+            else
+            {
+                chosenNode = Topology.Rehabs.Last();
+            }
+
+            return chosenNode;
         }
 
         public void DeleteIndex(string name)
@@ -223,6 +330,7 @@ namespace Raven.Client.ServerWide
             Indexes?.Remove(name);
             AutoIndexes?.Remove(name);
             IndexesHistory?.Remove(name);
+            RollingIndexes?.Remove(name);
         }
 
         public void DeletePeriodicBackupConfiguration(long backupTaskId)
@@ -233,7 +341,7 @@ namespace Raven.Client.ServerWide
             {
                 if (periodicBackup.TaskId == backupTaskId)
                 {
-                    if (periodicBackup.Name != null && 
+                    if (periodicBackup.Name != null &&
                         periodicBackup.Name.StartsWith(ServerWideBackupConfiguration.NamePrefix, StringComparison.OrdinalIgnoreCase))
                         throw new InvalidOperationException($"Can't delete task id: {periodicBackup.TaskId}, name: '{periodicBackup.Name}', " +
                                                             $"because it is a server-wide backup task. Please use a dedicated operation.");
@@ -262,6 +370,8 @@ namespace Raven.Client.ServerWide
                 throw new InvalidOperationException($"Can't use task name '{taskName}', there is already an ETL task with that name");
             if (SqlEtls.Any(x => x.Name.Equals(taskName, StringComparison.OrdinalIgnoreCase)))
                 throw new InvalidOperationException($"Can't use task name '{taskName}', there is already a SQL ETL task with that name");
+            if (OlapEtls.Any(x => x.Name.Equals(taskName, StringComparison.OrdinalIgnoreCase)))
+                throw new InvalidOperationException($"Can't use task name '{taskName}', there is already an OLAP ETL task with that name");
             if (PeriodicBackups.Any(x => x.Name.Equals(taskName, StringComparison.OrdinalIgnoreCase)))
                 throw new InvalidOperationException($"Can't use task name '{taskName}', there is already a Periodic Backup task with that name");
         }
@@ -329,6 +439,14 @@ namespace Raven.Client.ServerWide
         public IndexDefinition Definition { get; set; }
         public string Source { get; set; }
         public DateTime CreatedAt { get; set; }
+        public Dictionary<string, RollingIndexDeployment> RollingDeployment { get; set; }
+    }
+
+    public enum DatabaseLockMode
+    {
+        Unlock,
+        PreventDeletesIgnore,
+        PreventDeletesError
     }
 
     public enum DatabaseStateStatus
@@ -361,17 +479,20 @@ namespace Raven.Client.ServerWide
 
         protected bool Equals(DocumentsCompressionConfiguration other)
         {
-            var mine = new HashSet<string>(Collections,StringComparer.OrdinalIgnoreCase);
+            var mine = new HashSet<string>(Collections, StringComparer.OrdinalIgnoreCase);
             var them = new HashSet<string>(other.Collections, StringComparer.OrdinalIgnoreCase);
-            return CompressRevisions == other.CompressRevisions && 
+            return CompressRevisions == other.CompressRevisions &&
                    mine.SetEquals(them);
         }
 
         public override bool Equals(object obj)
         {
-            if (ReferenceEquals(null, obj)) return false;
-            if (ReferenceEquals(this, obj)) return true;
-            if (obj.GetType() != GetType()) return false;
+            if (ReferenceEquals(null, obj))
+                return false;
+            if (ReferenceEquals(this, obj))
+                return true;
+            if (obj.GetType() != GetType())
+                return false;
             return Equals((DocumentsCompressionConfiguration)obj);
         }
 
@@ -387,12 +508,12 @@ namespace Raven.Client.ServerWide
             hash = 31 * hash + CompressRevisions.GetHashCode();
             return hash;
         }
-        
+
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
-                [nameof(Collections)] =  new DynamicJsonArray(Collections),
+                [nameof(Collections)] = new DynamicJsonArray(Collections),
                 [nameof(CompressRevisions)] = CompressRevisions
             };
         }

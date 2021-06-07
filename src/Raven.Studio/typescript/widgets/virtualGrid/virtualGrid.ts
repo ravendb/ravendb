@@ -13,6 +13,10 @@ import virtualGridSelection = require("widgets/virtualGrid/virtualGridSelection"
 import shiftSelectionPreview = require("widgets/virtualGrid/shiftSelectionPreview");
 
 class virtualGrid<T> {
+    
+    static readonly rowHeightRegular = 36;
+    static readonly rowHeightCondensed = 24;
+    
 
     private items = new Map<number, T>(); // The items loaded asynchronously.
     private totalItemCount: number | null = null;
@@ -50,7 +54,10 @@ class virtualGrid<T> {
     private controller: virtualGridController<T>;
     private previousScroll: [number, number] = [0, 0];
     private condensed = false;
+    private disableStripes: boolean;
     private rowHeight: number;
+    private customRowClassProvider: (item: T) => string[] = null;
+    private readonly afterRenderCallback: () => void;
 
     private static readonly minItemFetchCount = 100;
     private static readonly viewportSelector = ".viewport";
@@ -58,7 +65,7 @@ class virtualGrid<T> {
     private static readonly viewportScrollerSelector = ".viewport-scroller";
     private static readonly minColumnWidth = 20;
 
-    constructor(params: { controller: KnockoutObservable<virtualGridController<T>>, emptyTemplate: string , condensed: boolean}) {
+    constructor(params: { controller: KnockoutObservable<virtualGridController<T>>, emptyTemplate: string , condensed: boolean, disableStripes: boolean, afterRender?: () => void }) {
         this.gridId = _.uniqueId("vg_");
 
         this.refreshSelection();
@@ -75,10 +82,14 @@ class virtualGrid<T> {
         
         if (params.condensed) {
             this.condensed = true;
-            this.rowHeight = 24;
+            this.rowHeight = virtualGrid.rowHeightCondensed;
         } else {
-            this.rowHeight = 36;
+            this.rowHeight = virtualGrid.rowHeightRegular;
         }
+        
+        this.afterRenderCallback = params.afterRender;
+        
+        this.disableStripes = params ? params.disableStripes : false;
     }
 
     private initController() {
@@ -88,6 +99,7 @@ class virtualGrid<T> {
             init: (fetcher, columnsProvider) => this.init(fetcher, columnsProvider),
             reset: (hard: boolean = true, retainSort: boolean = true) => this.resetItems(hard, retainSort),
             selection: this.selection,
+            customRowClassProvider: provider => this.customRowClassProvider = provider,
             findItem: (predicate) => this.findItem(predicate),
             getSelectedItems: () => this.getSelectedItems(),
             setSelectedItems: (selection: Array<T>) => this.setSelectedItems(selection),
@@ -113,6 +125,7 @@ class virtualGrid<T> {
     // Called by Knockout once the grid has been rendered.
     afterRender() {
         this.initializeUIElements();
+        this.afterRenderCallback?.();
     }
 
     private initializeUIElements() {
@@ -265,7 +278,7 @@ class virtualGrid<T> {
         const rows: virtualRow[] = [];
         rows.length = desiredRowCount;
         for (let i = 0; i < desiredRowCount; i++) {
-            rows[i] = new virtualRow(this.rowHeight);
+            rows[i] = new virtualRow(this.rowHeight, this.disableStripes);
         }
 
         return rows;
@@ -446,7 +459,9 @@ class virtualGrid<T> {
                 // Populate it with data.
                 const rowIndex = Math.floor(positionCheck / this.rowHeight);
                 const isChecked = this.isSelected(rowIndex);
-                rowAtPosition.populate(this.items.get(rowIndex), rowIndex, isChecked, columns, columns.indexOf(this.sortByColumn()));
+                const item = this.items.get(rowIndex);
+                const customRowClasses = this.customRowClassProvider ? this.customRowClassProvider(item) : [];
+                rowAtPosition.populate(item, rowIndex, isChecked, columns, columns.indexOf(this.sortByColumn()), customRowClasses);
             }
 
             const newPositionCheck = rowAtPosition.top + this.rowHeight;
@@ -474,7 +489,9 @@ class virtualGrid<T> {
 
                 // Fill it with the data we've got loaded. If there's no data, it will display the loading indicator.
                 const isRowChecked = this.isSelected(row.index);
-                row.populate(this.items.get(row.index), row.index, isRowChecked, columns, columns.indexOf(this.sortByColumn()));
+                const item = this.items.get(row.index);
+                const customRowClasses = this.customRowClassProvider ? this.customRowClassProvider(item) : [];
+                row.populate(item, row.index, isRowChecked, columns, columns.indexOf(this.sortByColumn()), customRowClasses);
             }
         }
 

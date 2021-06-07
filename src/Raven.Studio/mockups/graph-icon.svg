@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 123 123">
+  <defs>
+    <style>
+      .a {
+        fill: #262a30;
+      }
+
+      .b, .d, .f {
+        fill: none;
+        stroke-miterlimit: 10;
+      }
+
+      .b {
+        stroke: #333d48;
+        stroke-width: 2px;
+      }
+
+      .c {
+        fill: url(#a);
+      }
+
+      .d {
+        stroke: #2f9ef3;
+      }
+
+      .d, .f {
+        stroke-linecap: round;
+        stroke-width: 3px;
+      }
+
+      .e {
+        fill: url(#b);
+      }
+
+      .f {
+        stroke: #ba50a1;
+      }
+    </style>
+    <linearGradient id="a" x1="61.287" y1="-0.212" x2="61.287" y2="121.845" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2f9ef3" stop-opacity="0.5"/>
+      <stop offset="1" stop-color="#2f9ef3" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="b" x1="61.478" y1="50.205" x2="61.478" y2="127.215" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ba50a1" stop-opacity="0.5"/>
+      <stop offset="1" stop-color="#ba50a1" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <title>Artboard 4</title>
+  <rect class="a" x="-0.5" width="124" height="123"/>
+  <line class="b" x1="32.458" y1="14.536" x2="32.458" y2="110.147"/>
+  <line class="b" x1="52" y1="14.536" x2="52" y2="110.147"/>
+  <line class="b" x1="71.542" y1="14.536" x2="71.542" y2="110.147"/>
+  <line class="b" x1="91.084" y1="14.536" x2="91.084" y2="110.147"/>
+  <g>
+    <g>
+      <polygon class="c" points="11.948 48.391 21.815 44.944 31.676 16.822 41.541 46.299 51.406 37.752 61.27 40.972 71.137 35.624 81.009 57.355 90.876 55.272 100.751 60.09 110.625 37.152 110.625 110.146 110.624 110.147 11.948 110.147 11.948 48.391"/>
+      <polyline class="d" points="11.734 47.777 21.307 44.432 31.691 14.822 41.849 45.174 51.258 37.02 61.206 40.269 71.442 34.72 81.384 56.613 90.961 54.592 100.424 59.207 110.029 36.894"/>
+    </g>
+    <polygon class="e" points="12.139 86.767 22.007 83.32 31.867 55.201 41.732 84.677 51.597 76.131 61.461 79.35 71.328 74.002 81.2 95.733 91.067 93.65 100.943 98.469 110.817 75.529 110.817 110.146 110.815 110.147 12.139 110.147 12.139 86.767"/>
+    <polyline class="f" points="12.139 86.767 22.007 83.32 31.867 55.201 41.732 84.677 51.597 76.131 61.461 79.35 71.328 74.002 81.2 95.733 91.067 93.65 100.943 98.469 110.817 75.529"/>
+  </g>
+</svg>

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Raven.Client;
@@ -87,11 +88,11 @@ namespace Raven.Server.Documents.Queries
             return result;
         }
 
-        public async Task WriteDetailedQueryResult(IndexQueryServerSide indexQuery, QueryOperationContext queryContext, BlittableJsonTextWriter writer, OperationCancelToken token)
+        public async Task WriteDetailedQueryResult(IndexQueryServerSide indexQuery, QueryOperationContext queryContext, AsyncBlittableJsonTextWriter writer, OperationCancelToken token)
         {
             var qr = await GetQueryResults(indexQuery, queryContext, null, token, true);
             var reporter = new GraphQueryDetailedReporter(writer, queryContext.Documents);
-            reporter.Visit(qr.QueryPlan.RootQueryStep);
+            await reporter.VisitAsync(qr.QueryPlan.RootQueryStep);
         }
 
         public override async Task<DocumentQueryResult> ExecuteQuery(IndexQueryServerSide query, QueryOperationContext queryContext, long? existingResultEtag,
@@ -133,7 +134,7 @@ namespace Raven.Server.Documents.Queries
                     IncludeCompareExchangeValuesCommand icevc = null;
                     if (q.Select == null && q.SelectFunctionBody.FunctionText == null)
                     {
-                        HandleResultsWithoutSelect(queryContext.Documents, qr.Matches, final);
+                        await HandleResultsWithoutSelectAsync(queryContext.Documents, qr.Matches, final, token.Token);
                     }
                     else if (q.Select != null)
                     {
@@ -167,7 +168,7 @@ namespace Raven.Server.Documents.Queries
                             // ReSharper disable once PossibleNullReferenceException
                             if (q.IsDistinct && alreadySeenProjections.Add(result.DataHash) == false)
                                 continue;
-                            final.AddResult(result);
+                            await final.AddResultAsync(result, token.Token);
                         }
                     }
 
@@ -185,6 +186,8 @@ namespace Raven.Server.Documents.Queries
                     idc.Fill(final.Includes);
 
                     final.TotalResults = final.Results.Count;
+
+                    final.LongTotalResults = final.Results.Count;
 
                     if (query.Limit != null || query.Offset != null)
                     {
@@ -284,9 +287,11 @@ namespace Raven.Server.Documents.Queries
             return (matchResults, qp, false);
         }
 
-        private static void HandleResultsWithoutSelect<TResult>(
+        private static async ValueTask HandleResultsWithoutSelectAsync<TResult>(
             DocumentsOperationContext documentsContext,
-            List<Match> matchResults, TResult final) where TResult : QueryResultServerSide<Document>
+            List<Match> matchResults, 
+            TResult final,
+            CancellationToken token) where TResult : QueryResultServerSide<Document>
         {
             foreach (var match in matchResults)
             {
@@ -295,7 +300,7 @@ namespace Raven.Server.Documents.Queries
 
                 if (match.Count == 1) //if we don't have multiple results in each row, we can "flatten" the row
                 {
-                    final.AddResult(match.GetFirstResult());
+                    await final.AddResultAsync(match.GetFirstResult(), token);
                     continue;
                 }
 
@@ -307,7 +312,7 @@ namespace Raven.Server.Documents.Queries
                     Data = documentsContext.ReadObject(resultAsJson, "graph/result"),
                 };
 
-                final.AddResult(result);
+                await final.AddResultAsync(result, token);
             }
         }
 

@@ -199,9 +199,9 @@ namespace Raven.Client.Documents.Commands
                 pathBuilder.Append("&loadHash=").Append(calculateHash);
                 request.Method = HttpMethod.Post;
 
-                request.Content = new BlittableJsonContent(stream =>
+                request.Content = new BlittableJsonContent(async stream =>
                 {
-                    using (var writer = new BlittableJsonTextWriter(context, stream))
+                    await using (var writer = new AsyncBlittableJsonTextWriter(context, stream))
                     {
                         writer.WriteStartObject();
                         writer.WriteArray("Ids", uniqueIds);

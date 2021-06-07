@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using FastTests;
 using FastTests.Server.Replication;
 using Raven.Client;
 using Raven.Client.Documents.Operations.TimeSeries;
@@ -395,7 +396,7 @@ namespace SlowTests.Client.TimeSeries
             using (var storeA = GetDocumentStore())
             using (var storeB = GetDocumentStore())
             {
-                var baseline = DateTime.Now;
+                var baseline = RavenTestHelper.UtcToday;
 
                 using (var session = storeA.OpenAsyncSession())
                 {

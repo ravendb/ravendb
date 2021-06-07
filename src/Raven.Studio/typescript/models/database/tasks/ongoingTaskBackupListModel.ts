@@ -88,7 +88,7 @@ class ongoingTaskBackupListModel extends ongoingTaskListModel {
         });
 
         this.isBackupNowVisible = ko.pureComputed(() => {
-            return  !this.isServerWide() || accessManager.default.clusterAdminOrClusterNode();
+            return  !this.isServerWide() || accessManager.default.isClusterAdminOrClusterNode();
         });
         
         this.lastFullBackupHumanized = ko.pureComputed(() => {

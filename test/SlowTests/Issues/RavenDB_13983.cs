@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using FastTests;
 using Sparrow.Json;
+using Sparrow.Server.Json.Sync;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -69,7 +70,7 @@ namespace SlowTests.Issues
 
             using (var context = JsonOperationContext.ShortTermSingleUse())
             {
-                var obj = context.Read(new MemoryStream(Encoding.UTF8.GetBytes(json)), "test");
+                var obj = context.Sync.ReadForDisk(new MemoryStream(Encoding.UTF8.GetBytes(json)), "test");
                 obj.TryGet("Test", out BlittableJsonReaderObject a1);
                 obj.TryGet("Fun", out BlittableJsonReaderObject a2);
 

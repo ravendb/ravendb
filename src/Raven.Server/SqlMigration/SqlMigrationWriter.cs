@@ -53,7 +53,7 @@ namespace Raven.Server.SqlMigration
                     Hash = await AttachmentsStorageHelper.CopyStreamToFileAndCalculateHash(_context, memoryStream, stream, _context.DocumentDatabase.DatabaseShutdown) //TODO: do we need it?
                 };
 
-                stream.Flush();
+                await stream.FlushAsync();
 
                 _attachmentStreams.Add(attachmentStream);
 

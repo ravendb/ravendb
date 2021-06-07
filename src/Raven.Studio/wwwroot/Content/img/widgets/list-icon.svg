@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 124 123">
+  <defs>
+    <style>
+      .a {
+        fill: #262a30;
+      }
+
+      .b {
+        fill: none;
+        stroke: #333d48;
+        stroke-miterlimit: 10;
+        stroke-width: 2px;
+      }
+
+      .c {
+        fill: #99b3d1;
+      }
+
+      .d {
+        fill: #ba50a1;
+      }
+
+      .e {
+        fill: #2f9ef3;
+      }
+    </style>
+  </defs>
+  <title>Artboard 5</title>
+  <rect class="a" width="124" height="123"/>
+  <g>
+    <line class="b" x1="13.512" y1="105.319" x2="109.124" y2="105.319"/>
+    <line class="b" x1="13.512" y1="76.106" x2="109.124" y2="76.106"/>
+    <line class="b" x1="13.512" y1="46.894" x2="109.124" y2="46.894"/>
+    <line class="b" x1="13.512" y1="17.681" x2="109.124" y2="17.681"/>
+    <rect class="c" x="13.512" y="27.836" width="40.23" height="8.903"/>
+    <rect class="c" x="13.512" y="57.048" width="52.501" height="8.903"/>
+    <rect class="c" x="13.512" y="86.261" width="64.771" height="8.903"/>
+    <rect class="d" x="94.824" y="25.988" width="12.6" height="12.6" rx="6.3"/>
+    <rect class="e" x="73.983" y="25.988" width="12.6" height="12.6" rx="6.3"/>
+    <rect class="e" x="94.824" y="55.2" width="12.6" height="12.6" rx="6.3"/>
+    <rect class="d" x="94.824" y="84.412" width="12.6" height="12.6" rx="6.3"/>
+  </g>
+</svg>

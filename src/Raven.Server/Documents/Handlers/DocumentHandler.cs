@@ -22,6 +22,7 @@ using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session.Loaders;
 using Raven.Client.Exceptions;
+using Raven.Client.Http;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Json;
@@ -44,7 +45,7 @@ namespace Raven.Server.Documents.Handlers
 {
     public class DocumentHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/docs", "HEAD", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/docs", "HEAD", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public Task Head()
         {
             var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
@@ -68,8 +69,8 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/docs/size", "GET", AuthorizationStatus.ValidUser)]
-        public Task GetDocSize()
+        [RavenAction("/databases/*/docs/size", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        public async Task GetDocSize()
         {
             var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
 
@@ -80,7 +81,7 @@ namespace Raven.Server.Documents.Handlers
                 if (document == null)
                 {
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                    return Task.CompletedTask;
+                    return;
                 }
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
@@ -94,17 +95,14 @@ namespace Raven.Server.Documents.Handlers
                     HumaneAllocatedSize = Sizes.Humane(document.Value.AllocatedSize)
                 };
 
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     context.Write(writer, documentSizeDetails.ToJson());
-                    writer.Flush();
                 }
-
-                return Task.CompletedTask;
             }
         }
 
-        [RavenAction("/databases/*/docs", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/docs", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task Get()
         {
             var ids = GetStringValuesQueryString("id", required: false);
@@ -123,7 +121,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/docs", "POST", AuthorizationStatus.ValidUser, DisableOnCpuCreditsExhaustion = true)]
+        [RavenAction("/databases/*/docs", "POST", AuthorizationStatus.ValidUser, EndpointType.Read, DisableOnCpuCreditsExhaustion = true)]
         public async Task PostGet()
         {
             var metadataOnly = GetBoolValueQueryString("metadataOnly", required: false) ?? false;
@@ -191,17 +189,16 @@ namespace Raven.Server.Documents.Handlers
                 documents = Database.DocumentsStorage.GetDocumentsInReverseEtagOrder(context, start, pageSize);
             }
 
-            int numberOfResults;
+            long numberOfResults;
 
-            using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream(), Database.DatabaseShutdown))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
                 writer.WritePropertyName("Results");
 
-                numberOfResults = await writer.WriteDocumentsAsync(context, documents, metadataOnly);
+                numberOfResults = await writer.WriteDocumentsAsync(context, documents, metadataOnly, Database.DatabaseShutdown);
 
                 writer.WriteEndObject();
-                await writer.OuterFlushAsync();
             }
 
             AddPagingPerformanceHint(PagingOperationType.Documents, isStartsWith ? nameof(DocumentsStorage.GetDocumentsStartingWith) : nameof(GetDocumentsAsync), HttpContext.Request.QueryString.Value, numberOfResults, pageSize, sw.ElapsedMilliseconds);
@@ -234,7 +231,9 @@ namespace Raven.Server.Documents.Handlers
 
                     if (document == null && ids.Count == 1)
                     {
-                        HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                    HttpContext.Response.StatusCode = GetStringFromHeaders("If-None-Match") == HttpCache.NotFoundResponse
+                        ?(int)HttpStatusCode.NotModified
+                        :(int)HttpStatusCode.NotFound;
                         return;
                     }
 
@@ -259,10 +258,8 @@ namespace Raven.Server.Documents.Handlers
 
                 HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + actualEtag + "\"";
 
-                int numberOfResults = 0;
-
-                numberOfResults = await WriteDocumentsJsonAsync(context, metadataOnly, documents, includes, includeCounters?.Results, includeTimeSeries?.Results,
-                    includeCompareExchangeValues?.Results, numberOfResults);
+                var numberOfResults = await WriteDocumentsJsonAsync(context, metadataOnly, documents, includes, includeCounters?.Results, includeTimeSeries?.Results,
+                    includeCompareExchangeValues?.Results);
 
                 AddPagingPerformanceHint(PagingOperationType.Documents, nameof(GetDocumentsByIdAsync), HttpContext.Request.QueryString.Value, numberOfResults,
                     documents.Count, sw.ElapsedMilliseconds);
@@ -382,20 +379,21 @@ namespace Raven.Server.Documents.Handlers
             includeTimeSeries = new IncludeTimeSeriesCommand(context, new Dictionary<string, HashSet<AbstractTimeSeriesRange>> { { string.Empty, hs } });
         }
 
-        private async Task<int> WriteDocumentsJsonAsync(JsonOperationContext context, bool metadataOnly, IEnumerable<Document> documentsToWrite, List<Document> includes,
-            Dictionary<string, List<CounterDetail>> counters, Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>> timeseries, Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>> compareExchangeValues, int numberOfResults)
+        private async Task<long> WriteDocumentsJsonAsync(JsonOperationContext context, bool metadataOnly, IEnumerable<Document> documentsToWrite, List<Document> includes,
+            Dictionary<string, List<CounterDetail>> counters, Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>> timeseries, Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>> compareExchangeValues)
         {
-            using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream(), Database.DatabaseShutdown))
+            long numberOfResults;
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
                 writer.WritePropertyName(nameof(GetDocumentsResult.Results));
-                numberOfResults = await writer.WriteDocumentsAsync(context, documentsToWrite, metadataOnly);
+                numberOfResults = await writer.WriteDocumentsAsync(context, documentsToWrite, metadataOnly, Database.DatabaseShutdown);
 
                 writer.WriteComma();
                 writer.WritePropertyName(nameof(GetDocumentsResult.Includes));
                 if (includes.Count > 0)
                 {
-                    await writer.WriteIncludesAsync(context, includes);
+                    await writer.WriteIncludesAsync(context, includes, Database.DatabaseShutdown);
                 }
                 else
                 {
@@ -407,30 +405,29 @@ namespace Raven.Server.Documents.Handlers
                 {
                     writer.WriteComma();
                     writer.WritePropertyName(nameof(GetDocumentsResult.CounterIncludes));
-                    await writer.WriteCountersAsync(counters);
+                    await writer.WriteCountersAsync(counters, Database.DatabaseShutdown);
                 }
 
                 if (timeseries?.Count > 0)
                 {
                     writer.WriteComma();
                     writer.WritePropertyName(nameof(GetDocumentsResult.TimeSeriesIncludes));
-                    await writer.WriteTimeSeriesAsync(timeseries);
+                    await writer.WriteTimeSeriesAsync(timeseries, Database.DatabaseShutdown);
                 }
 
                 if (compareExchangeValues?.Count > 0)
                 {
                     writer.WriteComma();
                     writer.WritePropertyName(nameof(GetDocumentsResult.CompareExchangeValueIncludes));
-                    await writer.WriteCompareExchangeValues(compareExchangeValues);
+                    await writer.WriteCompareExchangeValuesAsync(compareExchangeValues, Database.DatabaseShutdown);
                 }
 
                 writer.WriteEndObject();
-                await writer.OuterFlushAsync();
             }
             return numberOfResults;
         }
 
-        [RavenAction("/databases/*/docs", "DELETE", AuthorizationStatus.ValidUser, DisableOnCpuCreditsExhaustion = true)]
+        [RavenAction("/databases/*/docs", "DELETE", AuthorizationStatus.ValidUser, EndpointType.Write, DisableOnCpuCreditsExhaustion = true)]
         public async Task Delete()
         {
             var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
@@ -446,7 +443,7 @@ namespace Raven.Server.Documents.Handlers
             NoContentStatus();
         }
 
-        [RavenAction("/databases/*/docs", "PUT", AuthorizationStatus.ValidUser, DisableOnCpuCreditsExhaustion = true)]
+        [RavenAction("/databases/*/docs", "PUT", AuthorizationStatus.ValidUser, EndpointType.Write, DisableOnCpuCreditsExhaustion = true)]
         public async Task Put()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -474,7 +471,7 @@ namespace Raven.Server.Documents.Handlers
 
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
-                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
                         writer.WriteStartObject();
 
@@ -491,7 +488,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/docs", "PATCH", AuthorizationStatus.ValidUser, DisableOnCpuCreditsExhaustion = true)]
+        [RavenAction("/databases/*/docs", "PATCH", AuthorizationStatus.ValidUser, EndpointType.Write, DisableOnCpuCreditsExhaustion = true)]
         public async Task Patch()
         {
             var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
@@ -502,7 +499,7 @@ namespace Raven.Server.Documents.Handlers
 
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                var request = context.Read(RequestBodyStream(), "ScriptedPatchRequest");
+                var request = await context.ReadForMemoryAsync(RequestBodyStream(), "ScriptedPatchRequest");
                 if (request.TryGet("Patch", out BlittableJsonReaderObject patchCmd) == false || patchCmd == null)
                     throw new ArgumentException("The 'Patch' field in the body request is mandatory");
 
@@ -513,6 +510,8 @@ namespace Raven.Server.Documents.Handlers
                 if (request.TryGet("PatchIfMissing", out BlittableJsonReaderObject patchIfMissingCmd) && patchIfMissingCmd != null)
                     patchIfMissing = PatchRequest.Parse(patchIfMissingCmd, out patchIfMissingArgs);
 
+                request.TryGet("CreateIfMissing", out BlittableJsonReaderObject createIfMissing);
+
                 var changeVector = context.GetLazyString(GetStringFromHeaders("If-Match"));
 
                 var command = new PatchDocumentCommand(context,
@@ -521,6 +520,7 @@ namespace Raven.Server.Documents.Handlers
                     skipPatchIfChangeVectorMismatch,
                     (patch, patchArgs),
                     (patchIfMissing, patchIfMissingArgs),
+                    createIfMissing,
                     Database.IdentityPartsSeparator,
                     isTest,
                     debugMode,
@@ -547,21 +547,25 @@ namespace Raven.Server.Documents.Handlers
                     case PatchStatus.DocumentDoesNotExist:
                         HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                         return;
+
                     case PatchStatus.Created:
                         HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
                         break;
+
                     case PatchStatus.Skipped:
                         HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
                         return;
+
                     case PatchStatus.Patched:
                     case PatchStatus.NotModified:
                         HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
                         break;
+
                     default:
                         throw new ArgumentOutOfRangeException();
                 }
 
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
 
@@ -617,8 +621,8 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/docs/class", "GET", AuthorizationStatus.ValidUser, DisableOnCpuCreditsExhaustion = true)]
-        public Task GenerateClassFromDocument()
+        [RavenAction("/databases/*/docs/class", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, DisableOnCpuCreditsExhaustion = true)]
+        public async Task GenerateClassFromDocument()
         {
             var id = GetStringQueryString("id");
             var lang = (GetStringQueryString("lang", required: false) ?? "csharp")
@@ -631,25 +635,24 @@ namespace Raven.Server.Documents.Handlers
                 if (document == null)
                 {
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                    return Task.CompletedTask;
+                    return;
                 }
 
                 switch (lang)
                 {
                     case "csharp":
                         break;
+
                     default:
                         throw new NotImplementedException($"Document code generator isn't implemented for {lang}");
                 }
 
-                using (var writer = new StreamWriter(ResponseBodyStream()))
+                await using (var writer = new StreamWriter(ResponseBodyStream()))
                 {
                     var codeGenerator = new JsonClassGenerator(lang);
                     var code = codeGenerator.Execute(document.Data);
-                    writer.Write(code);
+                    await writer.WriteAsync(code);
                 }
-
-                return Task.CompletedTask;
             }
         }
     }

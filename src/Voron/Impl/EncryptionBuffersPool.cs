@@ -32,6 +32,7 @@ namespace Voron.Impl
         private readonly Timer _cleanupTimer;
         private long _generation;
         public bool Disabled;
+        private long _currentlyInUseBytes;
 
         public long Generation => _generation;
 
@@ -44,7 +45,7 @@ namespace Voron.Impl
         private DateTime[] _lastGlobalStackRebuilds;
         private readonly TimeSpan _globalStackRebuildInterval = TimeSpan.FromMinutes(15);
 
-        public EncryptionBuffersPool()
+        public EncryptionBuffersPool(bool registerLowMemory = true, bool registerCleanup = true)
         {
             _maxNumberOfAllocationsToKeepInGlobalStackPerSlot = PlatformDetails.Is32Bits == false
                 ? 128
@@ -67,9 +68,11 @@ namespace Voron.Impl
                 _lastGlobalStackRebuilds[i] = now;
             }
 
-            LowMemoryNotification.Instance.RegisterLowMemoryHandler(this);
+            if (registerLowMemory)
+                LowMemoryNotification.Instance.RegisterLowMemoryHandler(this);
 
-            _cleanupTimer = new Timer(Cleanup, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
+            if (registerCleanup)
+                _cleanupTimer = new Timer(Cleanup, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
         }
 
         public byte* Get(int numberOfPages, out long size, out NativeMemory.ThreadStats thread)
@@ -82,8 +85,12 @@ namespace Voron.Impl
             {
                 // We don't want to pool large buffers
                 size = numberOfPages * Constants.Storage.PageSize;
+                Interlocked.Add(ref _currentlyInUseBytes, size);
+
                 return PlatformSpecific.NativeMemory.Allocate4KbAlignedMemory(size, out thread);
             }
+
+            Interlocked.Add(ref _currentlyInUseBytes, size);
 
             var index = Bits.MostSignificantBit(size);
             NativeAllocation allocation;
@@ -123,6 +130,8 @@ namespace Voron.Impl
             if (ptr == null)
                 return;
 
+            Interlocked.Add(ref _currentlyInUseBytes, -size);
+
             Sodium.sodium_memzero(ptr, (UIntPtr)size);
 
             var numberOfPages = size / Constants.Storage.PageSize;
@@ -131,6 +140,7 @@ namespace Voron.Impl
             {
                 // - don't want to pool large buffers
                 // - release all the buffers that were created before we got the low memory event
+                ForTestingPurposes?.OnFree4KbAlignedMemory?.Invoke(size);
                 PlatformSpecific.NativeMemory.Free4KbAlignedMemory(ptr, size, allocatingThread);
                 return;
             }
@@ -149,6 +159,7 @@ namespace Voron.Impl
             if (success)
             {
                 // updating the thread allocations since we released the memory back to the pool
+                ForTestingPurposes?.OnUpdateMemoryStatsForThread?.Invoke(size);
                 NativeMemory.UpdateMemoryStatsForThread(allocatingThread, size);
                 return;
             }
@@ -159,11 +170,13 @@ namespace Voron.Impl
             if (addToGlobalPool && currentGlobalStack.Count < _maxNumberOfAllocationsToKeepInGlobalStackPerSlot)
             {
                 // updating the thread allocations since we released the memory back to the pool
+                ForTestingPurposes?.OnUpdateMemoryStatsForThread?.Invoke(size);
                 NativeMemory.UpdateMemoryStatsForThread(allocatingThread, size);
                 currentGlobalStack.Push(allocation);
                 return;
             }
 
+            ForTestingPurposes?.OnFree4KbAlignedMemory?.Invoke(size);
             PlatformSpecific.NativeMemory.Free4KbAlignedMemory(ptr, size, allocatingThread);
         }
 
@@ -214,6 +227,7 @@ namespace Voron.Impl
         {
             var stats = new EncryptionBufferStats();
             stats.Disabled = Disabled;
+            stats.CurrentlyInUseSize = _currentlyInUseBytes;
 
             for (int i = 0; i < _items.Length; i++)
             {
@@ -249,7 +263,7 @@ namespace Voron.Impl
 
                 if (numberOfItems > 0)
                 {
-                    stats.TotalSize += totalStackSize;
+                    stats.TotalPoolSize += totalStackSize;
                     stats.TotalNumberOfItems += numberOfItems;
 
                     stats.Details.Add(new EncryptionBufferStats.AllocationInfo
@@ -263,7 +277,7 @@ namespace Voron.Impl
 
                 if (numberOfGlobalStackItems > 0)
                 {
-                    stats.TotalSize += totalGlobalStackSize;
+                    stats.TotalPoolSize += totalGlobalStackSize;
                     stats.TotalNumberOfItems += numberOfGlobalStackItems;
 
                     stats.Details.Add(new EncryptionBufferStats.AllocationInfo
@@ -396,6 +410,10 @@ namespace Voron.Impl
             public bool CanAddToPerCorePool = true;
 
             public bool CanAddToGlobalPool = true;
+
+            public Action<long> OnFree4KbAlignedMemory;
+
+            public Action<long> OnUpdateMemoryStatsForThread;
         }
     }
 
@@ -410,9 +428,13 @@ namespace Voron.Impl
 
         public List<AllocationInfo> Details { get; private set; }
 
-        public long TotalSize { get; set; }
+        public long TotalPoolSize { get; set; }
 
-        public Size TotalSizeHumane => new Size(TotalSize, SizeUnit.Bytes);
+        public long CurrentlyInUseSize { get; set; }
+
+        public Size CurrentlyInUseSizeHumane => new Size(CurrentlyInUseSize, SizeUnit.Bytes);
+
+        public Size TotalPoolSizeHumane => new Size(TotalPoolSize, SizeUnit.Bytes);
 
         public long TotalNumberOfItems { get; set; }
 
@@ -455,8 +477,10 @@ namespace Voron.Impl
             return new DynamicJsonValue
             {
                 [nameof(Disabled)] = Disabled,
-                [nameof(TotalSize)] = TotalSize,
-                [nameof(TotalSizeHumane)] = TotalSizeHumane.ToString(),
+                [nameof(CurrentlyInUseSize)] = CurrentlyInUseSize,
+                [nameof(CurrentlyInUseSizeHumane)] = CurrentlyInUseSizeHumane.ToString(),
+                [nameof(TotalPoolSize)] = TotalPoolSize,
+                [nameof(TotalPoolSizeHumane)] = TotalPoolSizeHumane.ToString(),
                 [nameof(TotalNumberOfItems)] = TotalNumberOfItems,
                 [nameof(Details)] = Details.OrderByDescending(x => x.TotalSize).Select(x => x.ToJson())
             };

@@ -17,13 +17,19 @@ namespace Raven.Server.ServerWide.Commands
             return djv;
         }
 
+        public virtual void DeleteValue(ClusterOperationContext context)
+        {
+        }
+
         public override void VerifyCanExecuteCommand(ServerStore store, TransactionOperationContext context, bool isClusterAdmin)
         {
             if (Name == ServerStore.LicenseStorageKey)
                 throw new RachisApplyException($"Attempted to use {nameof(DeleteValueCommand)} to delete a license, use dedicated command for this.");
         }
 
-        public DeleteValueCommand() { }
+        public DeleteValueCommand()
+        {
+        }
 
         public DeleteValueCommand(string uniqueRequestId) : base(uniqueRequestId)
         {

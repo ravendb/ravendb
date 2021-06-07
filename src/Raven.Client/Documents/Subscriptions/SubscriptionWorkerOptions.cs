@@ -1,5 +1,5 @@
 // -----------------------------------------------------------------------
-//  <copyright file="SubscriptionBatchOptions.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="SubscriptionWorkerOptions.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
@@ -81,7 +81,7 @@ namespace Raven.Client.Documents.Subscriptions
     }
 
     /// <summary>
-    /// Holds subscription connection properties, control both how client and server side behaves
+    /// Holds subscription connection properties, control both how client and server side behave
     /// </summary>
     public class SubscriptionWorkerOptions
     {
@@ -129,7 +129,7 @@ namespace Raven.Client.Documents.Subscriptions
         public bool IgnoreSubscriberErrors { get; set; }
 
         /// <summary>
-        /// How connection attempt handle existing\incoming connection. Default: OpenIfFree
+        /// How connection attempt handles existing\incoming connection. Default: OpenIfFree
         /// </summary>
         public SubscriptionOpeningStrategy Strategy { get; set; }
 

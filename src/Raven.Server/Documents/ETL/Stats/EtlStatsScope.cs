@@ -2,24 +2,113 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using Raven.Client.Documents.Operations.Backups;
+using Raven.Server.Documents.ETL.Providers.OLAP;
 using Raven.Server.Utils;
 using Raven.Server.Utils.Stats;
 using Sparrow;
 
 namespace Raven.Server.Documents.ETL.Stats
 {
-    public class EtlStatsScope : StatsScope<EtlRunStats, EtlStatsScope>
+    public class OlapEtlStatsScope : AbstractEtlStatsScope<OlapEtlStatsScope, OlapEtlPerformanceOperation>
     {
-        private readonly EtlRunStats _stats;
-
-        public EtlStatsScope(EtlRunStats stats, bool start = true) : base(stats, start)
+        public OlapEtlStatsScope(EtlRunStats stats, bool start = true) : base(stats, start)
         {
-            _stats = stats;
+        }
+
+        public UploadProgress AzureUpload { get; set; }
+
+        public UploadProgress FtpUpload { get; set; }
+
+        public UploadProgress GlacierUpload { get; set; }
+
+        public UploadProgress GoogleCloudUpload { get; set; }
+
+        public UploadProgress S3Upload { get; set; }
+
+        public int NumberOfFiles { get; set; }
+
+        public string FileName { get; set; }
+
+        protected override OlapEtlStatsScope OpenNewScope(EtlRunStats stats, bool start)
+        {
+            return new OlapEtlStatsScope(stats, start);
+        }
+
+        protected override OlapEtlPerformanceOperation ToPerformanceOperation(string name, OlapEtlStatsScope scope)
+        {
+            return scope.ToPerformanceOperation(name);
+        }
+
+        public override OlapEtlPerformanceOperation ToPerformanceOperation(string name)
+        {
+            var operation = new OlapEtlPerformanceOperation(Duration)
+            {
+                Name = name,
+                AzureUpload = AzureUpload,
+                FtpUpload = FtpUpload,
+                GlacierUpload = GlacierUpload,
+                GoogleCloudUpload = GoogleCloudUpload,
+                S3Upload = S3Upload,
+                NumberOfFiles = NumberOfFiles,
+                FileName = FileName
+            };
+
+            if (Scopes != null)
+            {
+                operation.Operations = Scopes
+                    .Select(x => ToPerformanceOperation(x.Key, x.Value))
+                    .ToArray();
+            }
+
+            return operation;
+        }
+    }
+
+    public class EtlStatsScope : AbstractEtlStatsScope<EtlStatsScope, EtlPerformanceOperation>
+    {
+        public EtlStatsScope(EtlRunStats stats, bool start = true)
+            : base(stats, start)
+        {
         }
 
         protected override EtlStatsScope OpenNewScope(EtlRunStats stats, bool start)
         {
             return new EtlStatsScope(stats, start);
+        }
+
+        protected override EtlPerformanceOperation ToPerformanceOperation(string name, EtlStatsScope scope)
+        {
+            return scope.ToPerformanceOperation(name);
+        }
+
+        public override EtlPerformanceOperation ToPerformanceOperation(string name)
+        {
+            var operation = new EtlPerformanceOperation(Duration)
+            {
+                Name = name
+            };
+
+            if (Scopes != null)
+            {
+                operation.Operations = Scopes
+                    .Select(x => ToPerformanceOperation(x.Key, x.Value))
+                    .ToArray();
+            }
+
+            return operation;
+        }
+    }
+
+    public abstract class AbstractEtlStatsScope<TStatsScope, TEtlPerformanceOperation> : StatsScope<EtlRunStats, TStatsScope>
+        where TStatsScope : StatsScope<EtlRunStats, TStatsScope>
+        where TEtlPerformanceOperation : EtlPerformanceOperation
+    {
+        private readonly EtlRunStats _stats;
+
+        protected AbstractEtlStatsScope(EtlRunStats stats, bool start = true) : base(stats, start)
+        {
+            _stats = stats;
         }
 
         public Dictionary<EtlItemType, int> NumberOfExtractedItems => _stats.NumberOfExtractedItems;
@@ -100,22 +189,9 @@ namespace Raven.Server.Documents.ETL.Stats
                 _stats.LastFilteredOutEtags[type] = etag;
         }
 
-        public EtlPerformanceOperation ToPerformanceOperation(string name)
-        {
-            var operation = new EtlPerformanceOperation(Duration)
-            {
-                Name = name
-            };
+        protected abstract TEtlPerformanceOperation ToPerformanceOperation(string name, TStatsScope scope);
 
-            if (Scopes != null)
-            {
-                operation.Operations = Scopes
-                    .Select(x => x.Value.ToPerformanceOperation(x.Key))
-                    .ToArray();
-            }
-
-            return operation;
-        }
+        public abstract TEtlPerformanceOperation ToPerformanceOperation(string name);
 
         public void RecordBatchCompleteReason(string reason)
         {
@@ -125,11 +201,6 @@ namespace Raven.Server.Documents.ETL.Stats
         public bool HasBatchCompleteReason()
         {
             return string.IsNullOrEmpty(_stats.BatchCompleteReason) == false;
-        }
-
-        public long GetLastTransformedOrFilteredEtag(EtlItemType type)
-        {
-            return Math.Max(LastTransformedEtags[type], LastFilteredOutEtags[type]);
         }
 
         public void RecordTransformationError()

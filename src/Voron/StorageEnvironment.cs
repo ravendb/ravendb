@@ -88,7 +88,7 @@ namespace Voron
         private NativeMemory.ThreadStats _currentWriteTransactionHolder;
         private readonly AsyncManualResetEvent _writeTransactionRunning = new AsyncManualResetEvent();
         internal readonly ThreadHoppingReaderWriterLock FlushInProgressLock = new ThreadHoppingReaderWriterLock();
-        private readonly ReaderWriterLockSlim _txCommit = new ReaderWriterLockSlim();
+        private readonly ReaderWriterLockSlim _txCreation = new ReaderWriterLockSlim();
         private readonly CountdownEvent _envDispose = new CountdownEvent(1);
 
         private long _transactionsCounter;
@@ -99,7 +99,9 @@ namespace Voron
         private readonly CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
         private readonly ScratchBufferPool _scratchBufferPool;
         private EndOfDiskSpaceEvent _endOfDiskSpace;
-        internal int SizeOfUnflushedTransactionsInJournalFile;
+
+        private int _idleFlushTimerFailures = 0;
+        private Task _idleFlushTimer = Task.CompletedTask;
 
         internal DateTime LastFlushTime;
 
@@ -109,8 +111,7 @@ namespace Voron
         public bool Disposed;
         private readonly Logger _log;
         public static int MaxConcurrentFlushes = 10; // RavenDB-5221
-        public static int NumOfConcurrentSyncsPerPhysDrive;
-        public static int TimeToSyncAfterFlushInSec;
+        public int TimeToSyncAfterFlushInSec;
 
         public Guid DbId { get; set; }
 
@@ -132,7 +133,6 @@ namespace Voron
                 _dataPager = options.DataPager;
                 _freeSpaceHandling = new FreeSpaceHandling();
                 _headerAccessor = new HeaderAccessor(this);
-                NumOfConcurrentSyncsPerPhysDrive = options.NumOfConcurrentSyncsPerPhysDrive;
                 TimeToSyncAfterFlushInSec = options.TimeToSyncAfterFlushInSec;
 
                 Debug.Assert(_dataPager.NumberOfAllocatedPages != 0);
@@ -162,8 +162,7 @@ namespace Voron
                 else // existing db, let us load it
                     LoadExistingDatabase();
 
-                if (_options.ManualFlushing == false)
-                    Task.Run(IdleFlushTimer);
+                Debug.Assert(_options.ManualFlushing || _idleFlushTimer.IsCompleted == false, "_idleFlushTimer.IsCompleted == false"); // initialized by transaction on storage create/open
 
                 if (IsNew == false && _options.ManualSyncing == false)
                     SuggestSyncDataFile(); // let's suggest syncing data file after the recovery
@@ -177,41 +176,63 @@ namespace Voron
                 throw;
             }
         }
-
         private async Task IdleFlushTimer()
         {
-            var cancellationToken = _cancellationTokenSource.Token;
-
-            while (cancellationToken.IsCancellationRequested == false)
+            try
             {
-                if (Disposed)
-                    return;
+                var cancellationToken = _cancellationTokenSource.Token;
 
-                if (Options.ManualFlushing)
-                    return;
+                while (cancellationToken.IsCancellationRequested == false)
+                {
+                    if (Disposed)
+                        return;
+
+                    if (Options.ManualFlushing)
+                        return;
+
+                    try
+                    {
+                        if (await _writeTransactionRunning.WaitAsync(TimeSpan.FromMilliseconds(Options.IdleFlushTimeout)) == false)
+                        {
+                            if (Journal.Applicator.ShouldFlush)
+                                GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
+
+                            else if (Journal.Applicator.ShouldSync)
+                                SuggestSyncDataFile();
+                        }
+                        else
+                        {
+                            await TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(1000), cancellationToken).ConfigureAwait(false);
+                        }
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                        return;
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        return;
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                int numberOfFailures = Interlocked.Increment(ref _idleFlushTimerFailures);
+
+                string message = $"{nameof(IdleFlushTimer)} failed (numberOfFailures: {numberOfFailures}), unable to schedule flush / syncs of data file. Will be restarted on new write transaction";
+
+                if (_log.IsOperationsEnabled)
+                {
+                    _log.Operations(message, e);
+                }
 
                 try
                 {
-                    if (await _writeTransactionRunning.WaitAsync(TimeSpan.FromMilliseconds(Options.IdleFlushTimeout)) == false)
-                    {
-                        if (SizeOfUnflushedTransactionsInJournalFile != 0)
-                            GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
-
-                        else if (Journal.Applicator.TotalWrittenButUnsyncedBytes != 0)
-                            SuggestSyncDataFile();
-                    }
-                    else
-                    {
-                        await TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(1000), cancellationToken).ConfigureAwait(false);
-                    }
+                    _options.InvokeRecoverableFailure(message, e);
                 }
-                catch (ObjectDisposedException)
+                catch
                 {
-                    return;
-                }
-                catch (OperationCanceledException)
-                {
-                    return;
+                    // ignored 
                 }
             }
         }
@@ -554,7 +575,7 @@ namespace Voron
 
                 LowLevelTransaction tx;
 
-                _txCommit.EnterReadLock();
+                _txCreation.EnterReadLock();
                 try
                 {
                     _cancellationTokenSource.Token.ThrowIfCancellationRequested();
@@ -565,11 +586,11 @@ namespace Voron
                 }
                 finally
                 {
-                    _txCommit.ExitReadLock();
+                    _txCreation.ExitReadLock();
                 }
 
                 var state = _dataPager.PagerState;
-                tx.EnsurePagerStateReference(state);
+                tx.EnsurePagerStateReference(ref state);
 
                 return new Transaction(tx);
             }
@@ -638,14 +659,18 @@ namespace Voron
                         _endOfDiskSpace.AssertCanContinueWriting();
 
                         _endOfDiskSpace = null;
-                        Task.Run(IdleFlushTimer);
                         GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
+                    }
+
+                    if (Options.ManualFlushing == false && _idleFlushTimer.IsCompleted)
+                    {
+                        _idleFlushTimer = Task.Run(IdleFlushTimer); // on storage environment creation or if the task has failed
                     }
                 }
 
                 LowLevelTransaction tx;
 
-                _txCommit.EnterReadLock();
+                _txCreation.EnterReadLock();
                 try
                 {
                     _cancellationTokenSource.Token.ThrowIfCancellationRequested();
@@ -669,11 +694,11 @@ namespace Voron
                 }
                 finally
                 {
-                    _txCommit.ExitReadLock();
+                    _txCreation.ExitReadLock();
                 }
 
                 var state = _dataPager.PagerState;
-                tx.EnsurePagerStateReference(state);
+                tx.EnsurePagerStateReference(ref state);
 
                 return tx;
             }
@@ -784,10 +809,24 @@ namespace Voron
             return result;
         }
 
-        internal ExitWriteLock PreventNewReadTransactions()
+        internal ExitWriteLock PreventNewTransactions()
         {
-            _txCommit.EnterWriteLock();
-            return new ExitWriteLock(_txCommit);
+            _txCreation.EnterWriteLock();
+            return new ExitWriteLock(_txCreation);
+        }
+
+        internal bool IsInPreventNewTransactionsMode => _txCreation.IsWriteLockHeld;
+
+        internal bool TryPreventNewReadTransactions(TimeSpan timeout, out IDisposable exitWriteLock)
+        {
+            if (_txCreation.TryEnterWriteLock(timeout))
+            {
+                exitWriteLock = new ExitWriteLock(_txCreation);
+                return true;
+            }
+
+            exitWriteLock = null;
+            return false;
         }
 
         public struct ExitWriteLock : IDisposable
@@ -812,7 +851,7 @@ namespace Voron
             if (ActiveTransactions.Contains(tx) == false)
                 return;
 
-            using (PreventNewReadTransactions())
+            using (PreventNewTransactions())
             {
                 Journal.Applicator.OnTransactionCommitted(tx);
                 ScratchBufferPool.UpdateCacheForPagerStatesOfAllScratches();
@@ -845,7 +884,7 @@ namespace Voron
                         totalPages += page.NumberOfPages;
                     }
 
-                    Interlocked.Add(ref SizeOfUnflushedTransactionsInJournalFile, totalPages);
+                    Interlocked.Add(ref Journal.Applicator.TotalCommittedSinceLastFlushPages, totalPages);
 
                     if (tx.IsLazyTransaction == false)
                         GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
@@ -1037,8 +1076,37 @@ namespace Voron
                 ScratchBufferPoolInfo = _scratchBufferPool.InfoForDebug(PossibleOldestReadTransaction(tx.LowLevelTransaction)),
                 TempPath = Options.TempPath,
                 JournalPath = (Options as StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)?.JournalPath,
-                TotalEncryptionBufferSize = totalCryptoBufferSize
+                TotalEncryptionBufferSize = totalCryptoBufferSize,
+                InMemoryStorageState = GetInMemoryStorageState(tx.LowLevelTransaction)
             });
+        }
+
+        public InMemoryStorageState GetInMemoryStorageState(LowLevelTransaction tx)
+        {
+            var state = new InMemoryStorageState
+            {
+                CurrentReadTransactionId = CurrentReadTransactionId,
+                NextWriteTransactionId = NextWriteTransactionId,
+                PossibleOldestReadTransaction = PossibleOldestReadTransaction(tx),
+                ActiveTransactions = ActiveTransactions.AllTransactions,
+                FlushState = new InMemoryStorageState.FlushStateDetails
+                {
+                    LastFlushTime = Journal.Applicator.LastFlushTime,
+                    ShouldFlush = Journal.Applicator.ShouldFlush,
+                    LastFlushedTransactionId = Journal.Applicator.LastFlushedJournalId,
+                    LastFlushedJournalId = Journal.Applicator.LastFlushedJournalId,
+                    LastTransactionIdUsedToReleaseScratches = Journal.Applicator.LastTransactionIdUsedToReleaseScratches,
+                    JournalsToDelete = Journal.Applicator.JournalsToDelete.Select(x => x.Number).ToList()
+                },
+                SyncState = new InMemoryStorageState.SyncStateDetails
+                {
+                    LastSyncTime = Journal.Applicator.LastSyncTime,
+                    ShouldSync = Journal.Applicator.ShouldSync,
+                    TotalWrittenButUnsyncedBytes = Journal.Applicator.TotalWrittenButUnsyncedBytes
+                }
+            };
+
+            return state;
         }
 
         private Size GetTotalCryptoBufferSize()
@@ -1067,7 +1135,6 @@ namespace Voron
                     UsedDataFileSizeInBytes = (State.NextPageNumber - 1) * Constants.Storage.PageSize,
                     AllocatedDataFileSizeInBytes = numberOfAllocatedPages * Constants.Storage.PageSize,
                     NextWriteTransactionId = NextWriteTransactionId,
-                    ActiveTransactions = ActiveTransactions.AllTransactions
                 };
             }
         }

@@ -2,6 +2,8 @@
 import virtualGrid = require("widgets/virtualGrid/virtualGrid");
 import listView = require("widgets/listView/listView");
 import genUtils = require("common/generalUtils");
+import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
+import accessManager = require("common/shell/accessManager");
 
 class extensions {
     static install() {
@@ -191,9 +193,128 @@ class extensions {
             $(document).off("shown.bs.modal", onModalShown);
         });
     }
+    
+    private static verifyBindingLocation(bindingsArray: string[], binding: string, accessBindingLocation: number) {
+        const bindingLocation = bindingsArray.indexOf(binding);
 
+        if (bindingLocation > accessBindingLocation) {
+            throw new Error(`The '${binding}' binding must come BEFORE the 'requiredAccess' binding in your html.`);
+        }
+    }
+    
+    private static readonly accessLevels: accessLevel[] = ["DatabaseRead", "DatabaseReadWrite", "DatabaseAdmin", "Operator", "ClusterNode", "ClusterAdmin"];
+    
     private static installBindingHandlers() {
+        ko.bindingHandlers["requiredAccess"] = {
+            init: (element: Element,
+                   valueAccessor: KnockoutObservable<accessLevel>,
+                   allBindings) => {
+                
+                const requiredAccessLevel = ko.unwrap(valueAccessor());
 
+                if (!_.includes(extensions.accessLevels, requiredAccessLevel)) {
+                    throw new Error(`Invalid Access Level. Value provided: ${requiredAccessLevel}. Supported values: ${extensions.accessLevels.join(", ")}`);
+                }
+                
+                const bindings = allBindings();
+                const bindingsArray = Object.keys(bindings);
+                const requiredAccessBindingLocation = bindingsArray.indexOf("requiredAccess");
+                
+                if (bindings.visible) {
+                    this.verifyBindingLocation(bindingsArray, "visible", requiredAccessBindingLocation);
+                }
+                if (bindings.hidden) {
+                    this.verifyBindingLocation(bindingsArray, "hidden", requiredAccessBindingLocation);
+                }
+                if (bindings.disable) {
+                    this.verifyBindingLocation(bindingsArray, "disable", requiredAccessBindingLocation);
+                }
+                if (bindings.enable) {
+                    this.verifyBindingLocation(bindingsArray, "enable", requiredAccessBindingLocation);
+                }
+
+                const strategyTypes = ["hide", "disable"]; // todo: "visibilityHidden"
+                
+                if (bindings.requiredAccessOptions) {
+                    const strategy = bindings.requiredAccessOptions.strategy;
+                    if (!_.includes(strategyTypes, strategy)) {
+                        throw new Error(`Invalid requiredAccess strategy. Value provided: ${strategy}. Possible values are: ${strategyTypes}`);
+                    }
+
+                    if (strategy === "disable") {
+                        const hasDisabledClass = $(element).hasClass("disabled");
+                        if (hasDisabledClass) {
+                            throw new Error("Error in 'requiredAccess' binding. Support for 'disabled' class is not implemented.");
+                        }
+
+                        if (element.tagName === "A") {
+                            throw new Error("Error in 'RequiredAccess' binding. Support for 'disable' strategy on type 'a' is not implemented.");
+                        }
+                        
+                        if (bindings.enable && bindings.disable) {
+                            throw new Error("Error in 'RequiredAccess' binding. Do not use both 'disable' & 'enable' bindings together.");
+                        }
+                    }
+                }
+            },
+            update: (element: any,
+                     valueAccessor: KnockoutObservable<accessLevel>,
+                     allBindings) => {
+
+                const activeDatabase = activeDatabaseTracker.default.database();
+                const bindings = allBindings();
+                
+                const requiredAccessLevel = ko.unwrap(valueAccessor());
+                const strategy = bindings.requiredAccessOptions ? bindings.requiredAccessOptions.strategy : 'hide';
+
+                switch (strategy) {
+                    case 'hide': {
+                        const visibleBinding = bindings.visible;
+                        const visibleValue = visibleBinding != null ? ko.unwrap(visibleBinding) : true;
+
+                        const hiddenBinding = bindings.hidden;
+                        const hiddenValue = hiddenBinding != null ? ko.unwrap(hiddenBinding) : false;
+
+                        const shouldBeVisibleByKo = visibleValue && !hiddenValue;
+                        const isElementVisible = element.style.display !== "none";
+
+                        if (accessManager.canHandleOperation(requiredAccessLevel, activeDatabase?.name)) {
+                            if (!isElementVisible && shouldBeVisibleByKo) {
+                                element.style.display = "";
+                            }
+                        } else {
+                            if (isElementVisible) {
+                                element.style.display = "none";
+                            }
+                        }
+                    }
+                        break;
+
+                    case 'disable': {
+                        const disableBinding = bindings.disable;
+                        const disableValue = disableBinding != null ? ko.unwrap(disableBinding) : false;
+
+                        const enableBinding = bindings.enable;
+                        const enableValue = enableBinding != null ? ko.unwrap(enableBinding) : true;
+
+                        const shouldBeEnabledByKo = !disableValue && enableValue;
+                        const isElementDisabled = element.hasAttribute("disabled");
+
+                        if (accessManager.canHandleOperation(requiredAccessLevel, activeDatabase?.name)) {
+                            if (isElementDisabled && shouldBeEnabledByKo) {
+                                element.setAttribute("disabled", "false")
+                            }
+                        } else {
+                            if (!isElementDisabled) {
+                                element.setAttribute("disabled", "true");
+                            }
+                        }
+                    }
+                        break;
+                }
+            }
+        };
+        
         ko.bindingHandlers["tooltipText"] = {
             init: (element: any, valueAccessor: KnockoutObservable<string>) => {
                 const text = ko.utils.unwrapObservable(valueAccessor());

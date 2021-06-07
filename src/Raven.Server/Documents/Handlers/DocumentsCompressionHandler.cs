@@ -15,8 +15,8 @@ namespace Raven.Server.Documents.Handlers
 {
     public class DocumentsCompressionHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/documents-compression/config", "GET", AuthorizationStatus.ValidUser)]
-        public Task GetDocumentsCompressionConfig()
+        [RavenAction("/databases/*/documents-compression/config", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        public async Task GetDocumentsCompressionConfig()
         {
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
@@ -29,7 +29,7 @@ namespace Raven.Server.Documents.Handlers
 
                 if (compressionConfig != null)
                 {
-                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
                         context.Write(writer, compressionConfig.ToJson());
                     }
@@ -39,7 +39,6 @@ namespace Raven.Server.Documents.Handlers
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                 }
             }
-            return Task.CompletedTask;
         }
 
         [RavenAction("/databases/*/admin/documents-compression/config", "POST", AuthorizationStatus.DatabaseAdmin)]

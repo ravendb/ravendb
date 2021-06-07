@@ -10,7 +10,7 @@ namespace Sparrow.Json
     public static class BlittableJsonTextWriterExtensions
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteArray<T>(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, string name, IEnumerable<T> items, 
+        public static void WriteArray<T>(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, string name, IEnumerable<T> items,
             Action<AbstractBlittableJsonTextWriter, JsonOperationContext, T> onWrite)
         {
             writer.WritePropertyName(name);
@@ -36,12 +36,11 @@ namespace Sparrow.Json
             writer.WritePropertyName(name);
 
             writer.WriteStartArray();
-            var span = items.Span;
-            for (int i = 0; i < span.Length; i++)
+            for (int i = 0; i < items.Length; i++)
             {
                 if (i > 0)
                     writer.WriteComma();
-                writer.WriteDouble(span[i]);
+                writer.WriteDouble(items.Span[i]);
             }
             writer.WriteEndArray();
         }

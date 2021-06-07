@@ -9,8 +9,8 @@ namespace Raven.Server.Documents.Handlers.Debugging
 {
     public class ServerTransactionDebugHandler : RequestHandler
     {
-        [RavenAction("/admin/debug/txinfo", "GET", AuthorizationStatus.DatabaseAdmin, IsDebugInformationEndpoint = true)]
-        public Task TxInfo()
+        [RavenAction("/admin/debug/txinfo", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
+        public async Task TxInfo()
         {
             var results = new List<TransactionDebugHandler.TransactionInfo>();
 
@@ -23,14 +23,13 @@ namespace Raven.Server.Documents.Handlers.Debugging
             results.Add(txInfo);
 
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 context.Write(writer, new DynamicJsonValue
                 {
                     ["tx-info"] = TransactionDebugHandler.ToJson(results)
                 });
             }
-            return Task.CompletedTask;
         }
     }
 }

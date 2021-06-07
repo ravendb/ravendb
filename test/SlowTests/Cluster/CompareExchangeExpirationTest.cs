@@ -167,7 +167,7 @@ namespace SlowTests.Cluster
             }
         }
 
-        [Fact]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CanExportImportCompareExchangeWithExpiration()
         {
             using var server = GetNewServer();
@@ -194,29 +194,8 @@ namespace SlowTests.Cluster
                 await AssertCompareExchanges(compareExchangesWithLongExpiration, store, longExpiry);
                 await AssertCompareExchanges(compareExchanges, store, expiry: null);
 
-
-                var config = new PeriodicBackupConfiguration
-                {
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    Name = "full",
-                    FullBackupFrequency = "0 0 1 1 *",
-                    BackupType = BackupType.Backup
-                };
-
-                var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
-                var documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
-                var periodicBackupRunner = documentDatabase.PeriodicBackupRunner;
-                var op = periodicBackupRunner.StartBackupTask(result.TaskId, isFullBackup: true);
-                var value = WaitForValue(() =>
-                {
-                    var status = store.Maintenance.Send(new GetOperationStateOperation(op)).Status;
-                    return status;
-                }, OperationStatus.Completed);
-
-                Assert.Equal(OperationStatus.Completed, value);
+                var config = Backup.CreateBackupConfiguration(backupPath);
+                var backupTaskId = Backup.UpdateConfigAndRunBackup(server, config, store);
 
                 var backupDirectory = Directory.GetDirectories(backupPath).First();
                 var restoreConfig = new RestoreBackupConfiguration()

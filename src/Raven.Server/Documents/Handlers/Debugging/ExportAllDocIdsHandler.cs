@@ -10,23 +10,21 @@ namespace Raven.Server.Documents.Handlers.Debugging
 {
     public class AllDocumentIdsDebugHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/debug/documents/export-all-ids", "GET", AuthorizationStatus.ValidUser)]
-        public Task ExportAllDocIds()
+        [RavenAction("/databases/*/debug/documents/export-all-ids", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        public async Task ExportAllDocIds()
         {
             var fileName = $"ids-for-{Uri.EscapeDataString(Database.Name)}-{Database.Time.GetUtcNow().GetDefaultRavenFormat(isUtc: true)}.txt";
             HttpContext.Response.Headers["Content-Disposition"] = $"attachment; filename={fileName}";
 
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (var writer = new StreamWriter(ResponseBodyStream(), Encoding.UTF8, 4096))
+            await using (var writer = new StreamWriter(ResponseBodyStream(), Encoding.UTF8, 4096))
             using (context.OpenReadTransaction())
             {
                 foreach (var id in context.DocumentDatabase.DocumentsStorage.GetAllIds(context))
-                    writer.Write($"{id}{Environment.NewLine}");
+                    await writer.WriteAsync($"{id}{Environment.NewLine}");
 
-                writer.Flush();
+                await writer.FlushAsync();
             }
-
-            return Task.CompletedTask;
         }
     }
 }

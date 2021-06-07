@@ -23,9 +23,19 @@ namespace Raven.Server.Routing
 
         public bool IsPosixSpecificEndpoint { get; set; }
 
-        public RavenActionAttribute(string path, string method, AuthorizationStatus requireAuth, bool isDebugInformationEndpoint = false,
-            bool isPosixSpecificEndpoint = false, CorsMode corsMode = CorsMode.None)
+        public EndpointType? EndpointType { get; }
+
+        public RavenActionAttribute(
+            string path,
+            string method,
+            AuthorizationStatus requireAuth,
+            bool isDebugInformationEndpoint = false,
+            bool isPosixSpecificEndpoint = false,
+            CorsMode corsMode = CorsMode.None)
         {
+            if (requireAuth == AuthorizationStatus.ValidUser)
+                throw new InvalidOperationException($"Please use the other constructor with endpoint type parameter. Route: '{method} {path}'");
+
             Path = path;
             Method = method;
             IsDebugInformationEndpoint = isDebugInformationEndpoint;
@@ -33,6 +43,34 @@ namespace Raven.Server.Routing
             IsPosixSpecificEndpoint = isPosixSpecificEndpoint;
             CorsMode = corsMode;
         }
+
+        public RavenActionAttribute(
+            string path,
+            string method,
+            AuthorizationStatus requireAuth,
+            EndpointType endpointType,
+            bool isDebugInformationEndpoint = false,
+            bool isPosixSpecificEndpoint = false,
+            CorsMode corsMode = CorsMode.None)
+        {
+            if (requireAuth != AuthorizationStatus.ValidUser)
+                throw new InvalidOperationException($"Please use the other constructor without endpoint type parameter. Route: '{method} {path}'");
+
+            Path = path;
+            Method = method;
+            EndpointType = endpointType;
+            IsDebugInformationEndpoint = isDebugInformationEndpoint;
+            RequiredAuthorization = requireAuth;
+            IsPosixSpecificEndpoint = isPosixSpecificEndpoint;
+            CorsMode = corsMode;
+        }
+    }
+
+    public enum EndpointType
+    {
+        None,
+        Read,
+        Write
     }
 
     public class RavenShardedActionAttribute : Attribute

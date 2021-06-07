@@ -7,9 +7,9 @@
                     <button class="btn btn-sm btn-primary" data-bind="click: onAddRavenEtl" title="Add a new RavenDB ETL connection string"><i class="icon-plus"></i><span>Add</span></button>
                 </div>
                 <div data-bind="if: ravenEtlConnectionStringsNames().length === 0">
-                    <div>
-                        <i class="icon-xl icon-empty-set text-muted"></i>
-                        <h3 class="text-center text-muted">No RavenDB ETL connection strings have been defined.</h3>
+                    <div class="text-center">
+                        <i class="icon-lg icon-empty-set text-muted"></i>
+                        <h3 class="text-center text-muted margin-top">No RavenDB ETL connection strings have been defined</h3>
                     </div>
                 </div>
                 <div data-bind="foreach: ravenEtlConnectionStringsNames">
@@ -41,9 +41,9 @@
                     <button class="btn btn-sm btn-primary" data-bind="click: onAddSqlEtl" title="Add a new SQL ETL connection string"><i class="icon-plus"></i><span>Add</span></button> 
                 </div>
                 <div data-bind="if: sqlEtlConnectionStringsNames().length === 0">
-                    <div>
-                        <i class="icon-xl icon-empty-set text-muted"></i>
-                        <h3 class="text-center text-muted">No SQL ETL connection strings have been defined.</h3>
+                    <div class="text-center">
+                        <i class="icon-lg icon-empty-set text-muted"></i>
+                        <h3 class="text-center text-muted margin-top">No SQL ETL connection strings have been defined</h3>
                     </div>
                 </div>
                 <div data-bind="foreach: sqlEtlConnectionStringsNames">
@@ -67,6 +67,37 @@
                         </div>
                     </div>
                 </div>
+                <div class="hr-title on-base-background margin-top margin-top-lg">
+                    <h5><strong>OLAP</strong> Connection Strings</h5><hr>
+                    <button class="btn btn-sm btn-primary" data-bind="click: onAddOlapEtl" title="Add a new Olap ETL connection string"><i class="icon-plus"></i><span>Add</span></button>
+                </div>
+                <div data-bind="if: olapEtlConnectionStringsNames().length === 0">
+                    <div class="text-center">
+                        <i class="icon-lg icon-empty-set text-muted"></i>
+                        <h3 class="text-center text-muted margin-top">No OLAP ETL connection strings have been defined</h3>
+                    </div>
+                </div>
+                <div data-bind="foreach: olapEtlConnectionStringsNames">
+                    <div class="panel padding padding-sm flex-horizontal destination-item panel-hover"
+                         data-bind="css: { 'active': $root.editedOlapEtlConnectionString() && $data === $root.editedOlapEtlConnectionString().connectionStringName() }">
+                        <a href="#" class="connection-string-title flex-grow text-elipsis" data-bind="click: $parent.onEditOlapEtl, attr: { title: $data }">
+                            <h4 class="text-elipsis">
+                                <span data-bind="text: $data"></span>
+                            </h4>
+                        </a>
+                        <div class="actions">
+                            <button class="btn btn-default" data-bind="click: $parent.onEditOlapEtl" title="Edit connection string"><i class="icon-edit"></i></button>
+                            <span class="has-disable-reason" data-placement="right"
+                                  data-bind="attr: { 'data-original-title': $root.isConnectionStringInUse($data, 'Olap') ? 'Connection string is being used by an ongoing task !' : '' }">
+                                <button class="btn btn-danger"
+                                        data-bind="click: $parent.confirmDelete.bind($parent, $data,'Olap'), disable: $root.isConnectionStringInUse($data, 'Olap'), 
+                                                   attr: { 'title': !$root.isConnectionStringInUse($data, 'Olap') ? 'Remove connection string' : ''}">
+                                        <i class="icon-trash"></i>
+                                </button>
+                            </span>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
         <div class="col-sm-12 col-lg-6 flex-vertical" data-bind="visible: editedRavenEtlConnectionString() || editedSqlEtlConnectionString()">
@@ -76,14 +107,15 @@
                     <h3 class="flex-grow" data-bind="visible: editedSqlEtlConnectionString">SQL Connection String</h3>
                     <button class="close flex-start" data-bind="click: onCloseEdit"><i class="icon-cancel"></i></button>
                 </div>
-                <form class="flex-form padding">
+                <form class="flex-form padding" autocomplete="off">
                     <div data-bind="with: editedRavenEtlConnectionString">
                         <div data-bind="compose: 'database/settings/connectionStringRaven.html'"></div>
                         <div class="form-group" data-bind="if: tasksThatAreUsingThisConnectionString().length > 0">
-                            <label class="control-label">Used in Tasks:</label> 
+                            <label class="control-label">Used in Tasks:</label>
                             <div data-bind="foreach: tasksThatAreUsingThisConnectionString">
                                 <div class="task">
-                                    <a data-bind="attr: { 'href': $root.taskEditLink($data.taskId, $parent.connectionStringName()) }" title="Click to edit task.."><span class="text-info small" data-bind="text: $data.taskName"></span></a>
+                                    <a data-bind="attr: { 'href': $root.taskEditLink($data.taskId, $parent.connectionStringName()) }"
+                                       title="Click to edit task.."><span class="text-info small" data-bind="text: $data.taskName"></span></a>
                                 </div>
                             </div>
                         </div>
@@ -93,8 +125,9 @@
                         <div class="form-group" data-bind="if: tasksThatAreUsingThisConnectionString().length > 0">
                             <label class="control-label">Used in Tasks:</label>
                             <div data-bind="foreach: tasksThatAreUsingThisConnectionString">
-                                <div class="task"> 
-                                    <a data-bind="attr: { 'href': $root.taskEditLink($data.taskId, $parent.connectionStringName()) }" title="Click to edit task.."><span class="text-info small" data-bind="text: $data.taskName"></span></a>
+                                <div class="task">
+                                    <a data-bind="attr: { 'href': $root.taskEditLink($data.taskId, $parent.connectionStringName()) }"
+                                       title="Click to edit task.."><span class="text-info small" data-bind="text: $data.taskName"></span></a>
                                 </div>
                             </div>
                         </div>
@@ -109,19 +142,13 @@
                                     <span>Test Connection</span>
                                 </button>
                             </span>
-                            <button class="btn btn-default" data-bind="click: onCloseEdit">
-                                <i class="icon-cancel"></i><span>Cancel</span>
-                            </button>
-                            <button class="btn btn-success" data-bind="click: onSave, visible: !editedRavenEtlConnectionString() || !editedRavenEtlConnectionString().isServerWide()"
-                                    title="Click to save this connection string">
-                                <i class="icon-check"></i><span>Save</span>
-                            </button>
+                            <span data-bind="template: { name: 'cancel-save' }"></span>
                         </div>
                     </div>
                 </form>
                 <div class="panel-addon" data-bind="with: testConnectionResult">
                     <div class="padding bg-success small" data-bind="visible: Success">
-                        <div data-bind="visible: $root.editedRavenEtlConnectionString()">Successfully connected to the node.</div>
+                        <div data-bind="visible: $root.editedRavenEtlConnectionString()">Successfully connected to the node</div>
                         <div data-bind="visible: $root.editedSqlEtlConnectionString()">Successfully connected</div>
                     </div>
                     <div data-bind="if: !Success">
@@ -154,7 +181,55 @@
                 </div>
             </div>
         </div>
+        <div class="col-sm-12 col-lg-6 flex-vertical" data-bind="visible: editedOlapEtlConnectionString()">
+            <div class="panel slidein-style">
+                <div class="flex-horizontal padding">
+                    <h3 class="flex-grow" data-bind="visible: editedOlapEtlConnectionString">OLAP Connection String</h3>
+                    <button class="close flex-start" data-bind="click: onCloseEdit"><i class="icon-cancel"></i></button>
+                </div>
+                <form class="flex-form padding" autocomplete="off">
+                    <div data-bind="with: editedOlapEtlConnectionString">
+                        <div class="form-group" data-bind="validationElement: connectionStringName">
+                            <label class="control-label">Name</label>
+                            <div class="flex-grow">
+                                <input class="form-control" placeholder="Enter a name for the connection string"
+                                       data-bind="textInput: connectionStringName, enable: isNew, 
+                                                  attr: { 'title': isNew() ? 'Enter any name of your choice for this connection string' : '' }" />
+                            </div>
+                        </div>
+                        <div class="form-group" data-bind="if: tasksThatAreUsingThisConnectionString().length > 0">
+                            <label class="control-label">Used in Tasks:</label>
+                            <div data-bind="foreach: tasksThatAreUsingThisConnectionString">
+                                <div class="task">
+                                    <a data-bind="attr: { 'href': $root.taskEditLink($data.taskId, $parent.connectionStringName()) }"
+                                       title="Click to edit task.."><span class="text-info small" data-bind="text: $data.taskName"></span></a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div data-bind="with: editedOlapEtlConnectionString" class="slidein-style">
+                <form autocomplete="off">
+                    <div data-bind="compose: 'database/settings/connectionStringOlap.html'"></div>
+                </form>
+            </div>
+            <div class="panel slidein-style padding">
+                <div class="flex-horizontal">
+                    <div class="flex-grow"></div>
+                    <div data-bind="template: { name: 'cancel-save' }"></div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
-
+<script type="text/html" id="cancel-save">
+    <button class="btn btn-default" data-bind="click: onCloseEdit">
+        <i class="icon-cancel"></i><span>Cancel</span>
+    </button>
+    <button class="btn btn-success" title="Click to save this connection string"
+            data-bind="click: onSave, visible: !editedRavenEtlConnectionString() || !editedRavenEtlConnectionString().isServerWide()">
+        <i class="icon-check"></i><span>Save</span>
+    </button>
+</script>

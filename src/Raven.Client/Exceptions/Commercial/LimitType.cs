@@ -28,6 +28,9 @@ namespace Raven.Client.Exceptions.Commercial
         [Description("Documents Compression")]
         DocumentsCompression,
 
+        [Description("Rolling Indexes")]
+        RollingIndexes,
+
         [Description("External Replication")]
         ExternalReplication,
 
@@ -36,6 +39,9 @@ namespace Raven.Client.Exceptions.Commercial
 
         [Description("SQL ETL")]
         SqlEtl,
+        
+        [Description("OLAP ETL")]
+        OlapEtl,
 
         [Description("Cores Limit")]
         Cores,
@@ -65,6 +71,9 @@ namespace Raven.Client.Exceptions.Commercial
         AdditionalAssembliesFromNuGet,
         
         [Description("Monitoring Endpoints")]
-        MonitoringEndpoints
+        MonitoringEndpoints,
+
+        [Description("Read-only Certificates")]
+        ReadOnlyCertificates
     }
 }

@@ -1572,10 +1572,7 @@ namespace SlowTests.Client.Attachments
                     await session.StoreAsync(new User { Name = "EGR" }, "users/1");
                     await session.SaveChangesAsync();
 
-                    using (var a1 = new MemoryStream(new byte[] { 1, 2, 3 }))
-                    {
-                        await store1.Operations.SendAsync(new PutAttachmentOperation("users/1", "a1", a1, "a1/jpeg"));
-                    }
+                    await PutAttachment(store1, new byte[] { 1, 2, 3 }, "a1/jpeg");
                 }
 
                 using (var session = store2.OpenAsyncSession())
@@ -1583,20 +1580,16 @@ namespace SlowTests.Client.Attachments
                     await session.StoreAsync(new User { Name = "EGOR" }, "users/1");
                     await session.SaveChangesAsync();
 
-                    using (var a1 = new MemoryStream(new byte[] { 1, 2, 3 }))
-                    {
-                        store2.Operations.Send(new PutAttachmentOperation("users/1", "a1", a1, "a2/jpeg"));
-                    }
+                    await PutAttachment(store2, new byte[] { 1, 2, 3 }, "a2/jpeg");
                 }
 
-                var externalList1 = await SetupReplicationAsync(store1, store2);
-                var externalList2 = await SetupReplicationAsync(store2, store1);
-                WaitForDocumentWithAttachmentToReplicate<User>(store1, "users/1", "a1", Debugger.IsAttached ? 60000 : 15000);
-                WaitForDocumentWithAttachmentToReplicate<User>(store2, "users/1", "a1", Debugger.IsAttached ? 60000 : 15000);
+                var replication1To2TaskId = (await SetupReplicationAsync(store1, store2)).First().TaskId;
+                var replication2To1TaskId = (await SetupReplicationAsync(store2, store1)).First().TaskId;
                 WaitForMarker(store1, store2);
 
-                using (var session = store1.OpenAsyncSession())
+                static async Task Assert1(IDocumentStore store)
                 {
+                    using var session = store.OpenAsyncSession();
                     var user = await session.LoadAsync<User>("users/1");
                     Assert.Equal("EGOR", user.Name);
                     var attachments = session.Advanced.Attachments.GetNames(user);
@@ -1607,17 +1600,8 @@ namespace SlowTests.Client.Attachments
                     Assert.Equal(3, attachments[0].Size);
                 }
 
-                using (var session = store2.OpenAsyncSession())
-                {
-                    var user = await session.LoadAsync<User>("users/1");
-                    Assert.Equal("EGOR", user.Name);
-                    var attachments = session.Advanced.Attachments.GetNames(user);
-                    Assert.Equal(1, attachments.Length);
-                    Assert.Equal("a1", attachments[0].Name);
-                    Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachments[0].Hash);
-                    Assert.Equal("a2/jpeg", attachments[0].ContentType);
-                    Assert.Equal(3, attachments[0].Size);
-                }
+                await Assert1(store1);
+                await Assert1(store2);
 
                 var db1 = await GetDocumentDatabaseInstanceFor(store1);
                 var db2 = await GetDocumentDatabaseInstanceFor(store2);
@@ -1626,53 +1610,49 @@ namespace SlowTests.Client.Attachments
 
                 var external1 = new ExternalReplication(store1.Database, $"ConnectionString-{store2.Identifier}")
                 {
-                    TaskId = externalList1.First().TaskId,
+                    TaskId = replication1To2TaskId,
                     Disabled = true
                 };
                 var external2 = new ExternalReplication(store2.Database, $"ConnectionString-{store1.Identifier}")
                 {
-                    TaskId = externalList2.First().TaskId,
+                    TaskId = replication2To1TaskId,
                     Disabled = true
                 };
-                var res1 = await store1.Maintenance.SendAsync(new UpdateExternalReplicationOperation(external1));
-                Assert.Equal(externalList1.First().TaskId, res1.TaskId);
-                var res2 = await store2.Maintenance.SendAsync(new UpdateExternalReplicationOperation(external2));
-                Assert.Equal(externalList2.First().TaskId, res2.TaskId);
 
-                await db1.ServerStore.Cluster.WaitForIndexNotification(res1.RaftCommandIndex);
-                await db2.ServerStore.Cluster.WaitForIndexNotification(res1.RaftCommandIndex);
-                await db1.ServerStore.Cluster.WaitForIndexNotification(res2.RaftCommandIndex);
-                await db2.ServerStore.Cluster.WaitForIndexNotification(res2.RaftCommandIndex);
+                async Task UpdateExternalReplicationAndWait(IDocumentStore store, ExternalReplication external, long taskId)
+                {
+                    var result = await store.Maintenance.SendAsync(new UpdateExternalReplicationOperation(external));
+                    Assert.Equal(taskId, result.TaskId);
+                    await db1.ServerStore.Cluster.WaitForIndexNotification(result.RaftCommandIndex);
+                    await db2.ServerStore.Cluster.WaitForIndexNotification(result.RaftCommandIndex);
+                }
+
+                await Task.WhenAll(
+                    UpdateExternalReplicationAndWait(store1, external1, replication1To2TaskId),
+                    UpdateExternalReplicationAndWait(store2, external2, replication2To1TaskId));
 
                 Assert.True(await WaitForValueAsync(() => replicationConnection1.IsConnectionDisposed, true));
                 Assert.True(await WaitForValueAsync(() => replicationConnection2.IsConnectionDisposed, true));
 
-                using (var a1 = new MemoryStream(new byte[] { 1, 2, 3, 4 }))
-                {
-                    await store1.Operations.SendAsync(new PutAttachmentOperation("users/1", "a1", a1, "a1/jpeg"));
-                }
-                using (var a1 = new MemoryStream(new byte[] { 1, 2, 3, 5 }))
-                {
-                    await store2.Operations.SendAsync(new PutAttachmentOperation("users/1", "a1", a1, "a1/jpeg"));
-                }
+                await PutAttachment(store1, new byte[] { 1, 2, 3, 4 }, "a1/jpeg");
+                await PutAttachment(store2, new byte[] { 1, 2, 3, 5 }, "a1/jpeg");
+
+                var replication1To2LastEtag = ReplicationLoader.GetExternalReplicationState(db1.ServerStore, db1.Name, replication1To2TaskId).LastSentEtag;
+                var replication2To1LastEtag = ReplicationLoader.GetExternalReplicationState(db2.ServerStore, db2.Name, replication2To1TaskId).LastSentEtag;
+
                 external1.Disabled = false;
                 external2.Disabled = false;
 
-                var res3 = await store1.Maintenance.SendAsync(new UpdateExternalReplicationOperation(external1));
-                Assert.Equal(externalList1.First().TaskId, res3.TaskId);
-                var res4 = await store2.Maintenance.SendAsync(new UpdateExternalReplicationOperation(external2));
-                Assert.Equal(externalList2.First().TaskId, res4.TaskId);
+                await Task.WhenAll(
+                    UpdateExternalReplicationAndWait(store1, external1, replication1To2TaskId),
+                    UpdateExternalReplicationAndWait(store2, external2, replication2To1TaskId));
 
-                await db1.ServerStore.Cluster.WaitForIndexNotification(res3.RaftCommandIndex);
-                await db2.ServerStore.Cluster.WaitForIndexNotification(res3.RaftCommandIndex);
-                await db1.ServerStore.Cluster.WaitForIndexNotification(res4.RaftCommandIndex);
-                await db2.ServerStore.Cluster.WaitForIndexNotification(res4.RaftCommandIndex);
+                await AssertWaitFoGreaterAsync(() => ReplicationLoader.GetExternalReplicationState(db1.ServerStore, db1.Name, replication1To2TaskId).LastSentEtag, replication1To2LastEtag);
+                await AssertWaitFoGreaterAsync(() => ReplicationLoader.GetExternalReplicationState(db2.ServerStore, db2.Name, replication2To1TaskId).LastSentEtag, replication2To1LastEtag);
 
-                WaitForDocumentWithAttachmentToReplicate<User>(store1, "users/1", "a1", Debugger.IsAttached ? 60000 : 15000);
-                WaitForDocumentWithAttachmentToReplicate<User>(store2, "users/1", "a1", Debugger.IsAttached ? 60000 : 15000);
-                WaitForMarker(store1, store2);
-                using (var session = store1.OpenAsyncSession())
+                static async Task Assert2(IDocumentStore store)
                 {
+                    using var session = store.OpenAsyncSession();
                     var user = await session.LoadAsync<User>("users/1");
                     Assert.Equal("EGOR", user.Name);
                     var attachments = session.Advanced.Attachments.GetNames(user);
@@ -1683,16 +1663,12 @@ namespace SlowTests.Client.Attachments
                     Assert.Equal(4, attachments[0].Size);
                 }
 
-                using (var session = store2.OpenAsyncSession())
+                await Assert2(store1);
+                await Assert2(store2);
+
+                static async Task PutAttachment(IDocumentStore store, byte[] buffer, string contentTyp)
                 {
-                    var user = await session.LoadAsync<User>("users/1");
-                    Assert.Equal("EGOR", user.Name);
-                    var attachments = session.Advanced.Attachments.GetNames(user);
-                    Assert.Equal(1, attachments.Length);
-                    Assert.Equal("a1", attachments[0].Name);
-                    Assert.Equal("XiUNwy+pPQdTVBunU26rVydiLOd3Iqgtz4lkmZVfSs4=", attachments[0].Hash);
-                    Assert.Equal("a1/jpeg", attachments[0].ContentType);
-                    Assert.Equal(4, attachments[0].Size);
+                    await store.Operations.SendAsync(new PutAttachmentOperation("users/1", "a1", new MemoryStream(buffer), contentTyp));
                 }
             }
         }

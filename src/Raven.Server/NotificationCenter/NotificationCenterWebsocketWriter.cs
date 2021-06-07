@@ -1,9 +1,9 @@
 ﻿using System;
-using System.Diagnostics;
 using System.IO;
 using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Server.Dashboard;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -14,11 +14,11 @@ namespace Raven.Server.NotificationCenter
 {
     public class NotificationCenterWebSocketWriter : IWebsocketWriter, IDisposable
     {
-        private readonly WebSocket _webSocket;
+        protected readonly WebSocket _webSocket;
         private readonly NotificationsBase _notificationsBase;
         private readonly JsonOperationContext _context;
-        private readonly CancellationToken _resourceShutdown;
-        
+        protected readonly CancellationToken _resourceShutdown;
+
         private readonly MemoryStream _ms = new MemoryStream();
         public Action AfterTrackActionsRegistration;
         private readonly IDisposable _returnContext;
@@ -31,10 +31,10 @@ namespace Raven.Server.NotificationCenter
             _resourceShutdown = resourceShutdown;
         }
 
-        public async Task WriteNotifications(Func<string, bool> shouldWriteByDb)
+        public async Task WriteNotifications(CanAccessDatabase shouldWriteByDb, Task taskHandlingReceiveOfData = null)
         {
             var receiveBuffer = new ArraySegment<byte>(new byte[1024]);
-            var receive = _webSocket.ReceiveAsync(receiveBuffer, _resourceShutdown);
+            var receive = taskHandlingReceiveOfData ?? _webSocket.ReceiveAsync(receiveBuffer, _resourceShutdown);
 
             var asyncQueue = new AsyncQueue<DynamicJsonValue>();
 
@@ -68,14 +68,14 @@ namespace Raven.Server.NotificationCenter
             }
         }
 
-        public Task WriteToWebSocket<TNotification>(TNotification notification)
+        public async Task WriteToWebSocket<TNotification>(TNotification notification)
         {
             _context.Reset();
             _context.Renew();
 
             _ms.SetLength(0);
 
-            using (var writer = new BlittableJsonTextWriter(_context, _ms))
+            await using (var writer = new AsyncBlittableJsonTextWriter(_context, _ms))
             {
                 var notificationType = notification.GetType();
 
@@ -89,7 +89,7 @@ namespace Raven.Server.NotificationCenter
 
             _ms.TryGetBuffer(out ArraySegment<byte> bytes);
 
-            return _webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, _resourceShutdown);
+            await _webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, _resourceShutdown);
         }
 
         private async Task SendHeartbeat()
@@ -102,7 +102,7 @@ namespace Raven.Server.NotificationCenter
             throw new NotSupportedException($"Not supported notification type: {notification.GetType()}");
         }
 
-        public void Dispose()
+        public virtual void Dispose()
         {
             using (_returnContext)
             using (_ms)

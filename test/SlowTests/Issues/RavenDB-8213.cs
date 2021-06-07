@@ -101,7 +101,8 @@ update
 }");
 
                     var ex = Assert.Throws<Raven.Client.Exceptions.Documents.Patching.JavaScriptException>(() => projection.ToList());
-                    Assert.Contains("at toString(40) @  15:3", ex.Message);
+                    Assert.Contains("at toString", ex.Message);
+                    Assert.Contains("radix must be between 2 and 36", ex.Message);
                 }
             }
         }

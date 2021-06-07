@@ -2,12 +2,14 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import spatialMarkersLayerModel = require("models/database/query/spatialMarkersLayerModel");
 import document = require("models/database/documents/document");
 import documentMetadata = require("models/database/documents/documentMetadata");
-import {Control, LatLngExpression, Layer, MarkerClusterGroup} from "leaflet";
+import { Control, IconOptions, MarkerClusterGroup } from "leaflet";
 import genUtils = require("common/generalUtils");
 import spatialCircleModel = require("models/database/query/spatialCircleModel");
 import spatialPolygonModel = require("models/database/query/spatialPolygonModel");
 
 class spatialQueryMap extends viewModelBase {
+    
+    private map: L.Map;
     
     markersLayers = ko.observableArray<spatialMarkersLayerModel>([]);
     circlesLayer = ko.observableArray<spatialCircleModel>([]);
@@ -50,9 +52,18 @@ class spatialQueryMap extends viewModelBase {
         const dataLayers: Control.LayersObject = {};
         const markersGroups: MarkerClusterGroup[] = [];
 
+        const ravenMarker = L.icon({
+            iconUrl: 'Content/img/leaflet/marker-icon.svg',
+            iconSize: [35, 26],
+            iconAnchor: [17, 22],
+            popupAnchor: [5, -22],
+            tooltipAnchor: [0, -17]
+        } as IconOptions);
+
         this.markersLayers().forEach(markersLayer => {
             const markers = markersLayer.geoPoints().map(point => {
-                return L.marker([point.Latitude, point.Longitude], { title: point.PopupContent.getId() })
+                return L.marker([point.Latitude, point.Longitude], { icon: ravenMarker })
+                    .bindTooltip(point.PopupContent.getId(), { direction: 'top' })
                     .bindPopup(generatePopupHtml(point.PopupContent), { "className" : "custom-popup", "maxWidth": 600, "maxHeight": 400 } );
             });
 
@@ -72,7 +83,7 @@ class spatialQueryMap extends viewModelBase {
         })
         
         const polyArray = this.polygonsLayer().map((poly, index) => L.polygon(poly.vertices,
-            { color: spatialPolygonModel.colors[index % spatialPolygonModel.colors.length] }));
+            { color: spatialPolygonModel.colors[index % spatialPolygonModel.colors.length], fillOpacity: 0.2 }));
 
         const circleArray = this.circlesLayer().map((circle, index) => L.circle([circle.latitude, circle.longitude],
             { color: spatialCircleModel.colors[index % spatialCircleModel.colors.length], fillOpacity: 0.2, radius: circle.radius }));
@@ -90,22 +101,22 @@ class spatialQueryMap extends viewModelBase {
 
         // Must init L.map w/ some options, otherwise method Circle.getBounds() will fail
         // The map.fitBounds method that is called later overrides these options
-        const map = L.map("mapid", {center:[0, 0], zoom: 1, preferCanvas: true});
+        this.map = L.map("mapid", {center:[0, 0], zoom: 1, preferCanvas: true});
 
-        osmMap.addTo(map);
-        L.control.layers(baseLayers, dataLayers).addTo(map);
+        osmMap.addTo(this.map);
+        L.control.layers(baseLayers, dataLayers).addTo(this.map);
         
-        markersGroups.forEach(group => map.addLayer(group));
-        map.addLayer(polyLayer);
-        map.addLayer(circleLayer);
+        markersGroups.forEach(group => this.map.addLayer(group));
+        this.map.addLayer(polyLayer);
+        this.map.addLayer(circleLayer);
 
         const mapBounds = L.latLngBounds([]);
         markersGroups.forEach(group => mapBounds.extend(group.getBounds()));
        
         polyArray.forEach(poly => mapBounds.extend(poly.getBounds()));
         circleArray.forEach(circ => mapBounds.extend(circ.getBounds()));
-        
-        map.fitBounds(mapBounds, {padding: [50, 50]});
+
+        this.map.fitBounds(mapBounds, {padding: [50, 50]});
     }
     
     private getStreetMapTileLayer() {
@@ -121,6 +132,10 @@ class spatialQueryMap extends viewModelBase {
         const otmAttrib = `&copy; ${otmLink} Contributors`;
         return L.tileLayer(otmUrl, {attribution: otmAttrib});
     } 
+    
+    onResize() {
+        this.map.invalidateSize();
+    }
 }
 
 export = spatialQueryMap;

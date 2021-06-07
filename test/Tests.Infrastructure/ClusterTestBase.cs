@@ -16,11 +16,13 @@ using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
+using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
@@ -48,6 +50,15 @@ namespace Tests.Infrastructure
         protected readonly ConcurrentBag<IDisposable> _toDispose = new ConcurrentBag<IDisposable>();
 
         private readonly Random _random = new Random();
+
+        // workaround until RavenDB-16760 resolved
+        protected DocumentStore GetDocumentStoreForRollingIndexes(Options options = null,  [CallerMemberName]string caller = null)
+        {
+            Assert.NotNull(options?.Server);
+            options.RunInMemory = false; 
+
+            return base.GetDocumentStore(options, caller);
+        }
 
         protected void NoTimeouts()
         {
@@ -330,6 +341,30 @@ namespace Tests.Infrastructure
                 }
             }
             throw new Exception($"Not all node in the group have the expected value of {expected}. {otherValues}");
+        }
+
+        protected bool WaitForChangeVectorInCluster(List<RavenServer> nodes, string database, int timeout = 15000)
+        {
+            return AsyncHelpers.RunSync(() => WaitForChangeVectorInClusterAsync(nodes, database, timeout));
+        }
+
+        protected async Task<bool> WaitForChangeVectorInClusterAsync(List<RavenServer> nodes, string database, int timeout = 15000)
+        {
+            return await WaitForValueAsync(async () =>
+            {
+                var cvs = new List<string>();
+                foreach (var server in nodes)
+                {
+                    var storage = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
+                    using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                    using (context.OpenReadTransaction())
+                    {
+                        cvs.Add(DocumentsStorage.GetDatabaseChangeVector(context));
+                    }
+                }
+
+                return cvs.Any(x => x != cvs.FirstOrDefault()) == false;
+            }, true, timeout: timeout, interval: 333);
         }
 
         protected async Task<bool> WaitForDocumentInClusterAsync<T>(DocumentSession session, string docId, Func<T, bool> predicate, TimeSpan timeout, X509Certificate2 certificate = null)

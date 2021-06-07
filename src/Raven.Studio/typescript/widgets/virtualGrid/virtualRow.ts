@@ -14,9 +14,11 @@ class virtualRow {
     private _even: boolean | null = null;
 
     private _height: number;
+    private readonly _disableStripes: boolean;
     
-    constructor(height: number) {
+    constructor(height: number, disableStripes: boolean = false) {
         this._height = height;
+        this._disableStripes = disableStripes;
         this.element = $(`<div class="virtual-row" style="height: ${this._height}px; top: ${this.top}px"></div>`);
     }
 
@@ -49,7 +51,7 @@ class virtualRow {
         this.element.text(`Unable to load data`);
     }
 
-    populate(item: Object | null, rowIndex: number, isSelected: boolean, columns: virtualColumn[], sortColumnIndex: number) {
+    populate(item: Object | null, rowIndex: number, isSelected: boolean, columns: virtualColumn[], sortColumnIndex: number, customRowClasses: string[] = []) {
         // Optimization: don't regenerate this row HTML if nothing's changed since last render.
         const alreadyDisplayingData = !!item && this._item === item && this._index === rowIndex && this.isItemSelected === isSelected && this.sortColumnIndex === sortColumnIndex;
         if (!alreadyDisplayingData) {
@@ -64,22 +66,34 @@ class virtualRow {
                 this.element.text("");
             }
 
+            let hasChangedSelectedStatus = this.isItemSelected !== isSelected;
+            
+            if (customRowClasses && customRowClasses.length) {
+                this.element.attr("class", "virtual-row " + customRowClasses.join(" "));
+                
+                // since we force unselected state above - mark selection state to be updated if needed
+                if (isSelected) {
+                    hasChangedSelectedStatus = true;
+                }
+            }
+
             // Update the selected status. Displays as a different row color.
-            const hasChangedSelectedStatus = this.isItemSelected !== isSelected;
             if (hasChangedSelectedStatus) {
-                this.element.toggleClass("selected");
+                this.element.toggleClass("selected", isSelected);
                 this.isItemSelected = isSelected;
             }
             
-            // Update the "even" status. Used for striping the virtual rows.
-            const newEvenState = rowIndex % 2 === 0;
-            const hasChangedEven = this._even !== newEvenState;
-            if (hasChangedEven) {
-                this._even = newEvenState;
-                if (this._even) {
-                    this.element.addClass("even");
-                } else {
-                    this.element.removeClass("even");
+            if (!this._disableStripes) {
+                // Update the "even" status. Used for striping the virtual rows.
+                const newEvenState = rowIndex % 2 === 0;
+                const hasChangedEven = this._even !== newEvenState;
+                if (hasChangedEven) {
+                    this._even = newEvenState;
+                    if (this._even) {
+                        this.element.addClass("even");
+                    } else {
+                        this.element.removeClass("even");
+                    }
                 }
             }
 

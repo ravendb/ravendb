@@ -530,7 +530,7 @@ namespace Raven.Server.Documents
         {
             using (_documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                using (var ms = new MemoryStream())
+                await using (var ms = new MemoryStream())
                 {
                     var sp = Stopwatch.StartNew();
                     while (true)
@@ -542,7 +542,7 @@ namespace Raven.Server.Documents
                         context.Reset();
                         context.Renew();
 
-                        using (var writer = new BlittableJsonTextWriter(context, ms))
+                        await using (var writer = new AsyncBlittableJsonTextWriter(context, ms))
                         {
                             sp.Restart();
 
@@ -561,7 +561,7 @@ namespace Raven.Server.Documents
                                 first = false;
                                 context.Write(writer, value);
 
-                                writer.Flush();
+                                await writer.FlushAsync();
 
                                 if (ms.Length > 16 * 1024)
                                     break;

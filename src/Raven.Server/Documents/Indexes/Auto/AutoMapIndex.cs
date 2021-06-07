@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Config.Categories;
 using Raven.Server.ServerWide.Context;
@@ -27,6 +28,7 @@ namespace Raven.Server.Documents.Indexes.Auto
             var definition = AutoMapIndexDefinition.Load(environment);
             var instance = new AutoMapIndex(definition);
             instance.Initialize(environment, documentDatabase, documentDatabase.Configuration.Indexing, documentDatabase.Configuration.PerformanceHints);
+            definition.DeploymentMode = documentDatabase.Configuration.Indexing.AutoIndexDeploymentMode;
 
             return instance;
         }
@@ -56,6 +58,8 @@ namespace Raven.Server.Documents.Indexes.Auto
                 .ToHashSet();
 
             var dynamicEntries = GetDynamicEntriesFields(staticEntries);
+
+            staticEntries.Add(Constants.Documents.Indexing.Fields.DocumentIdFieldName);
 
             return (staticEntries, dynamicEntries);
         }

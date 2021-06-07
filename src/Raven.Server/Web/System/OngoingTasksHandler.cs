@@ -11,6 +11,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
@@ -28,9 +29,6 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Server.Documents.PeriodicBackup;
-using Raven.Server.Documents.PeriodicBackup.Aws;
-using Raven.Server.Documents.PeriodicBackup.Azure;
-using Raven.Server.Documents.PeriodicBackup.GoogleCloud;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
@@ -47,18 +45,16 @@ namespace Raven.Server.Web.System
 {
     public class OngoingTasksHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/tasks", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
-        public Task GetOngoingTasks()
+        [RavenAction("/databases/*/tasks", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
+        public async Task GetOngoingTasks()
         {
             var result = GetOngoingTasksInternal();
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 context.Write(writer, result.ToJson());
             }
-
-            return Task.CompletedTask;
         }
 
         public OngoingTasksResult GetOngoingTasksInternal()
@@ -117,12 +113,16 @@ namespace Raven.Server.Web.System
         }
 
         private OngoingTaskPullReplicationAsSink GetSinkTaskInfo(
-            DatabaseTopology dbTopology, 
-            ClusterTopology clusterTopology, 
+            DatabaseTopology dbTopology,
+            ClusterTopology clusterTopology,
             Dictionary<string, RavenConnectionString> connectionStrings,
-            PullReplicationAsSink sinkReplication, 
+            PullReplicationAsSink sinkReplication,
             List<IncomingReplicationHandler> handlers)
         {
+            connectionStrings.TryGetValue(sinkReplication.ConnectionStringName, out var connection);
+            sinkReplication.Database = connection?.Database;
+            sinkReplication.ConnectionString = connection;
+            
             var tag = Database.WhoseTaskIsIt(dbTopology, sinkReplication, null);
 
             (string Url, OngoingTaskConnectionStatus Status) res = (null, OngoingTaskConnectionStatus.NotActive);
@@ -144,13 +144,11 @@ namespace Raven.Server.Web.System
                 res.Status = OngoingTaskConnectionStatus.NotOnThisNode;
             }
 
-            connectionStrings.TryGetValue(sinkReplication.ConnectionStringName, out var connection);
-
             var sinkInfo = new OngoingTaskPullReplicationAsSink
             {
                 TaskId = sinkReplication.TaskId,
                 TaskName = sinkReplication.Name,
-                ResponsibleNode = new NodeId {NodeTag = tag, NodeUrl = clusterTopology.GetUrlFromTag(tag)},
+                ResponsibleNode = new NodeId { NodeTag = tag, NodeUrl = clusterTopology.GetUrlFromTag(tag) },
                 ConnectionStringName = sinkReplication.ConnectionStringName,
                 TaskState = sinkReplication.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
                 DestinationDatabase = connection?.Database,
@@ -169,8 +167,8 @@ namespace Raven.Server.Web.System
             {
                 // fetch public key of certificate
                 var certBytes = Convert.FromBase64String(sinkReplication.CertificateWithPrivateKey);
-                var certificate = new X509Certificate2(certBytes, 
-                    sinkReplication.CertificatePassword, 
+                var certificate = new X509Certificate2(certBytes,
+                    sinkReplication.CertificatePassword,
                     X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
 
                 sinkInfo.CertificatePublicKey = Convert.ToBase64String(certificate.Export(X509ContentType.Cert));
@@ -201,7 +199,7 @@ namespace Raven.Server.Web.System
             {
                 TaskId = ex.TaskId,
                 TaskName = ex.Name,
-                ResponsibleNode = new NodeId {NodeTag = tag, NodeUrl = clusterTopology.GetUrlFromTag(tag)},
+                ResponsibleNode = new NodeId { NodeTag = tag, NodeUrl = clusterTopology.GetUrlFromTag(tag) },
                 TaskState = ex.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
                 DestinationDatabase = ex.Database,
                 DestinationUrl = connectionResult.Url,
@@ -233,7 +231,7 @@ namespace Raven.Server.Web.System
 
                 yield return new OngoingTaskSubscription
                 {
-                    // Supply only needed fields for List View  
+                    // Supply only needed fields for List View
                     ResponsibleNode = new NodeId
                     {
                         NodeTag = tag,
@@ -264,6 +262,10 @@ namespace Raven.Server.Web.System
         private OngoingTaskReplication GetExternalReplicationInfo(DatabaseTopology databaseTopology, ClusterTopology clusterTopology,
             ExternalReplication watcher, Dictionary<string, RavenConnectionString> connectionStrings)
         {
+            connectionStrings.TryGetValue(watcher.ConnectionStringName, out var connection);
+            watcher.Database = connection?.Database;
+            watcher.ConnectionString = connection;
+            
             var taskStatus = ReplicationLoader.GetExternalReplicationState(ServerStore, Database.Name, watcher.TaskId);
             var tag = Database.WhoseTaskIsIt(databaseTopology, watcher, taskStatus);
 
@@ -276,8 +278,6 @@ namespace Raven.Server.Web.System
             {
                 res.Status = OngoingTaskConnectionStatus.NotOnThisNode;
             }
-            
-            connectionStrings.TryGetValue(watcher.ConnectionStringName, out var connection);
 
             var taskInfo = new OngoingTaskReplication
             {
@@ -302,7 +302,7 @@ namespace Raven.Server.Web.System
         }
 
         [RavenAction("/databases/*/admin/periodic-backup/config", "GET", AuthorizationStatus.DatabaseAdmin)]
-        public Task GetConfiguration()
+        public async Task GetConfiguration()
         {
             // FullPath removes the trailing '/' so adding it back for the studio
             var localRootPath = ServerStore.Configuration.Backup.LocalRootPath;
@@ -315,28 +315,23 @@ namespace Raven.Server.Web.System
             };
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 context.Write(writer, result);
             }
-
-            return Task.CompletedTask;
         }
 
         [RavenAction("/databases/*/admin/debug/periodic-backup/timers", "GET", AuthorizationStatus.DatabaseAdmin)]
-        public Task GetPeriodicBackupTimer()
+        public async Task GetPeriodicBackupTimer()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 BackupDatabaseHandler.WriteStartOfTimers(writer);
                 BackupDatabaseHandler.WritePeriodicBackups(Database, writer, context, out int count);
                 BackupDatabaseHandler.WriteEndOfTimers(writer, count);
-                writer.Flush();
             }
-
-            return Task.CompletedTask;
         }
 
         [RavenAction("/databases/*/admin/periodic-backup", "POST", AuthorizationStatus.DatabaseAdmin)]
@@ -395,7 +390,7 @@ namespace Raven.Server.Web.System
             {
                 var operationId = Database.PeriodicBackupRunner.StartBackupTask(taskId, isFullBackup ?? true);
                 using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
                     writer.WritePropertyName(nameof(StartBackupOperationResult.ResponsibleNode));
@@ -453,13 +448,13 @@ namespace Raven.Server.Web.System
                 try
                 {
                     var operationId = ServerStore.Operations.GetNextOperationId();
-                    var cancelToken = new OperationCancelToken(ServerStore.ServerShutdown);
+                    var cancelToken = CreateOperationToken();
                     var backupParameters = new BackupParameters
                     {
                         RetentionPolicy = null,
                         StartTimeUtc = SystemTime.UtcNow,
                         IsOneTimeBackup = true,
-                        BackupStatus = new PeriodicBackupStatus {TaskId = -1},
+                        BackupStatus = new PeriodicBackupStatus { TaskId = -1 },
                         OperationId = operationId,
                         BackupToLocalFolder = BackupConfiguration.CanBackupUsing(backupConfiguration.LocalSettings),
                         IsFullBackup = true,
@@ -511,7 +506,7 @@ namespace Raven.Server.Web.System
                         },
                         id: operationId, token: cancelToken);
 
-                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
                         writer.WriteOperationIdAndNodeTag(context, operationId, ServerStore.NodeTag);
                     }
@@ -601,7 +596,7 @@ namespace Raven.Server.Web.System
         [RavenAction("/databases/*/admin/connection-strings", "DELETE", AuthorizationStatus.DatabaseAdmin)]
         public async Task RemoveConnectionString()
         {
-            if (TryGetAllowedDbs(Database.Name, out var _, requireAdmin: true) == false)
+            if (await CanAccessDatabaseAsync(Database.Name, requireAdmin: true, requireWrite: true) == false)
                 return;
 
             if (ResourceNameValidator.IsValidResourceName(Database.Name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
@@ -618,13 +613,12 @@ namespace Raven.Server.Web.System
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     context.Write(writer, new DynamicJsonValue
                     {
                         ["RaftCommandIndex"] = index
                     });
-                    writer.Flush();
                 }
             }
         }
@@ -635,7 +629,7 @@ namespace Raven.Server.Web.System
             if (ResourceNameValidator.IsValidResourceName(Database.Name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
                 throw new BadRequestException(errorMessage);
 
-            if (TryGetAllowedDbs(Database.Name, out var allowedDbs, true) == false)
+            if (await CanAccessDatabaseAsync(Database.Name, requireAdmin: true, requireWrite: false) == false)
                 return;
 
             var connectionStringName = GetStringQueryString("connectionStringName", false);
@@ -648,6 +642,7 @@ namespace Raven.Server.Web.System
             {
                 Dictionary<string, RavenConnectionString> ravenConnectionStrings;
                 Dictionary<string, SqlConnectionString> sqlConnectionStrings;
+                Dictionary<string, OlapConnectionString> olapConnectionStrings;
 
                 using (context.OpenReadTransaction())
                 using (var rawRecord = ServerStore.Cluster.ReadRawDatabaseRecord(context, Database.Name))
@@ -657,37 +652,38 @@ namespace Raven.Server.Web.System
                         if (string.IsNullOrWhiteSpace(connectionStringName))
                             throw new ArgumentException($"connectionStringName {connectionStringName}' must have a non empty value");
 
-
                         if (Enum.TryParse<ConnectionStringType>(type, true, out var connectionStringType) == false)
                             throw new NotSupportedException($"Unknown connection string type: {connectionStringType}");
 
-                        (ravenConnectionStrings, sqlConnectionStrings) = GetConnectionString(rawRecord, connectionStringName, connectionStringType);
+                        (ravenConnectionStrings, sqlConnectionStrings, olapConnectionStrings) = GetConnectionString(rawRecord, connectionStringName, connectionStringType);
                     }
                     else
                     {
                         ravenConnectionStrings = rawRecord.RavenConnectionStrings;
                         sqlConnectionStrings = rawRecord.SqlConnectionStrings;
+                        olapConnectionStrings = rawRecord.OlapConnectionString;
                     }
                 }
 
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     var result = new GetConnectionStringsResult
                     {
                         RavenConnectionStrings = ravenConnectionStrings,
-                        SqlConnectionStrings = sqlConnectionStrings
+                        SqlConnectionStrings = sqlConnectionStrings,
+                        OlapConnectionStrings = olapConnectionStrings
                     };
                     context.Write(writer, result.ToJson());
-                    writer.Flush();
                 }
             }
         }
 
-        private static (Dictionary<string, RavenConnectionString>, Dictionary<string, SqlConnectionString>)
+        private static (Dictionary<string, RavenConnectionString>, Dictionary<string, SqlConnectionString>, Dictionary<string, OlapConnectionString>)
             GetConnectionString(RawDatabaseRecord rawRecord, string connectionStringName, ConnectionStringType connectionStringType)
         {
             var ravenConnectionStrings = new Dictionary<string, RavenConnectionString>();
             var sqlConnectionStrings = new Dictionary<string, SqlConnectionString>();
+            var olapConnectionStrings = new Dictionary<string, OlapConnectionString>();
 
             switch (connectionStringType)
             {
@@ -709,11 +705,20 @@ namespace Raven.Server.Web.System
 
                     break;
 
+                case ConnectionStringType.Olap:
+                    var recordOlapConnectionStrings = rawRecord.OlapConnectionString;
+                    if (recordOlapConnectionStrings != null && recordOlapConnectionStrings.TryGetValue(connectionStringName, out var olapConnectionString))
+                    {
+                        olapConnectionStrings.TryAdd(connectionStringName, olapConnectionString);
+                    }
+
+                    break;
+                
                 default:
                     throw new NotSupportedException($"Unknown connection string type: {connectionStringType}");
             }
 
-            return (ravenConnectionStrings, sqlConnectionStrings);
+            return (ravenConnectionStrings, sqlConnectionStrings, olapConnectionStrings);
         }
 
         [RavenAction("/databases/*/admin/connection-strings", "PUT", AuthorizationStatus.DatabaseAdmin)]
@@ -722,7 +727,7 @@ namespace Raven.Server.Web.System
             await DatabaseConfigurations((_, databaseName, connectionString, guid) => ServerStore.PutConnectionString(_, databaseName, connectionString, guid), "put-connection-string", GetRaftRequestIdFromQuery());
         }
 
-        [RavenAction("/databases/*/admin/etl", "RESET", AuthorizationStatus.Operator)]
+        [RavenAction("/databases/*/admin/etl", "RESET", AuthorizationStatus.DatabaseAdmin)]
         public async Task ResetEtl()
         {
             var configurationName = GetStringQueryString("configurationName"); // etl task name
@@ -731,15 +736,18 @@ namespace Raven.Server.Web.System
             await DatabaseConfigurations((_, databaseName, etlConfiguration, guid) => ServerStore.RemoveEtlProcessState(_, databaseName, configurationName, transformationName, guid), "etl-reset", GetRaftRequestIdFromQuery());
         }
 
-        [RavenAction("/databases/*/admin/etl", "PUT", AuthorizationStatus.Operator)]
+        [RavenAction("/databases/*/admin/etl", "PUT", AuthorizationStatus.DatabaseAdmin)]
         public async Task AddEtl()
         {
             var id = GetLongQueryString("id", required: false);
 
             if (id == null)
             {
-                await DatabaseConfigurations((_, databaseName, etlConfiguration, guid) => ServerStore.AddEtl(_, databaseName, etlConfiguration, guid), "etl-add", 
-                    GetRaftRequestIdFromQuery(), beforeSetupConfiguration: AssertCanAddOrUpdateEtl, fillJson: (json, _, index) => json[nameof(EtlConfiguration<ConnectionString>.TaskId)] = index);
+                await DatabaseConfigurations((_, databaseName, etlConfiguration, guid) =>
+                        ServerStore.AddEtl(_, databaseName, etlConfiguration, guid), "etl-add",
+                    GetRaftRequestIdFromQuery(),
+                    beforeSetupConfiguration: AssertCanAddOrUpdateEtl,
+                    fillJson: (json, _, index) => json[nameof(EtlConfiguration<ConnectionString>.TaskId)] = index);
 
                 return;
             }
@@ -747,15 +755,14 @@ namespace Raven.Server.Web.System
             string etlConfigurationName = null;
 
             await DatabaseConfigurations((_, databaseName, etlConfiguration, guid) =>
-            {
-                var task = ServerStore.UpdateEtl(_, databaseName, id.Value, etlConfiguration, guid);
-                etlConfiguration.TryGet(nameof(RavenEtlConfiguration.Name), out etlConfigurationName);
-                return task;
-
-            }, "etl-update", 
+                {
+                    var task = ServerStore.UpdateEtl(_, databaseName, id.Value, etlConfiguration, guid);
+                    etlConfiguration.TryGet(nameof(RavenEtlConfiguration.Name), out etlConfigurationName);
+                    return task;
+                }, "etl-update",
                 GetRaftRequestIdFromQuery(),
+                beforeSetupConfiguration: AssertCanAddOrUpdateEtl,
                 fillJson: (json, _, index) => json[nameof(EtlConfiguration<ConnectionString>.TaskId)] = index);
-
 
             // Reset scripts if needed
             var scriptsToReset = HttpContext.Request.Query["reset"];
@@ -781,6 +788,9 @@ namespace Raven.Server.Web.System
                 case EtlType.Sql:
                     ServerStore.LicenseManager.AssertCanAddSqlEtl();
                     break;
+                case EtlType.Olap:
+                    ServerStore.LicenseManager.AssertCanAddOlapEtl();
+                    break;
                 default:
                     throw new NotSupportedException($"Unknown ETL configuration type. Configuration: {etlConfiguration}");
             }
@@ -795,7 +805,6 @@ namespace Raven.Server.Web.System
             {
                 foreach (var ravenEtl in databaseRecord.RavenEtls)
                 {
-
                     var taskState = GetEtlTaskState(ravenEtl);
 
                     databaseRecord.RavenConnectionStrings.TryGetValue(ravenEtl.ConnectionStringName, out var connection);
@@ -861,6 +870,39 @@ namespace Raven.Server.Web.System
                     };
                 }
             }
+            
+            if (databaseRecord.OlapEtls != null)
+            {
+                foreach (var olapEtl in databaseRecord.OlapEtls)
+                {
+                    string destination = default;
+                    if (databaseRecord.OlapConnectionStrings.TryGetValue(olapEtl.ConnectionStringName, out var olapConnection))
+                    {
+                        destination = olapConnection.GetDestination();
+                    }
+
+                    var connectionStatus = GetEtlTaskConnectionStatus(databaseRecord, olapEtl, out var tag, out var error);
+
+                    var taskState = GetEtlTaskState(olapEtl);
+
+                    yield return new OngoingTaskOlapEtlListView
+                    {
+                        TaskId = olapEtl.TaskId,
+                        TaskName = olapEtl.Name,
+                        TaskConnectionStatus = connectionStatus,
+                        TaskState = taskState,
+                        MentorNode = olapEtl.MentorNode,
+                        ResponsibleNode = new NodeId
+                        {
+                            NodeTag = tag,
+                            NodeUrl = clusterTopology.GetUrlFromTag(tag)
+                        },
+                        ConnectionStringName = olapEtl.ConnectionStringName,
+                        Destination = destination,
+                        Error = error
+                    };
+                }
+            }
         }
 
         private OngoingTaskConnectionStatus GetEtlTaskConnectionStatus<T>(DatabaseRecord record, EtlConfiguration<T> config, out string tag, out string error)
@@ -886,7 +928,6 @@ namespace Raven.Server.Web.System
                     else
                         error = $"ETL process '{config.Name}' was not found.";
                 }
-
             }
             else
             {
@@ -897,8 +938,8 @@ namespace Raven.Server.Web.System
         }
 
         // Get Info about a specific task - For Edit View in studio - Each task should return its own specific object
-        [RavenAction("/databases/*/task", "GET", AuthorizationStatus.ValidUser)]
-        public Task GetOngoingTaskInfo()
+        [RavenAction("/databases/*/task", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        public async Task GetOngoingTaskInfo()
         {
             if (ResourceNameValidator.IsValidResourceName(Database.Name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
                 throw new BadRequestException(errorMessage);
@@ -942,10 +983,10 @@ namespace Raven.Server.Web.System
                             }
                             var taskInfo = GetExternalReplicationInfo(dbTopology, clusterTopology, watcher, record.RavenConnectionStrings);
 
-                            WriteResult(context, taskInfo);
+                            await WriteResult(context, taskInfo);
 
                             break;
-                        
+
                         case OngoingTaskType.PullReplicationAsHub:
                             throw new BadRequestException("Getting task info for " + OngoingTaskType.PullReplicationAsHub + " is not supported");
 
@@ -958,7 +999,7 @@ namespace Raven.Server.Web.System
                             }
                             var sinkTaskInfo = GetSinkTaskInfo(dbTopology, clusterTopology, record.RavenConnectionStrings, edge, Database.ReplicationLoader.IncomingHandlers.ToList());
 
-                            WriteResult(context, sinkTaskInfo);
+                            await WriteResult(context, sinkTaskInfo);
                             break;
 
                         case OngoingTaskType.Backup:
@@ -975,7 +1016,7 @@ namespace Raven.Server.Web.System
 
                             var backupTaskInfo = GetOngoingTaskBackup(key, record, backupConfiguration, clusterTopology);
 
-                            WriteResult(context, backupTaskInfo);
+                            await WriteResult(context, backupTaskInfo);
                             break;
 
                         case OngoingTaskType.SqlEtl:
@@ -990,7 +1031,7 @@ namespace Raven.Server.Web.System
                                 break;
                             }
 
-                            WriteResult(context, new OngoingTaskSqlEtlDetails
+                            await WriteResult(context, new OngoingTaskSqlEtlDetails
                             {
                                 TaskId = sqlEtl.TaskId,
                                 TaskName = sqlEtl.Name,
@@ -1004,6 +1045,35 @@ namespace Raven.Server.Web.System
                                     NodeUrl = clusterTopology.GetUrlFromTag(sqlNode)
                                 },
                                 Error = sqlEtlError
+                            });
+                            break;
+                        
+                        case OngoingTaskType.OlapEtl:
+
+                            var olapEtl = name != null ?
+                                record.OlapEtls.Find(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+                                : record.OlapEtls?.Find(x => x.TaskId == key);
+
+                            if (olapEtl == null)
+                            {
+                                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                                break;
+                            }
+                            
+                            await WriteResult(context, new OngoingTaskOlapEtlDetails
+                            {
+                                TaskId = olapEtl.TaskId,
+                                TaskName = olapEtl.Name,
+                                MentorNode = olapEtl.MentorNode,
+                                Configuration = olapEtl,
+                                TaskState = GetEtlTaskState(olapEtl),
+                                TaskConnectionStatus = GetEtlTaskConnectionStatus(record, olapEtl, out var olapNode, out var olapEtlError),
+                                ResponsibleNode = new NodeId
+                                {
+                                    NodeTag = olapNode,
+                                    NodeUrl = clusterTopology.GetUrlFromTag(olapNode)
+                                },
+                                Error = olapEtlError
                             });
                             break;
 
@@ -1021,7 +1091,7 @@ namespace Raven.Server.Web.System
 
                             var process = Database.EtlLoader.Processes.OfType<RavenEtl>().FirstOrDefault(x => x.ConfigurationName == ravenEtl.Name);
 
-                            WriteResult(context, new OngoingTaskRavenEtlDetails
+                            await WriteResult(context, new OngoingTaskRavenEtlDetails
                             {
                                 TaskId = ravenEtl.TaskId,
                                 TaskName = ravenEtl.Name,
@@ -1078,21 +1148,19 @@ namespace Raven.Server.Web.System
 
                             // Todo: here we'll need to talk with the running node? TaskConnectionStatus = subscriptionState.Disabled ? OngoingTaskConnectionStatus.NotActive : OngoingTaskConnectionStatus.Active,
 
-                            WriteResult(context, subscriptionStateInfo);
+                            await WriteResult(context, subscriptionStateInfo);
                             break;
-                       
+
                         default:
                             HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                             break;
                     }
                 }
             }
-
-            return Task.CompletedTask;
         }
-        
-        [RavenAction("/databases/*/tasks/pull-replication/hub", "GET", AuthorizationStatus.ValidUser)]
-        public Task GetHubTasksInfo()
+
+        [RavenAction("/databases/*/tasks/pull-replication/hub", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        public async Task GetHubTasksInfo()
         {
             if (ResourceNameValidator.IsValidResourceName(Database.Name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
                 throw new BadRequestException(errorMessage);
@@ -1116,9 +1184,9 @@ namespace Raven.Server.Web.System
                     if (def == null)
                     {
                         HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                        return Task.CompletedTask;
+                        return;
                     }
-                            
+
                     var currentHandlers = Database.ReplicationLoader.OutgoingHandlers.Where(o => o.Destination is ExternalReplication ex && ex.TaskId == key)
                         .Select(x => GetPullReplicationAsHubTaskInfo(clusterTopology, x.Destination as ExternalReplication))
                         .ToList();
@@ -1128,37 +1196,33 @@ namespace Raven.Server.Web.System
                         Definition = def,
                         OngoingTasks = currentHandlers
                     };
-                            
-                    WriteResult(context, response.ToJson());
+
+                    await WriteResult(context, response.ToJson());
                 }
             }
-
-            return Task.CompletedTask;
         }
 
-        private void WriteResult(JsonOperationContext context, IDynamicJson taskInfo)
+        private async Task WriteResult(JsonOperationContext context, IDynamicJson taskInfo)
         {
             HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
 
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 context.Write(writer, taskInfo.ToJson());
-                writer.Flush();
             }
         }
 
-        private void WriteResult(JsonOperationContext context, DynamicJsonValue dynamicJsonValue)
+        private async Task WriteResult(JsonOperationContext context, DynamicJsonValue dynamicJsonValue)
         {
             HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
 
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 context.Write(writer, dynamicJsonValue);
-                writer.Flush();
             }
         }
-        
-        [RavenAction("/databases/*/subscription-tasks/state", "POST", AuthorizationStatus.ValidUser)]
+
+        [RavenAction("/databases/*/subscription-tasks/state", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public async Task ToggleSubscriptionTaskState()
         {
             // Note: Only Subscription task needs User authentication, All other tasks need Admin authentication
@@ -1172,7 +1236,7 @@ namespace Raven.Server.Web.System
             await ToggleTaskState();
         }
 
-        [RavenAction("/databases/*/admin/tasks/state", "POST", AuthorizationStatus.Operator)]
+        [RavenAction("/databases/*/admin/tasks/state", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task ToggleTaskState()
         {
             if (ResourceNameValidator.IsValidResourceName(Database.Name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
@@ -1193,19 +1257,18 @@ namespace Raven.Server.Web.System
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
 
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     context.Write(writer, new DynamicJsonValue
                     {
                         [nameof(ModifyOngoingTaskResult.TaskId)] = key,
                         [nameof(ModifyOngoingTaskResult.RaftCommandIndex)] = index
                     });
-                    writer.Flush();
                 }
             }
         }
 
-        [RavenAction("/databases/*/admin/tasks/external-replication", "POST", AuthorizationStatus.Operator)]
+        [RavenAction("/databases/*/admin/tasks/external-replication", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task UpdateExternalReplication()
         {
             if (ResourceNameValidator.IsValidResourceName(Database.Name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
@@ -1231,7 +1294,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/databases/*/subscription-tasks", "DELETE", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/subscription-tasks", "DELETE", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public async Task DeleteSubscriptionTask()
         {
             // Note: Only Subscription task needs User authentication, All other tasks need Admin authentication
@@ -1245,7 +1308,7 @@ namespace Raven.Server.Web.System
             await DeleteOngoingTask();
         }
 
-        [RavenAction("/databases/*/admin/tasks", "DELETE", AuthorizationStatus.Operator)]
+        [RavenAction("/databases/*/admin/tasks", "DELETE", AuthorizationStatus.DatabaseAdmin)]
         public async Task DeleteOngoingTask()
         {
             if (ResourceNameValidator.IsValidResourceName(Database.Name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
@@ -1269,6 +1332,11 @@ namespace Raven.Server.Web.System
                 {
                     (index, _) = await ServerStore.DeleteOngoingTask(id, taskName, type, Database.Name, $"{raftRequestId}/delete-ongoing-task");
                     await Database.RachisLogIndexNotifications.WaitForIndexNotification(index, ServerStore.Engine.OperationTimeout);
+
+                    if (type == OngoingTaskType.Subscription)
+                    {
+                        Database.SubscriptionStorage.RaiseNotificationForTaskRemoved(taskName);
+                    }
                 }
                 finally
                 {
@@ -1277,14 +1345,13 @@ namespace Raven.Server.Web.System
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
 
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     context.Write(writer, new DynamicJsonValue
                     {
                         [nameof(ModifyOngoingTaskResult.TaskId)] = id,
                         [nameof(ModifyOngoingTaskResult.RaftCommandIndex)] = index
                     });
-                    writer.Flush();
                 }
             }
         }
@@ -1362,7 +1429,7 @@ namespace Raven.Server.Web.System
     {
         public List<OngoingTask> OngoingTasksList { get; set; }
         public int SubscriptionsCount { get; set; }
-        
+
         public List<PullReplicationDefinition> PullReplications { get; set; }
 
         public OngoingTasksResult()

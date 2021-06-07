@@ -93,6 +93,7 @@ namespace Raven.Server.Documents.TcpHandlers
                         0,
                         long.MaxValue)
                 };
+
                 foreach (var doc in documents)
                 {
                     using (doc.Data)
