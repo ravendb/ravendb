@@ -397,7 +397,7 @@ namespace Raven.Server.Documents
             }
 
             changeVector = SetDocumentChangeVectorForLocalChange(context, lowerId, oldChangeVector, newEtag);
-            context.SkipChangeVectorValidation = _documentsStorage.TryRemoveUnusedIds(ref changeVector);
+            context.SkipChangeVectorValidation = _documentsStorage.TryRemoveUnusedIds(ref changeVector, removeTrxn: true);
             return (changeVector, nonPersistentFlags);
         }
 

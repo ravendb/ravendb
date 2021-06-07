@@ -453,12 +453,17 @@ namespace Raven.Server.Documents
             return true;
         }
 
-        public bool TryRemoveUnusedIds(ref string changeVector)
+        public bool TryRemoveUnusedIds(ref string changeVector, bool removeTrxn = false)
         {
             if (string.IsNullOrEmpty(changeVector))
                 return false;
 
             var list = UnusedDatabaseIds;
+            if (removeTrxn)
+            {
+                list ??= new HashSet<string>();
+                list.Add(DocumentDatabase.ClusterTransactionId);
+            }
             if (list == null || list.Count == 0)
                 return false;
 
