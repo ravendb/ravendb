@@ -1,14 +1,26 @@
 <div class="modal-dialog modal-lg" role="document" id="querySyntaxDialog">
     <div class="modal-content">
+        <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <i class="icon-cancel"></i>
+            </button>
+        </div>
         <div class="modal-body">
-            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><i class="icon-cancel"></i></button>
-            <div class="margin-top">Simple collection query:</div>
+            <div class="flex-horizontal">
+                <div>Simple collection query:</div>
+                <div class="flex-separator"></div>
+                <small title="Go to RQL documentation">
+                    <a target="_blank" data-bind="attr: { href: 'https://ravendb.net/l/48L1WY/' + clientVersion() }">
+                        <i class="icon-link"></i><span>RQL tutorial</span>
+                    </a>
+                </small>
+            </div>
 <pre class="margin-bottom">
 <span class="token keyword">from</span> <span class="token string">Orders</span>
 <span class="token keyword">where</span> Lines.Count <span class="token operator">></span> <span class="token number">4</span>
 <span class="token keyword">order by</span> Freight <span class="token keyword">as double</span>
 <span class="token keyword">select</span> Lines[].ProductName <span class="token keyword">as</span> ProductNames, OrderedAt, ShipTo.City
-</pre>            
+</pre>
             <div>Using JavaScript select:</div>
 <pre class="margin-bottom"><span class="token keyword">from</span> <span class="token string">Orders</span> <span class="token keyword">as</span> o
 <span class="token keyword">load</span> o.Company <span class="token keyword">as</span> c
@@ -17,7 +29,7 @@
     Country: c.Address.Country,
     LinesCount: o.Lines.length
 <span class="token punctuation">}</span>
-</pre>            
+</pre>
             <div>Group by:</div>
 <pre class="margin-bottom"><span class="token keyword">from</span> <span class="token string">Orders</span>
 <span class="token keyword">group by</span> Company
@@ -25,7 +37,7 @@
 <span class="token keyword">order by</span> <span class="token builtin">count()</span> <span class="token keyword">desc</span>
 <span class="token keyword">select</span> <span class="token builtin">count()</span> <span class="token keyword">as</span> Count, <span class="token builtin">key()</span> <span class="token keyword">as</span> Company
 <span class="token keyword">include</span> Company
-</pre>    
+</pre>
             <div>Querying an index:</div>
 <pre class="margin-bottom"><span class="token keyword">from index</span> <span class="token string">'Orders/Totals'</span> <span class="token keyword">as</span> i
 <span class="token keyword">where</span> i.Total <span class="token operator">></span> <span class="token number">10000</span>

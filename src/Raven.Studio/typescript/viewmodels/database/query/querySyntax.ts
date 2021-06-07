@@ -1,8 +1,9 @@
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
+import viewModelBase = require("viewmodels/viewModelBase");
 
 class querySyntax extends dialogViewModelBase {
 
-    // empty by design
-    
+    clientVersion = viewModelBase.clientVersion;
 }
+
 export = querySyntax;
