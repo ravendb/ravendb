@@ -141,6 +141,8 @@ namespace SlowTests.Issues
         [Fact]
         public async Task Can_use_cluster_tx_mixed_with_tx()
         {
+            DoNotReuseServer();
+
             using (var store = GetDocumentStore())
             {
                 const string userId = "users/1";
@@ -161,11 +163,13 @@ namespace SlowTests.Issues
 
                     var changeVector = session.Advanced.GetChangeVectorFor(user);
                     Assert.True(changeVector.Contains("RAFT:1"));
+                    Assert.True(changeVector.Contains("TRXN:5"));
                 }
 
                 var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
                 var databaseChangeVector = stats.DatabaseChangeVector;
                 Assert.True(databaseChangeVector.Contains("RAFT:1"));
+                Assert.True(databaseChangeVector.Contains("TRXN:5"));
 
                 using (var session = store.OpenSession())
                 {
@@ -179,7 +183,9 @@ namespace SlowTests.Issues
 
                 stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
                 databaseChangeVector = stats.DatabaseChangeVector;
-                Assert.True(databaseChangeVector.Contains("A:2") && databaseChangeVector.Contains("RAFT:1"));
+                Assert.True(databaseChangeVector.Contains("A:2"));
+                Assert.True(databaseChangeVector.Contains("RAFT:1"));
+                Assert.True(databaseChangeVector.Contains("TRXN:5"));
 
                 using (var session = store.OpenSession(new SessionOptions
                 {
@@ -192,11 +198,17 @@ namespace SlowTests.Issues
 
                     var changeVector = session.Advanced.GetChangeVectorFor(user);
                     Assert.True(changeVector.Contains("RAFT:2"));
+                    Assert.True(changeVector.Contains("TRXN:6"));
+
                 }
 
                 stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
                 databaseChangeVector = stats.DatabaseChangeVector;
-                Assert.True(databaseChangeVector.Contains("A:2") && databaseChangeVector.Contains("RAFT:2"));
+                Assert.True(databaseChangeVector.Contains("A:2"));
+                Assert.True(databaseChangeVector.Contains("RAFT:2"));
+                Assert.True(databaseChangeVector.Contains("TRXN:6"));
+
+                WaitForUserToContinueTheTest(store);
             }
         }
 
