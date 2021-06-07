@@ -8,6 +8,7 @@
         FixedSizeTree = 3,
         ObseleteValue = 4, // used to be PrefixTree, never used in prod 
         Table = 5,
-        CompactTree
+        CompactTree = 6,
+        Set = 7,
     }
 }
