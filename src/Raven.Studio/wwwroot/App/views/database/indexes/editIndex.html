@@ -549,7 +549,7 @@
                 <div class="properties-container">
                     <div class="properties-item">
                         <span class="properties-label">Store</span>
-                        <div class="btn-group properties-value">
+                        <div class="btn-group properties-value" data-bind="validationElement: indexOrStore">
                             <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
                                 <span data-bind="text: effectiveStorage"></span> <span class="caret"></span>
                             </button>
@@ -715,12 +715,12 @@
                         </div>
                         <div class="properties-item">
                             <span class="properties-label">Indexing</span>
-                            <div class="btn-group properties-value">
+                            <div class="btn-group properties-value" data-bind="validationElement: indexOrStore">
                                 <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false"
                                         data-bind="attr: { title: effectiveIndexing() === 'Search (implied)' ? 'Indexing was not defined. Search is implied since an analyzer is defined' : effectiveIndexing() }">
                                     <span data-bind="text: effectiveIndexing"></span> <span class="caret"></span>
                                 </button>
-                                <ul class="dropdown-menu" data-bind=" css: { 'list-dropup' : $root.shouldDropupMenu($data, isDefaultFieldOptions() ? 0 : $index())() }">
+                                <ul class="dropdown-menu" data-bind="css: { 'list-dropup' : $root.shouldDropupMenu($data, isDefaultFieldOptions() ? 0 : $index())() }">
                                     <li data-bind="if:!analyzerDefinedWithoutIndexing()">
                                         <a href="#" data-bind="click: indexing.bind(indexing, null)"><span data-bind="text: defaultIndexing"></span></a>
                                     </li>
@@ -748,6 +748,9 @@
                                     </ul>
                                 </div>
                             </div>
+                        </div>
+                        <div data-bind="validationElement: indexOrStore" class="margin-top margin-top-sm">
+                            <span class="help-block" data-bind="validationMessage: indexOrStore"></span>
                         </div>
                     </div>
                 </div>

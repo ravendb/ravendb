@@ -8,6 +8,7 @@ using Xunit.Abstractions;
 using System.Threading;
 using FastTests.Server.Replication;
 using Newtonsoft.Json.Linq;
+using Raven.Client.Extensions;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
 
@@ -40,7 +41,7 @@ namespace SlowTests.Issues
                         var arraySegment = new ArraySegment<byte>(new byte[512]);
                         var buffer = new StringBuilder();
                         var charBuffer = new char[Encodings.Utf8.GetMaxCharCount(arraySegment.Count)];
-                        
+
                         while (cts.IsCancellationRequested == false)
                         {
                             buffer.Length = 0;
@@ -75,7 +76,10 @@ namespace SlowTests.Issues
                     session.Store(new User { Name = "Jane Dow", Age = 31 }, "users/2");
                     session.SaveChanges();
                 }
-                await readFromSocketTask;
+
+                cts.CancelAfter(TimeSpan.FromMinutes(1));
+
+                Assert.True(await readFromSocketTask.WaitWithTimeout(TimeSpan.FromMinutes(2)));
             }
         }
 
@@ -145,8 +149,9 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                cts.CancelAfter(10_000);
-                await readFromSocketTask;
+                cts.CancelAfter(TimeSpan.FromMinutes(1));
+
+                Assert.True(await readFromSocketTask.WaitWithTimeout(TimeSpan.FromMinutes(2)));
             }
         }
     }

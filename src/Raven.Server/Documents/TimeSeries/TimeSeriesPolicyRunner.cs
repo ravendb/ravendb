@@ -122,7 +122,7 @@ namespace Raven.Server.Documents.TimeSeries
             var currentIndex = config.GetPolicyIndexByTimeSeries(slicerHolder.Name);
             if (currentIndex == -1) // policy not found
                 return;
-            
+
             var nextPolicy = config.GetNextPolicy(currentIndex);
             if (nextPolicy == null)
                 return;
@@ -139,7 +139,7 @@ namespace Raven.Server.Documents.TimeSeries
                 if (now - startRollup > currentPolicy.RetentionTime)
                     return; // ignore this segment since it is outside our retention frame
             }
-            
+
             _database.DocumentsStorage.TimeSeriesStorage.Rollups.MarkSegmentForPolicy(context, slicerHolder, nextPolicy, timestamp, changeVector);
         }
 
@@ -454,8 +454,7 @@ namespace Raven.Server.Documents.TimeSeries
                 var nextStats = tss.Stats.GetStats(context, docId, next.GetTimeSeriesName(raw));
 
                 var nextEnd = nextStats.End.Add(next.AggregationTime).AddMilliseconds(-1);
-                
-                if (nextEnd > currentStats.End)
+                if (nextEnd >= currentStats.End)
                     return false;
 
                 if (nextEnd < to)

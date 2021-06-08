@@ -11,6 +11,7 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents;
 using Sparrow;
+using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
 

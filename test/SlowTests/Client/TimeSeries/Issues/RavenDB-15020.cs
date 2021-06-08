@@ -8,7 +8,6 @@ using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Client.Exceptions;
 using Raven.Tests.Core.Utils.Entities;
-using Sparrow;
 using Sparrow.Extensions;
 using Xunit;
 using Xunit.Abstractions;
@@ -27,7 +26,7 @@ namespace SlowTests.Client.TimeSeries.Issues
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today.EnsureUtc();
+                var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
                 const double number = 90;
 
@@ -44,7 +43,7 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Person {Name = "Oren",}, id);
+                    session.Store(new Person { Name = "Oren", }, id);
 
                     var tsf = session.TimeSeriesFor(id, "HeartRate");
 
@@ -86,16 +85,16 @@ select timeseries(
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today.EnsureUtc();
+                var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
                 const double number = 90;
 
                 var values = new List<double>
                 {
-                    43, 54, 56, 61, 62, 
-                    66, 68, 69, 69, 70, 
-                    71, 72, 77, 78, 79, 
-                    85, 87, 88, 89, 93, 
+                    43, 54, 56, 61, 62,
+                    66, 68, 69, 69, 70,
+                    71, 72, 77, 78, 79,
+                    85, 87, 88, 89, 93,
                     95, 96, 98, 99, 99
                 };
 
@@ -103,7 +102,7 @@ select timeseries(
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Person {Name = "Oren",}, id);
+                    session.Store(new Person { Name = "Oren", }, id);
 
                     var tsf = session.TimeSeriesFor(id, "HeartRate");
 
@@ -176,12 +175,12 @@ select timeseries(
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today.EnsureUtc();
+                var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Person {Name = "Oren",}, id);
+                    session.Store(new Person { Name = "Oren", }, id);
 
                     var tsf = session.TimeSeriesFor(id, "HeartRate");
                     var rand = new Random();
@@ -205,13 +204,13 @@ select timeseries(
 
                     var allEntries = session.TimeSeriesFor(id, "HeartRate").Get();
                     var groupByHour = allEntries
-                        .GroupBy(e => new {e.Timestamp.Day, e.Timestamp.Hour})
+                        .GroupBy(e => new { e.Timestamp.Day, e.Timestamp.Hour })
                         .ToList();
 
                     var query = session.Query<Person>()
                         .Select(p => RavenQuery.TimeSeries(p, "HeartRate")
                             .GroupBy(g => g.Hours(1))
-                            .Select(x => new {P = x.Percentile(number)})
+                            .Select(x => new { P = x.Percentile(number) })
                             .ToList());
 
                     var result = query.First();
@@ -240,14 +239,14 @@ select timeseries(
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today.EnsureUtc();
+                var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
 
-                var tags = new[] {"watches/fitbit", "watches/casio", "watches/apple"};
+                var tags = new[] { "watches/fitbit", "watches/casio", "watches/apple" };
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Person {Name = "Oren",}, id);
+                    session.Store(new Person { Name = "Oren", }, id);
 
                     var tsf = session.TimeSeriesFor(id, "HeartRate");
 
@@ -278,8 +277,8 @@ select timeseries(
                             .Where(e => e.Tag == "watches/fitbit")
                             .Select(x => new
                             {
-                                Percentile = x.Percentile(number), 
-                                Min = x.Min(), 
+                                Percentile = x.Percentile(number),
+                                Min = x.Min(),
                                 Max = x.Max()
                             })
                             .ToList());
@@ -300,7 +299,7 @@ select timeseries(
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today.EnsureUtc();
+                var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
 
                 using (var session = store.OpenSession())
@@ -317,8 +316,8 @@ select timeseries(
 
                         var value1 = rand.NextDouble() * rand.Next(1, 100);
                         var value2 = rand.NextDouble() * rand.Next(1, 100);
-                        
-                        tsf.Append(baseline.AddMinutes(i), new []{ value1, value2 });
+
+                        tsf.Append(baseline.AddMinutes(i), new[] { value1, value2 });
                     }
 
                     session.SaveChanges();
@@ -370,12 +369,12 @@ select timeseries(
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today.EnsureUtc();
+                var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Person {Name = "Oren",}, id);
+                    session.Store(new Person { Name = "Oren", }, id);
 
                     var tsf = session.TimeSeriesFor(id, "HeartRate");
 
@@ -405,8 +404,8 @@ select timeseries(
                         .Select(p => RavenQuery.TimeSeries(p, "HeartRate", baseline, baseline.AddDays(1))
                             .Select(x => new
                             {
-                                Percentile = x.Percentile(number), 
-                                Min = x.Min(), 
+                                Percentile = x.Percentile(number),
+                                Min = x.Min(),
                                 Max = x.Max()
                             })
                             .Scale(0.001)
@@ -431,12 +430,12 @@ select timeseries(
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today.EnsureUtc();
+                var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Person {Name = "Oren",}, id);
+                    session.Store(new Person { Name = "Oren", }, id);
 
                     var tsf = session.TimeSeriesFor(id, "HeartRate");
 
@@ -462,8 +461,8 @@ select timeseries(
                         .Select(p => RavenQuery.TimeSeries(p, "HeartRate", baseline, baseline.AddDays(1))
                             .GroupBy(g => g
                                 .Hours(1)
-                                .WithOptions(new TimeSeriesAggregationOptions {Interpolation = InterpolationType.Linear}))
-                            .Select(x => new {Percentile = x.Percentile(number)})
+                                .WithOptions(new TimeSeriesAggregationOptions { Interpolation = InterpolationType.Linear }))
+                            .Select(x => new { Percentile = x.Percentile(number) })
                             .ToList());
 
                     var result = query.First();
@@ -526,7 +525,7 @@ select timeseries(
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today.EnsureUtc();
+                var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
 
                 using (var session = store.OpenSession())
@@ -553,7 +552,7 @@ select timeseries(
                         .Select(e => e.Value)
                         .ToList();
 
-                    var numbers = new[] {0.0693, 0.0694, 99.93, 99.94};
+                    var numbers = new[] { 0.0693, 0.0694, 99.93, 99.94 };
 
                     foreach (var number in numbers)
                     {
@@ -599,7 +598,7 @@ select timeseries(
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
                 var database = await GetDocumentDatabaseInstanceFor(store);
 
-                var now = DateTime.Today.EnsureUtc();
+                var now = RavenTestHelper.UtcToday;
 
                 var baseline = now.AddDays(-12);
                 var total = TimeSpan.FromDays(12).TotalMinutes;
@@ -630,8 +629,8 @@ select timeseries(
                             .GroupBy(g => g.Days(1))
                             .Select(agg => new
                             {
-                                Max = agg.Max(), 
-                                Min = agg.Min(), 
+                                Max = agg.Max(),
+                                Min = agg.Min(),
                                 P25 = agg.Percentile(25)
                             })
                             .ToList());
@@ -648,7 +647,7 @@ select timeseries(
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today.EnsureUtc();
+                var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
 
                 using (var session = store.OpenSession())
@@ -718,12 +717,12 @@ select timeseries(
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today.EnsureUtc();
+                var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Person {Name = "Oren",}, id);
+                    session.Store(new Person { Name = "Oren", }, id);
 
                     var tsf = session.TimeSeriesFor(id, "HeartRate");
 
@@ -765,12 +764,12 @@ select timeseries(
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today.EnsureUtc();
+                var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Person {Name = "Oren",}, id);
+                    session.Store(new Person { Name = "Oren", }, id);
 
                     var tsf = session.TimeSeriesFor(id, "HeartRate");
 
@@ -805,12 +804,12 @@ select timeseries(
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today.EnsureUtc();
+                var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Person {Name = "Oren",}, id);
+                    session.Store(new Person { Name = "Oren", }, id);
 
                     var tsf = session.TimeSeriesFor(id, "HeartRate");
 
@@ -860,13 +859,13 @@ select timeseries(
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today.EnsureUtc();
+                var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
 
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Person {Name = "Oren",}, id);
+                    session.Store(new Person { Name = "Oren", }, id);
 
                     var tsf = session.TimeSeriesFor(id, "HeartRate");
 
@@ -893,9 +892,9 @@ select timeseries(
 
                     var result = query.First();
                     Assert.Equal(24, result.Results.Length);
-                    
+
                     var dy = 5900;
-                    var dx = TimeSpan.FromMinutes(60).TotalMilliseconds; 
+                    var dx = TimeSpan.FromMinutes(60).TotalMilliseconds;
                     var dxSeconds = TimeSpan.FromMinutes(60).TotalSeconds;
                     var expected = dy / dxSeconds;
                     Assert.Equal(expected, scale * (dy / dx));
@@ -935,7 +934,7 @@ select timeseries(
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
                 var database = await GetDocumentDatabaseInstanceFor(store);
 
-                var now = DateTime.Today.EnsureUtc();
+                var now = RavenTestHelper.UtcToday;
 
                 var baseline = now.AddDays(-12);
                 var total = TimeSpan.FromDays(12).TotalMinutes;
@@ -993,7 +992,7 @@ select timeseries(
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today.EnsureUtc();
+                var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
 
                 var values = new List<double>
@@ -1047,7 +1046,7 @@ select timeseries(
                     var sum = allValues.Sum(v => (v - mean) * (v - mean));
                     var expected = Math.Sqrt(sum / (allValues.Count - 1));
 
-                    Assert.Equal(expected, result.Results[0].StandardDeviation[0]);
+                    Assert.True(expected.AlmostEquals(result.Results[0].StandardDeviation[0]));
                 }
             }
         }
@@ -1057,7 +1056,7 @@ select timeseries(
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today.EnsureUtc();
+                var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
 
                 var values = new List<double>
@@ -1116,7 +1115,7 @@ select timeseries(
                     var result = query.First();
 
                     Assert.Equal(1, result.Results.Length);
-                    Assert.Equal(expected, result.Results[0].StandardDeviation[0]);
+                    Assert.True(expected.AlmostEquals(result.Results[0].StandardDeviation[0]));
                 }
 
                 using (var session = store.OpenSession())
@@ -1128,7 +1127,7 @@ select timeseries(
 
                     var result = query.First();
                     Assert.Equal(1, result.Results.Length);
-                    Assert.Equal(expected, result.Results[0].StandardDeviation[0]);
+                    Assert.True(expected.AlmostEquals(result.Results[0].StandardDeviation[0]));
                 }
 
                 using (var session = store.OpenSession())
@@ -1144,7 +1143,7 @@ select timeseries(
 
                     var result = query.First();
                     Assert.Equal(1, result.Results.Length);
-                    Assert.Equal(expected, result.Results[0].StandardDeviation[0]);
+                    Assert.True(expected.AlmostEquals(result.Results[0].StandardDeviation[0]));
                 }
             }
         }
@@ -1154,7 +1153,7 @@ select timeseries(
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today.EnsureUtc();
+                var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
 
                 using (var session = store.OpenSession())
@@ -1209,7 +1208,7 @@ select timeseries(
                         var mean = groupValues.Average();
                         var sigma = groupValues.Sum(v => Math.Pow(v - mean, 2));
                         var expected = Math.Sqrt(sigma / (groupValues.Count - 1));
-                         
+
                         Assert.True(expected.AlmostEquals(rangeAggregation.StandardDeviation[0]));
                     }
                 }
@@ -1221,7 +1220,7 @@ select timeseries(
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today.EnsureUtc();
+                var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
 
                 var tags = new[] { "watches/fitbit", "watches/casio", "watches/apple" };
@@ -1250,7 +1249,7 @@ select timeseries(
                         .Where(e => e.Tag == "watches/fitbit")
                         .Select(e => e.Value)
                         .ToList();
-                    
+
                     var mean = values.Average();
                     var sigma = values.Sum(v => Math.Pow(v - mean, 2));
                     var expected = Math.Sqrt(sigma / (values.Count - 1));
@@ -1260,8 +1259,8 @@ select timeseries(
                             .Where(e => e.Tag == "watches/fitbit")
                             .Select(x => new
                             {
-                                StandardDev = x.StandardDeviation(), 
-                                Min = x.Min(), 
+                                StandardDev = x.StandardDeviation(),
+                                Min = x.Min(),
                                 Max = x.Max()
                             })
                             .ToList());
@@ -1273,7 +1272,7 @@ select timeseries(
                     Assert.Equal(values[0], result.Results[0].Min[0]);
                     Assert.Equal(values[^1], result.Results[0].Max[0]);
 
-                    Assert.Equal(expected, result.Results[0].StandardDeviation[0]);
+                    Assert.True(expected.AlmostEquals(result.Results[0].StandardDeviation[0]));
                 }
             }
         }
@@ -1283,7 +1282,7 @@ select timeseries(
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today.EnsureUtc();
+                var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
 
 
@@ -1320,8 +1319,8 @@ select timeseries(
                         .Select(p => RavenQuery.TimeSeries(p, "HeartRate", baseline, baseline.AddDays(1))
                             .Select(x => new
                             {
-                                StandardDeviation = x.StandardDeviation(), 
-                                Min = x.Min(), 
+                                StandardDeviation = x.StandardDeviation(),
+                                Min = x.Min(),
                                 Max = x.Max()
                             })
                             .Scale(0.001)
@@ -1334,9 +1333,7 @@ select timeseries(
                     Assert.Equal(scaledValues[0], result.Results[0].Min[0]);
                     Assert.Equal(scaledValues[^1], result.Results[0].Max[0]);
 
-                    var tolerance = 0.0000000001;
-                    var diff = Math.Abs(expected - result.Results[0].StandardDeviation[0]);
-                    Assert.True(diff < tolerance);
+                    Assert.True(expected.AlmostEquals(result.Results[0].StandardDeviation[0]));
                 }
             }
         }
@@ -1346,7 +1343,7 @@ select timeseries(
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today.EnsureUtc();
+                var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
 
                 using (var session = store.OpenSession())
@@ -1402,14 +1399,14 @@ select timeseries(
                         var sigma = groupValues.Sum(v => Math.Pow(v - mean, 2));
                         var expected = Math.Sqrt(sigma / (groupValues.Count - 1));
 
-                        Assert.Equal(expected, rangeAggregation.StandardDeviation[0]);
+                        Assert.True(expected.AlmostEquals(rangeAggregation.StandardDeviation[0]));
 
                         var groupValues2 = group.Select(g => g.Values[1]).ToList();
                         mean = groupValues2.Average();
                         sigma = groupValues2.Sum(v => Math.Pow(v - mean, 2));
                         expected = Math.Sqrt(sigma / (groupValues2.Count - 1));
-                        
-                        Assert.Equal(expected, rangeAggregation.StandardDeviation[1]);
+
+                        Assert.True(expected.AlmostEquals(rangeAggregation.StandardDeviation[1]));
                     }
                 }
             }
@@ -1420,7 +1417,7 @@ select timeseries(
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today.EnsureUtc();
+                var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
 
                 using (var session = store.OpenSession())
@@ -1471,7 +1468,7 @@ select timeseries(
                     var sigma = values.Sum(v => Math.Pow(v - mean, 2));
                     var expected = Math.Sqrt(sigma / (values.Count - 1));
 
-                    Assert.Equal(expected, result.Results[0].StandardDeviation[0]);
+                    Assert.True(expected.AlmostEquals(result.Results[0].StandardDeviation[0]));
 
                     // 03:00 - 04:00
                     Assert.Equal(baseline.AddHours(3), result.Results[3].From);
@@ -1486,7 +1483,7 @@ select timeseries(
                     sigma = values.Sum(v => Math.Pow(v - mean, 2));
                     expected = Math.Sqrt(sigma / (values.Count - 1));
 
-                    Assert.Equal(expected, result.Results[3].StandardDeviation[0]);
+                    Assert.True(expected.AlmostEquals(result.Results[3].StandardDeviation[0]));
 
                     // assert percentiles in filled up gaps
 
@@ -1498,7 +1495,7 @@ select timeseries(
                     double quotient = 1d / 3;
                     expected = result.Results[0].StandardDeviation[0] + dy * quotient;
 
-                    Assert.Equal(expected, result.Results[1].StandardDeviation[0]);
+                    Assert.True(expected.AlmostEquals(result.Results[1].StandardDeviation[0]));
 
                     // 02:00 - 03:00
                     Assert.Equal(baseline.AddHours(2), result.Results[2].From);
@@ -1507,7 +1504,7 @@ select timeseries(
                     quotient = 2d / 3;
                     expected = result.Results[0].StandardDeviation[0] + dy * quotient;
 
-                    Assert.Equal(expected, result.Results[2].StandardDeviation[0]);
+                    Assert.True(expected.AlmostEquals(result.Results[2].StandardDeviation[0]));
                 }
             }
         }
@@ -1539,7 +1536,7 @@ select timeseries(
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
                 var database = await GetDocumentDatabaseInstanceFor(store);
 
-                var now = DateTime.Today.EnsureUtc();
+                var now = RavenTestHelper.UtcToday;
 
                 var baseline = now.AddDays(-12);
                 var total = TimeSpan.FromDays(12).TotalMinutes;
