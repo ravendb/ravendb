@@ -52,9 +52,12 @@ class serverWideExternalReplicationEditModel extends serverWideConfigurationMode
 
     private initValidation() {
         this.delayTime.extend({
-            required: {
-                onlyIf: () => this.showDelayTime()
-            },
+            validation: [
+                {
+                    validator: () => !this.showDelayTime() || !!this.delayTime(),
+                    message: "Please enter a value greater than 0"
+                }
+            ],
             min: 0
         });
         

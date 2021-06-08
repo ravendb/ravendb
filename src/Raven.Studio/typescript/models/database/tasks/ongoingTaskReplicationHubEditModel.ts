@@ -89,9 +89,12 @@ class ongoingTaskReplicationHubEditModel {
         });
         
         this.delayReplicationTime.extend({
-            required: {
-                onlyIf: () => this.showDelayReplication()
-            },
+            validation: [
+                {
+                    validator: () => !this.showDelayReplication() || !!this.delayReplicationTime(),
+                    message: "Please enter a value greater than 0"
+                }
+            ],
             min: 0
         });
         

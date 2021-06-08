@@ -21,11 +21,9 @@
                         </div>
                         <div class="form-group margin-top margin-top-lg">
                             <label class="control-label">&nbsp;</label>
-                            <div class="toggle">
-                                <div data-placement="right" data-toggle="tooltip" title="Set a delay time for the task" data-animation="true">
-                                    <input id="setDelayTime" type="checkbox" data-bind="checked: showDelayTime">
-                                    <label for="setDelayTime">Set Replication Delay Time</label>
-                                </div>
+                            <div class="toggle" data-placement="right" data-toggle="tooltip" title="Set a delay time for the task" data-animation="true">
+                                <input id="setDelayTime" type="checkbox" data-bind="checked: showDelayTime">
+                                <label for="setDelayTime">Set Replication Delay Time</label>
                             </div>
                         </div>
                         <div data-bind="validationElement: delayTime, collapse: showDelayTime">
@@ -33,8 +31,9 @@
                                 <div>
                                     <label class="control-label">Delay Time</label>
                                 </div>
-                                <div class="flex-grow">
+                                <div class="flex-grow" data-bind="validationElement: delayTime">
                                     <input type="text" class="form-control" data-bind="durationPicker: delayTime, durationPickerOptions: { showDays: true, showSeconds: true }" />
+                                    <div class="help-block" data-bind="validationMessage: delayTime"></div>
                                 </div>
                             </div>
                         </div>
