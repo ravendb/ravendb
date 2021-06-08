@@ -775,7 +775,7 @@ namespace Raven.Server.Rachis
 
             PrevStates.LimitedSizeEnqueue(transition, 5);
 
-            context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented += 
+            context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented +=
                 _ => CurrentState = rachisState; //  we need this to happened while we still under the write lock
 
             context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
@@ -1181,6 +1181,11 @@ namespace Raven.Server.Rachis
                                 var follower = new Follower(this, negotiation.Term, remoteConnection);
                                 follower.AcceptConnection(negotiation);
                             }
+                            else
+                            {
+                                DisposeRemoteConnection(remoteConnection);
+                            }
+
                             break;
                         default:
                             throw new ArgumentOutOfRangeException("Unknown initial message value: " +
@@ -1209,14 +1214,7 @@ namespace Raven.Server.Rachis
                     Log.Info("Failed to process incoming connection", e);
                 }
 
-                try
-                {
-                    remoteConnection?.Dispose();
-                }
-                catch (Exception)
-                {
-                    // ignored
-                }
+                DisposeRemoteConnection(remoteConnection);
 
                 try
                 {
@@ -1228,6 +1226,18 @@ namespace Raven.Server.Rachis
                 }
 
                 throw;
+            }
+
+            static void DisposeRemoteConnection(RemoteConnection remoteConnection)
+            {
+                try
+                {
+                    remoteConnection?.Dispose();
+                }
+                catch (Exception)
+                {
+                    // ignored
+                }
             }
         }
 
@@ -1284,7 +1294,9 @@ namespace Raven.Server.Rachis
 
                 var noopCmd = new DynamicJsonValue
                 {
-                    ["Type"] = $"Noop for {Tag} in term {term}", ["Command"] = "noop", [nameof(CommandBase.UniqueRequestId)] = Guid.NewGuid().ToString()
+                    ["Type"] = $"Noop for {Tag} in term {term}",
+                    ["Command"] = "noop",
+                    [nameof(CommandBase.UniqueRequestId)] = Guid.NewGuid().ToString()
                 };
                 var cmd = context.ReadObject(noopCmd, "noop-cmd");
 
@@ -1409,7 +1421,7 @@ namespace Raven.Server.Rachis
                 table.Delete(reader.Id);
                 truncatedIndex = entryIndex;
 
-                if (truncatedIndex % 1024 == 0 && 
+                if (truncatedIndex % 1024 == 0 &&
                     sp.ElapsedMilliseconds > (int)ElectionTimeout.TotalMilliseconds / 3)
                 {
                     Timeout.Defer(LeaderTag);
