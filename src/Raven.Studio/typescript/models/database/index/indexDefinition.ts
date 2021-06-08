@@ -380,7 +380,7 @@ class indexDefinition {
         }
     }
     
-    static empty(): indexDefinition {
+    static empty(defaultDeploymentMode: Raven.Client.Documents.Indexes.IndexDeploymentMode): indexDefinition {
         return new indexDefinition({
             Fields: {},
             Maps: [""],
@@ -388,7 +388,7 @@ class indexDefinition {
             LockMode: "Unlock",
             Reduce: undefined,
             Priority: "Normal",
-            DeploymentMode: "Rolling",
+            DeploymentMode: defaultDeploymentMode,
             Configuration: null,
             Type: "Map",
             SourceType: "None",
