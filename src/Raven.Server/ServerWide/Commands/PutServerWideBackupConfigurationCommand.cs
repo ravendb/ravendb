@@ -199,7 +199,7 @@ namespace Raven.Server.ServerWide.Commands
 
         private static string GetUpdatedPath(string str, string databaseName, char separator = '/')
         {
-            if (str == null)
+            if (string.IsNullOrWhiteSpace(str))
                 return databaseName;
 
             if (str.EndsWith(separator) == false)

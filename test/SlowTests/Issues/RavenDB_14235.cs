@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Session;
 using Xunit;
 using Xunit.Abstractions;
 #pragma warning disable 1998
@@ -164,9 +165,10 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact(Skip = "Running this test makes that not awaited async calls (intentional) can cause heap corruption. See https://issues.hibernatingrhinos.com/issue/RavenDB-16759")]
+        [Fact]
         public async Task ShouldThrowOnNotAwaitedAsyncMethods()
         {
+            // "Running this test makes that not awaited async calls (intentional) - we need to wait for tasks to avoid heap corruption. See https://issues.hibernatingrhinos.com/issue/RavenDB-16759
             const string name = "1";
 
             var exceptionsCounter = 0;
@@ -176,7 +178,14 @@ namespace SlowTests.Issues
             {
                 tryCounter++;
                 using var session = store.OpenAsyncSession();
-                session.LoadAsync<User>(name);
+                var task = session.LoadAsync<User>(name);
+                using (((InMemoryDocumentSessionOperations)session).ForTestingPurposesOnly().CallOnSessionDisposeAboutToThrowDueToRunningAsyncTask(() =>
+                {
+                    task.Wait();
+                }))
+                {
+
+                }
             }
             catch (Exception e)
             {
@@ -189,7 +198,14 @@ namespace SlowTests.Issues
                 tryCounter++;
                 using var session = store.OpenAsyncSession();
                 await session.StoreAsync(new User());
-                session.SaveChangesAsync();
+                var task = session.SaveChangesAsync();
+                using (((InMemoryDocumentSessionOperations)session).ForTestingPurposesOnly().CallOnSessionDisposeAboutToThrowDueToRunningAsyncTask(() =>
+                {
+                    task.Wait();
+                }))
+                {
+
+                }
             }
             catch (Exception e)
             {
@@ -201,7 +217,14 @@ namespace SlowTests.Issues
             {
                 tryCounter++;
                 using var session = store.OpenAsyncSession();
-                session.Query<User>().ToListAsync();
+                var task = session.Query<User>().ToListAsync();
+                using (((InMemoryDocumentSessionOperations)session).ForTestingPurposesOnly().CallOnSessionDisposeAboutToThrowDueToRunningAsyncTask(() =>
+                {
+                    task.Wait();
+                }))
+                {
+
+                }
             }
             catch (Exception e)
             {
@@ -213,7 +236,14 @@ namespace SlowTests.Issues
             {
                 tryCounter++;
                 using var session = store.OpenAsyncSession();
-                session.Advanced.Attachments.GetAsync(name, name);
+                var task = session.Advanced.Attachments.GetAsync(name, name);
+                using (((InMemoryDocumentSessionOperations)session).ForTestingPurposesOnly().CallOnSessionDisposeAboutToThrowDueToRunningAsyncTask(() =>
+                {
+                    task.Wait();
+                }))
+                {
+
+                }
             }
             catch (Exception e)
             {
@@ -225,7 +255,14 @@ namespace SlowTests.Issues
             {
                 tryCounter++;
                 using var session = store.OpenAsyncSession();
-                session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<object>(name);
+                var task = session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<object>(name);
+                using (((InMemoryDocumentSessionOperations)session).ForTestingPurposesOnly().CallOnSessionDisposeAboutToThrowDueToRunningAsyncTask(() =>
+                {
+                    task.Wait();
+                }))
+                {
+
+                }
             }
             catch (Exception e)
             {
@@ -238,7 +275,15 @@ namespace SlowTests.Issues
                 tryCounter++;
                 using var session = store.OpenAsyncSession();
                 var lazy = session.Advanced.Lazily.LoadAsync<User>(new[] { name, name, name, name });
-                lazy.Value.Start();
+                var task = lazy.Value;
+                task.Start();
+                using (((InMemoryDocumentSessionOperations)session).ForTestingPurposesOnly().CallOnSessionDisposeAboutToThrowDueToRunningAsyncTask(() =>
+                {
+                    task.Wait();
+                }))
+                {
+
+                }
             }
             catch (Exception e)
             {

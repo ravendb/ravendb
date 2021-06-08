@@ -4,6 +4,7 @@ using FastTests;
 using FastTests.Server.Basic.Entities;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Config;
+using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
 

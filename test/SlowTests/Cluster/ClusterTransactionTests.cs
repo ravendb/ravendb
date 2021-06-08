@@ -807,7 +807,7 @@ namespace SlowTests.Cluster
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User { Name = "Aviv1" }, "users/1-A");
-                    session.TimeSeriesFor("users/1-A", "Heartrate").Append(DateTime.Today, new[] { 55d }, "watches/apple");
+                    session.TimeSeriesFor("users/1-A", "Heartrate").Append(RavenTestHelper.UtcToday, new[] { 55d }, "watches/apple");
                     session.SaveChanges();
                 }
 

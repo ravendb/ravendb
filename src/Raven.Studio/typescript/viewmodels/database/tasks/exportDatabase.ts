@@ -33,7 +33,9 @@ class exportDatabase extends viewModelBase {
     filter = ko.observable<string>("");
     filteredCollections: KnockoutComputed<Array<string>>;
 
-    exportCommand: KnockoutComputed<string>;
+    commandTypes: Array<commandLineType> = ["PowerShell", "Cmd", "Bash"];
+    effectiveCommandType = ko.observable<commandLineType>("PowerShell");
+    effectiveCommand: KnockoutComputed<string>;
 
     encryptionSection = ko.observable<setupEncryptionKey>();
 
@@ -125,27 +127,9 @@ class exportDatabase extends viewModelBase {
             return collections.filter(x => x.toLowerCase().includes(filterLowerCase));
         });
 
-        this.exportCommand = ko.pureComputed<string>(() => {
-            const db = this.activeDatabase();
-            if (!db) {
-                return "";
-            }
-
-            const args = this.model.toDto();
-            if (!args.TransformScript) {
-                delete args.TransformScript;
-            }
-            const fileName = args.FileName;
-            delete args.FileName;
-            const json = JSON.stringify(args);
-
-            return 'curl -o "' + fileName + '.ravendbdump" --data "DownloadOptions=' + encodeURIComponent(json) + '" ' +
-                appUrl.forServer() + appUrl.forDatabaseQuery(db) + endpoints.databases.smuggler.smugglerExport;
+        this.effectiveCommand = ko.pureComputed(() => {
+            return this.getCommand(this.effectiveCommandType());
         });
-    }
-
-    copyCommandToClipboard() {
-        copyToClipboard.copy(this.exportCommand(), "Command was copied to clipboard.");
     }
 
     attached() {
@@ -238,6 +222,42 @@ class exportDatabase extends viewModelBase {
                         messagePublisher.reportError("Could not export database: " + exception.Message, exception.Error, null, false);
                     }).always(() => exportDatabase.isExporting(false));
             });
+    }
+
+    getCommandTypeLabel(cmdType: commandLineType) {
+        return `Export Command - ${cmdType}`;
+    }
+
+    copyCommandToClipboard() {
+        const command = this.effectiveCommand();
+        copyToClipboard.copy(command, "Export command was copied to clipboard.");
+    }
+    
+    getCommand(commandType: commandLineType) {
+        const commandEndpointUrl = (db: database) => appUrl.forServer() + appUrl.forDatabaseQuery(db) + endpoints.databases.smuggler.smugglerExport;
+
+        const db = this.activeDatabase();
+        if (!db) {
+            return "";
+        }
+
+        const args = this.model.toDto();
+        if (!args.TransformScript) {
+            delete args.TransformScript;
+        }
+
+        const fileName = args.FileName;
+        delete args.FileName;
+        const json = JSON.stringify(args);
+        
+        switch (commandType) {
+            case "PowerShell":
+                return `curl.exe -o '${fileName}.ravendbdump' --data DownloadOptions='${json.replace(/"/g, '\\"')}' ${commandEndpointUrl(db)}`;
+            case "Cmd":
+                return `curl.exe -o "${fileName}.ravendbdump" --data DownloadOptions="${json.replace(/"/g, '\\"')}" ${commandEndpointUrl(db)}`;
+            case "Bash":
+                return `curl -o '${fileName}.ravendbdump' --data DownloadOptions='${json}' ${commandEndpointUrl(db)}`;
+        }
     }
 }
 

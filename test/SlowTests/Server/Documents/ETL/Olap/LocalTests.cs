@@ -19,6 +19,7 @@ using Raven.Server.Documents.ETL.Providers.OLAP;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Platform;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
 
