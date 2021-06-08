@@ -171,9 +171,10 @@
                 <div class="row margin-bottom" data-bind="validationElement: mode">
                     <label class="control-label col-sm-4 col-lg-2">Encryption Mode<i class="required"></i></label>
                     <div class="col-sm-4" data-bind="validationOptions: { insertMessages: false }">
-                        <div class="dropdown btn-block">
-                            <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown"
-                                    data-bind="disable: !enableKeySourceDropdown(), attr: { 'title': keySourceDropdownTitle }">
+                        <div class="dropdown btn-block has-disable-reason"
+                             data-bind="attr: { 'data-original-title': enableKeySourceDropdown() ? '' : keySourceDropdownTitle }" data-placement="bottom">
+                            <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown" title=""
+                                    data-bind="enable: enableKeySourceDropdown, attr: { 'title': keySourceDropdownTitle }">
                                 <span data-bind="text: labelFor(mode()) || 'Select encryption key type..'"></span>
                                 <span class="caret"></span>
                             </button>

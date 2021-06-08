@@ -1185,6 +1185,11 @@ namespace Raven.Server.Rachis
                                 var follower = new Follower(this, negotiation.Term, remoteConnection);
                                 follower.AcceptConnection(negotiation);
                             }
+                            else
+                            {
+                                DisposeRemoteConnection(remoteConnection);
+                            }
+
                             break;
 
                         default:
@@ -1214,14 +1219,7 @@ namespace Raven.Server.Rachis
                     Log.Info("Failed to process incoming connection", e);
                 }
 
-                try
-                {
-                    remoteConnection?.Dispose();
-                }
-                catch (Exception)
-                {
-                    // ignored
-                }
+                DisposeRemoteConnection(remoteConnection);
 
                 try
                 {
@@ -1233,6 +1231,18 @@ namespace Raven.Server.Rachis
                 }
 
                 throw;
+            }
+
+            static void DisposeRemoteConnection(RemoteConnection remoteConnection)
+            {
+                try
+                {
+                    remoteConnection?.Dispose();
+                }
+                catch (Exception)
+                {
+                    // ignored
+                }
             }
         }
 

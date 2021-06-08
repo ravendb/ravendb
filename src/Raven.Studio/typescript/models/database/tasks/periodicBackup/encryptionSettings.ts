@@ -159,8 +159,8 @@ class encryptionSettings {
         
         this.keySourceDropdownTitle = ko.pureComputed(() => {
             if (this.encryptedDatabase()) {
-                return this.enableKeySourceDropdown() ?  'Select Encryption Key mode' : 
-                                                         'The Database Key will be used as the Encryption Key when selecting Snapshot type';
+                return this.enableKeySourceDropdown() ? 'Select Encryption Key mode' :
+                                                        'The Database Encryption Key will be used when selecting Snapshot type';
             }
             // db is not encrypted and the dropdown is disabled... 
             return 'The database is not encrypted. Provide your own Encryption Key for the Backup task.';
