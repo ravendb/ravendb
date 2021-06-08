@@ -17,11 +17,9 @@
                             </div>
                             <div class="form-group margin-bottom margin-bottom-xs">
                                 <label class="control-label">&nbsp;</label>
-                                <div class="toggle">
-                                    <div data-placement="right" data-toggle="tooltip" title="Set a delay time for the task" data-animation="true">
-                                        <input id="setDelayTime" type="checkbox" data-bind="checked: showDelayReplication" />
-                                        <label for="setDelayTime">Set Replication Delay Time</label>
-                                    </div>
+                                <div class="toggle" data-placement="right" data-toggle="tooltip" title="Set a delay time for the task" data-animation="true">
+                                    <input id="setDelayTime" type="checkbox" data-bind="checked: showDelayReplication" />
+                                    <label for="setDelayTime">Set Replication Delay Time</label>
                                 </div>
                             </div>
                             <div data-bind="validationElement: delayReplicationTime, collapse: showDelayReplication">
@@ -29,16 +27,19 @@
                                     <div>
                                         <label class="control-label">Delay Time</label>
                                     </div>
-                                    <div class="flex-grow">
+                                    <div class="flex-grow" data-bind="validationElement: delayReplicationTime">
                                         <input type="text" class="form-control" data-bind="durationPicker: delayReplicationTime, durationPickerOptions: { showDays: true, showSeconds: true }" />
+                                        <div class="help-block" data-bind="validationMessage: delayReplicationTime"></div>
                                     </div>
                                 </div>
                             </div>
-                            <div class="form-group margin-bottom margin-bottom-xs" data-bind="visible: humaneDelayDescription">
-                                <label class="control-label">&nbsp;</label>
-                                <div class="bg-info padding padding-sm small flex-horizontal">
-                                    <div><i class="icon-info"></i></div>
-                                    <div data-bind="html: humaneDelayDescription"></div>
+                            <div data-bind="collapse: humaneDelayDescription">
+                                <div class="form-group margin-bottom margin-bottom-lg">
+                                    <label class="control-label">&nbsp;</label>
+                                    <div class="bg-info padding padding-sm small flex-horizontal">
+                                        <div><i class="icon-info"></i></div>
+                                        <div data-bind="html: humaneDelayDescription"></div>
+                                    </div>
                                 </div>
                             </div>
                             <div class="form-group margin-bottom margin-bottom-xs">
@@ -91,7 +92,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="flex-horizontal pull-right" data-bind="css: { 'disabled-area': $root.editedReplicationAccessItem }">
+                        <div class="flex-horizontal pull-right margin-top" data-bind="css: { 'disabled-area': $root.editedReplicationAccessItem }">
                             <div>
                                 <button class="btn btn-default" data-bind="click: $root.cancelHubTaskOperation"
                                         title="Return to Ongoing Tasks View">
