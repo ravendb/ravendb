@@ -195,7 +195,7 @@ class editIndex extends viewModelBase {
                         });
                     return canActivateResult;
                 } else {
-                    this.editedIndex(indexDefinition.empty(this.defaultDeploymentMode()));
+                    this.editedIndex(indexDefinition.empty());
                 }
 
                 return $.Deferred<canActivateResultDto>().resolve({ can: true });
