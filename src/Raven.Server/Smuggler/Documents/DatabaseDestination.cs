@@ -556,17 +556,120 @@ namespace Raven.Server.Smuggler.Documents
             private readonly List<RemoveCompareExchangeCommand> _compareExchangeRemoveCommands = new List<RemoveCompareExchangeCommand>();
             private readonly List<AddOrUpdateCompareExchangeCommand> _compareExchangeAddOrUpdateCommands = new List<AddOrUpdateCompareExchangeCommand>();
             private DisposableReturnedArray<BatchRequestParser.CommandData> _clusterTransactionCommands = new DisposableReturnedArray<BatchRequestParser.CommandData>(1024);
-            private (IDisposable disposable, DocumentsOperationContext ctx, DocumentsTransaction readTrx) _operationContext;
+            private readonly DocumentContextHolder _documentContextHolder;
 
             public DatabaseCompareExchangeActions(DocumentDatabase database, JsonOperationContext context, CancellationToken token)
             {
                 _database = database;
                 _context = context;
                 _token = token;
-                _operationContext.disposable = _database.DocumentsStorage.ContextPool.AllocateOperationContext(out _operationContext.ctx);
+                _documentContextHolder = new DocumentContextHolder(database);
             }
 
-            struct DisposableReturnedArray<T> : IDisposable
+            public async ValueTask WriteKeyValueAsync(string key, BlittableJsonReaderObject value)
+            {
+                if (ClusterTransactionCommand.IsAtomicGuardKey(key, out var docId))
+                {
+                    var ctx = _documentContextHolder.GetContextForRead();
+
+                    var doc = _database.DocumentsStorage.Get(ctx, docId, DocumentFields.Data);
+                    if (doc == null)
+                        return;
+
+                    _clusterTransactionCommands.Push(new BatchRequestParser.CommandData {Id = docId, Document = doc.Data, Type = CommandType.PUT});
+                }
+                else
+                {
+                    _compareExchangeAddOrUpdateCommands.Add(new AddOrUpdateCompareExchangeCommand(_database.Name, key, value, 0, _context, RaftIdGenerator.DontCareId,
+                        fromBackup: true));
+                }
+
+                if (_compareExchangeAddOrUpdateCommands.Count >= BatchSize)
+                    await SendAddOrUpdateCommandsAsync(_context);
+
+                if (_clusterTransactionCommands.Length >= BatchSize)
+                    await SendClusterTransactionsAsync(_context);
+            }
+
+            public async ValueTask WriteTombstoneKeyAsync(string key)
+            {
+                var index = _database.ServerStore.LastRaftCommitIndex;
+                _compareExchangeRemoveCommands.Add(new RemoveCompareExchangeCommand(_database.Name, key, index, _context, RaftIdGenerator.DontCareId, fromBackup: true));
+
+                if (_compareExchangeRemoveCommands.Count < BatchSize)
+                    return;
+
+                await SendRemoveCommandsAsync(_context);
+            }
+
+            public async ValueTask DisposeAsync()
+            {
+                using (_documentContextHolder)
+                using (_clusterTransactionCommands)
+                {
+                    await SendClusterTransactionsAsync(_context);
+                    await SendAddOrUpdateCommandsAsync(_context);
+                    await SendRemoveCommandsAsync(_context);
+                }
+            }
+
+            private async ValueTask SendClusterTransactionsAsync(JsonOperationContext context)
+            {
+                if (_clusterTransactionCommands.Length == 0)
+                    return;
+
+                using (_database.ClusterTransactionWaiter.CreateTask(out var taskId))
+                {
+                    var parsedCommands = _clusterTransactionCommands.GetArraySegment();
+
+                    var raftRequestId = RaftIdGenerator.NewId();
+                    var options = new ClusterTransactionCommand.ClusterTransactionOptions(taskId);
+                    var topology = _database.ServerStore.LoadDatabaseTopology(_database.Name);
+
+                    var clusterTransactionCommand = new ClusterTransactionCommand(_database.Name, _database.IdentityPartsSeparator, topology, parsedCommands, options, raftRequestId);
+                    var clusterTransactionResult = await _database.ServerStore.SendToLeaderAsync(clusterTransactionCommand);
+                    for (int i = 0; i < _clusterTransactionCommands.Length; i++)
+                    {
+                        _clusterTransactionCommands[i].Document.Dispose();
+                    }
+             
+                    _clusterTransactionCommands.Clear();
+                    _documentContextHolder.Reset();
+
+                    await _database.ServerStore.Cluster.WaitForIndexNotification(clusterTransactionResult.Index);
+                    await _database.ClusterTransactionWaiter.WaitForResults(taskId, _token);
+                }
+            }
+
+            private async ValueTask SendAddOrUpdateCommandsAsync(JsonOperationContext context)
+            {
+                if (_compareExchangeAddOrUpdateCommands.Count == 0)
+                    return;
+
+                var addOrUpdateResult = await _database.ServerStore.SendToLeaderAsync(new AddOrUpdateCompareExchangeBatchCommand(_compareExchangeAddOrUpdateCommands, context, RaftIdGenerator.DontCareId));
+                foreach (var command in _compareExchangeAddOrUpdateCommands)
+                {
+                    command.Value.Dispose();
+                }
+                _compareExchangeAddOrUpdateCommands.Clear();
+
+                await _database.ServerStore.Cluster.WaitForIndexNotification(addOrUpdateResult.Index);
+            }
+
+            private async ValueTask SendRemoveCommandsAsync(JsonOperationContext context)
+            {
+                if (_compareExchangeRemoveCommands.Count == 0)
+                    return;
+                await _database.ServerStore.SendToLeaderAsync(new AddOrUpdateCompareExchangeBatchCommand(_compareExchangeRemoveCommands, context, RaftIdGenerator.DontCareId));
+                _compareExchangeRemoveCommands.Clear();
+            }
+
+            public JsonOperationContext GetContextForNewCompareExchangeValue()
+            {
+                return _context;
+            }
+            
+            private struct DisposableReturnedArray<T> : IDisposable
             {
                 private readonly T[] _array;
                 
@@ -588,99 +691,48 @@ namespace Raven.Server.Smuggler.Documents
                 public void Dispose() => ArrayPool<T>.Shared.Return(_array);
             }
 
-            public async ValueTask WriteKeyValueAsync(string key, BlittableJsonReaderObject value)
+            private class DocumentContextHolder : IDisposable
             {
-                if (ClusterTransactionCommand.IsAtomicGuardKey(key, out var docId))
+                private readonly DocumentDatabase _database;
+                private IDisposable _returnContext;
+                private DocumentsTransaction _readTx;
+                private DocumentsOperationContext _current;
+
+                public DocumentContextHolder(DocumentDatabase database)
                 {
-                    if (_operationContext.readTrx == null || _operationContext.readTrx.Disposed)
-                        _operationContext.readTrx = _operationContext.ctx.OpenReadTransaction();
+                    _database = database;
+                }
 
-                    var doc = _database.DocumentsStorage.Get(_operationContext.ctx, docId, DocumentFields.Data);
-                    if (doc == null)
-                        return;
+                public DocumentsOperationContext GetContextForRead()
+                {
+                    if (_current != null)
+                        return _current;
 
-                    _clusterTransactionCommands.Push(new BatchRequestParser.CommandData
+                    _returnContext = _database.DocumentsStorage.ContextPool.AllocateOperationContext(out _current);
+                    _readTx = _current.OpenReadTransaction();
+                    return _current;
+                }
+
+                public void Reset()
+                {
+                    using (_returnContext)
+                    using (_readTx)
                     {
-                        Id = docId,
-                        Document = doc.Data,
-                        Type = CommandType.PUT
-                    });
-                }
-                _compareExchangeAddOrUpdateCommands.Add(new AddOrUpdateCompareExchangeCommand(_database.Name, key, value, 0, _context, RaftIdGenerator.DontCareId, fromBackup: true));
-
-                if (_compareExchangeAddOrUpdateCommands.Count + _clusterTransactionCommands.Length < BatchSize)
-                    return;
-
-                await SendAddOrUpdateCommandsAsync(_context);
-            }
-
-            public async ValueTask WriteTombstoneKeyAsync(string key)
-            {
-                var index = _database.ServerStore.LastRaftCommitIndex;
-                _compareExchangeRemoveCommands.Add(new RemoveCompareExchangeCommand(_database.Name, key, index, _context, RaftIdGenerator.DontCareId, fromBackup: true));
-
-                if (_compareExchangeRemoveCommands.Count < BatchSize)
-                    return;
-
-                await SendRemoveCommandsAsync(_context);
-            }
-
-            public async ValueTask DisposeAsync()
-            {
-                using (_clusterTransactionCommands)
-                using (_operationContext.disposable)
-                using (_operationContext.readTrx)
-                {
-                    await SendAddOrUpdateCommandsAsync(_context);
-                    await SendRemoveCommandsAsync(_context);
-                }
-            }
-
-            private async ValueTask SendAddOrUpdateCommandsAsync(JsonOperationContext context)
-            {
-                Debug.Assert(_compareExchangeAddOrUpdateCommands.Count == _clusterTransactionCommands.Length);
-                if (_compareExchangeAddOrUpdateCommands.Count == 0)
-                    return;
-
-                var (aoucecIndex, _) = await _database.ServerStore.SendToLeaderAsync(new AddOrUpdateCompareExchangeBatchCommand(_compareExchangeAddOrUpdateCommands, context, RaftIdGenerator.DontCareId));
-                foreach (var command in _compareExchangeAddOrUpdateCommands)
-                {
-                    command.Value.Dispose();
-                }
-                _compareExchangeAddOrUpdateCommands.Clear();
-
-                using (_operationContext.readTrx)
-                using (_database.ClusterTransactionWaiter.CreateTask(out var taskId))
-                {
-                    var parsedCommands = _clusterTransactionCommands.GetArraySegment();
-
-                    var raftRequestId = RaftIdGenerator.NewId();
-                    var options = new ClusterTransactionCommand.ClusterTransactionOptions(taskId);
-                    var topology = _database.ServerStore.LoadDatabaseTopology(_database.Name);
-
-                    var clusterTransactionCommand = new ClusterTransactionCommand(_database.Name, _database.IdentityPartsSeparator, topology, parsedCommands, options, raftRequestId);
-                    var (ctcIndex, _) = await _database.ServerStore.SendToLeaderAsync(clusterTransactionCommand);
-                    for (int i = 0; i < _clusterTransactionCommands.Length; i++)
-                    {
-                        _clusterTransactionCommands[i].Document.Dispose();
+                        
                     }
-                    _clusterTransactionCommands.Clear();
-                    await _database.ServerStore.Cluster.WaitForIndexNotification(ctcIndex);
-                    await _database.ServerStore.Cluster.WaitForIndexNotification(aoucecIndex);
-                    await _database.ClusterTransactionWaiter.WaitForResults(taskId, _token);
-                }
-            }
-            private async ValueTask SendRemoveCommandsAsync(JsonOperationContext context)
-            {
-                if (_compareExchangeRemoveCommands.Count == 0)
-                    return;
-                await _database.ServerStore.SendToLeaderAsync(new AddOrUpdateCompareExchangeBatchCommand(_compareExchangeRemoveCommands, context, RaftIdGenerator.DontCareId));
-                _compareExchangeRemoveCommands.Clear();
-            }
 
-            public JsonOperationContext GetContextForNewCompareExchangeValue()
-            {
-                return _context;
+                    _returnContext = null;
+                    _readTx = null;
+                    _current = null;
+                }
+
+                public void Dispose()
+                {
+                    using (_returnContext)
+                    using (_readTx)
+                    {
+                    }
+                }
             }
         }
 
