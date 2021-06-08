@@ -16,8 +16,24 @@ namespace Raven.Client.ServerWide.Operations
         private readonly DatabaseRecord _databaseRecord;
         private readonly int _replicationFactor;
 
-        public CreateDatabaseOperation(DatabaseRecord databaseRecord, int replicationFactor = 1)
+        public CreateDatabaseOperation(DatabaseRecord databaseRecord)
         {
+            if (databaseRecord == null)
+                throw new ArgumentNullException(nameof(databaseRecord));
+
+            ResourceNameValidator.AssertValidDatabaseName(databaseRecord.DatabaseName);
+            _databaseRecord = databaseRecord;
+            _replicationFactor = databaseRecord.Topology?.ReplicationFactor > 0 ? databaseRecord.Topology.ReplicationFactor : 1;
+        }
+
+        public CreateDatabaseOperation(DatabaseRecord databaseRecord, int replicationFactor)
+        {
+            if (databaseRecord == null)
+                throw new ArgumentNullException(nameof(databaseRecord));
+
+            if (replicationFactor <= 0)
+                throw new ArgumentException(nameof(replicationFactor));
+
             ResourceNameValidator.AssertValidDatabaseName(databaseRecord.DatabaseName);
             _databaseRecord = databaseRecord;
             _replicationFactor = replicationFactor;
