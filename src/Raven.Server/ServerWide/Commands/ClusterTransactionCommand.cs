@@ -111,14 +111,17 @@ namespace Raven.Server.ServerWide.Commands
 
         public ClusterTransactionCommand() { }
 
-        public ClusterTransactionCommand(string databaseName, char identityPartsSeparator, DatabaseTopology topology, ArraySegment<BatchRequestParser.CommandData> commandParsedCommands,
-            ClusterTransactionOptions options, string uniqueRequestId) : base(uniqueRequestId)
+        public ClusterTransactionCommand(string databaseName, char identityPartsSeparator, DatabaseTopology topology,
+            ArraySegment<BatchRequestParser.CommandData> commandParsedCommands,
+            ClusterTransactionOptions options, string uniqueRequestId, int clusterMinVersion) : base(uniqueRequestId)
         {
             DatabaseName = databaseName;
             DatabaseRecordId = topology.DatabaseTopologyIdBase64 ?? Guid.NewGuid().ToBase64Unpadded();
             ClusterTransactionId = topology.DatabaseTopologyIdBase64 ?? Guid.NewGuid().ToBase64Unpadded();
             Options = options;
-            DisableAtomicDocumentWrites = options.DisableAtomicDocumentWrites;
+
+            DisableAtomicDocumentWrites = clusterMinVersion < 52_000 // for mixed cluster, retain the old behaviour
+                                          || options.DisableAtomicDocumentWrites;
 
             foreach (var commandData in commandParsedCommands)
             {
@@ -155,11 +158,8 @@ namespace Raven.Server.ServerWide.Commands
 
         public List<string> ExecuteCompareExchangeCommands(DatabaseTopology dbTopology, ClusterOperationContext context, long index, Table items)
         {
-            if (DisableAtomicDocumentWrites == false && 
-                ClusterCommandsVersionManager.CurrentClusterMinimalVersion >= 52_000) // for mixed cluster, retain the old behaviour
-            {
+            if (DisableAtomicDocumentWrites == false)
                 EnsureAtomicDocumentWrites(dbTopology, context, items, index);
-            }
 
             if (ClusterCommands == null || ClusterCommands.Count == 0)
                 return null;

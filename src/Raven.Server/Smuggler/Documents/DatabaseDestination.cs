@@ -626,7 +626,7 @@ namespace Raven.Server.Smuggler.Documents
                     var options = new ClusterTransactionCommand.ClusterTransactionOptions(taskId);
                     var topology = _database.ServerStore.LoadDatabaseTopology(_database.Name);
 
-                    var clusterTransactionCommand = new ClusterTransactionCommand(_database.Name, _database.IdentityPartsSeparator, topology, parsedCommands, options, raftRequestId);
+                    var clusterTransactionCommand = new ClusterTransactionCommand(_database.Name, _database.IdentityPartsSeparator, topology, parsedCommands, options, raftRequestId, ClusterCommandsVersionManager.CurrentClusterMinimalVersion);
                     var clusterTransactionResult = await _database.ServerStore.SendToLeaderAsync(clusterTransactionCommand);
                     for (int i = 0; i < _clusterTransactionCommands.Length; i++)
                     {

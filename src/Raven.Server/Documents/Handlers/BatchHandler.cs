@@ -26,6 +26,7 @@ using Raven.Server.Documents.Replication;
 using Raven.Server.Json;
 using Raven.Server.Rachis;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler;
@@ -67,8 +68,8 @@ namespace Raven.Server.Documents.Handlers
                     BatchTrafficWatch(command.ParsedCommands);
                 }
                 
-                var disableAtomicDocumentWrites = GetBoolValueQueryString("disableAtomicDocumentWrites", required: false) ?? 
-                    Database.Configuration.Cluster.DisableAtomicDocumentWrites;
+                var disableAtomicDocumentWrites = GetBoolValueQueryString("disableAtomicDocumentWrites", required: false) ??
+                                                  Database.Configuration.Cluster.DisableAtomicDocumentWrites;
                 var waitForIndexesTimeout = GetTimeSpanQueryString("waitForIndexesTimeout", required: false);
                 var waitForIndexThrow = GetBoolValueQueryString("waitForIndexThrow", required: false) ?? true;
                 var specifiedIndexesQueryString = HttpContext.Request.Query["waitForSpecificIndex"];
@@ -199,7 +200,7 @@ namespace Raven.Server.Documents.Handlers
             if (topology.Promotables.Contains(ServerStore.NodeTag))
                 throw new DatabaseNotRelevantException("Cluster transaction can't be handled by a promotable node.");
 
-            var clusterTransactionCommand = new ClusterTransactionCommand(Database.Name, Database.IdentityPartsSeparator, topology, command.ParsedCommands, options, raftRequestId);
+            var clusterTransactionCommand = new ClusterTransactionCommand(Database.Name, Database.IdentityPartsSeparator, topology, command.ParsedCommands, options, raftRequestId, ClusterCommandsVersionManager.CurrentClusterMinimalVersion);
             var result = await ServerStore.SendToLeaderAsync(clusterTransactionCommand);
 
             if (result.Result is List<string> errors)
