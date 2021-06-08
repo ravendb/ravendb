@@ -81,7 +81,7 @@ class editIndex extends viewModelBase {
     
     defaultDeploymentMode = ko.observable<Raven.Client.Documents.Indexes.IndexDeploymentMode>();
     defaultDeploymentModeFormatted = ko.pureComputed(() => {
-        return this.defaultDeploymentMode() === "Rolling" ? "Server default (rolling - one node at a time)" : "Server default (parallel - all nodes concurrently)";
+        return this.defaultDeploymentMode() === "Rolling" ? "Database default (rolling - one node at a time)" : "Database default (parallel - all nodes concurrently)";
     });
 
     effectiveDeploymentMode = ko.pureComputed(() => {
@@ -195,7 +195,7 @@ class editIndex extends viewModelBase {
                         });
                     return canActivateResult;
                 } else {
-                    this.editedIndex(indexDefinition.empty());
+                    this.editedIndex(indexDefinition.empty(this.defaultDeploymentMode()));
                 }
 
                 return $.Deferred<canActivateResultDto>().resolve({ can: true });
