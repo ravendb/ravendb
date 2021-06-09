@@ -194,7 +194,7 @@ class certificates extends viewModelBase {
             return _.some(certs, x => x.SecurityClearance === "ClusterNode");
         });
         
-        this.canReplaceClusterCertificate = ko.pureComputed(() => {
+        this.canReplaceServerCertificate = ko.pureComputed(() => {
             const certs = this.certificates();
             return _.some(certs, x => x.SecurityClearance === "ClusterNode");
         });
@@ -271,7 +271,7 @@ class certificates extends viewModelBase {
         this.model(certificateModel.upload());
     }
     
-    replaceClusterCertificate() {
+    replaceServerCertificate() {
         eventsCollector.default.reportEvent("certificates", "replace");
         this.model(certificateModel.replace());
         
