@@ -91,15 +91,16 @@
                     </button>
                     <ul class="dropdown-menu">
                         <li>
-                            <a href="#" data-bind="click: replaceClusterCertificate, enable: canReplaceClusterCertificate" title="Replace the cluster certificate">
-                                <i class="icon-replace"></i>
-                                <span>Replace cluster certificate</span>
+                            <a href="#" class="js-export-certificates" data-bind="click: exportServerCertificates, enable: canExportServerCertificates"
+                               title="Export the server certificate(s) without their private key into .pfx file. These certificates can be used during a manual cluster setup, when you need to register server certificates to be trusted on other nodes.">
+                                <i class="icon-export"></i>
+                                <span>Export server certificates</span>
                             </a>
                         </li>
                         <li>
-                            <a href="#" id="download-certificates" data-bind="click: downloadClusterCertificates, enable: canDownloadClusterCertificates">
-                                <i class="icon-export"></i>
-                                <span>Download cluster certificates</span>
+                            <a href="#" data-bind="click: replaceServerCertificate, enable: canReplaceServerCertificate">
+                                <i class="icon-replace"></i>
+                                <span>Replace server certificates</span>
                             </a>
                         </li>
                     </ul>
