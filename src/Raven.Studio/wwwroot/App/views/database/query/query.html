@@ -218,7 +218,7 @@
                 </div>
             </div>
         </div>
-        <div class="flex-window-head">
+        <div class="flex-window-head tabs-menu">
             <button type="button" class="btn btn-sm" 
                     data-bind="css: { active: currentTab() === 'results'}, click: goToResultsTab">
                 Results &nbsp; <span class="label" data-bind="text: totalResultsForUi().toLocaleString() + (hasMoreUnboundedResults() ? '+' : ''), css: { 'label-primary': totalResultsForUi(), 'label-default': !totalResultsForUi() }"></span>
@@ -243,13 +243,19 @@
                 Graph
             </button>
             <!-- ko foreach: timeSeriesGraphs -->
-                <button type="button" class="btn btn-sm" data-bind="click: $root.goToTimeSeriesTab, css: { active: $parent.currentTab() === $data }">
-                    <i class="icon-stats"></i> <span data-bind="text: 'Time Series'"></span> &nbsp; <span class="label label-primary" data-bind="click: $root.closeTimeSeriesTab"><i class="icon-cancel"></i></span>
-                </button>
+            <button type="button" class="btn btn-sm tab-info" data-placement="top" data-toggle="tooltip" data-animation="true" data-html="true"
+                    data-bind="click: $root.goToTimeSeriesTab, css: { active: $parent.currentTab() === $data }, attr: { title: tabInfo }">
+                <i class="icon-stats"></i>
+                <span data-bind="text: tabText"></span>
+                <span class="label label-primary margin-left margin-left-sm" data-bind="click: $root.closeTimeSeriesTab"><i class="icon-cancel"></i></span>
+            </button>
             <!-- /ko -->
             <!-- ko foreach: timeSeriesTables -->
-            <button type="button" class="btn btn-sm" data-bind="click: $root.goToTimeSeriesTab, css: { active: $parent.currentTab() === $data }">
-                <i class="icon-table"></i> <span data-bind="text: documentId + ' - ' + name"></span> &nbsp; <span class="label label-primary" data-bind="click: $root.closeTimeSeriesTab"><i class="icon-cancel"></i></span>
+            <button type="button" class="btn btn-sm tab-info" data-placement="top" data-toggle="tooltip" data-animation="true" data-html="true"
+                    data-bind="click: $root.goToTimeSeriesTab, css: { active: $parent.currentTab() === $data }, attr: { title: tabInfo }">
+                <i class="icon-table"></i>
+                <span data-bind="text: tabText"></span>
+                <span class="label label-primary margin-left margin-left-sm" data-bind="click: $root.closeTimeSeriesTab"><i class="icon-cancel"></i></span>
             </button>
             <!-- /ko -->
         </div>
