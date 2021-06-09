@@ -15,6 +15,7 @@ using Newtonsoft.Json.Linq;
 using Raven.Client;
 using Raven.Client.Http;
 using Raven.Client.Util;
+using Raven.Debug.StackTrace;
 using Raven.Server;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
@@ -798,7 +799,20 @@ namespace FastTests
                 server.AfterDisposal += () => mre.Set();
                 var task = Task.Run(server.Dispose);
 
-                Assert.True(mre.Wait(timeout), $"Could not dispose server with URL '{url}' and DebugTag: '{debugTag}' in '{timeout}'.");
+                if (mre.Wait(timeout) == false)
+                {
+                    using (var process = Process.GetCurrentProcess())
+                    using (var ms = new MemoryStream())
+                    using (var outputWriter = new StreamWriter(ms, leaveOpen: true))
+                    {
+                        StackTracer.ShowStackTraceWithSnapshot(process.Id, outputWriter);
+                        ms.Position = 0;
+
+                        using (var outputReader = new StreamReader(ms, leaveOpen: true))
+                            throw new InvalidOperationException($"Could not dispose server with URL '{url}' and DebugTag: '{debugTag}' in '{timeout}'. StackTraces:{Environment.NewLine}{outputReader.ReadToEnd()}");
+                    }
+                }
+
                 task.GetAwaiter().GetResult();
             }
         }

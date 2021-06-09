@@ -13,71 +13,117 @@ namespace Raven.Debug.StackTrace
 {
     public static class StackTracer
     {
-        public static void ShowStackTrace(
-            int processId, uint attachTimeout, string outputPath,
-            CommandLineApplication cmd, HashSet<uint> threadIds = null, bool includeStackObjects = false)
+        public static void ShowStackTraceWithSnapshot(int processId, TextWriter outputWriter)
         {
             if (processId == -1)
                 throw new InvalidOperationException("Uninitialized process id parameter");
 
-            var threadInfoList = new List<ThreadInfo>();
+            List<ThreadInfo> threadInfos;
+            using (var dataTarget = DataTarget.CreateSnapshotAndAttach(processId))
+                threadInfos = CreateThreadInfos(dataTarget);
 
+            var mergedStackTraces = MergeStackTraces(threadInfos);
+
+            OutputResult(outputWriter, mergedStackTraces);
+        }
+
+        public static void ShowStackTrace(
+            int processId,
+            uint attachTimeout,
+            string outputPath,
+            CommandLineApplication cmd,
+            HashSet<uint> threadIds = null,
+            bool includeStackObjects = false)
+        {
+            if (processId == -1)
+                throw new InvalidOperationException("Uninitialized process id parameter");
+
+            List<ThreadInfo> threadInfos;
             using (var dataTarget = DataTarget.AttachToProcess(processId, attachTimeout, AttachFlag.Passive))
-            {
-                var clrInfo = dataTarget.ClrVersions[0];
-                ClrRuntime runtime;
-                try
-                {
-                    runtime = clrInfo.CreateRuntime();
-                }
-                catch (Exception)
-                {
-                    var path = Path.Combine(AppContext.BaseDirectory, clrInfo.DacInfo.FileName);
-                    runtime = clrInfo.CreateRuntime(path);
-                }
-
-                var sb = new StringBuilder(1024 * 1024);
-                var count = 0;
-
-                foreach (var thread in runtime.Threads)
-                {
-                    if (thread.IsAlive == false)
-                        continue;
-
-                    if (threadIds != null && threadIds.Contains(thread.OSThreadId) == false)
-                        continue;
-
-                    try
-                    {
-                        var threadInfo = GetThreadInfo(thread, dataTarget, runtime, sb, includeStackObjects);
-                        threadInfoList.Add(threadInfo);
-                    }
-                    catch (InvalidOperationException)
-                    {
-                        // thread has exited
-                        continue;
-                    }
-                    catch (Win32Exception e) when (e.HResult == 0x5)
-                    {
-                        // thread has exited
-                        continue;
-                    }
-
-                    count++;
-                    if (threadIds != null && count == threadIds.Count)
-                        break;
-                }
-            }
+                threadInfos = CreateThreadInfos(dataTarget, threadIds, includeStackObjects);
 
             if (threadIds != null || includeStackObjects)
             {
-                OutputResult(outputPath, cmd, threadInfoList);
+                using (GetOutputWriter(outputPath, cmd, out var outputWriter))
+                    OutputResult(outputWriter, threadInfos);
                 return;
             }
 
+            var mergedStackTraces = MergeStackTraces(threadInfos);
+
+            using (GetOutputWriter(outputPath, cmd, out var outputWriter))
+                OutputResult(outputWriter, mergedStackTraces);
+
+            static IDisposable GetOutputWriter(string outputPath, CommandLineApplication cmd, out TextWriter outputWriter)
+            {
+                if (outputPath != null)
+                {
+                    var output = File.Create(outputPath);
+                    outputWriter = new StreamWriter(output);
+                    return outputWriter;
+                }
+
+                outputWriter = cmd.Out;
+                return null;
+            }
+        }
+
+        private static List<ThreadInfo> CreateThreadInfos(DataTarget dataTarget, HashSet<uint> threadIds = null, bool includeStackObjects = false)
+        {
+            var threadInfoList = new List<ThreadInfo>();
+
+            var clrInfo = dataTarget.ClrVersions[0];
+            ClrRuntime runtime;
+            try
+            {
+                runtime = clrInfo.CreateRuntime();
+            }
+            catch (Exception)
+            {
+                var path = Path.Combine(AppContext.BaseDirectory, clrInfo.DacInfo.FileName);
+                runtime = clrInfo.CreateRuntime(path);
+            }
+
+            var sb = new StringBuilder(1024 * 1024);
+            var count = 0;
+
+            foreach (var thread in runtime.Threads)
+            {
+                if (thread.IsAlive == false)
+                    continue;
+
+                if (threadIds != null && threadIds.Contains(thread.OSThreadId) == false)
+                    continue;
+
+                try
+                {
+                    var threadInfo = GetThreadInfo(thread, dataTarget, runtime, sb, includeStackObjects);
+                    threadInfoList.Add(threadInfo);
+                }
+                catch (InvalidOperationException)
+                {
+                    // thread has exited
+                    continue;
+                }
+                catch (Win32Exception e) when (e.HResult == 0x5)
+                {
+                    // thread has exited
+                    continue;
+                }
+
+                count++;
+                if (threadIds != null && count == threadIds.Count)
+                    break;
+            }
+
+            return threadInfoList;
+        }
+
+        private static List<StackInfo> MergeStackTraces(List<ThreadInfo> stackTraces)
+        {
             var mergedStackTraces = new List<StackInfo>();
 
-            foreach (var threadInfo in threadInfoList)
+            foreach (var threadInfo in stackTraces)
             {
                 var merged = false;
 
@@ -110,10 +156,10 @@ namespace Raven.Debug.StackTrace
                 });
             }
 
-            OutputResult(outputPath, cmd, mergedStackTraces);
+            return mergedStackTraces;
         }
 
-        private static void OutputResult(string outputPath, CommandLineApplication cmd, object results)
+        private static void OutputResult(TextWriter outputWriter, object results)
         {
             var jsonSerializer = new JsonSerializer
             {
@@ -125,18 +171,7 @@ namespace Raven.Debug.StackTrace
                 Results = results
             };
 
-            if (outputPath != null)
-            {
-                using (var output = File.Create(outputPath))
-                using (var streamWriter = new StreamWriter(output))
-                {
-                    jsonSerializer.Serialize(streamWriter, result);
-                }
-            }
-            else
-            {
-                jsonSerializer.Serialize(cmd.Out, result);
-            }
+            jsonSerializer.Serialize(outputWriter, result);
         }
 
         private static ThreadInfo GetThreadInfo(ClrThread thread, DataTarget dataTarget, ClrRuntime runtime, StringBuilder sb, bool includeStackObjects)
