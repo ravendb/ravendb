@@ -533,17 +533,11 @@ namespace Raven.Server.Documents.Replication
                         ReadAttachmentStreamsFromSource(attachmentStreamCount, documentsContext, dataForReplicationCommand, reader, networkStats);
                     }
 
-                    if (_allowedPathsValidator != null)
+                    if (_allowedPathsValidator != null || _preventIncomingSinkDeletions)
                     {
                         // if the other side sends us any information that we shouldn't get from them,
                         // we abort the connection and send an error back
                         ValidateIncomingReplicationItemsPaths(dataForReplicationCommand);
-                    }
-
-                    //TODO: Should combine with ValidateIncomingReplicationItemsPaths's loop and insert the 'if' statements inside the loop?
-                    if (_preventIncomingSinkDeletions)
-                    {
-                        HandleIncomingReplicationTombstones(dataForReplicationCommand);
                     }
 
                     if (_log.IsInfoEnabled)
@@ -624,40 +618,40 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private void HandleIncomingReplicationTombstones(DataForReplicationCommand dataForReplicationCommand)
-        {
-            foreach (var item in dataForReplicationCommand.ReplicatedItems)
-            {
-                switch (item)
-                {
-                    case DocumentReplicationItem { Type: ReplicationBatchItem.ReplicationItemType.DeletedTimeSeriesRange }:
-                    case DocumentReplicationItem { Type: ReplicationBatchItem.ReplicationItemType.RevisionTombstone }:
-                    case DocumentReplicationItem { Type: ReplicationBatchItem.ReplicationItemType.AttachmentTombstone }:
-                    case DocumentReplicationItem { Type: ReplicationBatchItem.ReplicationItemType.DocumentTombstone }:
-                        throw new InvalidOperationException($"This hub does not allow for tombstone replication via pull replication '{_incomingPullReplicationParams.Name}'." +
-                                                            " Replication aborted");
-                }
-            }
-        }
-
         private void ValidateIncomingReplicationItemsPaths(DataForReplicationCommand dataForReplicationCommand)
         {
             HashSet<Slice> expectedAttachmentStreams = null;
             
             foreach (var item in dataForReplicationCommand.ReplicatedItems)
             {
-                if (_allowedPathsValidator.ShouldAllow(item) == false)
+                if (_allowedPathsValidator != null)
                 {
-                    throw new InvalidOperationException("Attempted to replicate " + _allowedPathsValidator.GetItemInformation(item) +
-                                                        ", which is not allowed, according to the allowed paths policy. Replication aborted");
+                    if (_allowedPathsValidator.ShouldAllow(item) == false)
+                    {
+                        throw new InvalidOperationException("Attempted to replicate " + _allowedPathsValidator.GetItemInformation(item) +
+                                                            ", which is not allowed, according to the allowed paths policy. Replication aborted");
+                    }
+
+                    switch (item)
+                    {
+                        case AttachmentReplicationItem a:
+                            expectedAttachmentStreams ??= new HashSet<Slice>(SliceComparer.Instance);
+                            expectedAttachmentStreams.Add(a.Key);
+                            break;
+                    }
                 }
-                
-                switch (item)
+
+                if (_preventIncomingSinkDeletions)
                 {
-                    case AttachmentReplicationItem a:
-                        expectedAttachmentStreams ??= new HashSet<Slice>(SliceComparer.Instance);
-                        expectedAttachmentStreams.Add(a.Key);
-                        break;
+                    switch (item)
+                    {
+                        case DocumentReplicationItem { Type: ReplicationBatchItem.ReplicationItemType.DeletedTimeSeriesRange }:
+                        case DocumentReplicationItem { Type: ReplicationBatchItem.ReplicationItemType.RevisionTombstone }:
+                        case DocumentReplicationItem { Type: ReplicationBatchItem.ReplicationItemType.AttachmentTombstone }:
+                        case DocumentReplicationItem { Type: ReplicationBatchItem.ReplicationItemType.DocumentTombstone }:
+                            throw new InvalidOperationException($"This hub does not allow for tombstone replication via pull replication '{_incomingPullReplicationParams.Name}'." +
+                                                                " Replication aborted");
+                    }
                 }
             }
 

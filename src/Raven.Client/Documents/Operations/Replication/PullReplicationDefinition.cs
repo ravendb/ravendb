@@ -86,8 +86,7 @@ namespace Raven.Client.Documents.Operations.Replication
     [Flags]
     public enum PreventDeletionsMode
     {
-        Disabled,
-        PreventSinkToHubDeletions,
-        PreventDocumentExpirationFromSink
+        None,
+        PreventSinkToHubDeletions
     }
 }
