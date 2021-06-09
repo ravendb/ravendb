@@ -66,7 +66,12 @@ namespace Raven.Server.NotificationCenter
 
         private static MessageDetails OutOfMemoryDetails(Exception exception)
         {
-            var memoryInfo = MemoryInformation.GetMemoryInformationUsingOneTimeSmapsReader();
+            MemoryInfoResult memoryInfo;
+
+            if (exception is EarlyOutOfMemoryException eoome && eoome.MemoryInfo != null)
+                memoryInfo = eoome.MemoryInfo.Value;
+            else
+                memoryInfo = MemoryInformation.GetMemoryInformationUsingOneTimeSmapsReader();
 
             return new MessageDetails
             {
