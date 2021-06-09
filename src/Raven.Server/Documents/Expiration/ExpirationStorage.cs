@@ -76,46 +76,44 @@ namespace Raven.Server.Documents.Expiration
                 $"The expiration date format for document '{lowerId}' is not valid: '{expirationDate}'. Use the following format: {_database.Time.GetUtcNow():O}");
         }
 
-        public class ExpiredDocumentsOptions
+        public record ExpiredDocumentsOptions
         {
             public DocumentsOperationContext Context;
             public DateTime CurrentTime;
             public bool IsFirstInTopology; 
             public long AmountToTake;
-            public Stopwatch Duration;
-            public string TreeName;
-            public string MetadataPropertyToCheck;
+
+            public ExpiredDocumentsOptions(DocumentsOperationContext context, DateTime currentTime, bool isFirstInTopology, long amountToTake) =>
+                (Context, CurrentTime, IsFirstInTopology, AmountToTake)
+                = (context, currentTime, isFirstInTopology, amountToTake);
         }
 
-        public Dictionary<Slice, List<(Slice LowerId, string Id)>> GetExpiredDocuments(ExpiredDocumentsOptions options, CancellationToken cancellationToken)
+        public Dictionary<Slice, List<(Slice LowerId, string Id)>> GetExpiredDocuments(ExpiredDocumentsOptions options, out Stopwatch duration, CancellationToken cancellationToken)
         {
-            options.TreeName = DocumentsByExpiration;
-            options.MetadataPropertyToCheck = Constants.Documents.Metadata.Expires;
-            return GetDocuments(options, cancellationToken);
+            return GetDocuments(options, DocumentsByExpiration, Constants.Documents.Metadata.Expires, out duration, cancellationToken);
         }
 
-        public Dictionary<Slice, List<(Slice LowerId, string Id)>> GetDocumentsToRefresh(ExpiredDocumentsOptions options, CancellationToken cancellationToken)
+        public Dictionary<Slice, List<(Slice LowerId, string Id)>> GetDocumentsToRefresh(ExpiredDocumentsOptions options, out Stopwatch duration, CancellationToken cancellationToken)
         {
-            options.TreeName = DocumentsByRefresh;
-            options.MetadataPropertyToCheck = Constants.Documents.Metadata.Refresh;
-            return GetDocuments(options, cancellationToken);
+            return GetDocuments(options, DocumentsByRefresh, Constants.Documents.Metadata.Refresh, out duration, cancellationToken);
         }
 
-        private Dictionary<Slice, List<(Slice LowerId, string Id)>> GetDocuments(ExpiredDocumentsOptions options, CancellationToken cancellationToken)
+        private Dictionary<Slice, List<(Slice LowerId, string Id)>> GetDocuments(ExpiredDocumentsOptions options, string treeName, string metadataPropertyToCheck, out Stopwatch duration, CancellationToken cancellationToken)
         {
             var count = 0;
             var currentTicks = options.CurrentTime.Ticks;
 
-            var expirationTree = options.Context.Transaction.InnerTransaction.ReadTree(options.TreeName);
+            var expirationTree = options.Context.Transaction.InnerTransaction.ReadTree(treeName);
             using (var it = expirationTree.Iterate(false))
             {
                 if (it.Seek(Slices.BeforeAllKeys) == false)
                 {
+                    duration = null;
                     return null;
                 }
 
                 var expired = new Dictionary<Slice, List<(Slice LowerId, string Id)>>();
-                options.Duration = Stopwatch.StartNew();
+                duration = Stopwatch.StartNew();
                 
                 do
                 {
@@ -144,7 +142,7 @@ namespace Raven.Server.Documents.Expiration
                                     {
                                         if (document == null ||
                                             document.TryGetMetadata(out var metadata) == false ||
-                                            HasPassed(metadata, options.MetadataPropertyToCheck, options.CurrentTime) == false)
+                                            HasPassed(metadata, metadataPropertyToCheck, options.CurrentTime) == false)
                                         {
                                             expiredDocs.Add((clonedId, null));
                                             continue;

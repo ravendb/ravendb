@@ -206,17 +206,12 @@ namespace SlowTests.Server.Documents.Expiration
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
-                    var options = new ExpirationStorage.ExpiredDocumentsOptions
-                    {
-                        Context = context, 
-                        CurrentTime = SystemTime.UtcNow.AddMinutes(10), 
-                        IsFirstInTopology = true, 
-                        AmountToTake = 10
-                    };
-                    var expired = database.DocumentsStorage.ExpirationStorage.GetExpiredDocuments(options, CancellationToken.None);
+                    var options = new ExpirationStorage.ExpiredDocumentsOptions(context, SystemTime.UtcNow.AddMinutes(10), true, 10);
+                    
+                    var expired = database.DocumentsStorage.ExpirationStorage.GetExpiredDocuments(options, out _, CancellationToken.None);
                     Assert.Equal(1, expired.Count);
 
-                    var toRefresh = database.DocumentsStorage.ExpirationStorage.GetDocumentsToRefresh(options, CancellationToken.None);
+                    var toRefresh = database.DocumentsStorage.ExpirationStorage.GetDocumentsToRefresh(options, out _, CancellationToken.None);
                     Assert.Equal(1, toRefresh.Count);
                 }
             }
@@ -247,14 +242,8 @@ namespace SlowTests.Server.Documents.Expiration
                 using (context.OpenWriteTransaction())
                 {
                     DateTime time = SystemTime.UtcNow.AddMinutes(10);
-                    var options = new ExpirationStorage.ExpiredDocumentsOptions
-                    {
-                        Context = context,
-                        CurrentTime = time,
-                        IsFirstInTopology = true,
-                        AmountToTake = 10
-                    };
-                    var toRefresh = database.DocumentsStorage.ExpirationStorage.GetDocumentsToRefresh(options, CancellationToken.None);
+                    var options = new ExpirationStorage.ExpiredDocumentsOptions(context, time, true, 10);
+                    var toRefresh = database.DocumentsStorage.ExpirationStorage.GetDocumentsToRefresh(options, out _, CancellationToken.None);
                     database.DocumentsStorage.ExpirationStorage.RefreshDocuments(context, toRefresh, time);
                 }
             }

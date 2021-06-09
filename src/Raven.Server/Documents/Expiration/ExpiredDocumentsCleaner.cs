@@ -151,17 +151,12 @@ namespace Raven.Server.Documents.Expiration
 
                         using (context.OpenReadTransaction())
                         {
-                            var options = new ExpirationStorage.ExpiredDocumentsOptions
-                            {
-                                Context = context,
-                                CurrentTime = currentTime,
-                                IsFirstInTopology = isFirstInTopology,
-                                AmountToTake = batchSize
-                            };
+                            var options = new ExpirationStorage.ExpiredDocumentsOptions(context, currentTime, isFirstInTopology, batchSize);
+
                             var expired =
                                 forExpiration ?
-                                    _database.DocumentsStorage.ExpirationStorage.GetExpiredDocuments(options, CancellationToken) :
-                                    _database.DocumentsStorage.ExpirationStorage.GetDocumentsToRefresh(options, CancellationToken);
+                                    _database.DocumentsStorage.ExpirationStorage.GetExpiredDocuments(options, out var duration, CancellationToken) :
+                                    _database.DocumentsStorage.ExpirationStorage.GetDocumentsToRefresh(options, out duration, CancellationToken);
 
                             if (expired == null || expired.Count == 0)
                                 return;
@@ -170,7 +165,7 @@ namespace Raven.Server.Documents.Expiration
                             await _database.TxMerger.Enqueue(command);
 
                             if (Logger.IsInfoEnabled)
-                                Logger.Info($"Successfully {(forExpiration ? "deleted" : "refreshed")} {command.DeletionCount:#,#;;0} documents in {options.Duration.ElapsedMilliseconds:#,#;;0} ms.");
+                                Logger.Info($"Successfully {(forExpiration ? "deleted" : "refreshed")} {command.DeletionCount:#,#;;0} documents in {duration.ElapsedMilliseconds:#,#;;0} ms.");
                         }
                     }
                 }
