@@ -356,8 +356,7 @@ namespace Raven.Server.Documents.Handlers
                         TrafficWatchQuery(query);
 
                     ExecuteQueryOperation(query,
-                        (runner, options, onProgress, token) => runner.ExecuteDeleteQuery(query, options, context, onProgress, token),
-                        context, returnContextToPool, Operations.Operations.OperationType.DeleteByQuery);
+                        (runner, options, onProgress, token) => runner.ExecuteDeleteQuery(query, options, context, onProgress, token), returnContextToPool, Operations.Operations.OperationType.DeleteByQuery);
 
                     return Task.CompletedTask;
                 }
@@ -484,7 +483,7 @@ namespace Raven.Server.Documents.Handlers
                 ExecuteQueryOperation(query,
                     (runner, options, onProgress, token) => runner.ExecutePatchQuery(
                         query, options, patch, query.QueryParameters, context, onProgress, token),
-                    context, returnContextToPool, Operations.Operations.OperationType.UpdateByQuery);
+                    returnContextToPool, Operations.Operations.OperationType.UpdateByQuery);
 
                 return Task.CompletedTask;
             }
@@ -514,7 +513,6 @@ namespace Raven.Server.Documents.Handlers
                 QueryOperationOptions,
                 Action<IOperationProgress>, OperationCancelToken,
                 Task<IOperationResult>> operation,
-                DocumentsOperationContext context,
                 IDisposable returnContextToPool,
                 Operations.Operations.OperationType operationType)
         {
@@ -538,6 +536,7 @@ namespace Raven.Server.Documents.Handlers
                 operationType,
                 onProgress => operation(Database.QueryRunner, options, onProgress, token), operationId, details, token);
 
+            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteOperationIdAndNodeTag(context, operationId, ServerStore.NodeTag);
