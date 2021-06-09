@@ -308,7 +308,7 @@ class timeSeriesPlotDetails extends viewModelBase {
         this.tabText = ko.pureComputed(() => {
            const documentIdsSet = new Set<string>();
            const allData = [...this.rangeTimeSeries, ...this.pointTimeSeries];
-           allData.map(x => documentIdsSet.add(genUtils.escapeHtml(x.documentId)));
+           allData.map(x => documentIdsSet.add(x.documentId));
            
            const numberOfDocuments =  Array.from(documentIdsSet).length;
            return numberOfDocuments === 1 ? `TS - ${genUtils.truncateDocumentId(allData[0].documentId)}` :

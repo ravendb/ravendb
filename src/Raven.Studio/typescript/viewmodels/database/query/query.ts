@@ -77,7 +77,7 @@ class timeSeriesTableDetails {
         this.tabInfo = ko.pureComputed(() => {
             return `<div class="tab-info-tooltip padding padding-sm">
                        <div class="margin-bottom margin-bottom-sm"><strong>Time Series Table for:</strong></div>
-                       <div class="text-left document-id">${this.documentId}</div>
+                       <div class="text-left document-id">${generalUtils.escapeHtml(this.documentId)}</div>
                    </div>`;
         });
     }

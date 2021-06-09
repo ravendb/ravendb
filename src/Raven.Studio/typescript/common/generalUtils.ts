@@ -506,12 +506,11 @@ class genUtils {
         return result;
     }
     
-    static truncateDocumentId(documentId: string): string {
+    static truncateDocumentId(documentId: string, charsToShow: number = 12): string {
         if (!documentId) {
             return null;
         }
 
-        const charsToShow = 12;
         const slashPosition = documentId.lastIndexOf("/");
         
         if (slashPosition === -1) {
