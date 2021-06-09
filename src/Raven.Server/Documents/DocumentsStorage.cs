@@ -453,17 +453,12 @@ namespace Raven.Server.Documents
             return true;
         }
 
-        public bool TryRemoveUnusedIds(ref string changeVector, bool removeTrxn = false)
+        public bool TryRemoveUnusedIds(ref string changeVector)
         {
             if (string.IsNullOrEmpty(changeVector))
                 return false;
 
             var list = UnusedDatabaseIds;
-            if (removeTrxn)
-            {
-                list ??= new HashSet<string>();
-                list.Add(DocumentDatabase.ClusterTransactionId);
-            }
             if (list == null || list.Count == 0)
                 return false;
 
@@ -2335,6 +2330,10 @@ namespace Raven.Server.Documents
                 // case 4: incoming change vector A:11, B:12, C:10 -> update                (original: conflict, after: update)
 
                 var original = ChangeVectorUtils.GetConflictStatus(remote, local);
+                
+                remote = remote.StripTrxnTags();
+                local = local.StripTrxnTags();
+
                 TryRemoveUnusedIds(ref remote);
                 skipValidation = TryRemoveUnusedIds(ref local);
                 var after = ChangeVectorUtils.GetConflictStatus(remote, local);
