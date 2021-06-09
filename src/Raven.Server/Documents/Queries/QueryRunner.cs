@@ -64,7 +64,7 @@ namespace Raven.Server.Documents.Queries
 
         public override async Task<DocumentQueryResult> ExecuteQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag, OperationCancelToken token)
         {
-            ObjectDisposedException lastException = null;
+            Exception lastException = null;
             for (var i = 0; i < NumberOfRetries; i++)
             {
                 try
@@ -91,6 +91,16 @@ namespace Raven.Server.Documents.Queries
 
                     lastException = e;
                 }
+                catch (OperationCanceledException e)
+                {
+                    if (Database.DatabaseShutdown.IsCancellationRequested)
+                        throw;
+
+                    if (token.Token.IsCancellationRequested)
+                        throw;
+
+                    lastException = e;
+                }
             }
 
             throw CreateRetriesFailedException(lastException);
@@ -98,7 +108,7 @@ namespace Raven.Server.Documents.Queries
 
         public override async Task ExecuteStreamQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response, IStreamQueryResultWriter<Document> writer, OperationCancelToken token)
         {
-            ObjectDisposedException lastException = null;
+            Exception lastException = null;
             for (var i = 0; i < NumberOfRetries; i++)
             {
                 try
@@ -113,6 +123,16 @@ namespace Raven.Server.Documents.Queries
 
                     lastException = e;
                 }
+                catch (OperationCanceledException e)
+                {
+                    if (Database.DatabaseShutdown.IsCancellationRequested)
+                        throw;
+
+                    if (token.Token.IsCancellationRequested)
+                        throw;
+
+                    lastException = e;
+                }
             }
 
             throw CreateRetriesFailedException(lastException);
@@ -121,7 +141,7 @@ namespace Raven.Server.Documents.Queries
         public override async Task ExecuteStreamIndexEntriesQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response,
             IStreamQueryResultWriter<BlittableJsonReaderObject> writer, OperationCancelToken token)
         {
-            ObjectDisposedException lastException = null;
+            Exception lastException = null;
             for (var i = 0; i < NumberOfRetries; i++)
             {
                 try
@@ -137,6 +157,16 @@ namespace Raven.Server.Documents.Queries
 
                     lastException = e;
                 }
+                catch (OperationCanceledException e)
+                {
+                    if (Database.DatabaseShutdown.IsCancellationRequested)
+                        throw;
+
+                    if (token.Token.IsCancellationRequested)
+                        throw;
+
+                    lastException = e;
+                }
             }
 
             throw CreateRetriesFailedException(lastException);
@@ -146,7 +176,7 @@ namespace Raven.Server.Documents.Queries
             if (query.Metadata.IsDynamic)
                 throw new InvalidQueryException("Facet query must be executed against static index.", query.Metadata.QueryText, query.QueryParameters);
 
-            ObjectDisposedException lastException = null;
+            Exception lastException = null;
             for (var i = 0; i < NumberOfRetries; i++)
             {
                 try
@@ -166,6 +196,16 @@ namespace Raven.Server.Documents.Queries
 
                     lastException = e;
                 }
+                catch (OperationCanceledException e)
+                {
+                    if (Database.DatabaseShutdown.IsCancellationRequested)
+                        throw;
+
+                    if (token.Token.IsCancellationRequested)
+                        throw;
+
+                    lastException = e;
+                }
             }
 
             throw CreateRetriesFailedException(lastException);
@@ -173,7 +213,7 @@ namespace Raven.Server.Documents.Queries
 
         public TermsQueryResultServerSide ExecuteGetTermsQuery(string indexName, string field, string fromValue, long? existingResultEtag, int pageSize, DocumentsOperationContext context, OperationCancelToken token, out Index index)
         {
-            ObjectDisposedException lastException = null;
+            Exception lastException = null;
             for (var i = 0; i < NumberOfRetries; i++)
             {
 
@@ -194,6 +234,16 @@ namespace Raven.Server.Documents.Queries
 
                     lastException = e;
                 }
+                catch (OperationCanceledException e)
+                {
+                    if (Database.DatabaseShutdown.IsCancellationRequested)
+                        throw;
+
+                    if (token.Token.IsCancellationRequested)
+                        throw;
+
+                    lastException = e;
+                }
             }
 
             throw CreateRetriesFailedException(lastException);
@@ -201,7 +251,7 @@ namespace Raven.Server.Documents.Queries
 
         public override async Task<SuggestionQueryResult> ExecuteSuggestionQuery(IndexQueryServerSide query, DocumentsOperationContext context, long? existingResultEtag, OperationCancelToken token)
         {
-            ObjectDisposedException lastException = null;
+            Exception lastException = null;
             for (var i = 0; i < NumberOfRetries; i++)
             {
                 try
@@ -228,6 +278,16 @@ namespace Raven.Server.Documents.Queries
 
                     lastException = e;
                 }
+                catch (OperationCanceledException e)
+                {
+                    if (Database.DatabaseShutdown.IsCancellationRequested)
+                        throw;
+
+                    if (token.Token.IsCancellationRequested)
+                        throw;
+
+                    lastException = e;
+                }
             }
 
             throw CreateRetriesFailedException(lastException);
@@ -235,7 +295,7 @@ namespace Raven.Server.Documents.Queries
 
         public override async Task<IndexEntriesQueryResult> ExecuteIndexEntriesQuery(IndexQueryServerSide query, DocumentsOperationContext context, long? existingResultEtag, OperationCancelToken token)
         {
-            ObjectDisposedException lastException = null;
+            Exception lastException = null;
             for (var i = 0; i < NumberOfRetries; i++)
             {
                 try
@@ -249,6 +309,16 @@ namespace Raven.Server.Documents.Queries
 
                     lastException = e;
                 }
+                catch (OperationCanceledException e)
+                {
+                    if (Database.DatabaseShutdown.IsCancellationRequested)
+                        throw;
+
+                    if (token.Token.IsCancellationRequested)
+                        throw;
+
+                    lastException = e;
+                }
             }
 
             throw CreateRetriesFailedException(lastException);
@@ -256,7 +326,7 @@ namespace Raven.Server.Documents.Queries
 
         public override async Task<IOperationResult> ExecuteDeleteQuery(IndexQueryServerSide query, QueryOperationOptions options, DocumentsOperationContext context, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
-            ObjectDisposedException lastException = null;
+            Exception lastException = null;
             for (var i = 0; i < NumberOfRetries; i++)
             {
                 try
@@ -270,6 +340,16 @@ namespace Raven.Server.Documents.Queries
 
                     lastException = e;
                 }
+                catch (OperationCanceledException e)
+                {
+                    if (Database.DatabaseShutdown.IsCancellationRequested)
+                        throw;
+
+                    if (token.Token.IsCancellationRequested)
+                        throw;
+
+                    lastException = e;
+                }
             }
 
             throw CreateRetriesFailedException(lastException);
@@ -277,7 +357,7 @@ namespace Raven.Server.Documents.Queries
 
         public override async Task<IOperationResult> ExecutePatchQuery(IndexQueryServerSide query, QueryOperationOptions options, PatchRequest patch, BlittableJsonReaderObject patchArgs, DocumentsOperationContext context, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
-            ObjectDisposedException lastException = null;
+            Exception lastException = null;
             for (var i = 0; i < NumberOfRetries; i++)
             {
                 try
@@ -287,6 +367,16 @@ namespace Raven.Server.Documents.Queries
                 catch (ObjectDisposedException e)
                 {
                     if (Database.DatabaseShutdown.IsCancellationRequested)
+                        throw;
+
+                    lastException = e;
+                }
+                catch (OperationCanceledException e)
+                {
+                    if (Database.DatabaseShutdown.IsCancellationRequested)
+                        throw;
+
+                    if (token.Token.IsCancellationRequested)
                         throw;
 
                     lastException = e;
