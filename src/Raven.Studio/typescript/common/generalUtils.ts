@@ -506,14 +506,22 @@ class genUtils {
         return result;
     }
     
-    static truncateDocumentId(documentId: string) {
+    static truncateDocumentId(documentId: string): string {
+        if (!documentId) {
+            return null;
+        }
+
         const charsToShow = 12;
-        const slashPosition = documentId.lastIndexOf('/');
+        const slashPosition = documentId.lastIndexOf("/");
         
+        if (slashPosition === -1) {
+            return _.truncate(documentId, { "length": charsToShow });
+        }
+
         const start = documentId.substring(0, slashPosition);
-        const end = documentId.substring(slashPosition, documentId.length);
+        const end = documentId.substr(slashPosition);
         
-        const startTruncated = _.truncate(start, { 'length': charsToShow });
+        const startTruncated = _.truncate(start, { "length": charsToShow });
         return startTruncated + end;
     }
 

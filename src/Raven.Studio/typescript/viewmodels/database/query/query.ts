@@ -65,8 +65,8 @@ class highlightSection {
 
 class timeSeriesTableDetails {
     
-    tabText:KnockoutComputed<string>;
-    tabInfo:KnockoutComputed<string>;
+    tabText: KnockoutComputed<string>;
+    tabInfo: KnockoutComputed<string>;
     
     constructor(public documentId: string, public name: string, public value: timeSeriesQueryResultDto) {
 
