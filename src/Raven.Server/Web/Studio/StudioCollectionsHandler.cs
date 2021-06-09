@@ -305,13 +305,13 @@ namespace Raven.Server.Web.Studio
             return Task.CompletedTask;
         }
 
-        private void ExecuteCollectionOperation(Func<CollectionRunner, string, CollectionOperationOptions, Action<IOperationProgress>, OperationCancelToken, Task<IOperationResult>> operation, DocumentsOperationContext context, IDisposable returnContextToPool, Documents.Operations.Operations.OperationType operationType, HashSet<string> excludeIds)
+        private void ExecuteCollectionOperation(Func<CollectionRunner, string, CollectionOperationOptions, Action<IOperationProgress>, OperationCancelToken, Task<IOperationResult>> operation, DocumentsOperationContext docsContext, IDisposable returnContextToPool, Documents.Operations.Operations.OperationType operationType, HashSet<string> excludeIds)
         {
             var collectionName = GetStringQueryString("name");
 
             var token = CreateTimeLimitedCollectionOperationToken();
 
-            var collectionRunner = new StudioCollectionRunner(Database, context, excludeIds);
+            var collectionRunner = new StudioCollectionRunner(Database, docsContext, excludeIds);
 
             var operationId = Database.Operations.GetNextOperationId();
 
@@ -323,6 +323,7 @@ namespace Raven.Server.Web.Studio
 
             task.ContinueWith(_ => returnContextToPool.Dispose());
 
+            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteOperationIdAndNodeTag(context, operationId, ServerStore.NodeTag);
