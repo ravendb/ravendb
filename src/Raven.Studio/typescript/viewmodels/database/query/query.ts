@@ -64,7 +64,22 @@ class highlightSection {
 }
 
 class timeSeriesTableDetails {
+    
+    tabText:KnockoutComputed<string>;
+    tabInfo:KnockoutComputed<string>;
+    
     constructor(public documentId: string, public name: string, public value: timeSeriesQueryResultDto) {
+
+        this.tabText = ko.pureComputed(() => {
+            return `TS - ${generalUtils.truncateDocumentId(this.documentId)}`;
+        });
+
+        this.tabInfo = ko.pureComputed(() => {
+            return `<div class="tab-info-tooltip padding padding-sm">
+                       <div class="margin-bottom margin-bottom-sm"><strong>Time Series Table for:</strong></div>
+                       <div class="text-left document-id">${this.documentId}</div>
+                   </div>`;
+        });
     }
     
     isEqual(table: timeSeriesTableDetails) {
@@ -553,7 +568,7 @@ class query extends viewModelBase {
 
         this.registerDisposableHandler($(window), "storage", () => this.loadSavedQueries());
     }
-
+    
     compositionComplete() {
         super.compositionComplete();
 
@@ -575,6 +590,7 @@ class query extends viewModelBase {
                         this.goToTimeSeriesTab(existingChart);
                     } else {
                         this.timeSeriesGraphs.push(newChart);
+                        this.initTabTooltip();
                         this.goToTimeSeriesTab(newChart);
                     }
                 } else {
@@ -585,6 +601,7 @@ class query extends viewModelBase {
                         this.goToTimeSeriesTab(existingTable);
                     } else {
                         this.timeSeriesTables.push(newTable);
+                        this.initTabTooltip();
                         this.goToTimeSeriesTab(newTable);
                     }
                 }
@@ -633,6 +650,7 @@ class query extends viewModelBase {
         
         const queryTimingsLink = "https://ravendb.net/l/4FEPMK/" + this.clientVersion();
         const queryTimingsDetails = `<a target="_blank" href="${queryTimingsLink}">Query Timings</a>`;
+        
         popoverUtils.longWithHover($(".query-time-info"),
             {
                 content: `<small>View timings details by including ${queryTimingsDetails}</small>`,
@@ -679,6 +697,10 @@ class query extends viewModelBase {
         this.queryHasFocus(true);
         
         this.timingsGraph.syncLegend();
+    }
+    
+    private initTabTooltip() {
+        $('.tab-info[data-toggle="tooltip"]').tooltip();
     }
     
     private getQueriedIndexInfo() {
@@ -1236,6 +1258,7 @@ class query extends viewModelBase {
             this.goToTimeSeriesTab(existingChart);
         } else {
             this.timeSeriesGraphs.push(newChart);
+            this.initTabTooltip();
             this.goToTimeSeriesTab(newChart);
         }
     }

@@ -505,6 +505,17 @@ class genUtils {
 
         return result;
     }
+    
+    static truncateDocumentId(documentId: string) {
+        const charsToShow = 12;
+        const slashPosition = documentId.lastIndexOf('/');
+        
+        const start = documentId.substring(0, slashPosition);
+        const end = documentId.substring(slashPosition, documentId.length);
+        
+        const startTruncated = _.truncate(start, { 'length': charsToShow });
+        return startTruncated + end;
+    }
 
     /***  File Methods ***/
     
