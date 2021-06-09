@@ -86,20 +86,21 @@
                 <div class="dropdown">
                     <button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true"
                             aria-expanded="true">
-                        <i class="icon-settings"></i><span>Cluster certificate</span>
+                        <i class="icon-settings"></i><span>Server certificates</span>
                         <span class="caret"></span>
                     </button>
                     <ul class="dropdown-menu">
                         <li>
-                            <a href="#" data-bind="click: replaceClusterCertificate, enable: canReplaceClusterCertificate" title="Replace the cluster certificate">
-                                <i class="icon-replace"></i>
-                                <span>Replace cluster certificate</span>
+                            <a href="#" class="js-export-certificates" data-bind="click: exportServerCertificates, enable: canExportServerCertificates"
+                               title="Export the server certificate(s) without their private key into .pfx file. These certificates can be used during a manual cluster setup, when you need to register server certificates to be trusted on other nodes.">
+                                <i class="icon-export"></i>
+                                <span>Export server certificates</span>
                             </a>
                         </li>
                         <li>
-                            <a href="#" id="download-certificates" data-bind="click: downloadClusterCertificates, enable: canDownloadClusterCertificates">
-                                <i class="icon-export"></i>
-                                <span>Download cluster certificates</span>
+                            <a href="#" data-bind="click: replaceServerCertificate, enable: canReplaceServerCertificate">
+                                <i class="icon-replace"></i>
+                                <span>Replace server certificates</span>
                             </a>
                         </li>
                     </ul>
@@ -214,7 +215,7 @@
                                 <h3 data-bind="visible: mode() === 'generate'">Generate client certificate</h3>
                                 <h3 data-bind="visible: mode() === 'upload'">Upload client certificate</h3>
                                 <h3 data-bind="visible: mode() === 'editExisting'">Edit permissions</h3>
-                                <h3 data-bind="visible: mode() === 'replace'">Replace cluster certificate</h3>
+                                <h3 data-bind="visible: mode() === 'replace'">Replace server certificates (cluster-wide)</h3>
                             </div>
                             <div class="flex-start">
                                 <button data-bind="click: $root.onCloseEdit" class="close"><i class="icon-cancel"></i></button>
@@ -222,13 +223,13 @@
                         </div>
                         <div class="bg-info padding padding-sm margin-bottom" data-bind="visible: mode() === 'replace'">
                             <small>
-                                Replace the cluster certificate without shutting down the servers.
+                                Replace all server certificates in the cluster without shutting down the servers.
                                 The update will happen when all nodes of the cluster confirm the replacement, or when
                                 there are 3 days left for expiration.
                                 <br>
                                 <br>
                                 Please verify that the new certificate contains
-                                all of the following cluster domain names in the CN or ASN properties of the certificate:
+                                all of the following domain names in the CN or ASN properties of the certificate:
                                 <ul data-bind="foreach: $root.domainsForServerCertificate" class="margin-top margin-top-xs">
                                     <li data-bind="text: $data"></li>
                                 </ul>

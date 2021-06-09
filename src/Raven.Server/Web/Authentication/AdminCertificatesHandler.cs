@@ -760,7 +760,7 @@ namespace Raven.Server.Web.Authentication
 
             var pfx = collection.Export(X509ContentType.Pfx);
 
-            var contentDisposition = "attachment; filename=ClusterCertificatesCollection.pfx";
+            var contentDisposition = "attachment; filename=ServerCertificatesCollection.pfx";
             HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
             HttpContext.Response.ContentType = "application/octet-stream";
 
