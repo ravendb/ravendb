@@ -16,6 +16,7 @@ using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Session;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -47,10 +48,7 @@ namespace SlowTests.Server.Replication
             {
                 AdminCertificate = adminCert, ClientCertificate = adminCert, ModifyDatabaseName = x => sinkDatabase
             });
-
-            //setup expiration
-            await SetupExpiration(sinkStore);
-
+            
             var pullCert = new X509Certificate2(File.ReadAllBytes(certificates.ClientCertificate2Path), (string)null,
                 X509KeyStorageFlags.Exportable);
 
@@ -82,12 +80,10 @@ namespace SlowTests.Server.Replication
 
                 dynamic user1 = new {Source = "Sink"};
                 await s.StoreAsync(user1, "users/insink/1");
-                s.Advanced.GetMetadataFor(user1)[Constants.Documents.Metadata.Expires] = DateTime.UtcNow.AddMinutes(10);
-
+                
                 dynamic user2 = new {Source = "Sink"};
                 await s.StoreAsync(user2, "users/insink/2");
-                s.Advanced.GetMetadataFor(user2)[Constants.Documents.Metadata.Expires] = DateTime.UtcNow.AddMinutes(10);
-
+                
                 await s.SaveChangesAsync();
             }
 
@@ -111,16 +107,6 @@ namespace SlowTests.Server.Replication
 
                 var doc2 = await h.LoadAsync<dynamic>("users/insink/2");
                 Assert.NotNull(doc2);
-
-                //check expired does not exist in users/insink/1
-                var metadata = h.Advanced.GetMetadataFor(doc1);
-                var errorMD = Assert.Throws<KeyNotFoundException>(() => metadata[Constants.Documents.Metadata.Expires]);
-                Assert.Contains("@expires is not in the metadata", errorMD.Message);
-
-                //check expired does not exist in users/insink/2
-                metadata = h.Advanced.GetMetadataFor(doc2);
-                errorMD = Assert.Throws<KeyNotFoundException>(() => metadata[Constants.Documents.Metadata.Expires]);
-                Assert.Contains("@expires is not in the metadata", errorMD.Message);
             }
 
             Assert.True(WaitForDocument(sinkStore, "users/inhub/1"));
@@ -140,7 +126,7 @@ namespace SlowTests.Server.Replication
             }
 
             //make sure doc deleted from sink
-            Assert.False(WaitForDocument(sinkStore, "users/insink/1"));
+            Assert.True(WaitForDocumentDeletion(sinkStore, "users/insink/1"));
 
             //make sure doc not deleted from hub
             using (var h = hubStore.OpenAsyncSession())
@@ -148,15 +134,10 @@ namespace SlowTests.Server.Replication
                 //check hub got doc
                 var doc = await h.LoadAsync<dynamic>("users/insink/1");
                 Assert.NotNull(doc);
-
-                //check expired still does not exist
-                var metadata = h.Advanced.GetMetadataFor(doc);
-                var errorMD = Assert.Throws<KeyNotFoundException>(() => metadata[Constants.Documents.Metadata.Expires]);
-                Assert.Contains("@expires is not in the metadata", errorMD.Message);
             }
 
             //make sure hub threw error
-            Assert.Contains("This hub does not allow for tombstone replication via pull replication", error);
+            await AssertWaitForTrueAsync(() => Task.FromResult(error.Contains("This hub does not allow for tombstone replication via pull replication")));
         }
 
         [Fact]
@@ -259,8 +240,8 @@ namespace SlowTests.Server.Replication
             EnsureReplicating(sinkStore, hubStore);
 
             //make sure doc is deleted from hub and sink both
-            Assert.False(WaitForDocument(hubStore, "users/insink/1"));
-            Assert.False(WaitForDocument(sinkStore, "users/insink/1"));
+            Assert.True(WaitForDocumentDeletion(hubStore, "users/insink/1"));
+            Assert.True(WaitForDocumentDeletion(sinkStore, "users/insink/1"));
         }
 
         [Fact]
@@ -344,14 +325,12 @@ namespace SlowTests.Server.Replication
                 Assert.NotNull(doc2);
 
                 //check expired does not exist in users/insink/1
-                var metadata = h.Advanced.GetMetadataFor(doc1);
-                var errorMD = Assert.Throws<KeyNotFoundException>(() => metadata[Constants.Documents.Metadata.Expires]);
-                Assert.Contains("@expires is not in the metadata", errorMD.Message);
+                IMetadataDictionary metadata = h.Advanced.GetMetadataFor(doc1);
+                Assert.False(metadata?.ContainsKey(Constants.Documents.Metadata.Expires));
 
                 //check expired does not exist in users/insink/2
                 metadata = h.Advanced.GetMetadataFor(doc2);
-                errorMD = Assert.Throws<KeyNotFoundException>(() => metadata[Constants.Documents.Metadata.Expires]);
-                Assert.Contains("@expires is not in the metadata", errorMD.Message);
+                Assert.False(metadata?.ContainsKey(Constants.Documents.Metadata.Expires));
             }
 
             //delete doc from sink
@@ -365,7 +344,7 @@ namespace SlowTests.Server.Replication
             EnsureReplicating(sinkStore, hubStore);
 
             //make sure doc is deleted from sink
-            Assert.False(WaitForDocument(sinkStore, "users/insink/1"));
+            Assert.True(WaitForDocumentDeletion(sinkStore, "users/insink/1"));
 
             //make sure doc not deleted from hub and still doesn't contain expires
             using (var h = hubStore.OpenAsyncSession())
@@ -374,10 +353,9 @@ namespace SlowTests.Server.Replication
                 var doc1 = await h.LoadAsync<dynamic>("users/insink/1");
                 Assert.NotNull(doc1);
 
-                //check expired does not exist in users/insink/1
-                var metadata = h.Advanced.GetMetadataFor(doc1);
-                var errorMD = Assert.Throws<KeyNotFoundException>(() => metadata[Constants.Documents.Metadata.Expires]);
-                Assert.Contains("@expires is not in the metadata", errorMD.Message);
+                //check expires does not exist in users/insink/1
+                IMetadataDictionary metadata = h.Advanced.GetMetadataFor(doc1);
+                Assert.False(metadata?.ContainsKey(Constants.Documents.Metadata.Expires));
             }
         }
 

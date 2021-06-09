@@ -379,7 +379,7 @@ namespace Raven.Server.Documents.Replication
 
             string[] allowedPaths = default;
             string pullDefinitionName = null;
-            PreventDeletionsMode preventDeletionsMode = PreventDeletionsMode.Disabled;
+            PreventDeletionsMode preventDeletionsMode = PreventDeletionsMode.None;
             switch (header.AuthorizeInfo?.AuthorizeAs)
             {
                 case TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PullReplication:
@@ -504,7 +504,7 @@ namespace Raven.Server.Documents.Replication
                 Name = destination.HubName,
                 AllowedPaths = allowedPaths,
                 Mode = PullReplicationMode.HubToSink,
-                PreventDeletionsMode = null, // Not yet configured because this is before getting a reply from hub
+                PreventDeletionsMode = null,
                 Type = PullReplicationParams.ConnectionType.Incoming
             };
             var newIncoming = CreateIncomingReplicationHandler(tcpConnectionOptions, buffer, incomingPullParams);
