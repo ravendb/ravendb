@@ -288,26 +288,6 @@ namespace Raven.Server.Documents
             }
         }
 
-        private static string StripSinkTags(string from, string exclude)
-        {
-            if (from.Contains("SINK", StringComparison.OrdinalIgnoreCase) == false)
-                return from;
-
-            var newChangeVector = new List<ChangeVectorEntry>();
-            var changeVectorList = from.ToChangeVectorList();
-
-            foreach (var entry in changeVectorList)
-            {
-                if (entry.NodeTag != ChangeVectorExtensions.SinkTag ||
-                    exclude.Contains(entry.DbId))
-                {
-                    newChangeVector.Add(entry);
-                }
-            }
-
-            return newChangeVector.SerializeVector();
-        }
-
         public void InitializeFromDatabaseRecord(DatabaseRecord record)
         {
             if (_documentsCompression.Equals(record.DocumentsCompression))
@@ -397,14 +377,14 @@ namespace Raven.Server.Documents
             }
 
             changeVector = SetDocumentChangeVectorForLocalChange(context, lowerId, oldChangeVector, newEtag);
-            context.SkipChangeVectorValidation = _documentsStorage.TryRemoveUnusedIds(ref changeVector, removeTrxn: true);
+            context.SkipChangeVectorValidation = _documentsStorage.TryRemoveUnusedIds(ref changeVector);
             return (changeVector, nonPersistentFlags);
         }
 
         private static bool UpdateLastDatabaseChangeVector(DocumentsOperationContext context, string changeVector, DocumentFlags flags, NonPersistentDocumentFlags nonPersistentFlags)
         {
             var currentGlobalChangeVector = context.LastDatabaseChangeVector ?? GetDatabaseChangeVector(context);
-            changeVector = StripSinkTags(changeVector, currentGlobalChangeVector);
+            changeVector = changeVector.StripSinkTags(currentGlobalChangeVector);
 
             // this is raft created document, so it must contain only the RAFT element 
             if (flags.Contain(DocumentFlags.FromClusterTransaction))

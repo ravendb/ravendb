@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Replication;
+using Raven.Server.Utils;
 using Sparrow.Threading;
 using Voron;
 
@@ -16,6 +17,8 @@ namespace Raven.Server.ServerWide.Context
             get => _lastDatabaseChangeVector;
             set
             {
+                value = value.StripTrxnTags();
+
                 if (DbIdsToIgnore == null || DbIdsToIgnore.Count == 0 || string.IsNullOrEmpty(value))
                 {
                     _lastDatabaseChangeVector = value;

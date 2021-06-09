@@ -92,5 +92,72 @@ namespace SlowTests.Issues
                 }
             }
         }
+
+        [Fact]
+        public async Task CanRecreatedFromDeletedClusterTx3()
+        {
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
+            {
+                using (var session = store1.OpenAsyncSession(new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
+                {
+                    await session.StoreAsync(new Person(), "karmel");
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store1.OpenAsyncSession(new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
+                {
+                    session.Delete("karmel");
+                    await session.SaveChangesAsync();
+                }
+
+                for (int i = 0; i < 9; i++)
+                {
+                    using (var session = store1.OpenAsyncSession())
+                    {
+                        await session.StoreAsync(new Person
+                        {
+                            Name = i.ToString()
+                        },"karmel");
+                        await session.SaveChangesAsync();
+                    }
+                }
+
+                await SetupReplicationAsync(store1, store2);
+                await SetupReplicationAsync(store2, store1);
+                await EnsureReplicatingAsync(store1,store2);
+
+                using (var session = store1.OpenAsyncSession(new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
+                {
+                    await session.StoreAsync(new Person
+                    {
+                        Name = "Store2"
+                    },"store2/karmel");
+                    await session.SaveChangesAsync();
+                }
+
+                await EnsureReplicatingAsync(store2,store1);
+
+                using (var session = store1.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Person
+                    {
+                        Name = "Store1"
+                    },"store1/karmel");
+                    await session.SaveChangesAsync();
+                }
+
+                WaitForUserToContinueTheTest(store2);
+            }
+        }
     }
 }
