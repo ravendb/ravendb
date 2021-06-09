@@ -11,6 +11,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Lambda2Js;
@@ -1342,37 +1343,42 @@ more responsive application.
             if (_isDisposed)
                 return;
 
+            ExceptionDispatchInfo edi = null;
+
             try
             {
                 OnSessionDisposing?.Invoke(this, new SessionDisposingEventArgs(this));
-
-                var asyncTasksCounter = Interlocked.Read(ref _asyncTasksCounter);
-                if (asyncTasksCounter != 0)
-                {
-                    _forTestingPurposes?.OnSessionDisposeAboutToThrowDueToRunningAsyncTask?.Invoke();
-
-                    throw new InvalidOperationException($"Disposing session with active async task is forbidden, please make sure that all asynchronous session methods returning Task are awaited. Number of active async tasks: {asyncTasksCounter}");
-                }
-
             }
-            finally
+            catch (Exception e)
             {
-                _isDisposed = true;
-
-                if (isDisposing && RunningOn.FinalizerThread == false)
-                {
-                    GC.SuppressFinalize(this);
-
-                    _releaseOperationContext?.Dispose();
-                }
-                else
-                {
-                    // when we are disposed from the finalizer then we have to dispose the context immediately instead of returning it to the pool because
-                    // the finalizer of ArenaMemoryAllocator could be already called so we cannot return such context to the pool (RavenDB-7571)
-
-                    Context?.Dispose();
-                }
+                edi = ExceptionDispatchInfo.Capture(e);
             }
+
+            var asyncTasksCounter = Interlocked.Read(ref _asyncTasksCounter);
+            if (asyncTasksCounter != 0)
+            {
+                _forTestingPurposes?.OnSessionDisposeAboutToThrowDueToRunningAsyncTask?.Invoke();
+
+                throw new InvalidOperationException($"Disposing session with active async task is forbidden, please make sure that all asynchronous session methods returning Task are awaited. Number of active async tasks: {asyncTasksCounter}");
+            }
+
+            _isDisposed = true;
+
+            if (isDisposing && RunningOn.FinalizerThread == false)
+            {
+                GC.SuppressFinalize(this);
+
+                _releaseOperationContext?.Dispose();
+            }
+            else
+            {
+                // when we are disposed from the finalizer then we have to dispose the context immediately instead of returning it to the pool because
+                // the finalizer of ArenaMemoryAllocator could be already called so we cannot return such context to the pool (RavenDB-7571)
+
+                Context?.Dispose();
+            }
+
+            edi?.Throw();
         }
 
         /// <summary>
