@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Nito.AsyncEx;
@@ -75,6 +76,13 @@ namespace SlowTests.Issues
                         [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = result.Url
                     }
                 });
+
+                using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10)))
+                {
+                    await testServer.ServerStore.Engine.WaitForState(RachisState.Follower, cts.Token);
+                }
+
+                await WaitAndAssertForValueAsync(async () => await GetMembersCount(store, database), 3, 20000);
 
                 using (var session = store.OpenSession(new SessionOptions {}))
                 {
