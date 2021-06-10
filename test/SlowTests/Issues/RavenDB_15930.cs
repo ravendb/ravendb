@@ -56,7 +56,7 @@ namespace SlowTests.Issues
                 using (var tx = env.WriteTransaction())
                 {
                     var bytes = new byte[1024];
-                    new Random().NextBytes(bytes);
+                    new Random(1).NextBytes(bytes);
 
                     var tree = tx.ReadTree("items");
                     tree.Add("items/" + 2, bytes);
@@ -88,7 +88,7 @@ namespace SlowTests.Issues
                 using (var tx = env.WriteTransaction())
                 {
                     var bytes = new byte[8 * 1024 * 1024];
-                    new Random().NextBytes(bytes);
+                    new Random(1).NextBytes(bytes);
 
                     var tree = tx.ReadTree("items");
                     tree.Add("items/" + 2, bytes);
@@ -120,7 +120,7 @@ namespace SlowTests.Issues
                     using (var tx = env.WriteTransaction())
                     {
                         var bytes = new byte[9 * 1024 * 1024];
-                        new Random().NextBytes(bytes);
+                        new Random(1).NextBytes(bytes);
 
                         var tree = tx.ReadTree("items");
                         tree.Add("items/" + 0, bytes);
@@ -132,7 +132,7 @@ namespace SlowTests.Issues
                 using (var tx = env.WriteTransaction())
                 {
                     var bytes = new byte[1024];
-                    new Random().NextBytes(bytes);
+                    new Random(1).NextBytes(bytes);
 
                     var tree = tx.ReadTree("items");
                     tree.Add("items/" + 1, bytes);
@@ -144,7 +144,7 @@ namespace SlowTests.Issues
                 using (var tx = env.WriteTransaction())
                 {
                     var bytes = new byte[9 * 1024 * 1024];
-                    new Random().NextBytes(bytes);
+                    new Random(1).NextBytes(bytes);
 
                     var tree = tx.ReadTree("items");
                     tree.Add("items/" + 322, bytes);
