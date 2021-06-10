@@ -11,6 +11,8 @@ namespace Raven.Server.Documents.Replication
 {
     public class InterruptibleRead : IDisposable
     {
+        private bool _isDisposed;
+
         private Task<Result> _prevCall;
         private readonly Dictionary<AsyncManualResetEvent, Task<Task>> _previousWait = new Dictionary<AsyncManualResetEvent, Task<Task>>();
 
@@ -27,7 +29,10 @@ namespace Raven.Server.Documents.Replication
             public void Dispose()
             {
                 Document?.Dispose();
+                Document = null;
+
                 ReturnContext?.Dispose();
+                ReturnContext = null;
             }
         }
 
@@ -97,44 +102,46 @@ namespace Raven.Server.Documents.Replication
 
         private async Task<Result> ReadNextObject(string debugTag, JsonOperationContext.ManagedPinnedBuffer buffer, CancellationToken token)
         {
-            var retCtx = _contextPool.AllocateOperationContext(out DocumentsOperationContext context);
+            var returnContext = _contextPool.AllocateOperationContext(out DocumentsOperationContext context);
             try
             {
-                var jsonReaderObject = await context.ParseToMemoryAsync(_stream, debugTag, BlittableJsonDocumentBuilder.UsageMode.None, buffer, token);
+                var json = await context.ParseToMemoryAsync(_stream, debugTag, BlittableJsonDocumentBuilder.UsageMode.None, buffer, token);
                 return new Result
                 {
-                    Document = jsonReaderObject,
-                    ReturnContext = retCtx,
+                    Document = json,
+                    ReturnContext = returnContext,
                     Context = context
                 };
             }
             catch (Exception)
             {
-                retCtx.Dispose();
+                returnContext.Dispose();
                 throw;
             }
         }
 
         public void Dispose()
         {
-            if (_prevCall == null)
+            if (_isDisposed)
                 return;
 
-            try
-            {
-                _stream.Dispose();// need to dispose the current stream to abort the operation
-                using (_prevCall.Result)
-                {
+            _isDisposed = true;
 
+            SafelyDispose(_stream); // need to dispose the current stream to abort the operation
+            SafelyDispose(_prevCall?.Result);
+
+            _prevCall = null;
+
+            static void SafelyDispose(IDisposable toDispose)
+            {
+                try
+                {
+                    toDispose?.Dispose();
                 }
-            }
-            catch (Exception)
-            {
-                // explicitly ignoring this
-            }
-            finally
-            {
-                _prevCall = null;
+                catch
+                {
+                    // explicitly ignoring this
+                }
             }
         }
     }

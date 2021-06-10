@@ -56,6 +56,7 @@ namespace Raven.Server.Documents.TcpHandlers
         {
             return $"TCP Connection ('{Operation}') {_debugTag}";
         }
+
         public IDisposable ConnectionProcessingInProgress(string debugTag)
         {
             _debugTag = debugTag;
@@ -72,9 +73,14 @@ namespace Raven.Server.Documents.TcpHandlers
             GC.SuppressFinalize(this);
 #endif
 
-            using (TcpClient)
-            using (Stream)
+            _running.Wait();
+            try
             {
+                if (_isDisposed)
+                    return;
+
+                _isDisposed = true;
+
                 if (Operation == TcpConnectionHeaderMessage.OperationTypes.Cluster)
                 {
                     try
@@ -86,15 +92,9 @@ namespace Raven.Server.Documents.TcpHandlers
                         // nothing we can do
                     }
                 }
-            }
 
-            _running.Wait();
-            try
-            {
-                if (_isDisposed)
-                    return;
-
-                _isDisposed = true;
+                SafelyDispose(Stream);
+                SafelyDispose(TcpClient);
 
                 DocumentDatabase?.RunningTcpConnections.TryRemove(this);
 
@@ -107,8 +107,21 @@ namespace Raven.Server.Documents.TcpHandlers
             {
                 _running.Release();
             }
+
             // we'll let the _running be finalized, because otherwise we have
             // a possible race condition on dispose
+
+            static void SafelyDispose(IDisposable toDispose)
+            {
+                try
+                {
+                    toDispose?.Dispose();
+                }
+                catch
+                {
+                    // nothing we can do
+                }
+            }
         }
 
 #if !RELEASE
