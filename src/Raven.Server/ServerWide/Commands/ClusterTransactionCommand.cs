@@ -76,13 +76,14 @@ namespace Raven.Server.ServerWide.Commands
             public TimeSpan? WaitForIndexesTimeout;
             public bool WaitForIndexThrow;
             public List<string> SpecifiedIndexesQueryString;
-            public bool DisableAtomicDocumentWrites;
+            public bool? DisableAtomicDocumentWrites;
 
             public ClusterTransactionOptions() { }
 
-            public ClusterTransactionOptions(string taskId)
+            public ClusterTransactionOptions(string taskId, bool disableAtomicDocumentWrites, int clusterMinVersion)
             {
                 TaskId = taskId;
+                DisableAtomicDocumentWrites = disableAtomicDocumentWrites || clusterMinVersion < 52_000; // for mixed cluster, retain the old behaviour
             }
 
             public DynamicJsonValue ToJson()
@@ -104,8 +105,6 @@ namespace Raven.Server.ServerWide.Commands
         [JsonDeserializationIgnore]
         public ClusterTransactionOptions Options;
         
-        public bool? DisableAtomicDocumentWrites;
-
         [JsonDeserializationIgnore]
         public readonly List<ClusterTransactionDataCommand> DatabaseCommands = new List<ClusterTransactionDataCommand>();
 
@@ -113,15 +112,12 @@ namespace Raven.Server.ServerWide.Commands
 
         public ClusterTransactionCommand(string databaseName, char identityPartsSeparator, DatabaseTopology topology,
             ArraySegment<BatchRequestParser.CommandData> commandParsedCommands,
-            ClusterTransactionOptions options, string uniqueRequestId, int clusterMinVersion) : base(uniqueRequestId)
+            ClusterTransactionOptions options, string uniqueRequestId) : base(uniqueRequestId)
         {
             DatabaseName = databaseName;
             DatabaseRecordId = topology.DatabaseTopologyIdBase64 ?? Guid.NewGuid().ToBase64Unpadded();
             ClusterTransactionId = topology.DatabaseTopologyIdBase64 ?? Guid.NewGuid().ToBase64Unpadded();
             Options = options;
-
-            DisableAtomicDocumentWrites = clusterMinVersion < 52_000 // for mixed cluster, retain the old behaviour
-                                          || options.DisableAtomicDocumentWrites;
 
             foreach (var commandData in commandParsedCommands)
             {
@@ -158,7 +154,7 @@ namespace Raven.Server.ServerWide.Commands
 
         public List<string> ExecuteCompareExchangeCommands(DatabaseTopology dbTopology, ClusterOperationContext context, long index, Table items)
         {
-            if (DisableAtomicDocumentWrites == false)
+            if (Options?.DisableAtomicDocumentWrites == false)
                 EnsureAtomicDocumentWrites(dbTopology, context, items, index);
 
             if (ClusterCommands == null || ClusterCommands.Count == 0)
@@ -370,7 +366,6 @@ namespace Raven.Server.ServerWide.Commands
             public long Index;
             public long PreviousCount;
             public string Database;
-            public bool DisableAtomicDocumentWrites;
 
             public DynamicJsonValue ToJson()
             {
@@ -379,7 +374,6 @@ namespace Raven.Server.ServerWide.Commands
                     [nameof(Database)] = Database,
                     [nameof(PreviousCount)] = PreviousCount,
                     [nameof(Index)] = Index,
-                    [nameof(DisableAtomicDocumentWrites)] = DisableAtomicDocumentWrites,
                     [nameof(Options)] = Options.ToJson(),
                     [nameof(Index)] = new DynamicJsonArray(Commands)
                 };
@@ -452,10 +446,6 @@ namespace Raven.Server.ServerWide.Commands
             {
                 options = JsonDeserializationServer.ClusterTransactionOptions(blittableOptions);
             }
-            if (blittable.TryGet(nameof(DisableAtomicDocumentWrites), out bool disable) == false) 
-            {
-                disable = true;
-            }
 
             var index = *(long*)reader.Read((int)TransactionCommandsColumn.RaftIndex, out _);
             var keyPtr = reader.Read((int)TransactionCommandsColumn.Key, out size);
@@ -466,7 +456,6 @@ namespace Raven.Server.ServerWide.Commands
                 Options = options,
                 Commands = array,
                 Index = index,
-                DisableAtomicDocumentWrites = disable,
                 PreviousCount = Bits.SwapBytes(*(long*)(keyPtr + size - sizeof(long))),
                 Database = database
             };
@@ -497,14 +486,12 @@ namespace Raven.Server.ServerWide.Commands
             var djv = base.ToJson(context);
             djv[nameof(ClusterCommands)] = new DynamicJsonArray(ClusterCommands.Select(x => x.ToJson(context)));
             djv[nameof(SerializedDatabaseCommands)] = SerializedDatabaseCommands?.Clone(context);
-            djv[nameof(DisableAtomicDocumentWrites)] = DisableAtomicDocumentWrites;
             if (SerializedDatabaseCommands == null && DatabaseCommands.Count > 0)
             {
                 var databaseCommands = new DynamicJsonValue
                 {
                     [nameof(DatabaseCommands)] = new DynamicJsonArray(DatabaseCommands.Select(x => x.ToJson(context))),
                     [nameof(Options)] = Options.ToJson(),
-                    [nameof(DisableAtomicDocumentWrites)] = DisableAtomicDocumentWrites
                 };
                 djv[nameof(SerializedDatabaseCommands)] = context.ReadObject(databaseCommands, "read database commands");
             }

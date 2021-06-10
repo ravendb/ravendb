@@ -882,6 +882,12 @@ namespace Raven.Server.ServerWide
                 clusterTransaction = (ClusterTransactionCommand)JsonDeserializationCluster.Commands[nameof(ClusterTransactionCommand)](cmd);
                 var dbTopology = UpdateDatabaseRecordId(context, index, clusterTransaction);
 
+                if (clusterTransaction.SerializedDatabaseCommands != null &&
+                    clusterTransaction.SerializedDatabaseCommands.TryGet(nameof(ClusterTransactionCommand.Options), out BlittableJsonReaderObject blittableOptions))
+                {
+                    clusterTransaction.Options = JsonDeserializationServer.ClusterTransactionOptions(blittableOptions);
+                }
+
                 var compareExchangeItems = context.Transaction.InnerTransaction.OpenTable(CompareExchangeSchema, CompareExchange);
                 var error = clusterTransaction.ExecuteCompareExchangeCommands(dbTopology, context, index, compareExchangeItems);
                 if (error == null)

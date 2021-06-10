@@ -85,12 +85,11 @@ namespace Raven.Server.Documents.Handlers
                     {
                         // Since this is a cluster transaction we are not going to wait for the write assurance of the replication.
                         // Because in any case the user will get a raft index to wait upon on his next request.
-                        var options = new ClusterTransactionCommand.ClusterTransactionOptions(taskId)
+                        var options = new ClusterTransactionCommand.ClusterTransactionOptions(taskId, disableAtomicDocumentWrites, ClusterCommandsVersionManager.CurrentClusterMinimalVersion)
                         {
                             WaitForIndexesTimeout = waitForIndexesTimeout,
                             WaitForIndexThrow = waitForIndexThrow,
                             SpecifiedIndexesQueryString = specifiedIndexesQueryString.Count > 0 ? specifiedIndexesQueryString.ToList() : null,
-                            DisableAtomicDocumentWrites = disableAtomicDocumentWrites
                         };
                         await HandleClusterTransaction(context, command, options);
                     }
@@ -218,7 +217,7 @@ namespace Raven.Server.Documents.Handlers
             if (topology.Promotables.Contains(ServerStore.NodeTag))
                 throw new DatabaseNotRelevantException("Cluster transaction can't be handled by a promotable node.");
 
-            var clusterTransactionCommand = new ClusterTransactionCommand(Database.Name, Database.IdentityPartsSeparator, topology, command.ParsedCommands, options, raftRequestId, ClusterCommandsVersionManager.CurrentClusterMinimalVersion);
+            var clusterTransactionCommand = new ClusterTransactionCommand(Database.Name, Database.IdentityPartsSeparator, topology, command.ParsedCommands, options, raftRequestId);
             var result = await ServerStore.SendToLeaderAsync(clusterTransactionCommand);
 
             if (result.Result is List<string> errors)
@@ -561,7 +560,7 @@ namespace Raven.Server.Documents.Handlers
                         {
                             count++;
                             var changeVector = $"{ChangeVectorParser.RaftTag}:{count}-{Database.DatabaseGroupId}";
-                            if (command.DisableAtomicDocumentWrites == false)
+                            if (options.DisableAtomicDocumentWrites == false)
                             {
                                 changeVector += $",{ChangeVectorParser.TrxnTag}:{command.Index}-{Database.ClusterTransactionId}";
                             }
