@@ -4,11 +4,14 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using FastTests.Server.Documents.Revisions;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide.Operations;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.Utils;
 using SlowTests.Core.Utils.Entities;
 using Tests.Infrastructure;
@@ -23,6 +26,33 @@ namespace SlowTests.Cluster
     {
         public ClusterIndexNotificationsTest(ITestOutputHelper output) : base(output)
         {
+        }
+
+        [Fact]
+        public async Task NotifyAfterServerRestart()
+        {
+            using (var store = GetDocumentStore(new Options {RunInMemory =  false}))
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.Advanced.SetTransactionMode(TransactionMode.ClusterWide);
+
+                    await session.StoreAsync(new User
+                    {
+                        Name = "karmel"
+                    }, "users/1");
+                    await session.SaveChangesAsync();
+                }
+
+                var old = GetDocumentDatabaseInstanceFor(store).Result;
+                Server.ServerStore.DatabasesLandlord.UnloadDirectly(store.Database);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>("users/1");
+                    Assert.NotNull(user);
+                }
+            }
         }
 
         [Fact]

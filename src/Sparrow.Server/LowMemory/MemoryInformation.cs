@@ -189,7 +189,7 @@ namespace Sparrow.LowMemory
         private static void ThrowInsufficientMemory(MemoryInfoResult memInfo)
         {
             LowMemoryNotification.Instance.SimulateLowMemoryNotification();
-            throw new EarlyOutOfMemoryException($"The amount of available memory to commit on the system is low. Commit charge: {memInfo.CurrentCommitCharge} / {memInfo.TotalCommittableMemory}. Memory: {memInfo.TotalPhysicalMemory - memInfo.AvailableMemory} / {memInfo.TotalPhysicalMemory}");
+            throw new EarlyOutOfMemoryException($"The amount of available memory to commit on the system is low. Commit charge: {memInfo.CurrentCommitCharge} / {memInfo.TotalCommittableMemory}. Memory: {memInfo.TotalPhysicalMemory - memInfo.AvailableMemory} / {memInfo.TotalPhysicalMemory}", memInfo);
         }
 
         [return: MarshalAs(UnmanagedType.Bool)]
@@ -691,12 +691,15 @@ namespace Sparrow.LowMemory
         {
         }
 
-        public EarlyOutOfMemoryException(string message) : base(message)
+        public EarlyOutOfMemoryException(string message, MemoryInfoResult memoryInfo) : base(message)
         {
+            MemoryInfo = memoryInfo;
         }
 
         public EarlyOutOfMemoryException(string message, Exception inner) : base(message, inner)
         {
         }
+
+        public MemoryInfoResult? MemoryInfo { get; }
     }
 }

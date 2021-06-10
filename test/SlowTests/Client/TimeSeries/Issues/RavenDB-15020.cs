@@ -8,7 +8,6 @@ using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Client.Exceptions;
 using Raven.Tests.Core.Utils.Entities;
-using Sparrow.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 using User = SlowTests.Core.Utils.Entities.User;
@@ -1046,7 +1045,7 @@ select timeseries(
                     var sum = allValues.Sum(v => (v - mean) * (v - mean));
                     var expected = Math.Sqrt(sum / (allValues.Count - 1));
 
-                    Assert.True(expected.AlmostEquals(result.Results[0].StandardDeviation[0]));
+                    Assert.True(AlmostEquals(expected, result.Results[0].StandardDeviation[0]));
                 }
             }
         }
@@ -1115,7 +1114,7 @@ select timeseries(
                     var result = query.First();
 
                     Assert.Equal(1, result.Results.Length);
-                    Assert.True(expected.AlmostEquals(result.Results[0].StandardDeviation[0]));
+                    Assert.True(AlmostEquals(expected, result.Results[0].StandardDeviation[0]));
                 }
 
                 using (var session = store.OpenSession())
@@ -1127,7 +1126,7 @@ select timeseries(
 
                     var result = query.First();
                     Assert.Equal(1, result.Results.Length);
-                    Assert.True(expected.AlmostEquals(result.Results[0].StandardDeviation[0]));
+                    Assert.True(AlmostEquals(expected, result.Results[0].StandardDeviation[0]));
                 }
 
                 using (var session = store.OpenSession())
@@ -1143,7 +1142,7 @@ select timeseries(
 
                     var result = query.First();
                     Assert.Equal(1, result.Results.Length);
-                    Assert.True(expected.AlmostEquals(result.Results[0].StandardDeviation[0]));
+                    Assert.True(AlmostEquals(expected, result.Results[0].StandardDeviation[0]));
                 }
             }
         }
@@ -1209,7 +1208,7 @@ select timeseries(
                         var sigma = groupValues.Sum(v => Math.Pow(v - mean, 2));
                         var expected = Math.Sqrt(sigma / (groupValues.Count - 1));
 
-                        Assert.True(expected.AlmostEquals(rangeAggregation.StandardDeviation[0]));
+                        Assert.True(AlmostEquals(expected, rangeAggregation.StandardDeviation[0]));
                     }
                 }
             }
@@ -1272,7 +1271,7 @@ select timeseries(
                     Assert.Equal(values[0], result.Results[0].Min[0]);
                     Assert.Equal(values[^1], result.Results[0].Max[0]);
 
-                    Assert.True(expected.AlmostEquals(result.Results[0].StandardDeviation[0]));
+                    Assert.True(AlmostEquals(expected, result.Results[0].StandardDeviation[0]));
                 }
             }
         }
@@ -1284,7 +1283,6 @@ select timeseries(
             {
                 var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
-
 
                 using (var session = store.OpenSession())
                 {
@@ -1333,7 +1331,7 @@ select timeseries(
                     Assert.Equal(scaledValues[0], result.Results[0].Min[0]);
                     Assert.Equal(scaledValues[^1], result.Results[0].Max[0]);
 
-                    Assert.True(expected.AlmostEquals(result.Results[0].StandardDeviation[0]));
+                    Assert.True(AlmostEquals(expected, result.Results[0].StandardDeviation[0]));
                 }
             }
         }
@@ -1399,14 +1397,14 @@ select timeseries(
                         var sigma = groupValues.Sum(v => Math.Pow(v - mean, 2));
                         var expected = Math.Sqrt(sigma / (groupValues.Count - 1));
 
-                        Assert.True(expected.AlmostEquals(rangeAggregation.StandardDeviation[0]));
+                        Assert.True(AlmostEquals(expected, rangeAggregation.StandardDeviation[0]));
 
                         var groupValues2 = group.Select(g => g.Values[1]).ToList();
                         mean = groupValues2.Average();
                         sigma = groupValues2.Sum(v => Math.Pow(v - mean, 2));
                         expected = Math.Sqrt(sigma / (groupValues2.Count - 1));
 
-                        Assert.True(expected.AlmostEquals(rangeAggregation.StandardDeviation[1]));
+                        Assert.True(AlmostEquals(expected, rangeAggregation.StandardDeviation[1]));
                     }
                 }
             }
@@ -1468,7 +1466,7 @@ select timeseries(
                     var sigma = values.Sum(v => Math.Pow(v - mean, 2));
                     var expected = Math.Sqrt(sigma / (values.Count - 1));
 
-                    Assert.True(expected.AlmostEquals(result.Results[0].StandardDeviation[0]));
+                    Assert.True(AlmostEquals(expected, result.Results[0].StandardDeviation[0]));
 
                     // 03:00 - 04:00
                     Assert.Equal(baseline.AddHours(3), result.Results[3].From);
@@ -1483,7 +1481,7 @@ select timeseries(
                     sigma = values.Sum(v => Math.Pow(v - mean, 2));
                     expected = Math.Sqrt(sigma / (values.Count - 1));
 
-                    Assert.True(expected.AlmostEquals(result.Results[3].StandardDeviation[0]));
+                    Assert.True(AlmostEquals(expected, result.Results[3].StandardDeviation[0]));
 
                     // assert percentiles in filled up gaps
 
@@ -1495,7 +1493,7 @@ select timeseries(
                     double quotient = 1d / 3;
                     expected = result.Results[0].StandardDeviation[0] + dy * quotient;
 
-                    Assert.True(expected.AlmostEquals(result.Results[1].StandardDeviation[0]));
+                    Assert.True(AlmostEquals(expected, result.Results[1].StandardDeviation[0]));
 
                     // 02:00 - 03:00
                     Assert.Equal(baseline.AddHours(2), result.Results[2].From);
@@ -1504,7 +1502,7 @@ select timeseries(
                     quotient = 2d / 3;
                     expected = result.Results[0].StandardDeviation[0] + dy * quotient;
 
-                    Assert.True(expected.AlmostEquals(result.Results[2].StandardDeviation[0]));
+                    Assert.True(AlmostEquals(expected, result.Results[2].StandardDeviation[0]));
                 }
             }
         }
@@ -1613,6 +1611,13 @@ select timeseries(
             }
 
             return f;
+        }
+
+        private static bool AlmostEquals(double x, double y)
+        {
+            var tolerance = Math.Pow(10, -12);
+            var diff = Math.Abs(x - y);
+            return diff < tolerance;
         }
 
         private class TsResult
