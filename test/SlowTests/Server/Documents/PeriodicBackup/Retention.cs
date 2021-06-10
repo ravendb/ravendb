@@ -230,18 +230,29 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     var etagForIncBackup = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
                     await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false, expectedEtag: etagForIncBackup, timeout: timeout);
                 }
+
+                var sp1 = Stopwatch.StartNew();
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "Grisha" });
                     await session.SaveChangesAsync();
                 }
+                sp1.Stop();
+                var sp2 = Stopwatch.StartNew();
                 var etag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
+                sp2.Stop();
+                var sp3 = Stopwatch.StartNew();
                 var status = await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: true, expectedEtag: etag, timeout: timeout);
-
+                sp3.Stop();
+                
                 var directoriesCount = await getDirectoriesCount(store.Database);
                 var expectedNumberOfDirectories = checkIncremental ? 2 : 1;
-                Assert.True(expectedNumberOfDirectories == directoriesCount, $" Backup duration: {status.DurationInMs}, LocalRetentionDurationInMs: {status.LocalRetentionDurationInMs}");
-                Assert.NotNull(status.LocalRetentionDurationInMs);
+                Assert.True(expectedNumberOfDirectories == directoriesCount, 
+                    $"SaveChanges() duration: {sp1}, GetStatisticsOperation duration: {sp2}, RunBackupAndReturnStatusAsync duration: {sp3}," +
+                    $" Backup duration: {status.DurationInMs}, LocalRetentionDurationInMs: {status.LocalRetentionDurationInMs}");
+
+                if (PeriodicBackupConfiguration.CanBackupUsing(config.LocalSettings))
+                    Assert.NotNull(status.LocalRetentionDurationInMs);
             }
         }
     }
