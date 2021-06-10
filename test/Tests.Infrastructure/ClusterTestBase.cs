@@ -495,17 +495,6 @@ namespace Tests.Infrastructure
             Servers.Remove(serverToDispose);
         }
 
-        protected async Task<(List<RavenServer> Nodes, RavenServer Leader)> CreateRaftClusterWithSsl(
-            int numberOfNodes,
-            bool shouldRunInMemory = true,
-            int? leaderIndex = null,
-            IDictionary<string, string> customSettings = null,
-            List<IDictionary<string, string>> customSettingsList = null,
-            bool watcherCluster = false)
-        {
-            return await CreateRaftCluster(numberOfNodes, shouldRunInMemory, leaderIndex, useSsl: true, customSettings, customSettingsList, watcherCluster);
-        }
-
         protected Dictionary<string, string> DefaultClusterSettings = new Dictionary<string, string>
         {
             [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "1",
@@ -517,6 +506,103 @@ namespace Tests.Infrastructure
             int numberOfNodes,
             bool? shouldRunInMemory = null,
             int? leaderIndex = null,
+            IDictionary<string, string> customSettings = null,
+            List<IDictionary<string, string>> customSettingsList = null,
+            bool watcherCluster = false,
+            [CallerMemberName] string caller = null)
+        {
+            var result = await CreateRaftClusterInternalAsync(numberOfNodes, shouldRunInMemory, leaderIndex, useSsl: false, customSettings, customSettingsList, watcherCluster, caller);
+            return (result.Nodes, result.Leader);
+        }
+
+        protected Task<(List<RavenServer> Nodes, RavenServer Leader, TestCertificatesHolder Certificates)> CreateRaftClusterWithSsl(
+            int numberOfNodes,
+            bool shouldRunInMemory = true,
+            int? leaderIndex = null,
+            IDictionary<string, string> customSettings = null,
+            List<IDictionary<string, string>> customSettingsList = null,
+            bool watcherCluster = false)
+        {
+            return CreateRaftClusterInternalAsync(numberOfNodes, shouldRunInMemory, leaderIndex, useSsl: true, customSettings, customSettingsList, watcherCluster);
+        }
+
+        protected async Task<(RavenServer Leader, Dictionary<RavenServer, ProxyServer> Proxies)> CreateRaftClusterWithProxiesAsync(
+            int numberOfNodes, bool shouldRunInMemory = true, int? leaderIndex = null, int delay = 0, [CallerMemberName] string caller = null)
+        {
+            var result = await CreateRaftClusterWithProxiesAndGetLeaderInternalAsync(numberOfNodes, shouldRunInMemory, leaderIndex, useSsl: false, delay, caller);
+            return (result.Leader, result.Proxies);
+        }
+
+        protected async Task<(RavenServer Leader, Dictionary<RavenServer, ProxyServer> Proxies, TestCertificatesHolder Certificates)> CreateRaftClusterWithSslAndProxiesAsync(
+            int numberOfNodes, bool shouldRunInMemory = true, int? leaderIndex = null, int delay = 0, [CallerMemberName] string caller = null)
+        {
+            var result = await CreateRaftClusterWithProxiesAndGetLeaderInternalAsync(numberOfNodes, shouldRunInMemory, leaderIndex, useSsl: true, delay, caller);
+            return (result.Leader, result.Proxies, result.Certificates);
+        }
+
+        private async Task<(RavenServer Leader, Dictionary<RavenServer, ProxyServer> Proxies, TestCertificatesHolder Certificates)> CreateRaftClusterWithProxiesAndGetLeaderInternalAsync(int numberOfNodes, bool shouldRunInMemory = true, int? leaderIndex = null, bool useSsl = false, int delay = 0, [CallerMemberName] string caller = null)
+        {
+            leaderIndex ??= _random.Next(0, numberOfNodes);
+            RavenServer leader = null;
+            var serversToPorts = new Dictionary<RavenServer, string>();
+            var serversToProxies = new Dictionary<RavenServer, ProxyServer>();
+
+            var customSettings = GetServerSettingsForPort(useSsl, out var serverUrl, out var certificates);
+
+            for (var i = 0; i < numberOfNodes; i++)
+            {
+                int proxyPort = 10000;
+                var co = new ServerCreationOptions
+                {
+                    CustomSettings = customSettings,
+                    RunInMemory = shouldRunInMemory,
+                    RegisterForDisposal = false
+                };
+                var server = GetNewServer(co, caller);
+                var proxy = new ProxyServer(ref proxyPort, Convert.ToInt32(server.ServerStore.GetNodeHttpServerUrl()), delay);
+                serversToProxies.Add(server, proxy);
+
+                if (Servers.Any(s => s.WebUrl.Equals(server.WebUrl, StringComparison.OrdinalIgnoreCase)) == false)
+                {
+                    Servers.Add(server);
+                }
+
+                serversToPorts.Add(server, serverUrl);
+                if (i == leaderIndex)
+                {
+                    server.ServerStore.EnsureNotPassive();
+                    leader = server;
+                }
+            }
+            using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
+            {
+                for (var i = 0; i < numberOfNodes; i++)
+                {
+                    if (i == leaderIndex)
+                    {
+                        continue;
+                    }
+                    var follower = Servers[i];
+                    // ReSharper disable once PossibleNullReferenceException
+                    await leader.ServerStore.AddNodeToClusterAsync(serversToPorts[follower], token: cts.Token);
+                    await follower.ServerStore.WaitForTopology(Leader.TopologyModification.Voter, cts.Token);
+                }
+            }
+            // ReSharper disable once PossibleNullReferenceException
+            var condition = await leader.ServerStore.WaitForState(RachisState.Leader, CancellationToken.None).WaitAsync(numberOfNodes * _electionTimeoutInMs * 5);
+            var states = string.Empty;
+            if (condition == false)
+            {
+                states = GetLastStatesFromAllServersOrderedByTime();
+            }
+            Assert.True(condition, "The leader has changed while waiting for cluster to become stable. All nodes status: " + states);
+            return (leader, serversToProxies, certificates);
+        }
+
+        protected async Task<(List<RavenServer> Nodes, RavenServer Leader, TestCertificatesHolder Certificates)> CreateRaftClusterInternalAsync(
+            int numberOfNodes,
+            bool? shouldRunInMemory = null,
+            int? leaderIndex = null,
             bool useSsl = false,
             IDictionary<string, string> customSettings = null,
             List<IDictionary<string, string>> customSettingsList = null,
@@ -524,7 +610,7 @@ namespace Tests.Infrastructure
             [CallerMemberName] string caller = null)
         {
             string[] allowedNodeTags = { "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z" };
-            leaderIndex = leaderIndex ?? _random.Next(0, numberOfNodes);
+            leaderIndex ??= _random.Next(0, numberOfNodes);
             RavenServer leader = null;
             var serversToPorts = new Dictionary<RavenServer, string>();
             var clusterNodes = new List<RavenServer>(); // we need this in case we create more than 1 cluster in the same test
@@ -536,11 +622,13 @@ namespace Tests.Infrastructure
                 throw new InvalidOperationException("The number of custom settings must equal the number of nodes.");
             }
 
+            TestCertificatesHolder certificates = null;
+
             for (var i = 0; i < numberOfNodes; i++)
             {
                 if (customSettingsList == null)
                 {
-                    customSettings = customSettings ?? new Dictionary<string, string>(DefaultClusterSettings)
+                    customSettings ??= new Dictionary<string, string>(DefaultClusterSettings)
                     {
                         [RavenConfiguration.GetKey(x => x.Cluster.ElectionTimeout)] = _electionTimeoutInMs.ToString(),
                     };
@@ -555,7 +643,7 @@ namespace Tests.Infrastructure
                 if (useSsl)
                 {
                     serverUrl = UseFiddlerUrl("https://127.0.0.1:0");
-                    SetupServerAuthentication(customSettings, serverUrl);
+                    certificates = SetupServerAuthentication(customSettings, serverUrl);
                 }
                 else
                 {
@@ -617,7 +705,7 @@ namespace Tests.Infrastructure
                 states = GetLastStatesFromAllServersOrderedByTime();
             }
             Assert.True(condition, "The leader has changed while waiting for cluster to become stable. All nodes status: " + states);
-            return (clusterNodes, leader);
+            return (clusterNodes, leader, certificates);
         }
 
         private async Task WaitForClusterTopologyOnAllNodes(List<RavenServer> clusterNodes)
@@ -629,85 +717,22 @@ namespace Tests.Infrastructure
             }
         }
 
-        protected async Task<RavenServer> CreateRaftClusterAndGetLeader(int numberOfNodes, bool? shouldRunInMemory = null, int? leaderIndex = null, bool useSsl = false,
-            IDictionary<string, string> customSettings = null, List<IDictionary<string, string>> customSettingsList = null, [CallerMemberName] string caller = null)
-        {
-            return (await CreateRaftCluster(numberOfNodes, shouldRunInMemory, leaderIndex, useSsl, customSettings: customSettings, customSettingsList: customSettingsList, caller: caller)).Leader;
-        }
-
-        protected async Task<(RavenServer, Dictionary<RavenServer, ProxyServer>)> CreateRaftClusterWithProxiesAndGetLeader(int numberOfNodes, bool shouldRunInMemory = true, int? leaderIndex = null, bool useSsl = false, int delay = 0, [CallerMemberName] string caller = null)
-        {
-            leaderIndex = leaderIndex ?? _random.Next(0, numberOfNodes);
-            RavenServer leader = null;
-            var serversToPorts = new Dictionary<RavenServer, string>();
-            var serversToProxies = new Dictionary<RavenServer, ProxyServer>();
-            for (var i = 0; i < numberOfNodes; i++)
-            {
-                string serverUrl;
-                var customSettings = GetServerSettingsForPort(useSsl, out serverUrl);
-
-                int proxyPort = 10000;
-                var co = new ServerCreationOptions
-                {
-                    CustomSettings = customSettings,
-                    RunInMemory = shouldRunInMemory,
-                    RegisterForDisposal = false
-                };
-                var server = GetNewServer(co, caller);
-                var proxy = new ProxyServer(ref proxyPort, Convert.ToInt32(server.ServerStore.GetNodeHttpServerUrl()), delay);
-                serversToProxies.Add(server, proxy);
-
-                if (Servers.Any(s => s.WebUrl.Equals(server.WebUrl, StringComparison.OrdinalIgnoreCase)) == false)
-                {
-                    Servers.Add(server);
-                }
-
-                serversToPorts.Add(server, serverUrl);
-                if (i == leaderIndex)
-                {
-                    server.ServerStore.EnsureNotPassive();
-                    leader = server;
-                }
-            }
-            using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
-            {
-                for (var i = 0; i < numberOfNodes; i++)
-                {
-                    if (i == leaderIndex)
-                    {
-                        continue;
-                    }
-                    var follower = Servers[i];
-                    // ReSharper disable once PossibleNullReferenceException
-                    await leader.ServerStore.AddNodeToClusterAsync(serversToPorts[follower], token: cts.Token);
-                    await follower.ServerStore.WaitForTopology(Leader.TopologyModification.Voter, cts.Token);
-                }
-            }
-            // ReSharper disable once PossibleNullReferenceException
-            var condition = await leader.ServerStore.WaitForState(RachisState.Leader, CancellationToken.None).WaitAsync(numberOfNodes * _electionTimeoutInMs * 5);
-            var states = string.Empty;
-            if (condition == false)
-            {
-                states = GetLastStatesFromAllServersOrderedByTime();
-            }
-            Assert.True(condition, "The leader has changed while waiting for cluster to become stable. All nodes status: " + states);
-            return (leader, serversToProxies);
-        }
-
-        protected Dictionary<string, string> GetServerSettingsForPort(bool useSsl, out string serverUrl)
+        protected Dictionary<string, string> GetServerSettingsForPort(bool useSsl, out string serverUrl, out TestCertificatesHolder certificates)
         {
             var customSettings = new Dictionary<string, string>();
 
             if (useSsl)
             {
                 serverUrl = UseFiddlerUrl("https://127.0.0.1:0");
-                SetupServerAuthentication(customSettings, serverUrl);
+                certificates = SetupServerAuthentication(customSettings, serverUrl);
             }
             else
             {
                 serverUrl = UseFiddlerUrl("http://127.0.0.1:0");
                 customSettings[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = serverUrl;
+                certificates = null;
             }
+
             return customSettings;
         }
 
@@ -833,7 +858,7 @@ namespace Tests.Infrastructure
             }
         }
 
-        
+
         public async Task StoreInTransactionMode(IDocumentStore store, int n)
         {
             for (int i = 0; i < n; i++)
@@ -852,7 +877,7 @@ namespace Tests.Infrastructure
             {
                 using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                 {
-                    session.Delete( "users/1");
+                    session.Delete("users/1");
                     await session.SaveChangesAsync();
                 }
             }
@@ -890,7 +915,7 @@ namespace Tests.Infrastructure
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    session.Delete( "users/1");
+                    session.Delete("users/1");
                     await session.SaveChangesAsync();
                 }
             }

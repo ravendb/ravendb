@@ -37,7 +37,7 @@ namespace SlowTests.Issues
             var myNodesList = new List<string>();
             const int clusterSize = 3;
             var databaseName = GetDatabaseName();
-            var leader = await CreateRaftClusterAndGetLeader(clusterSize, false, useSsl: false);
+            var (_, leader) = await CreateRaftCluster(clusterSize, false);
 
             using (var store = new DocumentStore
             {
@@ -97,7 +97,7 @@ namespace SlowTests.Issues
             var backupPath = NewDataPath(suffix: "BackupFolder");
             var clusterSize = 3;
             var databaseName = GetDatabaseName();
-            (List<RavenServer> Nodes, RavenServer Leader) cluster = await CreateRaftCluster(clusterSize, false, useSsl: false);
+            var cluster = await CreateRaftCluster(clusterSize, false);
             using (var store = new DocumentStore
             {
                 Urls = new[] { cluster.Leader.WebUrl },
@@ -186,7 +186,7 @@ namespace SlowTests.Issues
 
             using (var store = new DocumentStore
             {
-                Urls = new[] { cluster.Leader.WebUrl},
+                Urls = new[] { cluster.Leader.WebUrl },
                 Database = databaseName,
             }.Initialize())
             {

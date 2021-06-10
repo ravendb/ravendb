@@ -123,17 +123,17 @@ namespace SlowTests.Client
             var putDatabaseClientConfigDisabled = new PutClientConfigurationOperation(new ClientConfiguration { Disabled = true });
             const int numberOfNodes = 3;
 
-            var (_, leader) = await CreateRaftCluster(numberOfNodes, watcherCluster:true);
+            var (_, leader) = await CreateRaftCluster(numberOfNodes, watcherCluster: true);
             using var store = GetDocumentStore(new Options
+            {
+                Server = leader,
+                ReplicationFactor = numberOfNodes,
+                ModifyDocumentStore = documentStore =>
                 {
-                    Server = leader,
-                    ReplicationFactor = numberOfNodes,
-                    ModifyDocumentStore = documentStore =>
-                    {
-                        documentStore.Conventions.ReadBalanceBehavior = ReadBalanceBehavior.RoundRobin;
-                        documentStore.Conventions.MaxNumberOfRequestsPerSession = 99;
-                    }
-                });
+                    documentStore.Conventions.ReadBalanceBehavior = ReadBalanceBehavior.RoundRobin;
+                    documentStore.Conventions.MaxNumberOfRequestsPerSession = 99;
+                }
+            });
             var requestExecutor = store.GetRequestExecutor();
 
             var origin = requestExecutor.Conventions.MaxNumberOfRequestsPerSession;
@@ -142,23 +142,23 @@ namespace SlowTests.Client
 
             await store.Maintenance.SendAsync(putDatabaseClientConfigDisabled);
             await AssertWaitForClientConfiguration(origin);
-            
+
             await store.Maintenance.SendAsync(new PutClientConfigurationOperation(GetClientConfiguration(101)));
             await store.Maintenance.Server.SendAsync(new PutServerWideClientConfigurationOperation(GetClientConfiguration(102)));
             await AssertWaitForClientConfiguration(101);
-                
+
             await store.Maintenance.SendAsync(putDatabaseClientConfigDisabled);
             await AssertWaitForClientConfiguration(102);
-                
+
             await store.Maintenance.SendAsync(new PutClientConfigurationOperation(GetClientConfiguration(103)));
             await AssertWaitForClientConfiguration(103);
 
             await store.Maintenance.SendAsync(putDatabaseClientConfigDisabled);
             await AssertWaitForClientConfiguration(102);
-            
-            await store.Maintenance.Server.SendAsync(new PutServerWideClientConfigurationOperation(new ClientConfiguration{Disabled = true}));
+
+            await store.Maintenance.Server.SendAsync(new PutServerWideClientConfigurationOperation(new ClientConfiguration { Disabled = true }));
             await AssertWaitForClientConfiguration(origin);
-            
+
             async Task AssertWaitForClientConfiguration(int maxNumberOfRequestsPerSession)
             {
                 await WaitForValueAsync(async () =>
@@ -174,8 +174,8 @@ namespace SlowTests.Client
             {
                 return new ClientConfiguration
                 {
-                    ReadBalanceBehavior = ReadBalanceBehavior.RoundRobin, 
-                    MaxNumberOfRequestsPerSession = maxNumberOfRequestsPerSession, 
+                    ReadBalanceBehavior = ReadBalanceBehavior.RoundRobin,
+                    MaxNumberOfRequestsPerSession = maxNumberOfRequestsPerSession,
                     Disabled = false
                 };
             }

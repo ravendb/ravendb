@@ -36,7 +36,7 @@ namespace SlowTests.Issues
         {
             const int clusterSize = 3;
             const string databaseName = "Cluster_identity_for_single_document_should_work";
-            var leaderServer = await CreateRaftClusterAndGetLeader(clusterSize);
+            var (_, leaderServer) = await CreateRaftCluster(clusterSize);
             using (var leaderStore = new DocumentStore
             {
                 Urls = new[] { leaderServer.WebUrl },
@@ -66,7 +66,9 @@ namespace SlowTests.Issues
             }
             Servers.Clear();
 
-            leaderServer = await CreateRaftClusterAndGetLeader(clusterSize);
+            var result = await CreateRaftCluster(clusterSize);
+            leaderServer = result.Leader;
+
             using (var leaderStore = new DocumentStore
             {
                 Urls = new[] { leaderServer.WebUrl },

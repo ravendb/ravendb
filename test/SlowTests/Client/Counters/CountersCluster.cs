@@ -24,7 +24,7 @@ namespace SlowTests.Client.Counters
         [Fact]
         public async Task IncrementCounterShouldNotCreateRevisions()
         {
-            var leader = await CreateRaftClusterAndGetLeader(3);
+            var (_, leader) = await CreateRaftCluster(3);
             var dbName = GetDatabaseName();
             var db = await CreateDatabaseInCluster(dbName, 3, leader.WebUrl);
             var stores = db.Servers.Select(s => new DocumentStore
@@ -88,7 +88,7 @@ namespace SlowTests.Client.Counters
         [InlineData(7)]
         public async Task IncrementCounter(int clusterSize)
         {
-            var leader = await CreateRaftClusterAndGetLeader(clusterSize);
+            var (_, leader) = await CreateRaftCluster(clusterSize);
             var dbName = GetDatabaseName();
             var db = await CreateDatabaseInCluster(dbName, clusterSize, leader.WebUrl);
             var stores = db.Servers.Select(s => new DocumentStore
@@ -158,7 +158,7 @@ namespace SlowTests.Client.Counters
         [Fact]
         public async Task DeleteCounter()
         {
-            var leader = await CreateRaftClusterAndGetLeader(3);
+            var (_, leader) = await CreateRaftCluster(3);
             var dbName = GetDatabaseName();
             var db = await CreateDatabaseInCluster(dbName, 3, leader.WebUrl);
 
