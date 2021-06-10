@@ -1171,6 +1171,7 @@ namespace Raven.Server.Documents.Replication
 
                 _attachmentStreamsTempFile.Dispose();
 
+                _replicationFromAnotherSource.Dispose();
             }
             finally
             {

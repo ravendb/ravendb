@@ -1123,6 +1123,9 @@ namespace Raven.Server.Documents.Replication
             {
                 //was already disposed? we don't care, we are disposing
             }
+
+            _connectionDisposed.Dispose();
+            _waitForChanges.Dispose();
         }
 
         private void DisposeTcpClient()
