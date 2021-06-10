@@ -147,8 +147,10 @@ namespace Raven.Server.Documents.Handlers
                 return;
             }
 
-            if (clientVersion.Major <= 5 && clientVersion.Minor < 2)
+            if (clientVersion.Major < 5 || (clientVersion.Major == 5 && clientVersion.Minor < 2))
+            {
                 disableAtomicDocumentWrites = true;
+            }
         }
 
         private static void ValidateCommandForClusterWideTransaction(MergedBatchCommand command)
