@@ -1060,8 +1060,9 @@ namespace Raven.Server.Documents.Replication
 
             public void BeforeSendingToTxMerger(PreventDeletionsMode? preventDeletionsMode, DocumentsOperationContext ctx)
             {
-                bool _removeExpires = preventDeletionsMode?.HasFlag(PreventDeletionsMode.PreventSinkToHubDeletions) == true &&
-                                      _mode == PullReplicationMode.SinkToHub;
+                if(preventDeletionsMode?.HasFlag(PreventDeletionsMode.PreventSinkToHubDeletions) == false ||
+                                      _mode != PullReplicationMode.SinkToHub)
+                    return;
                 
                 foreach (var item in _replicationInfo.ReplicatedItems)
                 {
@@ -1070,10 +1071,7 @@ namespace Raven.Server.Documents.Replication
                         if (doc.Data == null)
                             continue;
 
-                        if (_removeExpires)
-                        {
-                            RemoveExpiresFromSinkBatchItem(doc, ctx);
-                        }
+                        RemoveExpiresFromSinkBatchItem(doc, ctx);
                     }
                 }
             }
