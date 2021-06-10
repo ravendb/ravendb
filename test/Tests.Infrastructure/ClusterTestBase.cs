@@ -6,12 +6,14 @@ using System.Linq;
 using System.Net.Http;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography.X509Certificates;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
+using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
@@ -23,9 +25,11 @@ using Raven.Server.Documents;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.ServerWide.Maintenance;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Sparrow.Platform;
 using Xunit;
 using Xunit.Abstractions;
@@ -776,7 +780,17 @@ namespace Tests.Infrastructure
                 Certificate = certificate
             }.Initialize())
             {
-                databaseResult = store.Maintenance.Server.Send(new CreateDatabaseOperation(record, replicationFactor));
+                try
+                {
+                    databaseResult = store.Maintenance.Server.Send(new CreateDatabaseOperation(record, replicationFactor));
+                }
+                catch (ConcurrencyException inner)
+                {
+                    //catch debug logs
+                    var sb = new StringBuilder();
+                    await GetClusterDebugLogs(sb);
+                    throw new ConcurrencyException($"Couldn't create database on time, cluster debug logs: {sb}", inner);
+                }
                 urls = await GetClusterNodeUrlsAsync(leadersUrl, store);
             }
 
@@ -906,6 +920,78 @@ namespace Tests.Infrastructure
                 }
             }
 
+        }
+
+        internal async Task GetClusterDebugLogs(StringBuilder sb)
+        {
+            (ClusterObserverLogEntry[] List, long Iteration) logs;
+            List<DynamicJsonValue> historyLogs = null;
+            DynamicJsonValue inMemoryDebug = null;
+            List<string> prevStates = null;
+            logs.List = null;
+            await ActionWithLeader((l) =>
+            {
+                logs = l.ServerStore.Observer.ReadDecisionsForDatabase();
+                prevStates = l.ServerStore.Engine.PrevStates.Select(s => s.ToString()).ToList();
+
+                using (l.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    historyLogs = l.ServerStore.Engine.LogHistory.GetHistoryLogs(context).ToList();
+                    inMemoryDebug = l.ServerStore.Engine.InMemoryDebug.ToJson();
+                }
+
+                return Task.CompletedTask;
+            });
+
+            if (prevStates != null)
+            {
+                sb.AppendLine($"{Environment.NewLine}States:{Environment.NewLine}-----------------------");
+                foreach (var state in prevStates)
+                {
+                    sb.AppendLine($"{state}{Environment.NewLine}");
+                }
+                sb.AppendLine();
+            }
+
+            if (historyLogs != null)
+            {
+                sb.AppendLine($"HistoryLogs:{Environment.NewLine}-----------------------");
+                using (var context = JsonOperationContext.ShortTermSingleUse())
+                {
+                    var c = 0;
+                    foreach (var log in historyLogs)
+                    {
+                        var json = context.ReadObject(log, nameof(log) + $"{c++}");
+                        sb.AppendLine(json.ToString());
+                    }
+                }
+                sb.AppendLine();
+            }
+
+            if (logs.List.Length > 0)
+            {
+                sb.AppendLine($"Cluster Observer Log Entries:{Environment.NewLine}-----------------------");
+                using (var context = JsonOperationContext.ShortTermSingleUse())
+                {
+                    var c = 0;
+                    foreach (var log in logs.List)
+                    {
+                        var json = context.ReadObject(log.ToJson(), nameof(log) + $"{c++}");
+                        sb.AppendLine(json.ToString());
+                    }
+                }
+            }
+
+            if (inMemoryDebug != null)
+            {
+                sb.AppendLine($"RachisDebug:{Environment.NewLine}-----------------------");
+                using (var context = JsonOperationContext.ShortTermSingleUse())
+                {
+                    var json = context.ReadObject(inMemoryDebug, nameof(inMemoryDebug));
+                    sb.AppendLine(json.ToString());
+                }
+            }
         }
 
         public override void Dispose()

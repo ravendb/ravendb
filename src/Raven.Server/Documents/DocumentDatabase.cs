@@ -351,10 +351,11 @@ namespace Raven.Server.Documents
                     try
                     {
                         NotifyFeaturesAboutStateChange(record, index);
+                        RachisLogIndexNotifications.NotifyListenersAbout(index, null);
                     }
-                    catch
+                    catch (Exception e)
                     {
-                        // We ignore the exception since it was caught in the function itself
+                        RachisLogIndexNotifications.NotifyListenersAbout(index, e);
                     }
                 }, null);
 
@@ -362,6 +363,7 @@ namespace Raven.Server.Documents
                 {
                     try
                     {
+                        _hasClusterTransaction.Set();
                         await ExecuteClusterTransactionTask();
                     }
                     catch (OperationCanceledException)
