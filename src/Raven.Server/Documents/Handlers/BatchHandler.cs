@@ -70,6 +70,9 @@ namespace Raven.Server.Documents.Handlers
                 
                 var disableAtomicDocumentWrites = GetBoolValueQueryString("disableAtomicDocumentWrites", required: false) ??
                                                   Database.Configuration.Cluster.DisableAtomicDocumentWrites;
+
+                CheckBackwardCompatibility(ref disableAtomicDocumentWrites);
+
                 var waitForIndexesTimeout = GetTimeSpanQueryString("waitForIndexesTimeout", required: false);
                 var waitForIndexThrow = GetBoolValueQueryString("waitForIndexThrow", required: false) ?? true;
                 var specifiedIndexesQueryString = HttpContext.Request.Query["waitForSpecificIndex"];
@@ -132,6 +135,21 @@ namespace Raven.Server.Documents.Handlers
                     });
                 }
             }
+        }
+
+        private void CheckBackwardCompatibility(ref bool disableAtomicDocumentWrites)
+        {
+            if (disableAtomicDocumentWrites) 
+                return;
+
+            if (RequestRouter.TryGetClientVersion(HttpContext, out var clientVersion) == false)
+            {
+                disableAtomicDocumentWrites = true;
+                return;
+            }
+
+            if (clientVersion.Major <= 5 && clientVersion.Minor < 2)
+                disableAtomicDocumentWrites = true;
         }
 
         private static void ValidateCommandForClusterWideTransaction(MergedBatchCommand command)
