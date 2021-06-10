@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -30,7 +31,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
         [Theory, Trait("Category", "Smuggler")]
         [InlineData(7, 3, false)]
-        [InlineData(7, 3, true)]
+        [InlineData(10, 3, true)]
         [InlineData(7, 3, false, "/E/G/O/R/../../../..")]
         public async Task can_delete_backups_by_date(int backupAgeInSeconds, int numberOfBackupsToCreate, bool checkIncremental, string suffix = null)
         {
@@ -73,7 +74,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
         [AmazonS3Theory]
         [InlineData(7, 3, false)]
-        [InlineData(7, 3, true)]
+        [InlineData(10, 3, true)]
         public async Task can_delete_backups_by_date_s3(int backupAgeInSeconds, int numberOfBackupsToCreate, bool checkIncremental)
         {
             await Locker.WaitAsync();
@@ -106,7 +107,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
         [AzureTheory, Trait("Category", "Smuggler")]
         [InlineData(7, 3, false)]
-        [InlineData(7, 3, true)]
+        [InlineData(10, 3, true)]
         public async Task can_delete_backups_by_date_azure(int backupAgeInSeconds, int numberOfBackupsToCreate, bool checkIncremental)
         {
             await Locker.WaitAsync();
@@ -213,7 +214,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false, expectedEtag: etagForIncBackup, timeout: timeout);
                 }
 
-                await Task.Delay(minimumBackupAgeToKeep + TimeSpan.FromSeconds(5));
+                await Task.Delay(minimumBackupAgeToKeep + TimeSpan.FromSeconds(3));
 
                 if (checkIncremental)
                 {
