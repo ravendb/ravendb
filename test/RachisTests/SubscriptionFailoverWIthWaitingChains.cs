@@ -336,10 +336,10 @@ namespace RachisTests
                     Assert.True(ex.GetType() == typeof(IOException) || ex.GetType() == typeof(EndOfStreamException));
                     mre.Set();
                 };
-                var task = subsWorker.Run(x => { });
                 server.ForTestingPurposesOnly().ThrowExceptionInListenToNewTcpConnection = true;
                 try
                 {
+                    var task = subsWorker.Run(x => { });
                     Assert.True(await mre.WaitAsync(TimeSpan.FromSeconds(30)));
                 }
                 finally
