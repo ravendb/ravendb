@@ -1,7 +1,6 @@
 using System;
 using System.Linq;
 using FastTests;
-using FastTests.Server.Basic.Entities;
 using MongoDB.Driver;
 using Newtonsoft.Json;
 using Raven.Client.Documents;

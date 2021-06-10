@@ -1,7 +1,6 @@
 ﻿using System.Linq;
 using FastTests;
 using Xunit;
-using FastTests.Server.Basic.Entities;
 using Tests.Infrastructure.Entities;
 using Xunit.Abstractions;
 

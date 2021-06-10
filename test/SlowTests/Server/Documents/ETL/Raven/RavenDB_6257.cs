@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Linq;
-using FastTests.Server.Basic.Entities;
 using Raven.Client;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
