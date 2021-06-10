@@ -111,8 +111,11 @@ class certificates extends viewModelBase {
 
         $(".js-export-certificates").tooltip({
             container: "body",
-            placement: "right"
-            });
+            placement: "right",
+            html: true,
+            title: `<div class="text-left">Export the server certificate(s) without their private key into a .pfx file.
+                   These certificates can be used during a manual cluster setup, when you need to register server certificates to be trusted on other nodes.</div>`
+        });
         
         this.model.subscribe(model => {
             if (model) {
