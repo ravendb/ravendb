@@ -258,7 +258,7 @@ namespace FastTests
 
             string GenerateClientCertificate(int index, X509Certificate2 serverCertificate, Org.BouncyCastle.Pkcs.AsymmetricKeyEntry pk)
             {
-                string name = $"{Environment.MachineName}_CC_{index}_{DateTime.Today:yyyy-MM-DD}";
+                string name = $"{Environment.MachineName}_CC_{index}_{DateTime.Today:yyyy-MM-dd}";
                 string clientCertificatePath = Path.Combine(Path.GetTempPath(), name + ".pfx");
 
                 if (File.Exists(clientCertificatePath) == false)
