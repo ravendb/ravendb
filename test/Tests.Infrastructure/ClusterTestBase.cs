@@ -934,7 +934,7 @@ namespace Tests.Infrastructure
                 logs = l.ServerStore.Observer.ReadDecisionsForDatabase();
                 prevStates = l.ServerStore.Engine.PrevStates.Select(s => s.ToString()).ToList();
 
-                using (l.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (l.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                 using (context.OpenReadTransaction())
                 {
                     historyLogs = l.ServerStore.Engine.LogHistory.GetHistoryLogs(context).ToList();
