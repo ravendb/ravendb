@@ -800,18 +800,7 @@ namespace FastTests
                 var task = Task.Run(server.Dispose);
 
                 if (mre.Wait(timeout) == false)
-                {
-                    using (var process = Process.GetCurrentProcess())
-                    using (var ms = new MemoryStream())
-                    using (var outputWriter = new StreamWriter(ms, leaveOpen: true))
-                    {
-                        StackTracer.ShowStackTraceWithSnapshot(process.Id, outputWriter);
-                        ms.Position = 0;
-
-                        using (var outputReader = new StreamReader(ms, leaveOpen: true))
-                            throw new InvalidOperationException($"Could not dispose server with URL '{url}' and DebugTag: '{debugTag}' in '{timeout}'. StackTraces:{Environment.NewLine}{outputReader.ReadToEnd()}");
-                    }
-                }
+                    ThrowCouldNotDisposeServerException(url, debugTag, timeout);
 
                 task.GetAwaiter().GetResult();
             }
@@ -832,10 +821,26 @@ namespace FastTests
             using (var mre = new AsyncManualResetEvent())
             {
                 server.AfterDisposal += () => mre.Set();
-                var task = Task.Run(() => server.Dispose());
+                var task = Task.Run(server.Dispose);
 
-                Assert.True(await mre.WaitAsync(timeout), $"Could not dispose server with URL '{url}' and DebugTag: '{debugTag}' in '{timeout}'.");
+                if (await mre.WaitAsync(timeout) == false)
+                    ThrowCouldNotDisposeServerException(url, debugTag, timeout);
+
                 await task;
+            }
+        }
+
+        private static void ThrowCouldNotDisposeServerException(string url, string debugTag, TimeSpan timeout)
+        {
+            using (var process = Process.GetCurrentProcess())
+            using (var ms = new MemoryStream())
+            using (var outputWriter = new StreamWriter(ms, leaveOpen: true))
+            {
+                StackTracer.ShowStackTraceWithSnapshot(process.Id, outputWriter);
+                ms.Position = 0;
+
+                using (var outputReader = new StreamReader(ms, leaveOpen: true))
+                    throw new InvalidOperationException($"Could not dispose server with URL '{url}' and DebugTag: '{debugTag}' in '{timeout}'. StackTraces:{Environment.NewLine}{outputReader.ReadToEnd()}");
             }
         }
     }
