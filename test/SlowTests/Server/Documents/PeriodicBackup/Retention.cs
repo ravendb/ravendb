@@ -230,19 +230,18 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     var etagForIncBackup = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
                     await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false, expectedEtag: etagForIncBackup, timeout: timeout);
                 }
-
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "Grisha" });
                     await session.SaveChangesAsync();
                 }
-
                 var etag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
-                await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: true, expectedEtag: etag, timeout: timeout);
+                var status = await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: true, expectedEtag: etag, timeout: timeout);
 
                 var directoriesCount = await getDirectoriesCount(store.Database);
                 var expectedNumberOfDirectories = checkIncremental ? 2 : 1;
-                Assert.Equal(expectedNumberOfDirectories, directoriesCount);
+                Assert.True(expectedNumberOfDirectories == directoriesCount, $" Backup duration: {status.DurationInMs}, LocalRetentionDurationInMs: {status.LocalRetentionDurationInMs}");
+                Assert.NotNull(status.LocalRetentionDurationInMs);
             }
         }
     }
