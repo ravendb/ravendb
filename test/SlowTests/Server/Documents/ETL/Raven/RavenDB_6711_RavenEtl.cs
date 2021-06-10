@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using FastTests.Server.Basic.Entities;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Tests.Core.Utils.Entities;

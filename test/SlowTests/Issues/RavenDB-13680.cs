@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using FastTests;
-using FastTests.Server.Basic.Entities;
 using Xunit;
 using System.Linq;
 using Raven.Client.Documents.Queries;

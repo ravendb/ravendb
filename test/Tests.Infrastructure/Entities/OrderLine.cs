@@ -1,4 +1,4 @@
-﻿namespace FastTests.Server.Basic.Entities
+﻿namespace Tests.Infrastructure.Entities
 {
     public class OrderLine
     {

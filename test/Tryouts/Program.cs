@@ -6,6 +6,7 @@ using FastTests.Client;
 using SlowTests.Issues;
 using SlowTests.MailingList;
 using SlowTests.Server.Documents.ETL.Raven;
+using StressTests.Issues;
 using Tests.Infrastructure;
 
 namespace Tryouts
@@ -26,9 +27,9 @@ namespace Tryouts
                 try
                 {
                     using (var testOutputHelper = new ConsoleTestOutputHelper())
-                    using (var test = new FirstClassPatch(testOutputHelper))
+                    using (var test = new RavenDB_13861(testOutputHelper))
                     {
-                         test.PatchNullField_ExpectFieldSetToNull();
+                         await test.BatchMemorySizeLimitationShouldBeExactIn64Bit();
                     }
                 }
                 catch (Exception e)

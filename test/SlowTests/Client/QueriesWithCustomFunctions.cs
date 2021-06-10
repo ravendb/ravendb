@@ -4,7 +4,6 @@ using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.Basic.Entities;
 using Newtonsoft.Json;
 using Raven.Client;
 using Raven.Client.Documents;

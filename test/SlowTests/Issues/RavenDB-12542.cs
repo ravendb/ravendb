@@ -1,6 +1,5 @@
 ﻿using System.Linq;
 using FastTests;
-using FastTests.Server.Basic.Entities;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;

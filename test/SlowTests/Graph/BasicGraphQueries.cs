@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using FastTests.Server.Basic.Entities;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Indexes;
