@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Text;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
@@ -16,12 +17,14 @@ namespace FastTests
     {
         public class BackupTestBase
         {
+            private readonly int _reasonableTimeout = Debugger.IsAttached ? 60000 : 15000;
+
             internal static readonly Lazy<BackupTestBase> Instance = new Lazy<BackupTestBase>(() => new BackupTestBase());
 
             /// <summary>
             /// Run backup with provided task id and wait for completion. Full backup by default.
             /// </summary>
-            public void RunBackup(RavenServer server, long taskId, DocumentStore store, bool isFullBackup = true, OperationStatus opStatus = OperationStatus.Completed, int timeout = 15000)
+            public void RunBackup(RavenServer server, long taskId, DocumentStore store, bool isFullBackup = true, OperationStatus opStatus = OperationStatus.Completed, int? timeout = default)
             {
                 AsyncHelpers.RunSync(() => RunBackupAsync(server, taskId, store, isFullBackup, opStatus, timeout));
             }
@@ -29,7 +32,7 @@ namespace FastTests
             /// <summary>
             /// Run backup with provided task id and wait for completion. Full backup by default.
             /// </summary>
-            public async Task RunBackupAsync(RavenServer server, long taskId, DocumentStore store, bool isFullBackup = true, OperationStatus opStatus = OperationStatus.Completed, int timeout = 15000)
+            public async Task RunBackupAsync(RavenServer server, long taskId, DocumentStore store, bool isFullBackup = true, OperationStatus opStatus = OperationStatus.Completed, int? timeout = default)
             {
                 var documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
                 var periodicBackupRunner = documentDatabase.PeriodicBackupRunner;
@@ -38,7 +41,7 @@ namespace FastTests
                 {
                     var status = (await store.Maintenance.SendAsync(new GetOperationStateOperation(op))).Status;
                     return status;
-                }, opStatus, timeout: timeout);
+                }, opStatus, timeout: timeout ?? _reasonableTimeout);
 
                 Assert.Equal(opStatus, value);
             }
@@ -47,19 +50,19 @@ namespace FastTests
             /// Update backup config, run backup and wait for completion. Full backup by default.
             /// </summary>
             /// <returns>TaskId</returns>
-            public long UpdateConfigAndRunBackup(RavenServer server, PeriodicBackupConfiguration config, DocumentStore store, bool isFullBackup = true, OperationStatus opStatus = OperationStatus.Completed)
+            public long UpdateConfigAndRunBackup(RavenServer server, PeriodicBackupConfiguration config, DocumentStore store, bool isFullBackup = true, OperationStatus opStatus = OperationStatus.Completed, int? timeout = default)
             {
-                return AsyncHelpers.RunSync(() => UpdateConfigAndRunBackupAsync(server, config, store, isFullBackup, opStatus));
+                return AsyncHelpers.RunSync(() => UpdateConfigAndRunBackupAsync(server, config, store, isFullBackup, opStatus, timeout));
             }
 
             /// <summary>
             /// Update backup config, run backup and wait for completion. Full backup by default.
             /// </summary>
             /// <returns>TaskId</returns>
-            public async Task<long> UpdateConfigAndRunBackupAsync(RavenServer server, PeriodicBackupConfiguration config, DocumentStore store, bool isFullBackup = true, OperationStatus opStatus = OperationStatus.Completed)
+            public async Task<long> UpdateConfigAndRunBackupAsync(RavenServer server, PeriodicBackupConfiguration config, DocumentStore store, bool isFullBackup = true, OperationStatus opStatus = OperationStatus.Completed, int? timeout = default)
             {
                 var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
-                await RunBackupAsync(server, result.TaskId, store, isFullBackup, opStatus);
+                await RunBackupAsync(server, result.TaskId, store, isFullBackup, opStatus, timeout);
                 return result.TaskId;
             }
 
@@ -67,7 +70,7 @@ namespace FastTests
             /// Run backup with provided task id and wait for completion. Full backup by default.
             /// </summary>
             /// <returns>PeriodicBackupStatus</returns>
-            public PeriodicBackupStatus RunBackupAndReturnStatus(RavenServer server, long taskId, DocumentStore store, bool isFullBackup = true, OperationStatus opStatus = OperationStatus.Completed, long? expectedEtag = default, int timeout = 15000)
+            public PeriodicBackupStatus RunBackupAndReturnStatus(RavenServer server, long taskId, DocumentStore store, bool isFullBackup = true, OperationStatus opStatus = OperationStatus.Completed, long? expectedEtag = default, int? timeout = default)
             {
                 return AsyncHelpers.RunSync(() => RunBackupAndReturnStatusAsync(server, taskId, store, isFullBackup, opStatus, expectedEtag, timeout));
             }
@@ -76,7 +79,7 @@ namespace FastTests
             /// Run backup with provided task id and wait for completion. Full backup by default.
             /// </summary>
             /// <returns>PeriodicBackupStatus</returns>
-            public async Task<PeriodicBackupStatus> RunBackupAndReturnStatusAsync(RavenServer server, long taskId, DocumentStore store, bool isFullBackup = true, OperationStatus opStatus = OperationStatus.Completed, long? expectedEtag = default, int timeout = 15000)
+            public async Task<PeriodicBackupStatus> RunBackupAndReturnStatusAsync(RavenServer server, long taskId, DocumentStore store, bool isFullBackup = true, OperationStatus opStatus = OperationStatus.Completed, long? expectedEtag = default, int? timeout = default)
             {
                 await RunBackupAsync(server, taskId, store, isFullBackup, opStatus, timeout);
                 var operation = new GetPeriodicBackupStatusOperation(taskId);
@@ -88,7 +91,7 @@ namespace FastTests
                     {
                         status = (await store.Maintenance.SendAsync(operation)).Status;
                         return status.LastEtag;
-                    }, expectedEtag.Value, interval: 333);
+                    }, expectedEtag.Value, interval: 333, timeout: timeout ?? _reasonableTimeout);
                     Assert.NotNull(etag);
                     Assert.Equal(expectedEtag.Value, etag.Value);
                 }
@@ -154,34 +157,34 @@ namespace FastTests
             /// Create and run backup with provided task id in cluster.
             /// </summary>
             /// <returns>TaskId</returns>
-            public long CreateAndRunBackupInCluster(PeriodicBackupConfiguration config, DocumentStore store, bool isFullBackup = true, OperationStatus opStatus = OperationStatus.Completed)
+            public long CreateAndRunBackupInCluster(PeriodicBackupConfiguration config, DocumentStore store, bool isFullBackup = true, OperationStatus opStatus = OperationStatus.Completed, int? timeout = default)
             {
-                return AsyncHelpers.RunSync(() => CreateAndRunBackupInClusterAsync(config, store, isFullBackup, opStatus));
+                return AsyncHelpers.RunSync(() => CreateAndRunBackupInClusterAsync(config, store, isFullBackup, opStatus, timeout));
             }
 
             /// <summary>
             /// Create and run backup with provided task id in cluster.
             /// </summary>
             /// <returns>TaskId</returns>
-            public async Task<long> CreateAndRunBackupInClusterAsync(PeriodicBackupConfiguration config, DocumentStore store, bool isFullBackup = true, OperationStatus opStatus = OperationStatus.Completed)
+            public async Task<long> CreateAndRunBackupInClusterAsync(PeriodicBackupConfiguration config, DocumentStore store, bool isFullBackup = true, OperationStatus opStatus = OperationStatus.Completed, int? timeout = default)
             {
                 var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                await RunBackupInClusterAsync(store, backupTaskId, isFullBackup, opStatus);
+                await RunBackupInClusterAsync(store, backupTaskId, isFullBackup, opStatus, timeout);
                 return backupTaskId;
             }
 
             /// <summary>
             /// Run backup with provided task id in a cluster.
             /// </summary>
-            public void RunBackupInCluster(DocumentStore store, long taskId, bool isFullBackup = true, OperationStatus opStatus = OperationStatus.Completed)
+            public void RunBackupInCluster(DocumentStore store, long taskId, bool isFullBackup = true, OperationStatus opStatus = OperationStatus.Completed, int? timeout = default)
             {
-                AsyncHelpers.RunSync(() => RunBackupInClusterAsync(store, taskId, isFullBackup, opStatus));
+                AsyncHelpers.RunSync(() => RunBackupInClusterAsync(store, taskId, isFullBackup, opStatus, timeout));
             }
 
             /// <summary>
             /// Run backup with provided task id in a cluster.
             /// </summary>
-            public async Task RunBackupInClusterAsync(DocumentStore store, long taskId, bool isFullBackup = true, OperationStatus opStatus = OperationStatus.Completed)
+            public async Task RunBackupInClusterAsync(DocumentStore store, long taskId, bool isFullBackup = true, OperationStatus opStatus = OperationStatus.Completed, int? timeout = default)
             {
                 var op = await store.Maintenance.SendAsync(new StartBackupOperation(isFullBackup, taskId));
 
@@ -193,7 +196,7 @@ namespace FastTests
 
                     OperationStatus status = x.Status;
                     return status;
-                }, opStatus);
+                }, opStatus, timeout: timeout ?? _reasonableTimeout);
 
                 Assert.Equal(opStatus, value);
             }
@@ -203,7 +206,7 @@ namespace FastTests
                 var restoreOperation = new RestoreBackupOperation(config);
 
                 var operation = store.Maintenance.Server.Send(restoreOperation);
-                operation.WaitForCompletion(timeout ?? TimeSpan.FromSeconds(30));
+                operation.WaitForCompletion(timeout ?? TimeSpan.FromMilliseconds(_reasonableTimeout * 2));
 
                 return EnsureDatabaseDeletion(config.DatabaseName, store);
             }
@@ -213,7 +216,7 @@ namespace FastTests
                 var restoreOperation = new RestoreBackupOperation(config);
 
                 var operation = store.Maintenance.Server.Send(restoreOperation);
-                operation.WaitForCompletion(timeout ?? TimeSpan.FromSeconds(30));
+                operation.WaitForCompletion(timeout ?? TimeSpan.FromMilliseconds(_reasonableTimeout * 2));
 
                 return EnsureDatabaseDeletion(config.DatabaseName, store);
             }
