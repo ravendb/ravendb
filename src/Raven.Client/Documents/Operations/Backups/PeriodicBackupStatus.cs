@@ -44,6 +44,8 @@ namespace Raven.Client.Documents.Operations.Backups
 
         public long? DurationInMs { get; set; }
 
+        public long? LocalRetentionDurationInMs { get; set; }
+
         public long Version { get; set; }
 
         public Error Error { get; set; }
@@ -77,6 +79,7 @@ namespace Raven.Client.Documents.Operations.Backups
             json[nameof(LastRaftIndex)] = LastRaftIndex?.ToJson();
             json[nameof(FolderName)] = FolderName;
             json[nameof(DurationInMs)] = DurationInMs;
+            json[nameof(LocalRetentionDurationInMs)] = LocalRetentionDurationInMs;
             json[nameof(Version)] = Version;
             json[nameof(Error)] = Error?.ToJson();
             json[nameof(LastOperationId)] = LastOperationId;
