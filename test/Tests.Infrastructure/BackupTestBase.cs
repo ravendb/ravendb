@@ -43,6 +43,7 @@ namespace FastTests
                     return status;
                 }, opStatus, timeout: timeout ?? _reasonableTimeout);
 
+                await CheckBackupOperationStatus(opStatus, value, store, taskId);
                 Assert.Equal(opStatus, value);
             }
 
@@ -197,7 +198,7 @@ namespace FastTests
                     OperationStatus status = x.Status;
                     return status;
                 }, opStatus, timeout: timeout ?? _reasonableTimeout);
-
+                await CheckBackupOperationStatus(opStatus, value, store, taskId);
                 Assert.Equal(opStatus, value);
             }
 
@@ -377,6 +378,17 @@ namespace FastTests
                 }
 
                 return sb.ToString();
+            }
+
+            private static async Task CheckBackupOperationStatus(OperationStatus expected, OperationStatus actual, DocumentStore store, long taskId)
+            {
+                if (expected == OperationStatus.Completed && actual == OperationStatus.Faulted)
+                {
+                    // gather debug info
+                    var operation = new GetPeriodicBackupStatusOperation(taskId);
+                    var status = (await store.Maintenance.SendAsync(operation)).Status;
+                    Assert.True(false, PrintBackupStatus(status));
+                }
             }
         }
     }
