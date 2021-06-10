@@ -59,7 +59,7 @@ namespace SlowTests.Cluster
         [Fact]
         public async Task CanCreateClusterTransactionRequest()
         {
-            var leader = await CreateRaftClusterAndGetLeader(3);
+            var (_, leader) = await CreateRaftCluster(3);
             using (var leaderStore = GetDocumentStore(new Options
             {
                 Server = leader,
@@ -96,7 +96,7 @@ namespace SlowTests.Cluster
         public async Task CanCreateClusterTransactionRequest2()
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;
-            var leader = await CreateRaftClusterAndGetLeader(2);
+            var (_, leader) = await CreateRaftCluster(2);
             using (var leaderStore = GetDocumentStore(new Options
             {
                 Server = leader,
@@ -194,7 +194,7 @@ namespace SlowTests.Cluster
         {
             var numOfSessions = 10;
             var docsPerSession = 2;
-            var leader = await CreateRaftClusterAndGetLeader(numberOfNodes);
+            var (_, leader) = await CreateRaftCluster(numberOfNodes);
             using (var store = GetDocumentStore(new Options
             {
                 Server = leader,
@@ -266,7 +266,7 @@ namespace SlowTests.Cluster
         [InlineData(10)]
         public async Task ClusterTransactionWaitForIndexes(int docs)
         {
-            var leader = await CreateRaftClusterAndGetLeader(3);
+            var (_, leader) = await CreateRaftCluster(3);
             using (var leaderStore = GetDocumentStore(new Options
             {
                 Server = leader,
@@ -610,7 +610,7 @@ namespace SlowTests.Cluster
         [Fact]
         public async Task CreateUniqueUser()
         {
-            var leader = await CreateRaftClusterAndGetLeader(3);
+            var (_, leader) = await CreateRaftCluster(3);
 
             using (var store = GetDocumentStore(new Options
             {
@@ -920,7 +920,7 @@ namespace SlowTests.Cluster
         [Fact]
         public async Task ClusterTransactionRequestWithRevisions()
         {
-            var leader = await CreateRaftClusterAndGetLeader(5, shouldRunInMemory: false, leaderIndex: 0);
+            var (_, leader) = await CreateRaftCluster(5, shouldRunInMemory: false, leaderIndex: 0);
             using (var leaderStore = GetDocumentStore(new Options
             {
                 DeleteDatabaseOnDispose = false,

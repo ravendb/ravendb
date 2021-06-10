@@ -54,7 +54,7 @@ namespace SlowTests.Issues
         [Fact]
         public async Task CountersHandler_GetCounterValue_ShouldCheckForOverflow()
         {
-            var leader = await CreateRaftClusterAndGetLeader(3);
+            var (_, leader) = await CreateRaftCluster(3);
             var dbName = GetDatabaseName();
 
             var (_, servers) = await CreateDatabaseInCluster(new DatabaseRecord(dbName), 3, leader.WebUrl);

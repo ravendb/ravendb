@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Graph;
@@ -7,6 +8,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;
 using Xunit;
@@ -23,13 +25,14 @@ namespace SlowTests.Issues
         [Fact]
         public async Task AddingNodeToEncryptedDatabaseGroupShouldThrow()
         {
-            var (nodes, leader) = await CreateRaftClusterWithSsl(3);
+            var (nodes, leader, certificates) = await CreateRaftClusterWithSsl(3);
 
             var options = new Options
             {
                 Server = leader,
                 ReplicationFactor = 2,
-                Encrypted = true
+                ClientCertificate = certificates.ClientCertificate1.Value,
+                AdminCertificate = certificates.ServerCertificate.Value
             };
 
             using (var store = GetDocumentStore(options))
@@ -49,7 +52,7 @@ namespace SlowTests.Issues
                 }))
                 {
                     await Assert.ThrowsAsync<DatabaseLoadFailureException>(async () => await TrySavingDocument(notInDbGroupStore));
-                    PutSecrectKeyForDatabaseInServersStore(dbName, notInDbGroupServer);
+                    PutSecretKeyForDatabaseInServersStore(dbName, notInDbGroupServer);
                     await notInDbGroupServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName, ignoreDisabledDatabase: true);
                     await TrySavingDocument(notInDbGroupStore);
                 }
@@ -68,27 +71,30 @@ namespace SlowTests.Issues
         [Fact]
         public async Task DeletingMasterKeyForExistedEncryptedDatabaseShouldFail()
         {
-            var (nodes, server) = await CreateRaftClusterWithSsl(1);
+            EncryptedServer(out var certificates, out var databaseName);
 
             var options = new Options
             {
-                Server = server,
+                ModifyDatabaseName = _ => databaseName,
+                ClientCertificate = certificates.ServerCertificate.Value,
+                AdminCertificate = certificates.ServerCertificate.Value,
                 Encrypted = true
             };
+
             using (var store = GetDocumentStore(options))
             {
                 await TrySavingDocument(store);
-                using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                 {
                     using (ctx.OpenWriteTransaction())
                     {
-                        Assert.Throws<InvalidOperationException>(() => server.ServerStore.DeleteSecretKey(ctx, store.Database));
+                        Assert.Throws<InvalidOperationException>(() => Server.ServerStore.DeleteSecretKey(ctx, store.Database));
                     }
 
                     store.Maintenance.Server.Send(new DeleteDatabasesOperation(store.Database, true));
                     using (ctx.OpenWriteTransaction())
                     {
-                        server.ServerStore.DeleteSecretKey(ctx, store.Database);
+                        Server.ServerStore.DeleteSecretKey(ctx, store.Database);
                     }
                 }
             }
@@ -97,13 +103,14 @@ namespace SlowTests.Issues
         [Fact]
         public async Task DeletingEncryptedDatabaseFromDatabaseGroup()
         {
-            var (nodes, server) = await CreateRaftClusterWithSsl(3);
+            var (nodes, server, certificates) = await CreateRaftClusterWithSsl(3);
 
             var options = new Options
             {
                 Server = server,
                 ReplicationFactor = 3,
-                Encrypted = true
+                AdminCertificate = certificates.ServerCertificate.Value,
+                ClientCertificate = certificates.ClientCertificate1.Value
             };
 
             using (var store = GetDocumentStore(options))

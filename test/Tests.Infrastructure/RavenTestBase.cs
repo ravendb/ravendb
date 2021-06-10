@@ -17,7 +17,6 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Exceptions;
@@ -73,7 +72,7 @@ namespace FastTests
 
         private readonly object _getDocumentStoreSync = new object();
 
-        protected string EncryptedServer(out TestCertificatesHolder certificates, out string name)
+        protected string EncryptedServer(out TestCertificatesHolder certificates, out string databaseName)
         {
             certificates = SetupServerAuthentication();
             var dbName = GetDatabaseName();
@@ -105,10 +104,11 @@ namespace FastTests
             if (canUseProtect == false) // fall back to a file
                 Server.ServerStore.Configuration.Security.MasterKeyPath = GetTempFileName();
 
-            Server.ServerStore.EnsureNotPassive(); // activate license so we can insert the secret key
+            Server.ServerStore.EnsureNotPassive();
+            Server.ServerStore.LicenseManager.TryActivateLicense(Server.ThrowOnLicenseActivationFailure); // activate license so we can insert the secret key
+            Server.ServerStore.PutSecretKey(base64Key, dbName, overwrite: true);
 
-            Server.ServerStore.PutSecretKey(base64Key, dbName, true);
-            name = dbName;
+            databaseName = dbName;
             return Convert.ToBase64String(buffer);
         }
 
@@ -211,7 +211,7 @@ namespace FastTests
             {
                 lock (_getDocumentStoreSync)
                 {
-                    options = options ?? Options.Default;
+                    options ??= Options.Default;
                     var serverToUse = options.Server ?? Server;
 
                     var name = GetDatabaseName(caller);
@@ -254,14 +254,12 @@ namespace FastTests
                         }
                     };
 
+                    if (options.Encrypted)
+                        doc.Encrypted = true;
+
                     if (pathToUse != null)
                     {
                         doc.Settings.Add(RavenConfiguration.GetKey(x => x.Core.DataDirectory), pathToUse);
-                    }
-
-                    if (options.Encrypted)
-                    {
-                        SetupForEncryptedDatabase(options, name, serverToUse, doc);
                     }
 
                     options.ModifyDatabaseRecord?.Invoke(doc);
@@ -405,7 +403,7 @@ namespace FastTests
                 if (options.AdminCertificate != null)
                 {
                     using (var adminStore =
-                        new DocumentStore {Urls = UseFiddler(serverToUse.WebUrl), Database = name, Certificate = options.AdminCertificate}.Initialize())
+                        new DocumentStore { Urls = UseFiddler(serverToUse.WebUrl), Database = name, Certificate = options.AdminCertificate }.Initialize())
                     {
                         return adminStore.Maintenance.Server.Send(new DeleteDatabasesOperation(name, hardDelete));
                     }
@@ -450,78 +448,6 @@ namespace FastTests
             return null;
         }
 
-        private void SetupForEncryptedDatabase(Options options, string dbName, RavenServer mainServer, DatabaseRecord doc)
-        {
-            foreach (var server in Servers)
-            {
-                if (server.Certificate.Certificate == null)
-                {
-                    throw new InvalidOperationException("Can't generate encrypted database on not secured servers please create server with 'UseSsl = true'");
-                }
-            }
-
-            var count = Servers.Count;
-
-            Debug.Assert(count >= options.ReplicationFactor);
-            Debug.Assert(options.ReplicationFactor > 0);
-
-            var topology = GenerateStaticTopology(options, mainServer);
-
-            var ravenServers = Servers.Where(s => topology.Members.Contains(s.ServerStore.NodeTag)).ToList();
-
-            foreach (var server in ravenServers)
-            {
-                PutSecrectKeyForDatabaseInServersStore(dbName, server);
-            }
-
-            //This is so things will just work, you must provide a client certificate for GetDocumentStore for encrypted database
-            EnsureClientCertificateIsProvidedForEncryptedDatabase(options, mainServer);
-
-            doc.Topology = topology;
-            doc.Encrypted = true;
-        }
-
-        private void EnsureClientCertificateIsProvidedForEncryptedDatabase(Options options, RavenServer mainServer)
-        {
-            if (options.ClientCertificate == null)
-            {
-                if (options.AdminCertificate != null)
-                {
-                    options.ClientCertificate = options.AdminCertificate;
-                }
-                else
-                {
-                    var certificates = GenerateAndSaveSelfSignedCertificate();
-                    RegisterClientCertificate(certificates, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, server: mainServer);
-                    options.AdminCertificate = options.ClientCertificate = certificates.ClientCertificate1.Value;
-                }
-            }
-        }
-
-        /// <summary>
-        /// Generating a static topology of the requested size.
-        /// </summary>
-        /// <param name="options">Contains replication factor.</param>
-        /// <param name="mainServer">The main server for which we generate the database, must be contained in the topology.</param>
-        /// <returns></returns>
-        private DatabaseTopology GenerateStaticTopology(Options options, RavenServer mainServer)
-        {
-            DatabaseTopology topology = new DatabaseTopology();
-            var mainTag = mainServer.ServerStore.NodeTag;
-            topology.Members.Add(mainTag);
-            var rand = new Random();
-            var serverTags = Servers.Where(s => s != mainServer).Select(s => s.ServerStore.NodeTag).ToList();
-
-            for (var i = 0; i < options.ReplicationFactor - 1; i++)
-            {
-                var position = rand.Next(0, serverTags.Count);
-                topology.Members.Add(serverTags[position]);
-                serverTags.RemoveAt(position);
-            }
-
-            return topology;
-        }
-
         protected string GetLastStatesFromAllServersOrderedByTime()
         {
             List<(string tag, RachisConsensus.StateTransition transition)> states = new List<(string tag, RachisConsensus.StateTransition transition)>();
@@ -539,9 +465,9 @@ namespace FastTests
         {
             var admin = store.Maintenance.ForDatabase(dbName);
 
-            timeout = timeout ?? (Debugger.IsAttached
-                          ? TimeSpan.FromMinutes(15)
-                          : TimeSpan.FromMinutes(1));
+            timeout ??= (Debugger.IsAttached
+                ? TimeSpan.FromMinutes(15)
+                : TimeSpan.FromMinutes(1));
 
             var sp = Stopwatch.StartNew();
             while (sp.Elapsed < timeout.Value)
@@ -668,11 +594,11 @@ namespace FastTests
             return entriesCount;
         }
 
-        protected async Task AssertWaitForExceptionAsync<T>(Func<Task> act, int timeout = 15000, int interval = 100) 
-            where T : class 
+        protected async Task AssertWaitForExceptionAsync<T>(Func<Task> act, int timeout = 15000, int interval = 100)
+            where T : class
         {
-            await WaitAndAssertForValueAsync(async () => 
-                await act().ContinueWith(t => 
+            await WaitAndAssertForValueAsync(async () =>
+                await act().ContinueWith(t =>
                     t.Exception?.InnerException?.GetType()), typeof(T), timeout, interval);
         }
 
@@ -970,13 +896,17 @@ namespace FastTests
 
         private readonly Dictionary<(RavenServer Server, string Database), string> _serverDatabaseToMasterKey = new Dictionary<(RavenServer Server, string Database), string>();
 
-        protected void PutSecrectKeyForDatabaseInServersStore(string dbName, RavenServer server)
+        protected void PutSecretKeyForDatabaseInServersStore(string dbName, RavenServer server)
         {
             var base64key = CreateMasterKey(out _);
             var base64KeyClone = new string(base64key.ToCharArray());
+
             EnsureServerMasterKeyIsSetup(server);
-            server.ServerStore.EnsureNotPassive(); // activate license so we can insert the secret key
-            server.ServerStore.PutSecretKey(base64key, dbName, true);
+
+            server.ServerStore.EnsureNotPassive();
+            server.ServerStore.LicenseManager.TryActivateLicense(Server.ThrowOnLicenseActivationFailure); // activate license so we can insert the secret key
+            server.ServerStore.PutSecretKey(base64key, dbName, overwrite: true);
+
             _serverDatabaseToMasterKey.Add((server, dbName), base64KeyClone);
         }
 
