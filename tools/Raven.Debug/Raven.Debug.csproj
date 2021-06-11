@@ -15,9 +15,9 @@
 
   <ItemGroup>
     <PackageReference Include="McMaster.Extensions.CommandLineUtils" Version="3.1.0" />
-    <PackageReference Include="Microsoft.Diagnostics.NETCore.Client" Version="0.2.221401" />
+    <PackageReference Include="Microsoft.Diagnostics.NETCore.Client" Version="0.2.227602" />
     <PackageReference Include="Microsoft.Diagnostics.Runtime-ravendb" Version="1.0.8" />
-    <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="2.0.68" />
+    <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="2.0.69" />
     <PackageReference Include="Microsoft.Win32.Registry" Version="4.7.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
     <PackageReference Include="System.Collections.Immutable" Version="1.7.1" />
