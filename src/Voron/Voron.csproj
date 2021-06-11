@@ -3,7 +3,7 @@
     <Description>Voron - Low level storage engine</Description>
     <Authors>Hibernating Rhinos</Authors>
     <TargetFramework>net5.0</TargetFramework>
-    <RuntimeFrameworkVersion>5.0.6</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>5.0.7</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>Voron</AssemblyName>
     <PackageId>Voron</PackageId>
