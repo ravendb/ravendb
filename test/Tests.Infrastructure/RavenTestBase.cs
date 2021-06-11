@@ -75,7 +75,7 @@ namespace FastTests
         protected string EncryptedServer(out TestCertificatesHolder certificates, out string databaseName)
         {
             certificates = SetupServerAuthentication();
-            var dbName = GetDatabaseName();
+            databaseName = GetDatabaseName();
             RegisterClientCertificate(certificates, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
 
             var buffer = new byte[32];
@@ -106,10 +106,27 @@ namespace FastTests
 
             Server.ServerStore.EnsureNotPassive();
             Server.ServerStore.LicenseManager.TryActivateLicense(Server.ThrowOnLicenseActivationFailure); // activate license so we can insert the secret key
-            Server.ServerStore.PutSecretKey(base64Key, dbName, overwrite: true);
+            Server.ServerStore.PutSecretKey(base64Key, databaseName, overwrite: true);
 
-            databaseName = dbName;
             return Convert.ToBase64String(buffer);
+        }
+
+        protected void EncryptedCluster(List<RavenServer> nodes, TestCertificatesHolder certificates, out string databaseName)
+        {
+            databaseName = GetDatabaseName();
+
+            foreach (var node in nodes)
+            {
+                RegisterClientCertificate(certificates, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, node);
+
+                var base64Key = CreateMasterKey(out _);
+
+                EnsureServerMasterKeyIsSetup(node);
+
+                node.ServerStore.EnsureNotPassive();
+                node.ServerStore.LicenseManager.TryActivateLicense(node.ThrowOnLicenseActivationFailure); // activate license so we can insert the secret key
+                node.ServerStore.PutSecretKey(base64Key, databaseName, overwrite: true);
+            }
         }
 
         protected async Task WaitForRaftCommandToBeAppliedInCluster(RavenServer leader, string commandType)
@@ -896,7 +913,7 @@ namespace FastTests
 
         private readonly Dictionary<(RavenServer Server, string Database), string> _serverDatabaseToMasterKey = new Dictionary<(RavenServer Server, string Database), string>();
 
-        protected void PutSecretKeyForDatabaseInServersStore(string dbName, RavenServer server)
+        protected void PutSecretKeyForDatabaseInServerStore(string databaseName, RavenServer server)
         {
             var base64key = CreateMasterKey(out _);
             var base64KeyClone = new string(base64key.ToCharArray());
@@ -905,9 +922,14 @@ namespace FastTests
 
             server.ServerStore.EnsureNotPassive();
             server.ServerStore.LicenseManager.TryActivateLicense(Server.ThrowOnLicenseActivationFailure); // activate license so we can insert the secret key
-            server.ServerStore.PutSecretKey(base64key, dbName, overwrite: true);
+            server.ServerStore.PutSecretKey(base64key, databaseName, overwrite: true);
 
-            _serverDatabaseToMasterKey.Add((server, dbName), base64KeyClone);
+            _serverDatabaseToMasterKey.Add((server, databaseName), base64KeyClone);
+        }
+
+        protected void DeleteSecretKeyForDatabaseFromServerStore(string databaseName, RavenServer server)
+        {
+            server.ServerStore.DeleteSecretKey(databaseName);
         }
 
         protected string SetupEncryptedDatabase(out TestCertificatesHolder certificates, out byte[] masterKey, [CallerMemberName] string caller = null)
@@ -924,25 +946,34 @@ namespace FastTests
             return dbName;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void EnsureServerMasterKeyIsSetup(RavenServer ravenServer)
+        private void EnsureServerMasterKeyIsSetup(RavenServer server)
         {
-            // sometimes when using `dotnet xunit` we get platform not supported from ProtectedData
-            try
+            var canUseProtect = PlatformDetails.RunningOnPosix == false;
+
+            if (canUseProtect)
             {
-                ProtectedData.Protect(Encoding.UTF8.GetBytes("Is supported?"), null, DataProtectionScope.CurrentUser);
+                // sometimes when using `dotnet xunit` we get platform not supported from ProtectedData
+                try
+                {
+                    ProtectedData.Protect(Encoding.UTF8.GetBytes("Is supported?"), null, DataProtectionScope.CurrentUser);
+                }
+                catch (PlatformNotSupportedException)
+                {
+                    canUseProtect = false;
+                }
             }
-            catch (PlatformNotSupportedException)
+
+            if (canUseProtect == false)
             {
                 // so we fall back to a file
-                if (File.Exists(ravenServer.ServerStore.Configuration.Security.MasterKeyPath) == false)
+                if (File.Exists(server.ServerStore.Configuration.Security.MasterKeyPath) == false)
                 {
-                    ravenServer.ServerStore.Configuration.Security.MasterKeyPath = GetTempFileName();
+                    server.ServerStore.Configuration.Security.MasterKeyPath = GetTempFileName();
                 }
             }
         }
 
-        protected static string CreateMasterKey(out byte[] masterKey)
+        private static string CreateMasterKey(out byte[] masterKey)
         {
             var buffer = new byte[32];
             using (var rand = RandomNumberGenerator.Create())

@@ -169,7 +169,7 @@ namespace BenchmarkTests
             
             if (Encrypted)
             {
-                PutSecretKeyForDatabaseInServersStore(databaseName, Server);
+                PutSecretKeyForDatabaseInServerStore(databaseName, Server);
                 databaseRecord.Encrypted = true;
             }
 

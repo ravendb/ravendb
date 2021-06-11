@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Graph;
@@ -8,7 +7,6 @@ using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
-using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;
 using Xunit;
@@ -27,33 +25,38 @@ namespace SlowTests.Issues
         {
             var (nodes, leader, certificates) = await CreateRaftClusterWithSsl(3);
 
+            EncryptedCluster(nodes, certificates, out var databaseName);
+
             var options = new Options
             {
                 Server = leader,
                 ReplicationFactor = 2,
                 ClientCertificate = certificates.ClientCertificate1.Value,
-                AdminCertificate = certificates.ServerCertificate.Value
+                AdminCertificate = certificates.ServerCertificate.Value,
+                ModifyDatabaseName = _ => databaseName,
+                Encrypted = true
             };
 
             using (var store = GetDocumentStore(options))
             {
                 var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
-                var notInDbGroupServer = Servers.Single(s => record.Topology.AllNodes.Contains(s.ServerStore.NodeTag) == false);
+                var notInDbGroupServer = nodes.Single(s => record.Topology.AllNodes.Contains(s.ServerStore.NodeTag) == false);
+                DeleteSecretKeyForDatabaseFromServerStore(databaseName, notInDbGroupServer);
+
                 await Assert.ThrowsAsync<RavenException>(async () => await store.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(store.Database)));
 
-                var dbName = store.Database;
                 using (var notInDbGroupStore = GetDocumentStore(new Options
                 {
                     Server = notInDbGroupServer,
                     CreateDatabase = false,
                     ModifyDocumentStore = ds => ds.Conventions.DisableTopologyUpdates = true,
                     ClientCertificate = options.ClientCertificate,
-                    ModifyDatabaseName = _ => dbName
+                    ModifyDatabaseName = _ => databaseName
                 }))
                 {
                     await Assert.ThrowsAsync<DatabaseLoadFailureException>(async () => await TrySavingDocument(notInDbGroupStore));
-                    PutSecretKeyForDatabaseInServersStore(dbName, notInDbGroupServer);
-                    await notInDbGroupServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName, ignoreDisabledDatabase: true);
+                    PutSecretKeyForDatabaseInServerStore(databaseName, notInDbGroupServer);
+                    await notInDbGroupServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName, ignoreDisabledDatabase: true);
                     await TrySavingDocument(notInDbGroupStore);
                 }
             }
@@ -105,12 +108,16 @@ namespace SlowTests.Issues
         {
             var (nodes, server, certificates) = await CreateRaftClusterWithSsl(3);
 
+            EncryptedCluster(nodes, certificates, out var databaseName);
+
             var options = new Options
             {
                 Server = server,
                 ReplicationFactor = 3,
+                Encrypted = true,
                 AdminCertificate = certificates.ServerCertificate.Value,
-                ClientCertificate = certificates.ClientCertificate1.Value
+                ClientCertificate = certificates.ClientCertificate1.Value,
+                ModifyDatabaseName = _ => databaseName
             };
 
             using (var store = GetDocumentStore(options))
