@@ -1,6 +1,5 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using FastTests.Server.Basic.Entities;
 using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;

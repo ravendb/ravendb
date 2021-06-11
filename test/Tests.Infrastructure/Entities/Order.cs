@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using FastTests.Server.Basic.Entities;
 using Raven.Tests.Core.Utils.Entities;
 
 namespace Tests.Infrastructure.Entities

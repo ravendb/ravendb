@@ -1,6 +1,5 @@
 ﻿using System.Linq;
 using FastTests;
-using FastTests.Server.Basic.Entities;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Xunit;

@@ -5,7 +5,6 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.Basic.Entities;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Tests.Infrastructure;
@@ -131,7 +130,7 @@ namespace StressTests.Issues
                 using (var bi = store.BulkInsert())
                 {
                     // with 747 documents, we pass the 32MB limit
-                    for (var i = 0; i < 5970 * 3; i++)
+                    for (var i = 0; i < 5972 * 3; i++)
                     {
                         bi.Store(new Order
                         {
@@ -152,7 +151,7 @@ namespace StressTests.Issues
                 {
                     batchLengths.Add(batch.Items.Count);
                 }));
-                Assert.All(batchLengths, x => Assert.Equal(5970, x));
+                Assert.All(batchLengths, x => Assert.Equal(5972, x));
             }
         }
 
