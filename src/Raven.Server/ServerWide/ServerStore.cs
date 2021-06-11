@@ -1604,6 +1604,16 @@ namespace Raven.Server.ServerWide
 
         }
 
+        public void DeleteSecretKey(string databaseName)
+        {
+            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (var tx = context.OpenWriteTransaction())
+            {
+                DeleteSecretKey(context, databaseName);
+                tx.Commit();
+            }
+        }
+
         public void DeleteSecretKey(TransactionOperationContext context, string name)
         {
             Debug.Assert(context.Transaction != null);
