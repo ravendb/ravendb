@@ -5,7 +5,6 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Client;
-using FastTests.Server.Basic.Entities;
 using Newtonsoft.Json;
 using Parquet;
 using Parquet.Data;

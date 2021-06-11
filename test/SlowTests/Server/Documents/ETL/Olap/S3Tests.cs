@@ -6,7 +6,6 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using FastTests.Client;
-using FastTests.Server.Basic.Entities;
 using Parquet;
 using Parquet.Data;
 using Raven.Client.Documents;
@@ -679,7 +678,7 @@ loadToOrders(partitionBy(
                         {
                             var folder = cloudObjects.FileInfoDetails[index - 1];
                             var objectsInFolder = await s3Client.ListObjectsAsync(prefix: folder.FullPath, delimiter: "/", listFolders: true);
-                            
+
                             Assert.Equal(2, objectsInFolder.FileInfoDetails.Count);
                             Assert.Contains($"month={index}/", objectsInFolder.FileInfoDetails[0].FullPath);
                             Assert.Contains($"month={index + 1}/", objectsInFolder.FileInfoDetails[1].FullPath);
@@ -797,7 +796,7 @@ loadToOrders(partitionBy(['year', year], ['month', month], ['source', $customPar
                         var prefix = $"{settings.RemoteFolderName}/{CollectionName}/";
                         var cloudObjects = await s3Client.ListObjectsAsync(prefix, delimiter: "/", listFolders: true);
                         Assert.Equal(1, cloudObjects.FileInfoDetails.Count);
-                        
+
                         var files = await ListAllFilesInFolders(s3Client, cloudObjects);
                         Assert.Equal(2, files.Count);
                         Assert.Contains($"/Orders/year=2020/month=1/source={customPartition}/", files[0]);
@@ -861,7 +860,7 @@ loadToOrders(noPartition(), {
             {
                 using (var store = GetDocumentStore())
                 {
-                    using (var session= store.OpenAsyncSession())
+                    using (var session = store.OpenAsyncSession())
                     {
                         var today = DateTime.Today;
                         await session.StoreAsync(new Order
@@ -1258,7 +1257,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
                 await DeleteObjects(settings, prefix: $"{settings.RemoteFolderName}{CollectionName}", delimiter: string.Empty);
             }
         }
-       
+
         private void SetupS3OlapEtl(DocumentStore store, string script, S3Settings settings, string customPartitionValue = null, string transformationName = null)
         {
             var connectionStringName = $"{store.Database} to S3";
