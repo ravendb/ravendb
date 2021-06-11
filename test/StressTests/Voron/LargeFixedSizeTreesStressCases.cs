@@ -13,7 +13,7 @@ namespace StressTests.Voron
         {
         }
 
-        [Theory]
+        [NightlyBuildTheory]
         [InlineDataWithRandomSeed(94000)]
         [InlineDataWithRandomSeed(300000)]
         public void CanDeleteRange_TryToFindABranchNextToLeaf(int count, int seed)
@@ -24,7 +24,7 @@ namespace StressTests.Voron
             }
         }
 
-        [Theory64Bit]
+        [NightlyBuildTheory64Bit]
         [InlineDataWithRandomSeed(1000000)]
         [InlineDataWithRandomSeed(2000000)]
         [InlineData(2000000, 1877749431)]// reproduced a bug, do not remove
