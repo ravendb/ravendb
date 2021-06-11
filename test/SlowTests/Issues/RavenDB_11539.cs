@@ -1,7 +1,6 @@
 ﻿
 using System.Linq;
 using FastTests;
-using FastTests.Server.Basic.Entities;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
 using SlowTests.Core.Utils.Entities;

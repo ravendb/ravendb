@@ -7,6 +7,7 @@ using SlowTests.Issues;
 using SlowTests.MailingList;
 using SlowTests.Rolling;
 using SlowTests.Server.Documents.ETL.Raven;
+using StressTests.Issues;
 using Tests.Infrastructure;
 
 namespace Tryouts

@@ -12,7 +12,6 @@ using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
-using FastTests.Server.Basic.Entities;
 using Raven.Server.Documents.PeriodicBackup.GoogleCloud;
 using Tests.Infrastructure.Entities;
 using Xunit.Abstractions;

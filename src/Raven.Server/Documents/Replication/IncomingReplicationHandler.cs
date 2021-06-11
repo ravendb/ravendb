@@ -90,6 +90,9 @@ namespace Raven.Server.Documents.Replication
             ConnectionInfo = IncomingConnectionInfo.FromGetLatestEtag(replicatedLastEtag);
 
             _database = options.DocumentDatabase;
+
+            _replicationFromAnotherSource = new AsyncManualResetEvent(_database.DatabaseShutdown);
+
             _tcpClient = options.TcpClient;
             _stream = options.Stream;
             SupportedFeatures = TcpConnectionHeaderMessage.GetSupportedFeaturesFor(options.Operation, options.ProtocolVersion);
@@ -165,7 +168,7 @@ namespace Raven.Server.Documents.Replication
             ThreadLocalCleanup.ReleaseThreadLocalState += () => IsIncomingReplication = false;
         }
 
-        private readonly AsyncManualResetEvent _replicationFromAnotherSource = new AsyncManualResetEvent();
+        private readonly AsyncManualResetEvent _replicationFromAnotherSource;
 
         public void OnReplicationFromAnotherSource()
         {
@@ -181,7 +184,7 @@ namespace Raven.Server.Documents.Replication
                 using (_stream)
                 using (var interruptibleRead = new InterruptibleRead(_database.DocumentsStorage.ContextPool, _stream))
                 {
-                    while (!_cts.IsCancellationRequested)
+                    while (_cts.IsCancellationRequested == false)
                     {
                         try
                         {
@@ -923,6 +926,7 @@ namespace Raven.Server.Documents.Replication
                 _cts.Dispose();
 
                 _attachmentStreamsTempFile.Dispose();
+                _replicationFromAnotherSource.Dispose();
             }
             finally
             {

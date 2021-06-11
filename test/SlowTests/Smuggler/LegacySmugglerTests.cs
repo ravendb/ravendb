@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.Basic.Entities;
 using FastTests.Utils;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
