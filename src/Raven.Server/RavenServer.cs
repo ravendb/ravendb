@@ -1549,12 +1549,28 @@ namespace Raven.Server
             // The certificate is not explicitly registered in our server, let's see if we have a certificate
             // with the same public key pinning hash.
             var pinningHash = certificate.GetPublicKeyPinningHash();
-            var certWithSameHash = ServerStore.Cluster.GetCertificatesByPinningHash(ctx, pinningHash).FirstOrDefault();
+            var certificatesWithSameHash = ServerStore.Cluster.GetCertificatesByPinningHash(ctx, pinningHash).ToList();
 
-            if (certWithSameHash == null)
+            if (certificatesWithSameHash.Count == 0)
             {
                 authenticationStatus.Status = AuthenticationStatus.UnfamiliarCertificate;
                 return;
+            }
+
+            CertificateDefinition certWithSameHash = null;
+            string issuerHash = null;
+
+            foreach (var certDef in certificatesWithSameHash.OrderByDescending(x => x.NotAfter))
+            {
+                // Hash is good, let's validate it was signed by a known issuer, otherwise users can use the private key to register a new cert with a different issuer.
+                using (var goodKnownCert = new X509Certificate2(Convert.FromBase64String(certDef.Certificate)))
+                {
+                    if (CertHasKnownIssuer(certificate, goodKnownCert, out issuerHash))
+                    {
+                        certWithSameHash = certDef;
+                        break;
+                    }
+                }
             }
 
             string remoteAddress = null;
@@ -1568,9 +1584,7 @@ namespace Raven.Server
                     break;
             }
 
-            // Hash is good, let's validate it was signed by a known issuer, otherwise users can use the private key to register a new cert with a different issuer.
-            var goodKnownCert = new X509Certificate2(Convert.FromBase64String(certWithSameHash.Certificate));
-            if (CertHasKnownIssuer(certificate, goodKnownCert, out var issuerHash) == false)
+            if (certWithSameHash == null)
             {
                 if (_authAuditLog.IsInfoEnabled)
                     _authAuditLog.Info($"Connection from {remoteAddress} with certificate '{certificate.Subject} ({certificate.Thumbprint})' which is not registered in the cluster. " +
