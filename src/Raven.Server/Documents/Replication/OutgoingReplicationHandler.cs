@@ -219,13 +219,11 @@ namespace Raven.Server.Documents.Replication
                 {
                     var supportedFeatures = NegotiateReplicationVersion(authorizationInfo);
 
-#if NETCOREAPP3_1_OR_GREATER
                     if (supportedFeatures.DataCompression)
                     {
                         _stream = new ReadWriteCompressedStream(_stream, _buffer);
                         _tcpConnectionOptions.Stream = _stream;
                     }
-#endif
 
                     _interruptibleRead = new InterruptibleRead(_database.DocumentsStorage.ContextPool, _stream);
 
