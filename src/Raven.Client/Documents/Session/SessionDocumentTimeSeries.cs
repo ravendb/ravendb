@@ -7,7 +7,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using Raven.Client.Documents.Session.Loaders;
 using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Util;
@@ -64,8 +63,7 @@ namespace Raven.Client.Documents.Session
             {
                 if (_asyncSessionTimeSeries.NotInCache(from, to))
                 {
-                    // not in cache
-                    return _asyncSessionTimeSeries.GetTimeSeriesAndIncludes<TimeSeriesEntry<TValues>>(from, to, includes: null, start, pageSize, CancellationToken.None);
+                    return _asyncSessionTimeSeries.GetTimeSeriesAndIncludes<TimeSeriesEntry<TValues>>(from, to, includes: null, start, pageSize);
                 }
 
                 return _asyncSessionTimeSeries.GetTypedFromCache<TValues>(from, to, null, start, pageSize);
@@ -76,11 +74,10 @@ namespace Raven.Client.Documents.Session
         {
             if (_asyncSessionTimeSeries.NotInCache(from, to))
             {
-                // not in cache
-                return AsyncHelpers.RunSync(() => _asyncSessionTimeSeries.GetTimeSeriesAndIncludes<TimeSeriesRollupEntry<TValues>>(from, to, includes: null, start, pageSize, CancellationToken.None));
+                return AsyncHelpers.RunSync(() => _asyncSessionTimeSeries.GetTimeSeriesAndIncludes<TimeSeriesRollupEntry<TValues>>(from, to, includes: null, start, pageSize));
             }
 
-            var result = _asyncSessionTimeSeries.GetTypedFromCache<TValues>(from, to, includes: null, start, pageSize, CancellationToken.None);
+            var result = _asyncSessionTimeSeries.GetTypedFromCache<TValues>(from, to, includes: null, start, pageSize);
             return result.Result?.Select(r => r.AsRollupEntry()).ToArray();
         }
 

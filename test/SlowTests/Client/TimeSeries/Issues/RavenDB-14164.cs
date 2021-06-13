@@ -843,7 +843,6 @@ namespace SlowTests.Client.TimeSeries.Issues
             }
         }
 
-
         private class Watch
         {
             public string Name { get; set; }
