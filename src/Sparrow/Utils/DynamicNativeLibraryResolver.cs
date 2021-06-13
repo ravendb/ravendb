@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 
 namespace Sparrow.Utils
 {
+#if NETCOREAPP3_1_OR_GREATER
     internal static class DynamicNativeLibraryResolver
     {
         private static Dictionary<string, Func<string, string>> _registered = new Dictionary<string, Func<string, string>>();
@@ -26,7 +27,7 @@ namespace Sparrow.Utils
 
         private static IntPtr Resolver(string libraryName, Assembly assembly, DllImportSearchPath? dllImportSearchPath)
         {
-            if(_registered.TryGetValue(libraryName, out var mutator) == false)
+            if (_registered.TryGetValue(libraryName, out var mutator) == false)
                 return IntPtr.Zero;
 
             string suffix;
@@ -62,4 +63,5 @@ namespace Sparrow.Utils
             return NativeLibrary.Load(name, assembly, dllImportSearchPath);
         }
     }
+#endif
 }
