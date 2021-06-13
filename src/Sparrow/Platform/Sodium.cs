@@ -4,13 +4,14 @@ using Sparrow.Utils;
 
 namespace Sparrow.Platform
 {
+#if NETCOREAPP3_1_OR_GREATER
     public static unsafe partial class Sodium
     {
         static Sodium()
         {
             try
             {
-                DynamicNativeLibraryResolver.Register(typeof(Sodium).Assembly,LIBSODIUM);
+                DynamicNativeLibraryResolver.Register(typeof(Sodium).Assembly, LIBSODIUM);
 
                 var rc = sodium_init();
                 if (rc != 0)
@@ -218,4 +219,5 @@ namespace Sparrow.Platform
         [DllImport(LIBSODIUM)]
         public static extern int sodium_mlock(byte* addr, UIntPtr len);
     }
+#endif
 }
