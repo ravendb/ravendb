@@ -226,6 +226,13 @@ namespace Raven.Client.Documents.Subscriptions
 
                 var databaseName = _store.GetDatabase(_dbName);
 
+                bool compressionSupport = false;
+#if NETCOREAPP3_1_OR_GREATER
+                var version = SubscriptionTcpVersion ?? TcpConnectionHeaderMessage.SubscriptionTcpVersion;
+                if(version >= 53_000)
+                    compressionSupport = true;
+#endif
+
                 var parameters = new AsyncTcpNegotiateParameters
                 {
                     Database = databaseName,
@@ -233,7 +240,8 @@ namespace Raven.Client.Documents.Subscriptions
                     Version = SubscriptionTcpVersion ?? TcpConnectionHeaderMessage.SubscriptionTcpVersion,
                     ReadResponseAndGetVersionCallbackAsync = ReadServerResponseAndGetVersionAsync,
                     DestinationNodeTag = CurrentNodeTag,
-                    DestinationUrl = chosenUrl
+                    DestinationUrl = chosenUrl,
+                    CompressionSupport = compressionSupport
                 };
                 _supportedFeatures = await TcpNegotiation.NegotiateProtocolVersionAsync(context, _stream, parameters).ConfigureAwait(false);
 
@@ -242,9 +250,10 @@ namespace Raven.Client.Documents.Subscriptions
                     throw new InvalidOperationException(
                         $"{_options.SubscriptionName}: TCP negotiation resulted with an invalid protocol version:{_supportedFeatures.ProtocolVersion}");
                 }
-
+#if NETCOREAPP3_1_OR_GREATER
                 if (_supportedFeatures.DataCompression)
                     _stream = new ReadWriteCompressedStream(_stream);
+#endif
 
                 using (var optionsJson = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_options, context))
                 {
