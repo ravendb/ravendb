@@ -216,7 +216,7 @@ namespace Raven.Client.Documents.Subscriptions
                         tcpInfo = await LegacyTryGetTcpInfo(requestExecutor, context, token).ConfigureAwait(false);
                     }
                 }
-                
+
                 var result = await TcpUtils.ConnectSecuredTcpSocket(
                     tcpInfo,
                     _store.Certificate,
@@ -241,15 +241,16 @@ namespace Raven.Client.Documents.Subscriptions
                 _tcpClient.NoDelay = true;
                 _tcpClient.SendBufferSize = _options?.SendBufferSizeInBytes ?? SubscriptionWorkerOptions.DefaultSendBufferSizeInBytes;
                 _tcpClient.ReceiveBufferSize = _options?.ReceiveBufferSizeInBytes ?? SubscriptionWorkerOptions.DefaultReceiveBufferSizeInBytes;
-                
+
                 if (_supportedFeatures.ProtocolVersion <= 0)
                 {
                     throw new InvalidOperationException(
                         $"{_options.SubscriptionName}: TCP negotiation resulted with an invalid protocol version:{_supportedFeatures.ProtocolVersion}");
                 }
-
+#if NETCOREAPP3_1_OR_GREATER
                 if (_supportedFeatures.DataCompression)
                     _stream = new ReadWriteCompressedStream(_stream);
+#endif
 
                 using (var optionsJson = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_options, context))
                 {
@@ -268,6 +269,13 @@ namespace Raven.Client.Documents.Subscriptions
 
         private async Task<TcpConnectionHeaderMessage.SupportedFeatures> NegotiateProtocolVersionForSubscriptionAsync(string chosenUrl, TcpConnectionInfo tcpInfo, Stream stream, JsonOperationContext context, List<string> _)
         {
+                bool compressionSupport = false;
+#if NETCOREAPP3_1_OR_GREATER
+                var version = SubscriptionTcpVersion ?? TcpConnectionHeaderMessage.SubscriptionTcpVersion;
+                if(version >= 53_000)
+                    compressionSupport = true;
+#endif
+
             var parameters = new AsyncTcpNegotiateParameters
             {
                 Database = _store.GetDatabase(_dbName),
@@ -276,7 +284,8 @@ namespace Raven.Client.Documents.Subscriptions
                 ReadResponseAndGetVersionCallbackAsync = ReadServerResponseAndGetVersionAsync,
                 DestinationNodeTag = CurrentNodeTag,
                 DestinationUrl = chosenUrl,
-                DestinationServerId = tcpInfo.ServerId
+                DestinationServerId = tcpInfo.ServerId,
+				CompressionSupport = compressionSupport
             };
 
             return await TcpNegotiation.NegotiateProtocolVersionAsync(context, stream, parameters).ConfigureAwait(false);

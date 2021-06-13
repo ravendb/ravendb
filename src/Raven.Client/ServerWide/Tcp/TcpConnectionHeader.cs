@@ -57,6 +57,8 @@ namespace Raven.Client.ServerWide.Tcp
 
         public AuthorizationInfo AuthorizeInfo { get; set; }
 
+        public bool CompressionSupport { get; set; }
+
         public DetailedReplicationHubAccess ReplicationHubAccess;
 
         public static readonly int PingBaseLine = -1;
