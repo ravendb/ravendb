@@ -8,6 +8,7 @@ using Sparrow.Threading;
 
 namespace Sparrow.Utils
 {
+#if NETCOREAPP3_1_OR_GREATER
     internal class ReadWriteCompressedStream : Stream
     {
         private readonly Stream _inner;
@@ -186,4 +187,5 @@ namespace Sparrow.Utils
             await _dispose.DisposeAsync().ConfigureAwait(false);
         }
     }
+#endif
 }

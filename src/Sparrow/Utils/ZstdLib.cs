@@ -6,7 +6,8 @@ using Sparrow.Platform;
 
 namespace Sparrow.Utils
 {
-    internal static unsafe class ZstdLib
+#if NETCOREAPP3_1_OR_GREATER
+    public static unsafe class ZstdLib
     {
         private const string LIBZSTD = @"libzstd";
 
@@ -208,7 +209,7 @@ namespace Sparrow.Utils
         [ThreadStatic]
         private static CompressContext _threadCompressContext;
 
-        public static int Compress(byte * src, int srcLen, byte* dst, int dstLen, CompressionDictionary dictionary)
+        public static int Compress(byte* src, int srcLen, byte* dst, int dstLen, CompressionDictionary dictionary)
         {
             _threadCompressContext ??= new CompressContext();
 
@@ -345,4 +346,5 @@ namespace Sparrow.Utils
             }
         }
     }
+#endif
 }
