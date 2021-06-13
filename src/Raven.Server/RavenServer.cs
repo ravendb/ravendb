@@ -1932,7 +1932,13 @@ namespace Raven.Server
 
                             var supportedVersions = TcpConnectionHeaderMessage.GetSupportedFeaturesFor(header.Operation, header.OperationVersion);
                             if (supportedVersions.DataCompression)
-                                tcp.Stream = new ReadWriteCompressedStream(stream, buffer);
+                            {
+                                if (header.Operation == TcpConnectionHeaderMessage.OperationTypes.Replication ||
+                                    header.Operation == TcpConnectionHeaderMessage.OperationTypes.Subscription && header.CompressionSupport)
+                                {
+                                    tcp.Stream = new ReadWriteCompressedStream(stream, buffer);
+                                }
+                            }
 
                             await DispatchTcpConnection(header, tcp, buffer, cert);
 
@@ -2040,7 +2046,7 @@ namespace Raven.Server
                         }
                         
                         header = JsonDeserializationClient.TcpConnectionHeaderMessage(headerJson);
-
+                        
                         if (Logger.IsInfoEnabled)
                         {
                             Logger.Info($"New {header.Operation} TCP connection to {header.DatabaseName ?? "the cluster node"} from {tcpClient.Client.RemoteEndPoint}");
