@@ -28,9 +28,9 @@ namespace Sparrow.Utils
         public static ZstdStream Compress(Stream stream) => new ZstdStream(stream, compression: true);
         public static ZstdStream Decompress(Stream stream) => new ZstdStream(stream, compression: false);
 
-        public override bool CanRead => true;
+        public override bool CanRead => _compression == false;
         public override bool CanSeek => false;
-        public override bool CanWrite => true;
+        public override bool CanWrite => _compression;
         public override long Length => throw new NotSupportedException();
         public override long Position { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
 
@@ -46,27 +46,40 @@ namespace Sparrow.Utils
 
         private unsafe int DecompressStep(ReadOnlySpan<byte> buffer)
         {
-            fixed (byte* pBuffer = buffer, pOutput = _decompressionInput.Span)
+            if (_readSemaphore.Wait(1500) == false)
+                throw new TimeoutException("Couldn't acquire read lock for too long!");
+            try
             {
-                var output = new ZstdLib.ZSTD_outBuffer { Source = pBuffer, Position = UIntPtr.Zero, Size = (UIntPtr)buffer.Length };
-                var input = new ZstdLib.ZSTD_inBuffer { Source = pOutput, Position = UIntPtr.Zero, Size = (UIntPtr)_decompressionInput.Length };
-                var v = ZstdLib.ZSTD_decompressStream(_compressContext.Streaming, &output, &input);
-                ZstdLib.AssertZstdSuccess(v);
-                _decompressionInput = _decompressionInput.Slice((int)input.Position);
-                return (int)output.Position;
+                fixed (byte* pBuffer = buffer, pOutput = _decompressionInput.Span)
+                {
+                    var output = new ZstdLib.ZSTD_outBuffer { Source = pBuffer, Position = UIntPtr.Zero, Size = (UIntPtr)buffer.Length };
+                    var input = new ZstdLib.ZSTD_inBuffer { Source = pOutput, Position = UIntPtr.Zero, Size = (UIntPtr)_decompressionInput.Length };
+                    var v = ZstdLib.ZSTD_decompressStream(_compressContext.Streaming, &output, &input);
+                    ZstdLib.AssertZstdSuccess(v);
+                    _decompressionInput = _decompressionInput.Slice((int)input.Position);
+                    return (int)output.Position;
+                }
             }
+            finally { _readSemaphore.Release(); }
         }
 
         private unsafe (int OutputPosition, int InputPosition, bool Done) CompressStep(ReadOnlySpan<byte> buffer, ZstdLib.ZSTD_EndDirective directive)
         {
-            fixed (byte* pBuffer = buffer, pTempBuffer = _tempBuffer)
+            if (_writeSemaphore.Wait(1500) == false)
+                throw new TimeoutException("Couldn't acquire write lock for too long!");
+
+            try
             {
-                var input = new ZstdLib.ZSTD_inBuffer { Source = pBuffer, Position = UIntPtr.Zero, Size = (UIntPtr)buffer.Length };
-                var output = new ZstdLib.ZSTD_outBuffer { Source = pTempBuffer, Position = UIntPtr.Zero, Size = (UIntPtr)_tempBuffer.Length };
-                var v = ZstdLib.ZSTD_compressStream2(_compressContext.Compression, &output, &input, directive);
-                ZstdLib.AssertZstdSuccess(v);
-                return ((int)output.Position, (int)input.Position, v == UIntPtr.Zero);
+                fixed (byte* pBuffer = buffer, pTempBuffer = _tempBuffer)
+                {
+                    var input = new ZstdLib.ZSTD_inBuffer { Source = pBuffer, Position = UIntPtr.Zero, Size = (UIntPtr)buffer.Length };
+                    var output = new ZstdLib.ZSTD_outBuffer { Source = pTempBuffer, Position = UIntPtr.Zero, Size = (UIntPtr)_tempBuffer.Length };
+                    var v = ZstdLib.ZSTD_compressStream2(_compressContext.Compression, &output, &input, directive);
+                    ZstdLib.AssertZstdSuccess(v);
+                    return ((int)output.Position, (int)input.Position, v == UIntPtr.Zero);
+                }
             }
+            finally { _writeSemaphore.Release(); }
         }
 
         private unsafe void ShiftBufferData()
@@ -93,38 +106,26 @@ namespace Sparrow.Utils
 
         public override int Read(Span<byte> buffer)
         {
-            if (_readSemaphore.Wait(10_000) == false)
-                throw new InvalidOperationException("Couldn't acquire write lock for 10 seconds!");
+            if (_disposeOnce.Disposed)
+                throw new ObjectDisposedException("Object was already disposed!");
 
-            try
+            while (true)
             {
-                if (_disposeOnce.Disposed)
-                    throw new ObjectDisposedException("Object was already disposed!");
-                while (true)
-                {
-                    int read = DecompressStep(buffer);
-                    if (read != 0)
-                        return read;
+                int read = DecompressStep(buffer);
+                if (read != 0)
+                    return read;
 
-                    ShiftBufferData();
+                ShiftBufferData();
 
-                    read = _inner.Read(_tempBuffer, _decompressionInput.Length, _tempBuffer.Length - _decompressionInput.Length);
-                    if (read == 0)
-                        return 0; // nothing left to read
+                read = _inner.Read(_tempBuffer, _decompressionInput.Length, _tempBuffer.Length - _decompressionInput.Length);
+                if (read == 0)
+                    return 0; // nothing left to read
 
-                    _decompressionInput = new Memory<byte>(_tempBuffer, 0, _decompressionInput.Length + read);
-                    read = DecompressStep(buffer);
-                    if (read != 0)
-                        return read;
-                }
+                _decompressionInput = new Memory<byte>(_tempBuffer, 0, _decompressionInput.Length + read);
+                read = DecompressStep(buffer);
+                if (read != 0)
+                    return read;
             }
-            catch (ObjectDisposedException)
-            {
-                // object was already disposed, so nothing to do...
-            }
-            finally { _readSemaphore.Release(); }
-
-            return 0;
         }
 
         public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
@@ -134,67 +135,39 @@ namespace Sparrow.Utils
 
         public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
         {
-            await _readSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+            if (_disposeOnce.Disposed)
+                throw new ObjectDisposedException("Object was already disposed!");
 
-            try
+            while (true)
             {
-                if (_disposeOnce.Disposed)
-                    throw new ObjectDisposedException("Object was already disposed!");
+                int read = DecompressStep(buffer.Span);
+                if (read != 0)
+                    return read;
 
-                while (true)
-                {
-                    int read = DecompressStep(buffer.Span);
-                    if (read != 0)
-                        return read;
+                ShiftBufferData();
 
-                    ShiftBufferData();
+                read = await _inner.ReadAsync(_tempBuffer, _decompressionInput.Length, _tempBuffer.Length - _decompressionInput.Length, cancellationToken)
+                    .ConfigureAwait(false);
+                if (read == 0)
+                    return 0; // nothing left to read
 
-                    read = await _inner.ReadAsync(_tempBuffer, _decompressionInput.Length, _tempBuffer.Length - _decompressionInput.Length, cancellationToken)
-                        .ConfigureAwait(false);
-                    if (read == 0)
-                        return 0; // nothing left to read
-
-                    _decompressionInput = new Memory<byte>(_tempBuffer, 0, _decompressionInput.Length + read);
-                    read = DecompressStep(buffer.Span);
-                    if (read != 0)
-                        return read;
-                }
+                _decompressionInput = new Memory<byte>(_tempBuffer, 0, _decompressionInput.Length + read);
+                read = DecompressStep(buffer.Span);
+                if (read != 0)
+                    return read;
             }
-            catch (ObjectDisposedException)
-            {
-                // object was already disposed, so nothing to do...
-            }
-            finally
-            {
-                _readSemaphore.Release();
-            }
-            return 0;
         }
 
         public override void Write(ReadOnlySpan<byte> buffer)
         {
-            if (_writeSemaphore.Wait(10_000) == false)
-                throw new InvalidOperationException("Couldn't acquire write lock for 10 seconds!");
+            if (_disposeOnce.Disposed)
+                throw new ObjectDisposedException("Object was already disposed!");
 
-            try
+            while (buffer.Length > 0)
             {
-                if (_disposeOnce.Disposed)
-                    throw new ObjectDisposedException("Object was already disposed!");
-
-                while (buffer.Length > 0)
-                {
-                    var (outputBytes, inputBytes, _) = CompressStep(buffer, ZstdLib.ZSTD_EndDirective.ZSTD_e_continue);
-                    buffer = buffer.Slice(inputBytes);
-                    _inner.Write(_tempBuffer, 0, outputBytes);
-                }
-            }
-            catch (ObjectDisposedException)
-            {
-                // object was already disposed, so nothing to do...
-            }
-            finally
-            {
-                _writeSemaphore.Release();
+                var (outputBytes, inputBytes, _) = CompressStep(buffer, ZstdLib.ZSTD_EndDirective.ZSTD_e_continue);
+                buffer = buffer.Slice(inputBytes);
+                _inner.Write(_tempBuffer, 0, outputBytes);
             }
         }
 
@@ -210,131 +183,66 @@ namespace Sparrow.Utils
 
         public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
         {
-            await _writeSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+            if (_disposeOnce.Disposed)
+                throw new ObjectDisposedException("Object was already disposed!");
 
-            try
+            while (buffer.Length > 0)
             {
-                if (_disposeOnce.Disposed)
-                    throw new ObjectDisposedException("Object was already disposed!");
-
-                while (buffer.Length > 0)
-                {
-                    var (outputBytes, inputBytes, _) = CompressStep(buffer.Span, ZstdLib.ZSTD_EndDirective.ZSTD_e_continue);
-                    buffer = buffer.Slice(inputBytes);
-                    await _inner.WriteAsync(_tempBuffer, 0, outputBytes, cancellationToken).ConfigureAwait(false);
-                }
-            }
-            catch (ObjectDisposedException)
-            {
-                // object was already disposed, so nothing to do...
-            }
-            finally
-            {
-                _writeSemaphore.Release();
+                var (outputBytes, inputBytes, _) = CompressStep(buffer.Span, ZstdLib.ZSTD_EndDirective.ZSTD_e_continue);
+                buffer = buffer.Slice(inputBytes);
+                await _inner.WriteAsync(_tempBuffer, 0, outputBytes, cancellationToken).ConfigureAwait(false);
             }
         }
 
         public override void Flush()
         {
-            if (_writeSemaphore.Wait(10_000) == false)
-                throw new InvalidOperationException("Couldn't acquire write lock for 10 seconds!");
+            if (_disposeOnce.Disposed)
+                throw new ObjectDisposedException("Object was already disposed!");
 
-            try
+            while (true)
             {
-                if (_disposeOnce.Disposed)
-                    throw new ObjectDisposedException("Object was already disposed!");
+                var (outputBytes, _, _) = CompressStep(ReadOnlySpan<byte>.Empty, ZstdLib.ZSTD_EndDirective.ZSTD_e_flush);
+                if (outputBytes == 0)
+                    break;
+                _inner.Write(_tempBuffer, 0, outputBytes);
+            }
 
-                while (true)
-                {
-                    var (outputBytes, _, _) = CompressStep(ReadOnlySpan<byte>.Empty, ZstdLib.ZSTD_EndDirective.ZSTD_e_flush);
-                    if (outputBytes == 0)
-                        break;
-                    _inner.Write(_tempBuffer, 0, outputBytes);
-                }
-
-                _inner.Flush();
-            }
-            catch (ObjectDisposedException)
-            {
-                // object was already disposed, so nothing to do...
-            }
-            finally
-            {
-                _writeSemaphore.Release();
-            }
+            _inner.Flush();
         }
 
         public override async Task FlushAsync(CancellationToken cancellationToken)
         {
-            await _writeSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+            if (_disposeOnce.Disposed)
+                throw new ObjectDisposedException("Object was already disposed!");
 
-            try
+            while (true)
             {
-                if (_disposeOnce.Disposed)
-                    throw new ObjectDisposedException("Object was already disposed!");
+                var (outputBytes, _, _) = CompressStep(ReadOnlySpan<byte>.Empty, ZstdLib.ZSTD_EndDirective.ZSTD_e_flush);
+                if (outputBytes == 0)
+                    break;
 
-                while (true)
-                {
-                    var (outputBytes, _, _) = CompressStep(ReadOnlySpan<byte>.Empty, ZstdLib.ZSTD_EndDirective.ZSTD_e_flush);
-                    if (outputBytes == 0)
-                        break;
+                await _inner.WriteAsync(_tempBuffer, 0, outputBytes, cancellationToken).ConfigureAwait(false);
+            }
 
-                    await _inner.WriteAsync(_tempBuffer, 0, outputBytes, cancellationToken).ConfigureAwait(false);
-                }
-
-                await _inner.FlushAsync(cancellationToken).ConfigureAwait(false);
-            }
-            catch (ObjectDisposedException)
-            {
-                // object was already disposed, so nothing to do...
-            }
-            finally
-            {
-                _writeSemaphore.Release();
-            }
+            await _inner.FlushAsync(cancellationToken).ConfigureAwait(false);
         }
 
         private async Task DisposeInternal()
         {
-            try
+            if (_compressContext != null)
             {
-                if (_compression == false)
+                while (_compression && _inner != null)
                 {
-                    await _readSemaphore.WaitAsync().ConfigureAwait(false);
-                }
-                else
-                {
-                    await _writeSemaphore.WaitAsync().ConfigureAwait(false);
+                    var (outputBytes, _, done) = CompressStep(ReadOnlySpan<byte>.Empty, ZstdLib.ZSTD_EndDirective.ZSTD_e_end);
 
-                    if (_compressContext != null)
-                    {
-                        while (_compression && _inner != null)
-                        {
-                            var (outputBytes, _, done) = CompressStep(ReadOnlySpan<byte>.Empty, ZstdLib.ZSTD_EndDirective.ZSTD_e_end);
+                    if (done)
+                        break;
 
-                            if (done)
-                                break;
-
-                            await _inner.WriteAsync(_tempBuffer, 0, outputBytes).ConfigureAwait(false);
-                        }
-                    }
-                }
-                ReleaseResources();
-            }
-            finally
-            {
-                try
-                {
-                    if (_compression)
-                        _writeSemaphore.Release();
-                    else
-                        _readSemaphore.Release();
-                }
-                catch (ObjectDisposedException)
-                {
-                    // if this happens, this means that the current instance of semaphore has already been disposed, so don't care...
+                    await _inner.WriteAsync(_tempBuffer, 0, outputBytes).ConfigureAwait(false);
                 }
             }
+                
+            ReleaseResources();
         }
 
         public override async ValueTask DisposeAsync()
