@@ -32,69 +32,75 @@ namespace Raven.Client.Documents.Session
 
         public Task<TimeSeriesEntry[]> GetAsync(DateTime? from = null, DateTime? to = null, int start = 0, int pageSize = int.MaxValue, CancellationToken token = default)
         {
-            return GetTimeSeriesAndIncludes<TimeSeriesEntry>(from, to, includes : null, start, pageSize, token);
+            return GetAsync(from, to, includes: null, start, pageSize, token);
         }
 
-        public Task<TimeSeriesEntry[]> GetAsync(DateTime? from, DateTime? to, Action<ITimeSeriesIncludeBuilder> includes, int start = 0, int pageSize = int.MaxValue, CancellationToken token = default)
+        public async Task<TimeSeriesEntry[]> GetAsync(DateTime? from, DateTime? to, Action<ITimeSeriesIncludeBuilder> includes, int start = 0, int pageSize = int.MaxValue, CancellationToken token = default) 
         {
-            return GetTimeSeriesAndIncludes<TimeSeriesEntry>(from, to, includes, start, pageSize, token);
+            if (NotInCache(from, to))
+            {
+                return await GetTimeSeriesAndIncludes<TimeSeriesEntry>(from, to, includes, start, pageSize, token)
+                    .ConfigureAwait(false);
+            }
+
+            var resultToUser =
+                await ServeFromCache(from ?? DateTime.MinValue, to ?? DateTime.MaxValue, start, pageSize, includes, token)
+                    .ConfigureAwait(false);
+
+            return resultToUser?.Take(pageSize).ToArray();
         }
 
-        public Task<TTValues[]> GetAsyncInternal<TTValues>(DateTime? from = null, DateTime? to = null, int start = 0, int pageSize = int.MaxValue, CancellationToken token = default) where TTValues : TimeSeriesEntry
+        internal async Task<TimeSeriesEntry<TEntry>[]> GetTypedFromCache<TEntry>(DateTime? from, DateTime? to, Action<ITimeSeriesIncludeBuilder> includes, int start,
+            int pageSize, CancellationToken token = default) where TEntry : new()
         {
-            return GetTimeSeriesAndIncludes<TTValues>(from, to, includes: null, start, pageSize, token);
+            // RavenDB-16060 
+            // Typed TimeSeries results need special handling when served from cache
+            // since we cache the results as non-typed 
+
+            var resultToUser =
+                await ServeFromCache(from ?? DateTime.MinValue, to ?? DateTime.MaxValue, start, pageSize, includes, token)
+                    .ConfigureAwait(false);
+
+            var asList = resultToUser.ToList();
+            if (asList.Count == 0)
+                return Array.Empty<TimeSeriesEntry<TEntry>>();
+
+            var result = new TimeSeriesEntry<TEntry>[asList.Count];
+
+            for (var index = 0; index < asList.Count; index++)
+            {
+                var timeSeriesEntry = new TimeSeriesEntry<TEntry>();
+
+                var item = asList[index];
+
+                timeSeriesEntry.IsRollup = item.IsRollup;
+                timeSeriesEntry.Timestamp = item.Timestamp;
+                timeSeriesEntry.Tag = item.Tag;
+                timeSeriesEntry.Value = TimeSeriesValuesHelper.SetMembers<TEntry>(item.Values, item.IsRollup);
+                timeSeriesEntry.Values = item.Values;
+
+                result[index] = timeSeriesEntry;
+            }
+
+            return result;
         }
 
-        private async Task<TTValues[]> GetTimeSeriesAndIncludes<TTValues>(DateTime? from, DateTime? to, Action<ITimeSeriesIncludeBuilder> includes, int start, int pageSize, CancellationToken token) where TTValues : TimeSeriesEntry
+        internal bool NotInCache(DateTime? from, DateTime? to)
         {
-            TimeSeriesRangeResult<TTValues> rangeResult;
+            return Session.TimeSeriesByDocId.TryGetValue(DocId, out var cache) == false ||
+                   cache.TryGetValue(Name, out var ranges) == false ||
+                   ranges.Count == 0 ||
+                   ranges[0].From > to || 
+                   ranges[ranges.Count - 1].To < from;
+        }
+
+        internal async Task<TTValues[]> GetTimeSeriesAndIncludes<TTValues>(DateTime? from, DateTime? to, Action<ITimeSeriesIncludeBuilder> includes, int start, int pageSize, CancellationToken token = default) where TTValues : TimeSeriesEntry
+        {
             from = from?.EnsureUtc();
             to = to?.EnsureUtc();
 
             if (pageSize == 0)
                 return Array.Empty<TTValues>();
-
-            if (Session.TimeSeriesByDocId.TryGetValue(DocId, out var cache) &&
-                cache.TryGetValue(Name, out var ranges) &&
-                ranges.Count > 0)
-            {
-                if (ranges[0].From > to || ranges[ranges.Count -1].To < from)
-                {
-                    // the entire range [from, to] is out of cache bounds
-
-                    // e.g. if cache is : [[2,3], [4,6], [8,9]]
-                    // and requested range is : [12, 15]
-                    // then ranges[ranges.Count - 1].To < from
-                    // so we need to get [12,15] from server and place it
-                    // at the end of the cache list
-
-                    Session.IncrementRequestCount();
-
-                    rangeResult = await Session.Operations.SendAsync(
-                            new GetTimeSeriesOperation<TTValues>(DocId, Name, from, to, start, pageSize, includes), Session._sessionInfo, token: token)
-                        .ConfigureAwait(false);
-
-                    if (rangeResult == null)
-                        return null;
-
-                    if (Session.NoTracking == false)
-                    {
-                        HandleIncludes(rangeResult);
-
-                        var index = ranges[0].From > to ? 0 : ranges.Count;
-                        ranges.Insert(index, rangeResult);
-                    }
-
-                    return rangeResult.Entries;
-                }
-
-                var resultToUser =
-                    await ServeFromCacheOrGetMissingPartsFromServerAndMerge(cache, from ?? DateTime.MinValue, to ?? DateTime.MaxValue, ranges, start, pageSize, includes, token)
-                        .ConfigureAwait(false);
-
-                return resultToUser?.Take(pageSize).Cast<TTValues>().ToArray();
-            }
-
 
             if (Session.DocumentsById.TryGetValue(DocId, out var document) &&
                 document.Metadata.TryGet(Constants.Documents.Metadata.TimeSeries, out BlittableJsonReaderArray metadataTimeSeries) &&
@@ -106,7 +112,7 @@ namespace Raven.Client.Documents.Session
 
             Session.IncrementRequestCount();
 
-            rangeResult = await Session.Operations.SendAsync(
+            var rangeResult = await Session.Operations.SendAsync(
                     new GetTimeSeriesOperation<TTValues>(DocId, Name, from, to, start, pageSize, includes), Session._sessionInfo, token: token)
                 .ConfigureAwait(false);
 
@@ -117,15 +123,25 @@ namespace Raven.Client.Documents.Session
             {
                 HandleIncludes(rangeResult);
 
-                if (Session.TimeSeriesByDocId.TryGetValue(DocId, out cache) == false)
+                if (Session.TimeSeriesByDocId.TryGetValue(DocId, out var cache) == false)
                 {
                     Session.TimeSeriesByDocId[DocId] = cache = new Dictionary<string, List<TimeSeriesRangeResult>>(StringComparer.OrdinalIgnoreCase);
                 }
 
-                cache[Name] = new List<TimeSeriesRangeResult>
+                if (cache.TryGetValue(Name, out var ranges) && ranges.Count > 0)
                 {
-                    rangeResult
-                };
+                    // update
+                    var index = ranges[0].From > to ? 0 : ranges.Count;
+                    ranges.Insert(index, rangeResult);
+                }
+
+                else
+                {
+                    cache[Name] = new List<TimeSeriesRangeResult>
+                    {
+                        rangeResult
+                    };
+                }
             }
 
             return rangeResult.Entries;
@@ -143,7 +159,6 @@ namespace Raven.Client.Documents.Session
 
             rangeResult.Includes = null;
         }
-
 
         private static IEnumerable<TimeSeriesEntry> SkipAndTrimRangeIfNeeded(
             DateTime from,
@@ -177,16 +192,17 @@ namespace Raven.Client.Documents.Session
         }
 
         private async Task<IEnumerable<TimeSeriesEntry>>
-            ServeFromCacheOrGetMissingPartsFromServerAndMerge(
-                Dictionary<string, List<TimeSeriesRangeResult>> cache, 
+            ServeFromCache(
                 DateTime from,
                 DateTime to,
-                List<TimeSeriesRangeResult> ranges,
                 int start,
                 int pageSize,
                 Action<ITimeSeriesIncludeBuilder> includes,
                 CancellationToken token)
         {
+            var cache = Session.TimeSeriesByDocId[DocId];
+            var ranges = cache[Name];
+
             // try to find a range in cache that contains [from, to]
             // if found, chop just the relevant part from it and return to the user.
 
@@ -279,7 +295,7 @@ namespace Raven.Client.Documents.Session
                 from = details.Values[Name].Min(ts => ts.From);
                 to = details.Values[Name].Max(ts => ts.To);
                 InMemoryDocumentSessionOperations.AddToCache(Name, from, to, fromRangeIndex, toRangeIndex, ranges, cache, mergedValues);
-        }
+            }
 
             return resultToUser;
         }
@@ -294,7 +310,7 @@ namespace Raven.Client.Documents.Session
             }
         }
 
-        private static TimeSeriesEntry[] MergeRangesWithResults(DateTime @from, DateTime to, List<TimeSeriesRangeResult> ranges,
+        private static TimeSeriesEntry[] MergeRangesWithResults(DateTime from, DateTime to, List<TimeSeriesRangeResult> ranges,
             int fromRangeIndex,
             int toRangeIndex,
             List<TimeSeriesRangeResult> resultFromServer,
@@ -416,7 +432,13 @@ namespace Raven.Client.Documents.Session
 
         Task<TimeSeriesEntry<TValues>[]> IAsyncSessionDocumentTypedTimeSeries<TValues>.GetAsync(DateTime? from, DateTime? to, int start, int pageSize, CancellationToken token)
         {
-            return GetAsyncInternal<TimeSeriesEntry<TValues>>(from, to, start, pageSize, token);
+            if (NotInCache(from, to))
+            {
+                // not in cache
+                return GetTimeSeriesAndIncludes<TimeSeriesEntry<TValues>>(from, to, includes: null, start, pageSize, token);
+            }
+
+            return GetTypedFromCache<TValues>(from, to, includes: null, start, pageSize, token);
         }
 
         void ISessionDocumentTypedAppendTimeSeriesBase<TValues>.Append(DateTime timestamp, TValues entry, string tag)
@@ -429,9 +451,16 @@ namespace Raven.Client.Documents.Session
             Append(entry.Timestamp, entry.Value, entry.Tag);
         }
 
-        Task<TimeSeriesRollupEntry<TValues>[]> IAsyncSessionDocumentRollupTypedTimeSeries<TValues>.GetAsync(DateTime? @from, DateTime? to, int start, int pageSize, CancellationToken token)
+        async Task<TimeSeriesRollupEntry<TValues>[]> IAsyncSessionDocumentRollupTypedTimeSeries<TValues>.GetAsync(DateTime? from, DateTime? to, int start, int pageSize, CancellationToken token)
         {
-            return GetAsyncInternal<TimeSeriesRollupEntry<TValues>>(from, to, start, pageSize, token);
+            if (NotInCache(from, to))
+            {
+                // not in cache
+                return await GetTimeSeriesAndIncludes<TimeSeriesRollupEntry<TValues>>(from, to, includes: null, start, pageSize, token).ConfigureAwait(false);
+            }
+
+            var result = await GetTypedFromCache<TValues>(from, to, includes: null, start, pageSize, token).ConfigureAwait(false);
+            return result?.Select(r => r.AsRollupEntry()).ToArray();
         }
 
         internal async Task<TimeSeriesStreamEnumerator<TTValues>> GetTimeSeriesStreamResult<TTValues>(DateTime? from = null, DateTime? to = null, TimeSpan? offset = null, CancellationToken token = default) where TTValues : TimeSeriesEntry
@@ -453,17 +482,17 @@ namespace Raven.Client.Documents.Session
             return await GetTimeSeriesStreamResult<TTValues>(from, to, offset).ConfigureAwait(false);
         }
 
-        Task<IAsyncEnumerator<TimeSeriesEntry>> IAsyncTimeSeriesStreamingBase<TimeSeriesEntry>.StreamAsync(DateTime? @from, DateTime? to, TimeSpan? offset, CancellationToken token)
+        Task<IAsyncEnumerator<TimeSeriesEntry>> IAsyncTimeSeriesStreamingBase<TimeSeriesEntry>.StreamAsync(DateTime? from, DateTime? to, TimeSpan? offset, CancellationToken token)
         {
             return GetAsyncStream<TimeSeriesEntry>(from, to, offset, token);
         }
 
-        Task<IAsyncEnumerator<TimeSeriesRollupEntry<TValues>>> IAsyncTimeSeriesStreamingBase<TimeSeriesRollupEntry<TValues>>.StreamAsync(DateTime? @from, DateTime? to, TimeSpan? offset, CancellationToken token)
+        Task<IAsyncEnumerator<TimeSeriesRollupEntry<TValues>>> IAsyncTimeSeriesStreamingBase<TimeSeriesRollupEntry<TValues>>.StreamAsync(DateTime? from, DateTime? to, TimeSpan? offset, CancellationToken token)
         {
             return GetAsyncStream<TimeSeriesRollupEntry<TValues>>(from, to, offset, token);
         }
 
-        Task<IAsyncEnumerator<TimeSeriesEntry<TValues>>> IAsyncTimeSeriesStreamingBase<TimeSeriesEntry<TValues>>.StreamAsync(DateTime? @from, DateTime? to, TimeSpan? offset, CancellationToken token)
+        Task<IAsyncEnumerator<TimeSeriesEntry<TValues>>> IAsyncTimeSeriesStreamingBase<TimeSeriesEntry<TValues>>.StreamAsync(DateTime? from, DateTime? to, TimeSpan? offset, CancellationToken token)
         {
             return GetAsyncStream<TimeSeriesEntry<TValues>>(from, to, offset, token);
         }
