@@ -84,7 +84,7 @@ class azureSettings extends backupSettings {
     toDto(): Raven.Client.Documents.Operations.Backups.AzureSettings {
         const dto = super.toDto() as Raven.Client.Documents.Operations.Backups.AzureSettings;
         dto.StorageContainer = this.storageContainer();
-        dto.RemoteFolderName = this.remoteFolderName();
+        dto.RemoteFolderName = this.remoteFolderName() || null;
         dto.AccountName = this.accountName();
         dto.AccountKey = this.accountKey();
         dto.SasToken = this.sasToken();

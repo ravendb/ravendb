@@ -86,7 +86,7 @@ class googleCloudSettings extends backupSettings {
     toDto(): Raven.Client.Documents.Operations.Backups.GoogleCloudSettings {
         const dto = super.toDto() as Raven.Client.Documents.Operations.Backups.GoogleCloudSettings;
         dto.BucketName = this.bucket();
-        dto.RemoteFolderName = this.remoteFolderName();
+        dto.RemoteFolderName = this.remoteFolderName() || null;
         dto.GoogleCredentialsJson = this.googleCredentialsJson();
 
         return genUtils.trimProperties(dto, ["RemoteFolderName"]);
