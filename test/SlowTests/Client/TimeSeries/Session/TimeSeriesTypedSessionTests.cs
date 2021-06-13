@@ -26,7 +26,7 @@ namespace SlowTests.Client.TimeSeries.Session
         {
         }
 
-        private struct StockPrice
+        internal struct StockPrice
         {
             [TimeSeriesValue(0)] public double Open;
             [TimeSeriesValue(1)] public double Close;

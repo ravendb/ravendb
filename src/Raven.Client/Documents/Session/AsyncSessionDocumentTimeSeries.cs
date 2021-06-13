@@ -55,7 +55,7 @@ namespace Raven.Client.Documents.Session
         {
             // RavenDB-16060 
             // Typed TimeSeries results need special handling when served from cache
-            // since we cache the results as non-typed 
+            // since we cache the results untyped 
 
             var resultToUser =
                 await ServeFromCache(from ?? DateTime.MinValue, to ?? DateTime.MaxValue, start, pageSize, includes, token)
@@ -434,7 +434,6 @@ namespace Raven.Client.Documents.Session
         {
             if (NotInCache(from, to))
             {
-                // not in cache
                 return GetTimeSeriesAndIncludes<TimeSeriesEntry<TValues>>(from, to, includes: null, start, pageSize, token);
             }
 
@@ -455,11 +454,12 @@ namespace Raven.Client.Documents.Session
         {
             if (NotInCache(from, to))
             {
-                // not in cache
-                return await GetTimeSeriesAndIncludes<TimeSeriesRollupEntry<TValues>>(from, to, includes: null, start, pageSize, token).ConfigureAwait(false);
+                return await GetTimeSeriesAndIncludes<TimeSeriesRollupEntry<TValues>>(from, to, includes: null, start, pageSize, token)
+                    .ConfigureAwait(false);
             }
 
-            var result = await GetTypedFromCache<TValues>(from, to, includes: null, start, pageSize, token).ConfigureAwait(false);
+            var result = await GetTypedFromCache<TValues>(from, to, includes: null, start, pageSize, token)
+                .ConfigureAwait(false);
             return result?.Select(r => r.AsRollupEntry()).ToArray();
         }
 
