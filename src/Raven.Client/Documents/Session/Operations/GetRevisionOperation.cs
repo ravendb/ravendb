@@ -48,8 +48,8 @@ namespace Raven.Client.Documents.Session.Operations
             if (_command.ChangeVectors is not null)
                 return _session.CheckIfChangeVectorAlreadyIncluded(_command.ChangeVectors) ? null : _command ;
             
-            if (_command._changeVector is not null)
-                return _session.CheckIfChangeVectorAlreadyIncluded(new[] {_command._changeVector}) ? null : _command;
+            if (_command.ChangeVector is not null)
+                return _session.CheckIfChangeVectorAlreadyIncluded(new[] {_command.ChangeVector}) ? null : _command;
             
             return _command;
         }
@@ -107,8 +107,8 @@ namespace Raven.Client.Documents.Session.Operations
         {
             if (_result == null)
             {
-                if(_session.IncludedRevisionByChangeVectors is not null && 
-                   _session.IncludedRevisionByChangeVectors.TryGetValue(_command._changeVector, out var revision))
+                if(_session.IncludeRevisionsByChangeVector is not null && 
+                   _session.IncludeRevisionsByChangeVector.TryGetValue(_command.ChangeVector, out var revision))
                 {
                     return GetRevision<T>(revision.Document);
                 }

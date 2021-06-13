@@ -169,7 +169,7 @@ namespace Raven.Server.Documents
                 isStartsWithOrIdQuery = true;
 
                 return new CollectionQueryEnumerable(Database, Database.DocumentsStorage, new FieldsToFetch(_operationQuery, null),
-                    collectionName, _operationQuery, null, context, null, null, null,new Reference<int>())
+                    collectionName, _operationQuery, null, context, null, null, null, new Reference<int>())
                 {
                     Fields = fields,
                     StartAfterId = startAfterId,

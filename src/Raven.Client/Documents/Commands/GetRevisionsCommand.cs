@@ -11,7 +11,7 @@ namespace Raven.Client.Documents.Commands
 {
     public class GetRevisionsCommand : RavenCommand<BlittableArrayResult>
     {
-        internal readonly string _changeVector;
+        public readonly string ChangeVector;
         public readonly string[] ChangeVectors;
         private readonly string _id;
         private readonly int? _start;
@@ -35,7 +35,7 @@ namespace Raven.Client.Documents.Commands
 
         public GetRevisionsCommand(string changeVector, bool metadataOnly = false)
         {
-            _changeVector = changeVector ?? throw new ArgumentNullException(nameof(changeVector));
+            ChangeVector = changeVector ?? throw new ArgumentNullException(nameof(changeVector));
             _metadataOnly = metadataOnly;
         }
 
@@ -65,8 +65,8 @@ namespace Raven.Client.Documents.Commands
         {
             if (_id != null)
                 pathBuilder.Append("&id=").Append(Uri.EscapeDataString(_id));
-            else if (_changeVector != null)
-                pathBuilder.Append("&changeVector=").Append(Uri.EscapeDataString(_changeVector));
+            else if (ChangeVector != null)
+                pathBuilder.Append("&changeVector=").Append(Uri.EscapeDataString(ChangeVector));
             else if (ChangeVectors != null)
             {
                 foreach (var changeVector in ChangeVectors)

@@ -591,16 +591,17 @@ namespace Raven.Server.Documents.Queries
                     case FieldExpression fe:
                     {
                         if (Query.From.Alias?.Value.Equals(fe.Compound[0].Value) == false)
-                            throw new InvalidOperationException($"Cannot include revisions for related Expression '{fe}', " + 
-                                                                $"Parent alias is different than include alias '{Query.From.Alias?.Value}'" +
-                                                                $" compare to '{fe.Compound[0].Value}';. ");
+                            throw new InvalidOperationException(
+                                $"Cannot include revisions for related Expression '{fe}', " + 
+                                       $"Parent alias is different than include alias '{Query.From.Alias?.Value}'" + 
+                                       $" compare to '{fe.Compound[0].Value}';. ");
                       
                         if(string.IsNullOrEmpty(fe.FieldValueWithoutAlias) == false)
                            revisionIncludes.AddRevision(fe.FieldValueWithoutAlias);
                         else revisionIncludes.AddRevision(fe.FieldValue);
                         break;
                     }
-                    case ValueExpression {Value: ValueTokenType.Parameter} ve:
+                    case ValueExpression ve:
                     {
                         var vt = QueryBuilder.GetValue(Query, this, parameters, ve);
                         var split = vt.Value.ToString()?.Split('.');
@@ -612,10 +613,12 @@ namespace Raven.Server.Documents.Queries
                             break;
                         }
 
-                        if (split[0] != vt.Value)
-                            throw new InvalidOperationException($"Cannot include revisions for related Expression '{vt}', " +
-                                                                $"Parent alias is different than include alias '{Query.From.Alias.Value}'" +
-                                                                $" compare to '{split[0]}';. ");
+                        if (split[0] != vt.Value.ToString())
+                            throw new InvalidOperationException(
+                                $"Cannot include revisions for related Expression '{vt}', " +
+                                       $"Parent alias is different than include alias '{Query.From.Alias.Value}'" +
+                                       $" compare to '{split[0]}';. ");
+                        
                         revisionIncludes.AddRevision(vt.Value.ToString());
                         break;
                     }
@@ -804,7 +807,6 @@ namespace Raven.Server.Documents.Queries
                 throw new InvalidQueryException("Parameters of method `counters` must be of type `string` or `string[]`, " +
                                                 $"but got `{parameterValue.Value}` of type `{parameterValue.Type}`", QueryText, parameters);
 
-            counterIncludes.AddCounter(parameterValue.Value.ToString(), sourcePath);
             counterIncludes.AddCounter(parameterValue.Value.ToString(), sourcePath);
         }
         
