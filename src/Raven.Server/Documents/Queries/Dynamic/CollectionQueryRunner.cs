@@ -168,7 +168,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                         });
                 }
 
-                IncludeCountersCommand   includeCountersCommand   = null;
+                IncludeCountersCommand includeCountersCommand = null;
                 IncludeTimeSeriesCommand includeTimeSeriesCommand = null;
                 
                 if (query.Metadata.RevisionIncludes != null)

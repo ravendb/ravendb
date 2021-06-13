@@ -33,11 +33,8 @@ namespace Raven.Server.Documents.Includes
             foreach (var fieldName in _pathsForRevisionsInDocuments)
             {
                 if (document.Data.TryGet(fieldName, out object singleOrMultipleCv) == false  )
-                {
-                    throw new InvalidOperationException($"Cannot include revisions for related document '{document.Id}', " +
-                                                        $"document {document.Id} doesn't have a field named '{fieldName}'. ");
-                }
-
+                    return;
+                
                 switch (singleOrMultipleCv)
                 {
                     case BlittableJsonReaderArray blittableJsonReaderArray:
