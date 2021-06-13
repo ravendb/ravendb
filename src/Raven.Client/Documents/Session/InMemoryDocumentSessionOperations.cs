@@ -118,7 +118,7 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Translate between an CV and its associated entity
         /// </summary>
-        internal  Dictionary<string, DocumentInfo> IncludedRevisionByChangeVectors;
+        internal  Dictionary<string, DocumentInfo> IncludeRevisionsByChangeVector;
         
         /// <summary>
         /// hold the data required to manage the data for RavenDB's Unit of Work
@@ -1473,7 +1473,7 @@ more responsive application.
             if (includes == null)
                 return;
 
-            IncludedRevisionByChangeVectors ??= new Dictionary<string, DocumentInfo>(StringComparer.OrdinalIgnoreCase);
+            IncludeRevisionsByChangeVector ??= new Dictionary<string, DocumentInfo>(StringComparer.OrdinalIgnoreCase);
             var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
             for (int i = 0; i < includes.Count; i++)
             {
@@ -1489,7 +1489,7 @@ more responsive application.
                     continue;
                 if (newDocumentInfo.Metadata.TryGet(Constants.Documents.Metadata.ChangeVector,out string cv))
                     
-                    IncludedRevisionByChangeVectors[cv] = newDocumentInfo;
+                    IncludeRevisionsByChangeVector[cv] = newDocumentInfo;
             }
         }
         
@@ -2147,10 +2147,10 @@ more responsive application.
         
         public bool CheckIfChangeVectorAlreadyIncluded(IEnumerable<string> changeVectors)
         {
-            if (IncludedRevisionByChangeVectors is null) return false;
+            if (IncludeRevisionsByChangeVector is null) return false;
             foreach (var cv in changeVectors)
             {
-                if (IncludedRevisionByChangeVectors.TryGetValue(cv, out DocumentInfo documentInfo) == false )
+                if (IncludeRevisionsByChangeVector.TryGetValue(cv, out DocumentInfo documentInfo) == false )
                     return false;
                 
                 if ((documentInfo.Entity == null) && (documentInfo.Document == null))
