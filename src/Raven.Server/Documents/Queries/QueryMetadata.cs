@@ -593,11 +593,12 @@ namespace Raven.Server.Documents.Queries
                         if (Query.From.Alias?.Value.Equals(fe.Compound[0].Value) == false)
                             throw new InvalidOperationException(
                                 $"Cannot include revisions for related Expression '{fe}', " + 
-                                       $"Parent alias is different than include alias '{Query.From.Alias?.Value}'" + 
-                                       $" compare to '{fe.Compound[0].Value}';. ");
+                                        $"Parent alias is different than include alias '{Query.From.Alias?.Value}'" + 
+                                        $" compare to '{fe.Compound[0].Value}';. ");
                       
-                        if(string.IsNullOrEmpty(fe.FieldValueWithoutAlias) == false)
-                           revisionIncludes.AddRevision(fe.FieldValueWithoutAlias);
+                        if (string.IsNullOrEmpty(fe.FieldValueWithoutAlias) == false)
+                            revisionIncludes.AddRevision(fe.FieldValueWithoutAlias);
+                        
                         else revisionIncludes.AddRevision(fe.FieldValue);
                         break;
                     }
