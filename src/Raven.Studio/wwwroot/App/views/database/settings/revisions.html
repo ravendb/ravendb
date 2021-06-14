@@ -99,39 +99,42 @@
                             </ul>
                         </div>
                     </div>
-                    <div class="toggle toggle-primary">
+                    <div class="toggle toggle-primary margin-top">
                         <input id="purge" class="styled" type="checkbox" data-bind="checked: purgeOnDelete">
                         <label for="purge">
-                            Purge on delete
+                            Purge on document delete
                         </label>
                     </div>
-                    <div class="toggle toggle-primary">
+                    <div class="toggle toggle-primary margin-top">
                         <input id="limitRevisions" class="styled" type="checkbox" data-bind="checked: limitRevisions">
                         <label for="limitRevisions">
                             Limit # of revisions
                         </label>
                     </div>
                     <div class="toggle-margin" data-bind="collapse: limitRevisions, validationElement: minimumRevisionsToKeep">
-                        <small>Minimum revisions to keep</small>
+                        <small>Number of revisions to keep</small>
                         <input type="number" min="0" class="form-control" placeholder="0" data-bind="numericInput: minimumRevisionsToKeep" />
                     </div>
-                    <div class="toggle toggle-primary">
+                    <div class="toggle toggle-primary margin-top">
                         <input id="limitRevisionsByAge" class="styled" type="checkbox" data-bind="checked: limitRevisionsByAge">
                         <label for="limitRevisionsByAge">
                             Limit # of revisions by age
                         </label>
                     </div>
                     <div id="limitRevisionsParametersByAge" class="toggle-margin collapse" data-bind="collapse: limitRevisionsByAge, validationElement: minimumRevisionAgeToKeep">
-                        <small>Minimum retention time</small>
+                        <small>Retention time</small>
                         <input type="text" class="form-control" data-bind="durationPicker: minimumRevisionAgeToKeep, durationPickerOptions: { showDays: true, showSeconds: true }" />
                     </div>
-                    <div class="bg-info padding padding-sm small flex-horizontal margin-top" data-bind="visible: humaneRetentionDescription">
-                        <div><i class="icon-info"></i></div>
+                    <div class="bg-info padding padding-xs small margin-top" data-bind="visible: deleteDescription">
+                        <div data-bind="html: deleteDescription"></div>
+                    </div>
+                    <div class="bg-info padding padding-xs margin-top small" data-bind="visible: humaneRetentionDescription">
                         <div data-bind="html: humaneRetentionDescription"></div>
                     </div>
+                    <hr>
                     <div class="text-right margin-top">
-                        <button class="btn btn-success" data-bind="click: $root.applyChanges"><i class="icon-check"></i><span>OK</span></button>
                         <button class="btn btn-default" data-bind="click: $root.exitEditMode"><i class="icon-cancel"></i><span>Cancel</span></button>
+                        <button class="btn btn-success" data-bind="click: $root.applyChanges"><i class="icon-check"></i><span>OK</span></button>
                     </div>
                 </div>
             </div>
@@ -151,9 +154,9 @@
         </div>
         <div class="flex-grow">
             <ul class="properties">
-                <li data-bind="visible: purgeOnDelete"><i class="icon-empty-set"></i><span>Purge on delete</span></li>
-                <li data-bind="visible: limitRevisions"><i class="icon-documents"></i><span>Minimum revisions to keep: <span data-bind="text: minimumRevisionsToKeep"></span></span></li>
-                <li data-bind="visible: limitRevisionsByAge"><i class="icon-clock"></i><span>Minimum retention time: <span data-bind="text: $root.formatedDurationObservable(minimumRevisionAgeToKeep)"></span></span></li>
+                <li data-bind="visible: purgeOnDelete"><i class="icon-empty-set"></i><span>Purge on document delete</span></li>
+                <li data-bind="visible: limitRevisions"><i class="icon-documents"></i><span>Number of revisions to keep: <span data-bind="text: minimumRevisionsToKeep"></span></span></li>
+                <li data-bind="visible: limitRevisionsByAge"><i class="icon-clock"></i><span>Retention time: <span data-bind="text: $root.formatedDurationObservable(minimumRevisionAgeToKeep)"></span></span></li>
             </ul>
         </div>
         <div class="actions-container">
