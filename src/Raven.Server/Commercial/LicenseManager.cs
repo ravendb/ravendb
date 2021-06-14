@@ -504,6 +504,16 @@ namespace Raven.Server.Commercial
             return response;
         }
 
+        public async Task<License> GetUpdatedLicense(License currentLicense)
+        {
+            var response = await GetUpdatedLicenseResponseMessage(currentLicense).ConfigureAwait(false);
+            if (response.IsSuccessStatusCode == false)
+                return null;
+
+            var leasedLicense = await ConvertResponseToLeasedLicense(response).ConfigureAwait(false);
+            return leasedLicense.License;
+        }
+
         private static async Task<LeasedLicense> ConvertResponseToLeasedLicense(HttpResponseMessage httpResponseMessage)
         {
             var leasedLicenseAsStream = await httpResponseMessage.Content.ReadAsStreamAsync().ConfigureAwait(false);
