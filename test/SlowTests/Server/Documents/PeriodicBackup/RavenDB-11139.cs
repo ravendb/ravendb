@@ -1676,6 +1676,69 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
+        [Fact, Trait("Category", "Smuggler")]
+        public async Task IncrementalBackupWithCompareExchangeTombstones()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+
+            var config = Backup.CreateBackupConfiguration(backupPath);
+
+            if (Directory.Exists(backupPath))
+                Directory.Delete(backupPath, true);
+
+            using (var store = GetDocumentStore())
+            {
+                var res = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<long>("dummy", 1L, 0));
+                Assert.True(res.Successful);
+
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+
+                res = await store.Operations.SendAsync(new DeleteCompareExchangeValueOperation<long>("dummy", res.Index));
+                Assert.True(res.Successful);
+
+                await Backup.RunBackupAsync(Server, backupTaskId, store, isFullBackup: false);
+
+                res = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<long>("dummy", 2L, res.Index));
+                Assert.True(res.Successful);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User(), "marker");
+                    await session.SaveChangesAsync();
+                }
+
+                await Backup.RunBackupAsync(Server, backupTaskId, store, isFullBackup: false);
+
+                var databaseName = GetDatabaseName() + "restore";
+                var backupDirectory = Directory.GetDirectories(backupPath).First();
+                var files = Directory.GetFiles(backupDirectory)
+                    .Where(BackupUtils.IsBackupFile)
+                    .OrderBackups()
+                    .ToArray();
+
+                var restoreConfig = new RestoreBackupConfiguration()
+                {
+                    BackupLocation = backupDirectory,
+                    DatabaseName = databaseName,
+                    LastFileNameToRestore = files.Last()
+                };
+
+                var restoreOperation = new RestoreBackupOperation(restoreConfig);
+                store.Maintenance.Server.Send(restoreOperation)
+                    .WaitForCompletion(TimeSpan.FromSeconds(30));
+
+                using (var store2 = GetDocumentStore(new Options()
+                {
+                    CreateDatabase = false,
+                    ModifyDatabaseName = s => databaseName
+                }))
+                {
+                    var val = await store2.Operations.SendAsync(new GetCompareExchangeValueOperation<long>("dummy"));
+                    Assert.Equal(2, val.Value);
+                }
+            }
+        }
+
         private static List<string> ConcatStringInList(List<string> list)
         {
             for (var i = 0; i < list.Count; i++)
