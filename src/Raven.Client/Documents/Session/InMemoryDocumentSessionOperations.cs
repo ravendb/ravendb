@@ -1487,9 +1487,10 @@ more responsive application.
                 var newDocumentInfo = DocumentInfo.GetNewDocumentInfo(json);
                 if (newDocumentInfo.Metadata.TryGetConflict(out var conflict) && conflict)
                     continue;
-                if (newDocumentInfo.Metadata.TryGet(Constants.Documents.Metadata.ChangeVector,out string cv))
-                    
-                    IncludeRevisionsByChangeVector[cv] = newDocumentInfo;
+                if (newDocumentInfo.Metadata.TryGet(Constants.Documents.Metadata.ChangeVector, out string cv) == false)
+                    throw new InvalidOperationException($"Missing change vector in revision '{newDocumentInfo.Id}'");
+                
+                IncludeRevisionsByChangeVector[cv] = newDocumentInfo;
             }
         }
         
@@ -2145,7 +2146,7 @@ more responsive application.
             return JsonConverter.FromBlittable(entityType, ref document, id, trackEntity);
         }
         
-        public bool CheckIfChangeVectorAlreadyIncluded(IEnumerable<string> changeVectors)
+        internal bool CheckIfChangeVectorAlreadyIncluded(IEnumerable<string> changeVectors)
         {
             if (IncludeRevisionsByChangeVector is null) return false;
             foreach (var cv in changeVectors)

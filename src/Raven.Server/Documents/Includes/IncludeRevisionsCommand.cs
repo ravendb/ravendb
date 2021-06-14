@@ -32,7 +32,7 @@ namespace Raven.Server.Documents.Includes
 
             foreach (var fieldName in _pathsForRevisionsInDocuments)
             {
-                if (document.Data.TryGet(fieldName, out object singleOrMultipleCv) == false  )
+                if (document.Data.TryGet(fieldName, out object singleOrMultipleCv) == false)
                     return;
                 
                 switch (singleOrMultipleCv)
