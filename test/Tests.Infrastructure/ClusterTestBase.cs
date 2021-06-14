@@ -492,6 +492,57 @@ namespace Tests.Infrastructure
             return false;
         }
 
+        public async Task<T[]> AssertClusterWaitForNotNull<T>(
+            List<RavenServer> nodes,
+            string database,
+            Func<IDocumentStore, Task<T>> act,
+            int timeout = 15000,
+            int interval = 100) where T : class
+        {
+            return await ClusterWaitFor(nodes, database, s => AssertWaitForNotNullAsync(() => act(s), timeout, interval));
+        }
+
+        public async Task<T[]> AssertClusterWaitForValue<T>(
+            List<RavenServer> nodes,
+            string database,
+            Func<IDocumentStore, Task<T>> act,
+            T expectedVal,
+            int timeout = 15000,
+            int interval = 100) where T : class
+        {
+            return await ClusterWaitFor(nodes, database, s => AssertWaitForValueAsync(() => act(s), expectedVal, timeout, interval));
+        }
+
+        public async Task<T[]> ClusterWaitFor<T>(
+            List<RavenServer> nodes, 
+            string database, 
+            Func<IDocumentStore, Task<T>> waitFunc)
+        {
+            var stores = nodes.Select(n => new DocumentStore {Database = database, Urls = new[] {n.WebUrl}}.Initialize()).ToArray();
+
+            using (new DisposableAction(Action))
+            {
+                var tasks = stores.Select(waitFunc).ToArray();
+                await Task.WhenAll(tasks);
+                return tasks.Select(t => t.Result).ToArray();
+            }
+
+            void Action()
+            {
+                foreach (var store in stores)
+                {
+                    try
+                    {
+                        store.Dispose();
+                    }
+                    catch
+                    {
+                        // ignored
+                    }
+                }
+            }
+        }
+
         protected static (string DataDirectory, string Url, string NodeTag) DisposeServerAndWaitForFinishOfDisposal(RavenServer serverToDispose)
         {
             var dataDirectory = serverToDispose.Configuration.Core.DataDirectory.FullPath;
