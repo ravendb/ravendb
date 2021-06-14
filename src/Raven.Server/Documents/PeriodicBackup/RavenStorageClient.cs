@@ -65,24 +65,33 @@ namespace Raven.Server.Documents.PeriodicBackup
                 throw new AggregateException(exceptions);
         }
 
-        public class Blob
+        public class Blob : IDisposable
         {
-            public Blob(Stream data, Dictionary<string, string> metadata)
+            private IDisposable _toDispose;
+
+            public Blob(Stream data, IDictionary<string, string> metadata, IDisposable toDispose = null)
             {
-                Data = data;
+                Data = data ?? throw new ArgumentNullException(nameof(data));
                 Metadata = metadata;
+                _toDispose = toDispose;
             }
 
             public Stream Data { get; }
 
-            public Dictionary<string, string> Metadata { get; }
+            public IDictionary<string, string> Metadata { get; }
+
+            public void Dispose()
+            {
+                _toDispose?.Dispose();
+                _toDispose = null;
+            }
         }
 
         public class ListBlobResult
         {
             public IEnumerable<BlobProperties> List { get; set; }
 
-            public string NextMarker { get; set; }
+            public string ContinuationToken { get; set; }
         }
 
         public class BlobProperties

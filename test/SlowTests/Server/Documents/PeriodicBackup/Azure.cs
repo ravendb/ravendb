@@ -5,6 +5,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Documents.PeriodicBackup;
@@ -65,7 +66,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         }
 
         [AzureFact]
-        public void CanRemoveBlobsWithNonExistingBlobsInBatch()
+        public async Task CanRemoveBlobsWithNonExistingBlobsInBatch()
         {
             using (var holder = new AzureClientHolder(AzureFactAttribute.AzureSettings))
             {
@@ -76,7 +77,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 new Random().NextBytes(tmpArr);
                 holder.Client.PutBlob(k, new MemoryStream(tmpArr), new Dictionary<string, string> { { "Nice", "NotNice" } });
 
-                var blob = holder.Client.GetBlob(k);
+                var blob = await holder.Client.GetBlobAsync(k);
                 Assert.NotNull(blob);
                 blobs.Add(k);
 
@@ -94,7 +95,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         }
 
         [AzureFact]
-        public void put_blob()
+        public async Task put_blob()
         {
             using (var holder = new AzureClientHolder(AzureFactAttribute.AzureSettings))
             {
@@ -105,7 +106,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         {"property1", "value1"},
                         {"property2", "value2"}
                     });
-                var blob = holder.Client.GetBlob(blobKey);
+                var blob = await holder.Client.GetBlobAsync(blobKey);
                 Assert.NotNull(blob);
 
                 using (var reader = new StreamReader(blob.Data))
@@ -120,7 +121,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         }
 
         [AzureFact]
-        public void put_blob_in_folder()
+        public async Task put_blob_in_folder()
         {
             using (var holder = new AzureClientHolder(AzureFactAttribute.AzureSettings))
             {
@@ -129,7 +130,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 holder.Client.PutBlob(blobNames[0], new MemoryStream(Encoding.UTF8.GetBytes("123")),
                         new Dictionary<string, string> { { "property1", "value1" }, { "property2", "value2" } });
 
-                var blob = holder.Client.GetBlob(blobNames[0]);
+                var blob = await holder.Client.GetBlobAsync(blobNames[0]);
                 Assert.NotNull(blob);
 
                 using (var reader = new StreamReader(blob.Data))
@@ -144,18 +145,18 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         }
 
         [AzureFact]
-        public void put_blob_without_sas_token()
+        public Task put_blob_without_sas_token()
         {
-            PutBlobs(5, useSasToken: false);
+            return PutBlobsAsync(5, useSasToken: false);
         }
 
         [AzureSasTokenFact]
-        public void put_blob_with_sas_token()
+        public Task put_blob_with_sas_token()
         {
-            PutBlobs(5, useSasToken: true);
+            return PutBlobsAsync(5, useSasToken: true);
         }
 
-        private static void PutBlobs(int blobsCount, bool useSasToken)
+        private static async Task PutBlobsAsync(int blobsCount, bool useSasToken)
         {
             using (var holder = new AzureClientHolder(useSasToken == false ? AzureFactAttribute.AzureSettings : AzureSasTokenFactAttribute.AzureSettings))
             {
@@ -168,7 +169,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 for (var i = 0; i < blobsCount; i++)
                 {
-                    var blob = holder.Client.GetBlob(blobNames[i]);
+                    var blob = await holder.Client.GetBlobAsync(blobNames[i]);
                     Assert.NotNull(blob);
 
                     using (var reader = new StreamReader(blob.Data))
@@ -206,14 +207,14 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             {
                 const int numberOfObjectsInBatch = 256;
                 var blobsToDelete = new List<string>();
-                string blobsNextMarker = null;
+                string continuationToken = null;
                 var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5));
 
                 try
                 {
                     do
                     {
-                        var blobs = Client.ListBlobs(_remoteFolder, delimiter: null, listFolders: false, marker: blobsNextMarker);
+                        var blobs = Client.ListBlobs(_remoteFolder, delimiter: null, listFolders: false, continuationToken: continuationToken);
 
                         foreach (var blob in blobs.List)
                         {
@@ -226,11 +227,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                             blobsToDelete.Add(blob.Name);
                         }
 
-                        blobsNextMarker = blobs.NextMarker;
+                        continuationToken = blobs.ContinuationToken;
 
                         cts.Token.ThrowIfCancellationRequested();
 
-                    } while (blobsNextMarker != null);
+                    } while (continuationToken != null);
 
                     if (blobsToDelete.Count > 0)
                         Client.DeleteBlobs(blobsToDelete);
