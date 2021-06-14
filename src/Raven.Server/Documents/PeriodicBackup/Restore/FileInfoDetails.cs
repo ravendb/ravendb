@@ -35,6 +35,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
     {
         public string FullPath { get; set; }
 
-        public string LastModifiedAsString { get; set; }
+        public DateTime LastModified { get; set; }
     }
 }
