@@ -27,7 +27,7 @@ namespace RachisTests
         [Fact]
         public async Task RequestExecutor_failover_with_only_one_database_should_properly_fail()
         {
-            var leader = await CreateRaftClusterAndGetLeader(1);
+            var (_, leader) = await CreateRaftCluster(1);
             const int replicationFactor = 1;
             const string databaseName = "RequestExecutor_failover_with_only_one_database_should_properly_fail";
             using (var store = new DocumentStore
@@ -61,7 +61,7 @@ namespace RachisTests
         [Fact]
         public async Task RequestExecutor_failover_to_database_topology_should_work()
         {
-            var leader = await CreateRaftClusterAndGetLeader(3);
+            var (_, leader) = await CreateRaftCluster(3);
             using (var store = GetDocumentStore(new Options
             {
                 Server = leader,

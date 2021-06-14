@@ -80,7 +80,7 @@ namespace RachisTests.DatabaseCluster
         public async Task DontPurgeTombstonesWhenNodeIsDown()
         {
             var clusterSize = 3;
-            var leader = await CreateRaftClusterAndGetLeader(clusterSize, leaderIndex: 0);
+            var (_, leader) = await CreateRaftCluster(clusterSize, leaderIndex: 0);
             using (var store = GetDocumentStore(new Options
             {
                 CreateDatabase = true,
@@ -335,7 +335,7 @@ namespace RachisTests.DatabaseCluster
         {
             var clusterSize = 3;
             var databaseName = GetDatabaseName();
-            var leader = await CreateRaftClusterAndGetLeader(clusterSize, true, 0);
+            var (_, leader) = await CreateRaftCluster(clusterSize, true, 0);
             using (var store = new DocumentStore
             {
                 Urls = new[] { leader.WebUrl },
@@ -383,7 +383,7 @@ namespace RachisTests.DatabaseCluster
         {
             var clusterSize = 3;
             var databaseName = GetDatabaseName();
-            var leader = await CreateRaftClusterAndGetLeader(clusterSize, true, 0);
+            var (_, leader) = await CreateRaftCluster(clusterSize, true, 0);
             using (var store = new DocumentStore()
             {
                 Urls = new[] { leader.WebUrl },
@@ -416,7 +416,7 @@ namespace RachisTests.DatabaseCluster
         {
             var clusterSize = 3;
             var databaseName = GetDatabaseName();
-            var leader = await CreateRaftClusterAndGetLeader(clusterSize, false, 0, customSettings: new Dictionary<string, string>
+            var (_, leader) = await CreateRaftCluster(clusterSize, false, 0, customSettings: new Dictionary<string, string>
             {
                 [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "4"
             });
@@ -464,7 +464,7 @@ namespace RachisTests.DatabaseCluster
             //DebuggerAttachedTimeout.DisableLongTimespan = true;
             var clusterSize = 3;
             var databaseName = GetDatabaseName();
-            var leader = await CreateRaftClusterAndGetLeader(clusterSize, false, 0, customSettings: new Dictionary<string, string>()
+            var (_, leader) = await CreateRaftCluster(clusterSize, false, 0, customSettings: new Dictionary<string, string>()
             {
                 [RavenConfiguration.GetKey(x => x.Cluster.ElectionTimeout)] = "600"
             });
@@ -540,7 +540,7 @@ namespace RachisTests.DatabaseCluster
             var clusterSize = 3;
             var dbGroupSize = 2;
             var databaseName = GetDatabaseName();
-            var leader = await CreateRaftClusterAndGetLeader(clusterSize, false, 0);
+            var (_, leader) = await CreateRaftCluster(clusterSize, false, 0);
 
             using (var store = new DocumentStore
             {
@@ -586,7 +586,7 @@ namespace RachisTests.DatabaseCluster
             var clusterSize = 5;
             var dbGroupSize = 3;
             var databaseName = GetDatabaseName();
-            var leader = await CreateRaftClusterAndGetLeader(clusterSize, false, 0);
+            var (_, leader) = await CreateRaftCluster(clusterSize, false, 0);
 
             using (var store = new DocumentStore
             {
@@ -631,7 +631,7 @@ namespace RachisTests.DatabaseCluster
         public async Task RemoveNodeFromClusterWhileDeletion()
         {
             var databaseName = GetDatabaseName();
-            var leader = await CreateRaftClusterAndGetLeader(3, leaderIndex: 0);
+            var (_, leader) = await CreateRaftCluster(3, leaderIndex: 0);
 
             using (var leaderStore = new DocumentStore
             {
@@ -683,7 +683,7 @@ namespace RachisTests.DatabaseCluster
                 [RavenConfiguration.GetKey(x => x.Cluster.StabilizationTime)] = "1",
                 [RavenConfiguration.GetKey(x => x.Cluster.AddReplicaTimeout)] = "1"
             };
-            var leader = await CreateRaftClusterAndGetLeader(3, shouldRunInMemory: false, customSettings: settings);
+            var (_, leader) = await CreateRaftCluster(3, shouldRunInMemory: false, customSettings: settings);
 
             using (var leaderStore = new DocumentStore
             {
@@ -814,7 +814,7 @@ namespace RachisTests.DatabaseCluster
         public async Task Promote_immedtialty_should_work()
         {
             var databaseName = GetDatabaseName();
-            var leader = await CreateRaftClusterAndGetLeader(3);
+            var (_, leader) = await CreateRaftCluster(3);
 
             using (var leaderStore = new DocumentStore
             {
@@ -850,7 +850,7 @@ namespace RachisTests.DatabaseCluster
         public async Task ChangeUrlOfSingleNodeCluster()
         {
             var databaseName = GetDatabaseName();
-            var leader = await CreateRaftClusterAndGetLeader(1, shouldRunInMemory: false);
+            var (_, leader) = await CreateRaftCluster(1, shouldRunInMemory: false);
 
             using (var leaderStore = new DocumentStore
             {
@@ -901,7 +901,7 @@ namespace RachisTests.DatabaseCluster
             var newUrl = "http://127.0.0.1:0";
             string nodeTag;
 
-            var leader = await CreateRaftClusterAndGetLeader(groupSize, shouldRunInMemory: false, leaderIndex: 0, customSettings: new Dictionary<string, string>
+            var (_, leader) = await CreateRaftCluster(groupSize, shouldRunInMemory: false, leaderIndex: 0, customSettings: new Dictionary<string, string>
             {
                 [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "4"
             });
@@ -964,7 +964,7 @@ namespace RachisTests.DatabaseCluster
         public async Task RavenDB_12744()
         {
             var databaseName = GetDatabaseName();
-            var leader = await CreateRaftClusterAndGetLeader(3);
+            var (_, leader) = await CreateRaftCluster(3);
             var result = await CreateDatabaseInCluster(databaseName, 1, leader.WebUrl);
 
             using (var store = new DocumentStore

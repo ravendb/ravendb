@@ -58,7 +58,7 @@ namespace SlowTests.Issues
         [Fact]
         public async Task NewDisableAndEnableEndPointTest2()
         {
-            var leader = await CreateRaftClusterAndGetLeader(3);
+            var (_, leader) = await CreateRaftCluster(3);
             var database = GetDatabaseName();
             await CreateDatabaseInClusterInner(new DatabaseRecord(database), 3, leader.WebUrl, null);
             var indexName = "SimpleIndex";
@@ -97,7 +97,7 @@ namespace SlowTests.Issues
         [Fact]
         public async Task ChangeStaticIndexStateToDisable()
         {
-            var leader = await CreateRaftClusterAndGetLeader(3);
+            var (_, leader) = await CreateRaftCluster(3);
             var database = GetDatabaseName();
             await CreateDatabaseInClusterInner(new DatabaseRecord(database), 3, leader.WebUrl, null);
             var indexName = "SimpleIndex";
@@ -141,7 +141,7 @@ namespace SlowTests.Issues
         [Fact]
         public async Task ChangeStaticIndexStateToError()
         {
-            var leader = await CreateRaftClusterAndGetLeader(3);
+            var (_, leader) = await CreateRaftCluster(3);
             var database = GetDatabaseName();
             await CreateDatabaseInClusterInner(new DatabaseRecord(database), 3, leader.WebUrl, null);
             var indexName = "SimpleIndex";
@@ -184,7 +184,7 @@ namespace SlowTests.Issues
         [Fact]
         public async Task ChangeStaticIndexStateToIdle()
         {
-            var leader = await CreateRaftClusterAndGetLeader(3);
+            var (_, leader) = await CreateRaftCluster(3);
             var database = GetDatabaseName();
             await CreateDatabaseInClusterInner(new DatabaseRecord(database), 3, leader.WebUrl, null);
             var indexName = "SimpleIndex";
@@ -227,7 +227,7 @@ namespace SlowTests.Issues
         [Fact]
         public async Task ChangeAutoIndexStateToDisable()
         {
-            var leader = await CreateRaftClusterAndGetLeader(3);
+            var (_, leader) = await CreateRaftCluster(3);
             var database = GetDatabaseName();
             await CreateDatabaseInClusterInner(new DatabaseRecord(database), 3, leader.WebUrl, null);
             var indexName = "Auto/Users/ByName";
@@ -281,7 +281,7 @@ namespace SlowTests.Issues
         [Fact]
         public async Task ChangeAutoIndexStateToError()
         {
-            var leader = await CreateRaftClusterAndGetLeader(3);
+            var (_, leader) = await CreateRaftCluster(3);
             var database = GetDatabaseName();
             await CreateDatabaseInClusterInner(new DatabaseRecord(database), 3, leader.WebUrl, null);
             var indexName = "Auto/Users/ByName";
@@ -335,7 +335,7 @@ namespace SlowTests.Issues
         [Fact]
         public async Task ChangeAutoIndexStateToIdle()
         {
-            var leader = await CreateRaftClusterAndGetLeader(3);
+            var (_, leader) = await CreateRaftCluster(3);
             var database = GetDatabaseName();
             await CreateDatabaseInClusterInner(new DatabaseRecord(database), 3, leader.WebUrl, null);
             var indexName = "Auto/Users/ByName";
@@ -389,7 +389,7 @@ namespace SlowTests.Issues
         [Fact]
         public async Task ChangeStaticIndexState()
         {
-            var leader = await CreateRaftClusterAndGetLeader(3);
+            var (_, leader) = await CreateRaftCluster(3);
             var database = GetDatabaseName();
             await CreateDatabaseInClusterInner(new DatabaseRecord(database), 3, leader.WebUrl, null);
             var indexName = "SimpleIndex";
@@ -512,7 +512,7 @@ namespace SlowTests.Issues
         [Fact]
         public async Task LastSetStateDetemineTheState()
         {
-            var leader = await CreateRaftClusterAndGetLeader(3);
+            var (_, leader) = await CreateRaftCluster(3);
             var database = GetDatabaseName();
             await CreateDatabaseInClusterInner(new DatabaseRecord(database), 3, leader.WebUrl, null);
             var indexName = "SimpleIndex";
@@ -586,7 +586,7 @@ namespace SlowTests.Issues
         [Fact]
         public async Task LocalStateDisabledCanBeChangedClusterWide()
         {
-            var leader = await CreateRaftClusterAndGetLeader(3);
+            var (_, leader) = await CreateRaftCluster(3);
             var database = GetDatabaseName();
             await CreateDatabaseInClusterInner(new DatabaseRecord(database), 3, leader.WebUrl, null);
             var indexName = "SimpleIndex";

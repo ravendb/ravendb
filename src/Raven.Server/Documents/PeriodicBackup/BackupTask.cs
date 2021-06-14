@@ -634,8 +634,11 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             if (_backupToLocalFolder)
             {
+                var sp = Stopwatch.StartNew();
                 var localRetentionPolicy = new LocalRetentionPolicyRunner(_retentionPolicyParameters, _configuration.LocalSettings.FolderPath);
                 localRetentionPolicy.Execute();
+                sp.Stop();
+                status.LocalRetentionDurationInMs = sp.ElapsedMilliseconds;
             }
 
             return internalBackupResult;

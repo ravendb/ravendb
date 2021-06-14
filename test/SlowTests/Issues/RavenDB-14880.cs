@@ -26,7 +26,7 @@ namespace SlowTests.Issues
         public async Task UpdateClientConfigurationOnlyWhenRequired(bool isServerWide)
         {
             const string databaseName = "test";
-            var leader = await CreateRaftClusterAndGetLeader(3);
+            var (_, leader) = await CreateRaftCluster(3);
             using (var store = new DocumentStore
             {
                 Urls = new[] { leader.WebUrl },
@@ -108,7 +108,7 @@ namespace SlowTests.Issues
         public async Task UpdateTopologyWhenNeeded()
         {
             const string databaseName = "test";
-            var leader = await CreateRaftClusterAndGetLeader(3);
+            var (_, leader) = await CreateRaftCluster(3);
             using (var store = new DocumentStore
             {
                 Urls = new[] { leader.WebUrl },

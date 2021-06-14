@@ -41,7 +41,7 @@ namespace SlowTests.Issues
         [Fact]
         public async Task RemoveEntryFromRaftLogEP()
         {
-            var leader = await CreateRaftClusterAndGetLeader(3);
+            var (_, leader) = await CreateRaftCluster(3);
             var database = GetDatabaseName();
 
             await CreateDatabaseInClusterInner(new DatabaseRecord(database), 3, leader.WebUrl, null);
@@ -143,7 +143,7 @@ namespace SlowTests.Issues
         [Fact]
         public async Task RemoveEntryFromRaftLogTest()
         {
-            var leader = await CreateRaftClusterAndGetLeader(3);
+            var (_, leader) = await CreateRaftCluster(3);
             var database = GetDatabaseName();
 
             await CreateDatabaseInClusterInner(new DatabaseRecord(database), 3, leader.WebUrl, null);
