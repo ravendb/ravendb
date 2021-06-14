@@ -1001,13 +1001,14 @@ namespace Raven.Server.Smuggler.Documents
 
                 if (databaseRecord.DocumentsCompression != null && databaseRecordItemType.HasFlag(DatabaseRecordItemType.DocumentsCompression))
                 {
-                    if (currentDatabaseRecord?.DocumentsCompression?.Collections?.Length > 0)
+                    if (currentDatabaseRecord?.DocumentsCompression?.Collections?.Length > 0 || currentDatabaseRecord?.DocumentsCompression?.CompressAllCollections == true)
                     {
                         var collectionsToAdd = new List<string>();
 
                         foreach (var collection in currentDatabaseRecord.DocumentsCompression.Collections)
                         {
-                            if (databaseRecord.DocumentsCompression.Collections.Contains(collection) == false)
+                            if (currentDatabaseRecord?.DocumentsCompression?.CompressAllCollections == true ||
+                                databaseRecord.DocumentsCompression.Collections.Contains(collection) == false)
                             {
                                 collectionsToAdd.Add(collection);
                             }

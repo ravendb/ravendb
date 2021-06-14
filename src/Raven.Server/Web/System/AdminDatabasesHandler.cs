@@ -265,7 +265,7 @@ namespace Raven.Server.Web.System
                 if (ServerStore.LicenseManager.LicenseStatus.HasDocumentsCompression && databaseRecord.DocumentsCompression == null)
                 {
                     databaseRecord.DocumentsCompression = new DocumentsCompressionConfiguration(
-                        Server.Configuration.Databases.CompressRevisionsDefault);
+                        Server.Configuration.Databases.CompressRevisionsDefault, Server.Configuration.Databases.CompressAllCollectionsDefault);
                 }
 
                 if (databaseRecord.Encrypted)
