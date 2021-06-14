@@ -524,7 +524,21 @@ namespace Raven.Server.Commercial
                     if (_skipLeasingErrorsLogging == false && Logger.IsInfoEnabled)
                     {
                         // ReSharper disable once MethodHasAsyncOverload
-                        Logger.Info("Skipping updating of the license because 'Licensing.DisableAutoLicenceUpdate' was set to true");
+                        Logger.Info("Skipping updating of the license from string or path or from api.ravendb.net because 'Licensing.DisableAutoLicenceUpdate' was set to true");
+                    }
+                    return null;
+                }
+
+                if (_serverStore.Configuration.Licensing.DisableAutoUpdateFromApi)
+                {
+                    var license = TryGetUpdatedLicenseFromStringOrPath(currentLicense);
+                    if (license != null)
+                        return license;
+
+                    if (_skipLeasingErrorsLogging == false && Logger.IsInfoEnabled)
+                    {
+                        // ReSharper disable once MethodHasAsyncOverload
+                        Logger.Info("Skipping updating of the license from api.ravendb.net because 'Licensing.DisableAutoUpdateFromApi' was set to true");
                     }
                     return null;
                 }
