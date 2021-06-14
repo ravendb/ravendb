@@ -20,7 +20,7 @@ namespace SlowTests.Issues
         [Fact]
         public async Task PatchingClusterTransactionDocumentShouldWork()
         {
-            var leader = await CreateRaftClusterAndGetLeader(3);
+            var (_, leader) = await CreateRaftCluster(3);
             using (var leaderStore = GetDocumentStore(new Options
             {
                 Server = leader,

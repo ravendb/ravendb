@@ -1268,7 +1268,7 @@ namespace SlowTests.Server.Replication
         [Fact]
         public async Task ResolveToLatestInClusterOnTheFly()
         {
-            var leader1 = await CreateRaftClusterAndGetLeader(3);
+            var (_, leader1) = await CreateRaftCluster(3);
 
             using (var store1 = GetDocumentStore(new Options
             {

@@ -266,12 +266,12 @@ exit 129";
                 cryptoRandom.GetBytes(buffer);
             }
             File.WriteAllBytes(keyPath, buffer);
-            var certPath = GenerateAndSaveSelfSignedCertificate();
+            var certificates = GenerateAndSaveSelfSignedCertificate();
             if (PlatformDetails.RunningOnPosix)
             {
                 var scriptPath = Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Guid.NewGuid().ToString(), ".sh"));
                 var keyArgs = CommandLineArgumentEscaper.EscapeAndConcatenate(new List<string> { scriptPath, keyPath });
-                var certArgs = CommandLineArgumentEscaper.EscapeAndConcatenate(new List<string> { scriptPath, certPath.ServerCertificatePath });
+                var certArgs = CommandLineArgumentEscaper.EscapeAndConcatenate(new List<string> { scriptPath, certificates.ServerCertificatePath });
 
                 customSettings[RavenConfiguration.GetKey(x => x.Security.MasterKeyExec)] = "bash";
                 customSettings[RavenConfiguration.GetKey(x => x.Security.MasterKeyExecArguments)] = $"{keyArgs}";
@@ -287,7 +287,7 @@ exit 129";
             {
                 var scriptPath = Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Guid.NewGuid().ToString(), ".ps1"));
                 var keyArgs = CommandLineArgumentEscaper.EscapeAndConcatenate(new List<string> { "-NoProfile", scriptPath, keyPath });
-                var certArgs = CommandLineArgumentEscaper.EscapeAndConcatenate(new List<string> { "-NoProfile", scriptPath, certPath.ServerCertificatePath });
+                var certArgs = CommandLineArgumentEscaper.EscapeAndConcatenate(new List<string> { "-NoProfile", scriptPath, certificates.ServerCertificatePath });
 
                 customSettings[RavenConfiguration.GetKey(x => x.Security.MasterKeyExec)] = "powershell";
                 customSettings[RavenConfiguration.GetKey(x => x.Security.MasterKeyExecArguments)] = $"{keyArgs}";
@@ -336,11 +336,11 @@ exit 0";
             X509Certificate2 serverCertificate;
             try
             {
-                serverCertificate = new X509Certificate2(certPath.ServerCertificatePath, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
+                serverCertificate = new X509Certificate2(certificates.ServerCertificatePath, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
             }
             catch (CryptographicException e)
             {
-                throw new CryptographicException($"Failed to load the test certificate from {certPath}.", e);
+                throw new CryptographicException($"Failed to load the test certificate from {certificates}.", e);
             }
             using (var store = GetDocumentStore(new Options
             {

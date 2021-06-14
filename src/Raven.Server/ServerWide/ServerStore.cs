@@ -1621,6 +1621,16 @@ namespace Raven.Server.ServerWide
             return Secrets.Unprotect(protectedData);
         }
 
+        public void DeleteSecretKey(string databaseName)
+        {
+            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (var tx = context.OpenWriteTransaction())
+            {
+                DeleteSecretKey(context, databaseName);
+                tx.Commit();
+            }
+        }
+
         public void DeleteSecretKey(TransactionOperationContext context, string name)
         {
             Debug.Assert(context.Transaction != null);
@@ -2428,7 +2438,7 @@ namespace Raven.Server.ServerWide
 
             return true;
         }
-        
+
         private static bool DatabaseNeedsToRunIdleOperations(DocumentDatabase database, out DatabaseCleanupMode mode)
         {
             var now = DateTime.UtcNow;
