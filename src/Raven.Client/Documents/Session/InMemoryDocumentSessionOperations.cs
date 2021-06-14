@@ -1488,8 +1488,7 @@ more responsive application.
                 if (newDocumentInfo.Metadata.TryGetConflict(out var conflict) && conflict)
                     continue;
                 if (newDocumentInfo.Metadata.TryGet(Constants.Documents.Metadata.ChangeVector, out string cv) == false)
-                    throw new InvalidOperationException($"Missing change vector in revision '{newDocumentInfo.Id}'");
-                
+                    return;
                 IncludeRevisionsByChangeVector[cv] = newDocumentInfo;
             }
         }
