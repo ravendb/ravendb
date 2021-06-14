@@ -380,9 +380,7 @@ namespace Raven.Server.Commercial
 
         public static async Task<LicenseStatus> GetUpdatedLicenseStatus(ServerStore serverStore, License currentLicense, Reference<License> updatedLicense = null)
         {
-            var license =
-                await serverStore.LicenseManager.GetUpdatedLicense(currentLicense).ConfigureAwait(false)
-                ?? currentLicense;
+            var license = await serverStore.LicenseManager.GetUpdatedLicense(currentLicense).ConfigureAwait(false) ?? currentLicense;
 
             var licenseStatus = LicenseManager.GetLicenseStatus(license);
             if (licenseStatus.Expired)
