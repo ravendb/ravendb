@@ -408,7 +408,7 @@ namespace RachisTests.DatabaseCluster
         [Theory]
         public async Task RemovedLeaderCauseReelection(int numberOfNodes)
         {
-            var leader = await CreateRaftClusterAndGetLeader(numberOfNodes);
+            var (_, leader) = await CreateRaftCluster(numberOfNodes);
             using (var cts = new CancellationTokenSource())
             {
                 try
@@ -426,7 +426,7 @@ namespace RachisTests.DatabaseCluster
 
         private async Task<RavenServer> RemoveNodeWithDatabase(string dbName, int nodesAmount, int replicationFactor)
         {
-            var firstLeader = await CreateRaftClusterAndGetLeader(nodesAmount, leaderIndex: 0);
+            var (_, firstLeader) = await CreateRaftCluster(nodesAmount, leaderIndex: 0);
             var (_, servers) = await CreateDatabaseInCluster(dbName, replicationFactor, firstLeader.WebUrl);
             var removed = servers.Last();
             using (var store = new DocumentStore

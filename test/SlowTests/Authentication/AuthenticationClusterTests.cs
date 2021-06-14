@@ -44,7 +44,7 @@ namespace SlowTests.Authentication
         {
             var clusterSize = 3;
             var databaseName = GetDatabaseName();
-            var leader = await CreateRaftClusterAndGetLeader(clusterSize, false, useSsl: true);
+            var (_, leader) = await CreateRaftCluster(clusterSize, false, useSsl: true);
 
             X509Certificate2 adminCertificate = null;
 
@@ -277,7 +277,7 @@ exit 0";
 
             var clusterSize = 3;
             var databaseName = GetDatabaseName();
-            var leader = await CreateRaftClusterAndGetLeader(clusterSize, false, useSsl: true, customSettingsList: new List<IDictionary<string, string>>{customSettings1, customSettings2, customSettings3});
+            var (_, leader) = await CreateRaftCluster(clusterSize, false, useSsl: true, customSettingsList: new List<IDictionary<string, string>>{customSettings1, customSettings2, customSettings3});
 
             Assert.True(leader?.Certificate?.Certificate?.Thumbprint?.Equals(firstServerCert.Thumbprint), "Cert is identical");
             

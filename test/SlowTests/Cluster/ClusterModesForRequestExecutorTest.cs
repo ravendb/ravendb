@@ -41,7 +41,7 @@ namespace SlowTests.Cluster
         {
             int serverPort = 10000;
 
-            var cluster = await CreateRaftCluster(1, customSettings: GetServerSettingsForPort(false, out _));
+            var cluster = await CreateRaftCluster(1, customSettings: GetServerSettingsForPort(false, out _, out _));
             var server = cluster.Leader;
 
             await using (var proxy = new ProxyServer(ref serverPort, Convert.ToInt32(server.ServerStore.GetNodeHttpServerUrl().Split(':')[2])))
@@ -88,7 +88,7 @@ namespace SlowTests.Cluster
             NoTimeouts();
             var databaseName = GetDatabaseName();
 
-            var (leader, serversToProxies) = await CreateRaftClusterWithProxiesAndGetLeader(3);
+            var (leader, serversToProxies) = await CreateRaftClusterWithProxiesAsync(3);
             var followers = Servers.Where(x => x.ServerStore.IsLeader() == false).ToArray();
 
             var conventionsForLoadBalancing = new DocumentConventions
@@ -198,7 +198,7 @@ namespace SlowTests.Cluster
         public async Task Round_robin_load_balancing_should_work()
         {
             var databaseName = GetDatabaseName();
-            var leader = await CreateRaftClusterAndGetLeader(3);
+            var (_, leader) = await CreateRaftCluster(3);
             var followers = Servers.Where(x => x.ServerStore.IsLeader() == false).ToArray();
             var conventionsForLoadBalancing = new DocumentConventions
             {
@@ -293,7 +293,7 @@ namespace SlowTests.Cluster
         public async Task Round_robin_load_balancing_with_failing_node_should_work()
         {
             var databaseName = GetDatabaseName();
-            var leader = await CreateRaftClusterAndGetLeader(3);
+            var (_, leader) = await CreateRaftCluster(3);
             var followers = Servers.Where(x => x.ServerStore.IsLeader() == false).ToArray();
 
             var conventionsForLoadBalancing = new DocumentConventions
@@ -387,7 +387,7 @@ namespace SlowTests.Cluster
             //we can execute commands that use a context, without it leading to a race condition
 
             var databaseName = GetDatabaseName();
-            var leader = await CreateRaftClusterAndGetLeader(3);
+            var (_, leader) = await CreateRaftCluster(3);
 
             var conventionsForLoadBalancing = new DocumentConventions
             {

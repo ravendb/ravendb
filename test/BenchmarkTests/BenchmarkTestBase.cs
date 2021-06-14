@@ -129,7 +129,6 @@ namespace BenchmarkTests
             if (options == null)
                 options = new Options();
 
-            options.Encrypted = Encrypted && options.CreateDatabase; // don't set encryption if we don't create new db
             options.ModifyDatabaseRecord = record => record.Settings.Remove(RavenConfiguration.GetKey(x => x.Core.RunInMemory));
 
             return base.GetDocumentStore(options, caller);
@@ -170,7 +169,7 @@ namespace BenchmarkTests
             
             if (Encrypted)
             {
-                PutSecrectKeyForDatabaseInServersStore(databaseName, Server);
+                PutSecretKeyForDatabaseInServerStore(databaseName, Server);
                 databaseRecord.Encrypted = true;
             }
 

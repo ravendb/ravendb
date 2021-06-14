@@ -24,45 +24,45 @@ namespace RachisTests
         public async Task LeaderCanCecedeFromClusterAndNewLeaderWillBeElected()
         {
             var clusterSize = 3;
-            var leader = await CreateRaftClusterAndGetLeader(clusterSize);
+            var (_, leader) = await CreateRaftCluster(clusterSize);
             ClusterTopology old, @new;
             old = GetServerTopology(leader);
-            new AdminJsConsole(leader,null).ApplyScript(new AdminJsScript
+            new AdminJsConsole(leader, null).ApplyScript(new AdminJsScript
             (
                @"server.ServerStore.Engine.HardResetToNewCluster('A');"
             ));
             await leader.ServerStore.WaitForState(RachisState.Leader, CancellationToken.None);
             @new = GetServerTopology(leader);
-            Assert.NotEqual(old.TopologyId,@new.TopologyId);
+            Assert.NotEqual(old.TopologyId, @new.TopologyId);
             List<Task<RavenServer>> leaderSelectedTasks = new List<Task<RavenServer>>();
             foreach (var server in Servers)
             {
-                if(server == leader)
+                if (server == leader)
                     continue;
-                leaderSelectedTasks.Add(server.ServerStore.WaitForState(RachisState.Leader, CancellationToken.None).ContinueWith(_=>server));
+                leaderSelectedTasks.Add(server.ServerStore.WaitForState(RachisState.Leader, CancellationToken.None).ContinueWith(_ => server));
             }
-            Assert.True(await Task.WhenAny(leaderSelectedTasks).WaitAsync(TimeSpan.FromSeconds(10)),"New leader was not elected after old leader left the cluster.");            
+            Assert.True(await Task.WhenAny(leaderSelectedTasks).WaitAsync(TimeSpan.FromSeconds(10)), "New leader was not elected after old leader left the cluster.");
         }
 
         [Fact]
         public async Task FollowerCanCecedeFromCluster()
         {
             var clusterSize = 3;
-            await CreateRaftClusterAndGetLeader(clusterSize);
+            await CreateRaftCluster(clusterSize);
             var follower = Servers.First(x => x.ServerStore.CurrentRachisState == RachisState.Follower);
             ClusterTopology old, @new;
             old = GetServerTopology(follower);
             new AdminJsConsole(follower, null).ApplyScript(new AdminJsScript(@"server.ServerStore.Engine.HardResetToNewCluster('A');"));
             await follower.ServerStore.WaitForState(RachisState.Leader, CancellationToken.None);
             @new = GetServerTopology(follower);
-            Assert.NotEqual(old.TopologyId, @new.TopologyId);            
+            Assert.NotEqual(old.TopologyId, @new.TopologyId);
         }
 
         private static ClusterTopology GetServerTopology(RavenServer leader)
         {
             ClusterTopology old;
             using (leader.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-            using(ctx.OpenReadTransaction())
+            using (ctx.OpenReadTransaction())
             {
                 old = leader.ServerStore.GetClusterTopology(ctx);
             }

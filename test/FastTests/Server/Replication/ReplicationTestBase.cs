@@ -130,7 +130,7 @@ namespace FastTests.Server.Replication
             }
             return false;
         }
-        
+
         protected List<string> WaitUntilHasTombstones(
                 IDocumentStore store,
                 int count = 1)
@@ -179,8 +179,8 @@ namespace FastTests.Server.Replication
                 using (var session = store.OpenSession(store.Database))
                 {
                     var doc = session.Load<T>(id);
-                    if (doc != null && session.Advanced.Attachments.Exists(id, attachmentName))                   
-                        return doc;                    
+                    if (doc != null && session.Advanced.Attachments.Exists(id, attachmentName))
+                        return doc;
                 }
                 Thread.Sleep(100);
             }
@@ -374,7 +374,7 @@ namespace FastTests.Server.Replication
 
         protected async Task<(DocumentStore source, DocumentStore destination)> CreateDuoCluster([CallerMemberName] string caller = null)
         {
-            var leader = await CreateRaftClusterAndGetLeader(2);
+            var (_, leader) = await CreateRaftCluster(2);
             var follower = Servers.First(srv => ReferenceEquals(srv, leader) == false);
             var source = new DocumentStore
             {

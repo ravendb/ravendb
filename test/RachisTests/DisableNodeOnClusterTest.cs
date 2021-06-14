@@ -29,7 +29,7 @@ namespace RachisTests
                 [RavenConfiguration.GetKey(x => x.Cluster.RotatePreferredNodeGraceTime)] = "15"
             };
 
-            var leader = await CreateRaftClusterAndGetLeader(3, shouldRunInMemory: false, customSettings: settings);
+            var (_, leader) = await CreateRaftCluster(3, shouldRunInMemory: false, customSettings: settings);
             await CreateDatabaseInCluster(db, 3, leader.WebUrl);
 
             using (var leaderStore = new DocumentStore
