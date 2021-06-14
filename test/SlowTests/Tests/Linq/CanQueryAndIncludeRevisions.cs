@@ -253,7 +253,7 @@ select Foo(u)"
                 {
                    
                     var query =  session.Advanced
-                        .RawQuery<User>("from Users include revisions(ChangeVectors)")
+                        .RawQuery<User>("from Users as u include revisions(u.ChangeVectors)")
                         .ToList();
                      
                     var revision1 =  session.Advanced.Revisions.Get<User>(cvList[0]);
