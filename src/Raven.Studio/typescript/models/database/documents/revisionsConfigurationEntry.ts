@@ -16,6 +16,7 @@ class revisionsConfigurationEntry {
     minimumRevisionAgeToKeep = ko.observable<number>();
 
     isDefault: KnockoutComputed<boolean>;
+    deleteDescription: KnockoutComputed<string>;
     humaneRetentionDescription: KnockoutComputed<string>;
 
     validationGroup: KnockoutValidationGroup = ko.validatedObservable({
@@ -41,16 +42,49 @@ class revisionsConfigurationEntry {
         this.initValidation();
     }
     private initObservables() {
+        this.deleteDescription = ko.pureComputed(() => {
+            const purgeOffText = `<li>A revision will be created anytime a document is modified or deleted.</li>
+                                  <li>Revisions of a deleted document can be accessed in the Revisions Bin view.</li>`;
+
+            const purgeOnText = `<li>A revision will be created anytime a docment is modified.</li>
+                                 <li>When a document is deleted all its revisions will be removed.</li>`;
+
+            let description = this.purgeOnDelete() ? purgeOnText : purgeOffText;
+            return `<ul class="margin-top">${description}</ul>`; 
+        });
+
         this.humaneRetentionDescription = ko.pureComputed(() => {
+            const numberOnlyText = (numberToKeep: number) => 
+                `<li>Only the latest <strong>${numberToKeep}</strong> revisions will be kept.</li>
+                 <li>Older revisions will be removed on next revision creation.</li>`;
+            
+            const ageOnlyText = (retentionText: string) => 
+                `<li>Revisions that exceed <strong>${retentionText}</strong> will be removed on next revision creation.</li>`;
+            
+            const numberAndAgeText = (numberToKeep: number, retentionText: string) => 
+                `<li>At least <strong>${numberToKeep}</strong> of the latest revisions will be kept.</li>
+                 <li>Older revisions will be removed if they exceed <strong>${retentionText}</strong> on next revision createion.</li>`;
+            
             const retentionTimeHumane = generalUtils.formatTimeSpan(this.minimumRevisionAgeToKeep() * 1000, true);
             
-            const agePart = this.limitRevisionsByAge() && this.minimumRevisionAgeToKeep.isValid() && this.minimumRevisionAgeToKeep() !== 0 ?
-                `Revisions are going to be removed on next revision creation or document deletion once they exceed retention time of <strong>${retentionTimeHumane}</strong>` : "";
+            const limitByNumber = this.limitRevisions() && this.minimumRevisionsToKeep.isValid();
+            const limitByAge = this.limitRevisionsByAge() && this.minimumRevisionAgeToKeep.isValid();
             
-            const countPart = this.limitRevisions() && this.minimumRevisionsToKeep.isValid() ? 
-                `At least <strong>${this.minimumRevisionsToKeep()}</strong> revisions are going to be kept` : "";
+            let description;
             
-            return agePart + countPart;
+            if (limitByNumber && !limitByAge) {
+                description = numberOnlyText(this.minimumRevisionsToKeep());
+            }
+            
+            if (!limitByNumber && limitByAge) {
+                description = ageOnlyText(retentionTimeHumane);
+            }
+
+            if (limitByNumber && limitByAge) {
+                description = numberAndAgeText(this.minimumRevisionsToKeep(), retentionTimeHumane);
+            }
+                
+            return description ? `<ul class="margin-top">${description}</ul>` : "";
         });
 
         this.limitRevisions.subscribe(() => {
