@@ -18,6 +18,7 @@ using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
@@ -572,11 +573,11 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     var ctx = _documentContextHolder.GetContextForRead();
 
-                    var doc = _database.DocumentsStorage.Get(ctx, docId, DocumentFields.Data);
+                    var doc = _database.DocumentsStorage.Get(ctx, docId, DocumentFields.Data | DocumentFields.ChangeVector);
                     if (doc == null)
                         return;
 
-                    _clusterTransactionCommands.Push(new BatchRequestParser.CommandData {Id = docId, Document = doc.Data, Type = CommandType.PUT});
+                    _clusterTransactionCommands.Push(new BatchRequestParser.CommandData {Id = docId, Document = doc.Data, Type = CommandType.PUT, OriginalChangeVector = ctx.GetLazyString(doc.ChangeVector)});
                 }
                 else
                 {
@@ -629,12 +630,16 @@ namespace Raven.Server.Smuggler.Documents
                     var clusterTransactionCommand = new ClusterTransactionCommand(_database.Name, _database.IdentityPartsSeparator, topology, parsedCommands, options, raftRequestId);
                     var clusterTransactionResult = await _database.ServerStore.SendToLeaderAsync(clusterTransactionCommand);
                     for (int i = 0; i < _clusterTransactionCommands.Length; i++)
-                    {
+                    { 
                         _clusterTransactionCommands[i].Document.Dispose();
+                        _clusterTransactionCommands[i].OriginalChangeVector.Dispose();
                     }
              
                     _clusterTransactionCommands.Clear();
                     _documentContextHolder.Reset();
+
+                    if (clusterTransactionResult.Result is List<string> errors)
+                        throw new ConcurrencyException($"Failed to execute cluster transaction due to the following issues: {string.Join(Environment.NewLine, errors)}"); //TODO
 
                     await _database.ServerStore.Cluster.WaitForIndexNotification(clusterTransactionResult.Index);
                     await _database.ClusterTransactionWaiter.WaitForResults(taskId, _token);
@@ -1230,8 +1235,8 @@ namespace Raven.Server.Smuggler.Documents
                         {
                             newEtag = _database.DocumentsStorage.GenerateNextEtag();
                             tombstone.ChangeVector = _database.DocumentsStorage.GetNewChangeVector(context, newEtag);
-
                             databaseChangeVector = ChangeVectorUtils.MergeVectors(databaseChangeVector, tombstone.ChangeVector);
+                            AddTrxnIfNeeded(context, tombstone.LowerId, ref tombstone.ChangeVector);
                             switch (tombstone.Type)
                             {
                                 case Tombstone.TombstoneType.Document:
@@ -1366,6 +1371,8 @@ namespace Raven.Server.Smuggler.Documents
                     newEtag = _database.DocumentsStorage.GenerateNextEtag();
                     document.ChangeVector = _database.DocumentsStorage.GetNewChangeVector(context, newEtag);
                     databaseChangeVector = ChangeVectorUtils.MergeVectors(databaseChangeVector, document.ChangeVector);
+                    AddTrxnIfNeeded(context, id, ref document.ChangeVector);
+
                     try
                     {
                         _database.DocumentsStorage.Put(context, id, expectedChangeVector: null, document.Data, document.LastModified.Ticks, document.ChangeVector, null, document.Flags, document.NonPersistentFlags);
@@ -1387,6 +1394,30 @@ namespace Raven.Server.Smuggler.Documents
                 }
 
                 return Documents.Count;
+            }
+
+            private void AddTrxnIfNeeded(DocumentsOperationContext context, string id, ref string changeVector)
+            {
+                using (var doc = _database.DocumentsStorage.Get(context, id, DocumentFields.ChangeVector))
+                {
+                    string oldChangeVector;
+
+                    if (doc != null)
+                    {
+                        oldChangeVector = doc.ChangeVector;
+                    }
+                    else
+                    {
+                        using (var tombstone = _database.DocumentsStorage.GetDocumentOrTombstone(context, id).Tombstone)
+                        {
+                            oldChangeVector = tombstone?.ChangeVector;
+                        }
+                    }
+
+                    var trxn = ChangeVectorUtils.GetEtagById(oldChangeVector, _database.ClusterTransactionId);
+                    if (trxn > 0)
+                        changeVector += $",TRXN:{trxn}-{_database.ClusterTransactionId}";
+                }
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]

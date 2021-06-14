@@ -165,12 +165,10 @@ namespace Raven.Server.ServerWide.Commands
             foreach (var clusterCommand in ClusterCommands)
             {
                 long current;
-                long actualIndex = clusterCommand.Index == -1 ? 0 : clusterCommand.Index;
-                bool ignoreIndex = clusterCommand.Index == -1;
                 switch (clusterCommand.Type)
                 {
                     case CommandType.CompareExchangePUT:
-                        var put = new AddOrUpdateCompareExchangeCommand(DatabaseName, clusterCommand.Id, clusterCommand.Document, actualIndex, context, null, ignoreIndex);
+                        var put = new AddOrUpdateCompareExchangeCommand(DatabaseName, clusterCommand.Id, clusterCommand.Document, clusterCommand.Index, context, null);
                         if (put.Validate(context, items, clusterCommand.Index, out current) == false)
                         {
                             if(clusterCommand.Error != null)
@@ -184,7 +182,7 @@ namespace Raven.Server.ServerWide.Commands
                         toExecute.Add(put);
                         break;
                     case CommandType.CompareExchangeDELETE:
-                        var delete = new RemoveCompareExchangeCommand(DatabaseName, clusterCommand.Id, actualIndex, context, null, ignoreIndex);
+                        var delete = new RemoveCompareExchangeCommand(DatabaseName, clusterCommand.Id, clusterCommand.Index, context, null);
                         if (delete.Validate(context, items, clusterCommand.Index, out current) == false)
                         {
                             if (clusterCommand.Error != null)
@@ -231,23 +229,48 @@ namespace Raven.Server.ServerWide.Commands
                 var docId = dbCmd[nameof(ClusterTransactionDataCommand.Id)].ToString();
                 var atomicGuardKey = GetAtomicGuardKey(docId);
                 var changeVector = dbCmd[nameof(ClusterTransactionDataCommand.ChangeVector)]?.ToString();
-                long changeVectorIndex = -1;
+                long changeVectorIndex = 0;
+
                 if (changeVector != null)
                     changeVectorIndex = ChangeVectorUtils.GetEtagById(changeVector, dbTopology.ClusterTransactionIdBase64);
+
+                var type = cmdType switch
+                {
+
+                    nameof(CommandType.PUT) => CommandType.CompareExchangePUT,
+                    nameof(CommandType.DELETE) => CommandType.CompareExchangeDELETE,
+                    _ => throw new ArgumentOutOfRangeException()
+                };
+
+                if (type == CommandType.CompareExchangeDELETE && changeVector == null)
+                {
+                    var current = GetCurrentIndex(context, items, atomicGuardKey);
+                    if (current == CompareExchangeCommandBase.InvalidIndexValue)
+                        continue; // trying to delete non-existing key
+
+                    changeVectorIndex = current;
+                }
+
                 ClusterCommands.Add(new ClusterTransactionDataCommand
                 {
-                    Type = cmdType switch {
-                    
-                        nameof(CommandType.PUT) =>CommandType.CompareExchangePUT,
-                        nameof(CommandType.DELETE) => CommandType.CompareExchangeDELETE,
-                        _ => throw new ArgumentOutOfRangeException()   
-                    },
+                    Type = type,
                     Id = atomicGuardKey,
                     Index = changeVectorIndex,
                     Document = context.ReadObject(new DynamicJsonValue { ["Id"] = docId }, "cmp-xchg-content"),
                     Error = $"Guard compare exchange value '{atomicGuardKey}' index does not match the transaction index's {changeVectorIndex} change vector on {docId}"
                 });
             }
+        }
+
+        private unsafe long GetCurrentIndex(ClusterOperationContext context, Table items, string key)
+        {
+            using (Slice.From(context.Allocator, CompareExchangeKey.GetStorageKey(DatabaseName, key), out Slice keySlice))
+            {
+                if (items.ReadByKey(keySlice, out var reader))
+                    return *(long*)reader.Read((int)ClusterStateMachine.CompareExchangeTable.Index, out var _);
+            }
+
+            return CompareExchangeCommandBase.InvalidIndexValue;
         }
 
         const string RvnAtomicPrefix = "rvn-atomic/";

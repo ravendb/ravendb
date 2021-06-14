@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -643,6 +644,24 @@ namespace FastTests
 
             return entriesCount;
         }
+
+        protected static async Task<TC> AssertWaitForSingleAsync<TC>(Func<Task<TC>> act, int timeout = 15000, int interval = 100) where TC : ICollection
+        {
+            var ret = await WaitForSingleAsync(act, timeout, interval);
+            Assert.Single(ret);
+            return ret;
+        }
+        protected static async Task<TC> AssertWaitForCountAsync<TC>(Func<Task<TC>> act, int count, int timeout = 15000, int interval = 100) where TC : ICollection
+        {
+            var ret = await WaitForCountAsync(act, count, timeout, interval);
+            Assert.True(ret.Count == count, $"Expected {count}, Actual {ret.Count}");
+            return ret;
+        }
+
+        protected static async Task<TC> WaitForSingleAsync<TC>(Func<Task<TC>> act,int timeout = 15000, int interval = 100) where  TC : ICollection =>
+            await WaitForCountAsync(act, 1, timeout, interval);
+        protected static async Task<TC> WaitForCountAsync<TC>(Func<Task<TC>> act, int count,int timeout = 15000, int interval = 100) where  TC : ICollection =>
+            await WaitForPredicateAsync(a => a != null && a.Count == count, act, timeout, interval);
 
         protected static async Task<T> AssertWaitForGreaterThanAsync<T>(Func<Task<T>> act, T val, int timeout = 15000, int interval = 100) where T : IComparable
         {
