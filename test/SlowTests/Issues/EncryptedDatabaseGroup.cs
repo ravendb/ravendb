@@ -23,34 +23,40 @@ namespace SlowTests.Issues
         [Fact]
         public async Task AddingNodeToEncryptedDatabaseGroupShouldThrow()
         {
-            var (nodes, leader) = await CreateRaftClusterWithSsl(3);
+            var (nodes, leader, certificates) = await CreateRaftClusterWithSsl(3);
+
+            EncryptedCluster(nodes, certificates, out var databaseName);
 
             var options = new Options
             {
                 Server = leader,
                 ReplicationFactor = 2,
+                ClientCertificate = certificates.ClientCertificate1.Value,
+                AdminCertificate = certificates.ServerCertificate.Value,
+                ModifyDatabaseName = _ => databaseName,
                 Encrypted = true
             };
 
             using (var store = GetDocumentStore(options))
             {
                 var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
-                var notInDbGroupServer = Servers.Single(s => record.Topology.AllNodes.Contains(s.ServerStore.NodeTag) == false);
+                var notInDbGroupServer = nodes.Single(s => record.Topology.AllNodes.Contains(s.ServerStore.NodeTag) == false);
+                DeleteSecretKeyForDatabaseFromServerStore(databaseName, notInDbGroupServer);
+
                 await Assert.ThrowsAsync<RavenException>(async () => await store.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(store.Database)));
 
-                var dbName = store.Database;
                 using (var notInDbGroupStore = GetDocumentStore(new Options
                 {
                     Server = notInDbGroupServer,
                     CreateDatabase = false,
                     ModifyDocumentStore = ds => ds.Conventions.DisableTopologyUpdates = true,
                     ClientCertificate = options.ClientCertificate,
-                    ModifyDatabaseName = _ => dbName
+                    ModifyDatabaseName = _ => databaseName
                 }))
                 {
                     await Assert.ThrowsAsync<DatabaseLoadFailureException>(async () => await TrySavingDocument(notInDbGroupStore));
-                    PutSecrectKeyForDatabaseInServersStore(dbName, notInDbGroupServer);
-                    await notInDbGroupServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName, ignoreDisabledDatabase: true);
+                    PutSecretKeyForDatabaseInServerStore(databaseName, notInDbGroupServer);
+                    await notInDbGroupServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName, ignoreDisabledDatabase: true);
                     await TrySavingDocument(notInDbGroupStore);
                 }
             }
@@ -68,27 +74,30 @@ namespace SlowTests.Issues
         [Fact]
         public async Task DeletingMasterKeyForExistedEncryptedDatabaseShouldFail()
         {
-            var (nodes, server) = await CreateRaftClusterWithSsl(1);
+            EncryptedServer(out var certificates, out var databaseName);
 
             var options = new Options
             {
-                Server = server,
+                ModifyDatabaseName = _ => databaseName,
+                ClientCertificate = certificates.ServerCertificate.Value,
+                AdminCertificate = certificates.ServerCertificate.Value,
                 Encrypted = true
             };
+
             using (var store = GetDocumentStore(options))
             {
                 await TrySavingDocument(store);
-                using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                 {
                     using (ctx.OpenWriteTransaction())
                     {
-                        Assert.Throws<InvalidOperationException>(() => server.ServerStore.DeleteSecretKey(ctx, store.Database));
+                        Assert.Throws<InvalidOperationException>(() => Server.ServerStore.DeleteSecretKey(ctx, store.Database));
                     }
 
                     store.Maintenance.Server.Send(new DeleteDatabasesOperation(store.Database, true));
                     using (ctx.OpenWriteTransaction())
                     {
-                        server.ServerStore.DeleteSecretKey(ctx, store.Database);
+                        Server.ServerStore.DeleteSecretKey(ctx, store.Database);
                     }
                 }
             }
@@ -97,13 +106,18 @@ namespace SlowTests.Issues
         [Fact]
         public async Task DeletingEncryptedDatabaseFromDatabaseGroup()
         {
-            var (nodes, server) = await CreateRaftClusterWithSsl(3);
+            var (nodes, server, certificates) = await CreateRaftClusterWithSsl(3);
+
+            EncryptedCluster(nodes, certificates, out var databaseName);
 
             var options = new Options
             {
                 Server = server,
                 ReplicationFactor = 3,
-                Encrypted = true
+                Encrypted = true,
+                AdminCertificate = certificates.ServerCertificate.Value,
+                ClientCertificate = certificates.ClientCertificate1.Value,
+                ModifyDatabaseName = _ => databaseName
             };
 
             using (var store = GetDocumentStore(options))

@@ -47,7 +47,7 @@ namespace StressTests.Rachis
         public async Task SubscriptionShouldFailIfLeaderIsDownAndItIsOnlyOpening()
         {
             const int nodesAmount = 2;
-            var leader = await CreateRaftClusterAndGetLeader(nodesAmount);
+            var (_, leader) = await CreateRaftCluster(nodesAmount);
             var defaultDatabase = "SubscriptionShouldFailIfLeaderIsDown";
 
             await CreateDatabaseInCluster(defaultDatabase, nodesAmount, leader.WebUrl).ConfigureAwait(false);
@@ -100,7 +100,7 @@ namespace StressTests.Rachis
         public async Task SubscriptionShouldFailIfLeaderIsDownBeforeAck()
         {
             const int nodesAmount = 2;
-            var leader = await CreateRaftClusterAndGetLeader(nodesAmount);
+            var (_, leader) = await CreateRaftCluster(nodesAmount);
             var defaultDatabase = "SubscriptionShouldFailIfLeaderIsDownBeforeAck";
 
             await CreateDatabaseInCluster(defaultDatabase, nodesAmount, leader.WebUrl).ConfigureAwait(false);
@@ -160,7 +160,7 @@ namespace StressTests.Rachis
         public async Task SubscriptionShouldNotFailIfLeaderIsDownButItStillHasEnoughTimeToRetry()
         {
             const int nodesAmount = 2;
-            var leader = await CreateRaftClusterAndGetLeader(nodesAmount, shouldRunInMemory: false);
+            var (_, leader) = await CreateRaftCluster(nodesAmount, shouldRunInMemory: false);
             var indexLeader = Servers.FindIndex(x => x == leader);
 
             var defaultDatabase = "SubscriptionShouldNotFailIfLeaderIsDownButItStillHasEnoughTimeToRetry";
