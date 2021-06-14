@@ -262,6 +262,9 @@ namespace Raven.Server.Utils
             if (changeVector == null)
                 return 0;
 
+            if (id == null)
+                throw new ArgumentNullException(nameof(id));
+
             var index = changeVector.IndexOf("-" + id, StringComparison.Ordinal);
             if (index == -1)
                 return 0;

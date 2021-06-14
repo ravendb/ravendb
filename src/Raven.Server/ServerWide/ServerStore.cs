@@ -2544,6 +2544,9 @@ namespace Raven.Server.ServerWide
             if (string.IsNullOrEmpty(record.Topology.DatabaseTopologyIdBase64))
                 record.Topology.DatabaseTopologyIdBase64 = Guid.NewGuid().ToBase64Unpadded();
 
+            if (string.IsNullOrEmpty(record.Topology.ClusterTransactionIdBase64))
+                record.Topology.ClusterTransactionIdBase64 = Guid.NewGuid().ToBase64Unpadded();
+
             record.Topology.Stamp ??= new LeaderStamp();
             record.Topology.Stamp.Term = _engine.CurrentTerm;
             record.Topology.Stamp.LeadersTicks = _engine.CurrentLeader?.LeaderShipDuration ?? 0;
