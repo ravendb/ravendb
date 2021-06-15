@@ -116,6 +116,11 @@ namespace Raven.Client.Documents.Session
         ///     Add an AND to the query
         /// </summary>
         TSelf AndAlso();
+        
+        /// <summary>
+        ///     Wraps previous query with clauses and add an AND operation to the given query
+        /// </summary>
+        TSelf AndAlso(bool wrapPreviousQueryClauses);
 
         /// <summary>
         ///     Simplified method for closing a clause within the query
@@ -164,6 +169,11 @@ namespace Raven.Client.Documents.Session
         /// <returns></returns>
         TSelf OpenSubclause();
 
+        /// <summary>
+        ///     Wraps previous query with clauses and add an OR operation to the given query
+        /// </summary>
+        TSelf OrElse(bool wrapPreviousQueryClauses);
+        
         /// <summary>
         ///     Add an OR to the query
         /// </summary>
@@ -486,6 +496,8 @@ namespace Raven.Client.Documents.Session
         TSelf Spatial(Func<DynamicSpatialFieldFactory<T>, DynamicSpatialField> field, Func<SpatialCriteriaFactory, SpatialCriteria> clause);
 
         TSelf MoreLikeThis(MoreLikeThisBase moreLikeThis);
+
+
     }
 
     public interface IGroupByDocumentQueryBase<T, TSelf> where TSelf : IDocumentQueryBase<T, TSelf>

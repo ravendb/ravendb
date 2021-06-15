@@ -436,6 +436,11 @@ namespace Raven.Client.Documents.Session
             return this;
         }
 
+        public IDocumentQuery<T> WrapQueryWithClauses()
+        {
+            throw new NotImplementedException();
+        }
+
         /// <inheritdoc />
         IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.Not
         {
@@ -740,6 +745,13 @@ namespace Raven.Client.Documents.Session
             AndAlso();
             return this;
         }
+        
+        /// <inheritdoc />
+        IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.AndAlso(bool wrapPreviousQueryClauses)
+        {
+            AndAlso(wrapPreviousQueryClauses);
+            return this;
+        }
 
         /// <inheritdoc />
         IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.OrElse()
@@ -747,6 +759,14 @@ namespace Raven.Client.Documents.Session
             OrElse();
             return this;
         }
+        
+        /// <inheritdoc />
+        IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.OrElse(bool wrapPreviousQueryClauses)
+        {
+            OrElse(wrapPreviousQueryClauses);
+            return this;
+        }
+
 
         /// <inheritdoc />
         IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Boost(decimal boost)
