@@ -183,6 +183,71 @@ namespace RachisTests.DatabaseCluster
             await task;
         }
 
+        [Fact]
+        public async Task CanRestoreAfterRecreation()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            var count = 1;
+            var (nodes, leader) = await CreateRaftCluster(3, watcherCluster: true);
+            using var documentStore = GetDocumentStore(new Options { Server = leader, ReplicationFactor = nodes.Count });
+
+            var notDelete = $"TestObjs/{count}";
+            using (var source = GetDocumentStore())
+            {
+                var config = new PeriodicBackupConfiguration { LocalSettings = new LocalSettings { FolderPath = backupPath }, IncrementalBackupFrequency = "0 0 */12 * *" };
+                var backupTaskId = (await source.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
+
+                using (var session = source.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide}))
+                {
+                    for (int i = 0; i < count; i++)
+                    {
+                        await session.StoreAsync(new TestObj(), $"TestObjs/{i}");
+                    }
+                    await session.SaveChangesAsync();
+                }
+
+                var backupStatus = await source.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
+                await backupStatus.WaitForCompletionAsync();
+
+                using (var session = source.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                {
+                    session.Advanced.MaxNumberOfRequestsPerSession += count;
+                    for (int i = 0; i < count; i++)
+                    {
+                        session.Delete($"TestObjs/{i}");
+                    }
+                    
+                    await session.SaveChangesAsync();
+                }
+
+                var backupStatus2 = await source.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
+                await backupStatus2.WaitForCompletionAsync();
+
+                using (var session = source.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                {
+                    for (int i = 0; i < count; i++)
+                    {
+                        await session.StoreAsync(new TestObj(), $"TestObjs/{i}");
+                    }
+                    await session.StoreAsync(new TestObj(), notDelete);
+                    await session.SaveChangesAsync();
+                }
+
+                var backupStatus3 = await source.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
+                await backupStatus3.WaitForCompletionAsync();
+
+                await documentStore.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerImportOptions(), Directory.GetDirectories(backupPath).First());
+            }
+
+            await AssertClusterWaitForNotNull(nodes, documentStore.Database, async s =>
+            {
+                using var session = s.OpenAsyncSession();
+                return await session.LoadAsync<TestObj>(notDelete);
+            });
+
+            await AssertWaitForCountAsync(async () => await documentStore.Operations.SendAsync(new GetCompareExchangeValuesOperation<TestObj>("")), count + 1);
+        }
+
         [Theory]
         [InlineData(1)]
         [InlineData(1, false)]
