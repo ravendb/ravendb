@@ -41,12 +41,13 @@ class revisionsConfigurationEntry {
         this.initObservables();
         this.initValidation();
     }
+    
     private initObservables() {
         this.deleteDescription = ko.pureComputed(() => {
             const purgeOffText = `<li>A revision will be created anytime a document is modified or deleted.</li>
                                   <li>Revisions of a deleted document can be accessed in the Revisions Bin view.</li>`;
 
-            const purgeOnText = `<li>A revision will be created anytime a docment is modified.</li>
+            const purgeOnText = `<li>A revision will be created anytime a document is modified.</li>
                                  <li>When a document is deleted all its revisions will be removed.</li>`;
 
             let description = this.purgeOnDelete() ? purgeOnText : purgeOffText;
@@ -54,17 +55,6 @@ class revisionsConfigurationEntry {
         });
 
         this.humaneRetentionDescription = ko.pureComputed(() => {
-            const numberOnlyText = (numberToKeep: number) => 
-                `<li>Only the latest <strong>${numberToKeep}</strong> revisions will be kept.</li>
-                 <li>Older revisions will be removed on next revision creation.</li>`;
-            
-            const ageOnlyText = (retentionText: string) => 
-                `<li>Revisions that exceed <strong>${retentionText}</strong> will be removed on next revision creation.</li>`;
-            
-            const numberAndAgeText = (numberToKeep: number, retentionText: string) => 
-                `<li>At least <strong>${numberToKeep}</strong> of the latest revisions will be kept.</li>
-                 <li>Older revisions will be removed if they exceed <strong>${retentionText}</strong> on next revision createion.</li>`;
-            
             const retentionTimeHumane = generalUtils.formatTimeSpan(this.minimumRevisionAgeToKeep() * 1000, true);
             
             const limitByNumber = this.limitRevisions() && this.minimumRevisionsToKeep.isValid();
@@ -73,15 +63,17 @@ class revisionsConfigurationEntry {
             let description;
             
             if (limitByNumber && !limitByAge) {
-                description = numberOnlyText(this.minimumRevisionsToKeep());
+                description = `<li>Only the latest <strong>${this.minimumRevisionsToKeep()}</strong> revisions will be kept.</li>
+                               <li>Older revisions will be removed on next revision creation.</li>`;
             }
             
             if (!limitByNumber && limitByAge) {
-                description = ageOnlyText(retentionTimeHumane);
+                description = `<li>Revisions that exceed <strong>${retentionTimeHumane}</strong> will be removed on next revision creation.</li>`;
             }
 
             if (limitByNumber && limitByAge) {
-                description = numberAndAgeText(this.minimumRevisionsToKeep(), retentionTimeHumane);
+                description =  `<li>At least <strong>${this.minimumRevisionsToKeep()}</strong> of the latest revisions will be kept.</li>
+                                <li>Older revisions will be removed if they exceed <strong>${retentionTimeHumane}</strong> on next revision creation.</li>`;
             }
                 
             return description ? `<ul class="margin-top">${description}</ul>` : "";
