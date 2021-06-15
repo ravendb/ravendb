@@ -840,7 +840,16 @@ namespace FastTests
                 ms.Position = 0;
 
                 using (var outputReader = new StreamReader(ms, leaveOpen: true))
-                    throw new InvalidOperationException($"Could not dispose server with URL '{url}' and DebugTag: '{debugTag}' in '{timeout}'. StackTraces:{Environment.NewLine}{outputReader.ReadToEnd()}");
+                {
+                    var stackTraces = outputReader.ReadToEnd();
+                    var tempPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.stacks.json");
+
+                    File.WriteAllText(tempPath, stackTraces);
+                    Console.WriteLine(stackTraces);
+
+                    throw new InvalidOperationException($"Could not dispose server with URL '{url}' and DebugTag: '{debugTag}' in '{timeout}'. StackTraces available at: '{tempPath}'");
+                }
+
             }
         }
     }
