@@ -30,23 +30,27 @@ namespace SlowTests.MailingList
             public string ImportantProperty { get; set; }
         }
 
-        [Fact(Skip = "RavenDB-6124")]
+        [Fact]
         public void WithCustomizedTagNameAndIdentityProperty()
         {
             var id = string.Empty;
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options()
             {
-                var defaultFindIdentityProperty = store.Conventions.FindIdentityProperty;
-                store.Conventions.FindIdentityProperty = property =>
-                    typeof(IEntity).GetTypeInfo().IsAssignableFrom(property.DeclaringType)
-                      ? property.Name == "Id2"
-                      : defaultFindIdentityProperty(property);
+                ModifyDocumentStore = s =>
+                {
+                    var defaultFindIdentityProperty = s.Conventions.FindIdentityProperty;
+                    s.Conventions.FindIdentityProperty = property =>
+                        typeof(IEntity).GetTypeInfo().IsAssignableFrom(property.DeclaringType)
+                            ? property.Name == "Id2"
+                            : defaultFindIdentityProperty(property);
 
-                store.Conventions.FindCollectionName = type =>
-                                                    typeof(IDomainObject).IsAssignableFrom(type)
-                                                        ? "domainobjects"
-                                                        : DocumentConventions.DefaultGetCollectionName(type);
-
+                    s.Conventions.FindCollectionName = type =>
+                        typeof(IDomainObject).IsAssignableFrom(type)
+                            ? "domainobjects"
+                            : DocumentConventions.DefaultGetCollectionName(type);
+                }
+            }))
+            {
                 using (var session = store.OpenSession())
                 {
                     var domainObject = new DomainObject();
