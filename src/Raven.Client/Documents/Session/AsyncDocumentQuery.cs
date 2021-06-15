@@ -162,7 +162,7 @@ namespace Raven.Client.Documents.Session
             WhereEquals(GetMemberQueryPath(propertySelector.Body), value, exact);
             return this;
         }
-
+        
         /// <inheritdoc />
         IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereEquals<TValue>(Expression<Func<T, TValue>> propertySelector, MethodCall value, bool exact)
         {
@@ -386,6 +386,13 @@ namespace Raven.Client.Documents.Session
             AndAlso();
             return this;
         }
+        
+        /// <inheritdoc />
+        IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.AndAlso(bool wrapPreviousQueryClauses)
+        {
+            AndAlso(wrapPreviousQueryClauses);
+            return this;
+        }
 
         /// <inheritdoc />
         IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrElse()
@@ -393,6 +400,14 @@ namespace Raven.Client.Documents.Session
             OrElse();
             return this;
         }
+        
+        /// <inheritdoc />
+        IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrElse(bool wrapPreviousQueryClauses)
+        {
+            OrElse(wrapPreviousQueryClauses);
+            return this;
+        }
+
 
         /// <inheritdoc />
         IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.Boost(decimal boost)
