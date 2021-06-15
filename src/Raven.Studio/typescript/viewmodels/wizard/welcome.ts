@@ -3,10 +3,20 @@ import router = require("plugins/router");
 import getSetupLocalNodeIpsCommand = require("commands/wizard/getSetupLocalNodeIpsCommand");
 import getSetupParametersCommand = require("commands/wizard/getSetupParametersCommand");
 import genUtils = require("common/generalUtils");
+import browserUtils = require("common/browserUtils");
 
 class welcome extends setupStep {
    
     disableLetEncrypt = ko.observable<boolean>(false);
+    
+    browserAlert = ko.observable<boolean>(false);
+    allowSavingPreference = ko.observable<boolean>(false);
+
+    constructor() {
+        super();
+        
+        this.detectBrowser();
+    }
     
     activate(args: any) {
         super.activate(args, true);
@@ -76,6 +86,16 @@ class welcome extends setupStep {
                 router.navigate("#license");
                 break;
         }
+    }
+
+    detectBrowser(): void {
+        if (!browserUtils.isBrowserSupported()) {
+            this.browserAlert(true);
+        }
+    }
+
+    browserAlertContinue() {
+        this.browserAlert(false);
     }
 }
 

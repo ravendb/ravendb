@@ -17,6 +17,7 @@ import buildInfo = require("models/resources/buildInfo");
 import changesContext = require("common/changesContext");
 import allRoutes = require("common/shell/routes");
 import popoverUtils = require("common/popoverUtils");
+import browserUtils = require("common/browserUtils");
 import registration = require("viewmodels/shell/registration");
 import collection = require("models/database/documents/collection");
 import constants = require("common/constants/constants");
@@ -73,8 +74,11 @@ class shell extends viewModelBase {
     currentRawUrl = ko.observable<string>("");
     rawUrlIsVisible = ko.computed(() => this.currentRawUrl().length > 0);
     showSplash = viewModelBase.showSplash;
+    
     browserAlert = ko.observable<boolean>(false);
     dontShowBrowserAlertAgain = ko.observable<boolean>(false);
+    allowSavingPreference = ko.observable<boolean>(true);
+    
     currentUrlHash = ko.observable<string>(window.location.hash);
 
     licenseStatus = license.licenseCssClass;
@@ -200,6 +204,7 @@ class shell extends viewModelBase {
                 // load global settings
                 studioSettings.default.globalSettings()
                     .done((settings: globalSettings) => this.onGlobalConfiguration(settings));
+                
                 studioSettings.default.registerOnSettingChangedHandler(name => true, (name: string, setting: studioSetting<any>) => {
                     // if any remote configuration was changed, then force reload
                     if (setting.saveLocation === "remote") {
@@ -464,12 +469,7 @@ class shell extends viewModelBase {
     }
     
     detectBrowser() {
-        const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
-        const isFirefox = navigator.userAgent.toLowerCase().indexOf('firefox') > -1;
-
-        if (!isChrome && !isFirefox) {
-            // it isn't supported browser, check if user already said: Don't show this again
-
+        if (!browserUtils.isBrowserSupported()) {
             studioSettings.default.globalSettings()
                 .done(settings => {
                     if (settings.dontShowAgain.shouldShow("UnsupportedBrowser")) {
