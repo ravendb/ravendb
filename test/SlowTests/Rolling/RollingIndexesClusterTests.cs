@@ -91,9 +91,9 @@ namespace SlowTests.Rolling
                 {
                     if (topology.RelevantFor(server.ServerStore.NodeTag) == false)
                     {
-                        server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().AfterDatabaseCreation = db =>
+                        server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().AfterDatabaseCreation = tuple =>
                         {
-                            db.IndexStore.ForTestingPurposesOnly().OnRollingIndexFinished = _ =>
+                            tuple.Database.IndexStore.ForTestingPurposesOnly().OnRollingIndexFinished = _ =>
                             {
                                 Interlocked.Increment(ref count);
                             };

@@ -123,7 +123,7 @@ namespace Raven.Server.Routing
             }
 
             var databasesLandlord = context.RavenServer.ServerStore.DatabasesLandlord;
-            var database = databasesLandlord.TryGetOrCreateResourceStore(databaseName);
+            var database = databasesLandlord.TryGetOrCreateResourceStore(databaseName, caller: context.HttpContext.Request.Path);
 
             if (database.IsCompletedSuccessfully)
             {
