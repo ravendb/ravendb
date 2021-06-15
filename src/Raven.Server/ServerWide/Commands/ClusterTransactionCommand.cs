@@ -108,6 +108,8 @@ namespace Raven.Server.ServerWide.Commands
         [JsonDeserializationIgnore]
         public readonly List<ClusterTransactionDataCommand> DatabaseCommands = new List<ClusterTransactionDataCommand>();
 
+        public bool FromBackup;
+
         public ClusterTransactionCommand() { }
 
         public ClusterTransactionCommand(string databaseName, char identityPartsSeparator, DatabaseTopology topology,
@@ -116,7 +118,7 @@ namespace Raven.Server.ServerWide.Commands
         {
             DatabaseName = databaseName;
             DatabaseRecordId = topology.DatabaseTopologyIdBase64 ?? Guid.NewGuid().ToBase64Unpadded();
-            ClusterTransactionId = topology.DatabaseTopologyIdBase64 ?? Guid.NewGuid().ToBase64Unpadded();
+            ClusterTransactionId = topology.ClusterTransactionIdBase64 ?? Guid.NewGuid().ToBase64Unpadded();
             Options = options;
 
             foreach (var commandData in commandParsedCommands)
@@ -234,9 +236,11 @@ namespace Raven.Server.ServerWide.Commands
                 if (changeVector != null)
                     changeVectorIndex = ChangeVectorUtils.GetEtagById(changeVector, dbTopology.ClusterTransactionIdBase64);
 
+                if (FromBackup)
+                    changeVectorIndex = GetCurrentIndex(context, items, atomicGuardKey) ?? 0;
+
                 var type = cmdType switch
                 {
-
                     nameof(CommandType.PUT) => CommandType.CompareExchangePUT,
                     nameof(CommandType.DELETE) => CommandType.CompareExchangeDELETE,
                     _ => throw new ArgumentOutOfRangeException()
@@ -245,10 +249,10 @@ namespace Raven.Server.ServerWide.Commands
                 if (type == CommandType.CompareExchangeDELETE && changeVector == null)
                 {
                     var current = GetCurrentIndex(context, items, atomicGuardKey);
-                    if (current == CompareExchangeCommandBase.InvalidIndexValue)
+                    if (current == null)
                         continue; // trying to delete non-existing key
 
-                    changeVectorIndex = current;
+                    changeVectorIndex = current.Value;
                 }
 
                 ClusterCommands.Add(new ClusterTransactionDataCommand
@@ -262,7 +266,7 @@ namespace Raven.Server.ServerWide.Commands
             }
         }
 
-        private unsafe long GetCurrentIndex(ClusterOperationContext context, Table items, string key)
+        private unsafe long? GetCurrentIndex(ClusterOperationContext context, Table items, string key)
         {
             using (Slice.From(context.Allocator, CompareExchangeKey.GetStorageKey(DatabaseName, key), out Slice keySlice))
             {
@@ -270,7 +274,7 @@ namespace Raven.Server.ServerWide.Commands
                     return *(long*)reader.Read((int)ClusterStateMachine.CompareExchangeTable.Index, out var _);
             }
 
-            return CompareExchangeCommandBase.InvalidIndexValue;
+            return null;
         }
 
         const string RvnAtomicPrefix = "rvn-atomic/";
@@ -522,6 +526,7 @@ namespace Raven.Server.ServerWide.Commands
             djv[nameof(DatabaseRecordId)] = DatabaseRecordId;
             djv[nameof(ClusterTransactionId)] = ClusterTransactionId;
             djv[nameof(DatabaseCommandsCount)] = DatabaseCommandsCount;
+            djv[nameof(FromBackup)] = FromBackup;
 
             return djv;
         }
