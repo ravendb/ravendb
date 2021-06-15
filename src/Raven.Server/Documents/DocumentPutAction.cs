@@ -72,6 +72,9 @@ namespace Raven.Server.Documents
                 if (nonPersistentDocumentFlags != NonPersistentDocumentFlags.None) // replication or engine running an operation, we can skip checking it 
                     return;
 
+                if (_parent._documentDatabase.ClusterTransactionId == null)
+                    return;
+
                 long indexFromChangeVector = ChangeVectorUtils.GetEtagById(changeVector, _parent._documentDatabase.ClusterTransactionId);
                 if (indexFromChangeVector == 0)
                     return;
