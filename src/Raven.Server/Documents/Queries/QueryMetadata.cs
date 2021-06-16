@@ -603,7 +603,7 @@ namespace Raven.Server.Documents.Queries
                         break;
                     }
                     case ValueExpression ve:
-                    {
+                     {
                         var vt = QueryBuilder.GetValue(Query, this, parameters, ve);
                         var split = vt.Value.ToString()?.Split('.');
                         
