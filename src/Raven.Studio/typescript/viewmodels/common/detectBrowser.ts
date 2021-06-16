@@ -1,17 +1,14 @@
-import viewModelBase = require("viewmodels/viewModelBase");
 import studioSettings = require("common/settings/studioSettings");
 
-class detectBrowser extends viewModelBase {
+class detectBrowser {
 
     showBrowserAlert = ko.observable<boolean>(false);
     dontShowBrowserAlertAgain = ko.observable<boolean>(false);
     
-    constructor(private settingsHasInfo: boolean) {
-        super();
-        
+    constructor(private infoPersistedInSettings: boolean) {
         const isBrowserSupported = detectBrowser.isBrowserSupported();
 
-        if (this.settingsHasInfo) {
+        if (this.infoPersistedInSettings) {
             studioSettings.default.globalSettings()
                 .done(settings => {
                     if (settings.dontShowAgain.shouldShow("UnsupportedBrowser")) {
@@ -30,8 +27,8 @@ class detectBrowser extends viewModelBase {
         return isChrome || isFirefox;
     }
 
-    continueWithCurrentBrowser() {
-        if (this.settingsHasInfo && this.dontShowBrowserAlertAgain()) {
+    continueWithCurrentBrowser(): void {
+        if (this.infoPersistedInSettings && this.dontShowBrowserAlertAgain()) {
             studioSettings.default.globalSettings()
                 .done(settings => settings.dontShowAgain.ignore("UnsupportedBrowser"));
         }

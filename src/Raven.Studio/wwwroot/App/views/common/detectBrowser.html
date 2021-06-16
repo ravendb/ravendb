@@ -15,7 +15,7 @@
         </div>
         <p class="margin-bottom">Or</p>
         <button class="btn btn-default" data-bind="click: continueWithCurrentBrowser">Continue with current browser</button>
-        <div data-bind="if: settingsHasInfo">
+        <div data-bind="if: infoPersistedInSettings">
             <div class="checkbox">
                 <input id="dontShowAgainBrowser" class="styled" type="checkbox" data-bind="checked: dontShowBrowserAlertAgain">
                 <label for="dontShowAgainBrowser">
