@@ -21,6 +21,7 @@ using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.ETL.Providers.OLAP
 {
@@ -149,26 +150,29 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             foreach (var transformed in records)
             {
                 outerScope.NumberOfFiles++;
-
-                string localPath, folderName, fileName, safeFolderName;
-                using (outerScope.Start())
-                using (var loadScope = outerScope.For($"{EtlOperations.LoadLocal}/{outerScope.NumberOfFiles}"))
+                string localPath = null;
+                try
                 {
-                    localPath = transformed.GenerateFile(out folderName, out safeFolderName, out fileName);
+                    string folderName, fileName, safeFolderName;
+                    using (outerScope.Start())
+                    using (var loadScope = outerScope.For($"{EtlOperations.LoadLocal}/{outerScope.NumberOfFiles}"))
+                    {
+                        localPath = transformed.GenerateFile(out folderName, out safeFolderName, out fileName);
 
-                    loadScope.FileName = fileName;
-                    loadScope.NumberOfFiles = 1;
+                        loadScope.FileName = fileName;
+                        loadScope.NumberOfFiles = 1;
 
-                    count += transformed.Count;
+                        count += transformed.Count;
+                    }
+
+                    if (AnyRemoteDestinations)
+                        UploadToServer(localPath, folderName, fileName, safeFolderName, scope);
                 }
-
-                if (AnyRemoteDestinations)
-                    UploadToServer(localPath, folderName, fileName, safeFolderName, scope);
-
-                if (Configuration.Connection.LocalSettings != null)
-                    continue;
-
-                File.Delete(localPath);
+                finally
+                {
+                    if (Configuration.Connection.LocalSettings == null && localPath != null)
+                        IOExtensions.DeleteFile(localPath);
+                }
             }
 
             return count;
