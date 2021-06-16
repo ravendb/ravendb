@@ -7,6 +7,7 @@ using Raven.Server.Config;
 using Raven.Server.Utils;
 using Xunit;
 using Xunit.Abstractions;
+using FastTests.Server.Basic.Entities;
 
 namespace SlowTests.Issues
 {
@@ -31,9 +32,9 @@ namespace SlowTests.Issues
                 {
                     Company = "Toli",
                     Employee = "Mitzi",
-                    Lines = new List<Lines>()
+                    Lines = new List<OrderLine>()
                     {
-                        new Lines()
+                        new OrderLine()
                         {
                             Discount = 1,
                             PricePerUnit = 1,
@@ -41,7 +42,7 @@ namespace SlowTests.Issues
                             ProductName = "1",
                             Quantity = 1
                         },
-                        new Lines()
+                        new OrderLine()
                         {
                             Discount = 2,
                             PricePerUnit = 2,
@@ -49,7 +50,7 @@ namespace SlowTests.Issues
                             ProductName = "2",
                             Quantity = 2
                         },
-                        new Lines()
+                        new OrderLine()
                         {
                             Discount = 3,
                             PricePerUnit = 3,
@@ -57,7 +58,7 @@ namespace SlowTests.Issues
                             ProductName = "3",
                             Quantity = 3
                         },
-                        new Lines()
+                        new OrderLine()
                         {
                             Discount = 4,
                             PricePerUnit = 4,
@@ -77,7 +78,6 @@ namespace SlowTests.Issues
                     await session.StoreAsync(order, "orders/1");
                     await session.SaveChangesAsync();
                 }
-
                 using (var session = store.OpenSession())
                 {
                     var res = WaitForValue(() =>
@@ -88,30 +88,7 @@ namespace SlowTests.Issues
 
                     Assert.False(res);
                 }
-
-
             }
-        }
-
-        public class Lines
-        {
-            public float Discount { get; set; }
-            public float PricePerUnit { get; set; }
-            public string Product { get; set; }
-            public string ProductName { get; set; }
-            public int Quantity { get; set; }
-        }
-
-        public class Order
-        {
-            public string Company { get; set; }
-            public string Employee { get; set; }
-            public float Freight { get; set; }
-            public List<Lines> Lines { get; set; }
-            public DateTimeOffset OrderedAt { get; set; }
-            public DateTimeOffset RequireAt { get; set; }
-            public string ShipVia { get; set; }
-            public object ShippedAt { get; set; }
         }
     }
 }
