@@ -93,16 +93,22 @@ define(function(require, exports, module) {
             var result;
             while (result = declareFunctionRegex.exec(value)) {
                 var start = result.index + result["0"].length;
-                var end = getEndOfDeclareFunctino(value,  start);
+                var end = getEndOfDeclareFunction(value, start);
+                
                 if (end > 0) {
                     var script = value.substring(start, end);
                     var lastNewLineIndex = value.lastIndexOf("\n", start);
-                    script =  new Array( start - lastNewLineIndex ).join( " " ) + script;
-                    lastNewLineIndex = value.lastIndexOf("\n", lastNewLineIndex - 1);
-                    while (lastNewLineIndex > -1){
+                    script =  new Array(start - lastNewLineIndex).join(" ") + script;
+
+                    if (lastNewLineIndex >= 0) {
                         script = "\n" + script;
-                        lastNewLineIndex = value.lastIndexOf("\n", lastNewLineIndex - 1);
+                        
+                        while (lastNewLineIndex > 0) {
+                            lastNewLineIndex = value.lastIndexOf("\n", lastNewLineIndex - 1);
+                            script = "\n" + script;
+                        }
                     }
+
                     validateFunction.apply(this, [script, errors]);
                 }
             }
@@ -112,7 +118,7 @@ define(function(require, exports, module) {
 
         var declareFunctionRegex = /declare\s+function\s+[^{]*{/g;
 
-        var getEndOfDeclareFunctino = function (value, start) {
+        var getEndOfDeclareFunction = function (value, start) {
             var curelyBracesCount = 0;
             var inDoubleQoutes = false;
             var inSingleQoutes = false;

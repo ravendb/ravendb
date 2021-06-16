@@ -23,7 +23,7 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
     constructor(dto: Raven.Client.Documents.Subscriptions.SubscriptionStateWithNodeDetails) {
         super();
         
-        this.query(dto.Query);
+        this.query(dto.Query.trim());
         this.updateDetails(dto);
         this.initializeObservables(); 
         this.initValidation();
@@ -75,13 +75,13 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
         
         this.manualChooseMentor(!!dto.MentorNode);
 
-        this.query(dto.Query);
+        this.query(dto.Query.trim());
         this.changeVectorForNextBatchStartingPoint(dto.ChangeVectorForNextBatchStartingPoint);
         this.setStartingPoint(false);
     }
 
     private serializeChangeVector() {
-        let changeVector: Raven.Client.Constants.Documents.SubscriptionChangeVectorSpecialStates | string = this.taskId ? "DoNotChange" : "BeginningOfTime"; 
+        let changeVector: Raven.Client.Constants.Documents.SubscriptionChangeVectorSpecialStates | string = this.taskId ? "DoNotChange" : "BeginningOfTime";
 
         if (this.setStartingPoint()) {
             switch (this.startingPointType()) {
