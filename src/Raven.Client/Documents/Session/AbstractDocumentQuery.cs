@@ -586,11 +586,6 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             tokens.AddLast(CloseSubclauseToken.Create());
         }
 
-        public void WrapQueryWithClauses()
-        {
-            throw new NotImplementedException();
-        }
-
         /// <summary>
         ///   Matches value
         /// </summary>
