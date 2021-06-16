@@ -260,12 +260,19 @@ namespace StressTests.Server.Replication
             });
 
             _nodes = cluster.Nodes;
-
+            var wakeUpReasons = new Dictionary<string, List<string>>();
             try
             {
                 foreach (var server in _nodes)
                 {
+                    wakeUpReasons.Add(server.ServerStore.NodeTag, new List<string>());
                     server.ServerStore.DatabasesLandlord.SkipShouldContinueDisposeCheck = true;
+                    server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().AfterDatabaseCreation = tuple =>
+                    {
+                        var list = wakeUpReasons[tuple.Database.ServerStore.NodeTag];
+                        list.Add(tuple.caller);
+                        wakeUpReasons[tuple.Database.ServerStore.NodeTag] = list;
+                    };
                 }
 
                 using (var store = GetDocumentStore(new Options
@@ -277,7 +284,7 @@ namespace StressTests.Server.Replication
                 }))
                 {
                     var count = RavenDB_13987.WaitForCount(TimeSpan.FromSeconds(300), clusterSize, GetIdleCount);
-                    Assert.Equal(clusterSize, count);
+                    Assert.True(clusterSize == count, string.Join(Environment.NewLine, wakeUpReasons.Select(x => string.Join(": ", x.Key, string.Join(", ", x.Value)))));
 
                     foreach (var server in _nodes)
                     {
@@ -294,8 +301,7 @@ namespace StressTests.Server.Replication
                     {
                         await store2.Maintenance.SendAsync(new GetStatisticsOperation());
 
-                        Assert.Equal(2, GetIdleCount());
-
+                        Assert.True(2 == GetIdleCount(), string.Join(Environment.NewLine, wakeUpReasons.Select(x => string.Join(": ", x.Key, string.Join(", ", x.Value)))));
                         using (var s = store2.OpenAsyncSession())
                         {
                             await s.StoreAsync(new User() { Name = "Egor" }, "foo/bar");
@@ -304,7 +310,7 @@ namespace StressTests.Server.Replication
                     }
 
                     count = RavenDB_13987.WaitForCount(TimeSpan.FromSeconds(300), 0, GetIdleCount);
-                    Assert.Equal(0, count);
+                    Assert.True(0 == count, string.Join(Environment.NewLine, wakeUpReasons.Select(x => string.Join(": ", x.Key, string.Join(", ", x.Value)))));
 
                     var timeout = 5000;
                     foreach (var server in _nodes)
@@ -327,7 +333,7 @@ namespace StressTests.Server.Replication
                             now = DateTime.Now;
                         }
                     }
-                    Assert.Equal(2, GetIdleCount());
+                    Assert.True(2 == GetIdleCount(), string.Join(Environment.NewLine, wakeUpReasons.Select(x => string.Join(": ", x.Key, string.Join(", ", x.Value)))));
                 }
             }
             finally
@@ -335,6 +341,7 @@ namespace StressTests.Server.Replication
                 foreach (var server in _nodes)
                 {
                     server.ServerStore.DatabasesLandlord.SkipShouldContinueDisposeCheck = false;
+                    server.ServerStore.DatabasesLandlord.ForTestingPurposes = null;
                 }
             }
         }
