@@ -17,7 +17,6 @@ import buildInfo = require("models/resources/buildInfo");
 import changesContext = require("common/changesContext");
 import allRoutes = require("common/shell/routes");
 import popoverUtils = require("common/popoverUtils");
-import browserUtils = require("common/browserUtils");
 import registration = require("viewmodels/shell/registration");
 import collection = require("models/database/documents/collection");
 import constants = require("common/constants/constants");
@@ -52,6 +51,7 @@ import serverTime = require("common/helpers/database/serverTime");
 import saveGlobalStudioConfigurationCommand = require("commands/resources/saveGlobalStudioConfigurationCommand");
 import saveStudioConfigurationCommand = require("commands/resources/saveStudioConfigurationCommand");
 import studioSetting = require("common/settings/studioSetting");
+import detectBrowser = require("viewmodels/common/detectBrowser");
 
 class shell extends viewModelBase {
 
@@ -75,9 +75,7 @@ class shell extends viewModelBase {
     rawUrlIsVisible = ko.computed(() => this.currentRawUrl().length > 0);
     showSplash = viewModelBase.showSplash;
     
-    browserAlert = ko.observable<boolean>(false);
-    dontShowBrowserAlertAgain = ko.observable<boolean>(false);
-    allowSavingPreference = ko.observable<boolean>(true);
+    browserAlert: detectBrowser;
     
     currentUrlHash = ko.observable<string>(window.location.hash);
 
@@ -152,7 +150,7 @@ class shell extends viewModelBase {
             (settings, db) => new saveStudioConfigurationCommand(settings, db).execute()
         );
         
-        this.detectBrowser();
+        this.browserAlert = new detectBrowser(true);
         
         window.addEventListener("hashchange", e => {
             this.currentUrlHash(location.hash);
@@ -210,7 +208,6 @@ class shell extends viewModelBase {
                     if (setting.saveLocation === "remote") {
                         studioSettings.default.globalSettings()
                             .done(settings => this.onGlobalConfiguration(settings));
-                        
                     }
                 });
 
@@ -466,30 +463,6 @@ class shell extends viewModelBase {
     
     ignoreWebSocketError() {
         changesContext.default.serverNotifications().ignoreWebSocketConnectionError(true);
-    }
-    
-    detectBrowser() {
-        if (!browserUtils.isBrowserSupported()) {
-            studioSettings.default.globalSettings()
-                .done(settings => {
-                    if (settings.dontShowAgain.shouldShow("UnsupportedBrowser")) {
-                        this.browserAlert(true);
-                    }
-                });
-        }
-    }
-
-    browserAlertContinue() {
-        const dontShowAgain = this.dontShowBrowserAlertAgain();
-        
-        if (dontShowAgain) {
-            studioSettings.default.globalSettings()
-                .done(settings => {
-                    settings.dontShowAgain.ignore("UnsupportedBrowser");
-                });
-        }
-        
-        this.browserAlert(false);
     }
     
     createUrlWithHashComputed(serverUrlProvider: KnockoutComputed<string>) {
