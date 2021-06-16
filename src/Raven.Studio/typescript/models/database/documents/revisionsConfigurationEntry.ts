@@ -52,7 +52,19 @@ class revisionsConfigurationEntry {
         this.initObservables();
         this.initValidation();
     }
+    
     private initObservables() {
+        this.deleteDescription = ko.pureComputed(() => {
+            const purgeOffText = `<li>A revision will be created anytime a document is modified or deleted.</li>
+                                  <li>Revisions of a deleted document can be accessed in the Revisions Bin view.</li>`;
+
+            const purgeOnText = `<li>A revision will be created anytime a document is modified.</li>
+                                 <li>When a document is deleted all its revisions will be removed.</li>`;
+
+            let description = this.purgeOnDelete() ? purgeOnText : purgeOffText;
+            return `<ul class="margin-top">${description}</ul>`; 
+        });
+
         this.humaneRetentionDescription = ko.pureComputed(() => {
             const retentionTimeHumane = generalUtils.formatTimeSpan(this.minimumRevisionAgeToKeep() * 1000, true);
             

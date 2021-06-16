@@ -508,12 +508,7 @@ namespace Raven.Server.Commercial
 
         public async Task<License> GetUpdatedLicense(License currentLicense)
         {
-            var leaseLicenseInfo = GetLeaseLicenseInfo(currentLicense);
-
-            var response = await ApiHttpClient.Instance.PostAsync("/api/v2/license/lease",
-                    new StringContent(JsonConvert.SerializeObject(leaseLicenseInfo), Encoding.UTF8, "application/json"))
-                .ConfigureAwait(false);
-
+            var response = await GetUpdatedLicenseResponseMessage(currentLicense).ConfigureAwait(false);
             if (response.IsSuccessStatusCode == false)
                 return null;
 

@@ -626,6 +626,7 @@ namespace Tests.Infrastructure
             [CallerMemberName] string caller = null)
         {
             string[] allowedNodeTags = { "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z" };
+            var actualLeaderIndex = leaderIndex;
             leaderIndex ??= _random.Next(0, numberOfNodes);
             RavenServer leader = null;
             var serversToPorts = new Dictionary<RavenServer, string>();
@@ -715,12 +716,28 @@ namespace Tests.Infrastructure
 
             // ReSharper disable once PossibleNullReferenceException
             var condition = await leader.ServerStore.WaitForState(RachisState.Leader, CancellationToken.None).WaitAsync(numberOfNodes * _electionTimeoutInMs * 5);
-            var states = string.Empty;
+            var states = "The leader has changed while waiting for cluster to become stable. All nodes status: ";
             if (condition == false)
             {
-                states = GetLastStatesFromAllServersOrderedByTime();
+                InvalidOperationException e = null;
+                if (actualLeaderIndex == null)
+                {
+                    // leader changed, try get the new leader if no leader index was selected
+                    try
+                    {
+                        leader = await ActionWithLeader(_ => Task.CompletedTask, clusterNodes);
+                        return (clusterNodes, leader, certificates);
+                    }
+                    catch (InvalidOperationException ex)
+                    {
+                        e = ex;
+                    }
+                }
+                states += GetLastStatesFromAllServersOrderedByTime();
+                if (e != null)
+                    states += $"{Environment.NewLine}{e}";
             }
-            Assert.True(condition, "The leader has changed while waiting for cluster to become stable. All nodes status: " + states);
+            Assert.True(condition, states);
             return (clusterNodes, leader, certificates);
         }
 
