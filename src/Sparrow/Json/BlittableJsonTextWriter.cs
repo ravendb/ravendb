@@ -83,7 +83,7 @@ namespace Sparrow.Json
         }
     }
 
-    public class RachisBlittableJsonTextWriter : AbstractBlittableJsonTextWriter
+    internal class RachisBlittableJsonTextWriter : AbstractBlittableJsonTextWriter
     {
         private readonly Action _afterFlush;
 
@@ -185,7 +185,7 @@ namespace Sparrow.Json
             }
 
             WriteStartObject();
-            
+
             var prop = new BlittableJsonReaderObject.PropertyDetails();
             using (var buffer = obj.GetPropertiesByInsertionOrder())
             {
