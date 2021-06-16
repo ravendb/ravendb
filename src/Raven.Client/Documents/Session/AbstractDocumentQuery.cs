@@ -957,31 +957,6 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                 tokens.AddLast(QueryOperatorToken.And);
             }
         }
-
-        /// <summary>
-        ///   Wraps previous query with clauses and adds an OR operator to the given query
-        /// </summary>
-        public void OrElse(bool wrapPreviousQueryClauses)
-        {
-            var tokens = GetCurrentWhereTokens();
-
-            if (tokens.Last == null)
-                return;
-
-            if (tokens.Last.Value is QueryOperatorToken)
-                throw new InvalidOperationException("Cannot add OR, previous token was already an operator token.");
-            
-            if (wrapPreviousQueryClauses == false)
-            {
-                tokens.AddLast(QueryOperatorToken.Or);
-            }
-            else
-            { 
-                tokens.AddFirst(OpenSubclauseToken.Create());
-                tokens.AddLast(CloseSubclauseToken.Create());
-                tokens.AddLast(QueryOperatorToken.Or);
-            }
-        }
         
         /// <summary>
         ///   Add an OR to the query

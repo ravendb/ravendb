@@ -400,14 +400,6 @@ namespace Raven.Client.Documents.Session
             OrElse();
             return this;
         }
-        
-        /// <inheritdoc />
-        IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrElse(bool wrapPreviousQueryClauses)
-        {
-            OrElse(wrapPreviousQueryClauses);
-            return this;
-        }
-
 
         /// <inheritdoc />
         IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.Boost(decimal boost)
