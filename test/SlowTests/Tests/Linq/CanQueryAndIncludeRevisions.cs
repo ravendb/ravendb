@@ -17,6 +17,139 @@ namespace SlowTests.Tests.Linq
         }
         
         [Fact]
+        public async Task CanQueryAndIncludeRevisionsJint()
+        {
+            using (var store = GetDocumentStore())
+            {
+                const string id = "users/omer";
+
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User {Name = "Omer",},
+                        id);
+
+                    await session.SaveChangesAsync();
+                }
+
+                string changeVector;
+                using (var session = store.OpenAsyncSession())
+                {
+                    var metadatas = await session.Advanced.Revisions.GetMetadataForAsync(id);
+                    Assert.Equal(1, metadatas.Count);
+
+                    changeVector = metadatas.First().GetString(Constants.Documents.Metadata.ChangeVector);
+
+                    session.Advanced.Patch<User, string>(id, x => x.ContractRevision, changeVector);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var query = await session.Advanced
+                        .AsyncRawQuery<User>(
+                            @"
+declare function Foo(i) {
+    includes.revisions(i.ContractRevision)
+    return i;
+}
+from Users as u
+where ID(u) = 'users/omer' 
+select Foo(u)"
+                        )
+                        .ToListAsync();
+                    
+                    var revision = await session.Advanced.Revisions.GetAsync<User>(changeVector);
+
+                    Assert.NotNull(revision);
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+                }
+            }
+        }
+        
+        [Fact]
+        public async Task CanQueryAndIncludeRevisionsArrayJint()
+        {
+            using (var store = GetDocumentStore())
+            {
+                const string id = "users/omer";
+                var cvList = new List<string>();
+
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User {Name = "Omer",},
+                        id);
+
+                    await session.SaveChangesAsync();
+                }
+
+                string changeVector;
+                using (var session = store.OpenAsyncSession())
+                {
+                    var metadatas = await session.Advanced.Revisions.GetMetadataForAsync(id);
+                    Assert.Equal(1, metadatas.Count);
+                      
+                    changeVector = metadatas.First().GetString(Constants.Documents.Metadata.ChangeVector);
+                    
+                    session.Advanced.Patch<User, string>(id, x => x.FirstRevision, changeVector);
+                    
+                    await session.SaveChangesAsync();
+
+                    cvList.Add(changeVector);
+                    
+                    metadatas = await session.Advanced.Revisions.GetMetadataForAsync(id);
+                    
+                    changeVector =  metadatas[0].GetString(Constants.Documents.Metadata.ChangeVector);
+                    
+                    cvList.Add(changeVector);
+                    
+                    session.Advanced.Patch<User, string>(id, x => x.SecondRevision, changeVector);
+                    
+                    await session.SaveChangesAsync(); 
+                    
+                    metadatas = await session.Advanced.Revisions.GetMetadataForAsync(id);
+
+                    changeVector = metadatas[0].GetString(Constants.Documents.Metadata.ChangeVector);
+                    
+                    cvList.Add(changeVector);
+                    
+                    session.Advanced.Patch<User, string>(id, x => x.ThirdRevision, changeVector);
+                    
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var query = await session.Advanced
+                        .AsyncRawQuery<User>(
+                            @"
+declare function Foo(i) {
+    includes.revisions(i.FirstRevision, i.SecondRevision, i.ThirdRevision)
+    return i;
+}
+from Users as u
+where ID(u) = 'users/omer' 
+select Foo(u)"
+                        )
+                        .ToListAsync();
+                    
+                    var revision1 = await session.Advanced.Revisions.GetAsync<User>(cvList[0]);
+                    var revision2 = await session.Advanced.Revisions.GetAsync<User>(cvList[1]);
+                    var revision3 = await session.Advanced.Revisions.GetAsync<User>(cvList[2]);
+                
+                    Assert.NotNull(revision1);
+                    Assert.NotNull(revision2);
+                    Assert.NotNull(revision3);
+                    
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+                }
+            }
+        }
+
+        [Fact]
         public async Task CanQueryAndIncludeRevisionsTest()
         {
             using (var store = GetDocumentStore())

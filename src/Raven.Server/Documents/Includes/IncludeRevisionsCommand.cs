@@ -12,22 +12,21 @@ namespace Raven.Server.Documents.Includes
     {
         private readonly DocumentDatabase _database;
         private readonly DocumentsOperationContext _context;
-        private readonly HashSet<string> _revisions;
+        private HashSet<string> _pathsForRevisionsInDocuments;
 
         public Dictionary<string, Document> Results { get;  }
 
         private IncludeRevisionsCommand(DocumentDatabase database, DocumentsOperationContext context)
         {
             _database = database;
-            _context = context;
-            
-            Results = new Dictionary<string, Document>(StringComparer.OrdinalIgnoreCase);
+            _context  = context;
+            Results   = new Dictionary<string, Document>(StringComparer.OrdinalIgnoreCase);
         }
         
-        public IncludeRevisionsCommand(DocumentDatabase database, DocumentsOperationContext context, HashSet<string> revisions)
+        public IncludeRevisionsCommand(DocumentDatabase database, DocumentsOperationContext context, HashSet<string> pathsForRevisionsInDocuments)
             : this(database, context)
         {
-            _revisions = revisions;
+            _pathsForRevisionsInDocuments = pathsForRevisionsInDocuments ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         }
 
         public void Fill(Document document)
@@ -35,32 +34,41 @@ namespace Raven.Server.Documents.Includes
             if (document == null)
                 return;
 
-            foreach (var fieldName in _revisions)
+            foreach (var fieldName in _pathsForRevisionsInDocuments)
             {
-                if (document.Data.TryGet(fieldName, out object singleOrMultipleCv) == false)
+                
+                if (document.Data.TryGet(fieldName, out object singleOrMultipleCv) == false  )
                 {
                     throw new InvalidOperationException($"Cannot include revisions for related document '{document.Id}', " +
                                                         $"document {document.Id} doesn't have a field named '{fieldName}'. ");
                 }
 
-                var changeVector = string.Empty;
                 if(singleOrMultipleCv is BlittableJsonReaderArray blittableJsonReaderArray)
                 {
                     foreach (object cvObj in blittableJsonReaderArray)
                     {
-                        changeVector = Convert.ToString(cvObj);
+                        var changeVector = Convert.ToString(cvObj);
                         var getRevisionsByCv  = _database.DocumentsStorage.RevisionsStorage.GetRevision(context: _context, changeVector:changeVector);
-                        Results.Add(changeVector,getRevisionsByCv);
+                        Results[changeVector] = getRevisionsByCv;
                     }
                 }
                 else if (singleOrMultipleCv is LazyStringValue lazyStringValue)
                 {
                     var getRevisionsByCv  = _database.DocumentsStorage.RevisionsStorage.GetRevision(context: _context, changeVector:lazyStringValue);
-                    Results.Add(lazyStringValue,getRevisionsByCv);
+                    Results[lazyStringValue] = getRevisionsByCv;
                 }
                 
 
             }
+        }
+
+        public void AddRange(HashSet<string> revisionsCvs)
+        {
+            foreach (string revisionsCv in revisionsCvs)
+            {
+                var getRevisionsByCv  = _database.DocumentsStorage.RevisionsStorage.GetRevision(context: _context, changeVector:revisionsCv);
+                Results[revisionsCv] = getRevisionsByCv;
+            }  
         }
     }
 }

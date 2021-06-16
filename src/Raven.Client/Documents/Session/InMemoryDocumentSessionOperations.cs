@@ -2148,7 +2148,7 @@ more responsive application.
         
         public bool CheckIfChangeVectorAlreadyIncluded(IEnumerable<string> changeVectors)
         {
-            if (IncludedRevisionByChangeVectors?.Count == 0) return false;
+            if (IncludedRevisionByChangeVectors is null) return false;
             foreach (var cv in changeVectors)
             {
                 if (IncludedRevisionByChangeVectors.TryGetValue(cv, out DocumentInfo documentInfo) == false )

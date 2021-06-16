@@ -3042,6 +3042,7 @@ namespace Raven.Server.Documents.Indexes
                                 var skippedResults = new Reference<int>();
                                 IncludeCountersCommand includeCountersCommand = null;
                                 IncludeTimeSeriesCommand includeTimeSeriesCommand = null;
+                                IncludeRevisionsCommand includeRevisionsCommand = null;
 
                                 var fieldsToFetch = new FieldsToFetch(query, Definition);
 
@@ -3049,6 +3050,14 @@ namespace Raven.Server.Documents.Indexes
                                     DocumentDatabase.DocumentsStorage, queryContext.Documents,
                                     query.Metadata.Includes,
                                     fieldsToFetch.IsProjection);
+
+                                if (query.Metadata.RevisionIncludes != null)
+                                {
+                                    includeRevisionsCommand = new IncludeRevisionsCommand(
+                                        DocumentDatabase,
+                                        queryContext.Documents,
+                                        query.Metadata.RevisionIncludes.Revisions);
+                                }
 
                                 var includeCompareExchangeValuesCommand = IncludeCompareExchangeValuesCommand.ExternalScope(queryContext, query.Metadata.CompareExchangeValueIncludes);
 
@@ -3067,7 +3076,7 @@ namespace Raven.Server.Documents.Indexes
                                         query.Metadata.TimeSeriesIncludes.TimeSeries);
                                 }
 
-                                var retriever = GetQueryResultRetriever(query, queryScope, queryContext.Documents, fieldsToFetch, includeDocumentsCommand, includeCompareExchangeValuesCommand);
+                                var retriever = GetQueryResultRetriever(query, queryScope, queryContext.Documents, fieldsToFetch, includeDocumentsCommand, includeCompareExchangeValuesCommand, includeRevisionsCommand);
 
                                 IEnumerable<IndexReadOperation.QueryResult> documents;
 
@@ -3974,8 +3983,11 @@ namespace Raven.Server.Documents.Indexes
             return _lastStats;
         }
 
-        public abstract IQueryResultRetriever GetQueryResultRetriever(IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsOperationContext documentsContext, FieldsToFetch fieldsToFetch, IncludeDocumentsCommand includeDocumentsCommand, IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand);
-
+        protected abstract IQueryResultRetriever GetQueryResultRetriever(
+            IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsOperationContext documentsContext, FieldsToFetch fieldsToFetch,
+            IncludeDocumentsCommand includeDocumentsCommand, IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand,
+            IncludeRevisionsCommand includeRevisionsCommand);
+        
         public abstract void SaveLastState(); 
 
         protected void HandleIndexOutputsPerDocument(LazyStringValue documentId, int numberOfOutputs, IndexingStatsScope stats)
