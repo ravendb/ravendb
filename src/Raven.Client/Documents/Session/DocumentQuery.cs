@@ -435,12 +435,6 @@ namespace Raven.Client.Documents.Session
             Include(path);
             return this;
         }
-
-        public IDocumentQuery<T> WrapQueryWithClauses()
-        {
-            throw new NotImplementedException();
-        }
-
         /// <inheritdoc />
         IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.Not
         {
