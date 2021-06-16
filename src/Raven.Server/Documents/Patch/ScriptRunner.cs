@@ -13,9 +13,11 @@ using Jint.Native;
 using Jint.Native.Array;
 using Jint.Native.Function;
 using Jint.Native.Object;
+using Jint.Runtime;
 using Jint.Runtime.Interop;
 using Raven.Client;
 using Raven.Client.Documents.Indexes.Spatial;
+using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Exceptions.Documents.Patching;
@@ -199,6 +201,7 @@ namespace Raven.Server.Documents.Patch
             public List<string> DebugOutput;
             public bool PutOrDeleteCalled;
             public HashSet<string> Includes;
+            public HashSet<string> IncludeRevisionsChangeVectors;
             public HashSet<string> CompareExchangeValueIncludes;
             private HashSet<string> _documentIds;
 
@@ -260,11 +263,12 @@ namespace Raven.Server.Documents.Patch
                 ObjectInstance includesObject = new ObjectInstance(ScriptEngine);
                 includesObject.FastAddProperty("document", includeDocumentFunc, false, false, false);
                 includesObject.FastAddProperty("cmpxchg", new ClrFunctionInstance(ScriptEngine, "cmpxchg", IncludeCompareExchangeValue), false, false, false);
+                includesObject.FastAddProperty("revisions", new ClrFunctionInstance(ScriptEngine, "revisions", IncludeRevisions), false, false, false);
                 ScriptEngine.SetValue("includes", includesObject);
 
                 // includes - backward compatibility
                 ScriptEngine.SetValue("include", includeDocumentFunc);
-
+                
                 ScriptEngine.SetValue("load", new ClrFunctionInstance(ScriptEngine, "load", LoadDocument));
                 ScriptEngine.SetValue("LoadDocument", new ClrFunctionInstance(ScriptEngine, "LoadDocument", ThrowOnLoadDocument));
 
@@ -1022,7 +1026,35 @@ namespace Raven.Server.Documents.Patch
                 if (_docsCtx == null)
                     throw new InvalidOperationException($"Unable to use `{functionName}` when this instance is not attached to a database operation");
             }
+            
+            private JsValue IncludeRevisions(JsValue self, JsValue[] args)
+            {
+                if(args is null)
+                    return JsValue.Null;
 
+                IncludeRevisionsChangeVectors ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                
+                foreach (JsValue arg in args)
+                {
+                    switch (arg.Type)
+                    {
+                        case Types.String:
+                            IncludeRevisionsChangeVectors.Add(arg.ToString());
+                            break;
+                        case Types.Object when arg.IsArray():
+                            foreach (JsValue nested in arg.AsArray())
+                            {
+                                if (nested.IsString() == false)
+                                    continue;
+                                IncludeRevisionsChangeVectors.Add(nested.ToString());
+                            }
+                            break;
+                    }
+                }
+                
+                return JsValue.Null;
+            }
+            
             private JsValue LoadDocumentByPath(JsValue self, JsValue[] args)
             {
                 using (_loadScope = _loadScope?.Start() ?? _scope?.For(nameof(QueryTimingsScope.Names.Load)))
@@ -1752,7 +1784,26 @@ namespace Raven.Server.Documents.Patch
                     return jsValue.AsObject().Get(Constants.CompareExchange.ObjectFieldName);
                 }
             }
+            
+            private JsValue LoadRevisionInternal(IEnumerable<JsValue> cvs)
+            {
+                
+                if (cvs is null)
+                    return JsValue.Undefined;
+                
+                IncludeRevisionsChangeVectors ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
+                Dictionary<string,Document> documents = new();
+                foreach (var cv in cvs)
+                {
+                    documents.Add(cv.ToString(),_database.DocumentsStorage.RevisionsStorage.GetRevision(_docsCtx,cv.ToString()));
+                    IncludeRevisionsChangeVectors.Add(cv.ToString());
+
+                }
+                
+                return JavaScriptUtils.TranslateToJs(ScriptEngine, _jsonCtx, documents.First().Value);
+            }
+            
             private JsValue LoadDocumentInternal(string id)
             {
                 if (string.IsNullOrEmpty(id))
@@ -1868,6 +1919,7 @@ namespace Raven.Server.Documents.Patch
                 }
 
                 Includes?.Clear();
+                IncludeRevisionsChangeVectors?.Clear();
                 CompareExchangeValueIncludes?.Clear();
                 DocumentCountersToUpdate?.Clear();
                 DocumentTimeSeriesToUpdate?.Clear();
@@ -1936,6 +1988,7 @@ namespace Raven.Server.Documents.Patch
                 _run.DebugMode = false;
                 _run.DebugOutput?.Clear();
                 _run.DebugActions?.Clear();
+                _run.IncludeRevisionsChangeVectors?.Clear();
 
                 _run.Includes?.Clear();
                 _run.CompareExchangeValueIncludes?.Clear();

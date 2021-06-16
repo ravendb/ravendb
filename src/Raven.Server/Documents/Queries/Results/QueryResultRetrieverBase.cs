@@ -35,8 +35,10 @@ namespace Raven.Server.Documents.Queries.Results
         protected readonly IndexQueryServerSide _query;
         private readonly JsonOperationContext _context;
         private readonly IncludeDocumentsCommand _includeDocumentsCommand;
+        private readonly IncludeRevisionsCommand _includeRevisionsCommand;
         private readonly IncludeCompareExchangeValuesCommand _includeCompareExchangeValuesCommand;
         private readonly BlittableJsonTraverser _blittableTraverser;
+
         private Dictionary<string, Document> _loadedDocuments;
         private Dictionary<string, Document> _loadedDocumentsByAliasName;
         private HashSet<string> _loadedDocumentIds;
@@ -56,12 +58,16 @@ namespace Raven.Server.Documents.Queries.Results
 
         private TimeSeriesRetriever _timeSeriesRetriever;
 
-        protected QueryResultRetrieverBase(DocumentDatabase database, IndexQueryServerSide query, QueryTimingsScope queryTimings, FieldsToFetch fieldsToFetch, DocumentsStorage documentsStorage, JsonOperationContext context, bool reduceResults, IncludeDocumentsCommand includeDocumentsCommand, IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand)
+        protected QueryResultRetrieverBase(
+            DocumentDatabase database, IndexQueryServerSide query, QueryTimingsScope queryTimings, FieldsToFetch fieldsToFetch, DocumentsStorage documentsStorage,
+            JsonOperationContext context, bool reduceResults, IncludeDocumentsCommand includeDocumentsCommand,
+            IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand, IncludeRevisionsCommand includeRevisionsCommand)
         {
             _database = database;
             _query = query;
             _context = context;
             _includeDocumentsCommand = includeDocumentsCommand;
+            _includeRevisionsCommand = includeRevisionsCommand;
             _includeCompareExchangeValuesCommand = includeCompareExchangeValuesCommand;
 
             ValidateFieldsToFetch(fieldsToFetch);
@@ -75,6 +81,8 @@ namespace Raven.Server.Documents.Queries.Results
 
             _blittableTraverser = reduceResults ? BlittableJsonTraverser.FlatMapReduceResults : BlittableJsonTraverser.Default;
         }
+
+    
 
         protected virtual void ValidateFieldsToFetch(FieldsToFetch fieldsToFetch)
         {
@@ -837,7 +845,9 @@ namespace Raven.Server.Documents.Queries.Results
             using (var result = run.Run(_context, _context as DocumentsOperationContext, methodName, args, timings))
             {
                 _includeDocumentsCommand?.AddRange(run.Includes, documentId);
+                _includeRevisionsCommand?.AddRange(run.IncludeRevisionsChangeVectors);
                 _includeCompareExchangeValuesCommand?.AddRange(run.CompareExchangeValueIncludes);
+                
 
                 if (result.IsNull)
                     return null;
