@@ -35,7 +35,7 @@ namespace Raven.Server.Commercial
         {
             unchecked
             {
-                return ((Id != null ? StringComparer.OrdinalIgnoreCase.GetHashCode(Id) : 0) * 397) ^ 
+                return (StringComparer.OrdinalIgnoreCase.GetHashCode(Id) * 397) ^ 
                        (Name != null ? StringComparer.OrdinalIgnoreCase.GetHashCode(Name) : 0) ^
                        (Keys != null ? Keys.GetHashCode() : 0);
             }

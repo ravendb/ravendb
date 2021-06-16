@@ -340,6 +340,7 @@ namespace Raven.Server.ServerWide.Commands
                             CompareExchangeExpirationStorage.Put(context, keySlice, ExpirationTicks.Value);
 
                         items.Update(reader.Id, tvb);
+                        TryRemoveCompareExchangeTombstone(context, keySlice);
                     }
                     else
                     {
@@ -357,6 +358,7 @@ namespace Raven.Server.ServerWide.Commands
                         CompareExchangeExpirationStorage.Put(context, keySlice, ExpirationTicks.Value);
 
                     items.Set(tvb);
+                    TryRemoveCompareExchangeTombstone(context, keySlice);
                 }
             }
             return new CompareExchangeResult
@@ -364,6 +366,15 @@ namespace Raven.Server.ServerWide.Commands
                 Index = index,
                 Value = Value
             };
+        }
+
+        private static void TryRemoveCompareExchangeTombstone(ClusterOperationContext context, Slice keySlice)
+        {
+            var tombstoneItems = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.CompareExchangeTombstoneSchema, ClusterStateMachine.CompareExchangeTombstones);
+            if (tombstoneItems.ReadByKey(keySlice, out var reader))
+            {
+                tombstoneItems.Delete(reader.Id);
+            }
         }
 
         public override DynamicJsonValue ToJson(JsonOperationContext context)
@@ -379,6 +390,6 @@ namespace Raven.Server.ServerWide.Commands
             throw new CompareExchangeKeyTooBigException(
                 $"Compare Exchange key cannot exceed {MaxNumberOfCompareExchangeKeyBytes} bytes, " +
                 $"but the key was {Encoding.GetByteCount(str)} bytes. The invalid key is '{str}'. Parameter '{nameof(str)}'");
-    }
+        }
     }
 }
