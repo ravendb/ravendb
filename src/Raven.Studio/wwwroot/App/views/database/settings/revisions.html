@@ -138,8 +138,10 @@
                         <small>Retention time</small>
                         <input type="text" class="form-control" data-bind="durationPicker: minimumRevisionAgeToKeep, durationPickerOptions: { showDays: true, showSeconds: true }" />
                     </div>
-                    <div class="bg-info padding padding-sm small flex-horizontal margin-top" data-bind="visible: humaneRetentionDescription">
-                        <div class="flex-start"><i class="icon-info"></i></div>
+                    <div class="bg-info padding padding-xs small margin-top" data-bind="visible: deleteDescription">
+                        <div data-bind="html: deleteDescription"></div>
+                    </div>
+                    <div class="bg-info padding padding-xs margin-top small" data-bind="visible: humaneRetentionDescription">
                         <div data-bind="html: humaneRetentionDescription"></div>
                     </div>
                     <hr>
@@ -167,9 +169,9 @@
         </div>
         <div class="flex-grow">
             <ul class="properties">
-                <li data-bind="visible: purgeOnDelete"><i class="icon-empty-set"></i><span>Purge on delete</span></li>
-                <li data-bind="visible: limitRevisions"><i class="icon-documents"></i><span>Minimum revisions to keep: <span data-bind="text: minimumRevisionsToKeep"></span></span></li>
-                <li data-bind="visible: limitRevisionsByAge"><i class="icon-clock"></i><span>Minimum retention time: <span data-bind="text: $root.formattedDurationObservable(minimumRevisionAgeToKeep)"></span></span></li>
+                <li data-bind="visible: purgeOnDelete"><i class="icon-empty-set"></i><span>Purge revisions on document delete</span></li>
+                <li data-bind="visible: limitRevisions"><i class="icon-documents"></i><span>Number of revisions to keep: <span data-bind="text: minimumRevisionsToKeep"></span></span></li>
+                <li data-bind="visible: limitRevisionsByAge"><i class="icon-clock"></i><span>Retention time: <span data-bind="text: $root.formattedDurationObservable(minimumRevisionAgeToKeep)"></span></span></li>
             </ul>
         </div>
         <div class="actions-container">
