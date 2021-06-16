@@ -11,7 +11,7 @@ namespace Raven.Client.Documents.Commands
 {
     public class GetRevisionsCommand : RavenCommand<BlittableArrayResult>
     {
-        public readonly string ChangeVector;
+        internal readonly string ChangeVector;
         public readonly string[] ChangeVectors;
         private readonly string _id;
         private readonly int? _start;

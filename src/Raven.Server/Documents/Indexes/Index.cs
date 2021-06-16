@@ -3160,6 +3160,8 @@ namespace Raven.Server.Documents.Indexes
                                             includeCountersCommand?.Fill(document.Result);
 
                                             includeTimeSeriesCommand?.Fill(document.Result);
+                                            
+                                            includeRevisionsCommand?.Fill(document.Result);
                                         }
                                     }
                                 }
@@ -3185,6 +3187,9 @@ namespace Raven.Server.Documents.Indexes
 
                                 if (includeCompareExchangeValuesCommand != null)
                                     resultToFill.AddCompareExchangeValueIncludes(includeCompareExchangeValuesCommand);
+                                
+                                if (includeRevisionsCommand != null)
+                                    resultToFill.AddRevisionIncludes(includeRevisionsCommand);
 
                                 resultToFill.RegisterTimeSeriesFields(query, fieldsToFetch);
                                 resultToFill.RegisterSpatialProperties(query);
