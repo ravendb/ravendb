@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Sparrow.Binary;
-using Sparrow.Server;
+using Sparrow.Platform;
 using Sparrow.Threading;
 using Voron.Data.BTrees;
 using Voron.Impl;

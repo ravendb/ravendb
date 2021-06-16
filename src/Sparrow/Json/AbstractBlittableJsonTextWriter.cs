@@ -505,6 +505,7 @@ namespace Sparrow.Json
             if (_pos == 0)
                 return;
             _stream.Write(_pinnedBuffer.Memory.Memory.Span.Slice(0, _pos));
+            _stream.Flush();
             _pos = 0;
         }
 

@@ -8,6 +8,7 @@ using FastTests.Voron.FixedSize;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide;
 using Sparrow;
+using Sparrow.Platform;
 using Sparrow.Server;
 using Sparrow.Utils;
 using Voron;

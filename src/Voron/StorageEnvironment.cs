@@ -11,6 +11,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Sparrow.Logging;
+using Sparrow.Platform;
 using Sparrow.Server;
 using Sparrow.Server.Exceptions;
 using Sparrow.Server.Utils;

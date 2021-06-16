@@ -418,7 +418,8 @@ namespace Raven.Server.Documents.Replication
                 return false;
             }
 
-            if (_stats.Storage.CurrentStats.InputCount % 16384 == 0)
+            var currentCount = _stats.Storage.CurrentStats.InputCount;
+            if (currentCount > 0 && currentCount % 16384 == 0)
             {
                 // ReSharper disable once PossibleLossOfFraction
                 if ((_parent._parent.MinimalHeartbeatInterval / 2) < _stats.Storage.Duration.TotalMilliseconds)
