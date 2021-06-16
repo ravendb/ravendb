@@ -170,11 +170,6 @@ namespace Raven.Client.Documents.Session
         TSelf OpenSubclause();
 
         /// <summary>
-        ///     Wraps previous query with clauses and add an OR operation to the given query
-        /// </summary>
-        TSelf OrElse(bool wrapPreviousQueryClauses);
-        
-        /// <summary>
         ///     Add an OR to the query
         /// </summary>
         TSelf OrElse();
