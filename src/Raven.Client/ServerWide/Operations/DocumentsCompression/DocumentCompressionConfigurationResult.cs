@@ -1,4 +1,4 @@
-﻿namespace Raven.Client.ServerWide.Operations
+﻿namespace Raven.Client.ServerWide.Operations.DocumentsCompression
 {
     public class DocumentCompressionConfigurationResult
     {

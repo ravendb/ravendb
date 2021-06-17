@@ -3,6 +3,7 @@ using FastTests;
 using FastTests.Server.Documents;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Raven.Client.ServerWide.Operations.DocumentsCompression;
 using Xunit;
 using Xunit.Abstractions;
 
