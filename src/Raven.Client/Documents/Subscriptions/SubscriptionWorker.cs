@@ -247,7 +247,8 @@ namespace Raven.Client.Documents.Subscriptions
                     throw new InvalidOperationException(
                         $"{_options.SubscriptionName}: TCP negotiation resulted with an invalid protocol version:{_supportedFeatures.ProtocolVersion}");
                 }
-#if NETCOREAPP3_1_OR_GREATER
+                
+#if !(NETSTANDARD2_0 || NETSTANDARD2_1 || NETCOREAPP2_1)
                 if (_supportedFeatures.DataCompression)
                     _stream = new ReadWriteCompressedStream(_stream);
 #endif
@@ -255,7 +256,6 @@ namespace Raven.Client.Documents.Subscriptions
                 using (var optionsJson = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_options, context))
                 {
                     await optionsJson.WriteJsonToAsync(_stream, token).ConfigureAwait(false);
-
                     await _stream.FlushAsync(token).ConfigureAwait(false);
                 }
 
@@ -445,10 +445,10 @@ namespace Raven.Client.Documents.Subscriptions
                 using (var tcpStream = await ConnectToServer(_processingCts.Token).ConfigureAwait(false))
                 {
                     _processingCts.Token.ThrowIfCancellationRequested();
-                    var tcpStreamCopy = tcpStream;
+
                     using (contextPool.AllocateOperationContext(out JsonOperationContext handshakeContext))
                     {
-                        var connectionStatus = await ReadNextObject(handshakeContext, tcpStreamCopy, buffer).ConfigureAwait(false);
+                        var connectionStatus = await ReadNextObject(handshakeContext, tcpStream, buffer).ConfigureAwait(false);
                         if (_processingCts.IsCancellationRequested)
                             return;
 
@@ -467,7 +467,7 @@ namespace Raven.Client.Documents.Subscriptions
                     while (_processingCts.IsCancellationRequested == false)
                     {
                         // start reading next batch from server on 1'st thread (can be before client started processing)
-                        var readFromServer = ReadSingleSubscriptionBatchFromServer(contextPool, tcpStreamCopy, buffer, batch);
+                        var readFromServer = ReadSingleSubscriptionBatchFromServer(contextPool, tcpStream, buffer, batch);
                         try
                         {
                             // wait for the subscriber to complete processing on 2'nd thread
@@ -522,9 +522,9 @@ namespace Raven.Client.Documents.Subscriptions
 
                             try
                             {
-                                if (tcpStreamCopy != null) //possibly prevent ObjectDisposedException
+                                if (tcpStream != null) //possibly prevent ObjectDisposedException
                                 {
-                                    await SendAckAsync(lastReceivedChangeVector, tcpStreamCopy, context, _processingCts.Token).ConfigureAwait(false);
+                                    await SendAckAsync(lastReceivedChangeVector, tcpStream, context, _processingCts.Token).ConfigureAwait(false);
                                 }
                             }
                             catch (ObjectDisposedException)
