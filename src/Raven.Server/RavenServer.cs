@@ -1930,13 +1930,15 @@ namespace Raven.Server
 
                             header = await NegotiateOperationVersion(stream, buffer, tcpClient, tcpAuditLog, cert, tcp);
 
-                            var supportedVersions = TcpConnectionHeaderMessage.GetSupportedFeaturesFor(header.Operation, header.OperationVersion);
-                            if (supportedVersions.DataCompression)
+                            var supportedFeatures = TcpConnectionHeaderMessage.GetSupportedFeaturesFor(header.Operation, header.OperationVersion);
+
+                            if (supportedFeatures.DataCompression)
                             {
                                 if (header.Operation == TcpConnectionHeaderMessage.OperationTypes.Replication ||
-                                    header.Operation == TcpConnectionHeaderMessage.OperationTypes.Subscription && header.CompressionSupport)
+                                    (header.Operation == TcpConnectionHeaderMessage.OperationTypes.Subscription && header.CompressionSupport == 1))
                                 {
-                                    tcp.Stream = new ReadWriteCompressedStream(stream, buffer);
+                                    stream = new ReadWriteCompressedStream(stream, buffer);
+                                    tcp.Stream = stream;
                                 }
                             }
 
@@ -2251,6 +2253,8 @@ namespace Raven.Server
                         ["Message"] = e.Message
                     });
                 }
+
+                await tcpStream.FlushAsync();
             }
             catch (Exception inner)
             {

@@ -13,14 +13,14 @@ namespace Sparrow.Utils
     {
         private readonly Stream _inner;
         private readonly ZstdStream _input, _output;
-        private readonly DisposeOnceAsync<SingleAttempt> _dispose;
+        private readonly DisposeOnce<SingleAttempt> _dispose;
 
         public ReadWriteCompressedStream(Stream inner)
         {
             _inner = inner ?? throw new ArgumentNullException(nameof(inner));
             _input = ZstdStream.Decompress(inner);
             _output = ZstdStream.Compress(inner);
-            _dispose = new DisposeOnceAsync<SingleAttempt>(DisposeInternal);
+            _dispose = new DisposeOnce<SingleAttempt>(DisposeInternal);
         }
 
         public unsafe ReadWriteCompressedStream(Stream inner, JsonOperationContext.MemoryBuffer alreadyOnBuffer)
@@ -42,7 +42,7 @@ namespace Sparrow.Utils
             _inner = inner ?? throw new ArgumentNullException(nameof(inner));
             _input = ZstdStream.Decompress(inner);
             _output = ZstdStream.Compress(inner);
-            _dispose = new DisposeOnceAsync<SingleAttempt>(DisposeInternal);
+            _dispose = new DisposeOnce<SingleAttempt>(DisposeInternal);
         }
 
         public override bool CanRead => true;
@@ -166,25 +166,19 @@ namespace Sparrow.Utils
             return _output.FlushAsync(cancellationToken);
         }
 
-        private async Task DisposeInternal()
+        private bool _disposing;
+        private void DisposeInternal()
         {
-            if (_output != null)
-                await _output.DisposeAsync().ConfigureAwait(false);
-
-            await _inner.DisposeAsync().ConfigureAwait(false);
-
-            if (_input != null)
-                await _input.DisposeAsync().ConfigureAwait(false);
+            base.Dispose(_disposing);
+            _output?.Dispose();
+            _input?.Dispose();
+            _inner?.Dispose();
         }
 
         protected override void Dispose(bool disposing)
         {
-            _dispose.DisposeAsync().GetAwaiter().GetResult();
-        }
-
-        public override async ValueTask DisposeAsync()
-        {
-            await _dispose.DisposeAsync().ConfigureAwait(false);
+            _disposing = disposing;
+            _dispose.Dispose();
         }
     }
 #endif
