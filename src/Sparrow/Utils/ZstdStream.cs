@@ -15,14 +15,14 @@ namespace Sparrow.Utils
         private ZstdLib.CompressContext _compressContext = new ZstdLib.CompressContext();
         private byte[] _tempBuffer = ArrayPool<byte>.Shared.Rent(1024);
         private Memory<byte> _decompressionInput = Memory<byte>.Empty;
-        private readonly DisposeOnceAsync<SingleAttempt> _disposeOnce;
+        private readonly DisposeOnce<SingleAttempt> _disposeOnce;
         private readonly SemaphoreSlim _readSemaphore = new SemaphoreSlim(1);
         private readonly SemaphoreSlim _writeSemaphore = new SemaphoreSlim(1);
         private ZstdStream(Stream inner, bool compression)
         {
             _inner = inner;
             _compression = compression;
-            _disposeOnce = new DisposeOnceAsync<SingleAttempt>(DisposeInternal);
+            _disposeOnce = new DisposeOnce<SingleAttempt>(DisposeInternal);
         }
 
         public static ZstdStream Compress(Stream stream) => new ZstdStream(stream, compression: true);
@@ -50,6 +50,9 @@ namespace Sparrow.Utils
                 throw new TimeoutException("Couldn't acquire read lock for too long!");
             try
             {
+                if (_compressContext == null)
+                    throw new ObjectDisposedException("_compressContext already disposed");
+
                 fixed (byte* pBuffer = buffer, pOutput = _decompressionInput.Span)
                 {
                     var output = new ZstdLib.ZSTD_outBuffer { Source = pBuffer, Position = UIntPtr.Zero, Size = (UIntPtr)buffer.Length };
@@ -70,6 +73,9 @@ namespace Sparrow.Utils
 
             try
             {
+                if (_compressContext == null)
+                    throw new ObjectDisposedException("_compressContext already disposed");
+
                 fixed (byte* pBuffer = buffer, pTempBuffer = _tempBuffer)
                 {
                     var input = new ZstdLib.ZSTD_inBuffer { Source = pBuffer, Position = UIntPtr.Zero, Size = (UIntPtr)buffer.Length };
@@ -90,13 +96,20 @@ namespace Sparrow.Utils
             if (_decompressionInput.Length == _tempBuffer.Length)
                 throw new InvalidOperationException("Should never happen, the buffer is full of data that produces not output");
 
-            fixed (byte* pTempBuf = _tempBuffer, pCurVal = _decompressionInput.Span)
+            if (_readSemaphore.Wait(1500) == false)
+                throw new TimeoutException("Couldn't acquire read lock for too long!");
+
+            try
             {
-                if (pTempBuf == pCurVal)
-                    return;
-                Buffer.MemoryCopy(pCurVal, pTempBuf, _tempBuffer.Length, _decompressionInput.Length);
-                _decompressionInput = new Memory<byte>(_tempBuffer, 0, _decompressionInput.Length);
+                fixed (byte* pTempBuf = _tempBuffer, pCurVal = _decompressionInput.Span)
+                {
+                    if (pTempBuf == pCurVal)
+                        return;
+                    Buffer.MemoryCopy(pCurVal, pTempBuf, _tempBuffer.Length, _decompressionInput.Length);
+                    _decompressionInput = new Memory<byte>(_tempBuffer, 0, _decompressionInput.Length);
+                }
             }
+            finally { _readSemaphore.Release(); }
         }
 
         public override int Read(byte[] buffer, int offset, int count)
@@ -109,7 +122,7 @@ namespace Sparrow.Utils
             if (_disposeOnce.Disposed)
                 throw new ObjectDisposedException("Object was already disposed!");
 
-            while (true)
+            while (_inner != null)
             {
                 int read = DecompressStep(buffer);
                 if (read != 0)
@@ -126,6 +139,8 @@ namespace Sparrow.Utils
                 if (read != 0)
                     return read;
             }
+
+            return 0;
         }
 
         public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
@@ -138,7 +153,7 @@ namespace Sparrow.Utils
             if (_disposeOnce.Disposed)
                 throw new ObjectDisposedException("Object was already disposed!");
 
-            while (true)
+            while (_inner != null)
             {
                 int read = DecompressStep(buffer.Span);
                 if (read != 0)
@@ -156,6 +171,7 @@ namespace Sparrow.Utils
                 if (read != 0)
                     return read;
             }
+            return 0;
         }
 
         public override void Write(ReadOnlySpan<byte> buffer)
@@ -163,7 +179,7 @@ namespace Sparrow.Utils
             if (_disposeOnce.Disposed)
                 throw new ObjectDisposedException("Object was already disposed!");
 
-            while (buffer.Length > 0)
+            while (buffer.Length > 0 && _inner != null)
             {
                 var (outputBytes, inputBytes, _) = CompressStep(buffer, ZstdLib.ZSTD_EndDirective.ZSTD_e_continue);
                 buffer = buffer.Slice(inputBytes);
@@ -186,7 +202,7 @@ namespace Sparrow.Utils
             if (_disposeOnce.Disposed)
                 throw new ObjectDisposedException("Object was already disposed!");
 
-            while (buffer.Length > 0)
+            while (buffer.Length > 0 && _inner != null)
             {
                 var (outputBytes, inputBytes, _) = CompressStep(buffer.Span, ZstdLib.ZSTD_EndDirective.ZSTD_e_continue);
                 buffer = buffer.Slice(inputBytes);
@@ -199,15 +215,14 @@ namespace Sparrow.Utils
             if (_disposeOnce.Disposed)
                 throw new ObjectDisposedException("Object was already disposed!");
 
-            while (true)
+            while (_inner != null)
             {
                 var (outputBytes, _, _) = CompressStep(ReadOnlySpan<byte>.Empty, ZstdLib.ZSTD_EndDirective.ZSTD_e_flush);
                 if (outputBytes == 0)
                     break;
                 _inner.Write(_tempBuffer, 0, outputBytes);
             }
-
-            _inner.Flush();
+            _inner?.Flush();
         }
 
         public override async Task FlushAsync(CancellationToken cancellationToken)
@@ -215,7 +230,7 @@ namespace Sparrow.Utils
             if (_disposeOnce.Disposed)
                 throw new ObjectDisposedException("Object was already disposed!");
 
-            while (true)
+            while (_inner != null)
             {
                 var (outputBytes, _, _) = CompressStep(ReadOnlySpan<byte>.Empty, ZstdLib.ZSTD_EndDirective.ZSTD_e_flush);
                 if (outputBytes == 0)
@@ -223,11 +238,11 @@ namespace Sparrow.Utils
 
                 await _inner.WriteAsync(_tempBuffer, 0, outputBytes, cancellationToken).ConfigureAwait(false);
             }
-
-            await _inner.FlushAsync(cancellationToken).ConfigureAwait(false);
+            if(_inner != null)
+                await _inner.FlushAsync(cancellationToken).ConfigureAwait(false);
         }
 
-        private async Task DisposeInternal()
+        private void DisposeInternal()
         {
             if (_compressContext != null)
             {
@@ -238,32 +253,39 @@ namespace Sparrow.Utils
                     if (done)
                         break;
 
-                    await _inner.WriteAsync(_tempBuffer, 0, outputBytes).ConfigureAwait(false);
+                    _inner.Write(_tempBuffer, 0, outputBytes);
                 }
             }
-                
             ReleaseResources();
-        }
-
-        public override async ValueTask DisposeAsync()
-        {
-            await _disposeOnce.DisposeAsync().ConfigureAwait(false);
         }
 
         protected override void Dispose(bool disposing)
         {
-            _disposeOnce.DisposeAsync().GetAwaiter().GetResult();
+            _disposeOnce.Dispose();
         }
 
         private void ReleaseResources()
         {
-            _inner = null;
-            _compressContext?.Dispose();
-            _compressContext = null;
-            if (_tempBuffer != null)
+            if (_readSemaphore.Wait(0) == false)
+                _readSemaphore.Wait();
+
+            if (_writeSemaphore.Wait(0) == false)
+                _writeSemaphore.Wait();
+
+            try
             {
-                ArrayPool<byte>.Shared.Return(_tempBuffer);
-                _tempBuffer = null;
+                if (_tempBuffer != null)
+                {
+                    ArrayPool<byte>.Shared.Return(_tempBuffer);
+                    _tempBuffer = null;
+                }
+                _compressContext?.Dispose();
+                _compressContext = null;
+            }
+            finally
+            {
+                _writeSemaphore?.Dispose();
+                _readSemaphore?.Dispose();
             }
         }
     }
