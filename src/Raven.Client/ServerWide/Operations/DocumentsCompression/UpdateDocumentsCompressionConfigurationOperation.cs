@@ -8,7 +8,7 @@ using Raven.Client.Json.Serialization;
 using Raven.Client.Util;
 using Sparrow.Json;
 
-namespace Raven.Client.ServerWide.Operations
+namespace Raven.Client.ServerWide.Operations.DocumentsCompression
 {
     public class UpdateDocumentsCompressionConfigurationOperation : IMaintenanceOperation<DocumentCompressionConfigurationResult>
     {
