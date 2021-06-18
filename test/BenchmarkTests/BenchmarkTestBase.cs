@@ -33,7 +33,7 @@ namespace BenchmarkTests
             {
                 {RavenConfiguration.GetKey(x => x.Databases.MaxIdleTime), int.MaxValue.ToString()}
             };
-            
+
             if (Encrypted)
             {
                 var serverUrl = UseFiddlerUrl("https://127.0.0.1:0");
@@ -48,7 +48,7 @@ namespace BenchmarkTests
             var co = new ServerCreationOptions
             {
                 CustomSettings = customSettings,
-                RunInMemory = false, 
+                RunInMemory = false,
                 RegisterForDisposal = false,
                 NodeTag = "A",
                 DataDirectory = RavenTestHelper.NewDataPath("benchmark", 0, true)
@@ -70,7 +70,7 @@ namespace BenchmarkTests
         protected DocumentStore GetSimpleDocumentStore(string databaseName, bool deleteDatabaseOnDispose = true)
         {
             X509Certificate2 adminCert = null;
-            
+
             if (Encrypted)
             {
                 var certificates = GenerateAndSaveSelfSignedCertificate();
@@ -79,15 +79,15 @@ namespace BenchmarkTests
                     new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin,
                     Server);
             }
-            
+
 
             var store = new DocumentStore
             {
                 Urls = new[]
                 {
                     Server.WebUrl
-                }, 
-                Database = databaseName, 
+                },
+                Database = databaseName,
                 Certificate = adminCert
             };
 
@@ -111,15 +111,15 @@ namespace BenchmarkTests
             return store;
         }
 
-        protected override DocumentStore GetDocumentStore(Options options = null, [CallerMemberName]string caller = null)
+        protected override DocumentStore GetDocumentStore(Options options = null, [CallerMemberName] string caller = null)
         {
             // since we want server to survive between tests runs 
             // we have to cheat a little bit
             // benchmark tests are divided into 2 phases: 
             // 1. initialization 
             // 2. actual test execution (this part is measured)
-            
-            var server = Server; 
+
+            var server = Server;
 
             if (Servers.Contains(server) == false)
             {
@@ -166,7 +166,7 @@ namespace BenchmarkTests
         protected DatabaseRecord CreateDatabaseRecord(string databaseName)
         {
             var databaseRecord = new DatabaseRecord(databaseName);
-            
+
             if (Encrypted)
             {
                 PutSecretKeyForDatabaseInServerStore(databaseName, Server);

@@ -25,9 +25,9 @@ case "$1" in
 
     purge)
     
-    rm -r /var/lib/ravendb
-    rm -r /var/log/ravendb
-    rm -r /etc/ravendb
+    rm -rf /var/lib/ravendb
+    rm -rf /var/log/ravendb
+    rm -rf /etc/ravendb
 
     ;;
 

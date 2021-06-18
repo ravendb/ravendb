@@ -48,6 +48,7 @@ namespace Raven.Server.Documents
 
         // used in ServerWideBackupStress
         internal bool SkipShouldContinueDisposeCheck = false;
+        internal Action<(DocumentDatabase Database, string caller)> AfterDatabaseCreation;
 
         public DatabasesLandlord(ServerStore serverStore)
         {
@@ -78,7 +79,7 @@ namespace Raven.Server.Documents
         internal class TestingStuff
         {
             internal Action<ServerStore> BeforeHandleClusterDatabaseChanged;
-            internal Action<DocumentDatabase> AfterDatabaseCreation;
+            internal Action<(DocumentDatabase Database, string caller)> AfterDatabaseCreation;
             internal int? HoldDocumentDatabaseCreation = null;
             internal bool PreventedRehabOfIdleDatabase = false;
         }
@@ -142,7 +143,7 @@ namespace Raven.Server.Documents
                         // it. This is important so things like replication will start pumping, and that
                         // configuration changes such as running periodic backup will get a chance to run, which
                         // they wouldn't unless the database is loaded / will have a request on it.
-                        task = TryGetOrCreateResourceStore(databaseName, ignoreBeenDeleted: true);
+                        task = TryGetOrCreateResourceStore(databaseName, ignoreBeenDeleted: true, caller: type);
                     }
 
                     var database = await task;
@@ -360,7 +361,7 @@ namespace Raven.Server.Documents
                             _logger.Info("Could not create database configuration", ex);
                     }
 
-                    
+
 
                     // this can happen if the database record was already deleted
                     if (configuration != null)
@@ -531,7 +532,7 @@ namespace Raven.Server.Documents
             return false;
         }
 
-        public Task<DocumentDatabase> TryGetOrCreateResourceStore(StringSegment databaseName, DateTime? wakeup = null, bool ignoreDisabledDatabase = false, bool ignoreBeenDeleted = false, bool ignoreNotRelevant = false)
+        public Task<DocumentDatabase> TryGetOrCreateResourceStore(StringSegment databaseName, DateTime? wakeup = null, bool ignoreDisabledDatabase = false, bool ignoreBeenDeleted = false, bool ignoreNotRelevant = false, [CallerMemberName] string caller = null)
         {
             IDisposable release = null;
             try
@@ -567,7 +568,7 @@ namespace Raven.Server.Documents
                         return database;
                     }
                 }
-                return CreateDatabase(databaseName, wakeup, ignoreDisabledDatabase, ignoreBeenDeleted, ignoreNotRelevant);
+                return CreateDatabase(databaseName, wakeup, ignoreDisabledDatabase, ignoreBeenDeleted, ignoreNotRelevant, caller);
             }
             finally
             {
@@ -609,19 +610,19 @@ namespace Raven.Server.Documents
             throw new ObjectDisposedException("The server is being disposed, cannot load database " + databaseName);
         }
 
-        private Task<DocumentDatabase> CreateDatabase(StringSegment databaseName, DateTime? wakeup, bool ignoreDisabledDatabase, bool ignoreBeenDeleted, bool ignoreNotRelevant)
+        private Task<DocumentDatabase> CreateDatabase(StringSegment databaseName, DateTime? wakeup, bool ignoreDisabledDatabase, bool ignoreBeenDeleted, bool ignoreNotRelevant, string caller)
         {
             var config = CreateDatabaseConfiguration(databaseName, ignoreDisabledDatabase, ignoreBeenDeleted, ignoreNotRelevant);
             if (config == null)
                 return Task.FromResult<DocumentDatabase>(null);
 
             if (!_databaseSemaphore.Wait(0))
-                return UnlikelyCreateDatabaseUnderContention(databaseName, config, wakeup);
+                return UnlikelyCreateDatabaseUnderContention(databaseName, config, wakeup, caller);
 
-            return CreateDatabaseUnderResourceSemaphore(databaseName, config, wakeup);
+            return CreateDatabaseUnderResourceSemaphore(databaseName, config, wakeup, caller);
         }
 
-        private async Task<DocumentDatabase> UnlikelyCreateDatabaseUnderContention(StringSegment databaseName, RavenConfiguration config, DateTime? wakeup = null)
+        private async Task<DocumentDatabase> UnlikelyCreateDatabaseUnderContention(StringSegment databaseName, RavenConfiguration config, DateTime? wakeup = null, string caller = null)
         {
             if (await _databaseSemaphore.WaitAsync(_concurrentDatabaseLoadTimeout) == false)
                 throw new DatabaseConcurrentLoadTimeoutException("Too many databases loading concurrently, timed out waiting for them to load.");
@@ -629,7 +630,7 @@ namespace Raven.Server.Documents
             return await CreateDatabaseUnderResourceSemaphore(databaseName, config, wakeup);
         }
 
-        private Task<DocumentDatabase> CreateDatabaseUnderResourceSemaphore(StringSegment databaseName, RavenConfiguration config, DateTime? wakeup = null)
+        private Task<DocumentDatabase> CreateDatabaseUnderResourceSemaphore(StringSegment databaseName, RavenConfiguration config, DateTime? wakeup = null, string caller = null)
         {
             try
             {
@@ -641,10 +642,7 @@ namespace Raven.Server.Documents
                     task.Start(); // the semaphore will be released here at the end of the task
                     task.ContinueWith(t =>
                     {
-                        if (ForTestingPurposes?.AfterDatabaseCreation != null)
-                        {
-                            ForTestingPurposes.AfterDatabaseCreation.Invoke(t.GetAwaiter().GetResult());
-                        }
+                        ForTestingPurposes?.AfterDatabaseCreation?.Invoke((t.GetAwaiter().GetResult(), caller));
 
                         _serverStore.IdleDatabases.TryRemove(databaseName.Value, out _);
                     }, TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.ExecuteSynchronously);
@@ -821,7 +819,7 @@ namespace Raven.Server.Documents
             {
                 if (databaseRecord == null)
                     return null;
-                
+
                 var record = databaseRecord.MaterializedRecord;
                 if (record.Encrypted)
                 {
@@ -1085,7 +1083,7 @@ namespace Raven.Server.Documents
                     RavenConfiguration currentConfiguration;
                     try
                     {
-                        currentConfiguration = CreateDatabaseConfiguration(currRecord.DatabaseName, ignoreDisabledDatabase: true, 
+                        currentConfiguration = CreateDatabaseConfiguration(currRecord.DatabaseName, ignoreDisabledDatabase: true,
                             ignoreBeenDeleted: true, ignoreNotRelevant: true, databaseRecord: currRecord);
                     }
                     catch (Exception e)

@@ -172,6 +172,8 @@ namespace Raven.Debug.StackTrace
             };
 
             jsonSerializer.Serialize(outputWriter, result);
+
+            outputWriter.Flush();
         }
 
         private static ThreadInfo GetThreadInfo(ClrThread thread, DataTarget dataTarget, ClrRuntime runtime, StringBuilder sb, bool includeStackObjects)
