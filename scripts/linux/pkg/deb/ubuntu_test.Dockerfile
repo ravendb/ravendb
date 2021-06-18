@@ -6,16 +6,6 @@ ARG DISTRO_VERSION_NAME
 ARG DOTNET_RUNTIME_VERSION
 ARG DOTNET_RUNTIME_DEPS
 
-
-# # install deps for package testing
-# RUN apt update \ 
-#     && apt install -y curl wget \
-#     && wget https://packages.microsoft.com/config/ubuntu/${DISTRO_VERSION}/packages-microsoft-prod.deb -O packages-microsoft-prod.deb \
-#     && dpkg -i ./packages-microsoft-prod.deb \
-#     && apt update \
-#     && apt install -y apt-transport-https \
-#     && apt update 
-
 RUN apt update && apt install -y curl
 
 WORKDIR /test

@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
@@ -22,6 +23,7 @@ using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Replication;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -212,7 +214,8 @@ namespace Tests.Infrastructure
         public async Task EnsureNoReplicationLoop(RavenServer server, string database)
         {
             var storage = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
-
+            using (var collector = new LiveReplicationPulsesCollector(storage))
+            {
             var etag1 = storage.DocumentsStorage.GenerateNextEtag();
 
             await Task.Delay(3000);
@@ -220,6 +223,15 @@ namespace Tests.Infrastructure
             var etag2 = storage.DocumentsStorage.GenerateNextEtag();
 
             Assert.True(etag1 + 1 == etag2, "Replication loop found :(");
+
+                var groups = collector.Pulses.GetAll().GroupBy(p => p.Direction);
+                foreach (var group in groups)
+                {
+                    var key = group.Key;
+                    var count = group.Count();
+                    Assert.True(count < 50,$"{key} seems to be excessive ({count})");
+        }
+            }
         }
 
         public class GetDatabaseDocumentTestCommand : RavenCommand<DatabaseRecord>

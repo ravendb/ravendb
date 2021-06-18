@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
@@ -86,39 +87,119 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public void ShouldNotLeaveWaitersInQueueIfOperationIsCancelled()
+        public void ShouldNotLeaveWaitersInQueueIfOperationIsCancelledAfterCallingRelease()
         {
             var @lock = new FifoSemaphore(1);
 
             @lock.Acquire(CancellationToken.None);
 
-            var cts = new CancellationTokenSource();
+            try
+            {
+                var cts = new CancellationTokenSource();
 
-            cts.Cancel();
+                cts.Cancel();
 
-            Assert.Throws<OperationCanceledException>(() => @lock.Acquire(cts.Token));
+                Assert.Throws<OperationCanceledException>(() => @lock.Acquire(cts.Token));
 
-            Assert.Empty(@lock._waitQueue);
+                Assert.Empty(@lock._waitQueue);
 
-            cts = new CancellationTokenSource();
+                cts = new CancellationTokenSource();
 
-            @lock.ForTestingPurposesOnly().JustBeforeAddingToWaitQueue += () => cts.Cancel();
+                @lock.ForTestingPurposesOnly().JustBeforeAddingToWaitQueue += () => cts.Cancel();
 
-            Assert.Throws<OperationCanceledException>(() => @lock.Acquire(cts.Token));
+                Assert.Throws<OperationCanceledException>(() => @lock.Acquire(cts.Token));
+
+                Assert.Equal(1, @lock._waitQueue.Count);
+
+                Assert.True(@lock._waitQueue.First().IsCancelled);
+            }
+            finally
+            {
+                @lock.Release();
+            }
 
             Assert.Empty(@lock._waitQueue);
         }
 
         [Fact]
-        public void ShouldNotLeaveWaitersInQueueIfTimeout()
+        public void ShouldNotLeaveWaitersInQueueIfTimeoutAfterCallingRelease()
         {
             var @lock = new FifoSemaphore(1);
 
             @lock.Acquire(CancellationToken.None);
 
-            Assert.False(@lock.TryAcquire(TimeSpan.Zero, CancellationToken.None));
+            try
+            {
+                Assert.False(@lock.TryAcquire(TimeSpan.Zero, CancellationToken.None));
+
+                Assert.Equal(1, @lock._waitQueue.Count);
+
+                Assert.True(@lock._waitQueue.First().IsTimedOut);
+            }
+            finally
+            {
+                @lock.Release();
+            }
 
             Assert.Empty(@lock._waitQueue);
+        }
+
+        [Fact]
+        public void RaceConditionBetweenCancellingAndReleasingWaiterFromTheQueue()
+        {
+            FifoSemaphore fs = new FifoSemaphore(2);
+
+            var cts = new CancellationTokenSource[4];
+
+            for (int i = 0; i < cts.Length; i++)
+            {
+                cts[i] = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            }
+
+            try
+            {
+                Parallel.For(0, 20, x =>
+                {
+                    CancellationTokenSource cancellationTokenSource = cts[x % cts.Length];
+
+                    while (cancellationTokenSource.IsCancellationRequested == false)
+                    {
+                        fs.Acquire(cancellationTokenSource.Token);
+                        try
+                        {
+                            Thread.Sleep(13);
+                        }
+                        finally
+                        {
+                            fs.Release();
+                        }
+                    }
+                });
+            }
+            catch
+            {
+                // ignored
+            }
+
+            Assert.True(fs.TryAcquire(TimeSpan.Zero, CancellationToken.None));
+            try
+            {
+                Assert.True(fs.TryAcquire(TimeSpan.Zero, CancellationToken.None));
+                try
+                {
+
+                }
+                finally
+                {
+                    fs.Release();
+                }
+            }
+            finally
+            {
+                fs.Release();
+            }
+
+            Assert.Empty(fs._waitQueue);
         }
     }
 }
