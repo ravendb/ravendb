@@ -341,7 +341,7 @@ namespace Raven.Server
                         var localLicenseStatus = LicenseManager.GetLicenseStatus(localLicense);
                         if (localLicenseStatus.Expiration >= RavenVersionAttribute.Instance.ReleaseDate)
                         {
-                            serverStore.LicenseManager.OnBeforeInitialize += () => serverStore.LicenseManager.TryActivateLicenseAsync(throwOnActivationFailure: false).Wait(serverStore.ServerShutdown);
+                            serverStore.LicenseManager.OnBeforeInitialize += () => serverStore.LicenseManager.TryActivateLicenseAsync(throwOnActivationFailure: serverStore.Server.ThrowOnLicenseActivationFailure).Wait(serverStore.ServerShutdown);
                             return;
                         }
 

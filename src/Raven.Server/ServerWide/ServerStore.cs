@@ -1097,6 +1097,9 @@ namespace Raven.Server.ServerWide
                     break;
 
                 case nameof(PutLicenseCommand):
+
+                    ForTestingPurposes?.BeforePutLicenseCommandHandledInOnValueChanged?.Invoke();
+
                     // reload license can send a notification which will open a write tx
                     LicenseManager.ReloadLicense();
                     ConcurrentBackupsCounter.ModifyMaxConcurrentBackups();
@@ -2706,7 +2709,7 @@ namespace Raven.Server.ServerWide
             if (Logger.IsInfoEnabled)
                 Logger.Info($"Updating license id: {license.Id}");
 
-            await WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, result.Index);
+            await Cluster.WaitForIndexNotification(result.Index);
         }
 
         public async Task PutNodeLicenseLimitsAsync(string nodeTag, DetailsPerNode detailsPerNode, int maxLicensedCores, string raftRequestId = null)
@@ -3227,6 +3230,21 @@ namespace Raven.Server.ServerWide
             }
 
             yield return usage;
+        }
+
+        internal TestingStuff ForTestingPurposes;
+
+        internal TestingStuff ForTestingPurposesOnly()
+        {
+            if (ForTestingPurposes != null)
+                return ForTestingPurposes;
+
+            return ForTestingPurposes = new TestingStuff();
+        }
+
+        internal class TestingStuff
+        {
+            internal Action BeforePutLicenseCommandHandledInOnValueChanged;
         }
     }
 }
