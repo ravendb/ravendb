@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
@@ -110,7 +111,7 @@ namespace SlowTests.Issues
 
                 Assert.Equal(1, @lock._waitQueue.Count);
 
-                Assert.True(@lock._waitQueue[0].IsCancelled);
+                Assert.True(@lock._waitQueue.First().IsCancelled);
             }
             finally
             {
@@ -133,7 +134,7 @@ namespace SlowTests.Issues
 
                 Assert.Equal(1, @lock._waitQueue.Count);
 
-                Assert.True(@lock._waitQueue[0].IsTimedOut);
+                Assert.True(@lock._waitQueue.First().IsTimedOut);
             }
             finally
             {
