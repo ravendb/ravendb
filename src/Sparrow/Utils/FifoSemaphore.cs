@@ -29,7 +29,7 @@ namespace Sparrow.Utils
     /// </remarks>
     internal class FifoSemaphore
     {
-        internal readonly List<OneTimeWaiter> _waitQueue;
+        internal readonly Queue<OneTimeWaiter> _waitQueue;
 
         private readonly object _lock;
 
@@ -42,7 +42,7 @@ namespace Sparrow.Utils
 
             _tokens = tokens;
             _lock = new object();
-            _waitQueue = new List<OneTimeWaiter>();
+            _waitQueue = new Queue<OneTimeWaiter>();
         }
 
         public bool TryAcquire(TimeSpan timeout, CancellationToken token)
@@ -63,7 +63,7 @@ namespace Sparrow.Utils
 
                 waiter = new OneTimeWaiter(token);
 
-                _waitQueue.Add(waiter);
+                _waitQueue.Enqueue(waiter);
             }
 
             using (waiter)
@@ -103,9 +103,7 @@ namespace Sparrow.Utils
                 {
                     if (_waitQueue.Count > 0)
                     {
-                        var waiter = _waitQueue[0];
-
-                        _waitQueue.RemoveAt(0);
+                        var waiter = _waitQueue.Dequeue();
 
                         if (waiter.TryRelease() == false)
                         {
