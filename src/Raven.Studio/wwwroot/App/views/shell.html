@@ -1,10 +1,11 @@
-<div data-bind="compose: browserAlert"></div>
+<div class="layout-container" data-bind="css: { 'cloud-cluster-admin': applyColorCustomization, 'collapse-menu': collapseMenu() || smallScreen(), 'pin-notifications': notificationCenter.pinNotifications(), 'show-notifications': notificationCenter.showNotifications(), 'show-search': searchBox.showSearchSmallScreen() }">
+    <div data-bind="compose: browserAlert"></div>
     <aside class="top-alert" data-bind="visible: developerLicense">
         Developer License - Not for Production Use
     </aside>
-<aside class="top-alert" data-bind="visible: applyColorCustomization">
-    !!! Running as Cloud Cluster Admin !!!  <a href="#" data-bind="click: disableColorCustomization">Disable color customization</a>
-</aside>
+    <aside class="top-alert" data-bind="visible: applyColorCustomization">
+        !!! Running as Cloud Cluster Admin !!!  <a href="#" data-bind="click: disableColorCustomization">Disable color customization</a>
+    </aside>
     <nav class="navbar">
         <div class="navbar-header">
             <a class="navbar-brand" data-bind="attr: { href: appUrls.serverDashboard }"><i class="icon-logo"></i></a>
