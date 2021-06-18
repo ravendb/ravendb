@@ -51,6 +51,7 @@ import serverTime = require("common/helpers/database/serverTime");
 import saveGlobalStudioConfigurationCommand = require("commands/resources/saveGlobalStudioConfigurationCommand");
 import saveStudioConfigurationCommand = require("commands/resources/saveStudioConfigurationCommand");
 import studioSetting = require("common/settings/studioSetting");
+import detectBrowser = require("viewmodels/common/detectBrowser");
 
 class shell extends viewModelBase {
 
@@ -73,9 +74,9 @@ class shell extends viewModelBase {
     currentRawUrl = ko.observable<string>("");
     rawUrlIsVisible = ko.computed(() => this.currentRawUrl().length > 0);
     showSplash = viewModelBase.showSplash;
-    browserAlert = ko.observable<boolean>(false);
+    
+    browserAlert: detectBrowser;
     collapseMenu = ko.observable<boolean>(false);
-    dontShowBrowserAlertAgain = ko.observable<boolean>(false);
     currentUrlHash = ko.observable<string>(window.location.hash);
 
     licenseStatus = license.licenseCssClass;
@@ -151,7 +152,7 @@ class shell extends viewModelBase {
             (settings, db) => new saveStudioConfigurationCommand(settings, db).execute()
         );
         
-        this.detectBrowser();
+        this.browserAlert = new detectBrowser(true);
         
         window.addEventListener("hashchange", e => {
             this.currentUrlHash(location.hash);
@@ -488,35 +489,6 @@ class shell extends viewModelBase {
     
     ignoreWebSocketError() {
         changesContext.default.serverNotifications().ignoreWebSocketConnectionError(true);
-    }
-    
-    detectBrowser() {
-        const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
-        const isFirefox = navigator.userAgent.toLowerCase().indexOf('firefox') > -1;
-
-        if (!isChrome && !isFirefox) {
-            // it isn't supported browser, check if user already said: Don't show this again
-
-            studioSettings.default.globalSettings()
-                .done(settings => {
-                    if (settings.dontShowAgain.shouldShow("UnsupportedBrowser")) {
-                        this.browserAlert(true);
-                    }
-                });
-        }
-    }
-
-    browserAlertContinue() {
-        const dontShowAgain = this.dontShowBrowserAlertAgain();
-        
-        if (dontShowAgain) {
-            studioSettings.default.globalSettings()
-                .done(settings => {
-                    settings.dontShowAgain.ignore("UnsupportedBrowser");
-                });
-        }
-        
-        this.browserAlert(false);
     }
     
     createUrlWithHashComputed(serverUrlProvider: KnockoutComputed<string>) {
