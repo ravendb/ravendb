@@ -361,7 +361,7 @@ namespace Raven.Server.Documents
                             _logger.Info("Could not create database configuration", ex);
                     }
 
-                    
+
 
                     // this can happen if the database record was already deleted
                     if (configuration != null)
@@ -646,10 +646,6 @@ namespace Raven.Server.Documents
 
                         _serverStore.IdleDatabases.TryRemove(databaseName.Value, out _);
                     }, TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.ExecuteSynchronously);
-                        }
-
-                        _serverStore.IdleDatabases.TryRemove(databaseName.Value, out _);
-                    }, TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.ExecuteSynchronously);
                 }
                 else
                     _databaseSemaphore.Release();
@@ -823,7 +819,7 @@ namespace Raven.Server.Documents
             {
                 if (databaseRecord == null)
                     return null;
-                
+
                 var record = databaseRecord.MaterializedRecord;
                 if (record.Encrypted)
                 {
@@ -1087,7 +1083,7 @@ namespace Raven.Server.Documents
                     RavenConfiguration currentConfiguration;
                     try
                     {
-                        currentConfiguration = CreateDatabaseConfiguration(currRecord.DatabaseName, ignoreDisabledDatabase: true, 
+                        currentConfiguration = CreateDatabaseConfiguration(currRecord.DatabaseName, ignoreDisabledDatabase: true,
                             ignoreBeenDeleted: true, ignoreNotRelevant: true, databaseRecord: currRecord);
                     }
                     catch (Exception e)
