@@ -14,10 +14,13 @@ namespace Sparrow.Server.Json.Sync
             _afterFlush = afterFlush;
         }
 
-        public override void Flush()
+        protected override bool FlushInternal()
         {
-            base.Flush();
-            _afterFlush?.Invoke();
+            var flushed = base.FlushInternal();
+            if (flushed)
+                _afterFlush?.Invoke();
+
+            return flushed;
         }
     }
 
@@ -33,7 +36,7 @@ namespace Sparrow.Server.Json.Sync
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public virtual void Flush()
+        public void Flush()
         {
             FlushInternal();
         }
