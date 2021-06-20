@@ -1935,7 +1935,7 @@ namespace Raven.Server
                             if (supportedFeatures.DataCompression)
                             {
                                 if (header.Operation == TcpConnectionHeaderMessage.OperationTypes.Replication ||
-                                    (header.Operation == TcpConnectionHeaderMessage.OperationTypes.Subscription && header.CompressionSupport == 1))
+                                    (header.Operation == TcpConnectionHeaderMessage.OperationTypes.Subscription && header.CompressionSupport))
                                 {
                                     stream = new ReadWriteCompressedStream(stream, buffer);
                                     tcp.Stream = stream;
@@ -2254,7 +2254,6 @@ namespace Raven.Server
                     });
                 }
 
-                await tcpStream.FlushAsync();
             }
             catch (Exception inner)
             {
