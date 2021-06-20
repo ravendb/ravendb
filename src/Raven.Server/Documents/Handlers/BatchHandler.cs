@@ -48,22 +48,27 @@ namespace Raven.Server.Documents.Handlers
             using (var command = new MergedBatchCommand(Database))
             {
                 var contentType = HttpContext.Request.ContentType;
-                if (contentType == null ||
-                    contentType.StartsWith("application/json", StringComparison.OrdinalIgnoreCase))
+                try
                 {
-                    await BatchRequestParser.BuildCommandsAsync(context, command, RequestBodyStream(), Database, ServerStore);
+                    if (contentType == null ||
+                        contentType.StartsWith("application/json", StringComparison.OrdinalIgnoreCase))
+                    {
+                        await BatchRequestParser.BuildCommandsAsync(context, command, RequestBodyStream(), Database, ServerStore);
+                    }
+                    else if (contentType.StartsWith("multipart/mixed", StringComparison.OrdinalIgnoreCase) ||
+                             contentType.StartsWith("multipart/form-data", StringComparison.OrdinalIgnoreCase))
+                    {
+                        await ParseMultipart(context, command);
+                    }
+                    else
+                        ThrowNotSupportedType(contentType);
                 }
-                else if (contentType.StartsWith("multipart/mixed", StringComparison.OrdinalIgnoreCase) ||
-                    contentType.StartsWith("multipart/form-data", StringComparison.OrdinalIgnoreCase))
+                finally
                 {
-                    await ParseMultipart(context, command);
-                }
-                else
-                    ThrowNotSupportedType(contentType);
-
-                if (TrafficWatchManager.HasRegisteredClients)
-                {
-                    BatchTrafficWatch(command.ParsedCommands);
+                    if (TrafficWatchManager.HasRegisteredClients)
+                    {
+                        BatchTrafficWatch(command.ParsedCommands);
+                    }
                 }
 
                 var waitForIndexesTimeout = GetTimeSpanQueryString("waitForIndexesTimeout", required: false);
