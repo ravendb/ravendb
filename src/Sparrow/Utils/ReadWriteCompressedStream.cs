@@ -171,6 +171,7 @@ namespace Sparrow.Utils
         private bool _disposing;
         private void DisposeInternal()
         {
+            Flush();
             base.Dispose(_disposing);
             _output?.Dispose();
             _input?.Dispose();
