@@ -179,7 +179,6 @@ namespace Sparrow.Threading
                 throw new NotSupportedException("Unknown operation mode: " + typeof(TOperationMode));
             }
             _operationModeData = default;
-            _operationModeData.Initialize();
         }
 
         /// <summary>
