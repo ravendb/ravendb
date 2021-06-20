@@ -128,15 +128,18 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             _documentIdColumn ??= DefaultIdColumn;
         }
 
-        public override string GenerateFile(out string folderName, out string safeFolderName, out string fileName)
+        public override string GenerateFile(out UploadInfo uploadInfo)
         {
             var nowAsString = DateTime.UtcNow.ToString(DateTimeFormat, CultureInfo.InvariantCulture);
 
-            fileName = $"{nowAsString}-{_fileNameSuffix}.{Extension}";
-            folderName = _key;
-            safeFolderName = _remoteFolderName;
+            uploadInfo = new UploadInfo
+            {
+                FileName = $"{nowAsString}-{_fileNameSuffix}.{Extension}", 
+                FolderName = _key, 
+                SafeFolderName = _remoteFolderName
+            };
 
-            var localPath = Path.Combine(_tmpFilePath, _localFolderName ?? string.Empty, fileName);
+            var localPath = Path.Combine(_tmpFilePath, _localFolderName ?? string.Empty, uploadInfo.FileName);
             if (_localFolderName != null)
                 Directory.CreateDirectory(Path.Combine(_tmpFilePath, _localFolderName));
             

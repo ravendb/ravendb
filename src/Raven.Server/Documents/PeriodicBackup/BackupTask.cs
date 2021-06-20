@@ -829,7 +829,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             };
 
             var backupUploader = new BackupUploader(uploaderSettings, _retentionPolicyParameters, _logger, _backupResult, _onProgress, TaskCancelToken);
-            backupUploader.Execute();
+            backupUploader.ExecuteUpload();
         }
 
         private void UpdateOperationId(PeriodicBackupStatus runningBackupStatus)

@@ -645,7 +645,7 @@ loadToOrders(noPartition(),
                         await session.SaveChangesAsync();
                     }
 
-                    var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                    var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0 && statistics.LoadErrors == 0);
 
                     var script = @"
 var orderDate = new Date(this.OrderedAt);
