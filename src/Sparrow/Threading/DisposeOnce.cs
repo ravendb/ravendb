@@ -213,7 +213,6 @@ namespace Sparrow.Threading
                     // is over. This call to Wait may throw with an
                     // AggregateException
                     await localState.Item2.Task.ConfigureAwait(false);
-                    return;
                 }
 
                 try
