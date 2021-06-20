@@ -55,7 +55,7 @@ namespace Raven.Client.ServerWide.Tcp
 
         public AuthorizationInfo AuthorizeInfo { get; set; }
 
-        public int CompressionSupport { get; set; }
+        public bool CompressionSupport { get; set; }
 
         public DetailedReplicationHubAccess ReplicationHubAccess;
 

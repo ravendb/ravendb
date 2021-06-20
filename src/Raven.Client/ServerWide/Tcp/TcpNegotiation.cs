@@ -119,6 +119,6 @@ namespace Raven.Client.ServerWide.Tcp
         public string DestinationNodeTag { get; set; }
         public string DestinationUrl { get; set; }
         public CancellationToken CancellationToken { get; set; }
-        public int CompressionSupport { get; set; }
+        public bool CompressionSupport { get; set; }
     }
 }

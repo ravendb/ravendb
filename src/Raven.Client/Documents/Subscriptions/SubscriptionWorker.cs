@@ -226,9 +226,9 @@ namespace Raven.Client.Documents.Subscriptions
 
                 var databaseName = _store.GetDatabase(_dbName);
 
-                var compressionSupport = 0;
+                var compressionSupport = false;
 #if !(NETSTANDARD2_0 || NETSTANDARD2_1 || NETCOREAPP2_1)
-                compressionSupport = 1;
+                compressionSupport = true;
 #endif
 
                 var parameters = new AsyncTcpNegotiateParameters
