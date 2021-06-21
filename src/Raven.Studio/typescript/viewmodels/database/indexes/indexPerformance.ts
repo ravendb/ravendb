@@ -510,6 +510,10 @@ class indexPerformance extends viewModelBase {
 
         this.liveViewClient(new liveIndexPerformanceWebSocketClient(this.activeDatabase(), onDataUpdate, this.dateCutoff));
     }
+
+    isConnectedToWebSocket() {
+        return this.liveViewClient() && this.liveViewClient().isConnected();
+    }
     
     private checkBufferUsage() {
         const dataCount = _.sumBy(this.data, x => x.Performance.length);

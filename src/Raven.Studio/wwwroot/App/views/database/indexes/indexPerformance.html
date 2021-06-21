@@ -3,7 +3,6 @@
         <div class="flex-horizontal flex-wrap margin-bottom margin-bottom-sm" role="form">
             <div class="form-inline">
                 <input type="text" accesskey="/" class="form-control" placeholder="Filter" title="Filter indexes (Alt+/)" data-bind="textInput: searchText, enable: hasAnyData" />
-
                 <button class="btn btn-default" data-bind="click: expandAll, visible: canExpandAll, enable: hasAnyData" title="Expand all indexes performance details"><i class="icon-expand"></i><span>Expand All</span></button>
                 <button class="btn btn-default" data-bind="click: collapseAll, visible: !canExpandAll(), enable: hasAnyData" title="Collapse all indexes performance details"><i class="icon-collapse"></i><span>Collapse All</span></button>
                 <button class="btn btn-default" data-bind="click: exportAsJson, enable: hasAnyData, visible: !isImport()" title="Export current performance graph to a file">
@@ -12,7 +11,6 @@
                 <label for="importFilePicker" class="btn btn-default">
                     <i class="icon-import"></i><span>Import</span>
                 </label>
-
                 <div class="input-group file-input" title="Import performance graph file">
                     <input type="file" id="importFilePicker" data-bind="event: { change: _.partial(fileSelected, $element) }" tabindex="-1" accept=".json">
                 </div>
@@ -26,7 +24,6 @@
                 <small>Data buffer is full, clear graph data to continue</small>
             </div>
             <div class="flex-separator"></div>
-
             <button class="btn btn-default btn-sm margin-right margin-right-sm" data-bind="click: clearBrush, visible: clearSelectionVisible">
                 <span>Clear selection</span>
             </button>
@@ -54,17 +51,14 @@
                             <i class="icon-xl global-spinner text-muted"></i>
                             <h2 class="text-center text-muted">Loading ...</h2>
                         </div>
-
                     </div>
                 </div>
             </div>
-
             <section id="indexingPerformance" style="position: relative" data-bind="visible: hasAnyData">
                 <section class="metricsContainer" id="indexPerfMetricsContainer">
                     <div class="tooltip tooltip-inner" style="opacity: 0; display: none">
                     </div>
                 </section>
-                
                 <div class="color-definitions">
                     <div class="axis"></div>
                     <div class="gaps"></div>
@@ -120,6 +114,11 @@
                     </div>
                 </div>
             </section>
+        </div>
+        <div class="results-error" data-bind="visible: !isConnectedToWebSocket()">
+            <div class="help-block bg-warning text-warning">
+                <span><i class="btn-spinner"></i><span class="margin-left">Trying to Connect</span></span>
+            </div>
         </div>
     </div>
 </div>

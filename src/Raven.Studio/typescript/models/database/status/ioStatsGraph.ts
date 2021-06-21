@@ -359,6 +359,10 @@ class ioStatsGraph {
         }
     }
 
+    isConnectedToWebSocket() {
+        return this.liveViewClient() && this.liveViewClient().isConnected();
+    }
+
     init(width: number, height: number) {
         colorsManager.setup(".io-stats .main-colors", this.colors);
         colorsManager.setup(".io-stats .event-colors", this.eventsColors);

@@ -10,7 +10,7 @@
             <div class="openedTrackArrow"></div>
             <div class="closedTrackArrow"></div>
             <div class="text"></div>
-        </div>    
+        </div>
     </div>
     <div class="event-colors" style="display: none">
         <div class="color-definitions">
@@ -32,24 +32,20 @@
             </div>
         </div>
     </div>
-    
     <div class="flex-vertical absolute-fill">
         <div class="flex-horizontal margin-bottom margin-bottom-sm">
             <div class="form-inline">
                 <span data-bind="visible: supportsIndexes">
                     <input type="text" accesskey="/" class="form-control" placeholder="Filter indexes" title="Filter Indexes (Alt+/)" data-bind="textInput: searchText, enable: hasIndexes" />
-
                     <button class="btn btn-default" data-bind="click: expandIndexes, enable: indexesVisible, visible: !isIndexesExpanded()" title="Expand indexes IO stats details"><i class="icon-expand"></i> <span>Expand</span></button>
-                    <button class="btn btn-default" data-bind="click: collapseIndexes, enable: indexesVisible, visible: isIndexesExpanded" title="Collapse indexes IO stats details"><i class="icon-collapse"></i> <span>Collapse</span></button>    
+                    <button class="btn btn-default" data-bind="click: collapseIndexes, enable: indexesVisible, visible: isIndexesExpanded" title="Collapse indexes IO stats details"><i class="icon-collapse"></i> <span>Collapse</span></button>
                 </span>
-
                 <button class="btn btn-default" data-bind="click: exportAsJson, enable: hasAnyData, visible: !isImport()" title="Export current IO stats graph to a file">
                     <i class="icon-export"></i><span>Export</span>
                 </button>
                 <label for="importFilePicker" class="btn btn-default">
                     <i class="icon-import"></i><span>Import</span>
                 </label>
-
                 <span class="input-group file-input" title="Import IO stats graph file">
                     <input type="file" id="importFilePicker" data-bind="event: { change: _.partial(fileSelected, $element) }" tabindex="-1" accept=".json" style="width: 10px">
                 </span>
@@ -76,7 +72,6 @@
                 <small>Data buffer is full, clear graph data to continue</small>
             </div>
             <div class="flex-separator"></div>
-
             <button class="btn btn-default btn-sm margin-right margin-right-sm" data-bind="click: clearBrush, visible: clearSelectionVisible">
                 <span>Clear selection</span>
             </button>
@@ -105,12 +100,16 @@
                     </div>
                 </div>
             </div>
-
             <div id="ioStats" style="position: relative" data-bind="visible: hasAnyData">
                 <section class="metricsContainer" id="IOMetricsContainer">
                     <div class="tooltip tooltip-inner" style="opacity: 0; display: none">
                     </div>
                 </section>
+            </div>
+        </div>
+        <div class="results-error" data-bind="visible: !isConnectedToWebSocket()">
+            <div class="help-block bg-warning text-warning">
+                <span><i class="btn-spinner"></i><span class="margin-left">Trying to Connect</span></span>
             </div>
         </div>
     </div>

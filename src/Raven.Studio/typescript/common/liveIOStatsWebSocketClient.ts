@@ -9,7 +9,7 @@ abstract class liveIOStatsWebSocketClient extends abstractWebSocketClient<Raven.
     private readonly onData: (data: Raven.Server.Utils.IoMetrics.IOMetricsResponse) => void;
     private static isoParser = d3.time.format.iso;
     private readonly dateCutOff: Date;
-    private readonly mergedData: Raven.Server.Utils.IoMetrics.IOMetricsResponse;    
+    private readonly mergedData: Raven.Server.Utils.IoMetrics.IOMetricsResponse;
     private pendingDataToApply: Raven.Server.Utils.IoMetrics.IOMetricsResponse[] = []; // Used to hold data when pauseUpdates
     private updatesPaused = false;
     loading = ko.observable<boolean>(true);
@@ -24,7 +24,7 @@ abstract class liveIOStatsWebSocketClient extends abstractWebSocketClient<Raven.
     }
 
     get autoReconnect() {
-        return false;
+        return true;
     }
 
     pauseUpdates() {
@@ -38,7 +38,7 @@ abstract class liveIOStatsWebSocketClient extends abstractWebSocketClient<Raven.
             this.pendingDataToApply.forEach(x => this.mergeIncomingData(x));
             this.pendingDataToApply = [];
 
-            this.onData(this.mergedData);    
+            this.onData(this.mergedData);
         }
     }
 
@@ -101,4 +101,3 @@ abstract class liveIOStatsWebSocketClient extends abstractWebSocketClient<Raven.
 }
 
 export = liveIOStatsWebSocketClient;
-
