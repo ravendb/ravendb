@@ -1,4 +1,5 @@
-﻿using System;
+﻿
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -187,9 +188,12 @@ namespace Raven.Server.ServerWide
             {
                 settings.Add(setting.Key, setting.Value);
             }
+
             // TODO: get rid of the strings
-            var dir = settings["DataDir"] ?? ".";
-            settings["DataDir"] = Path.Combine(dir, shardName);
+            if (settings.TryGetValue("DataDir", out string dir))
+            {
+                settings["DataDir"] = Path.Combine(dir, shardName);
+            }
 
             _record.Modifications = new DynamicJsonValue(_record)
             {
