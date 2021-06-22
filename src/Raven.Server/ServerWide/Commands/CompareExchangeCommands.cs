@@ -138,18 +138,24 @@ namespace Raven.Server.ServerWide.Commands
 
         }
 
+        public const long InvalidIndexValue = -1;
+        
         public unsafe bool Validate(ClusterOperationContext context, Table items, long index, out long currentIndex)
         {
-            currentIndex = -1;
+            currentIndex = InvalidIndexValue ;
             using (Slice.From(context.Allocator, ActualKey, out Slice keySlice))
             {
                 if (items.ReadByKey(keySlice, out var reader))
                 {
                     currentIndex = *(long*)reader.Read((int)ClusterStateMachine.CompareExchangeTable.Index, out var _);
+
+                    if (index == InvalidIndexValue )
+                        return true;
+
                     return Index == currentIndex;
                 }
             }
-            return index == 0;
+            return index == 0 || index == InvalidIndexValue;
         }
 
         public override DynamicJsonValue ToJson(JsonOperationContext context)
@@ -334,6 +340,7 @@ namespace Raven.Server.ServerWide.Commands
                             CompareExchangeExpirationStorage.Put(context, keySlice, ExpirationTicks.Value);
 
                         items.Update(reader.Id, tvb);
+                        TryRemoveCompareExchangeTombstone(context, keySlice);
                     }
                     else
                     {
@@ -351,6 +358,7 @@ namespace Raven.Server.ServerWide.Commands
                         CompareExchangeExpirationStorage.Put(context, keySlice, ExpirationTicks.Value);
 
                     items.Set(tvb);
+                    TryRemoveCompareExchangeTombstone(context, keySlice);
                 }
             }
             return new CompareExchangeResult
@@ -358,6 +366,15 @@ namespace Raven.Server.ServerWide.Commands
                 Index = index,
                 Value = Value
             };
+        }
+
+        private static void TryRemoveCompareExchangeTombstone(ClusterOperationContext context, Slice keySlice)
+        {
+            var tombstoneItems = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.CompareExchangeTombstoneSchema, ClusterStateMachine.CompareExchangeTombstones);
+            if (tombstoneItems.ReadByKey(keySlice, out var reader))
+            {
+                tombstoneItems.Delete(reader.Id);
+            }
         }
 
         public override DynamicJsonValue ToJson(JsonOperationContext context)
@@ -373,6 +390,6 @@ namespace Raven.Server.ServerWide.Commands
             throw new CompareExchangeKeyTooBigException(
                 $"Compare Exchange key cannot exceed {MaxNumberOfCompareExchangeKeyBytes} bytes, " +
                 $"but the key was {Encoding.GetByteCount(str)} bytes. The invalid key is '{str}'. Parameter '{nameof(str)}'");
-    }
+        }
     }
 }

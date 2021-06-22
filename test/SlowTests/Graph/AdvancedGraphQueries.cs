@@ -9,9 +9,9 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Xunit;
-using Order = FastTests.Server.Basic.Entities.Order;
-using Product = FastTests.Server.Basic.Entities.Product;
-using OrderLine = FastTests.Server.Basic.Entities.OrderLine;
+using Order = Tests.Infrastructure.Entities.Order;
+using Product = Tests.Infrastructure.Entities.Product;
+using OrderLine = Tests.Infrastructure.Entities.OrderLine;
 using Xunit.Abstractions;
 
 namespace SlowTests.Graph

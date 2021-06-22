@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
-using FastTests.Server.Basic.Entities;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -24,7 +24,7 @@ namespace SlowTests.Issues
         public async Task Can_failover_after_consecutive_failures(int nodes)
         {
             const string databaseName = "test";
-            var leader = await CreateRaftClusterAndGetLeader(nodes);
+            var (_, leader) = await CreateRaftCluster(nodes);
             using (var store = new DocumentStore
             {
                 Urls = new[] { leader.WebUrl },
@@ -79,7 +79,7 @@ namespace SlowTests.Issues
         public async Task Will_throw_when_all_nodes_are_down(int nodes)
         {
             const string databaseName = "test";
-            var leader = await CreateRaftClusterAndGetLeader(nodes);
+            var (_, leader) = await CreateRaftCluster(nodes);
             using (var store = new DocumentStore
             {
                 Urls = new []{ leader .WebUrl },

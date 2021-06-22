@@ -50,6 +50,12 @@ class periodicBackupConfiguration extends backupConfiguration {
     initObservables() {
         super.initObservables();
 
+        this.encryptionSettings.subscribe(() => {
+           if (this.backupType() === "Snapshot" && this.encryptionSettings().enabled()) {
+               this.encryptionSettings().mode("UseDatabaseKey");
+           } 
+        });
+
         this.dirtyFlag = new ko.DirtyFlag([
             this.name,
             this.backupType,

@@ -495,11 +495,12 @@ namespace Raven.Server.Web.System
             }
             else
             {
-                if (topology == null)
-                    topology = new DatabaseTopology();
-
+                topology ??= new DatabaseTopology();
                 topology.ReplicationFactor = Math.Min(replicationFactor, clusterTopology.AllNodes.Count);
             }
+
+            topology.ClusterTransactionIdBase64 ??= Guid.NewGuid().ToBase64Unpadded();
+            topology.DatabaseTopologyIdBase64 ??= Guid.NewGuid().ToBase64Unpadded();
 
             return topology;
         }

@@ -375,6 +375,7 @@ $"NodeTag of 'InternalReplication' can't be modified after 'GetHashCode' was inv
         }
 
         public string DatabaseTopologyIdBase64;
+        public string ClusterTransactionIdBase64;
 
         [JsonIgnore]
         public int Count => Members.Count + Promotables.Count + Rehabs.Count;
@@ -412,6 +413,7 @@ $"NodeTag of 'InternalReplication' can't be modified after 'GetHashCode' was inv
                 [nameof(DynamicNodesDistribution)] = DynamicNodesDistribution,
                 [nameof(ReplicationFactor)] = ReplicationFactor,
                 [nameof(DatabaseTopologyIdBase64)] = DatabaseTopologyIdBase64,
+                [nameof(ClusterTransactionIdBase64)] = ClusterTransactionIdBase64,
                 [nameof(PriorityOrder)] = PriorityOrder != null ? new DynamicJsonArray(PriorityOrder) : null
             };
         }

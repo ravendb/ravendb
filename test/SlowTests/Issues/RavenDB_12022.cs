@@ -1,7 +1,6 @@
 ﻿using System.IO;
 using System.Linq;
 using FastTests;
-using FastTests.Server.Basic.Entities;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Counters;
@@ -9,6 +8,7 @@ using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Storage.Schema.Updates.Documents;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
 

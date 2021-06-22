@@ -1,7 +1,7 @@
-using System;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
+using FastTests;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.Replication;
@@ -32,11 +32,11 @@ namespace SlowTests.Issues
                 await s.StoreAsync(new { Name = "Oren" }, "users/ayende");
                 s.CountersFor("users/ayende").Increment("test");
                 s.CountersFor("users/pheobe").Increment("test");
-                s.TimeSeriesFor<HeartRateMeasure>("users/pheobe").Append(DateTime.Today, new HeartRateMeasure
+                s.TimeSeriesFor<HeartRateMeasure>("users/pheobe").Append(RavenTestHelper.UtcToday, new HeartRateMeasure
                 {
                     HeartRate = 34
                 }, "test/things/out");
-                s.TimeSeriesFor<HeartRateMeasure>("users/ayende").Append(DateTime.Today, new HeartRateMeasure
+                s.TimeSeriesFor<HeartRateMeasure>("users/ayende").Append(RavenTestHelper.UtcToday, new HeartRateMeasure
                 {
                     HeartRate = 55
                 }, "test/things/out");

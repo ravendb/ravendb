@@ -4,7 +4,7 @@ using Orders;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Xunit;
-using Order = FastTests.Server.Basic.Entities.Order;
+using Order = Tests.Infrastructure.Entities.Order;
 using Xunit.Abstractions;
 
 namespace SlowTests.Issues

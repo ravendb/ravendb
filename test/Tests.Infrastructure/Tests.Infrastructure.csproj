@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net5.0</TargetFramework>
-    <RuntimeFrameworkVersion>5.0.6</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>5.0.7</RuntimeFrameworkVersion>
     <AssemblyName>Tests.Infrastructure</AssemblyName>
     <PackageId>Tests.Infrastructure</PackageId>
     <CodeAnalysisRuleSet>..\..\RavenDB.ruleset</CodeAnalysisRuleSet>
@@ -23,7 +23,7 @@
     <EmbeddedResource Include="Data\Northwind.4.2.ravendbdump" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="MongoDB.Driver" Version="2.12.3" />
+    <PackageReference Include="MongoDB.Driver" Version="2.12.4" />
     <PackageReference Include="xunit" Version="2.4.1" />
     <PackageReference Include="xunit.runner.utility" Version="2.4.1" />
     <PackageReference Include="XunitLogger" Version="4.0.991" />
@@ -34,5 +34,6 @@
     <ProjectReference Include="..\..\src\Raven.TestDriver\Raven.TestDriver.csproj" />
     <ProjectReference Include="..\..\src\Sparrow\Sparrow.csproj" />
     <ProjectReference Include="..\..\src\Voron\Voron.csproj" />
+    <ProjectReference Include="..\..\tools\Raven.Debug\Raven.Debug.csproj" />
   </ItemGroup>
 </Project>

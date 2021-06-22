@@ -11,6 +11,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Lambda2Js;
@@ -57,6 +58,8 @@ namespace Raven.Client.Documents.Session
         protected internal readonly SessionInfo _sessionInfo;
 
         private BatchOptions _saveChangesOptions;
+
+        internal readonly bool? DisableAtomicDocumentWritesInClusterWideTransaction;
 
         public TransactionMode TransactionMode;
 
@@ -233,6 +236,7 @@ namespace Raven.Client.Documents.Session
             JsonConverter = _requestExecutor.Conventions.Serialization.CreateConverter(this);
             _sessionInfo = new SessionInfo(this, options, _documentStore, asyncCommandRunning: false);
             TransactionMode = options.TransactionMode;
+            DisableAtomicDocumentWritesInClusterWideTransaction = options.DisableAtomicDocumentWritesInClusterWideTransaction;
 
             _javascriptCompilationOptions = new JavascriptCompilationOptions(
                 flags: JsCompilationFlags.BodyOnly | JsCompilationFlags.ScopeParameter,
@@ -606,8 +610,7 @@ more responsive application.
             if (id == null)
                 throw new ArgumentNullException(nameof(id));
             string changeVector = null;
-            DocumentInfo documentInfo;
-            if (DocumentsById.TryGetValue(id, out documentInfo))
+            if (DocumentsById.TryGetValue(id, out DocumentInfo documentInfo))
             {
                 using (var newObj = JsonConverter.ToBlittable(documentInfo.Entity, documentInfo))
                 {
@@ -630,7 +633,7 @@ more responsive application.
             _knownMissingIds.Add(id);
             changeVector = UseOptimisticConcurrency ? changeVector : null;
             _countersByDocId?.Remove(id);
-            Defer(new DeleteCommandData(id, expectedChangeVector ?? changeVector));
+            Defer(new DeleteCommandData(id, expectedChangeVector ?? changeVector, expectedChangeVector ?? documentInfo?.ChangeVector));
         }
 
         /// <summary>
@@ -925,11 +928,32 @@ more responsive application.
             {
                 foreach (var prop in documentInfo.MetadataInstance.Keys)
                 {
-                    documentInfo.Metadata.Modifications[prop] = documentInfo.MetadataInstance[prop];
+                    var result = documentInfo.MetadataInstance[prop];
+                    if(result is IMetadataDictionary md)
+                    {
+                        result = HandleDictionaryObject(md);
+                    }
+                    documentInfo.Metadata.Modifications[prop] =  result;
                 }
             }
 
             return true;
+        }
+
+        private static object HandleDictionaryObject(IMetadataDictionary md)
+        {
+            var djv = new DynamicJsonValue();
+            foreach (var item in md)
+            {
+                var v = item.Value;
+                if(v is IMetadataDictionary nested)
+                {
+                    RuntimeHelpers.EnsureSufficientExecutionStack();
+                    v = HandleDictionaryObject(nested);
+                }
+                djv[item.Key] = v;
+            }
+            return djv;
         }
 
         private void PrepareForCreatingRevisionsFromIds(SaveChangesData result)
@@ -988,14 +1012,16 @@ more responsive application.
                             result.OnSuccess.RemoveDocumentById(documentInfo.Id);
                         }
 
-                        changeVector = UseOptimisticConcurrency ? changeVector : null;
-
+                        if (UseOptimisticConcurrency == false)
+                            changeVector = null;
+                       
                         if (deletedEntity.ExecuteOnBeforeDelete)
                         {
                             OnBeforeDeleteInvoke(new BeforeDeleteEventArgs(this, documentInfo.Id, documentInfo.Entity));
                         }
 
-                        result.SessionCommands.Add(new DeleteCommandData(documentInfo.Id, changeVector));
+                        var deleteCommandData = new DeleteCommandData(documentInfo.Id, changeVector, documentInfo.ChangeVector);
+                        result.SessionCommands.Add(deleteCommandData);
                     }
                 }
             }
@@ -1098,7 +1124,7 @@ more responsive application.
                         }
                     }
 
-                    result.SessionCommands.Add(new PutCommandDataWithBlittableJson(entity.Value.Id, changeVector, document, forceRevisionCreationStrategy));
+                    result.SessionCommands.Add(new PutCommandDataWithBlittableJson(entity.Value.Id, changeVector, entity.Value.ChangeVector, document, forceRevisionCreationStrategy));
                 }
             }
         }
@@ -1342,33 +1368,42 @@ more responsive application.
             if (_isDisposed)
                 return;
 
+            ExceptionDispatchInfo edi = null;
+
             try
             {
                 OnSessionDisposing?.Invoke(this, new SessionDisposingEventArgs(this));
-
-                var asyncTasksCounter = Interlocked.Read(ref _asyncTasksCounter);
-                if (asyncTasksCounter != 0)
-                    throw new InvalidOperationException($"Disposing session with active async task is forbidden, please make sure that all asynchronous session methods returning Task are awaited. Number of active async tasks: {asyncTasksCounter}");
-
             }
-            finally
+            catch (Exception e)
             {
-                _isDisposed = true;
-
-                if (isDisposing && RunningOn.FinalizerThread == false)
-                {
-                    GC.SuppressFinalize(this);
-
-                    _releaseOperationContext?.Dispose();
-                }
-                else
-                {
-                    // when we are disposed from the finalizer then we have to dispose the context immediately instead of returning it to the pool because
-                    // the finalizer of ArenaMemoryAllocator could be already called so we cannot return such context to the pool (RavenDB-7571)
-
-                    Context?.Dispose();
-                }
+                edi = ExceptionDispatchInfo.Capture(e);
             }
+
+            var asyncTasksCounter = Interlocked.Read(ref _asyncTasksCounter);
+            if (asyncTasksCounter != 0)
+            {
+                _forTestingPurposes?.OnSessionDisposeAboutToThrowDueToRunningAsyncTask?.Invoke();
+
+                throw new InvalidOperationException($"Disposing session with active async task is forbidden, please make sure that all asynchronous session methods returning Task are awaited. Number of active async tasks: {asyncTasksCounter}");
+            }
+
+            _isDisposed = true;
+
+            if (isDisposing && RunningOn.FinalizerThread == false)
+            {
+                GC.SuppressFinalize(this);
+
+                _releaseOperationContext?.Dispose();
+            }
+            else
+            {
+                // when we are disposed from the finalizer then we have to dispose the context immediately instead of returning it to the pool because
+                // the finalizer of ArenaMemoryAllocator could be already called so we cannot return such context to the pool (RavenDB-7571)
+
+                Context?.Dispose();
+            }
+
+            edi?.Throw();
         }
 
         /// <summary>
@@ -2320,6 +2355,28 @@ more responsive application.
                 collectionName = Conventions.GetCollectionName(type) ?? Constants.Documents.Collections.AllDocumentsCollection;
 
             return (indexName, collectionName);
+        }
+
+        private TestingStuff _forTestingPurposes;
+
+        internal TestingStuff ForTestingPurposesOnly()
+        {
+            if (_forTestingPurposes != null)
+                return _forTestingPurposes;
+
+            return _forTestingPurposes = new TestingStuff();
+        }
+
+        internal class TestingStuff
+        {
+            internal Action OnSessionDisposeAboutToThrowDueToRunningAsyncTask;
+
+            internal IDisposable CallOnSessionDisposeAboutToThrowDueToRunningAsyncTask(Action action)
+            {
+                OnSessionDisposeAboutToThrowDueToRunningAsyncTask = action;
+
+                return new DisposableAction(() => OnSessionDisposeAboutToThrowDueToRunningAsyncTask = null);
+            }
         }
 
         internal void OnBeforeDeleteInvoke(BeforeDeleteEventArgs beforeDeleteEventArgs)

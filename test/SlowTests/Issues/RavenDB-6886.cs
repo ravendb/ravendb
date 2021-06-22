@@ -62,7 +62,7 @@ namespace SlowTests.Issues
             const int clusterSize = 3;
             const int docsInEachNode = 10;
             const string databaseName = "Cluster_identity_for_multiple_documents_on_different_nodes_should_work";
-            var leaderServer = await CreateRaftClusterAndGetLeader(clusterSize);
+            var (_, leaderServer) = await CreateRaftCluster(clusterSize);
             var followers = Servers.Where(s => s != leaderServer).ToList();
             using (var leaderStore = GetDocumentStore(new Options
             {
@@ -205,7 +205,7 @@ namespace SlowTests.Issues
         {
             const int clusterSize = 3;
             const string databaseName = "Cluster_identity_for_multiple_documents_on_different_nodes_should_work";
-            var leaderServer = await CreateRaftClusterAndGetLeader(clusterSize);
+            var (_, leaderServer) = await CreateRaftCluster(clusterSize);
             var followers = Servers.Where(s => s != leaderServer).ToList();
             using (var leaderStore = GetDocumentStore(new Options
             {
@@ -293,7 +293,7 @@ namespace SlowTests.Issues
             //LoggingSource.Instance.SetupLogMode(LogMode.Information, "D:\\raven-test-log");
             const int clusterSize = 3;
             const string databaseName = "Cluster_identity_for_multiple_documents_on_different_nodes_should_work";
-            var leaderServer = await CreateRaftClusterAndGetLeader(clusterSize, leaderIndex: 2);
+            var (_, leaderServer) = await CreateRaftCluster(clusterSize, leaderIndex: 2);
             var followers = Servers.Where(s => s != leaderServer).ToList();
             using (var leaderStore = GetDocumentStore(new Options
             {

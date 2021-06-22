@@ -494,9 +494,21 @@ class indexes extends viewModelBase {
     }
 
     resetIndex(i: index) {
-        this.confirmationMessage("Reset index?", `You're resetting <strong>'${generalUtils.escapeHtml(i.name)}'</strong>`, {
-            html: true
-        })
+        this.confirmationMessage("Reset index?",
+            `You're resetting index: <br><ul><li><strong>${generalUtils.escapeHtml(i.name)}</strong></li></ul>
+             <div class="margin-top margin-top-lg text-warning bg-warning padding padding-xs flex-horizontal">
+                <div class="flex-start">
+                    <small><i class="icon-warning"></i></small>
+                </div>
+                <div>
+                    <small>Clicking <strong>Reset</strong> will remove all existing indexed data.</small><br>
+                    <small>All items matched by the index definition will be re-indexed.</small>
+                </div>
+             </div>`,
+            {
+                buttons: ["Cancel", "Reset"],
+                html: true
+            })
             .done(result => {
                 if (result.can) {
 

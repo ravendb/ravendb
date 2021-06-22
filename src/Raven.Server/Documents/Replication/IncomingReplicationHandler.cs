@@ -90,6 +90,9 @@ namespace Raven.Server.Documents.Replication
             ConnectionInfo = IncomingConnectionInfo.FromGetLatestEtag(replicatedLastEtag);
 
             _database = options.DocumentDatabase;
+
+            _replicationFromAnotherSource = new AsyncManualResetEvent(_database.DatabaseShutdown);
+
             _tcpClient = options.TcpClient;
             _stream = options.Stream;
             SupportedFeatures = TcpConnectionHeaderMessage.GetSupportedFeaturesFor(options.Operation, options.ProtocolVersion);
@@ -165,7 +168,7 @@ namespace Raven.Server.Documents.Replication
             ThreadLocalCleanup.ReleaseThreadLocalState += () => IsIncomingReplication = false;
         }
 
-        private readonly AsyncManualResetEvent _replicationFromAnotherSource = new AsyncManualResetEvent();
+        private readonly AsyncManualResetEvent _replicationFromAnotherSource;
 
         public void OnReplicationFromAnotherSource()
         {
@@ -181,7 +184,7 @@ namespace Raven.Server.Documents.Replication
                 using (_stream)
                 using (var interruptibleRead = new InterruptibleRead(_database.DocumentsStorage.ContextPool, _stream))
                 {
-                    while (!_cts.IsCancellationRequested)
+                    while (_cts.IsCancellationRequested == false)
                     {
                         try
                         {
@@ -923,6 +926,7 @@ namespace Raven.Server.Documents.Replication
                 _cts.Dispose();
 
                 _attachmentStreamsTempFile.Dispose();
+                _replicationFromAnotherSource.Dispose();
             }
             finally
             {
@@ -1252,7 +1256,7 @@ namespace Raven.Server.Documents.Replication
                                             }
 
                                             database.DocumentsStorage.Put(context, doc.Id, null, resolvedDocument, doc.LastModifiedTicks,
-                                                rcvdChangeVector, flags, nonPersistentFlags);
+                                                rcvdChangeVector, null, flags, nonPersistentFlags);
                                         }
                                         else
                                         {
@@ -1363,7 +1367,7 @@ namespace Raven.Server.Documents.Replication
                         {
                             DbId = entry.DbId,
                             Etag = entry.Etag,
-                            NodeTag = ChangeVectorExtensions.SinkTag
+                            NodeTag = ChangeVectorParser.SinkInt
                         });
 
                         context.DbIdsToIgnore ??= new HashSet<string>();
@@ -1389,7 +1393,7 @@ namespace Raven.Server.Documents.Replication
 
                 foreach (var entry in incoming)
                 {
-                    if (entry.NodeTag == ChangeVectorExtensions.SinkTag)
+                    if (entry.NodeTag == ChangeVectorParser.SinkInt)
                     {
                         var found = global?.Find(x => x.DbId == entry.DbId) ?? default;
                         if (found.Etag > 0)

@@ -388,7 +388,7 @@ class indexDefinition {
             LockMode: "Unlock",
             Reduce: undefined,
             Priority: "Normal",
-            DeploymentMode: "Rolling",
+            DeploymentMode: null,
             Configuration: null,
             Type: "Map",
             SourceType: "None",

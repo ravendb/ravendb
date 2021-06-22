@@ -29,7 +29,7 @@ namespace SlowTests.Client.TimeSeries.BulkInsert
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today.EnsureMilliseconds();
+                var baseline = RavenTestHelper.UtcToday.EnsureMilliseconds();
              
                 const string documentId = "users/ayende";
 
@@ -70,7 +70,7 @@ namespace SlowTests.Client.TimeSeries.BulkInsert
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
                 const string documentId = "users/ayende";
 
                 using (var bulkInsert = store.BulkInsert())
@@ -110,7 +110,7 @@ namespace SlowTests.Client.TimeSeries.BulkInsert
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today.EnsureMilliseconds();
+                var baseline = RavenTestHelper.UtcToday.EnsureMilliseconds();
 
                 const string documentId = "users/ayende";
 
@@ -169,7 +169,7 @@ namespace SlowTests.Client.TimeSeries.BulkInsert
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
                 const string documentId = "users/ayende";
 
                 using (var bulkInsert = store.BulkInsert())
@@ -216,7 +216,7 @@ namespace SlowTests.Client.TimeSeries.BulkInsert
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
                 const string documentId = "users/ayende";
 
                 using (var bulkInsert = store.BulkInsert())
@@ -254,7 +254,7 @@ namespace SlowTests.Client.TimeSeries.BulkInsert
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
                 const string documentId = "users/ayende";
 
                 using (var bulkInsert = store.BulkInsert())
@@ -484,7 +484,7 @@ namespace SlowTests.Client.TimeSeries.BulkInsert
                 using (var bulkInsert = store.BulkInsert())
                 {
                     using (var ts = bulkInsert.TimeSeriesFor<HeartRateMeasure>(documentId2, "heartrate"))
-                        ts.Append(DateTime.Today.AddMinutes(1), new HeartRateMeasure { HeartRate = 58 }, "fitbit");
+                        ts.Append(RavenTestHelper.UtcToday.AddMinutes(1), new HeartRateMeasure { HeartRate = 58 }, "fitbit");
                 }
 
                 using (var session = store.OpenSession())
@@ -505,7 +505,7 @@ namespace SlowTests.Client.TimeSeries.BulkInsert
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today.ToUniversalTime();
+                var baseline = RavenTestHelper.UtcToday;
                 const string documentId = "users/ayende";
 
                 using (var session = store.OpenSession())
@@ -592,7 +592,7 @@ namespace SlowTests.Client.TimeSeries.BulkInsert
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 using (var bulkInsert = store.BulkInsert())
                 {
@@ -670,7 +670,7 @@ namespace SlowTests.Client.TimeSeries.BulkInsert
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
                 const string documentId1 = "users/ayende";
                 const string documentId2 = "users/grisha";
 
@@ -793,7 +793,7 @@ namespace SlowTests.Client.TimeSeries.BulkInsert
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today.ToUniversalTime();
+                var baseline = RavenTestHelper.UtcToday;
                 const string documentId = "users/ayende";
 
                 var offset = 0;
@@ -843,7 +843,7 @@ namespace SlowTests.Client.TimeSeries.BulkInsert
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
                 const string documentId = "users/ayende";
 
                 using (var bulkInsert = store.BulkInsert())
@@ -894,7 +894,7 @@ namespace SlowTests.Client.TimeSeries.BulkInsert
             
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today.EnsureUtc();
+                var baseline = RavenTestHelper.UtcToday.EnsureUtc();
                 var streams = new Dictionary<string, Dictionary<string, MemoryStream>>();
                 var counters = new Dictionary<string, string>();
                 var bulks = new Dictionary<string, BulkInsertOperation.AttachmentsBulkInsert>();

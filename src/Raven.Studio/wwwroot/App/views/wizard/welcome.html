@@ -1,3 +1,4 @@
+<div data-bind="compose: browserAlert"></div>
 <div class="on-base-background">
     <h2 class="margin-bottom margin-top">
         <strong class="margin-right">1.</strong> Welcome
@@ -91,7 +92,6 @@
         In order to disable this guide and setup the server manually, please find the 'settings.json' file in your RavenDB installation directory and change the <strong>Setup.Mode</strong> value to <strong>None</strong>
     </div>
 </div>
-
 <div class="bg-experimental padding flex-horizontal margin-top">
     <div class="margin-right">
         <i class="icon-experimental icon-lg"></i>
@@ -101,7 +101,6 @@
             <input id="features" type="checkbox" data-bind="checked: model.useExperimentalFeatures">
             <label for="features">Enable the following experimental features:</label>
         </div>
-        
         <ul class="margin-left">
             <li>Graph API</li>
         </ul>

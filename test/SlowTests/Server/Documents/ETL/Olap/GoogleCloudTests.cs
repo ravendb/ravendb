@@ -4,7 +4,6 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using FastTests.Client;
-using FastTests.Server.Basic.Entities;
 using Parquet;
 using Parquet.Data;
 using Raven.Client.Documents;
@@ -15,6 +14,7 @@ using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Server.Documents.ETL.Providers.OLAP;
 using Raven.Server.Documents.PeriodicBackup.GoogleCloud;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
 

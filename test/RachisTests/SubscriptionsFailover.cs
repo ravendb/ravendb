@@ -52,7 +52,7 @@ namespace RachisTests
         public async Task ContinueFromThePointIStopped(int batchSize)
         {
             const int nodesAmount = 5;
-            var leader = await this.CreateRaftClusterAndGetLeader(nodesAmount);
+            var (_, leader) = await CreateRaftCluster(nodesAmount);
 
             var defaultDatabase = "ContinueFromThePointIStopped";
 
@@ -100,7 +100,7 @@ namespace RachisTests
         public async Task SubscripitonDeletionFromCluster()
         {
             const int nodesAmount = 5;
-            var leader = await this.CreateRaftClusterAndGetLeader(nodesAmount);
+            var (_, leader) = await CreateRaftCluster(nodesAmount);
 
             var defaultDatabase = "ContinueFromThePointIStopped";
 
@@ -168,10 +168,11 @@ namespace RachisTests
             }
         }
 
+        [Fact]
         public async Task CreateDistributedRevisions()
         {
             const int nodesAmount = 5;
-            var leader = await this.CreateRaftClusterAndGetLeader(nodesAmount).ConfigureAwait(false);
+            var (_, leader) = await CreateRaftCluster(nodesAmount).ConfigureAwait(false);
 
             var defaultDatabase = "DistributedRevisionsSubscription";
 
@@ -201,7 +202,7 @@ namespace RachisTests
         public async Task SetMentorToSubscriptionWithFailover()
         {
             const int nodesAmount = 5;
-            var leader = await CreateRaftClusterAndGetLeader(nodesAmount);
+            var (_, leader) = await CreateRaftCluster(nodesAmount);
 
             var defaultDatabase = "SetMentorToSubscription";
 
@@ -259,7 +260,7 @@ namespace RachisTests
             var uniqueRevisions = new HashSet<string>();
             var uniqueDocs = new HashSet<string>();
 
-            var leader = await CreateRaftClusterAndGetLeader(nodesAmount).ConfigureAwait(false);
+            var (_, leader) = await CreateRaftCluster(nodesAmount).ConfigureAwait(false);
 
             var defaultDatabase = GetDatabaseName();
 

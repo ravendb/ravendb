@@ -259,12 +259,22 @@ function assert_ravendb_uninstalled {
 function test_package_local {
     pkgFilename=$1
 
-    echo "Testing the package $pkgFilename"
+    echo "# apt update"
+    apt update -qq
+
+    echo "# Testing the package $pkgFilename"
     
-    echo "Install package."
+    echo "# Install package."
     dpkg -i $pkgFilename
     
     set -e
+    dpkg -P ravendb
+
+    set +e
+    dpkg -i $pkgFilename
+
+    set -e
+
     export DEBIAN_FRONTEND=noninteractive 
     apt-get -y -f install
 
@@ -276,7 +286,7 @@ function test_package_local {
         return 1
     fi
 
-    echo "Remove package."
+    echo "# Remove package."
     dpkg -r ravendb
 
     if ! assert_ravendb_uninstalled; then
@@ -291,8 +301,11 @@ function test_package_local {
 function test_package_systemd {
     pkgFilename=$1
 
-    echo "Testing the package $pkgFilename"
-    echo "Install package."
+    echo "# apt update"
+    apt update -qq
+
+    echo "# Testing the package $pkgFilename"
+    echo "# Install package."
     dpkg -i $pkgFilename
 
     set -e
@@ -310,7 +323,7 @@ function test_package_systemd {
         return 1
     fi
 
-    echo "Remove package."
+    echo "# Remove package."
     dpkg -r ravendb
 
     if ! assert_ravendb_uninstalled; then
@@ -321,7 +334,7 @@ function test_package_systemd {
         return 1
     fi
 
-    echo "Package works fine as a systemd daemon."
+    echo "# Package works fine as a systemd daemon."
     set +e
 }
 

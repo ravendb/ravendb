@@ -201,7 +201,7 @@ namespace Raven.Server.Documents.Indexes
 
         protected internal IndexingConfiguration Configuration;
 
-        protected PerformanceHintsConfiguration PerformanceHints;
+        protected PerformanceHintsConfiguration PerformanceHintsConfig;
 
         private int _allocationCleanupNeeded;
 
@@ -233,10 +233,10 @@ namespace Raven.Server.Documents.Indexes
 
         private string IndexingThreadName => "Indexing of " + Name + " of " + _indexStorage.DocumentDatabase.Name;
 
-        private readonly WarnIndexOutputsPerDocument _indexOutputsPerDocumentWarning = new WarnIndexOutputsPerDocument
+        private readonly WarnIndexOutputsPerDocument.WarningDetails _indexOutputsPerDocumentWarning = new WarnIndexOutputsPerDocument.WarningDetails
         {
             MaxNumberOutputsPerDocument = int.MinValue,
-            Suggestion = "Please verify this index definition and consider a re-design of your entities or index for better indexing performance"
+            Suggestion = "Please verify index definitions and consider a re-design of your entities or indexes for better indexing performance."
         };
 
         private static readonly Size DefaultMaximumMemoryAllocation = new Size(32, SizeUnit.Megabytes);
@@ -733,7 +733,7 @@ namespace Raven.Server.Documents.Indexes
 
                 DocumentDatabase = documentDatabase;
                 Configuration = configuration;
-                PerformanceHints = performanceHints;
+                PerformanceHintsConfig = performanceHints;
 
                 _mre = new ThrottledManualResetEventSlim(Configuration.ThrottlingTimeInterval?.AsTimeSpan, throttlingBehavior: ThrottledManualResetEventSlim.ThrottlingBehavior.ManualManagement);
                 _logger = LoggingSource.Instance.GetLogger<Index>(documentDatabase.Name);
@@ -3963,7 +3963,7 @@ namespace Raven.Server.Documents.Indexes
 
         public abstract IQueryResultRetriever GetQueryResultRetriever(IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsOperationContext documentsContext, FieldsToFetch fieldsToFetch, IncludeDocumentsCommand includeDocumentsCommand, IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand);
 
-        public abstract void SaveLastState();
+        public abstract void SaveLastState(); 
 
         protected void HandleIndexOutputsPerDocument(LazyStringValue documentId, int numberOfOutputs, IndexingStatsScope stats)
         {
@@ -3972,7 +3972,7 @@ namespace Raven.Server.Documents.Indexes
             if (numberOfOutputs > MaxNumberOfOutputsPerDocument)
                 MaxNumberOfOutputsPerDocument = numberOfOutputs;
 
-            if (PerformanceHints.MaxWarnIndexOutputsPerDocument <= 0 || numberOfOutputs <= PerformanceHints.MaxWarnIndexOutputsPerDocument)
+            if (PerformanceHintsConfig.MaxWarnIndexOutputsPerDocument <= 0 || numberOfOutputs <= PerformanceHintsConfig.MaxWarnIndexOutputsPerDocument)
                 return;
 
             _indexOutputsPerDocumentWarning.NumberOfExceedingDocuments++;
@@ -3982,26 +3982,8 @@ namespace Raven.Server.Documents.Indexes
                 _indexOutputsPerDocumentWarning.MaxNumberOutputsPerDocument = numberOfOutputs;
                 _indexOutputsPerDocumentWarning.SampleDocumentId = documentId;
             }
-
-            if (_indexOutputsPerDocumentWarning.LastWarnedAt != null &&
-                (SystemTime.UtcNow - _indexOutputsPerDocumentWarning.LastWarnedAt.Value).Minutes <= 5)
-            {
-                // save the hint every 5 minutes (at worst case)
-                return;
-            }
-
-            _indexOutputsPerDocumentWarning.LastWarnedAt = SystemTime.UtcNow;
-
-            var hint = PerformanceHint.Create(
-                DocumentDatabase.Name,
-                "High indexing fanout ratio",
-                $"Index '{Name}' has produced more than {PerformanceHints.MaxWarnIndexOutputsPerDocument:#,#} map results from a single document",
-                PerformanceHintType.Indexing,
-                NotificationSeverity.Warning,
-                source: Name,
-                details: _indexOutputsPerDocumentWarning);
-
-            DocumentDatabase.NotificationCenter.Add(hint);
+            
+            DocumentDatabase.NotificationCenter.Indexing.AddWarning(Name, _indexOutputsPerDocumentWarning);
         }
 
         public virtual Dictionary<string, HashSet<CollectionName>> GetReferencedCollections()

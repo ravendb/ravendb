@@ -328,6 +328,8 @@ namespace Raven.Server.Documents.Replication
 
                     _parent.CancellationToken.ThrowIfCancellationRequested();
 
+                    MissingAttachmentsInLastBatch = false;
+
                     try
                     {
                         using (_stats.Network.Start())
@@ -351,8 +353,6 @@ namespace Raven.Server.Documents.Replication
                             _log.Info("Failed to send document replication batch", e);
                         throw;
                     }
-
-                    MissingAttachmentsInLastBatch = false;
 
                     return true;
                 }

@@ -498,14 +498,16 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        protected void FlushInternal()
+        protected virtual bool FlushInternal()
         {
             if (_stream == null)
                 ThrowStreamClosed();
             if (_pos == 0)
-                return;
+                return false;
             _stream.Write(_pinnedBuffer.Memory.Memory.Span.Slice(0, _pos));
+
             _pos = 0;
+            return true;
         }
 
         private static void ThrowValueTooBigForBuffer(int len)

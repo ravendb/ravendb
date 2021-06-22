@@ -17,6 +17,16 @@ namespace Sparrow.Server.Collections
             _event.Set();
         }
 
+        public bool TryDequeue(out T result)
+        {
+            return _inner.TryDequeue(out result);
+        }
+
+        public T[] GetAll()
+        {
+            return _inner.ToArray();
+        }
+
         public async Task<T> DequeueAsync()
         {
             T result;

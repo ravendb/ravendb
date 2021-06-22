@@ -866,7 +866,7 @@ namespace Voron.Impl.Journal
                         // let's try to prevent running new read transactions so we'll be able to free more scratch pages and delete more journals
                         // in particular we might clean the last journal so we won't need to apply it on restart - see RavenDB-11871 
 
-                        if (_waj._env.IsInPreventNewTransactionsMode || _waj._env.TryPreventNewReadTransactions(TimeSpan.Zero, out exitPreventNewTransactions))
+                        if (_waj._env.IsInPreventNewTransactionsMode || _waj._env.TryPreventNewTransactions(TimeSpan.Zero, out exitPreventNewTransactions))
                         {
                             // we managed to prevent from new read transactions, let's verify that we're still the only active transaction
 

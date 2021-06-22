@@ -1941,25 +1941,51 @@ namespace Raven.Server.Documents
         public static void FlagsProperlySet(DocumentFlags flags, string changeVector)
         {
             var cvArray = changeVector.ToChangeVector();
-
+            var expectedValues = new int[] { ChangeVectorParser.RaftInt, ChangeVectorParser.TrxnInt };
             if (flags.Contain(DocumentFlags.FromClusterTransaction))
             {
-                if (cvArray.Length != 1)
+                switch (cvArray.Length)
                 {
-                    Debug.Assert(false, $"FromClusterTransaction, expect change vector of length 1, {changeVector}");
-                }
-                if (cvArray[0].NodeTag != ChangeVectorParser.RaftInt)
-                {
-                    Debug.Assert(false, $"FromClusterTransaction, expect only RAFT, {changeVector}");
+                    case 1:
+                        if (cvArray[0].NodeTag != ChangeVectorParser.RaftInt)
+                        {
+                            Debug.Assert(false, $"FromClusterTransaction, expect RAFT, {changeVector}");
+                        }
+                        break;
+                    case 2:
+                        if (expectedValues.Contains(cvArray[0].NodeTag) == false ||
+                            expectedValues.Contains(cvArray[1].NodeTag) == false ||
+                            cvArray[0].NodeTag == cvArray[1].NodeTag)
+                        {
+                            Debug.Assert(false, $"FromClusterTransaction, expect RAFT or TRXN, {changeVector}");
+                        }
+                        break;
+                    default:
+                       Debug.Assert(false, $"FromClusterTransaction, expect change vector of length 1 or 2, {changeVector}");
+                        break;
                 }
             }
 
-            if (cvArray.Length == 1 && cvArray[0].NodeTag == ChangeVectorParser.RaftInt)
+            switch (cvArray.Length)
             {
-                if (flags.Contain(DocumentFlags.FromClusterTransaction) == false)
-                {
-                    Debug.Assert(false, $"flags must set FromClusterTransaction for the change vector: {changeVector}");
-                }
+                case 1:
+                    if (cvArray[0].NodeTag == ChangeVectorParser.RaftInt)
+                    {
+                        if (flags.Contain(DocumentFlags.FromClusterTransaction) == false)
+                        {
+                            Debug.Assert(false, $"flags must set FromClusterTransaction for the change vector: {changeVector}");
+                        }
+                    }
+                    break;
+                case 2:
+                    if (expectedValues.Contains(cvArray[0].NodeTag) && expectedValues.Contains(cvArray[1].NodeTag))
+                    {
+                        if (flags.Contain(DocumentFlags.FromClusterTransaction) == false)
+                        {
+                            Debug.Assert(false, $"flags must set FromClusterTransaction for the change vector: {changeVector}");
+                        }
+                    }
+                    break;
             }
         }
 
@@ -2057,9 +2083,10 @@ namespace Raven.Server.Documents
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public PutOperationResults Put(DocumentsOperationContext context, string id,
             string expectedChangeVector, BlittableJsonReaderObject document, long? lastModifiedTicks = null, string changeVector = null,
+            string oldChangeVectorForClusterTransactionIndexCheck = null,
             DocumentFlags flags = DocumentFlags.None, NonPersistentDocumentFlags nonPersistentFlags = NonPersistentDocumentFlags.None)
         {
-            return DocumentPut.PutDocument(context, id, expectedChangeVector, document, lastModifiedTicks, changeVector, flags, nonPersistentFlags);
+            return DocumentPut.PutDocument(context, id, expectedChangeVector, document, lastModifiedTicks, changeVector, oldChangeVectorForClusterTransactionIndexCheck, flags, nonPersistentFlags);
         }
 
         public long GetNumberOfDocumentsToProcess(DocumentsOperationContext context, string collection, long afterEtag, out long totalCount)
@@ -2303,6 +2330,10 @@ namespace Raven.Server.Documents
                 // case 4: incoming change vector A:11, B:12, C:10 -> update                (original: conflict, after: update)
 
                 var original = ChangeVectorUtils.GetConflictStatus(remote, local);
+                
+                remote = remote.StripTrxnTags();
+                local = local.StripTrxnTags();
+
                 TryRemoveUnusedIds(ref remote);
                 skipValidation = TryRemoveUnusedIds(ref local);
                 var after = ChangeVectorUtils.GetConflictStatus(remote, local);

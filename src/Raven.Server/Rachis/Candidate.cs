@@ -17,7 +17,7 @@ namespace Raven.Server.Rachis
     {
         private TaskCompletionSource<object> _stateChange = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
         private readonly RachisConsensus _engine;
-        private readonly List<CandidateAmbassador> _voters = new List<CandidateAmbassador>();
+        private List<CandidateAmbassador> _voters = new List<CandidateAmbassador>();
         private readonly ManualResetEvent _peersWaiting = new ManualResetEvent(false);
         private PoolOfThreads.LongRunningWork _longRunningWork;
         public long RunRealElectionAtTerm { get; private set; }
@@ -91,7 +91,10 @@ namespace Raven.Server.Rachis
                         if (voter.Key == _engine.Tag)
                             continue; // we already voted for ourselves
                         var candidateAmbassador = new CandidateAmbassador(_engine, this, voter.Key, voter.Value);
-                        _voters.Add(candidateAmbassador);
+                        _voters = new List<CandidateAmbassador>(_voters)
+                        {
+                            candidateAmbassador
+                        };
                         _engine.AppendStateDisposable(this, candidateAmbassador); // concurrency exception here will dispose the current candidate and it ambassadors
                         candidateAmbassador.Start();
                     }
@@ -229,7 +232,9 @@ namespace Raven.Server.Rachis
                             $"{ToString()}: the node {candidateAmbassador.Tag} has a mismatched topology and on longer part of this cluster.");
                     }
 
-                    _voters.Remove(candidateAmbassador);
+                    var tmp = new List<CandidateAmbassador>(_voters);
+                    tmp.Remove(candidateAmbassador);
+                    _voters = tmp;
                 }
 
                 ambassadorsToRemove.Clear();

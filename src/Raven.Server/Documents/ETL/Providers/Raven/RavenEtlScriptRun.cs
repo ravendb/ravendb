@@ -62,7 +62,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
             var commands = _fullDocuments[id] = new List<ICommandData>();
 
-            commands.Add(new PutCommandDataWithBlittableJson(id, null, doc));
+            commands.Add(new PutCommandDataWithBlittableJson(id, null,null, doc));
 
             _stats.IncrementBatchSize(doc.Size);
 
@@ -284,7 +284,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             {
                 foreach (var put in _putsByJsReference)
                 {
-                    commands.Add(new PutCommandDataWithBlittableJson(put.Value.Id, null, put.Value.Document));
+                    commands.Add(new PutCommandDataWithBlittableJson(put.Value.Id, null, null, put.Value.Document));
 
                     if (_addAttachments != null && _addAttachments.TryGetValue(put.Key, out var putAttachments))
                     {

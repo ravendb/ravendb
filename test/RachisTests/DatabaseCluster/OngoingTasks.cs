@@ -27,7 +27,7 @@ namespace RachisTests.DatabaseCluster
         {
             var clusterSize = 3;
             var databaseName = "TestDB";
-            var leader = await CreateRaftClusterAndGetLeader(clusterSize);
+            var (_, leader) = await CreateRaftCluster(clusterSize);
             ModifyOngoingTaskResult addWatcherRes;
             UpdatePeriodicBackupOperationResult updateBackupResult;
             AddEtlOperationResult addRavenEtlResult;
@@ -188,7 +188,7 @@ loadToOrders(orderData);
         {
             var clusterSize = 3;
             var databaseName = "TestDB";
-            var leader = await CreateRaftClusterAndGetLeader(clusterSize);
+            var (_, leader) = await CreateRaftCluster(clusterSize);
             RavenEtlConfiguration etlConfiguration;
             SqlEtlConfiguration sqlConfiguration;
             ExternalReplication watcher;
@@ -339,7 +339,7 @@ loadToOrders(orderData);
         {
             var clusterSize = 3;
             var databaseName = "TestDB";
-            var leader = await CreateRaftClusterAndGetLeader(clusterSize);
+            var (_, leader) = await CreateRaftCluster(clusterSize);
             ModifyOngoingTaskResult addWatcherRes;
             UpdatePeriodicBackupOperationResult updateBackupResult;
 

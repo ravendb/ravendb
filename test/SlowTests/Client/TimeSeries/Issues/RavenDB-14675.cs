@@ -1,5 +1,4 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using FastTests;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
@@ -18,7 +17,7 @@ namespace SlowTests.Client.TimeSeries.Issues
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -66,7 +65,7 @@ namespace SlowTests.Client.TimeSeries.Issues
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 using (var session = store.OpenAsyncSession())
                 {

@@ -5,7 +5,7 @@ class addClusterNodeModel {
     nodeTag = ko.observable<string>();
     addAsWatcher = ko.observable<boolean>(false);
     maxUtilizedCores = ko.observable<number>(undefined);
-    usaAvailableCores = ko.observable<boolean>(true);
+    useAvailableCores = ko.observable<boolean>(true);
 
     validationGroup: KnockoutValidationGroup = ko.validatedObservable({
         serverUrl: this.serverUrl,
@@ -14,12 +14,10 @@ class addClusterNodeModel {
     });
 
     constructor() {
-        this.usaAvailableCores.subscribe(newValue => {
+        this.useAvailableCores.subscribe(newValue => {
             this.maxUtilizedCores.clearError();
             if (!newValue)
                 return;
-
-            this.maxUtilizedCores(undefined);
         });
 
         this.initValidation();
@@ -33,7 +31,7 @@ class addClusterNodeModel {
 
         this.nodeTag.extend({
             pattern: {
-                message: 'Node tag must contain only upper case letters.',
+                message: 'Node tag must contain upper case letters only.',
                 params: '^[A-Z]+$'
             },
             minLength: 1,
@@ -42,7 +40,7 @@ class addClusterNodeModel {
 
         this.maxUtilizedCores.extend({
             required: {
-                onlyIf: () => !this.usaAvailableCores()
+                onlyIf: () => !this.useAvailableCores()
             },
             min: 1
         });

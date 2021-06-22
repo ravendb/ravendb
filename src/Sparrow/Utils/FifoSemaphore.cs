@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
 
 namespace Sparrow.Utils
@@ -28,7 +29,7 @@ namespace Sparrow.Utils
     /// </remarks>
     internal class FifoSemaphore
     {
-        internal readonly List<OneTimeWaiter> _waitQueue;
+        internal readonly Queue<OneTimeWaiter> _waitQueue;
 
         private readonly object _lock;
 
@@ -41,7 +42,7 @@ namespace Sparrow.Utils
 
             _tokens = tokens;
             _lock = new object();
-            _waitQueue = new List<OneTimeWaiter>();
+            _waitQueue = new Queue<OneTimeWaiter>();
         }
 
         public bool TryAcquire(TimeSpan timeout, CancellationToken token)
@@ -60,35 +61,19 @@ namespace Sparrow.Utils
 
                 _forTestingPurposes?.JustBeforeAddingToWaitQueue?.Invoke();
 
-                waiter = new OneTimeWaiter();
-                _waitQueue.Add(waiter);
+                waiter = new OneTimeWaiter(token);
+
+                _waitQueue.Enqueue(waiter);
             }
 
             using (waiter)
             {
-                try
-                {
+                bool result = waiter.TryWait(timeout);
 
-                    var result = waiter.TryWait(timeout, token);
-                    if (result == false)
-                        RemoveWaiter(waiter);
+                if (result == false)
+                    token.ThrowIfCancellationRequested();
 
-                    return result;
-                }
-                catch
-                {
-                    RemoveWaiter(waiter);
-
-                    throw;
-                }
-            }
-
-            void RemoveWaiter(OneTimeWaiter w)
-            {
-                lock (_lock)
-                {
-                    _waitQueue.Remove(w);
-                }
+                return result;
             }
         }
 
@@ -118,15 +103,19 @@ namespace Sparrow.Utils
                 {
                     if (_waitQueue.Count > 0)
                     {
-                        var waiter = _waitQueue[0];
+                        var waiter = _waitQueue.Dequeue();
 
-                        _waitQueue.RemoveAt(0);
+                        if (waiter.TryRelease() == false)
+                        {
+                            Debug.Assert(waiter.IsCancelled || waiter.IsTimedOut, $"waiter.IsCancelled: {waiter.IsCancelled} || waiter.IsTimedOut: {waiter.IsTimedOut}");
 
-                        waiter.Release();
+                            // waiter was cancelled or it timed out, let's release another waiter
+                            i--;
+                        }
                     }
                     else
                     {
-                        //We've got no one waiting, so add a token
+                        // We've got no one waiting, so add a token
                         _tokens++;
                     }
                 }
@@ -136,16 +125,52 @@ namespace Sparrow.Utils
         internal class OneTimeWaiter : IDisposable
         {
             private readonly ManualResetEventSlim _mre = new ManualResetEventSlim(false);
+            private CancellationToken _token;
+            private readonly object _mreAccessLock = new ManualResetEventSlim();
+            private bool _timedOut;
 
-            public bool TryWait(TimeSpan timeout, CancellationToken token)
+            public OneTimeWaiter(CancellationToken token)
             {
-                return _mre.Wait(timeout, token);
+                _token = token;
             }
 
-            public void Release()
+            public bool TryWait(TimeSpan timeout)
             {
-                _mre.Set();
+                var indexOfSatisfiedWait = WaitHandle.WaitAny(new[] { _mre.WaitHandle, _token.WaitHandle }, timeout);
+
+                if (indexOfSatisfiedWait == 0)
+                    return true;
+
+                lock (_mreAccessLock)
+                {
+                    if (_mre.IsSet) // someone already managed to call Release() on it, let's ignore the already cancelled token or timeout and let it continue so it will Release
+                        return true;
+
+                    if (indexOfSatisfiedWait == WaitHandle.WaitTimeout)
+                        _timedOut = true;
+                }
+
+                return false;
             }
+
+            public bool TryRelease()
+            {
+                lock (_mreAccessLock)
+                {
+                    if (_token.IsCancellationRequested)
+                        return false;
+
+                    if (_timedOut)
+                        return false;
+
+                    _mre.Set();
+                    return true;
+                }
+            }
+
+            public bool IsCancelled => _token.IsCancellationRequested;
+
+            public bool IsTimedOut => _timedOut;
 
             public void Dispose()
             {

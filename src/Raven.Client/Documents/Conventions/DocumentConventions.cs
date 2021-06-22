@@ -261,6 +261,7 @@ namespace Raven.Client.Documents.Conventions
         private bool _sendApplicationIdentifier;
         private Size _maxContextSizeToKeep;
         private ISerializationConventions _serialization;
+        private bool? _disableAtomicDocumentWritesInClusterWideTransaction;
 
         public Func<InMemoryDocumentSessionOperations, object, string, bool> ShouldIgnoreEntityChanges
         {
@@ -1123,6 +1124,20 @@ namespace Raven.Client.Documents.Conventions
         }
 
         internal bool AnyQueryMethodConverters => _listOfQueryMethodConverters.Count > 0;
+
+        /// <summary>
+        /// EXPERT: Disable automatic atomic writes with cluster write transactions. If set to 'true', will only consider explicitly
+        /// added compare exchange values to validate cluster wide transactions."
+        /// </summary>
+        public bool? DisableAtomicDocumentWritesInClusterWideTransaction
+        {
+            get => _disableAtomicDocumentWritesInClusterWideTransaction;
+            set
+            {
+                AssertNotFrozen();
+                _disableAtomicDocumentWritesInClusterWideTransaction = value;
+            }
+        }
 
         internal bool TryConvertQueryMethod<T>(QueryMethodConverter.Parameters<T> parameters)
         {

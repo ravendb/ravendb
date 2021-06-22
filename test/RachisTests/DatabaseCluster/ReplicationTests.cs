@@ -22,6 +22,7 @@ using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -38,7 +39,7 @@ namespace RachisTests.DatabaseCluster
         {
             var clusterSize = 5;
             var databaseName = GetDatabaseName();
-            var leader = await CreateRaftClusterAndGetLeader(clusterSize, false, 0);
+            var (_, leader) = await CreateRaftCluster(clusterSize, false, 0);
             using (var store = new DocumentStore
             {
                 Urls = new[] { leader.WebUrl },
@@ -71,18 +72,26 @@ namespace RachisTests.DatabaseCluster
         {
             var clusterSize = 5;
             var databaseName = GetDatabaseName();
-            var leader = await CreateRaftClusterAndGetLeader(clusterSize, false, useSsl: useSsl);
 
-            X509Certificate2 clientCertificate = null;
+            RavenServer leader;
             X509Certificate2 adminCertificate = null;
+            X509Certificate2 clientCertificate = null;
+
             if (useSsl)
             {
-                var certificates = GenerateAndSaveSelfSignedCertificate();
-                adminCertificate = RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, server: leader);
-                clientCertificate = RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
+                var result = await CreateRaftClusterWithSsl(clusterSize, false);
+                leader = result.Leader;
+
+                adminCertificate = RegisterClientCertificate(result.Certificates.ServerCertificate.Value, result.Certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, server: leader);
+                clientCertificate = RegisterClientCertificate(result.Certificates.ServerCertificate.Value, result.Certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
                 {
                     [databaseName] = DatabaseAccess.Admin
                 }, server: leader);
+            }
+            else
+            {
+                var result = await CreateRaftCluster(clusterSize, false);
+                leader = result.Leader;
             }
 
             DatabasePutResult databaseResult;
@@ -143,16 +152,24 @@ namespace RachisTests.DatabaseCluster
         {
             var clusterSize = 3;
             var databaseName = GetDatabaseName();
-            var leader = await CreateRaftClusterAndGetLeader(clusterSize, useSsl: useSsl);
-            var watchers = new List<ExternalReplication>();
 
+            RavenServer leader;
             X509Certificate2 adminCertificate = null;
+
             if (useSsl)
             {
-                var certificates = GenerateAndSaveSelfSignedCertificate();
-                adminCertificate = RegisterClientCertificate(certificates, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, server: leader);
+                var result = await CreateRaftClusterWithSsl(clusterSize);
+                leader = result.Leader;
+
+                adminCertificate = RegisterClientCertificate(result.Certificates, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, server: leader);
+            }
+            else
+            {
+                var result = await CreateRaftCluster(clusterSize);
+                leader = result.Leader;
             }
 
+            var watchers = new List<ExternalReplication>();
             var watcherUrls = new Dictionary<string, string[]>();
 
             using (var store = new DocumentStore()
@@ -259,7 +276,7 @@ namespace RachisTests.DatabaseCluster
         {
             var clusterSize = 5;
             var databaseName = GetDatabaseName();
-            var leader = await CreateRaftClusterAndGetLeader(clusterSize);
+            var (_, leader) = await CreateRaftCluster(clusterSize);
             var watchers = new List<ExternalReplication>();
 
             var watcherUrls = new Dictionary<string, string[]>();
@@ -334,7 +351,7 @@ namespace RachisTests.DatabaseCluster
             var databaseName = GetDatabaseName();
             var external1 = GetDatabaseName();
             var external2 = GetDatabaseName();
-            var leader = await CreateRaftClusterAndGetLeader(clusterSize);
+            var (_, leader) = await CreateRaftCluster(clusterSize);
             ExternalReplication watcher;
 
             string[] watcherUrls;
@@ -386,7 +403,7 @@ namespace RachisTests.DatabaseCluster
                 };
                 var updateRes = await AddWatcherToReplicationTopology((DocumentStore)store, watcher);
                 await WaitForRaftIndexToBeAppliedInCluster(updateRes.RaftCommandIndex, TimeSpan.FromSeconds(10));
-                Assert.True(WaitForDocument(new[] {leader.WebUrl}, watcher.Database));
+                Assert.True(WaitForDocument(new[] { leader.WebUrl }, watcher.Database));
             }
 
             var handler = await InstantiateOutgoingTaskHandler(databaseName, leader);
@@ -434,7 +451,7 @@ namespace RachisTests.DatabaseCluster
                 watcher.Database = external2;
                 var updateRes = await AddWatcherToReplicationTopology((DocumentStore)store, watcher);
                 await WaitForRaftIndexToBeAppliedInCluster(updateRes.RaftCommandIndex, TimeSpan.FromSeconds(10));
-                Assert.True(WaitForDocument(new[] {leader.WebUrl}, watcher.Database));
+                Assert.True(WaitForDocument(new[] { leader.WebUrl }, watcher.Database));
             }
 
             tasks = handler.GetOngoingTasksInternal().OngoingTasksList;
@@ -481,16 +498,24 @@ namespace RachisTests.DatabaseCluster
         {
             var clusterSize = 5;
             var databaseName = GetDatabaseName();
-            var leader = await CreateRaftClusterAndGetLeader(clusterSize, useSsl: useSsl);
 
+            RavenServer leader;
             X509Certificate2 adminCertificate = null;
+
             if (useSsl)
             {
-                var certificates = GenerateAndSaveSelfSignedCertificate();
-                adminCertificate = RegisterClientCertificate(certificates, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, server: leader);
+                var result = await CreateRaftClusterWithSsl(clusterSize);
+                leader = result.Leader;
+
+                adminCertificate = RegisterClientCertificate(result.Certificates, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, server: leader);
+            }
+            else
+            {
+                var result = await CreateRaftCluster(clusterSize);
+                leader = result.Leader;
             }
 
-            using (var store = new DocumentStore()
+            using (var store = new DocumentStore
             {
                 Urls = new[] { leader.WebUrl },
                 Database = databaseName,
@@ -545,22 +570,30 @@ namespace RachisTests.DatabaseCluster
         {
             var clusterSize = 3;
             var databaseName = GetDatabaseName();
-            var leader = await CreateRaftClusterAndGetLeader(clusterSize, true, 0, useSsl: useSsl);
 
-            X509Certificate2 clientCertificate = null;
+            RavenServer leader;
             X509Certificate2 adminCertificate = null;
+            X509Certificate2 clientCertificate = null;
+
             if (useSsl)
             {
-                var certificates = GenerateAndSaveSelfSignedCertificate();
-                adminCertificate = RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, server: leader);
-                clientCertificate = RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
+                var result = await CreateRaftClusterWithSsl(clusterSize, true, 0);
+                leader = result.Leader;
+
+                adminCertificate = RegisterClientCertificate(result.Certificates.ServerCertificate.Value, result.Certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, server: leader);
+                clientCertificate = RegisterClientCertificate(result.Certificates.ServerCertificate.Value, result.Certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
                 {
                     [databaseName] = DatabaseAccess.Admin
                 }, server: leader);
             }
+            else
+            {
+                var result = await CreateRaftCluster(clusterSize, true, 0);
+                leader = result.Leader;
+            }
 
             var doc = new DatabaseRecord(databaseName);
-            using (var store = new DocumentStore()
+            using (var store = new DocumentStore
             {
                 Urls = new[] { leader.WebUrl },
                 Database = databaseName,
@@ -602,17 +635,17 @@ namespace RachisTests.DatabaseCluster
                 {
                     await WaitForValueOnGroupAsync(topology, serverStore =>
                     {
-                    var database = serverStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName).Result;
+                        var database = serverStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName).Result;
 
-                    using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                    using (context.OpenReadTransaction())
-                    {
-                        var cv = DocumentsStorage.GetDatabaseChangeVector(context);
+                        using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                        using (context.OpenReadTransaction())
+                        {
+                            var cv = DocumentsStorage.GetDatabaseChangeVector(context);
 
-                        return cv != null && cv.Contains("A:1-") && cv.Contains("B:1-") && cv.Contains("C:1-");
-                    }
+                            return cv != null && cv.Contains("A:1-") && cv.Contains("B:1-") && cv.Contains("C:1-");
+                        }
                     }, expected: true, timeout: 60000);
-            }
+                }
                 catch (Exception e)
                 {
                     var error = e.Message;
@@ -773,8 +806,8 @@ namespace RachisTests.DatabaseCluster
         public async Task ExternalReplicationFailover()
         {
             var clusterSize = 3;
-            var srcLeader = await CreateRaftClusterAndGetLeader(clusterSize);
-            var dstLeader = await CreateRaftClusterAndGetLeader(clusterSize);
+            var (_, srcLeader) = await CreateRaftCluster(clusterSize);
+            var (_, dstLeader) = await CreateRaftCluster(clusterSize);
 
             var dstDB = GetDatabaseName();
             var srcDB = GetDatabaseName();
@@ -854,8 +887,8 @@ namespace RachisTests.DatabaseCluster
         public async Task GetFirstTopologyShouldTimeout()
         {
             var clusterSize = 1;
-            var srcLeader = await CreateRaftClusterAndGetLeader(clusterSize);
-            var dstLeader = await CreateRaftClusterAndGetLeader(clusterSize);
+            var (_, srcLeader) = await CreateRaftCluster(clusterSize);
+            var (_, dstLeader) = await CreateRaftCluster(clusterSize);
 
             var dstDB = GetDatabaseName();
             var srcDB = GetDatabaseName();
@@ -910,8 +943,8 @@ namespace RachisTests.DatabaseCluster
         public async Task GetTcpInfoShouldTimeout()
         {
             var clusterSize = 1;
-            var srcLeader = await CreateRaftClusterAndGetLeader(clusterSize);
-            var dstLeader = await CreateRaftClusterAndGetLeader(clusterSize);
+            var (_, srcLeader) = await CreateRaftCluster(clusterSize);
+            var (_, dstLeader) = await CreateRaftCluster(clusterSize);
 
             var dstDB = GetDatabaseName();
             var srcDB = GetDatabaseName();
@@ -1012,7 +1045,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [Fact]
+        [NightlyBuildFact]
         public async Task RavenDB_14435()
         {
             using (var src = GetDocumentStore())

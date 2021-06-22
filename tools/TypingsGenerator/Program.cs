@@ -217,6 +217,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(HugeDocumentsDetails));
             scripter.AddType(typeof(HugeDocumentInfo));
             scripter.AddType(typeof(RequestLatencyDetail));
+            scripter.AddType(typeof(WarnIndexOutputsPerDocument));
 
             // subscriptions
             scripter.AddType(typeof(SubscriptionConnectionStats));

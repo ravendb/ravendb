@@ -91,10 +91,10 @@ namespace Raven.Server.Rachis.Remote
             }
         }
 
-        private void Send(JsonOperationContext context, BlittableJsonReaderObject msg)
+        private void Send(JsonOperationContext context, BlittableJsonReaderObject msg, Action afterFlush = null)
         {
             using (_disposerLock.EnsureNotDisposed())
-            using (var writer = new BlittableJsonTextWriter(context, _stream))
+            using (var writer = new RachisBlittableJsonTextWriter(context, _stream, afterFlush))
             {
                 context.Write(writer, msg);
             }
@@ -211,7 +211,7 @@ namespace Raven.Server.Rachis.Remote
             foreach (var item in items)
             {
                 updateFollowerTicks();
-                Send(context, item);
+                Send(context, item, updateFollowerTicks);
             }
         }
 

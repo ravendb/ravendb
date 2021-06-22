@@ -2,13 +2,10 @@
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Client.Documents.Operations.Indexes;
-using Raven.Client.Documents.Session;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
-using Sparrow.Extensions;
 using Tests.Infrastructure.Operations;
 using Xunit;
 using Xunit.Abstractions;
