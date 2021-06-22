@@ -922,15 +922,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         /// </summary>
         public void AndAlso()
         {
-            var tokens = GetCurrentWhereTokens();
-
-            if (tokens.Last == null)
-                return;
-
-            if (tokens.Last.Value is QueryOperatorToken)
-                throw new InvalidOperationException("Cannot add AND, previous token was already an operator token.");
-
-            tokens.AddLast(QueryOperatorToken.And);
+            AndAlso(wrapPreviousQueryClauses:false);
         }
         
         /// <summary>
