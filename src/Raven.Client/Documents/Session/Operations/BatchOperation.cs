@@ -48,7 +48,11 @@ namespace Raven.Client.Documents.Session.Operations
             _entities = result.Entities;
 
             if (_session.TransactionMode == TransactionMode.ClusterWide)
-                return new ClusterWideBatchCommand(_session.Conventions, _session.Context, result.SessionCommands, result.Options);
+            {
+                return new ClusterWideBatchCommand(_session.Conventions, 
+                    result.SessionCommands, result.Options, 
+                    _session.DisableAtomicDocumentWritesInClusterWideTransaction);
+            }
 
             return new SingleNodeBatchCommand(_session.Conventions, _session.Context, result.SessionCommands, result.Options);
         }

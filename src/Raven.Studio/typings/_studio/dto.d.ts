@@ -797,6 +797,8 @@ interface sampleCode {
 
 type OnlyStrings<T> = { [ P in keyof T]: T[P] extends string ? P : never }[keyof T & string];
 
+type commandLineType = "PowerShell" | "Cmd" | "Bash";
+
 interface geoPointInfo extends Raven.Server.Documents.Indexes.Spatial.Coordinates {
     PopupContent: document;
 }

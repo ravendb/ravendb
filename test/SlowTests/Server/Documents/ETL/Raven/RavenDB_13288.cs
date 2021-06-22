@@ -25,8 +25,8 @@ namespace SlowTests.Server.Documents.ETL.Raven
             var srcDb = "13288-src";
             var dstDb = "13288-dst";
 
-            var srcRaft = await CreateRaftClusterAndGetLeader(2);
-            var dstRaft = await CreateRaftClusterAndGetLeader(1);
+            var (_, srcRaft) = await CreateRaftCluster(2);
+            var (_, dstRaft) = await CreateRaftCluster(1);
             var srcNodes = await CreateDatabaseInCluster(srcDb, 2, srcRaft.WebUrl);
             var destNode = await CreateDatabaseInCluster(dstDb, 1, dstRaft.WebUrl);
 

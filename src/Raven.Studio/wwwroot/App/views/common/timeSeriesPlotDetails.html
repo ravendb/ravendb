@@ -1,6 +1,5 @@
 <div class="time-series-details absolute-fill">
     <div class="dynamic-container">
-        
     </div>
     <div class="time-series-legend scroll">
         <div class="checkbox margin-bottom margin-bottom-lg">
@@ -12,9 +11,7 @@
         <h4 class="ts-legend-header">LEGEND</h4>
         <div class="flex-grow" style="position: relative">
             <div data-bind="foreach: allTimeSeries">
-                
-                <div data-bind="text: sectionName" class="section-name"></div>
-                
+                <div data-bind="text: sectionName" class="section-name margin-top"></div>
                 <div class="legend" data-bind="foreach: series">
                     <div class="checkbox">
                         <input type="checkbox" data-bind="attr: { id: uniqueId }, checked: visible" />

@@ -30,10 +30,26 @@ using Xunit.Abstractions;
 
 namespace FastTests.Server.Documents.Revisions
 {
+    
     public class RevisionsTests : RavenTestBase
     {
         public RevisionsTests(ITestOutputHelper output) : base(output)
         {
+        }
+        [Fact]
+        public async Task CanGetNonExistingRevisionsByChangeVectorAsyncLazily()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    var lazy = session.Advanced.Revisions.Lazily.GetAsync<User>("dummy");
+                    var user = await lazy.Value;
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+                    Assert.Null(user);
+                }
+            }
         }
         [Fact]
         public async Task CanGetRevisionsByChangeVectorsLazily()

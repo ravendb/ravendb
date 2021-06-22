@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Indexes;
@@ -108,16 +109,30 @@ namespace SlowTests.Issues
                     } while (performanceHint.Item2["Type"].ToString() != NotificationType.PerformanceHint.ToString());
 
                     Assert.NotNull(performanceHint.Item2);
-                    Assert.Equal("Index 'UsersAndFriends' has produced more than 2 map results from a single document", performanceHint.Item2[nameof(PerformanceHint.Message)]);
-                    Assert.Equal("UsersAndFriends", performanceHint.Item2[nameof(PerformanceHint.Source)]);
+
+                    Assert.Equal("Number of map results produced by an index exceeds the performance hint configuration key (MaxIndexOutputsPerDocument).",
+                        performanceHint.Item2[nameof(PerformanceHint.Message)]);
+                    
                     Assert.Equal(PerformanceHintType.Indexing, performanceHint.Item2[nameof(PerformanceHint.HintType)]);
 
                     var details = performanceHint.Item2[nameof(PerformanceHint.Details)] as DynamicJsonValue;
-
                     Assert.NotNull(details);
-                    Assert.Equal(1L, details[nameof(WarnIndexOutputsPerDocument.NumberOfExceedingDocuments)]);
-                    Assert.Equal(3, details[nameof(WarnIndexOutputsPerDocument.MaxNumberOutputsPerDocument)]);
-                    Assert.Equal("users/2-A", details[nameof(WarnIndexOutputsPerDocument.SampleDocumentId)]);
+                    
+                    var warnings = details[nameof(WarnIndexOutputsPerDocument.Warnings)] as DynamicJsonValue;
+                    Assert.NotNull(warnings);
+                    
+                    Assert.Contains(  warnings.Properties.ToArray()[0].Name, "UsersAndFriends");
+                    var indexWarningsArray = (warnings["UsersAndFriends"] as DynamicJsonArray).ToArray();
+                    
+                    var indexWarning = indexWarningsArray[0] as DynamicJsonValue;
+                    
+                    var numberOfExceedingDocs = indexWarning[nameof(WarnIndexOutputsPerDocument.WarningDetails.NumberOfExceedingDocuments)];
+                    var numberOfOutputsPerDoc = indexWarning[nameof(WarnIndexOutputsPerDocument.WarningDetails.MaxNumberOutputsPerDocument)];
+                    var sampleDoc = indexWarning[nameof(WarnIndexOutputsPerDocument.WarningDetails.SampleDocumentId)];
+
+                    Assert.Equal(1L, numberOfExceedingDocs);
+                    Assert.Equal(3, numberOfOutputsPerDoc);
+                    Assert.Equal("users/2-A", sampleDoc);
                 }
 
                 Assert.Equal(3, WaitForValue(() =>

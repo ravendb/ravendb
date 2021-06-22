@@ -281,6 +281,9 @@ class timeSeriesPlotDetails extends viewModelBase {
     
     private throttledTooltipUpdate = _.throttle((svgLocation: [number, number], globalLocation: [number, number]) => this.updateTooltip(svgLocation, globalLocation), 100);
     
+    tabText: KnockoutComputed<string>;
+    tabInfo: KnockoutComputed<string>;
+    
     constructor(timeSeries: Array<timeSeriesPlotItem>) {
         super();
         
@@ -300,6 +303,27 @@ class timeSeriesPlotDetails extends viewModelBase {
                     this.pointTimeSeries.push(new rawTimeSeriesContainer(item, onChange));
                     break;
             }
+        });
+        
+        this.tabText = ko.pureComputed(() => {
+           const documentIdsSet = new Set<string>();
+           const allData = [...this.rangeTimeSeries, ...this.pointTimeSeries];
+           allData.map(x => documentIdsSet.add(x.documentId));
+           
+           const numberOfDocuments =  Array.from(documentIdsSet).length;
+           return numberOfDocuments === 1 ? `TS - ${genUtils.truncateDocumentId(allData[0].documentId)}` :
+                                            `TS - ${numberOfDocuments} documents`;
+        });
+        
+        this.tabInfo = ko.pureComputed(() => {
+           const documentIdsSet = new Set<string>();
+           const allData = [...this.rangeTimeSeries, ...this.pointTimeSeries];
+           allData.map(x => documentIdsSet.add(`<span class="document-id">${genUtils.escapeHtml(x.documentId)}</span> - ${x.name}`));
+           
+           return `<div class="tab-info-tooltip padding padding-sm">
+                       <div class="margin-bottom margin-bottom-sm"><strong>Time Series Graph for:</strong></div>
+                       <div class="text-left">${Array.from(documentIdsSet).join("<br>")}</div>
+                   </div>`;
         });
         
         _.bindAll(this, "getColor", "getColorClass");

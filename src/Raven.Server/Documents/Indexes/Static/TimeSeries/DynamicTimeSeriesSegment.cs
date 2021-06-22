@@ -227,6 +227,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
                 Debug.Assert(nameof(Tag) == nameof(_entry.Tag), "nameof(Tag) == nameof(_segmentEntry.Tag)");
 
                 _entry = entry;
+                _values = CreateValues(_entry);
             }
 
             public override dynamic GetId()
@@ -237,7 +238,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             public override bool Set(object item)
             {
                 _entry = (SingleResult)item;
-                _values = null;
+                _values = CreateValues(_entry);
                 return true;
             }
 
@@ -245,7 +246,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             {
                 get
                 {
-                    return _values ??= new DynamicArray(_entry.Values.ToArray());
+                    return _values;
                 }
             }
 
@@ -253,9 +254,6 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             {
                 get
                 {
-                    if (_values == null)
-                        _values = new DynamicArray(_entry.Values.ToArray());
-
                     return _values.Get(0);
                 }
             }
@@ -270,6 +268,11 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
 
                 result = DynamicNullObject.Null;
                 return true;
+            }
+
+            private static DynamicArray CreateValues(SingleResult entry)
+            {
+                return new DynamicArray(entry.Values.ToArray());
             }
         }
     }

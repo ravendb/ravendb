@@ -5,7 +5,6 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Client;
-using FastTests.Server.Basic.Entities;
 using Newtonsoft.Json;
 using Parquet;
 using Parquet.Data;
@@ -19,6 +18,7 @@ using Raven.Server.Documents.ETL.Providers.OLAP;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Platform;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
 

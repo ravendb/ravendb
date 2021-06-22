@@ -1863,6 +1863,7 @@ namespace Raven.Server.Documents.Replication
 
         public async Task<int> WaitForReplicationAsync(int numberOfReplicasToWaitFor, TimeSpan waitForReplicasTimeout, string lastChangeVector)
         {
+            lastChangeVector = lastChangeVector.StripTrxnTags();
             var sp = Stopwatch.StartNew();
             while (true)
             {

@@ -3,10 +3,13 @@ import router = require("plugins/router");
 import getSetupLocalNodeIpsCommand = require("commands/wizard/getSetupLocalNodeIpsCommand");
 import getSetupParametersCommand = require("commands/wizard/getSetupParametersCommand");
 import genUtils = require("common/generalUtils");
+import detectBrowser = require("viewmodels/common/detectBrowser");
 
 class welcome extends setupStep {
    
     disableLetEncrypt = ko.observable<boolean>(false);
+    
+    browserAlert = new detectBrowser(false);
     
     activate(args: any) {
         super.activate(args, { shell: true });
@@ -41,7 +44,7 @@ class welcome extends setupStep {
     
     private fetchSetupParameters() {
         return new getSetupParametersCommand() 
-            .execute();            
+            .execute();
     }
     
     chooseUnsecured() {

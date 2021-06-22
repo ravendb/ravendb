@@ -20,9 +20,11 @@ using Raven.Client.Exceptions.Documents;
 using Raven.Client.Json;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Documents.Replication;
 using Raven.Server.Json;
 using Raven.Server.Rachis;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.TrafficWatch;
@@ -68,6 +70,11 @@ namespace Raven.Server.Documents.Handlers
                     // add sb to httpContext
                     AddStringToHttpContext(log, TrafficWatchChangeType.BulkDocs);
                 }
+                
+                var disableAtomicDocumentWrites = GetBoolValueQueryString("disableAtomicDocumentWrites", required: false) ??
+                                                  Database.Configuration.Cluster.DisableAtomicDocumentWrites;
+
+                CheckBackwardCompatibility(ref disableAtomicDocumentWrites);
 
                 using (var command = await commandBuilder.GetCommand(context))
                 {
@@ -79,18 +86,19 @@ namespace Raven.Server.Documents.Handlers
                         {
                             // Since this is a cluster transaction we are not going to wait for the write assurance of the replication.
                             // Because in any case the user will get a raft index to wait upon on his next request.
-                            var options = new ClusterTransactionCommand.ClusterTransactionOptions(taskId)
-                            {
-                                WaitForIndexesTimeout = waitForIndexesTimeout,
-                                WaitForIndexThrow = waitForIndexThrow,
-                                SpecifiedIndexesQueryString = specifiedIndexesQueryString.Count > 0 ? specifiedIndexesQueryString.ToList() : null
-                            };
+                            var options =
+                                new ClusterTransactionCommand.ClusterTransactionOptions(taskId, disableAtomicDocumentWrites,
+                                    ClusterCommandsVersionManager.CurrentClusterMinimalVersion)
+                                {
+                                    WaitForIndexesTimeout = waitForIndexesTimeout,
+                                    WaitForIndexThrow = waitForIndexThrow,
+                                    SpecifiedIndexesQueryString = specifiedIndexesQueryString.Count > 0 ? specifiedIndexesQueryString.ToList() : null
+                                };
                             await HandleClusterTransaction(context, command, options);
                         }
 
                         return;
                     }
-
 
                     if (waitForIndexesTimeout != null)
                         command.ModifiedCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -128,6 +136,23 @@ namespace Raven.Server.Documents.Handlers
                         context.Write(writer, new DynamicJsonValue {[nameof(BatchCommandResult.Results)] = command.Reply});
                     }
                 }
+            }
+        }
+
+        private void CheckBackwardCompatibility(ref bool disableAtomicDocumentWrites)
+        {
+            if (disableAtomicDocumentWrites) 
+                return;
+
+            if (RequestRouter.TryGetClientVersion(HttpContext, out var clientVersion) == false)
+            {
+                disableAtomicDocumentWrites = true;
+                return;
+            }
+
+            if (clientVersion.Major < 5 || (clientVersion.Major == 5 && clientVersion.Minor < 2))
+            {
+                disableAtomicDocumentWrites = true;
             }
         }
 
@@ -197,7 +222,7 @@ namespace Raven.Server.Documents.Handlers
             if (topology.Promotables.Contains(ServerStore.NodeTag))
                 throw new DatabaseNotRelevantException("Cluster transaction can't be handled by a promotable node.");
 
-            var clusterTransactionCommand = new ClusterTransactionCommand(Database.Name, Database.IdentityPartsSeparator, topology.DatabaseTopologyIdBase64, command.ParsedCommands, options, raftRequestId);
+            var clusterTransactionCommand = new ClusterTransactionCommand(Database.Name, Database.IdentityPartsSeparator, topology, command.ParsedCommands, options, raftRequestId);
             var result = await ServerStore.SendToLeaderAsync(clusterTransactionCommand);
 
             if (result.Result is List<string> errors)
@@ -480,8 +505,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 var global = context.LastDatabaseChangeVector ??
                              (context.LastDatabaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(context));
-                var dbGrpId = Database.DatabaseGroupId;
-                var current = ChangeVectorUtils.GetEtagById(global, dbGrpId);
+                var current = ChangeVectorUtils.GetEtagById(global, Database.DatabaseGroupId);
 
                 Replies.Clear();
                 Options.Clear();
@@ -505,7 +529,11 @@ namespace Raven.Server.Documents.Handlers
                         foreach (BlittableJsonReaderObject blittableCommand in commands)
                         {
                             count++;
-                            var changeVector = $"RAFT:{count}-{dbGrpId}";
+                            var changeVector = $"{ChangeVectorParser.RaftTag}:{count}-{Database.DatabaseGroupId}";
+                            if (options.DisableAtomicDocumentWrites == false)
+                            {
+                                changeVector += $",{ChangeVectorParser.TrxnTag}:{command.Index}-{Database.ClusterTransactionId}";
+                            }
                             var cmd = JsonDeserializationServer.ClusterTransactionDataCommand(blittableCommand);
 
                             switch (cmd.Type)
@@ -618,7 +646,8 @@ namespace Raven.Server.Documents.Handlers
                         context.LastDatabaseChangeVector = global;
                     }
 
-                    var updatedChangeVector = ChangeVectorUtils.TryUpdateChangeVector("RAFT", dbGrpId, count, global);
+                    var updatedChangeVector = ChangeVectorUtils.TryUpdateChangeVector("RAFT", Database.DatabaseGroupId, count, global);
+
                     if (updatedChangeVector.IsValid)
                     {
                         context.LastDatabaseChangeVector = updatedChangeVector.ChangeVector;
@@ -758,7 +787,8 @@ namespace Raven.Server.Documents.Handlers
                                     flags |= DocumentFlags.HasRevisions;
                                 }
 
-                                putResult = Database.DocumentsStorage.Put(context, cmd.Id, cmd.ChangeVector, cmd.Document, flags: flags);
+                                putResult = Database.DocumentsStorage.Put(context, cmd.Id, cmd.ChangeVector, cmd.Document, 
+                                    oldChangeVectorForClusterTransactionIndexCheck: cmd.OriginalChangeVector, flags: flags);
                             }
                             catch (Voron.Exceptions.VoronConcurrencyErrorException)
                             {

@@ -24,7 +24,7 @@ namespace SlowTests.Client.TimeSeries.Issues
             {
                 await new TimeSeriesIndex().ExecuteAsync(slave);
 
-                var baseline = DateTime.UtcNow;
+                var baseline = RavenTestHelper.UtcToday;
 
                 using (var session = master.OpenSession())
                 {

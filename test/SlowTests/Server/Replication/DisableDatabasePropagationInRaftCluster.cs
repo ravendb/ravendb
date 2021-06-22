@@ -26,7 +26,7 @@ namespace SlowTests.Server.Replication
         [Fact]
         public async Task DisableDatabaseToggleOperation_should_propagate_through_raft_cluster()
         {
-            var leaderServer = await CreateRaftClusterAndGetLeader(2, shouldRunInMemory:false);
+            var (_, leaderServer) = await CreateRaftCluster(2, shouldRunInMemory:false);
             var slaveServer = Servers.First(srv => ReferenceEquals(srv, leaderServer) == false);
 
             const string databaseName = "DisableDatabaseToggleOperation_should_propagate_through_raft_cluster";

@@ -40,7 +40,7 @@ namespace SlowTests.Cluster
         public async Task ReorderDatabaseNodes()
         {
             var db = "ReorderDatabaseNodes";
-            var leader = await CreateRaftClusterAndGetLeader(3);
+            var (_, leader) = await CreateRaftCluster(3);
             await CreateDatabaseInCluster(db, 3, leader.WebUrl);
             using (var store = new DocumentStore
             {
@@ -81,7 +81,7 @@ namespace SlowTests.Cluster
         public async Task ClusterWideIdentity()
         {
             var db = "ClusterWideIdentity";
-            var leader = await CreateRaftClusterAndGetLeader(2);
+            var (_, leader) = await CreateRaftCluster(2);
             await CreateDatabaseInCluster(db, 2, leader.WebUrl);
             var nonLeader = Servers.First(x => ReferenceEquals(x, leader) == false);
             using (var store = new DocumentStore
@@ -258,7 +258,7 @@ namespace SlowTests.Cluster
             {
                 var db = "ChangesApiFailOver_Test";
                 var topology = new DatabaseTopology { DynamicNodesDistribution = true };
-                var leader = await CreateRaftClusterAndGetLeader(3,
+                var (_, leader) = await CreateRaftCluster(3,
                     customSettings: new Dictionary<string, string>()
                     {
                         [RavenConfiguration.GetKey(x => x.Cluster.AddReplicaTimeout)] = "1",
@@ -331,7 +331,7 @@ namespace SlowTests.Cluster
         public async Task ChangesApiReorderDatabaseNodes()
         {
             var db = "ReorderDatabaseNodes";
-            var leader = await CreateRaftClusterAndGetLeader(2);
+            var (_, leader) = await CreateRaftCluster(2);
             await CreateDatabaseInCluster(db, 2, leader.WebUrl);
             using (var store = new DocumentStore
             {

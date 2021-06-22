@@ -559,7 +559,7 @@ namespace Raven.Server.Documents.Revisions
                     return;
                 }
                 _documentsStorage.Put(context, id, null, document, lastModifiedTicks, changeVector,
-                    flags, nonPersistentFlags);
+                    null, flags, nonPersistentFlags);
             }
         }
 

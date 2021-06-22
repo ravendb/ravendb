@@ -1,35 +1,11 @@
 <div class="layout-container" data-bind="css: { 'cloud-cluster-admin': applyColorCustomization, 'collapse-menu': collapseMenu() || smallScreen(), 'pin-notifications': notificationCenter.pinNotifications(), 'show-notifications': notificationCenter.showNotifications(), 'show-search': searchBox.showSearchSmallScreen() }">
-    <div class="browser-alert" data-bind="visible: browserAlert">
-        <div class="browser-message">
-            <i class="icon-unsupported-browser icon-xl"></i>
-            <p class="lead margin-bottom">This browser is not supported and some features may not work correctly</p>
-            <p class="margin-bottom">To ensure best experience please use</p>
-            <div class="browser-links">
-                <a class="chrome" href="https://www.google.com/chrome/" target="_blank">
-                    <i class="icon-chrome icon-lg"></i>
-                    Google Chrome
-                </a>
-                <a class="firefox" href="https://www.mozilla.org/firefox/" target="_blank">
-                    <i class="icon-firefox icon-lg"></i>
-                    Mozilla Firefox
-                </a>
-            </div>
-            <button class="btn btn-default" data-bind="click: browserAlertContinue">Continue</button>
-            <div class="checkbox">
-                <input id="dontShowAgainBrowser" class="styled" type="checkbox" data-bind="checked: dontShowBrowserAlertAgain">
-                <label for="dontShowAgainBrowser">
-                    Don't show again
-                </label>
-            </div>
-        </div>
-        <div class="backdrop show"></div>
-    </div>
+    <div data-bind="compose: browserAlert"></div>
     <aside class="top-alert" data-bind="visible: developerLicense">
         Developer License - Not for Production Use
     </aside>
-<aside class="top-alert" data-bind="visible: applyColorCustomization">
-    !!! Running as Cloud Cluster Admin !!!  <a href="#" data-bind="click: disableColorCustomization">Disable color customization</a>
-</aside>
+    <aside class="top-alert" data-bind="visible: applyColorCustomization">
+        !!! Running as Cloud Cluster Admin !!!  <a href="#" data-bind="click: disableColorCustomization">Disable color customization</a>
+    </aside>
     <nav class="navbar">
         <div class="navbar-header">
             <a class="navbar-brand" data-bind="attr: { href: appUrls.serverDashboard }"><i class="icon-logo"></i></a>

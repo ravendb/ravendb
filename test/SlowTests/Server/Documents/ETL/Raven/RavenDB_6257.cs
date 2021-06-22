@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Linq;
-using FastTests.Server.Basic.Entities;
 using Raven.Client;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
 

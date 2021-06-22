@@ -508,6 +508,24 @@ class genUtils {
             return JSON.stringify(obj, null, prettifySpacing);
         }
     }
+    
+    static truncateDocumentId(documentId: string, charsToShow: number = 12): string {
+        if (!documentId) {
+            return null;
+        }
+
+        const slashPosition = documentId.lastIndexOf("/");
+        
+        if (slashPosition === -1) {
+            return _.truncate(documentId, { "length": charsToShow });
+        }
+
+        const start = documentId.substring(0, slashPosition);
+        const end = documentId.substr(slashPosition);
+        
+        const startTruncated = _.truncate(start, { "length": charsToShow });
+        return startTruncated + end;
+    }
 
     /***  File Methods ***/
     

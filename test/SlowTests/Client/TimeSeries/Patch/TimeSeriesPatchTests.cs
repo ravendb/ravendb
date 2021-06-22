@@ -57,7 +57,7 @@ namespace SlowTests.Client.TimeSeries.Patch
                         Values =
                         {
                             { "timeseries", timeseries },
-                            { "timestamp", DateTime.Today },
+                            { "timestamp", RavenTestHelper.UtcToday },
                             { "tag", tag},
                             { "values", values }
                         }
@@ -673,7 +673,7 @@ for (var i = 0; i < args.todelete.length; i++)
         public async Task GetStatsTestAsync()
         {
             var id = "users/1-A";
-            var baseline = DateTime.Today.EnsureMilliseconds();
+            var baseline = RavenTestHelper.UtcToday.EnsureMilliseconds();
             var name = "Heartrate";
 
             using (var store = GetDocumentStore())

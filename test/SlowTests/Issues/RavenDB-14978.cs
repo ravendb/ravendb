@@ -21,7 +21,7 @@ namespace SlowTests.Issues
         [Fact]
         public async Task Can_setup_write_load_balancing_on_client()
         {
-            var leader = await CreateRaftClusterAndGetLeader(3);
+            var (_, leader) = await CreateRaftCluster(3);
             var databaseName = GetDatabaseName();
 
             string context = "users/1";
@@ -47,7 +47,7 @@ namespace SlowTests.Issues
         [Fact]
         public async Task Can_setup_write_load_balancing_on_server()
         {
-            var leader = await CreateRaftClusterAndGetLeader(3);
+            var (_, leader) = await CreateRaftCluster(3);
             var databaseName = GetDatabaseName();
             var context = "users/1";
 

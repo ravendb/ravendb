@@ -65,7 +65,7 @@
                                     <input id="importTimeSeries" type="checkbox"
                                            data-bind="checked: includeTimeSeries" />
                                     <label for="importTimeSeries">Include Time Series</label>
-                                </div>                                
+                                </div>
                                 <div class="toggle">
                                     <input id="importRevisions" type="checkbox" data-bind="checked: includeRevisionDocuments" />
                                     <label for="importRevisions">Include Revisions</label>
@@ -180,33 +180,23 @@
                             <div data-bind="compose: 'database/tasks/smugglerDatabaseRecord.html'"></div>
                         </div>
                     </div>
-                    <div class="flex-horizontal">
+                    <div class="flex-horizontal" data-bind="with: $root">
                         <div class="btn-group">
-                            <button data-bind="click: _.partial($root.copyCommandToClipboard, $root.importCommandPowerShell())" class="btn btn-default">
-                                <i class="icon-copy"></i>
-                                <span>Copy command as PowerShell</span>
+                            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+                                <span data-bind="text: getCommandTypeLabel(effectiveCommandType())"></span>
+                                <span class="caret margin-left margin-left-xs"></span>
                             </button>
-                            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-                                <span class="caret"></span>
-                                <span class="sr-only">Toggle Dropdown</span>
-                            </button>
-                            <ul class="dropdown-menu">
-                                <li>
-                                    <a href="#" data-bind="click: _.partial($root.copyCommandToClipboard, $root.importCommandCmd())">
-                                        <i class="icon-copy"></i> Copy as cURL (cmd)
-                                    </a>
-                                </li>
-                                <li>
-                                    <a href="#" data-bind="click: _.partial($root.copyCommandToClipboard, $root.importCommandBash())">
-                                        <i class="icon-copy"></i> Copy as cURL (bash)
-                                    </a>
-                                </li>
+                            <ul class="dropdown-menu" data-bind="foreach: commandTypes">
+                                <li><a href="#" data-bind="click: $root.effectiveCommandType.bind($root.effectiveCommandType, $data)"><span data-bind="text: $root.getCommandTypeLabel($data)"></span></a></li>
                             </ul>
                         </div>
                         <div class="flex-grow">
-                            <input onClick="this.select();" class="form-control" readonly data-bind="value: $root.importCommandPowerShell" />
+                            <input onClick="this.select();" class="form-control" readonly data-bind="value: effectiveCommand" />
                         </div>
-                    </div>    
+                        <button class="btn btn-default" data-bind="click: copyCommandToClipboard" title="Copy import command to clipboard">
+                            <i class="icon-copy-to-clipboard"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
             <hr />

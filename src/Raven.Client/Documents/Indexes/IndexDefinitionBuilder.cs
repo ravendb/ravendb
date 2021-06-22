@@ -172,6 +172,7 @@ namespace Raven.Client.Documents.Indexes
                     Reduce = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<TDocument, TReduceResult>(Reduce, conventions, "results", translateIdentityProperty: false),
                     LockMode = LockMode,
                     Priority = Priority,
+                    DeploymentMode = DeploymentMode,
                     State = State,
                     OutputReduceToCollection = OutputReduceToCollection,
                     PatternForOutputReduceToCollectionReferences = PatternReferencesCollectionName,

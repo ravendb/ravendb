@@ -20,6 +20,7 @@ import serverTime = require("common/helpers/database/serverTime");
 import accessManager = require("common/shell/accessManager");
 import driveUsageDetails = require("models/resources/serverDashboard/driveUsageDetails");
 import viewHelpers = require("common/helpers/view/viewHelpers");
+import timeHelpers = require("common/timeHelpers");
 
 class machineResourcesSection {
 
@@ -745,8 +746,9 @@ class serverDashboard extends viewModelBase {
         return null;
     });
     
-    formattedUpTime: KnockoutComputed<string>;
+    formattedUpTime = ko.observable<string>();
     formattedStartTime: KnockoutComputed<string>;
+    
     node: KnockoutComputed<clusterNode>;
     sizeFormatter = generalUtils.formatBytesToSize;
 
@@ -765,15 +767,6 @@ class serverDashboard extends viewModelBase {
 
     constructor() {
         super();
-
-        this.formattedUpTime = ko.pureComputed(() => {
-            const startTime = serverTime.default.startUpTime();
-            if (!startTime) {
-                return "a few seconds";
-            }
-
-            return generalUtils.formatDurationByDate(startTime);
-        });
 
         this.formattedStartTime = ko.pureComputed(() => {
             const start = serverTime.default.startUpTime();
@@ -795,6 +788,18 @@ class serverDashboard extends viewModelBase {
         this.enableLiveView();
         
         this.onResize();
+
+        this.onTick();
+        this.registerDisposable(timeHelpers.utcNowWithMinutePrecision.subscribe(() => this.onTick()));
+    }
+    
+    private onTick(): void {
+        const startTime = serverTime.default.startUpTime();
+        if (!startTime) {
+            this.formattedUpTime("a few seconds");
+        }
+
+        this.formattedUpTime(generalUtils.formatDurationByDate(startTime));
     }
 
     private initSections() {

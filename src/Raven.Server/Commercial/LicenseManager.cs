@@ -499,15 +499,6 @@ namespace Raven.Server.Commercial
 
         private async Task<HttpResponseMessage> GetUpdatedLicenseResponseMessage(License currentLicense)
         {
-            if (_serverStore.Configuration.Licensing.DisableAutoUpdate)
-            {
-                if (_skipLeasingErrorsLogging == false && Logger.IsInfoEnabled)
-                {
-                    // ReSharper disable once MethodHasAsyncOverload
-                    Logger.Info("Skipping updating of the license because 'Licensing.DisableAutoLicenceUpdate' was set to true");
-                }
-                return null;
-            }
             var leaseLicenseInfo = GetLeaseLicenseInfo(currentLicense);
 
             var response = await ApiHttpClient.Instance.PostAsync("/api/v2/license/lease",
@@ -519,12 +510,7 @@ namespace Raven.Server.Commercial
 
         public async Task<License> GetUpdatedLicense(License currentLicense)
         {
-            var leaseLicenseInfo = GetLeaseLicenseInfo(currentLicense);
-
-            var response = await ApiHttpClient.Instance.PostAsync("/api/v2/license/lease",
-                    new StringContent(JsonConvert.SerializeObject(leaseLicenseInfo), Encoding.UTF8, "application/json"))
-                .ConfigureAwait(false);
-
+            var response = await GetUpdatedLicenseResponseMessage(currentLicense).ConfigureAwait(false);
             if (response.IsSuccessStatusCode == false)
                 return null;
 
@@ -578,6 +564,30 @@ namespace Raven.Server.Commercial
         {
             try
             {
+                if (_serverStore.Configuration.Licensing.DisableAutoUpdate)
+                {
+                    if (_skipLeasingErrorsLogging == false && Logger.IsInfoEnabled)
+                    {
+                        // ReSharper disable once MethodHasAsyncOverload
+                        Logger.Info("Skipping updating of the license from string or path or from api.ravendb.net because 'Licensing.DisableAutoLicenceUpdate' was set to true");
+                    }
+                    return null;
+                }
+
+                if (_serverStore.Configuration.Licensing.DisableAutoUpdateFromApi)
+                {
+                    var license = TryGetUpdatedLicenseFromStringOrPath(currentLicense);
+                    if (license != null)
+                        return license;
+
+                    if (_skipLeasingErrorsLogging == false && Logger.IsInfoEnabled)
+                    {
+                        // ReSharper disable once MethodHasAsyncOverload
+                        Logger.Info("Skipping updating of the license from api.ravendb.net because 'Licensing.DisableAutoUpdateFromApi' was set to true");
+                    }
+                    return null;
+                }
+
                 var response = await GetUpdatedLicenseResponseMessage(currentLicense).ConfigureAwait(false);
 
                 if (response.IsSuccessStatusCode == false)

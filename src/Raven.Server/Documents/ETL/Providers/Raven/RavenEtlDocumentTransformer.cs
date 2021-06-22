@@ -318,7 +318,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                         {
                             if (item.IsAttachmentTombstone == false)
                             {
-                                _currentRun.Delete(new DeleteCommandData(item.DocumentId, null));
+                                _currentRun.Delete(new DeleteCommandData(item.DocumentId, null, null));
                             }
                             else
                             {
@@ -802,7 +802,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                         && _transformation.TimeSeries.IsAddingTimeSeries == false
                         && _currentRun.IsDocumentLoadedToSameCollection(item.DocumentId))
                         continue;
-                    _currentRun.Delete(new DeleteCommandData(item.DocumentId, null));
+                    _currentRun.Delete(new DeleteCommandData(item.DocumentId, null, null));
                     isLoadedToDefaultCollectionDeleted = true;
                 }
                 else

@@ -1,10 +1,10 @@
 ﻿using FastTests;
-using FastTests.Server.Basic.Entities;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Xunit;
 using Raven.Client;
 using System.Threading.Tasks;
+using Tests.Infrastructure.Entities;
 using Xunit.Abstractions;
 
 namespace SlowTests.Issues

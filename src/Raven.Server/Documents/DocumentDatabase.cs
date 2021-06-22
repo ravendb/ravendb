@@ -89,6 +89,7 @@ namespace Raven.Server.Documents
         private long _preventUnloadCounter;
 
         public string DatabaseGroupId;
+        public string ClusterTransactionId;
 
         public readonly ClusterTransactionWaiter ClusterTransactionWaiter;
 
@@ -351,10 +352,11 @@ namespace Raven.Server.Documents
                     try
                     {
                         NotifyFeaturesAboutStateChange(record, index);
+                        RachisLogIndexNotifications.NotifyListenersAbout(index, null);
                     }
-                    catch
+                    catch (Exception e)
                     {
-                        // We ignore the exception since it was caught in the function itself
+                        RachisLogIndexNotifications.NotifyListenersAbout(index, e);
                     }
                 }, null);
 
@@ -362,6 +364,7 @@ namespace Raven.Server.Documents
                 {
                     try
                     {
+                        _hasClusterTransaction.Set();
                         await ExecuteClusterTransactionTask();
                     }
                     catch (OperationCanceledException)
@@ -1183,6 +1186,7 @@ namespace Raven.Server.Documents
                     try
                     {
                         DatabaseGroupId = record.Topology.DatabaseTopologyIdBase64;
+                        ClusterTransactionId = record.Topology.ClusterTransactionIdBase64;
 
                         SetUnusedDatabaseIds(record);
                         InitializeFromDatabaseRecord(record);

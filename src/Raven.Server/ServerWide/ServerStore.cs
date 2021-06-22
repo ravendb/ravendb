@@ -1141,6 +1141,9 @@ namespace Raven.Server.ServerWide
                     break;
 
                 case nameof(PutLicenseCommand):
+
+                    ForTestingPurposes?.BeforePutLicenseCommandHandledInOnValueChanged?.Invoke();
+
                     // reload license can send a notification which will open a write tx
                     LicenseManager.ReloadLicense();
                     ConcurrentBackupsCounter.ModifyMaxConcurrentBackups();
@@ -1657,6 +1660,16 @@ namespace Raven.Server.ServerWide
             readResult.Reader.Read(protectedData, 0, protectedData.Length);
 
             return Secrets.Unprotect(protectedData);
+        }
+
+        public void DeleteSecretKey(string databaseName)
+        {
+            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (var tx = context.OpenWriteTransaction())
+            {
+                DeleteSecretKey(context, databaseName);
+                tx.Commit();
+            }
         }
 
         public void DeleteSecretKey(TransactionOperationContext context, string name)
@@ -2466,7 +2479,7 @@ namespace Raven.Server.ServerWide
 
             return true;
         }
-        
+
         private static bool DatabaseNeedsToRunIdleOperations(DocumentDatabase database, out DatabaseCleanupMode mode)
         {
             var now = DateTime.UtcNow;
@@ -2594,6 +2607,9 @@ namespace Raven.Server.ServerWide
 
                 if (string.IsNullOrEmpty(topology.DatabaseTopologyIdBase64))
                     topology.DatabaseTopologyIdBase64 = Guid.NewGuid().ToBase64Unpadded();
+
+                if (string.IsNullOrEmpty(topology.ClusterTransactionIdBase64))
+                    topology.ClusterTransactionIdBase64 = Guid.NewGuid().ToBase64Unpadded();
 
                 topology.Stamp ??= new LeaderStamp();
                 topology.Stamp.Term = _engine.CurrentTerm;
@@ -2797,7 +2813,7 @@ namespace Raven.Server.ServerWide
             if (Logger.IsInfoEnabled)
                 Logger.Info($"Updating license id: {license.Id}");
 
-            await WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, result.Index);
+            await Cluster.WaitForIndexNotification(result.Index);
         }
 
         public async Task PutNodeLicenseLimitsAsync(string nodeTag, DetailsPerNode detailsPerNode, int maxLicensedCores, string raftRequestId = null)
@@ -3318,6 +3334,21 @@ namespace Raven.Server.ServerWide
             }
 
             yield return usage;
+        }
+
+        internal TestingStuff ForTestingPurposes;
+
+        internal TestingStuff ForTestingPurposesOnly()
+        {
+            if (ForTestingPurposes != null)
+                return ForTestingPurposes;
+
+            return ForTestingPurposes = new TestingStuff();
+        }
+
+        internal class TestingStuff
+        {
+            internal Action BeforePutLicenseCommandHandledInOnValueChanged;
         }
     }
 }

@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Server;
@@ -103,6 +104,8 @@ namespace Voron.Impl.Scratch
             LowMemoryNotification.Instance.RegisterLowMemoryHandler(this);
         }
 
+        internal TimeSpan RecycledScratchFileTimeout { get; set; } = TimeSpan.FromMinutes(1);
+
         public Dictionary<int, PagerState> GetPagerStatesOfAllScratches()
         {
             return _pagerStatesAllScratchesCache;
@@ -113,6 +116,9 @@ namespace Voron.Impl.Scratch
             var dic = new Dictionary<int, PagerState>(NumericEqualityComparer.BoxedInstanceInt32);
             foreach (var scratchBufferItem in _scratchBuffers)
             {
+                if (scratchBufferItem.Value.File.IsDisposed) // precaution
+                    continue;
+
                 dic[scratchBufferItem.Key] = scratchBufferItem.Value.File.PagerState;
             }
 
@@ -262,13 +268,15 @@ namespace Voron.Impl.Scratch
             scratch.File.Free(page, txId);
             if (scratch.File.AllocatedPagesCount != 0)
                 return;
-            
+
+            List<ScratchBufferFile> recycledScratchesToDispose = null;
+
             while (_recycleArea.First != null)
             {
                 var recycledScratch = _recycleArea.First.Value;
 
                 if (IsLowMemory() == false && 
-                    DateTime.UtcNow - recycledScratch.RecycledAt <= TimeSpan.FromMinutes(1))
+                    DateTime.UtcNow - recycledScratch.RecycledAt <= RecycledScratchFileTimeout)
                     break;
 
                 _recycleArea.RemoveFirst();
@@ -283,8 +291,31 @@ namespace Voron.Impl.Scratch
                 }
 
                 _scratchBuffers.TryRemove(recycledScratch.Number, out var _);
-                recycledScratch.File.Dispose();
-                _scratchSpaceMonitor.Decrease(recycledScratch.File.NumberOfAllocatedPages * Constants.Storage.PageSize);
+
+                if (recycledScratchesToDispose == null)
+                    recycledScratchesToDispose = new List<ScratchBufferFile>();
+
+                recycledScratchesToDispose.Add(recycledScratch.File);
+            }
+
+            if (recycledScratchesToDispose != null)
+            {
+                using (_env.IsInPreventNewTransactionsMode == false ? _env.PreventNewTransactions() : (IDisposable)null)
+                {
+                    // we're about to dispose recycled scratch pagers, we need to update the cache so next transactions won't attempt to EnsurePagerStateReference() on them
+
+                    UpdateCacheForPagerStatesOfAllScratches();
+                }
+
+                foreach (var recycledScratch in recycledScratchesToDispose)
+                {
+                    recycledScratch.Dispose();
+
+                    _scratchSpaceMonitor.Decrease(recycledScratch.NumberOfAllocatedPages * Constants.Storage.PageSize);
+                }
+
+                _forTestingPurposes?.ActionToCallDuringRemovalsOfRecycledScratchesRightAfterDisposingScratches?.Invoke();
+
             }
 
             if (scratch == _current)
@@ -424,7 +455,6 @@ namespace Voron.Impl.Scratch
                     if (scratchesToDispose == null)
                         scratchesToDispose = new List<ScratchBufferFile>();
                     
-
                     scratchesToDispose.Add(scratchBufferItem.File);
                 }
             }
@@ -536,7 +566,7 @@ namespace Voron.Impl.Scratch
                         // additionally we must not allow to start any transaction (even read one) to start because it uses GetPagerStatesOfAllScratches() which
                         // returns _pagerStatesAllScratchesCache that we're updating here
                         
-                        if (_env.TryPreventNewReadTransactions(TimeSpan.Zero, out exitPreventNewTransactions))
+                        if (_env.TryPreventNewTransactions(TimeSpan.Zero, out exitPreventNewTransactions))
                         {
                             var removedInactive = RemoveInactiveScratches(_current, updateCacheBeforeDisposingScratch: false); // no need to update cache because we're going do to it here anyway
 
@@ -550,7 +580,7 @@ namespace Voron.Impl.Scratch
 
                             _forTestingPurposes?.ActionToCallDuringCleanupRightAfterRemovingInactiveScratches?.Invoke();
                             
-                            // UpdateCacheForPagerStatesOfAllScratches(); - no need to call it explicitly, it is called by Rollback() of the write transaction
+                            UpdateCacheForPagerStatesOfAllScratches(); // it's going to be called by Rollback() of the write tx but let's call it explicitly so we can easily find this usage
                         }
                     }
                 }
@@ -592,6 +622,8 @@ namespace Voron.Impl.Scratch
 
             internal Action ActionToCallDuringRemovalsOfInactiveScratchesRightAfterDisposingScratch;
 
+            internal Action ActionToCallDuringRemovalsOfRecycledScratchesRightAfterDisposingScratches;
+
             public TestingStuff(ScratchBufferPool env)
             {
                 _env = env;
@@ -609,6 +641,13 @@ namespace Voron.Impl.Scratch
                 ActionToCallDuringRemovalsOfInactiveScratchesRightAfterDisposingScratch = action;
 
                 return new DisposableAction(() => ActionToCallDuringRemovalsOfInactiveScratchesRightAfterDisposingScratch = null);
+            }
+
+            internal IDisposable CallDuringRemovalsOfRecycledScratchesRightAfterDisposingScratch(Action action)
+            {
+                ActionToCallDuringRemovalsOfRecycledScratchesRightAfterDisposingScratches = action;
+
+                return new DisposableAction(() => ActionToCallDuringRemovalsOfRecycledScratchesRightAfterDisposingScratches = null);
             }
         }
 

@@ -8,6 +8,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
 using Raven.Server.Documents.Queries.Sorting.AlphaNumeric;
 using SlowTests.Utils;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -318,7 +319,7 @@ namespace SlowTests.Tests.Sorting
         }
 
 
-        [Theory]
+        [NightlyBuildTheory]
         [InlineDataWithRandomSeed]
         public async Task random_words(int seed)
         {
