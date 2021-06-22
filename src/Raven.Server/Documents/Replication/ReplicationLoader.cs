@@ -1736,12 +1736,21 @@ namespace Raven.Server.Documents.Replication
         public Dictionary<string, long> GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType tombstoneType)
         {
             var minEtag = Math.Min(GetMinimalEtagForTombstoneCleanupWithHubReplication(), GetMinimalEtagForReplication());
+            if (minEtag == long.MaxValue)
+                return null;
 
-            var result = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase)
+            var result = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
+            switch (tombstoneType)
             {
-                { Constants.Documents.Collections.AllDocumentsCollection, minEtag },
-                { Constants.TimeSeries.All, minEtag }
-            };
+                case ITombstoneAware.TombstoneType.Documents:
+                    result.Add(Constants.Documents.Collections.AllDocumentsCollection, minEtag);
+                    break;
+                case ITombstoneAware.TombstoneType.TimeSeries:
+                    result.Add(Constants.TimeSeries.All, minEtag);
+                    break;
+                default:
+                    throw new NotSupportedException($"Tombstone type '{tombstoneType}' is not supported.");
+            }
 
             if (Destinations == null)
                 return result;
