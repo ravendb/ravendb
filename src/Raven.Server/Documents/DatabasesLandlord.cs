@@ -291,7 +291,7 @@ namespace Raven.Server.Documents
             DatabasesCache.RemoveLockAndReturn(databaseName, CompleteDatabaseUnloading, out _, caller).Dispose();
         }
 
-        public bool ShouldDeleteDatabase(TransactionOperationContext context, string dbName, RawDatabaseRecord rawRecord)
+        public bool ShouldDeleteDatabase(TransactionOperationContext context, string dbName, RawDatabaseRecord rawRecord, bool fromReplication = false)
         {
             var deletionInProgress = DeletionInProgressStatus.No;
             var directDelete = rawRecord.DeletionInProgress?.TryGetValue(_serverStore.NodeTag, out deletionInProgress) == true &&
@@ -300,7 +300,7 @@ namespace Raven.Server.Documents
             if (directDelete == false)
                 return false;
 
-            if (rawRecord.Topology.Rehabs.Contains(_serverStore.NodeTag))
+            if (rawRecord.Topology.Rehabs.Contains(_serverStore.NodeTag) && fromReplication == false)
                 // If the deletion was issued form the cluster observer to maintain the replication factor we need to make sure
                 // that all the documents were replicated from this node, therefor the deletion will be called from the replication code.
                 return false;
@@ -629,7 +629,11 @@ namespace Raven.Server.Documents
                 var database = DatabasesCache.GetOrAdd(databaseName, task);
                 if (database == task)
                 {
-                    DeleteIfNeeded(databaseName, task);
+                    // This is in case when an deletion request was issued prior to the actual loading of the database.
+                    task.ContinueWith(t =>
+                    {
+                        DeleteIfNeeded(databaseName);
+                    });
                     task.Start(); // the semaphore will be released here at the end of the task
                     task.ContinueWith(__ => _serverStore.IdleDatabases.TryRemove(databaseName.Value, out _), TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.ExecuteSynchronously);
                 }
@@ -686,34 +690,30 @@ namespace Raven.Server.Documents
             }
         }
 
-        private void DeleteIfNeeded(StringSegment databaseName, Task<DocumentDatabase> database)
+        public void DeleteIfNeeded(StringSegment databaseName, bool fromReplication = false)
         {
-            database.ContinueWith(t =>
+            try
             {
-                // This is in case when an deletion request was issued prior to the actual loading of the database.
-                try
+                using (_disposing.ReaderLock(_serverStore.ServerShutdown))
                 {
-                    using (_disposing.ReaderLock(_serverStore.ServerShutdown))
+                    if (_serverStore.ServerShutdown.IsCancellationRequested)
+                        return;
+
+                    using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    using (context.OpenReadTransaction())
+                    using (var rawRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, databaseName.Value))
                     {
-                        if (_serverStore.ServerShutdown.IsCancellationRequested)
+                        if (rawRecord == null)
                             return;
 
-                        using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                        using (context.OpenReadTransaction())
-                        using (var rawRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, databaseName.Value))
-                        {
-                            if (rawRecord == null)
-                                return;
-
-                            ShouldDeleteDatabase(context, databaseName.Value, rawRecord);
-                        }
+                        ShouldDeleteDatabase(context, databaseName.Value, rawRecord, fromReplication);
                     }
                 }
-                catch
-                {
-                    // nothing we can do here
-                }
-            });
+            }
+            catch
+            {
+                // nothing we can do here
+            }
         }
 
         public ConcurrentDictionary<string, ConcurrentQueue<string>> InitLog =

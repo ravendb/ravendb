@@ -886,8 +886,21 @@ namespace Raven.Server.Documents.Replication
                 }
                 finally
                 {
-                    var record = rawRecord.MaterializedRecord;
-                    ThreadPool.QueueUserWorkItem(_ => _server.DatabasesLandlord.DeleteDatabase(dbName, deletionInProgress[_server.NodeTag], record), null);
+                    ThreadPool.QueueUserWorkItem(_ =>
+                        {
+                            try
+                            {
+                                _server.DatabasesLandlord.DeleteIfNeeded(dbName, fromReplication: true);
+                            }
+                            catch (Exception e)
+                            {
+                                if (_log.IsOperationsEnabled)
+                                {
+                                    _log.Operations("Unexpected error during database deletion from replication loader", e);
+                                }
+                            }
+                        }
+                        , null);
                 }
             }
         }
