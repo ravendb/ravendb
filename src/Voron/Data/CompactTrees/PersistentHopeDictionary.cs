@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Linq;
 using Sparrow;
 using Sparrow.Server.Compression;
@@ -12,69 +13,97 @@ namespace Voron.Data.CompactTrees
         private readonly Page _page;
         private const int NumberOfPagesForDictionary = 8;
         public const int UsableDictionarySize = 8 * Constants.Storage.PageSize - PageHeader.SizeOf;
+
+        public long PageNumber => _page.PageNumber;
         
+        private readonly HopeEncoder<Encoder3Gram<NativeMemoryEncoderState>> _encoder;
+        private byte[] _tempBuffer;
+
         private struct DefaultList : IReadOnlySpanEnumerator
         {
-            public int Length => 2;
+            public int Length => 0;
 
-            public ReadOnlySpan<byte> this[int i] => new byte[] { (byte)(65 +i), (byte)(66 +i), (byte)(67 +i)};
+            public ReadOnlySpan<byte> this[int i] => throw new NotImplementedException();
         }
 
-        public static  long CreateEmpty(LowLevelTransaction llt)
+        public static long CreateEmpty(LowLevelTransaction llt)
         {
             var p = llt.AllocatePage(NumberOfPagesForDictionary);
             p.Flags = PageFlags.Overflow;
             p.OverflowSize = UsableDictionarySize;
-            //TODO: What would be the default here?
-            //var encoder = new HopeEncoder<Encoder3Gram>();
-            //encoder.Train(new NativeMemoryEncoderState(p.DataPointer, UsableDictionarySize), new DefaultList(), UsableDictionarySize);
+
+            var encoder = new HopeEncoder<Encoder3Gram<NativeMemoryEncoderState>>(
+                new Encoder3Gram<NativeMemoryEncoderState>(
+                    new NativeMemoryEncoderState(p.DataPointer, UsableDictionarySize)));
+            encoder.Train(new DefaultList(), 128);
+
             return p.PageNumber;
+        }
+
+        public static PersistentHopeDictionary Create<TKeysEnumerator>(LowLevelTransaction llt, in TKeysEnumerator enumerator)
+            where TKeysEnumerator : struct, IReadOnlySpanEnumerator
+        {
+            var p = llt.AllocatePage(NumberOfPagesForDictionary);
+            p.Flags = PageFlags.Overflow;
+            p.OverflowSize = UsableDictionarySize;
+
+            var encoder = new HopeEncoder<Encoder3Gram<NativeMemoryEncoderState>>(
+                new Encoder3Gram<NativeMemoryEncoderState>(
+                    new NativeMemoryEncoderState(p.DataPointer, UsableDictionarySize)));
+            encoder.Train(enumerator, 128);
+
+            return new PersistentHopeDictionary(p);
         }
 
         public PersistentHopeDictionary(Page page)
         {
             _page = page;
+
+            _encoder = new HopeEncoder<Encoder3Gram<NativeMemoryEncoderState>>(
+                new Encoder3Gram<NativeMemoryEncoderState>(
+                    new NativeMemoryEncoderState(page.DataPointer, UsableDictionarySize)));
         }
 
         public void Decode(ReadOnlySpan<byte> encodedKey, ref Span<byte> decodedKey)
         {
-            for (int i = 0; i < encodedKey.Length - 3; i++)
-            {
-                if ((byte)(((encodedKey[i] | 32) - (byte)'a')) < 26)
-                {
-                    decodedKey[i] = (byte)(encodedKey[i] ^ 32);
-                }
-                else
-                {
-                    decodedKey[i] = encodedKey[i];
-                }
-            }
-            decodedKey = decodedKey.Slice(0, encodedKey.Length - (int)(_page.PageNumber % 6));
+            int len = _encoder.Decode(encodedKey, decodedKey);
+            decodedKey = decodedKey.Slice(0, len);
         }
 
         public void Encode(ReadOnlySpan<byte> key, ref Span<byte> encodedKey)
         {
-            // simulate encoding
-            for (int i = 0; i < key.Length; i++)
+            if (key.Length == 0)
+                throw new ArgumentException();
+
+            if (key[^1] != 0)
             {
-                if ((byte)(((key[i] | 32) - (byte)'a')) < 26)
+                if (_tempBuffer == null || _tempBuffer.Length < key.Length + 1)
                 {
-                    encodedKey[i] = (byte)(key[i] ^ 32);
+                    if (_tempBuffer != null)
+                        ArrayPool<byte>.Shared.Return(_tempBuffer);
+                    _tempBuffer = ArrayPool<byte>.Shared.Rent(key.Length + 1);
                 }
-                else
-                {
-                    encodedKey[i] = key[i];
-                }
+
+                var newKey = _tempBuffer.AsSpan();
+                key.CopyTo(newKey);
+                newKey[key.Length] = 0;
+                key = newKey.Slice(0, key.Length + 1);
             }
-            for (int i = 0; i < _page.PageNumber % 6; i++)
-            {
-                encodedKey[key.Length + i] = (byte)((byte)'a' + (byte)i);
-            }
-            encodedKey = encodedKey.Slice(0, key.Length + (int)(_page.PageNumber % 6));
-            //var encoder = new HopeEncoder<Encoder3Gram>();
-            //var state = new NativeMemoryEncoderState(_page.DataPointer, UsableDictionarySize);
-            //var len = encoder.Encode(state, key, encodedKey);
-            //encodedKey = encodedKey.Slice(0, len);
+            
+            int bitsLength = _encoder.Encode(key, encodedKey);
+            int bytesLength = Math.DivRem(bitsLength, 8, out var remainder);
+            encodedKey = encodedKey.Slice(0, bytesLength + (remainder == 0 ? 0 : 1));
+        }
+
+        public int GetMaxEncodingBytes(ReadOnlySpan<byte> key)
+        {
+            // The plus one is because we may be sending non null terminated strings and we have to account for it. 
+            return Math.Max(sizeof(long), _encoder.GetMaxEncodingBytes(key.Length + 1));
+        }
+
+        public int GetMaxDecodingBytes(ReadOnlySpan<byte> key)
+        {
+            return _encoder.GetMaxDecodingBytes(key.Length);
         }
     }
 }
