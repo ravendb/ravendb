@@ -37,23 +37,7 @@ namespace FastTests.Server.Documents.Revisions
         {
         }
         
-        [Fact]
-        public void ExpectNullUser()
-        {
-            using var store = GetDocumentStore();
-
-            using var session = store.OpenSession();
-
-            string nullId = null;
-            var user1 = session.Load<User>(nullId);
-            Assert.Null(user1);
-
-            var user2 = session.Load<User>("");
-            Assert.Null(user2);
-            
-            var user3 = session.Load<User>(" ");
-            Assert.Null(user3);
-        }
+    
 
         [Fact]
         public async Task CanGetNonExistingRevisionsByChangeVectorAsyncLazily()

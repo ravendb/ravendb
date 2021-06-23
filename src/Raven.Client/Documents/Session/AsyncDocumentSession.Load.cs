@@ -17,7 +17,7 @@ namespace Raven.Client.Documents.Session
         {
             using (AsyncTaskHolder())
             {
-                if (id == null)
+                if (string.IsNullOrWhiteSpace(id))
                     return default;
 
                 var loadOperation = new LoadOperation(this);
