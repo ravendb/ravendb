@@ -134,7 +134,9 @@ namespace Tryouts
 
         public static async Task Main(string[] args)
         {
-            //new IndexEntryWriterTest(new ConsoleTestOutputHelper()).IterationReads();
+
+            new ContainerTests(new ConsoleTestOutputHelper()).CanStoreMoreThanASinglePage();
+            //new IntegerEncodingTests(new ConsoleTestOutputHelper()).WriteVariableSizeIntegers();
             //SyncMain();
 
 

@@ -7,10 +7,12 @@ using Voron.Data.BTrees;
 using Voron.Data.Fixed;
 using Voron.Data.Tables;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using Sparrow.Json;
 using Sparrow.Server;
 using Voron.Data.CompactTrees;
 using Voron.Data.RawData;
+using Voron.Data.Sets;
 using Constants = Voron.Global.Constants;
 
 namespace Voron.Impl
@@ -33,6 +35,8 @@ namespace Voron.Impl
 
         public ByteStringContext Allocator => _lowLevelTransaction.Allocator;
 
+        private Dictionary<Slice, Set> _sets;
+        
         private Dictionary<Slice, Table> _tables;
 
         private Dictionary<Slice, Tree> _trees;
@@ -136,11 +140,41 @@ namespace Voron.Impl
             _lowLevelTransaction.EndAsyncCommit();
         }
 
+        public Set OpenSet(string name)
+        {
+            using (Slice.From(Allocator, name, ByteStringType.Immutable, out Slice nameSlice))
+            {
+                return OpenSet(nameSlice);
+            }
+        }
+
+        private Set OpenSet(Slice name)
+        {
+            _sets ??= new Dictionary<Slice, Set>(SliceStructComparer.Instance);
+            if (_sets.TryGetValue(name, out var set))
+                return set;
+
+            var clonedName = name.Clone(Allocator);
+            
+            var existing = LowLevelTransaction.RootObjects.Read(name);
+            if (existing == null)
+            {
+                using var _ = LowLevelTransaction.RootObjects.DirectAdd(name, sizeof(SetState), out var p);
+                Set.Initialize(this.LowLevelTransaction, ref MemoryMarshal.AsRef<SetState>(new Span<byte>(p, sizeof(SetState))));
+                existing = LowLevelTransaction.RootObjects.Read(name);
+            }
+ 
+            set = new Set(LowLevelTransaction, clonedName,
+                MemoryMarshal.AsRef<SetState>(existing.Reader.AsSpan())
+            );
+            _sets[clonedName] = set;
+            return set;
+        }
+
         [MethodImpl(MethodImplOptions.NoInlining)]
         public Table OpenTable(TableSchema schema, string name)
         {
-            Slice nameSlice;
-            using (Slice.From(Allocator, name, ByteStringType.Immutable, out nameSlice))
+            using (Slice.From(Allocator, name, ByteStringType.Immutable, out Slice nameSlice))
             {
                 return OpenTable(schema, nameSlice);
             }
@@ -176,9 +210,21 @@ namespace Voron.Impl
                     var key = multiValueTree.Key.Item2;
                     var childTree = multiValueTree.Value;
 
-                    byte* ptr;
-                    using (parentTree.DirectAdd(key, sizeof(TreeRootHeader), TreeNodeFlags.MultiValuePageRef, out ptr))
+                    using (parentTree.DirectAdd(key, sizeof(TreeRootHeader), TreeNodeFlags.MultiValuePageRef, out byte* ptr))
                         childTree.State.CopyTo((TreeRootHeader*)ptr);
+                }
+            }
+            
+            if (_sets != null)
+            {
+                foreach (Set set in _sets.Values)
+                {
+                    using (_lowLevelTransaction.RootObjects.DirectAdd(set.Name, sizeof(SetState), out byte* ptr))
+                    {
+                        Span<byte> span = new Span<byte>(ptr, sizeof(SetState));
+                        ref var savedState = ref MemoryMarshal.AsRef<SetState>(span);
+                        savedState = set.State;
+                    }
                 }
             }
 
@@ -190,8 +236,7 @@ namespace Voron.Impl
                 var treeState = tree.State;
                 if (treeState.IsModified)
                 {
-                    byte* ptr;
-                    using (_lowLevelTransaction.RootObjects.DirectAdd(tree.Name, sizeof(TreeRootHeader), out ptr))
+                    using (_lowLevelTransaction.RootObjects.DirectAdd(tree.Name, sizeof(TreeRootHeader), out byte* ptr))
                         treeState.CopyTo((TreeRootHeader*)ptr);
                 }
             }
@@ -203,6 +248,7 @@ namespace Voron.Impl
                     participant.PrepareForCommit();
                 }
             }
+
         }
 
         internal void AddMultiValueTree(Tree tree, Slice key, Tree mvTree)

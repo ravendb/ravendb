@@ -29,7 +29,7 @@ namespace Voron.Data.Sets
         public PageFlags Flags;
 
         [FieldOffset(13)]
-        public SetPageFlags SetFlags;
+        public ExtendedPageType SetFlags;
         
         [FieldOffset(14)]
         public byte NumberOfCompressedPositions;

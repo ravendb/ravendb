@@ -267,10 +267,6 @@ namespace Voron
             return new Span<byte>(Content.Ptr, Size);
         }
 
-        public ReadOnlySpan<byte> AsReadOnlySpan()
-        {
-            return new ReadOnlySpan<byte>(Content.Ptr, Size);
-        }
     }
 
     public static class Slices

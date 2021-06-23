@@ -15,7 +15,8 @@ namespace Voron.Data.Sets
 {
     public unsafe class Set
     {
-        private LowLevelTransaction _llt;
+        public Slice Name;
+        private readonly LowLevelTransaction _llt;
         private SetState _state;
         private SetCursorState[] _stk = new SetCursorState[8];
         private int _pos = -1, _len;
@@ -23,49 +24,25 @@ namespace Voron.Data.Sets
         internal SetState State => _state;
         internal LowLevelTransaction Llt => _llt;
 
-        private Set()
+        public Set(LowLevelTransaction llt, Slice name, in SetState state)
         {
-        }
-
-        public static Set Create(LowLevelTransaction llt, string name, long baseline = 0)
-        {
-            using var _ = Slice.From(llt.Allocator, name, out var slice);
-            return Create(llt, slice, baseline);
-        }
-        public static Set Create(LowLevelTransaction llt, Slice name, long baseline = 0)
-        {
-            SetState* header;
-            var existing = llt.RootObjects.Read(name);
-            if (existing == null)
-            {
-                var newPage = llt.AllocatePage(1);
-                new SetLeafPage(newPage.Pointer).Init(baseline);
-                using var _ = llt.RootObjects.DirectAdd(name, sizeof(SetState), out var p);
-                header = (SetState*)p;
-                *header = new SetState
-                {
-                    RootObjectType = RootObjectType.Set,
-                    Depth = 1,
-                    BranchPages = 0,
-                    LeafPages = 1,
-                    RootPage = newPage.PageNumber,
-                    NumberOfEntries = 0,
-                };
-            }
-            else
-            {
-                header = (SetState*)existing.Reader.Base;
-            }
-
-            if (header->RootObjectType != RootObjectType.Set)
+            if (state.RootObjectType != RootObjectType.Set)
                 throw new InvalidOperationException($"Tried to open {name} as a set, but it is actually a " +
-                                                    header->RootObjectType);
+                                                    state.RootObjectType);
+            Name = name;
+            _llt = llt;
+            _state = state;
+        }
 
-            return new Set
-            {
-                _llt = llt,
-                _state = *header
-            };
+        internal static void Initialize(LowLevelTransaction tx, ref SetState state)
+        {
+            var newPage = tx.AllocatePage(1);
+            new SetLeafPage(newPage.Pointer).Init(0);
+            state.RootObjectType = RootObjectType.Set;
+            state.Depth = 1;
+            state.BranchPages = 0;
+            state.LeafPages = 1;
+            state.RootPage = newPage.PageNumber;
         }
 
         public void Remove(long value)
@@ -90,6 +67,9 @@ namespace Voron.Data.Sets
             }
             // could not store the new value (rare, but can happen)
             // need to split on remove :-(
+            _state.LeafPages++;
+            // we need to always split by half here, so we'll have enough space to
+            // write the new removed entry
             var (separator, newPage) = SplitLeafPageInHalf(value, leaf, state);
             AddToParentPage(separator, newPage);
             Remove(value); // now we can properly store the new value
@@ -106,7 +86,7 @@ namespace Voron.Data.Sets
             var (_, siblingPageNum) = branch.GetByIndex(siblingIdx);
             var siblingPage = _llt.GetPage(siblingPageNum);
             var siblingHeader = (SetLeafPageHeader*)siblingPage.Pointer;
-            if (siblingHeader->SetFlags != SetPageFlags.Leaf)
+            if (siblingHeader->SetFlags != ExtendedPageType.SetLeaf)
                 return;
             var sibling = new SetLeafPage(siblingPage.Pointer);
             // if the two pages together will be bigger than 75%, can skip merging
@@ -120,22 +100,20 @@ namespace Voron.Data.Sets
                     throw new InvalidOperationException("Even though we have 25% spare capacity, we run out?! Should not hapen ever");
             }
 
-            _state.LeafPages--;
-
             MergeSiblingsAtParent();
         }
 
         private void MergeSiblingsAtParent()
         {
             ref var state = ref _stk[_pos];
+            state.Page = _llt.ModifyPage(state.Page.PageNumber);
             var current = new SetBranchPage(state.Page.Pointer);
-            Debug.Assert(current.Header->SetFlags == SetPageFlags.Branch);
+            Debug.Assert(current.Header->SetFlags == ExtendedPageType.SetBranch);
             var (leafKey, leafPageNum) = current.GetByIndex(state.LastSearchPosition);
             var (siblingKey, siblingPageNum) = current.GetByIndex(GetSiblingIndex(in state));
 
-            state.Page = _llt.ModifyPage(state.Page.PageNumber);
             var siblingPageHeader = (SetLeafPageHeader*)_llt.GetPage(siblingPageNum).Pointer;
-            if (siblingPageHeader->SetFlags == SetPageFlags.Branch)
+            if (siblingPageHeader->SetFlags == ExtendedPageType.SetBranch)
                 _state.BranchPages--;
             else
                 _state.LeafPages--;
@@ -151,6 +129,8 @@ namespace Voron.Data.Sets
                 long cpy = state.Page.PageNumber;
                 leafPage.AsSpan().CopyTo(state.Page.AsSpan());
                 state.Page.PageNumber = cpy;
+                if (_pos == 0)
+                    _state.Depth--; // replaced the root page
                 _state.BranchPages--;
                 _llt.FreePage(leafPageNum);
                 return;
@@ -173,7 +153,7 @@ namespace Voron.Data.Sets
             (_, siblingPageNum) = gp.GetByIndex(siblingIdx);
             var siblingPage = _llt.GetPage(siblingPageNum);
             var siblingHeader = (SetLeafPageHeader*)siblingPage.Pointer;
-            if (siblingHeader->SetFlags != SetPageFlags.Branch)
+            if (siblingHeader->SetFlags != ExtendedPageType.SetBranch)
                 return;// cannot merge leaf & branch
             var sibling = new SetBranchPage(siblingPage.Pointer);
             if (sibling.Header->NumberOfEntries + current.Header->NumberOfEntries > SetBranchPage.MinNumberOfValuesBeforeMerge * 2)
@@ -194,6 +174,41 @@ namespace Voron.Data.Sets
             return parent.LastSearchPosition == 0 ? 1 : parent.LastSearchPosition - 1;
         }
 
+        public void Add(List<long> values)
+        {
+            int index = 0;
+            while (index < values.Count)
+            {
+                FindPageFor(values[index]);
+                ref var state = ref _stk[_pos];
+
+                state.Page = _llt.ModifyPage(state.Page.PageNumber);
+
+                var leafPage = new SetLeafPage(state.Page.Pointer);
+
+                long last = long.MaxValue;
+                if (_pos > 0)
+                {
+                    //TODO: Go up and find the next page start as a limit
+                    //_stk[_pos-1].Page
+                }
+                // if (leafPage.IsValidValue(value) == false)
+                //     break;
+
+
+                for (; index < values.Count && values[index] < last; index++)
+                {
+                    if(leafPage.Add(_llt, values[index]))
+                        continue; // successfully added
+                    // we couldn't add to the page (but it fits, need to split)
+                    var (separator, newPage) = SplitLeafPage(values[index]);
+                    AddToParentPage(separator, newPage);
+                    index--; // go back and repeat on the next page
+                    break; 
+                }
+            }
+        }
+        
         public void Add(long value)
         {
             if (value < 0)
@@ -497,7 +512,7 @@ namespace Voron.Data.Sets
 
                     _parent.PushPage(pageNum);
 
-                    if (header->SetFlags == SetPageFlags.Branch)
+                    if (header->SetFlags == ExtendedPageType.SetBranch)
                     {
                         // we'll increment on the next
                         _parent._stk[_parent._pos].LastSearchPosition = -1;
