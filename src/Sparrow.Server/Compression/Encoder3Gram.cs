@@ -1,10 +1,9 @@
-﻿using System;
+using System;
 using System.Buffers.Binary;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Text;
 using Sparrow.Collections;
 using Sparrow.Server.Binary;
 using Sparrow.Server.Collections.Persistent;
@@ -108,7 +107,6 @@ namespace Sparrow.Server.Compression
                     int prefixLen = Lookup(keyStr.Slice(pos), table, numberOfEntries, out Code code);
                     long sBuf = code.Value;
                     int sLen = code.Length;
-                    //Console.WriteLine($"[val={ToBinaryString((short)sBuf, sLen)}|bits={sLen}|consumed={prefixLen}|{Encoding.ASCII.GetString(keyStr.Slice(pos, prefixLen)).EscapeForCSharp()}]");
                     if (intBufLen + sLen > 63)
                     {
                         int numBitsLeft = 64 - intBufLen;
@@ -202,7 +200,7 @@ namespace Sparrow.Server.Compression
 
         public int Encode(ReadOnlySpan<byte> key, Span<byte> outputBuffer)
         {
-            Debug.Assert(outputBuffer.Length % sizeof(long) == 0); // Ensure we can safely cast to int 64
+            Debug.Assert(outputBuffer.Length >= sizeof(long)); // Ensure we can safely cast to int 64
 
             var intBuf = MemoryMarshal.Cast<byte, long>(outputBuffer);
 
@@ -213,14 +211,12 @@ namespace Sparrow.Server.Compression
             var table = EncodingTable;
             var numberOfEntries = _entries;
 
-            var keyStr = key;
-            int pos = 0;
-            while (pos < key.Length)
+            var symbol = key;
+            while (symbol.Length != 0)
             {
-                int prefixLen = Lookup(keyStr.Slice(pos), table, numberOfEntries, out Code code);
+                int prefixLen = Lookup(symbol, table, numberOfEntries, out Code code);
                 long sBuf = code.Value;
                 int sLen = code.Length;
-                //Console.WriteLine($"[val={ToBinaryString((short)sBuf, sLen)}|bits={sLen}|consumed={prefixLen}|{Encoding.ASCII.GetString(keyStr.Slice(pos, prefixLen)).EscapeForCSharp()}]");
                 if (intBufLen + sLen > 63)
                 {
                     int numBitsLeft = 64 - intBufLen;
@@ -238,7 +234,7 @@ namespace Sparrow.Server.Compression
                     intBufLen += sLen;
                 }
 
-                pos += prefixLen;
+                symbol = symbol.Slice(prefixLen);
             }
 
             intBuf[idx] <<= (64 - intBufLen);
@@ -246,10 +242,8 @@ namespace Sparrow.Server.Compression
             return ((idx << 6) + intBufLen);
         }
 
-        public int Decode(ReadOnlySpan<byte> data, Span<byte> outputBuffer)
+        public int DecodeStochasticBug(ReadOnlySpan<byte> data, Span<byte> outputBuffer)
         {
-            Debug.Assert(outputBuffer.Length % sizeof(long) == 0); // Ensure we can safely cast to int 64
-
             var buffer = outputBuffer;
             var table = EncodingTable;
             var tree = BinaryTree<short>.Open(_state.DecodingTable);
@@ -263,14 +257,12 @@ namespace Sparrow.Server.Compression
 
                 // Need to check here because the compiler does something strange after the Skip() call and kills
                 // the memory content of the symbol ReadOnlySpan.
-                bool hasFinished = symbol[^1] == 0; 
+                bool hasFinished = symbol[^1] == 0;
                 symbol.CopyTo(buffer);
                 buffer = buffer.Slice(symbol.Length);
 
                 // Advance the reader.
                 reader.Skip(length);
-
-                //Console.WriteLine($",consumed={symbol.Length}");
 
                 if (hasFinished)
                     break;
@@ -279,10 +271,34 @@ namespace Sparrow.Server.Compression
             return outputBuffer.Length - buffer.Length;
         }
 
+        public int Decode(ReadOnlySpan<byte> data, Span<byte> outputBuffer)
+        {
+            var buffer = outputBuffer;
+            var table = EncodingTable;
+            var tree = BinaryTree<short>.Open(_state.DecodingTable);
+
+            var reader = new BitReader(data);
+            while (reader.Length > 0)
+            {
+                int length = Lookup(reader, out var symbol, table, tree);
+                if (length < 0)
+                    throw new IOException("Invalid data stream.");
+
+                symbol.CopyTo(buffer);
+                buffer = buffer.Slice(symbol.Length);
+
+                // Advance the reader.
+                reader.Skip(length);
+
+                if (symbol[^1] == 0)
+                    break;
+            }
+
+            return outputBuffer.Length - buffer.Length;
+        }
+
         public int Decode(int bits, ReadOnlySpan<byte> data, Span<byte> outputBuffer)
         {
-            Debug.Assert(outputBuffer.Length % sizeof(long) == 0); // Ensure we can safely cast to int 64
-
             var table = EncodingTable;
             var tree = BinaryTree<short>.Open(_state.DecodingTable);
             var buffer = outputBuffer;
@@ -305,7 +321,6 @@ namespace Sparrow.Server.Compression
             return outputBuffer.Length - buffer.Length;
         }
 
-
         public int NumberOfEntries => _numberOfEntries[0];
         public int MemoryUse => _numberOfEntries[0] * Unsafe.SizeOf<Interval3Gram>();
 
@@ -314,8 +329,22 @@ namespace Sparrow.Server.Compression
 
         public int MaxBitSequenceLength
         {
-            get { return MemoryMarshal.Read<int>(_state.EncodingTable.Slice(4, 4)); }
-            set { MemoryMarshal.Write(_state.EncodingTable.Slice(4, 4), ref value); }
+            get { return MemoryMarshal.Read<byte>(_state.EncodingTable.Slice(4, 1)); }
+            set
+            {
+                byte valueAsByte = (byte)value;
+                MemoryMarshal.Write(_state.EncodingTable.Slice(4, 1), ref valueAsByte);
+            }
+        }
+
+        public int MinBitSequenceLength
+        {
+            get { return MemoryMarshal.Read<byte>(_state.EncodingTable.Slice(5, 1)); }
+            set
+            {
+                byte valueAsByte = (byte)value;
+                MemoryMarshal.Write(_state.EncodingTable.Slice(5, 1), ref valueAsByte);
+            }
         }
 
         private Span<Interval3Gram> EncodingTable => MemoryMarshal.Cast<byte, Interval3Gram>(_state.EncodingTable.Slice(8));
@@ -337,6 +366,7 @@ namespace Sparrow.Server.Compression
                 throw new ArgumentException("Not enough memory to store the dictionary");
 
             int maxBitSequenceLength = 1;
+            int minBitSequenceLength = int.MaxValue;
 
             for (int i = 0; i < dictSize; i++)
             {
@@ -386,9 +416,7 @@ namespace Sparrow.Server.Compression
                 var codeValueSpan = MemoryMarshal.Cast<int, byte>(MemoryMarshal.CreateSpan(ref codeValue, 1));
                 var reader = new BitReader(codeValueSpan, entry.Code.Length);
                 maxBitSequenceLength = Math.Max(maxBitSequenceLength, entry.Code.Length);
-
-                //string aux = Encoding.ASCII.GetString(entry.StartKey.Slice(0, entry.PrefixLength));
-                //Console.Write($"[{entry.PrefixLength},{Encoding.ASCII.GetString(entry.StartKey.Slice(0, entry.KeyLength)).EscapeForCSharp()}] ");
+                minBitSequenceLength = Math.Min(minBitSequenceLength, entry.Code.Length);
 
                 tree.Add(ref reader, (short)i);
             }
@@ -396,6 +424,7 @@ namespace Sparrow.Server.Compression
             _numberOfEntries[0] = dictSize;
             _entries = dictSize;
             MaxBitSequenceLength = maxBitSequenceLength;
+            MinBitSequenceLength = minBitSequenceLength;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -431,10 +460,6 @@ namespace Sparrow.Server.Compression
                 int m = (l + r) >> 1;
 
                 int cmp = CompareDictionaryEntry(symbol, table[m].StartKey);
-
-                //var comparisonString = cmp < 0 ? "<" : (cmp > 0 ? ">" : "=");
-                //Console.WriteLine($"{Encoding.ASCII.GetString(symbol).EscapeForCSharp()} {comparisonString} {Encoding.ASCII.GetString(entry.StartKey).EscapeForCSharp()} [{m}]");
-
                 if (cmp < 0)
                 {
                     r = m;
@@ -450,19 +475,20 @@ namespace Sparrow.Server.Compression
                 }
             }
 
-            //Console.WriteLine($"{Encoding.ASCII.GetString(symbol).EscapeForCSharp()} -> {Encoding.ASCII.GetString(table[l].StartKey.Slice(0, table[l].KeyLength)).EscapeForCSharp()} [{l}]");
-
             code = table[l].Code;
             return table[l].PrefixLength;
         }
+
         private int Lookup(in BitReader reader, out ReadOnlySpan<byte> symbol, ReadOnlySpan<Interval3Gram> table, in BinaryTree<short> tree)
         {
             BitReader localReader = reader;
             if (tree.FindCommonPrefix(ref localReader, out var idx))
             {
-                symbol = table[idx].StartKey.Slice(0, table[idx].PrefixLength);
-
-                //Console.Write($",bits={reader.Length - localReader.Length}");
+                // JIT: The runtime decides to create a copy of table[idx] therefore it will create a span on the stack
+                //      then the Unsafe at StartKey will get you a dereference to the wrong location and stack spills will
+                //      cause errors when decoding. 
+                ref var intervalGram = ref Unsafe.AsRef(table[idx]);
+                symbol = intervalGram.StartKey.Slice(0, intervalGram.PrefixLength);
 
                 return reader.Length - localReader.Length;
             }
