@@ -1,7 +1,6 @@
 using System.Runtime.InteropServices;
-using Voron.Data;
 
-namespace FastTests.Voron.Containers
+namespace Voron.Data.Containers
 {
     [StructLayout(LayoutKind.Explicit, Pack = 1)]
     public unsafe struct ContainerState

@@ -78,11 +78,8 @@ namespace Voron.Data.Tables
             }
         }
 
-        public event Action CORAX_DEBUG_MOVE_DATA;
-
         private void OnDataMoved(long previousId, long newId, byte* data, int size, bool compressed)
         {
-            CORAX_DEBUG_MOVE_DATA?.Invoke();
 #if DEBUG
             if (IsOwned(previousId) == false || IsOwned(newId) == false)
             {
