@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Server.Rachis.Remote;
@@ -7,8 +8,10 @@ using Raven.Server.Utils;
 
 namespace Raven.Server.Rachis
 {
-    public class Elector
+    public class Elector : IDisposable
     {
+        private const int TimeToWaitForElectorToFinishInMs = 60 * 1000;
+
         private readonly RachisConsensus _engine;
         private readonly RemoteConnection _connection;
         private PoolOfThreads.LongRunningWork _electorLongRunningWork;
@@ -20,9 +23,14 @@ namespace Raven.Server.Rachis
             _connection = connection;
         }
 
-        public void Run()
+        public void RunAndWait()
         {
-            _electorLongRunningWork = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => HandleVoteRequest(), null, $"Elector for candidate {_connection.Source}");
+            var name = $"Elector for candidate {_connection.Source}";
+
+            _electorLongRunningWork = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => HandleVoteRequest(), null, name);
+
+            if (_electorLongRunningWork.Join(TimeToWaitForElectorToFinishInMs) == false)
+                throw new InvalidOperationException($"{name} did not finish processing in {TimeToWaitForElectorToFinishInMs}ms."); // throwing will dispose the elector
         }
 
         public override string ToString()
@@ -30,11 +38,23 @@ namespace Raven.Server.Rachis
             return $"Elector {_engine.Tag} for {_connection.Source}";
         }
 
-        public void HandleVoteRequest()
+        private void HandleVoteRequest()
         {
             try
             {
-                while (true)
+                try
+                {
+                    Thread.CurrentThread.Priority = ThreadPriority.AboveNormal;
+                }
+                catch (Exception e)
+                {
+                    if (_engine.Log.IsInfoEnabled)
+                    {
+                        _engine.Log.Info("Elector was unable to set the thread priority, will continue with the same priority", e);
+                    }
+                }
+
+                while (_engine.IsDisposed == false)
                 {
                     using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                     {
@@ -44,7 +64,7 @@ namespace Raven.Server.Rachis
                         {
                             var election = rv.IsTrialElection ? "Trial" : "Real";
                             _engine.Log.Info($"Received ({election}) 'RequestVote' from {rv.Source}: Election is {rv.ElectionResult} in term {rv.Term} while our current term is {_engine.CurrentTerm}, " +
-                                             $"Forced election is {rv.IsForcedElection}. (Sent from:{rv.SendingThread})");
+                                $"Forced election is {rv.IsForcedElection}. (Sent from:{rv.SendingThread})");
                         }
 
                         //We are getting a request to vote for our known leader
@@ -97,25 +117,24 @@ namespace Raven.Server.Rachis
                                 NotInTopology = _engine.CurrentState == RachisState.Leader,
                                 Message = $"Node {rv.Source} is not in my topology, cannot vote for it"
                             });
-                            _connection.Dispose();
                             return;
                         }
 
                         var currentTerm = _engine.CurrentTerm;
                         if (rv.Term == currentTerm && rv.ElectionResult == ElectionResult.Won)
                         {
-                            _electionWon = true;
                             if (Follower.CheckIfValidLeader(_engine, _connection, out var negotiation))
                             {
                                 var follower = new Follower(_engine, negotiation.Term, _connection);
                                 follower.AcceptConnection(negotiation);
+                                _electionWon = true;
                             }
+
                             return;
                         }
 
                         if (rv.ElectionResult != ElectionResult.InProgress)
                         {
-                            _connection.Dispose();
                             return;
                         }
 
@@ -127,19 +146,17 @@ namespace Raven.Server.Rachis
                                 VoteGranted = false,
                                 Message = "My term is higher or equals to yours"
                             });
-                            _connection.Dispose();
                             return;
                         }
 
                         if (rv.LastLogTerm < lastLogTerm)
                         {
                             _connection.Send(context, new RequestVoteResponse
-                            {
-                                Term = _engine.CurrentTerm,
-                                VoteGranted = false,
-                                Message = $"My last log term is {lastLogTerm} and higher than yours {rv.LastLogTerm}"
-                            });
-                            _connection.Dispose();
+                                {
+                                    Term = _engine.CurrentTerm,
+                                    VoteGranted = false,
+                                    Message = $"My last log term is {lastLogTerm} and higher than yours {rv.LastLogTerm}"
+                                });
                             return;
                         }
 
@@ -152,34 +169,33 @@ namespace Raven.Server.Rachis
                         )
                         {
                             _connection.Send(context, new RequestVoteResponse
-                            {
-                                Term = _engine.CurrentLeader.Term,
-                                VoteGranted = false,
-                                Message = "I'm a leader in good standing, coup will be resisted"
-                            });
-                            _connection.Dispose();
+                                {
+                                    Term = _engine.CurrentLeader.Term,
+                                    VoteGranted = false,
+                                    Message = "I'm a leader in good standing, coup will be resisted"
+                                });
                             return;
                         }
 
                         if (whoGotMyVoteIn != null && whoGotMyVoteIn != rv.Source)
                         {
                             _connection.Send(context, new RequestVoteResponse
-                            {
-                                Term = _engine.CurrentTerm,
-                                VoteGranted = false,
-                                Message = $"Already voted in {rv.LastLogTerm}, for {whoGotMyVoteIn}"
-                            });
+                                {
+                                    Term = _engine.CurrentTerm,
+                                    VoteGranted = false,
+                                    Message = $"Already voted in {rv.LastLogTerm}, for {whoGotMyVoteIn}"
+                                });
                             continue;
                         }
 
                         if (lastVotedTerm > rv.Term)
                         {
                             _connection.Send(context, new RequestVoteResponse
-                            {
-                                Term = _engine.CurrentTerm,
-                                VoteGranted = false,
-                                Message = $"Already voted for another node in {lastVotedTerm}"
-                            });
+                                {
+                                    Term = _engine.CurrentTerm,
+                                    VoteGranted = false,
+                                    Message = $"Already voted for another node in {lastVotedTerm}"
+                                });
                             continue;
                         }
 
@@ -214,22 +230,22 @@ namespace Raven.Server.Rachis
                                 && string.IsNullOrEmpty(currentLeader) == false) // if we are leaderless we can't refuse to cast our vote.
                             {
                                 _connection.Send(context, new RequestVoteResponse
-                                {
-                                    Term = _engine.CurrentTerm,
-                                    VoteGranted = false,
-                                    Message = $"My leader {currentLeader} is keeping me up to date, so I don't want to vote for you"
-                                });
+                                    {
+                                        Term = _engine.CurrentTerm,
+                                        VoteGranted = false,
+                                        Message = $"My leader {currentLeader} is keeping me up to date, so I don't want to vote for you"
+                                    });
                                 continue;
                             }
 
                             if (lastLogTerm == rv.LastLogTerm && lastLogIndex > rv.LastLogIndex)
                             {
                                 _connection.Send(context, new RequestVoteResponse
-                                {
-                                    Term = _engine.CurrentTerm,
-                                    VoteGranted = false,
-                                    Message = $"My log {lastLogIndex} is more up to date than yours {rv.LastLogIndex}"
-                                });
+                                    {
+                                        Term = _engine.CurrentTerm,
+                                        VoteGranted = false,
+                                        Message = $"My log {lastLogIndex} is more up to date than yours {rv.LastLogIndex}"
+                                    });
                                 continue;
                             }
 
@@ -285,13 +301,6 @@ namespace Raven.Server.Rachis
                 if (_engine.Log.IsInfoEnabled)
                 {
                     _engine.Log.Info($"Failed to talk to candidate: {_engine.Tag}", e);
-                }
-            }
-            finally
-            {
-                if (_electionWon == false)
-                {
-                    _connection.Dispose();
                 }
             }
         }
@@ -356,6 +365,22 @@ namespace Raven.Server.Rachis
             }
 
             return result;
+        }
+
+        public void Dispose()
+        {
+            if (_electionWon == false)
+                _connection.Dispose();
+
+            if (_engine.Log.IsInfoEnabled)
+            {
+                _engine.Log.Info($"{ToString()}: Disposing");
+            }
+
+            if (_electorLongRunningWork != null && _electorLongRunningWork.ManagedThreadId != Thread.CurrentThread.ManagedThreadId)
+                _electorLongRunningWork.Join(int.MaxValue);
+
+            _engine.InMemoryDebug.RemoveRecorderOlderThan(DateTime.UtcNow.AddMinutes(-5));
         }
     }
 }
