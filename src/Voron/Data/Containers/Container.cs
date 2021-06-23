@@ -12,10 +12,10 @@ namespace Voron.Data.Containers
 {
     public readonly unsafe ref struct Container
     {
-        public static readonly Slice AllPagesSetName;
-        public static readonly Slice FreePagesSetName;
-        
-        public const int MinimumAdditionalFreeSpaceToConsider = 64;
+        private static readonly Slice AllPagesSetName;
+        private static readonly Slice FreePagesSetName;
+
+        private const int MinimumAdditionalFreeSpaceToConsider = 64;
 
         static Container()
         {
@@ -111,7 +111,7 @@ namespace Voron.Data.Containers
 
         // this is computed so this will fit exactly two items of max size in a container page. Beyond that, we'll have enough
         // fragmentation that we might as well use a dedicated page.
-        private const int MaxSizeInsideContainerPage = (Constants.Storage.PageSize - PageHeader.SizeOf) / 2 - sizeof(ushort) * 4;
+        public const int MaxSizeInsideContainerPage = (Constants.Storage.PageSize - PageHeader.SizeOf) / 2 - sizeof(ushort) * 4;
 
         private void Defrag(LowLevelTransaction llt)
         {
@@ -411,12 +411,17 @@ namespace Voron.Data.Containers
             }
         }
 
-        public static ReadOnlySpan<byte> Get(LowLevelTransaction llt, long id)
+        public static Span<byte> GetMutable(LowLevelTransaction llt, long id)
+        {
+            var pageNum = id / Constants.Storage.PageSize;
+            var page = llt.ModifyPage(pageNum);
+
+            return GetInternal(id, page);
+        }
+
+        private static Span<byte> GetInternal(long id, Page page)
         {
             var offset = (int)(id % Constants.Storage.PageSize);
-            var pageNum = id / Constants.Storage.PageSize;
-            var page = llt.GetPage(pageNum);
-
             if (offset == 0)
             {
                 Debug.Assert(page.IsOverflow);
@@ -427,6 +432,14 @@ namespace Voron.Data.Containers
             var container = new Container(page.AsSpan());
 
             return container.Get(offset);
+        }
+
+        public static ReadOnlySpan<byte> Get(LowLevelTransaction llt, long id)
+        {
+            var pageNum = id / Constants.Storage.PageSize;
+            var page = llt.GetPage(pageNum);
+
+            return GetInternal(id, page);
         }
 
         private Span<byte> Get(int offset)

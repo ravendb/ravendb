@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -11,7 +12,9 @@ using Voron.Data.Fixed;
 using Voron.Data.Tables;
 using Voron.Impl;
 using Newtonsoft.Json;
+using Voron.Data.Sets;
 using Voron.Debugging;
+using Container = Voron.Data.Containers.Container;
 
 namespace Corax
 {
@@ -31,31 +34,33 @@ namespace Corax
 
         public IEnumerable<string> Query(JsonOperationContext context, QueryOp q, int take, string sort)
         {
-            Table entries = _transaction.OpenTable(IndexWriter.IndexEntriesSchema, IndexWriter.IndexEntriesSlice);
-
-            if (take < 1024)  // query "planner"
-            {
-                return FilterByOrder(context, q, take, sort, entries);
-            }
-
-            return SearchThenSort(context, take, sort, q, entries);
+            // Table entries = _transaction.OpenTable(IndexWriter.IndexEntriesSchema, IndexWriter.IndexEntriesSlice);
+            //
+            // if (take < 1024)  // query "planner"
+            // {
+            //     return FilterByOrder(context, q, take, sort, entries);
+            // }
+            //
+            // return SearchThenSort(context, take, sort, q, entries);
+            throw new NotSupportedException();
         }
 
         public IEnumerable<string> QueryExact(JsonOperationContext context, QueryOp q, int take = 1, string sort = null)
         {
-            Table entries = _transaction.OpenTable(IndexWriter.IndexEntriesSchema, IndexWriter.IndexEntriesSlice);
-
-            if (take <= 1)
-            {
-                return SearchExactSingle(context, q, entries);
-            }
-            
-            if (take < 1024)  // query "planner"
-            {
-                return FilterByOrder(context, q, take, sort, entries);
-            }
-
-            return SearchThenSort(context, take, sort, q, entries);
+            // Table entries = _transaction.OpenTable(IndexWriter.IndexEntriesSchema, IndexWriter.IndexEntriesSlice);
+            //
+            // if (take <= 1)
+            // {
+            //     return SearchExactSingle(context, q, entries);
+            // }
+            //
+            // if (take < 1024)  // query "planner"
+            // {
+            //     return FilterByOrder(context, q, take, sort, entries);
+            // }
+            //
+            // return SearchThenSort(context, take, sort, q, entries);
+            throw new NotSupportedException();
         }
 
         private IEnumerable<string> SearchExactSingle(JsonOperationContext context, QueryOp q, Table entries)
@@ -136,22 +141,20 @@ namespace Corax
 
         unsafe string ExtractDocumentId(Table entries, long entryId)
         {
-            entries.DirectRead(entryId, out TableValueReader tvr);
-
-            byte* ptr = tvr.Read((int) IndexWriter.IndexEntriesTable.DocumentId, out var size);
-
-            var str = Encoding.UTF8.GetString(ptr, size);
-            return str;
+            var span = Container.Get(_transaction.LowLevelTransaction, entryId);
+            var length = (int)ZigZag.Decode(span, out var sizeLen);
+            return Encoding.UTF8.GetString(span.Slice(sizeLen, length));
         }
 
         private static unsafe BlittableJsonReaderObject GetBlittable(JsonOperationContext context, Table entries, long entryId)
         {
             entries.DirectRead(entryId, out TableValueReader tvr);
 
-            byte* ptr = tvr.Read((int) IndexWriter.IndexEntriesTable.Entry, out var size);
-
-            var bjro = new BlittableJsonReaderObject(ptr, size, context);
-            return bjro;
+            throw new NotSupportedException();
+            // byte* ptr = tvr.Read((int) IndexWriter.IndexEntriesTable.Entry, out var size);
+            //
+            // var bjro = new BlittableJsonReaderObject(ptr, size, context);
+            // return bjro;
         }
 
         public void Dispose()

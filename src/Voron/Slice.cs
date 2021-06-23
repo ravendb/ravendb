@@ -74,6 +74,11 @@ namespace Voron
             return new Slice(context.Skip(this.Content, bytesToSkip, type));       
         }
 
+        public void CopyTo(Span<byte> buffer)
+        {
+            AsSpan().CopyTo(buffer);
+        }
+
         public void CopyTo(int from, byte* dest, int offset, int count)
         {
             this.Content.CopyTo(from, dest, offset, count);

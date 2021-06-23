@@ -21,7 +21,7 @@ namespace Voron.Data.Sets
         private SetCursorState[] _stk = new SetCursorState[8];
         private int _pos = -1, _len;
 
-        internal SetState State => _state;
+        public SetState State => _state;
         internal LowLevelTransaction Llt => _llt;
 
         public Set(LowLevelTransaction llt, Slice name, in SetState state)
@@ -34,7 +34,7 @@ namespace Voron.Data.Sets
             _state = state;
         }
 
-        internal static void Initialize(LowLevelTransaction tx, ref SetState state)
+        public static void Initialize(LowLevelTransaction tx, ref SetState state)
         {
             var newPage = tx.AllocatePage(1);
             new SetLeafPage(newPage.Pointer).Init(0);
@@ -174,12 +174,12 @@ namespace Voron.Data.Sets
             return parent.LastSearchPosition == 0 ? 1 : parent.LastSearchPosition - 1;
         }
 
-        public void Add(List<long> values)
+        public void Add(SortedList<long, long> values)
         {
             int index = 0;
             while (index < values.Count)
-            {
-                FindPageFor(values[index]);
+            {               
+                FindPageFor(values.Values[index]);
                 ref var state = ref _stk[_pos];
 
                 state.Page = _llt.ModifyPage(state.Page.PageNumber);
@@ -195,13 +195,12 @@ namespace Voron.Data.Sets
                 // if (leafPage.IsValidValue(value) == false)
                 //     break;
 
-
-                for (; index < values.Count && values[index] < last; index++)
+                for (; index < values.Count && values.Values[index] < last; index++)
                 {
-                    if(leafPage.Add(_llt, values[index]))
+                    if(leafPage.Add(_llt, values.Values[index]))
                         continue; // successfully added
                     // we couldn't add to the page (but it fits, need to split)
-                    var (separator, newPage) = SplitLeafPage(values[index]);
+                    var (separator, newPage) = SplitLeafPage(values.Values[index]);
                     AddToParentPage(separator, newPage);
                     index--; // go back and repeat on the next page
                     break; 
