@@ -1,9 +1,6 @@
 using System.Runtime.InteropServices;
-using Sparrow.Server;
-using Voron;
-using Voron.Data;
 
-namespace FastTests.Voron.Containers
+namespace Voron.Data.Containers
 {
     [StructLayout(LayoutKind.Explicit, Pack = 1, Size = PageHeader.SizeOf)]
     public unsafe struct ContainerPageHeader
