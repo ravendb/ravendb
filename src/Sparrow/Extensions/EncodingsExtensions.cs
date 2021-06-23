@@ -9,6 +9,9 @@ namespace Sparrow
     {
         public static unsafe int GetBytes(this UTF8Encoding encoding, ReadOnlySpan<char> chars, Span<byte> bytes)
         {
+            if (chars.IsEmpty)
+                return 0;
+
             fixed (char* charsPtr = chars)
             fixed (byte* bytesPtr = bytes)
                 return encoding.GetBytes(charsPtr, chars.Length, bytesPtr, bytes.Length);
