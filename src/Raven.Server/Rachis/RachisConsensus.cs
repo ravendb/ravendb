@@ -33,6 +33,7 @@ using Sparrow.Server.Utils;
 using System.Linq;
 using Raven.Server.Rachis.Remote;
 using System.Net.Security;
+using Sparrow.Collections;
 
 namespace Raven.Server.Rachis
 {
@@ -1172,8 +1173,8 @@ namespace Raven.Server.Rachis
                     switch (initialMessage.InitialMessageType)
                     {
                         case InitialMessageType.RequestVote:
-                            var elector = new Elector(this, remoteConnection);
-                            elector.Run();
+                            using (var elector = new Elector(this, remoteConnection))
+                                elector.RunAndWait();
                             break;
                         case InitialMessageType.AppendEntries:
                             if (Follower.CheckIfValidLeader(this, remoteConnection, out var negotiation))
