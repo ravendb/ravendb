@@ -27,6 +27,11 @@ namespace Raven.Client.Documents.Operations
         /// Total number of compare-exchange tombstones values in database.
         /// </summary>
         public long CountOfCompareExchangeTombstones { get; set; }
+
+        /// <summary>
+        /// Total number of TimeSeries Deleted Ranges values in database.
+        /// </summary>
+        public long CountOfTimeSeriesDeletedRanges { get; set; }
     }
 
     public class DatabaseStatistics
