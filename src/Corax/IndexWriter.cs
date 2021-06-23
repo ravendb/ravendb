@@ -1,5 +1,6 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using Sparrow.Server;
@@ -138,15 +139,7 @@ namespace Corax
                 }
                 term[entryId] = entryId;
             }
-            else if (fieldType.HasFlag(IndexEntryFieldType.Invalid))
-            {
-                // if (field.TryGetValue(NullSlice, out var term) == false)
-                //     field[NullSlice] = term = new SortedList<long, long>();
-                // term[entryId] = entryId;
-                //TODO:
-                throw new NotSupportedException("Don't like this behavior.. (ayende)");
-            }
-            else
+            else if (!fieldType.HasFlag(IndexEntryFieldType.Invalid))
             {
                 entryReader.Read(tokenField, out var value);
 
@@ -158,6 +151,7 @@ namespace Corax
                 }
                 term[entryId] = entryId;
             }
+            // TODO: Do we want to index nulls? If so, how do we do that?
         }
 
         public unsafe void Commit()
@@ -171,6 +165,12 @@ namespace Corax
                 foreach (var (term, entries) in terms)
                 {
                     ReadOnlySpan<byte> termsSpan = term.AsSpan();
+
+                    // TODO: For now if the term is null (termsSpan.Length == 0) we will not do anything... this happens
+                    //       because we are not explicitly handling the case of explicit NULL values (instead of unsetted). 
+                    if (termsSpan.Length == 0)
+                        continue;
+
                     if (fieldTree.TryGetValue(termsSpan, out var existing) == false)
                     {
                         AddNewTerm(entries, fieldTree, termsSpan, tmpBuf);
@@ -202,6 +202,10 @@ namespace Corax
                     }
                     else // single
                     {
+                        // Same element to add, nothing to do here. 
+                        if (entries.Count == 1 && entries.Keys[0] == existing)
+                            continue;
+
                         entries[existing] = existing;
                         AddNewTerm(entries, fieldTree, termsSpan, tmpBuf);
                     }
@@ -225,6 +229,8 @@ namespace Corax
             // common for unique values (guid, date, etc)
             if (entries.Count == 1) 
             {
+                Debug.Assert(fieldTree.TryGetValue(termsSpan, out var _) == false);
+
                 // just a single entry, store the value inline
                 fieldTree.Add(termsSpan, entries.Keys[0] | (long)TermIdMask.Single);
                 return;
@@ -241,6 +247,7 @@ namespace Corax
                     pos += ZigZag.Encode(tmpBuf.Slice(pos), entries.Keys[i] - entries.Keys[i - 1]);
                     continue;
                 }
+
                 // too big, convert to a set
                 var setId = Container.Allocate(llt, _containerId, sizeof(SetState), out var setSpace);
                 ref var setState = ref MemoryMarshal.AsRef<SetState>(setSpace);
