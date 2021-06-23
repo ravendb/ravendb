@@ -25,7 +25,7 @@ namespace Raven.Client.Documents.Session
         /// <inheritdoc />
         public T Load<T>(string id)
         {
-            if (id == null)
+            if (string.IsNullOrWhiteSpace(id))
                 return default;
 
             var loadOperation = new LoadOperation(this);
