@@ -14,15 +14,13 @@ namespace Voron.Data.Sets
         [FieldOffset(8)]
         public long RootPage;
         [FieldOffset(16)]
-        public long NumberOfEntries;
-        [FieldOffset(24)]
         public long BranchPages;
-        [FieldOffset(32)]
+        [FieldOffset(24)]
         public long LeafPages;
 
         public override string ToString()
         {
-            return $"{nameof(RootObjectType)}: {RootObjectType}, {nameof(Depth)}: {Depth}, {nameof(RootPage)}: {RootPage}, {nameof(NumberOfEntries)}: {NumberOfEntries}, {nameof(BranchPages)}: {BranchPages}, {nameof(LeafPages)}: {LeafPages}";
+            return $"{nameof(RootObjectType)}: {RootObjectType}, {nameof(Depth)}: {Depth}, {nameof(RootPage)}: {RootPage}, {nameof(BranchPages)}: {BranchPages}, {nameof(LeafPages)}: {LeafPages}";
         }
     }
 }

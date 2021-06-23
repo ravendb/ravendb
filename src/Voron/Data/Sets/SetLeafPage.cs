@@ -42,8 +42,8 @@ namespace Voron.Data.Sets
         public void Init(long baseline)
         {
             Header->Baseline = baseline & ~int.MaxValue;
-            Header->Flags = PageFlags.Single | PageFlags.SetPage;
-            Header->SetFlags = SetPageFlags.Leaf;
+            Header->Flags = PageFlags.Single | PageFlags.Other;
+            Header->SetFlags = ExtendedPageType.SetLeaf;
             Header->CompressedValuesCeiling = (ushort)(PageHeader.SizeOf + MaxNumberOfCompressedEntries  * sizeof(CompressedHeader));
             Header->NumberOfCompressedPositions = 0;
             Header->NumberOfRawValues = 0;

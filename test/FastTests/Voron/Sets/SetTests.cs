@@ -47,13 +47,13 @@ namespace FastTests.Voron.Sets
         {
             using (var wtx = Env.WriteTransaction())
             {
-                var tree = Set.Create(wtx.LowLevelTransaction, "test");
+                var tree = wtx.OpenSet("test");
                 tree.Add(5);
                 wtx.Commit();
             }
             using (var rtx = Env.ReadTransaction())
             {
-                var tree = Set.Create(rtx.LowLevelTransaction, "test");
+                var tree = rtx.OpenSet("test");
                 var values = AllValues(tree);
                 Assert.Equal(new[] { 5L }, values);
             }
@@ -65,20 +65,20 @@ namespace FastTests.Voron.Sets
         {
             using (var wtx = Env.WriteTransaction())
             {
-                var tree = Set.Create(wtx.LowLevelTransaction, "test");
+                var tree = wtx.OpenSet("test");
                 tree.Add(5);
                 wtx.Commit();
             }
 
             using (var wtx = Env.WriteTransaction())
             {
-                var tree = Set.Create(wtx.LowLevelTransaction, "test");
+                var tree = wtx.OpenSet("test");
                 tree.Remove(5);
                 wtx.Commit();
             }
             using (var rtx = Env.ReadTransaction())
             {
-                var tree = Set.Create(rtx.LowLevelTransaction, "test");
+                var tree = rtx.OpenSet("test");
                 Assert.Empty(AllValues(tree));
             }
         }
@@ -89,7 +89,7 @@ namespace FastTests.Voron.Sets
         {
             using (var wtx = Env.WriteTransaction())
             {
-                var tree = Set.Create(wtx.LowLevelTransaction, "test");
+                var tree = wtx.OpenSet("test");
 
                 var l = new List<long>();
                 foreach (long i in _random)
@@ -102,29 +102,28 @@ namespace FastTests.Voron.Sets
             }
             using (var rtx = Env.ReadTransaction())
             {
-                var tree = Set.Create(rtx.LowLevelTransaction, "test");
+                var tree = rtx.OpenSet("test");
                 Assert.Equal(_data, AllValues(tree));
             }
         }
 
 
         [Fact]
-        public unsafe void CanDeleteLargeNumberOfItems()
+        public void CanDeleteLargeNumberOfItems()
         {
             using (var wtx = Env.WriteTransaction())
             {
-                var tree = Set.Create(wtx.LowLevelTransaction, "test");
+                var tree = wtx.OpenSet("test");
                 foreach (long i in _random)
                 {
                     tree.Add(i);
                 }
-                tree.Render();
                 wtx.Commit();
             }
 
             using (var wtx = Env.WriteTransaction())
             {
-                var tree = Set.Create(wtx.LowLevelTransaction, "test");
+                var tree = wtx.OpenSet("test");
                 foreach (long i in _random)
                 {
                     tree.Remove(i);
@@ -133,8 +132,8 @@ namespace FastTests.Voron.Sets
             }
             using (var rtx = Env.ReadTransaction())
             {
-                var tree = Set.Create(rtx.LowLevelTransaction, "test");
-                Assert.Equal(0, tree.State.NumberOfEntries);
+                var tree = rtx.OpenSet("test");
+                Assert.Empty(AllValues(tree));
                 Assert.Equal(0, tree.State.BranchPages);
                 Assert.Equal(1, tree.State.LeafPages);
                 Assert.Equal(1, tree.State.Depth);
@@ -147,7 +146,7 @@ namespace FastTests.Voron.Sets
         {
             using (var wtx = Env.WriteTransaction())
             {
-                var tree = Set.Create(wtx.LowLevelTransaction, "test");
+                var tree = wtx.OpenSet("test");
                 foreach (long i in _data)
                 {
                     tree.Add(i);
@@ -157,7 +156,7 @@ namespace FastTests.Voron.Sets
 
             using (var wtx = Env.WriteTransaction())
             {
-                var tree = Set.Create(wtx.LowLevelTransaction, "test");
+                var tree = wtx.OpenSet("test");
                 foreach (long i in _random)
                 {
                     tree.Remove(i);
@@ -166,8 +165,8 @@ namespace FastTests.Voron.Sets
             }
             using (var rtx = Env.ReadTransaction())
             {
-                var tree = Set.Create(rtx.LowLevelTransaction, "test");
-                Assert.Equal(0, tree.State.NumberOfEntries);
+                var tree = rtx.OpenSet("test");
+                Assert.Empty(AllValues(tree));
                 Assert.Equal(0, tree.State.BranchPages);
                 Assert.Equal(1, tree.State.LeafPages);
                 Assert.Equal(1, tree.State.Depth);
@@ -179,7 +178,7 @@ namespace FastTests.Voron.Sets
         {
             using (var wtx = Env.WriteTransaction())
             {
-                var tree = Set.Create(wtx.LowLevelTransaction, "test");
+                var tree = wtx.OpenSet("test");
 
                 for (int i = 0; i < 10_000; i++)
                 {
@@ -195,7 +194,7 @@ namespace FastTests.Voron.Sets
 
             using (var rtx = Env.ReadTransaction())
             {
-                var tree = Set.Create(rtx.LowLevelTransaction, "test");
+                var tree = rtx.OpenSet("test");
                 using var it = tree.Iterate();
                 Assert.True(it.Seek(0));
                 bool movedNext = true;
@@ -214,13 +213,46 @@ namespace FastTests.Voron.Sets
             }
         }
 
+        [Fact]
+        public void CanDeletesSmallNumberOfItems()
+        {
+            int count = 3213*2;
+            using (var wtx = Env.WriteTransaction())
+            {
+                var tree = wtx.OpenSet("test");
+                foreach (long i in _random.Take(count))
+                {
+                    tree.Add(i);
+                }
+                wtx.Commit();
+            }
+
+            using (var wtx = Env.WriteTransaction())
+            {
+                var tree = wtx.OpenSet("test");
+                foreach (long i in _random.Take(count))
+                {
+                    tree.Remove(i);
+                }
+                wtx.Commit();
+            }
+            using (var rtx = Env.ReadTransaction())
+            {
+                var tree = rtx.OpenSet("test");
+                Assert.Empty(AllValues(tree));
+                Assert.Equal(0, tree.State.BranchPages);
+                Assert.Equal(1, tree.State.LeafPages);
+                Assert.Equal(1, tree.State.Depth);
+            }
+        }
+
 
         [Fact]
         public void CanDeleteLargeNumberOfItemsFromStart()
         {
             using (var wtx = Env.WriteTransaction())
             {
-                var tree = Set.Create(wtx.LowLevelTransaction, "test");
+                var tree = wtx.OpenSet("test");
                 foreach (long i in _data)
                 {
                     tree.Add(i);
@@ -230,21 +262,18 @@ namespace FastTests.Voron.Sets
 
             using (var wtx = Env.WriteTransaction())
             {
-                var tree = Set.Create(wtx.LowLevelTransaction, "test");
+                var tree = wtx.OpenSet("test");
+                int count = 0;
                 foreach (long i in _data)
                 {
-                    if (i == 12205045)
-                    {
-                        tree.Render();
-                    }
                     tree.Remove(i);
                 }
                 wtx.Commit();
             }
             using (var rtx = Env.ReadTransaction())
             {
-                var tree = Set.Create(rtx.LowLevelTransaction, "test");
-                Assert.Equal(0, tree.State.NumberOfEntries);
+                var tree = rtx.OpenSet("test");
+                Assert.Empty(AllValues(tree));
                 Assert.Equal(0, tree.State.BranchPages);
                 Assert.Equal(1, tree.State.LeafPages);
                 Assert.Equal(1, tree.State.Depth);
@@ -257,7 +286,7 @@ namespace FastTests.Voron.Sets
         {
             using (var wtx = Env.WriteTransaction())
             {
-                var tree = Set.Create(wtx.LowLevelTransaction, "test");
+                var tree = wtx.OpenSet("test");
                 foreach (long i in _data)
                 {
                     tree.Add(i);
@@ -267,7 +296,7 @@ namespace FastTests.Voron.Sets
 
             using (var wtx = Env.WriteTransaction())
             {
-                var tree = Set.Create(wtx.LowLevelTransaction, "test");
+                var tree = wtx.OpenSet("test");
                 for (int i = _data.Count - 1; i >= 0; i--)
                 {
                     tree.Remove(_data[i]);
@@ -276,8 +305,8 @@ namespace FastTests.Voron.Sets
             }
             using (var rtx = Env.ReadTransaction())
             {
-                var tree = Set.Create(rtx.LowLevelTransaction, "test");
-                Assert.Equal(0, tree.State.NumberOfEntries);
+                var tree = rtx.OpenSet("test");
+                Assert.Empty(AllValues(tree));
                 Assert.Equal(0, tree.State.BranchPages);
                 Assert.Equal(1, tree.State.LeafPages);
                 Assert.Equal(1, tree.State.Depth);
@@ -290,7 +319,7 @@ namespace FastTests.Voron.Sets
         {
             using (var wtx = Env.WriteTransaction())
             {
-                var tree = Set.Create(wtx.LowLevelTransaction, "test");
+                var tree = wtx.OpenSet("test");
                 foreach (long i in _data)
                 {
                     tree.Add(i);
@@ -299,7 +328,7 @@ namespace FastTests.Voron.Sets
             }
             using (var rtx = Env.ReadTransaction())
             {
-                var tree = Set.Create(rtx.LowLevelTransaction, "test");
+                var tree = rtx.OpenSet("test");
                 Assert.Equal(_data, AllValues(tree));
             }
         }

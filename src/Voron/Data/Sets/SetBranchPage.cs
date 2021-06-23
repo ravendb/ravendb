@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection.Metadata;
 using System.Runtime.InteropServices;
+using System.Xml;
 using Voron.Global;
 using Voron.Impl;
 
@@ -22,8 +24,8 @@ namespace Voron.Data.Sets
 
         public void Init()
         {
-            Header->Flags = PageFlags.Single | PageFlags.SetPage;
-            Header->SetFlags = SetPageFlags.Branch;
+            Header->Flags = PageFlags.Single | PageFlags.Other;
+            Header->SetFlags = ExtendedPageType.SetBranch;
             Header->NumberOfEntries = 0;
             Header->Upper = Constants.Storage.PageSize;
         }
@@ -69,6 +71,18 @@ namespace Voron.Data.Sets
             tmpSpan.CopyTo(Span);
         }
 
+        public List<(long Key, long Page)> GetDebugOutput()
+        {
+            var results = new List<(long Key, long Page)>();
+            var it = Iterate();
+            while (it.TryMoveNext(out var key, out var page))
+            {
+                results.Add((key, page));
+            }
+
+            return results;
+        }
+
         public Iterator Iterate()
         {
             return new Iterator(this);
@@ -85,14 +99,15 @@ namespace Voron.Data.Sets
                 _pos = 0;
             }
 
-            public bool TryMoveNext(out long value)
+            public bool TryMoveNext(out long key, out long page)
             {
                 if (_pos >= _parent.Header->NumberOfEntries)
                 {
-                    value = -1;
+                    page = -1;
+                    key = -1;
                     return false;
                 }
-                (_, value) = ZigZag.DecodeBoth(_parent.Span.Slice(_parent.Positions[_pos++]));
+                (key, page) = ZigZag.DecodeBoth(_parent.Span.Slice(_parent.Positions[_pos++]));
                 return true;
             }
         }

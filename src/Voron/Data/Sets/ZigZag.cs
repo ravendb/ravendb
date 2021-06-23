@@ -22,9 +22,15 @@ namespace Voron.Data.Sets
             return len;
         }
         
-        public static long Decode(Span<byte> buffer)
+        public static long Decode(ReadOnlySpan<byte> buffer)
         {
             ulong result = Decode7Bits(buffer, out _);
+            return UnZag(result);
+        }
+
+        public static long Decode(ReadOnlySpan<byte> buffer, out int len)
+        {
+            ulong result = Decode7Bits(buffer, out len);
             return UnZag(result);
         }
 
@@ -33,14 +39,14 @@ namespace Voron.Data.Sets
             return ((result & 1) != 0 ? (long)(result >> 1) ^ -1 : (long)(result >> 1));
         }
 
-        public static int SizeOfBoth(Span<byte> buffer)
+        public static int SizeOfBoth(ReadOnlySpan<byte> buffer)
         {
             Decode7Bits(buffer, out var fst);
             Decode7Bits(buffer.Slice(fst), out var snd);
             return fst + snd;
         }
         
-        public static (long, long) DecodeBoth(Span<byte> buffer)
+        public static (long, long) DecodeBoth(ReadOnlySpan<byte> buffer)
         {
             ulong result = Decode7Bits(buffer, out var used);
             var one =  UnZag(result);
@@ -50,7 +56,7 @@ namespace Voron.Data.Sets
         }
 
             
-        public static ulong Decode7Bits(Span<byte> buffer, out int used)
+        public static ulong Decode7Bits(ReadOnlySpan<byte> buffer, out int used)
         {
             ulong result = 0;
             byte byteReadJustNow;
