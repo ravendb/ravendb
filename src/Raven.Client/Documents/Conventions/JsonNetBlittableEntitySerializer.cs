@@ -15,8 +15,12 @@ namespace Raven.Client.Documents.Conventions
         private readonly LightWeightThreadLocal<BlittableJsonReader> _reader;                
         private readonly LightWeightThreadLocal<JsonSerializer> _deserializer;
 
-
         private readonly GenerateEntityIdOnTheClient _generateEntityIdOnTheClient;
+
+        internal BlittableJsonReader GetReaderForCurrentThread()
+        {
+            return _reader.Value;
+        }
 
         public JsonNetBlittableEntitySerializer(DocumentConventions conventions)
         {
