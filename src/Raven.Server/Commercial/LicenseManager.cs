@@ -935,6 +935,7 @@ namespace Raven.Server.Commercial
             var ravenEtlCount = 0;
             var sqlEtlCount = 0;
             var olapEtlCount = 0;
+            var elasticsearchEtlCount = 0;
             var snapshotBackupsCount = 0;
             var cloudBackupsCount = 0;
             var encryptedBackupsCount = 0;
@@ -988,6 +989,10 @@ namespace Raven.Server.Commercial
                     if (databaseRecord.OlapEtls != null &&
                         databaseRecord.OlapEtls.Count > 0)
                         olapEtlCount++;
+                    
+                    if (databaseRecord.ElasticsearchEtls != null &&
+                        databaseRecord.ElasticsearchEtls.Count > 0)
+                        elasticsearchEtlCount++;
 
                     var backupTypes = GetBackupTypes(databaseRecord.PeriodicBackups);
                     if (backupTypes.HasSnapshotBackup)
@@ -1059,6 +1064,12 @@ namespace Raven.Server.Commercial
             {
                 var message = GenerateDetails(olapEtlCount, "OLAP ETL");
                 throw GenerateLicenseLimit(LimitType.OlapEtl, message);
+            }
+            
+            if (elasticsearchEtlCount > 0 && newLicenseStatus.HasElasticsearchEtl == false)
+            {
+                var message = GenerateDetails(elasticsearchEtlCount, "ELASTICSEARCH ETL");
+                throw GenerateLicenseLimit(LimitType.ElasticsearchEtl, message);
             }
 
             if (snapshotBackupsCount > 0 && newLicenseStatus.HasSnapshotBackups == false)
@@ -1374,6 +1385,18 @@ namespace Raven.Server.Commercial
 
             const string message = "Your current license doesn't include the SQL ETL feature";
             throw GenerateLicenseLimit(LimitType.SqlEtl, message);
+        }
+        
+        public void AssertCanAddElasticsearchEtl()
+        {
+            if (IsValid(out var licenseLimit) == false)
+                throw licenseLimit;
+
+            if (LicenseStatus.HasElasticsearchEtl != false)
+                return;
+
+            const string message = "Your current license doesn't include the Elasticsearch ETL feature";
+            throw GenerateLicenseLimit(LimitType.ElasticsearchEtl, message);
         }
 
         public void AssertCanAddOlapEtl()

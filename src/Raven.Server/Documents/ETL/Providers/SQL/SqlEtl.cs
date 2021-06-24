@@ -62,7 +62,6 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             throw new NotSupportedException("Time series aren't supported by SQL ETL");
         }
 
-
         protected override bool ShouldTrackAttachmentTombstones()
         {
             return false;

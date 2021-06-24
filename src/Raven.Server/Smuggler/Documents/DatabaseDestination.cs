@@ -1013,6 +1013,37 @@ namespace Raven.Server.Smuggler.Documents
                     }
                     progress.OlapConnectionStringsUpdated = true;
                 }
+                
+                if (databaseRecord.ElasticsearchEtls.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.ElasticsearchEtls))
+                {
+                    if (_log.IsInfoEnabled)
+                        _log.Info("Configuring sql etls configuration from smuggler");
+                    foreach (var etl in databaseRecord.ElasticsearchEtls)
+                    {
+                        currentDatabaseRecord?.ElasticsearchEtls.ForEach(x =>
+                        {
+                            if (x.Name.Equals(etl.Name, StringComparison.OrdinalIgnoreCase))
+                            {
+                                tasks.Add(_database.ServerStore.SendToLeaderAsync(new DeleteOngoingTaskCommand(x.TaskId, OngoingTaskType.ElasticsearchEtl, _database.Name, RaftIdGenerator.DontCareId)));
+                            }
+                        });
+                        etl.TaskId = 0;
+                        etl.Disabled = true;
+                        tasks.Add(_database.ServerStore.SendToLeaderAsync(new AddElasticsearchEtlCommand(etl, _database.Name, RaftIdGenerator.DontCareId)));
+                    }
+                    progress.ElasticsearchEtlsUpdated = true;
+                }
+                
+                if (databaseRecord.ElasticsearchConnectionStrings.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.ElasticsearchConnectionStrings))
+                {
+                    if (_log.IsInfoEnabled)
+                        _log.Info("Configuring ELASTICSEARCH connection strings from smuggler");
+                    foreach (var connectionString in databaseRecord.ElasticsearchConnectionStrings)
+                    {
+                        tasks.Add(_database.ServerStore.SendToLeaderAsync(new PutElasticsearchConnectionStringCommand(connectionString.Value, _database.Name, RaftIdGenerator.DontCareId)));
+                    }
+                    progress.ElasticsearchConnectionStringsUpdated = true;
+                }
 
                 if (tasks.Count == 0)
                     return;

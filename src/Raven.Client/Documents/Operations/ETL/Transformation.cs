@@ -387,6 +387,9 @@ namespace Raven.Client.Documents.Operations.ETL
                             case EtlType.Olap:
                                 targetName = "Table";
                                 break;
+                            case EtlType.Elasticsearch:
+                                targetName = "Index";
+                                break;
                             default:
                                 throw new ArgumentException($"Unknown ETL type: {type}");
 

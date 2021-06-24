@@ -1,6 +1,7 @@
 ﻿using System;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.Elasticsearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.ServerWide;
@@ -79,9 +80,9 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
             // for deserialization
         }
 
+
         public PutOlapConnectionStringCommand(OlapConnectionString connectionString, string databaseName, string uniqueRequestId) : base(connectionString, databaseName, uniqueRequestId)
         {
-
         }
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
@@ -90,5 +91,21 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
         }
     }
 
+    public class PutElasticsearchConnectionStringCommand : PutConnectionStringCommand<ElasticsearchConnectionString>
+    {
+        protected PutElasticsearchConnectionStringCommand()
+        {
+            // for deserialization
+        }
 
+        public PutElasticsearchConnectionStringCommand(ElasticsearchConnectionString connectionString, string databaseName, string uniqueRequestId) : base(connectionString, databaseName, uniqueRequestId)
+        {
+
+        }
+
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        {
+            record.ElasticsearchConnectionStrings[ConnectionString.Name] = ConnectionString;
+        }
+    }
 }
