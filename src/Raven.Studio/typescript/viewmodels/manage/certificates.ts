@@ -411,7 +411,7 @@ class certificates extends viewModelBase {
                 const clientCert = mergedCertificates.find(x => _.includes(x.Thumbprints, this.clientCertificateThumbprint()));
                 const orderedCertificates = mergedCertificates.filter(x => x !== serverCert && x !== clientCert);
                 
-                if (clientCert && serverCert && clientCert.Thumbprint != serverCert.Thumbprint) {
+                if (clientCert && serverCert && clientCert.Thumbprint !== serverCert.Thumbprint) {
                     orderedCertificates.unshift(clientCert);
                 }
                 
