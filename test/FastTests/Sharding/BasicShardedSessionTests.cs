@@ -9,7 +9,6 @@ using Raven.Client;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
-using Raven.Client.Documents.Operations.Identities;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents;
@@ -191,6 +190,32 @@ namespace FastTests.Sharding
                 }
             }
         }
+
+        [Fact]
+        public void CanStoreWithoutId()
+        {
+            using (var store = GetShardedDocumentStore())
+            {
+                string id;
+                using (var session = store.OpenSession())
+                {
+                    var user = new User { Name = "Aviv" };
+                    session.Store(user);
+
+                    id = user.Id;
+                    Assert.NotNull(id);
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var loaded = session.Load<User>(id);
+                    Assert.Equal("Aviv", loaded.Name);
+                }
+            }
+        }
+
 
         [Fact]
         public void CanUseBatchPatchCommand()

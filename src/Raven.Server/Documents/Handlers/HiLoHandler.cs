@@ -11,11 +11,13 @@ using System.Net;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
+using Raven.Client.Documents.Identity;
 using Raven.Client.Exceptions.Documents;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.TrafficWatch;
 using Sparrow;
+using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -75,12 +77,12 @@ namespace Raven.Server.Documents.Handlers
                 {
                     context.Write(writer, new DynamicJsonValue
                     {
-                        ["Prefix"] = cmd.Prefix,
-                        ["Low"] = cmd.OldMax + 1,
-                        ["High"] = cmd.OldMax + capacity,
-                        ["LastSize"] = capacity,
-                        ["ServerTag"] = ServerStore.NodeTag,
-                        ["LastRangeAt"] = DateTime.UtcNow.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite)
+                        [nameof(HiLoResult.Prefix)] = cmd.Prefix,
+                        [nameof(HiLoResult.Low)] = cmd.OldMax + 1,
+                        [nameof(HiLoResult.High)] = cmd.OldMax + capacity,
+                        [nameof(HiLoResult.LastSize)] = capacity,
+                        [nameof(HiLoResult.ServerTag)] = ServerStore.NodeTag,
+                        [nameof(HiLoResult.LastRangeAt)] = DateTime.UtcNow.GetDefaultRavenFormat()
                     });
                     if (TrafficWatchManager.HasRegisteredClients)
                         AddStringToHttpContext(writer.ToString(), TrafficWatchChangeType.Hilo);
@@ -98,12 +100,14 @@ namespace Raven.Server.Documents.Handlers
             public string Prefix;
             public long OldMax;
 
+            private const string Max = "Max";
+
+
             protected override long ExecuteCmd(DocumentsOperationContext context)
             {
                 var hiLoDocumentId = RavenHiloIdPrefix + Key;
                 var prefix = Key + Separator;
 
-                var newDoc = new DynamicJsonValue();
                 BlittableJsonReaderObject hiloDocReader = null;
                 try
                 {
@@ -120,8 +124,10 @@ namespace Raven.Server.Documents.Handlers
 
                     if (hiloDocReader == null)
                     {
+                        var newDoc = new DynamicJsonValue();
+
                         OldMax = LastRangeMax;
-                        newDoc["Max"] = OldMax + Capacity;
+                        newDoc[Max] = OldMax + Capacity;
                         newDoc[Constants.Documents.Metadata.Key] = new DynamicJsonValue
                         {
                             [Constants.Documents.Metadata.Collection] = CollectionName.HiLoCollection
@@ -132,12 +138,12 @@ namespace Raven.Server.Documents.Handlers
                     }
                     else
                     {
-                        hiloDocReader.TryGet("Max", out long oldMax);
+                        hiloDocReader.TryGet(Max, out long oldMax);
                         OldMax = Math.Max(oldMax, LastRangeMax);
 
                         hiloDocReader.Modifications = new DynamicJsonValue(hiloDocReader)
                         {
-                            ["Max"] = OldMax + Capacity
+                            [Max] = OldMax + Capacity
                         };
 
                         using (var freshHilo = context.ReadObject(hiloDocReader, hiLoDocumentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
