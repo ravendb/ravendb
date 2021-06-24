@@ -44,7 +44,7 @@ namespace Raven.Server.ServerWide.Commands
                 {
                     if (record.IsSharded == false)
                     {
-                        RemoveDatabaseFromSingleNode(record,record.Topology, node,string.Empty, deletionInProgressStatus);
+                        RemoveDatabaseFromSingleNode(record, record.Topology, node, string.Empty, deletionInProgressStatus);
                     }
                     else
                     {
@@ -60,7 +60,7 @@ namespace Raven.Server.ServerWide.Commands
             {
                 if (record.IsSharded == false)
                 {
-                    RemoveDatabaseFromAllNodes(record, record.Topology, "", deletionInProgressStatus);
+                    RemoveDatabaseFromAllNodes(record, record.Topology, string.Empty, deletionInProgressStatus);
                 }
                 else
                 {
@@ -79,7 +79,7 @@ namespace Raven.Server.ServerWide.Commands
         }
 
         
-        private DatabaseTopology RemoveDatabaseFromAllNodes(DatabaseRecord record,DatabaseTopology topology,string shardIndex, DeletionInProgressStatus deletionInProgressStatus)
+        private DatabaseTopology RemoveDatabaseFromAllNodes(DatabaseRecord record, DatabaseTopology topology, string shardIndex, DeletionInProgressStatus deletionInProgressStatus)
         {
             var allNodes = topology.AllNodes.Distinct();
 
@@ -92,7 +92,7 @@ namespace Raven.Server.ServerWide.Commands
             return new DatabaseTopology {Stamp = record.Topology?.Stamp, ReplicationFactor = 0};
         }
 
-        private void RemoveDatabaseFromSingleNode(DatabaseRecord record, DatabaseTopology topology, string node,string shardIndex, DeletionInProgressStatus deletionInProgressStatus)
+        private void RemoveDatabaseFromSingleNode(DatabaseRecord record, DatabaseTopology topology, string node, string shardIndex, DeletionInProgressStatus deletionInProgressStatus)
         {
             if (topology.RelevantFor(node) == false)
             {

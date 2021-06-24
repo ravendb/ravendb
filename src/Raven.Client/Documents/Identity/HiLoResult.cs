@@ -29,5 +29,7 @@ namespace Raven.Client.Documents.Identity
 
         public DateTime LastRangeAt { get; set; }
 
+        public int? ShardIndex { get; set; }
+
     }
 }

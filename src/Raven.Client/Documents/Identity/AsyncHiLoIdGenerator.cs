@@ -9,7 +9,6 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
-using Raven.Client.Extensions;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Identity
@@ -19,15 +18,18 @@ namespace Raven.Client.Documents.Identity
     /// </summary>
     public class AsyncHiLoIdGenerator
     {
+        protected string Prefix;
+        protected string ServerTag;
+        protected int? ShardIndex;
+
         private readonly DocumentStore _store;
         private readonly string _tag;
-        protected string Prefix;
         private long _lastBatchSize;
         private DateTime _lastRangeDate;
         private readonly string _dbName;
         private readonly char _identityPartsSeparator;
         private volatile RangeValue _range;
-
+        private Lazy<Task> _nextRangeTask = new Lazy<Task>(() => Task.CompletedTask);
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AsyncHiLoIdGenerator"/> class.
@@ -43,7 +45,11 @@ namespace Raven.Client.Documents.Identity
 
         protected virtual string GetDocumentIdFromId(long nextId)
         {
-            return $"{Prefix}{nextId}-{ServerTag}";
+            string suffix = null;
+            if (ShardIndex.HasValue)
+                suffix = $"/{ShardIndex.Value}";
+
+            return $"{Prefix}{nextId}-{ServerTag}{suffix}";
         }
 
         protected RangeValue Range
@@ -66,9 +72,6 @@ namespace Raven.Client.Documents.Identity
                 Current = min - 1;
             }
         }
-
-        private Lazy<Task> _nextRangeTask = new Lazy<Task>(() => Task.CompletedTask);
-        protected string ServerTag;
 
         /// <summary>
         /// Generates the document ID.
@@ -131,14 +134,14 @@ namespace Raven.Client.Documents.Identity
             var hiloCommand = new NextHiLoCommand(_tag, _lastBatchSize, _lastRangeDate, _identityPartsSeparator, Range.Max);
 
             var re = _store.GetRequestExecutor(_dbName);
-            JsonOperationContext context;
-            using (re.ContextPool.AllocateOperationContext(out context))
+            using (re.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
                 await re.ExecuteAsync(hiloCommand, context, sessionInfo: null, token: CancellationToken.None).ConfigureAwait(false);
             }
 
             Prefix = hiloCommand.Result.Prefix;
             ServerTag = hiloCommand.Result.ServerTag;
+            ShardIndex = hiloCommand.Result.ShardIndex;
             _lastRangeDate = hiloCommand.Result.LastRangeAt;
             _lastBatchSize = hiloCommand.Result.LastSize;
             Range = new RangeValue(hiloCommand.Result.Low, hiloCommand.Result.High);
@@ -149,8 +152,7 @@ namespace Raven.Client.Documents.Identity
             var returnCommand = new HiLoReturnCommand(_tag, Range.Current, Range.Max);
 
             var re = _store.GetRequestExecutor(_dbName);
-            JsonOperationContext context;
-            using (re.ContextPool.AllocateOperationContext(out context))
+            using (re.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
                 await re.ExecuteAsync(returnCommand, context, sessionInfo: null, token: CancellationToken.None).ConfigureAwait(false);
             }

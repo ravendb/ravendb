@@ -124,7 +124,7 @@ namespace FastTests.Sharding
             RequestExecutor requestExecutor = store.GetRequestExecutor();
             using (requestExecutor.ContextPool.AllocateOperationContext(out var context))
             {
-                var blittableJsonReaderObject = context.ReadObject( user, id);
+                var blittableJsonReaderObject = context.ReadObject(user, id);
                 requestExecutor.Execute(new PutDocumentCommand(id, null, blittableJsonReaderObject), context);
             }
         }

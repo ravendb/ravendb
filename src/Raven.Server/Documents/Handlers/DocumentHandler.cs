@@ -231,7 +231,7 @@ namespace Raven.Server.Documents.Handlers
 
                     if (document == null && ids.Count == 1)
                     {
-                    HttpContext.Response.StatusCode = GetStringFromHeaders("If-None-Match") == HttpCache.NotFoundResponse
+                        HttpContext.Response.StatusCode = GetStringFromHeaders("If-None-Match") == HttpCache.NotFoundResponse
                         ?(int)HttpStatusCode.NotModified
                         :(int)HttpStatusCode.NotFound;
                         return;
