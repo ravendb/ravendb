@@ -22,6 +22,7 @@ using Raven.Client.ServerWide.Operations.Logs;
 using Raven.Client.ServerWide.Operations.Migration;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Server.Commercial;
+using Raven.Server.Documents.ETL.Providers.Elasticsearch.Test;
 using Raven.Server.Documents.ETL.Providers.Raven.Test;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
 using Raven.Server.Documents.Handlers;
@@ -80,11 +81,13 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, TestSqlEtlScript> TestSqlEtlScript = GenerateJsonDeserializationRoutine<TestSqlEtlScript>();
 
         public static readonly Func<BlittableJsonReaderObject, TestRavenEtlScript> TestRavenEtlScript = GenerateJsonDeserializationRoutine<TestRavenEtlScript>();
-
+        
         public static readonly Func<BlittableJsonReaderObject, TestOlapEtlScript> TestOlapEtlScript = GenerateJsonDeserializationRoutine<TestOlapEtlScript>();
 
-        public static readonly Func<BlittableJsonReaderObject, SubscriptionCreationOptions> SubscriptionCreationParams = GenerateJsonDeserializationRoutine<SubscriptionCreationOptions>();
+        public static readonly Func<BlittableJsonReaderObject, TestElasticsearchEtlScript> TestElasticsearchEtlScript = GenerateJsonDeserializationRoutine<TestElasticsearchEtlScript>();
 
+        public static readonly Func<BlittableJsonReaderObject, SubscriptionCreationOptions> SubscriptionCreationParams = GenerateJsonDeserializationRoutine<SubscriptionCreationOptions>();
+        
         public static readonly Func<BlittableJsonReaderObject, SubscriptionUpdateOptions> SubscriptionUpdateOptions = GenerateJsonDeserializationRoutine<SubscriptionUpdateOptions>();
 
         public static readonly Func<BlittableJsonReaderObject, SubscriptionTryout> SubscriptionTryout = GenerateJsonDeserializationRoutine<SubscriptionTryout>();
@@ -110,7 +113,7 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, LatestVersionCheck.VersionInfo> LatestVersionCheckVersionInfo = GenerateJsonDeserializationRoutine<LatestVersionCheck.VersionInfo>();
 
         public static readonly Func<BlittableJsonReaderObject, License> License = GenerateJsonDeserializationRoutine<License>();
-
+        
         public static readonly Func<BlittableJsonReaderObject, SetupSettings> SetupSettings = GenerateJsonDeserializationRoutine<SetupSettings>();
 
         public static readonly Func<BlittableJsonReaderObject, LicenseInfo> LicenseInfo = GenerateJsonDeserializationRoutine<LicenseInfo>();
@@ -118,7 +121,7 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, LicenseLimits> LicenseLimits = GenerateJsonDeserializationRoutine<LicenseLimits>();
 
         public static readonly Func<BlittableJsonReaderObject, LeasedLicense> LeasedLicense = GenerateJsonDeserializationRoutine<LeasedLicense>();
-
+        
         public static readonly Func<BlittableJsonReaderObject, RevertRevisionsRequest> RevertRevisions = GenerateJsonDeserializationRoutine<RevertRevisionsRequest>();
 
         public static readonly Func<BlittableJsonReaderObject, LicenseSupportInfo> LicenseSupportInfo = GenerateJsonDeserializationRoutine<LicenseSupportInfo>();

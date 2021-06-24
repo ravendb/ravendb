@@ -4,6 +4,7 @@
     {
         Raven,
         Sql,
-        Olap
+        Olap,
+        Elasticsearch
     }
 }

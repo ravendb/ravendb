@@ -11,6 +11,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.Elasticsearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.OngoingTasks;
@@ -643,6 +644,7 @@ namespace Raven.Server.Web.System
                 Dictionary<string, RavenConnectionString> ravenConnectionStrings;
                 Dictionary<string, SqlConnectionString> sqlConnectionStrings;
                 Dictionary<string, OlapConnectionString> olapConnectionStrings;
+                Dictionary<string, ElasticsearchConnectionString> elasticsearchConnectionStrings;
 
                 using (context.OpenReadTransaction())
                 using (var rawRecord = ServerStore.Cluster.ReadRawDatabaseRecord(context, Database.Name))
@@ -655,13 +657,15 @@ namespace Raven.Server.Web.System
                         if (Enum.TryParse<ConnectionStringType>(type, true, out var connectionStringType) == false)
                             throw new NotSupportedException($"Unknown connection string type: {connectionStringType}");
 
-                        (ravenConnectionStrings, sqlConnectionStrings, olapConnectionStrings) = GetConnectionString(rawRecord, connectionStringName, connectionStringType);
+
+                        (ravenConnectionStrings, sqlConnectionStrings, olapConnectionStrings, elasticsearchConnectionStrings) = GetConnectionString(rawRecord, connectionStringName, connectionStringType);
                     }
                     else
                     {
                         ravenConnectionStrings = rawRecord.RavenConnectionStrings;
                         sqlConnectionStrings = rawRecord.SqlConnectionStrings;
                         olapConnectionStrings = rawRecord.OlapConnectionString;
+                        elasticsearchConnectionStrings = rawRecord.ElasticsearchConnectionStrings;
                     }
                 }
 
@@ -671,19 +675,21 @@ namespace Raven.Server.Web.System
                     {
                         RavenConnectionStrings = ravenConnectionStrings,
                         SqlConnectionStrings = sqlConnectionStrings,
-                        OlapConnectionStrings = olapConnectionStrings
+                        OlapConnectionStrings = olapConnectionStrings,
+                        ElasticsearchConnectionStrings = elasticsearchConnectionStrings
                     };
                     context.Write(writer, result.ToJson());
                 }
             }
         }
 
-        private static (Dictionary<string, RavenConnectionString>, Dictionary<string, SqlConnectionString>, Dictionary<string, OlapConnectionString>)
+        private static (Dictionary<string, RavenConnectionString>, Dictionary<string, SqlConnectionString>, Dictionary<string, OlapConnectionString>, Dictionary<string, ElasticsearchConnectionString>)
             GetConnectionString(RawDatabaseRecord rawRecord, string connectionStringName, ConnectionStringType connectionStringType)
         {
             var ravenConnectionStrings = new Dictionary<string, RavenConnectionString>();
             var sqlConnectionStrings = new Dictionary<string, SqlConnectionString>();
             var olapConnectionStrings = new Dictionary<string, OlapConnectionString>();
+            var elasticsearchConnectionStrings = new Dictionary<string, ElasticsearchConnectionString>();
 
             switch (connectionStringType)
             {
@@ -704,7 +710,7 @@ namespace Raven.Server.Web.System
                     }
 
                     break;
-
+                
                 case ConnectionStringType.Olap:
                     var recordOlapConnectionStrings = rawRecord.OlapConnectionString;
                     if (recordOlapConnectionStrings != null && recordOlapConnectionStrings.TryGetValue(connectionStringName, out var olapConnectionString))
@@ -714,11 +720,20 @@ namespace Raven.Server.Web.System
 
                     break;
                 
+                case ConnectionStringType.Elasticsearch:
+                    var recordElasticConnectionStrings = rawRecord.ElasticsearchConnectionStrings;
+                    if (recordElasticConnectionStrings != null && recordElasticConnectionStrings.TryGetValue(connectionStringName, out var elasticConnectionString))
+                    {
+                        elasticsearchConnectionStrings.TryAdd(connectionStringName, elasticConnectionString);
+                    }
+
+                    break;
+
                 default:
                     throw new NotSupportedException($"Unknown connection string type: {connectionStringType}");
             }
 
-            return (ravenConnectionStrings, sqlConnectionStrings, olapConnectionStrings);
+            return (ravenConnectionStrings, sqlConnectionStrings, olapConnectionStrings, elasticsearchConnectionStrings);
         }
 
         [RavenAction("/databases/*/admin/connection-strings", "PUT", AuthorizationStatus.DatabaseAdmin)]
@@ -755,11 +770,11 @@ namespace Raven.Server.Web.System
             string etlConfigurationName = null;
 
             await DatabaseConfigurations((_, databaseName, etlConfiguration, guid) =>
-                {
-                    var task = ServerStore.UpdateEtl(_, databaseName, id.Value, etlConfiguration, guid);
-                    etlConfiguration.TryGet(nameof(RavenEtlConfiguration.Name), out etlConfigurationName);
-                    return task;
-                }, "etl-update",
+            {
+                var task = ServerStore.UpdateEtl(_, databaseName, id.Value, etlConfiguration, guid);
+                etlConfiguration.TryGet(nameof(RavenEtlConfiguration.Name), out etlConfigurationName);
+                return task;
+            }, "etl-update",
                 GetRaftRequestIdFromQuery(),
                 beforeSetupConfiguration: AssertCanAddOrUpdateEtl,
                 fillJson: (json, _, index) => json[nameof(EtlConfiguration<ConnectionString>.TaskId)] = index);
@@ -790,6 +805,9 @@ namespace Raven.Server.Web.System
                     break;
                 case EtlType.Olap:
                     ServerStore.LicenseManager.AssertCanAddOlapEtl();
+                    break;
+                case EtlType.Elasticsearch:
+                    ServerStore.LicenseManager.AssertCanAddElasticsearchEtl();
                     break;
                 default:
                     throw new NotSupportedException($"Unknown ETL configuration type. Configuration: {etlConfiguration}");
@@ -879,7 +897,7 @@ namespace Raven.Server.Web.System
                     if (databaseRecord.OlapConnectionStrings.TryGetValue(olapEtl.ConnectionStringName, out var olapConnection))
                     {
                         destination = olapConnection.GetDestination();
-                    }
+        }
 
                     var connectionStatus = GetEtlTaskConnectionStatus(databaseRecord, olapEtl, out var tag, out var error);
 
@@ -1047,7 +1065,7 @@ namespace Raven.Server.Web.System
                                 Error = sqlEtlError
                             });
                             break;
-                        
+
                         case OngoingTaskType.OlapEtl:
 
                             var olapEtl = name != null ?
@@ -1336,7 +1354,7 @@ namespace Raven.Server.Web.System
                     if (type == OngoingTaskType.Subscription)
                     {
                         Database.SubscriptionStorage.RaiseNotificationForTaskRemoved(taskName);
-                    }
+                }
                 }
                 finally
                 {
