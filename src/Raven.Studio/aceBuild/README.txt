@@ -3,7 +3,7 @@ The overriding files are stored under the 'addons' dir.
 
 To run:
     * Go to 'src\Raven.Studio\aceBuild' folder
-    * Verify npm is installed
+    * Run 'npm install'
     * Run 'node Makefile.dryice.js' to build
 
     The Ace sources and addons will be copied to the build dir 'src\Raven.Studio\aceBuild\build'.
