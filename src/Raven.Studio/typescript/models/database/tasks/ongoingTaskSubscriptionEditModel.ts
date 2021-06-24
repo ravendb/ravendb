@@ -11,7 +11,7 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
     startingPointType = ko.observable<subscriptionStartType>();
     startingChangeVector = ko.observable<string>();
     startingPointChangeVector: KnockoutComputed<boolean>;
-    startingPointLatestDocument: KnockoutComputed<boolean>; 
+    startingPointLatestDocument: KnockoutComputed<boolean>;
     setStartingPoint = ko.observable<boolean>(true);
     
     changeVectorForNextBatchStartingPoint = ko.observable<string>(null); 
@@ -23,7 +23,7 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
     constructor(dto: Raven.Client.Documents.Subscriptions.SubscriptionStateWithNodeDetails) {
         super();
         
-        this.query(dto.Query.trim());
+        this.query(dto.Query);
         this.updateDetails(dto);
         this.initializeObservables(); 
         this.initValidation();
@@ -34,7 +34,7 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
             this.manualChooseMentor,
             this.query,
             this.startingPointType,
-            this.startingChangeVector, 
+            this.startingChangeVector,
             this.setStartingPoint,
             this.changeVectorForNextBatchStartingPoint
         ], false, jsonUtil.newLineNormalizingHashFunction);
@@ -75,7 +75,7 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
         
         this.manualChooseMentor(!!dto.MentorNode);
 
-        this.query(dto.Query.trim());
+        this.query(dto.Query);
         this.changeVectorForNextBatchStartingPoint(dto.ChangeVectorForNextBatchStartingPoint);
         this.setStartingPoint(false);
     }
@@ -107,11 +107,9 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
     }
     
     toDto(): Raven.Client.Documents.Subscriptions.SubscriptionCreationOptions {
-        const query = _.trim(this.query()) || null;
-
         return {
             Name: this.taskName(),
-            Query: query,
+            Query: this.query() || null,
             MentorNode: this.manualChooseMentor() ? this.mentorNode() : undefined,
             ChangeVector: this.serializeChangeVector()
         }
