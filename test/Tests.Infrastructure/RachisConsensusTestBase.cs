@@ -209,32 +209,38 @@ namespace Tests.Infrastructure
                     break;
                 }
 
-                try
+#pragma warning disable 4014
+                Task.Factory.StartNew(() =>
+#pragma warning restore 4014
                 {
-                    var stream = tcpClient.GetStream();
-                    rachis.AcceptNewConnection(stream, () => tcpClient.Client.Disconnect(false), tcpClient.Client.RemoteEndPoint, hello =>
+                    try
                     {
-                        if (rachis.Url == null)
-                            return;
-
-                        lock (this)
+                        var stream = tcpClient.GetStream();
+                        rachis.AcceptNewConnection(stream, () => tcpClient.Client.Disconnect(false), tcpClient.Client.RemoteEndPoint, hello =>
                         {
-                            if (_rejectionList.TryGetValue(rachis.Url, out var set))
+                            if (rachis.Url == null)
+                                return;
+
+                            lock (this)
                             {
-                                if (set.Contains(hello.DebugSourceIdentifier))
+                                if (_rejectionList.TryGetValue(rachis.Url, out var set))
                                 {
-                                    throw new InvalidComObjectException("Simulated failure");
+                                    if (set.Contains(hello.DebugSourceIdentifier))
+                                    {
+                                        throw new InvalidComObjectException("Simulated failure");
+                                    }
                                 }
+
+                                var connections = _connections.GetOrAdd(rachis.Url, _ => new ConcurrentSet<Tuple<string, TcpClient>>());
+                                connections.Add(Tuple.Create(hello.DebugSourceIdentifier, tcpClient));
                             }
-                            var connections = _connections.GetOrAdd(rachis.Url, _ => new ConcurrentSet<Tuple<string, TcpClient>>());
-                            connections.Add(Tuple.Create(hello.DebugSourceIdentifier, tcpClient));
-                        }
-                    });
-                }
-                catch
-                {
-                    // expected
-                }
+                        });
+                    }
+                    catch
+                    {
+                        // expected
+                    }
+                });
             }
         }
 
