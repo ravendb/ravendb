@@ -396,9 +396,9 @@ namespace Raven.Server.ServerWide.Maintenance
                 TcpConnectionHeaderMessage.SupportedFeatures supportedFeatures;
                 TcpClient tcpClient;
                 string url;
-                (tcpClient, url) = await TcpUtils.ConnectSocketAsync(tcpConnectionInfo, timeout, _log);
+                (tcpClient, url) = await TcpUtils.ConnectSocketAsync(tcpConnectionInfo, timeout, _log, _token);
 
-                var connection = await TcpUtils.WrapStreamWithSslAsync(tcpClient, tcpConnectionInfo, _parent._server.Server.Certificate.Certificate, _parent._server.Server.CipherSuitesPolicy, timeout);
+                var connection = await TcpUtils.WrapStreamWithSslAsync(tcpClient, tcpConnectionInfo, _parent._server.Server.Certificate.Certificate, _parent._server.Server.CipherSuitesPolicy, timeout, _token);
                 using (_contextPool.AllocateOperationContext(out JsonOperationContext ctx))
                 await using (var writer = new AsyncBlittableJsonTextWriter(ctx, connection))
                 {

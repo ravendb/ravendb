@@ -4,6 +4,14 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+#if !(NETSTANDARD2_0 || NETSTANDARD2_1 || NETCOREAPP2_1 || NETCOREAPP3_1)
+#define TCP_CLIENT_CANCELLATIONTOKEN_SUPPORT
+#endif
+
+#if !(NETSTANDARD2_0 || NETSTANDARD2_1 || NETCOREAPP2_1)
+#define SSL_STREAM_CIPHERSUITESPOLICY_SUPPORT
+#endif
+
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -210,7 +218,14 @@ namespace Raven.Client.Documents.Subscriptions
                 }
 
                 string chosenUrl;
-                (_tcpClient, chosenUrl) = await TcpUtils.ConnectAsyncWithPriority(tcpInfo, requestExecutor.DefaultTimeout).ConfigureAwait(false);
+                (_tcpClient, chosenUrl) = await TcpUtils.ConnectAsyncWithPriority(
+                    tcpInfo,
+                    requestExecutor.DefaultTimeout
+#if TCP_CLIENT_CANCELLATIONTOKEN_SUPPORT
+                    ,
+                    token
+#endif
+                    ).ConfigureAwait(false);
                 _tcpClient.NoDelay = true;
                 _tcpClient.SendBufferSize = _options?.SendBufferSizeInBytes ?? SubscriptionWorkerOptions.DefaultSendBufferSizeInBytes;
                 _tcpClient.ReceiveBufferSize = _options?.ReceiveBufferSizeInBytes ?? SubscriptionWorkerOptions.DefaultReceiveBufferSizeInBytes;
@@ -219,10 +234,15 @@ namespace Raven.Client.Documents.Subscriptions
                     _tcpClient,
                     tcpInfo,
                     _store.Certificate,
-#if !(NETSTANDARD2_0 || NETSTANDARD2_1 || NETCOREAPP2_1)
+#if SSL_STREAM_CIPHERSUITESPOLICY_SUPPORT
                     null,
 #endif
-                    requestExecutor.DefaultTimeout).ConfigureAwait(false);
+                    requestExecutor.DefaultTimeout
+#if TCP_CLIENT_CANCELLATIONTOKEN_SUPPORT
+                    ,
+                    token
+#endif
+                    ).ConfigureAwait(false);
 
                 var databaseName = _store.GetDatabase(_dbName);
 
