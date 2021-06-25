@@ -56,7 +56,6 @@ namespace Corax
             new Dictionary<Slice, Dictionary<Slice, List<long>>>(SliceComparer.Instance);
 
         private readonly long _containerId;
-        private static bool DebugThis;
 
         public long Index(string id, Span<byte> data, Dictionary<Slice, int> knownFields)
         {
@@ -109,7 +108,7 @@ namespace Corax
                         field[fieldName] = term = new List<long>();
                     }
                         
-                    term.Add(entryId);
+                    AddMaybeAvoidDuplicate(term);
                 }
             }
             else if (fieldType.HasFlag(IndexEntryFieldType.List))
@@ -126,7 +125,7 @@ namespace Corax
                         field[fieldName] = term = new List<long>();
                     }
 
-                    term.Add(entryId);
+                    AddMaybeAvoidDuplicate(term);
                 }
             }
             else if (fieldType.HasFlag(IndexEntryFieldType.Tuple))
@@ -139,7 +138,7 @@ namespace Corax
                     var fieldName = slice.Clone(context);
                     field[fieldName] = term = new List<long>();
                 }
-                term.Add(entryId);
+                AddMaybeAvoidDuplicate(term);
             }
             else if (!fieldType.HasFlag(IndexEntryFieldType.Invalid))
             {
@@ -151,9 +150,16 @@ namespace Corax
                     var fieldName = slice.Clone(context);
                     field[fieldName] = term = new List<long>();
                 }
+                AddMaybeAvoidDuplicate(term);
+            }
+            
+            // TODO: Do we want to index nulls? If so, how do we do that?
+            void AddMaybeAvoidDuplicate(List<long> term)
+            {
+                if (term.Count > 0 && term[^1] == entryId)
+                    return;
                 term.Add(entryId);
             }
-            // TODO: Do we want to index nulls? If so, how do we do that?
         }
 
         public void Commit()
@@ -168,14 +174,6 @@ namespace Corax
                 Array.Sort(sortedTerms, SliceComparer.Instance);
                 foreach (var term in sortedTerms)
                 {
-                    if (term.ToString() == "Pipeline")
-                    {
-                        Console.WriteLine();
-                    }
-                    if (DebugThis)
-                    {
-                        ReadOnlySpan<byte> readOnlySpan = Container.Get(llt,16492);
-                    }
                     var entries = terms[term];
                     ReadOnlySpan<byte> termsSpan = term.AsSpan();
 
@@ -205,10 +203,12 @@ namespace Corax
                         var id = existing & ~0b11;
                         var smallSet = Container.Get(llt, id);
                         // combine with existing value
+                        var cur = 0L;
                         while (smallSet.IsEmpty == false)
                         {
                             var value = ZigZag.Decode(smallSet, out var len);
-                            entries.Add(value);
+                            cur += value;
+                            entries.Add(cur);
                             smallSet = smallSet.Slice(len);
                         }
                         Container.Delete(llt, _containerId, id);
@@ -260,7 +260,11 @@ namespace Corax
             {
                 if (pos + 10 < tmpBuf.Length)
                 {
-                    pos += ZigZag.Encode(tmpBuf.Slice(pos), entries[i] - entries[i - 1]);
+                    long entry = entries[i] - entries[i - 1];
+                    if (entry == 0)
+                        continue; // we don't need to store duplicates
+                    
+                    pos += ZigZag.Encode(tmpBuf.Slice(pos), entry);
                     continue;
                 }
 
@@ -277,10 +281,6 @@ namespace Corax
             }
 
             var termId = Container.Allocate(llt, _containerId, pos, out var space);
-            if (termId == 16492)
-            {
-                DebugThis = true;
-            }
             tmpBuf.Slice(0, pos).CopyTo(space);
             fieldTree.Add(termsSpan, termId | (long)TermIdMask.Small);
         }

@@ -145,7 +145,7 @@ namespace Tryouts
             // var tests = new Encoder3GramTests();
             // tests.VerifyOrderPreservation();
 
-            CoraxEnron.Index(true, "Z:\\corax-d");
+            //CoraxEnron.Index(true, "Z:\\corax-d");
             //LuceneEnron.IndexInLucene(true);
 
             //CoraxReddit.Index(true, "Z:\\corax");

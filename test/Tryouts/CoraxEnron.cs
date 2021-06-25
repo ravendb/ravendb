@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using Corax;
 using MimeKit;
+using MimeKit.Text;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Server;
@@ -55,7 +56,7 @@ namespace Tryouts
             public string InReplyTo;
         }
 
-        public static unsafe void Index(bool recreateDatabase = true, string outputDirectory = ".")
+        public static void Index(bool recreateDatabase = true, string outputDirectory = ".")
         {
             var path =  Enron.DatasetFile;
 
@@ -65,108 +66,118 @@ namespace Tryouts
 
             using var options = StorageEnvironmentOptions.ForPath(storagePath);
             using var env = new StorageEnvironment(options);
-
-            var sp = Stopwatch.StartNew();
-            var indexOnlySp = new Stopwatch();
-
-            using var tar = SharpCompress.Readers.Tar.TarReader.Open(File.OpenRead(path));
-
-            var indexWriter = new IndexWriter(env);
-            indexWriter.Transaction.Allocator.Allocate(5200000 * 4, out var buffer);
-
-            int i = 0;
-            long ms = 0;
-            long justIndex = 0;
-
-            var bufferSpan = buffer.ToSpan();
-
-            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
-            Dictionary<Slice, int> knownFields = CreateKnownFields(bsc);
-
             try
             {
-                while (tar.MoveToNextEntry())
+
+                var sp = Stopwatch.StartNew();
+                var indexOnlySp = new Stopwatch();
+
+                using var tar = SharpCompress.Readers.Tar.TarReader.Open(File.OpenRead(path));
+
+                var indexWriter = new IndexWriter(env);
+                try
                 {
-                    if (tar.Entry.IsDirectory)
-                        continue;
+                    const int bufferSize = 5200000 * 4;
+                    indexWriter.Transaction.Allocator.Allocate(bufferSize, out var buffer);
 
-                    using var s = tar.OpenEntryStream();
-                    var msg = MimeMessage.Load(s);
+                    int i = 0;
+                    long ms = 0;
+                    long justIndex = 0;
 
-                    var value = new IndexEntry
+                    var bufferSpan = buffer.ToSpan();
+
+                    using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+                    Dictionary<Slice, int> knownFields = CreateKnownFields(bsc);
+
+                    while (tar.MoveToNextEntry())
                     {
-                        Bcc = NormalizeEmails((msg.Bcc ?? Enumerable.Empty<InternetAddress>()).Select(x => x.ToString())),
-                        Cc = NormalizeEmails((msg.Cc ?? Enumerable.Empty<InternetAddress>()).Select(x => x.ToString())),
-                        To = NormalizeEmails((msg.To ?? Enumerable.Empty<InternetAddress>()).Select(x => x.ToString())),
-                        From = msg.From?.FirstOrDefault()?.ToString(),
-                        ReplyTo = msg.ReplyTo?.FirstOrDefault()?.ToString(),
-                        Body = msg.GetTextBody(MimeKit.Text.TextFormat.Plain).Split(trimChars),
-                        Reference = (msg.References ?? Enumerable.Empty<string>()).ToArray(),
-                        Subject = msg.Subject.Split(' '),
-                        MessageId = msg.MessageId,
-                        Date = msg.Date.ToString("O"),
-                        Importance = msg.Importance.ToString(),
-                        Priority = msg.Priority.ToString(),
-                    };
+                        if (tar.Entry.IsDirectory)
+                            continue;
 
-                    if (msg.Sender != null)
-                        value.Sender = msg.Sender.ToString();
+                        using var s = tar.OpenEntryStream();
+                        var msg = MimeMessage.Load(s);
 
-                    if (msg.InReplyTo != null)
-                        value.InReplyTo = msg.InReplyTo;
+                        string[] strings = msg.GetTextBody(TextFormat.Plain).Split(trimChars);
+                        for (int j = 0; j < strings.Length; j++)
+                        {
+                            if (strings[j].Length > 512)
+                                strings[j] = strings[j].Substring(0, 512);
+                        }
 
-                    //var entry = ctx.ReadObject(value, $"entry/{i}");
-                    var entryWriter = new IndexEntryWriter(bufferSpan, knownFields);
+                        var value = new IndexEntry
+                        {
+                            Bcc = NormalizeEmails((msg.Bcc ?? Enumerable.Empty<InternetAddress>()).Select(x => x.ToString())),
+                            Cc = NormalizeEmails((msg.Cc ?? Enumerable.Empty<InternetAddress>()).Select(x => x.ToString())),
+                            To = NormalizeEmails((msg.To ?? Enumerable.Empty<InternetAddress>()).Select(x => x.ToString())),
+                            From = msg.From?.FirstOrDefault()?.ToString(),
+                            ReplyTo = msg.ReplyTo?.FirstOrDefault()?.ToString(),
+                            Body = strings,
+                            Reference = (msg.References ?? Enumerable.Empty<string>()).ToArray(),
+                            Subject = msg.Subject.Split(' '),
+                            MessageId = msg.MessageId,
+                            Date = msg.Date.ToString("O"),
+                            Importance = msg.Importance.ToString(),
+                            Priority = msg.Priority.ToString(),
+                        };
 
-                    var id = $"entry/{i}";
+                        if (msg.Sender != null)
+                            value.Sender = msg.Sender.ToString();
 
-                    try
-                    {
-                        
-                        var data = CreateIndexEntry(ref entryWriter, value, id);
+                        if (msg.InReplyTo != null)
+                            value.InReplyTo = msg.InReplyTo;
 
-                        indexOnlySp.Restart();
-                        indexWriter.Index(id, data, knownFields);
-                        justIndex += indexOnlySp.ElapsedMilliseconds;
+                        //var entry = ctx.ReadObject(value, $"entry/{i}");
+                        var entryWriter = new IndexEntryWriter(bufferSpan, knownFields);
+
+                        i++;
+                        var id = $"entry/{i}";
+                        try
+                        {
+
+                            var data = CreateIndexEntry(ref entryWriter, value, id);
+
+                            indexOnlySp.Restart();
+                            indexWriter.Index(id, data, knownFields);
+                            justIndex += indexOnlySp.ElapsedMilliseconds;
+                        }
+                        catch (Exception e)
+                        {
+                            Console.WriteLine(id);
+                            throw;
+                        }
+
+                        // var entryReader = new IndexEntryReader(data);
+
+
+                        if (i % 1024 == 0)
+                        {
+                            ms += sp.ElapsedMilliseconds;
+                            Console.WriteLine($"Elapsed: {sp.ElapsedMilliseconds} total: {i:##,###}");
+
+                            sp.Restart();
+                            indexWriter.Commit();
+                            indexWriter.Dispose();
+
+                            indexWriter = new IndexWriter(env);
+                            indexWriter.Transaction.Allocator.Allocate(bufferSize, out buffer);
+                            bufferSpan = buffer.ToSpan();
+                        }
                     }
-                    catch(Exception e)
-                    {
-                        Console.WriteLine(e);
-                        Console.WriteLine(id);
-                    }
-
-                    // var entryReader = new IndexEntryReader(data);
 
 
-                    if (i % 1024 == 0)
-                    {
-                        ms += sp.ElapsedMilliseconds;
-                        Console.WriteLine($"Elapsed: {sp.ElapsedMilliseconds} total: {i:##,###}");
-
-                        sp.Restart();
-
-                        indexWriter.Commit();
-                        indexWriter.Dispose();
-
-                        indexWriter = new IndexWriter(env);
-                        indexWriter.Transaction.Allocator.Allocate(520000 * 4, out buffer);
-                        bufferSpan = buffer.ToSpan();
-                    }
-
-                    i++;
+                    indexWriter.Commit();
+                    Console.WriteLine($"Indexing time: {justIndex}");
+                    Console.WriteLine($"Total execution time: {ms}");
+                }
+                finally
+                {
+                    indexWriter.Dispose();
                 }
             }
             catch (Exception e)
             {
                 Console.WriteLine(e);
             }
-
-
-            indexWriter.Commit();
-            indexWriter.Dispose();
-
-            Console.WriteLine($"Indexing time: {justIndex}");
-            Console.WriteLine($"Total execution time: {ms}");
         }
 
         private readonly struct StringArrayIterator : IReadOnlySpanEnumerator

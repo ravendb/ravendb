@@ -288,6 +288,7 @@ namespace Voron.Data.Sets
 
             PopPage();
             ref var state = ref _stk[_pos];
+            state.Page = _llt.ModifyPage(state.Page.PageNumber);
             var parent = new SetBranchPage(state.Page.Pointer);
             if (parent.TryAdd(_llt, separator, newPage))
                 return;
