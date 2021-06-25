@@ -199,15 +199,14 @@ namespace Raven.Server.Documents.Replication
                 }
             }
 
-            var task = TcpUtils.ConnectSocketAsync(_connectionInfo, _parent._server.Engine.TcpConnectionTimeout, _log);
+            var task = TcpUtils.ConnectSocketAsync(_connectionInfo, _parent._server.Engine.TcpConnectionTimeout, _log, CancellationToken);
             task.Wait(CancellationToken);
             TcpClient tcpClient;
             string url;
             (tcpClient, url) = task.Result;
             using (Interlocked.Exchange(ref _tcpClient, tcpClient))
             {
-                var wrapSsl = TcpUtils.WrapStreamWithSslAsync(_tcpClient, _connectionInfo, certificate, _parent._server.Server.CipherSuitesPolicy,
-                    _parent._server.Engine.TcpConnectionTimeout);
+                var wrapSsl = TcpUtils.WrapStreamWithSslAsync(_tcpClient, _connectionInfo, certificate, _parent._server.Server.CipherSuitesPolicy, _parent._server.Engine.TcpConnectionTimeout, CancellationToken);
                 wrapSsl.Wait(CancellationToken);
 
                 _stream = wrapSsl.Result;
@@ -222,7 +221,7 @@ namespace Raven.Server.Documents.Replication
                         SendPreliminaryData();
                         if (Destination is PullReplicationAsSink sink && (sink.Mode & PullReplicationMode.HubToSink) == PullReplicationMode.HubToSink)
                         {
-                            if(supportedFeatures.Replication.PullReplication == false)
+                            if (supportedFeatures.Replication.PullReplication == false)
                                 throw new InvalidOperationException("Other side does not support pull replication " + Destination);
                             InitiatePullReplicationAsSink(supportedFeatures, certificate);
                             return;
@@ -860,7 +859,7 @@ namespace Raven.Server.Documents.Replication
                         }
                     };
                 }
-               
+
                 return result.IsValid ? 1 : 0;
             }
 
@@ -888,12 +887,12 @@ namespace Raven.Server.Documents.Replication
                     {
                         if (update.DryRun(ctx))
                         {
-                    // we intentionally not waiting here, there is nothing that depends on the timing on this, since this
-                    // is purely advisory. We just want to have the information up to date at some point, and we won't
-                    // miss anything much if this isn't there.
-                    _database.TxMerger.Enqueue(update).IgnoreUnobservedExceptions();
-                }
-            }
+                            // we intentionally not waiting here, there is nothing that depends on the timing on this, since this
+                            // is purely advisory. We just want to have the information up to date at some point, and we won't
+                            // miss anything much if this isn't there.
+                            _database.TxMerger.Enqueue(update).IgnoreUnobservedExceptions();
+                        }
+                    }
                 }
             }
             _lastDestinationEtag = replicationBatchReply.CurrentEtag;
