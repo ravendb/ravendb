@@ -57,7 +57,7 @@ namespace Tryouts
 
         public static unsafe void Index(bool recreateDatabase = true, string outputDirectory = ".")
         {
-            var path = Path.Join("..", Enron.DatasetFile);
+            var path =  Enron.DatasetFile;
 
             string storagePath = Path.Join(outputDirectory, DirectoryEnron);
             if (Directory.Exists(storagePath))
@@ -129,18 +129,19 @@ namespace Tryouts
                         indexWriter.Index(id, data, knownFields);
                         justIndex += indexOnlySp.ElapsedMilliseconds;
                     }
-                    catch
+                    catch(Exception e)
                     {
+                        Console.WriteLine(e);
                         Console.WriteLine(id);
                     }
 
                     // var entryReader = new IndexEntryReader(data);
 
 
-                    if (i % 1024 * 16 == 0)
+                    if (i % 1024 == 0)
                     {
                         ms += sp.ElapsedMilliseconds;
-                        Console.WriteLine(sp.ElapsedMilliseconds);
+                        Console.WriteLine($"Elapsed: {sp.ElapsedMilliseconds} total: {i:##,###}");
 
                         sp.Restart();
 

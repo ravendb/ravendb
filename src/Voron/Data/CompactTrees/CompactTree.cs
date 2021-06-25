@@ -675,6 +675,7 @@ namespace Voron.Data.CompactTrees
 
         public void Add(string key, long value)
         {
+           
             using var _ = Slice.From(_llt.Allocator, key, out var slice);
             var span = slice.AsReadOnlySpan();
             Add(span, value);
@@ -682,6 +683,10 @@ namespace Voron.Data.CompactTrees
 
         public void Add(ReadOnlySpan<byte> key, long value)
         {
+            if (value == 16493)
+            {
+                Console.WriteLine();
+            }
             if (value < 0)
                 throw new ArgumentOutOfRangeException(nameof(value), "Only positive values are allowed");
             if (key.Length > 1024 || key.Length == 0)

@@ -176,6 +176,8 @@ namespace Voron.Data.Containers
 
         public static long Allocate(LowLevelTransaction llt, long containerId, int size, out Span<byte> allocatedSpace)
         {
+            if(size <= 0)
+                throw new ArgumentOutOfRangeException(nameof(size));
             Container rootContainer;
             if (size > MaxSizeInsideContainerPage)
             {      
@@ -445,6 +447,7 @@ namespace Voron.Data.Containers
         private Span<byte> Get(int offset)
         {
             ref var metadata = ref Offsets[OffsetToIndex(offset)];
+            Debug.Assert(metadata.Size != 0);
             return Span.Slice(metadata.Offset, metadata.Size);
         }
 

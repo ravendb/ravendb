@@ -43,7 +43,7 @@ namespace FastTests.Voron.Sets
         }
 
         [Fact]
-        public void CanCreateCompactTree()
+        public void CanCreateSet()
         {
             using (var wtx = Env.WriteTransaction())
             {
@@ -56,6 +56,24 @@ namespace FastTests.Voron.Sets
                 var tree = rtx.OpenSet("test");
                 var values = AllValues(tree);
                 Assert.Equal(new[] { 5L }, values);
+            }
+        }
+
+        
+        [Fact]
+        public void CanCreateSetAndAddLargeValue()
+        {
+            using (var wtx = Env.WriteTransaction())
+            {
+                var tree = wtx.OpenSet("test");
+                tree.Add(5L + int.MaxValue);
+                wtx.Commit();
+            }
+            using (var rtx = Env.ReadTransaction())
+            {
+                var tree = rtx.OpenSet("test");
+                var values = AllValues(tree);
+                Assert.Equal(new[] { 5L  +int.MaxValue }, values);
             }
         }
 
