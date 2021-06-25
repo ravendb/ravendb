@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using FastTests.Client;
+using RachisTests.DatabaseCluster;
 using SlowTests.Bugs;
 using SlowTests.Client.Counters;
 using SlowTests.Cluster;
@@ -18,7 +19,7 @@ namespace Tryouts
         {
             XunitLogging.RedirectStreams = false;
         }
-        
+
         public static async Task Main(string[] args)
         {
             Console.WriteLine(Process.GetCurrentProcess().Id);
@@ -30,9 +31,9 @@ namespace Tryouts
                 try
                 {
                     using (var testOutputHelper = new ConsoleTestOutputHelper())
-                    using (var test = new ClusterTransactionTests(testOutputHelper))
+                    using (var test = new ClusterDatabaseMaintenance(testOutputHelper))
                     {
-                        await test.ClusterTransactionWaitForIndexes(10);
+                        await test.ReshuffleAfterPromotion();
                     }
                 }
                 catch (Exception e)

@@ -438,6 +438,9 @@ namespace Raven.Server.Documents.Replication
 
                 foreach (var failure in _reconnectQueue)
                 {
+                    if (Database.DatabaseShutdown.IsCancellationRequested)
+                        return;
+
                     try
                     {
                         if (_reconnectQueue.TryRemove(failure) == false)

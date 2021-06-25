@@ -51,7 +51,7 @@ namespace Raven.Server.Documents
                 using (var id = context.GetLazyString(databaseName.ToLowerInvariant()))
                 using (var json = context.ReadObject(databaseInfo, "DatabaseInfo", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
-                    using (var tx = context.OpenWriteTransaction())
+                    using (var tx = context.OpenWriteTransaction(TimeSpan.FromSeconds(5)))
                     {
                         var table = tx.InnerTransaction.OpenTable(_databaseInfoSchema, DatabaseInfoSchema.DatabaseInfoTree);
                         using (table.Allocate(out TableValueBuilder tvb))
