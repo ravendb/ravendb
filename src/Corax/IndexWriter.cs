@@ -18,7 +18,7 @@ namespace Corax
         private readonly StorageEnvironment _environment;
         private readonly TransactionPersistentContext _transactionPersistentContext;
 
-        private readonly Transaction _transaction;
+        public readonly Transaction Transaction;        
 
         private static readonly Slice ContainerIdSlice;
 
@@ -37,13 +37,13 @@ namespace Corax
         {
             _environment = environment;
             _transactionPersistentContext = new TransactionPersistentContext(true);
-            _transaction = _environment.WriteTransaction(_transactionPersistentContext);            
+            Transaction = _environment.WriteTransaction(_transactionPersistentContext);            
 
-            var exists = _transaction.LowLevelTransaction.RootObjects.Read(ContainerIdSlice);
+            var exists = Transaction.LowLevelTransaction.RootObjects.Read(ContainerIdSlice);
             if (exists == null)
             {
-                _containerId = Container.Create(_transaction.LowLevelTransaction);
-                _transaction.LowLevelTransaction.RootObjects.Add(ContainerIdSlice, _containerId);
+                _containerId = Container.Create(Transaction.LowLevelTransaction);
+                Transaction.LowLevelTransaction.RootObjects.Add(ContainerIdSlice, _containerId);
             }
             else
             {
@@ -58,7 +58,7 @@ namespace Corax
 
         public long Index(string id, Span<byte> data, Dictionary<Slice, int> knownFields)
         {
-            using var _ = Slice.From(_transaction.Allocator, id, out var idSlice);
+            using var _ = Slice.From(Transaction.Allocator, id, out var idSlice);
             return Index(idSlice, data, knownFields);
         }
 
@@ -66,16 +66,16 @@ namespace Corax
         {
             Span<byte> buf = stackalloc byte[10];
             var idLen = ZigZag.Encode(buf, id.Size);
-            var entryId = Container.Allocate(_transaction.LowLevelTransaction, _containerId, idLen + id.Size + data.Length, out var space);
+            var entryId = Container.Allocate(Transaction.LowLevelTransaction, _containerId, idLen + id.Size + data.Length, out var space);
             buf.Slice(0, idLen).CopyTo(space);
             space = space.Slice(idLen);
             id.CopyTo(space);
             space = space.Slice(id.Size);
             data.CopyTo(space);
 
-            var context = _transaction.Allocator;
+            var context = Transaction.Allocator;
             var entryReader = new IndexEntryReader(data);
-            entryReader.DebugDump(knownFields);
+            //entryReader.DebugDump(knownFields);
 
             foreach (var (key, tokenField) in knownFields)
             {
@@ -156,12 +156,12 @@ namespace Corax
 
         public unsafe void Commit()
         {
-            using var _ = _transaction.Allocator.Allocate(Container.MaxSizeInsideContainerPage, out Span<byte> tmpBuf);
-            Tree fieldsTree = _transaction.CreateTree("Fields");
+            using var _ = Transaction.Allocator.Allocate(Container.MaxSizeInsideContainerPage, out Span<byte> tmpBuf);
+            Tree fieldsTree = Transaction.CreateTree("Fields");
             foreach (var (field, terms) in _buffer)
             {
                 var fieldTree = fieldsTree.CompactTreeFor(field);
-                var llt = _transaction.LowLevelTransaction;
+                var llt = Transaction.LowLevelTransaction;
                 foreach (var (term, entries) in terms)
                 {
                     ReadOnlySpan<byte> termsSpan = term.AsSpan();
@@ -211,7 +211,7 @@ namespace Corax
                     }
                 }
             }
-            _transaction.Commit();
+            Transaction.Commit();
         }
 
         // container ids are guaranteed to be aligned on 
@@ -239,7 +239,7 @@ namespace Corax
             // try to insert to container value
             //TODO: using simplest delta encoding, need to do better here
             int pos = ZigZag.Encode(tmpBuf, entries.Keys[0]);
-            var llt = _transaction.LowLevelTransaction;
+            var llt = Transaction.LowLevelTransaction;
             for (int i = 1; i < entries.Count; i++)
             {
                 if (pos + 10 >= tmpBuf.Length)
@@ -266,7 +266,7 @@ namespace Corax
 
         public void Dispose()
         {
-            _transaction?.Dispose();
+            Transaction?.Dispose();
         }
     }
 }

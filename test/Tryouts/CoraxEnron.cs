@@ -72,14 +72,13 @@ namespace Tryouts
             using var tar = SharpCompress.Readers.Tar.TarReader.Open(File.OpenRead(path));
 
             var indexWriter = new IndexWriter(env);
+            indexWriter.Transaction.Allocator.Allocate(5200000 * 4, out var buffer);
 
             int i = 0;
             long ms = 0;
             long justIndex = 0;
 
-            var ctx = JsonOperationContext.ShortTermSingleUse();
-            var buffer = ctx.GetMemory(512000);
-            var bufferSpan = new Span<byte>(buffer.Address, buffer.SizeInBytes);
+            var bufferSpan = buffer.ToSpan();
 
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
             Dictionary<Slice, int> knownFields = CreateKnownFields(bsc);
@@ -149,7 +148,8 @@ namespace Tryouts
                         indexWriter.Dispose();
 
                         indexWriter = new IndexWriter(env);
-                        ctx = JsonOperationContext.ShortTermSingleUse();
+                        indexWriter.Transaction.Allocator.Allocate(520000 * 4, out buffer);
+                        bufferSpan = buffer.ToSpan();
                     }
 
                     i++;
