@@ -75,7 +75,7 @@ namespace Raven.Server
 
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<RavenServer>("Server");
         private readonly Logger _authAuditLog = LoggingSource.AuditLog.GetLogger("AuthenticateCertificate", "Audit");
-        private TestingStuff _forTestingPurposes;
+        internal TestingStuff _forTestingPurposes;
 
         public readonly RavenConfiguration Configuration;
 
@@ -2614,6 +2614,7 @@ namespace Raven.Server
         {
             internal bool ThrowExceptionInListenToNewTcpConnection = false;
             internal bool ThrowExceptionInTrafficWatchTcp = false;
+            internal bool GatherVerboseDatabaseDisposeInformation = false;
         }
     }
 }
