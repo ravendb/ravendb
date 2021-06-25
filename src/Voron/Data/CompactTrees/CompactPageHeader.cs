@@ -32,7 +32,7 @@ namespace Voron.Data.CompactTrees
         {
             get
             {
-                int floor = Lower - PageHeader.SizeOf - CompactTree.DictionarySize;
+                int floor = Lower - PageHeader.SizeOf;
                 return floor / sizeof(short);
             }
         }

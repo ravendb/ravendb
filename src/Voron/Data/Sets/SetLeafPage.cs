@@ -433,7 +433,12 @@ namespace Voron.Data.Sets
                 Span<int> scratch = stackalloc int[PForEncoder.BufferLen];
                 var compressedEntryBuffer = Span.Slice(pos.Position, pos.Length);
                 var decoder = new PForDecoder(compressedEntryBuffer, scratch);
-                first = decoder.Decode()[0];
+                Span<int> decode = decoder.Decode();
+                if (decode.IsEmpty)
+                {
+                    Console.WriteLine();
+                }
+                first = decode[0];
             }
 
             var values = RawValues;

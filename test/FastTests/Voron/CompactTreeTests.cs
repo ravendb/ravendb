@@ -23,22 +23,24 @@ namespace FastTests.Voron
             using (var wtx = Env.WriteTransaction())
             {
                 var tree = CompactTree.Create(wtx.LowLevelTransaction, "test");
-                tree.Add("Pipeline", 5);
-                tree.Add("Pipeline\r", 6);
+                tree.Add("Pipeline1", 4);
+                tree.Add("Pipeline2", 5);
+                tree.Add("Pipeline3", 5);
                 wtx.Commit();
             }
             
             using (var wtx = Env.WriteTransaction())
             {
                 var tree = CompactTree.Create(wtx.LowLevelTransaction, "test");
-                tree.Add("Pipeline", 7);
-                //tree.Add("Pipeline\r", 8);
+                tree.Add("Pipeline2", 1007);
             
-                Assert.True(tree.TryGetValue("Pipeline", out var r));
-                Assert.Equal(7, r);
+                Assert.True(tree.TryGetValue("Pipeline1", out var r));
+                Assert.Equal(4, r);
+                Assert.True(tree.TryGetValue("Pipeline2", out  r));
+                Assert.Equal(1007, r);
                 
-                Assert.True(tree.TryGetValue("Pipeline\r", out  r));
-                Assert.Equal(6, r);
+                Assert.True(tree.TryGetValue("Pipeline3", out  r));
+                Assert.Equal(5, r);
             }
         }
         [Fact]
@@ -151,7 +153,7 @@ namespace FastTests.Voron
         
         
         [Fact]
-        public void CanDeleteLargeNumberOfItems()
+        public void CanDeleteLargeNumberOfItemsInRandomOrder()
         {
             const int Size = 400000;
 

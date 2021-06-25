@@ -254,6 +254,9 @@ namespace Voron.Data.Containers
                         if (maybe.HasEnoughSpaceFor(size + MinimumAdditionalFreeSpaceToConsider) == false)
                             continue;
 
+                        page = llt.ModifyPage(page.PageNumber);
+                        maybe = new Container(page.AsSpan());
+                        
                         maybe.Header.OnFreeList = false;
                         ModifyMetadataList(llt,  rootContainer, FreePagesSetName, ContainerPageHeader.FreeListOffset, add: false, page.PageNumber);
                         rootContainer.Header.NextFreePage = page.PageNumber;
@@ -308,7 +311,7 @@ namespace Voron.Data.Containers
 
         private static Set GetAllPagesList(LowLevelTransaction llt, long containerId)
         {
-            var rootPage = llt.ModifyPage(containerId);
+            var rootPage = llt.GetPage(containerId);
             var rootContainer = new Container(rootPage.AsSpan());
             var span = rootContainer.Offsets[ContainerPageHeader.AllPagesOffset].Slice(rootContainer.Span);
             ref var state = ref MemoryMarshal.AsRef<SetState>(span);
