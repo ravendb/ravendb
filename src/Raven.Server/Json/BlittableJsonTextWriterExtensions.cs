@@ -869,6 +869,14 @@ namespace Raven.Server.Json
             writer.WriteInteger(statistics.CountOfCompareExchange);
             writer.WriteComma();
 
+            writer.WritePropertyName(nameof(statistics.CountOfCompareExchangeTombstones));
+            writer.WriteInteger(statistics.CountOfCompareExchangeTombstones);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(statistics.CountOfTimeSeriesDeletedRanges));
+            writer.WriteInteger(statistics.CountOfTimeSeriesDeletedRanges);
+            writer.WriteComma();
+
             WriteDatabaseStatisticsInternal(writer, statistics);
 
             writer.WriteEndObject();

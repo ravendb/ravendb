@@ -111,8 +111,7 @@ namespace SlowTests.Server.Replication
                     session.Advanced.WaitForReplicationAfterSaveChanges(replicas: 2);
                     session.Store(new User { Name = "Karmel" }, "marker");
                     session.SaveChanges();
-
-                    Assert.True(await WaitForDocumentInClusterAsync<User>((DocumentSession)session, "marker", (u) => u.Id == "marker", TimeSpan.FromSeconds(15)));
+                    Assert.True(await WaitForDocumentInClusterAsync<User>(cluster.Nodes, store.Database, "marker", (u) => u.Id == "marker", Debugger.IsAttached ? TimeSpan.FromSeconds(60) : TimeSpan.FromSeconds(15)));
                 }
 
                 // wait for CV to merge after replication
@@ -192,7 +191,7 @@ namespace SlowTests.Server.Replication
                     session.Store(new User { Name = "Karmel" }, "marker");
                     session.SaveChanges();
 
-                    Assert.True(await WaitForDocumentInClusterAsync<User>((DocumentSession)session, "marker", (u) => u.Id == "marker", TimeSpan.FromSeconds(15)));
+                    Assert.True(await WaitForDocumentInClusterAsync<User>(cluster.Nodes, store.Database, "marker", (u) => u.Id == "marker", Debugger.IsAttached ? TimeSpan.FromSeconds(60) : TimeSpan.FromSeconds(15)));
                 }
 
                 // wait for CV to merge after replication
@@ -254,7 +253,7 @@ namespace SlowTests.Server.Replication
                     session.Store(new User { Name = "Karmel" }, "marker");
                     session.SaveChanges();
 
-                    await WaitForDocumentInClusterAsync<User>((DocumentSession)session, "marker", (u) => u.Id == "marker", TimeSpan.FromSeconds(15));
+                    Assert.True(await WaitForDocumentInClusterAsync<User>(cluster.Nodes, store.Database, "marker", (u) => u.Id == "marker", Debugger.IsAttached ? TimeSpan.FromSeconds(60) : TimeSpan.FromSeconds(15)));
                 }
 
                 // wait for CV to merge after replication
@@ -377,7 +376,7 @@ namespace SlowTests.Server.Replication
                     session.Store(new User { Name = "Karmel" }, "marker");
                     session.SaveChanges();
 
-                    Assert.True(await WaitForDocumentInClusterAsync<User>((DocumentSession)session, "marker", (u) => u.Id == "marker", TimeSpan.FromSeconds(15)));
+                    Assert.True(await WaitForDocumentInClusterAsync<User>(cluster.Nodes, store.Database, "marker", (u) => u.Id == "marker", Debugger.IsAttached ? TimeSpan.FromSeconds(60) : TimeSpan.FromSeconds(15)));
                 }
 
                 var total = 0L;

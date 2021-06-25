@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
@@ -142,6 +144,8 @@ namespace Raven.Server.Documents
                         if (subscriptionTombstones == null)
                             continue;
 
+                        Debug.Assert(new[] { Constants.TimeSeries.All, Constants.Documents.Collections.AllDocumentsCollection }.All(x => subscriptionTombstones.Keys.Contains(x)) == false);
+
                         foreach (var tombstone in subscriptionTombstones)
                         {
                             if (tombstone.Key == Constants.Documents.Collections.AllDocumentsCollection)
@@ -185,7 +189,7 @@ namespace Raven.Server.Documents
                     case ITombstoneAware.TombstoneType.TimeSeries:
                         return value.TimeSeries;
                     default:
-                        throw new NotSupportedException("$Tombstone type '{type}' is not supported.");
+                        throw new NotSupportedException($"Tombstone type '{type}' is not supported.");
                 }
             }
         }
