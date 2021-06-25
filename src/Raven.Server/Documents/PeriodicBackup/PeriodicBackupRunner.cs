@@ -1213,13 +1213,22 @@ namespace Raven.Server.Documents.PeriodicBackup
             var minLastEtag = GetMinLastEtag();
 
             if (minLastEtag == long.MaxValue)
-                return EmptyDictionary;
+                return null;
 
-            return new Dictionary<string, long>
+            var result = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
+            switch (tombstoneType)
             {
-                [Constants.Documents.Collections.AllDocumentsCollection] = minLastEtag,
-                [Constants.TimeSeries.All] = minLastEtag
-            };
+                case ITombstoneAware.TombstoneType.Documents:
+                    result.Add(Constants.Documents.Collections.AllDocumentsCollection, minLastEtag);
+                    break;
+                case ITombstoneAware.TombstoneType.TimeSeries:
+                    result.Add(Constants.TimeSeries.All, minLastEtag);
+                    break;
+                default:
+                    throw new NotSupportedException($"Tombstone type '{tombstoneType}' is not supported.");
+            }
+
+            return result;
         }
 
         internal TestingStuff _forTestingPurposes;

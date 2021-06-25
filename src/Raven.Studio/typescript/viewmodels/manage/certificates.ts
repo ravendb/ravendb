@@ -245,8 +245,10 @@ class certificates extends viewModelBase {
     }
     
     enterEditCertificateMode(itemToEdit: unifiedCertificateDefinition) {
-        this.model(certificateModel.fromDto(itemToEdit));
-        this.model().validationGroup.errors.showAllMessages(false);
+        if (!_.includes(itemToEdit.Thumbprints, this.serverCertificateThumbprint())) {
+            this.model(certificateModel.fromDto(itemToEdit));
+            this.model().validationGroup.errors.showAllMessages(false);
+        }
     }
 
     deleteCertificate(certificate: Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition) {
@@ -426,9 +428,10 @@ class certificates extends viewModelBase {
                 const clientCert = mergedCertificates.find(x => _.includes(x.Thumbprints, this.clientCertificateThumbprint()));
                 const orderedCertificates = mergedCertificates.filter(x => x !== serverCert && x !== clientCert);
                 
-                if (clientCert) {
+                if (clientCert && serverCert && clientCert.Thumbprint !== serverCert.Thumbprint) {
                     orderedCertificates.unshift(clientCert);
                 }
+                
                 orderedCertificates.unshift(serverCert);
                 
                 this.updateCache(orderedCertificates);

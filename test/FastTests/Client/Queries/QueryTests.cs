@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
 using Tests.Infrastructure.Entities;
 using Xunit;
@@ -32,6 +33,200 @@ namespace FastTests.Client.Queries
             public byte Byte { get; set; }
         }
 
+        private class Article
+        {
+            public string Title { get; set; }
+            public string Description { get; set; }
+            public bool IsDeleted { get; set; }
+        }
+        
+        [Fact]
+        public  void Query_CreateClausesForQueryDynamicallyWithOnBeforeQueryEvent()
+        {
+            using (var store = GetDocumentStore())
+            {
+                const string id1 = "users/1";
+                const string id2 = "users/2";
+                
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Article
+                        {
+                            Title = "foo",
+                            Description = "bar",
+                            IsDeleted = false
+                            
+                        },
+                        id1);
+                    
+                    session.Store(new Article
+                        {
+                            Title = "foo",
+                            Description = "bar",
+                            IsDeleted = true
+                        },
+                        id2);
+                    session.SaveChanges();
+                }
+                
+                using (var session = store.OpenSession())
+                {
+                    session.Advanced.OnBeforeQuery += (sender, args) =>
+                    {
+                        var queryToBeExecuted = (DocumentQuery<Article>) args.QueryCustomization;
+                        queryToBeExecuted.AndAlso(wrapPreviousQueryClauses: true);
+                        queryToBeExecuted.WhereEquals(nameof(Article.IsDeleted), true);
+                    };
+
+                    var query = session.Advanced.DocumentQuery<Article>()
+                        .Search(article => article.Title, "foo")
+                        .Search(article => article.Description, "bar", @operator: SearchOperator.Or);
+                    
+                    
+                    var result =  query.ToList();
+                    Assert.Equal(query.ToString(), "from 'Articles' where (search(Title, $p0) or search(Description, $p1)) and IsDeleted = $p2");
+                    Assert.Equal(result.Count, 1);
+                }
+            }
+        }
+        [Fact]
+        public async Task Query_CreateClausesForQueryDynamicallyWhenTheQueryEmpty()
+        {
+            using (var store = GetDocumentStore())
+            {
+                const string id1 = "users/1";
+                const string id2 = "users/2";
+                
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Article
+                        {
+                            Title = "foo",
+                            Description = "bar",
+                            IsDeleted = false
+                            
+                        },
+                        id1);
+                    
+                    session.Store(new Article
+                        {
+                            Title = "foo",
+                            Description = "bar",
+                            IsDeleted = true
+                        },
+                        id2);
+                    session.SaveChanges();
+                }
+                
+                using (var session = store.OpenAsyncSession())
+                {
+                    var query = session.Advanced.AsyncDocumentQuery<Article>()
+                        .AndAlso(wrapPreviousQueryClauses: true);
+                    
+                    Assert.Equal(query.ToString(),"from 'Articles'");
+                    var queryResult =  await query.ToListAsync();
+                    Assert.Equal(queryResult.Count, 2);
+
+                }
+            }
+        }
+        
+        [Fact]
+        public  void Query_CreateClausesForQueryDynamically()
+        {
+            using (var store = GetDocumentStore())
+            {
+                const string id1 = "users/1";
+                const string id2 = "users/2";
+                
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Article
+                        {
+                            Title = "foo",
+                            Description = "bar",
+                            IsDeleted = false
+                            
+                        },
+                        id1);
+                    
+                    session.Store(new Article
+                        {
+                            Title = "foo",
+                            Description = "bar",
+                            IsDeleted = true
+                        },
+                        id2);
+                    session.SaveChanges();
+                }
+                
+                using (var session = store.OpenSession())
+                {
+
+                    var query = session.Advanced.DocumentQuery<Article>()
+                        .Search(article => article.Title, "foo")
+                        .Search(article => article.Description, "bar", @operator: SearchOperator.Or)
+                        .AndAlso(wrapPreviousQueryClauses: true).WhereEquals(x => x.IsDeleted, false);
+                    
+                    Assert.Equal(query.ToString(), "from 'Articles' where (search(Title, $p0) or search(Description, $p1)) and IsDeleted = $p2");
+                    
+                    var result =  query.ToList();
+                    Assert.Equal(result.Count, 1);
+                }
+            }
+        }
+        
+        [Fact]
+        public async Task Query_CreateClausesForQueryDynamicallyAsyncWithOnBeforeQueryEvent()
+        {
+            using (var store = GetDocumentStore())
+            {
+                const string id1 = "users/1";
+                const string id2 = "users/2";
+                
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Article
+                        {
+                            Title = "foo",
+                            Description = "bar",
+                            IsDeleted = false
+                            
+                        },
+                        id1);
+                    
+                   await session.StoreAsync(new Article
+                        {
+                            Title = "foo",
+                            Description = "bar",
+                            IsDeleted = true
+                        },
+                        id2);
+                   
+                   await session.SaveChangesAsync();
+                }
+                
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.Advanced.OnBeforeQuery += (sender, args) =>
+                    {
+                        var queryToBeExecuted = (AsyncDocumentQuery<Article>) args.QueryCustomization;
+                        queryToBeExecuted.AndAlso(wrapPreviousQueryClauses: true);
+                        queryToBeExecuted.WhereEquals(nameof(Article.IsDeleted), true);
+
+                    };
+
+                    var query = session.Advanced.AsyncDocumentQuery<Article>()
+                        .Search(article => article.Title, "foo")
+                        .Search(article => article.Description, "bar", @operator: SearchOperator.Or);
+                    
+                    var result = await query.ToListAsync();
+                    Assert.Equal(query.ToString(), "from 'Articles' where (search(Title, $p0) or search(Description, $p1)) and IsDeleted = $p2");
+                    Assert.Equal(result?.Count,1);
+                }
+            }
+        }
+        
         [Fact]
         public async Task Query_WhenCompareObjectWithUlongInWhereClause_ShouldWork()
         {

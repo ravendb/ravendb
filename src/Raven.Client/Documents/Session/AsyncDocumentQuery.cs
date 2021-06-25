@@ -162,7 +162,7 @@ namespace Raven.Client.Documents.Session
             WhereEquals(GetMemberQueryPath(propertySelector.Body), value, exact);
             return this;
         }
-
+        
         /// <inheritdoc />
         IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereEquals<TValue>(Expression<Func<T, TValue>> propertySelector, MethodCall value, bool exact)
         {
@@ -384,6 +384,13 @@ namespace Raven.Client.Documents.Session
         IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.AndAlso()
         {
             AndAlso();
+            return this;
+        }
+        
+        /// <inheritdoc />
+        IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.AndAlso(bool wrapPreviousQueryClauses)
+        {
+            AndAlso(wrapPreviousQueryClauses);
             return this;
         }
 

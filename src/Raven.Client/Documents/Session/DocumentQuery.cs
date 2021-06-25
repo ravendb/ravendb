@@ -435,7 +435,6 @@ namespace Raven.Client.Documents.Session
             Include(path);
             return this;
         }
-
         /// <inheritdoc />
         IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.Not
         {
@@ -738,6 +737,13 @@ namespace Raven.Client.Documents.Session
         IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.AndAlso()
         {
             AndAlso();
+            return this;
+        }
+        
+        /// <inheritdoc />
+        IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.AndAlso(bool wrapPreviousQueryClauses)
+        {
+            AndAlso(wrapPreviousQueryClauses);
             return this;
         }
 

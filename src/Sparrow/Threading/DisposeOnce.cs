@@ -179,6 +179,7 @@ namespace Sparrow.Threading
                 throw new NotSupportedException("Unknown operation mode: " + typeof(TOperationMode));
             }
             _operationModeData = default;
+            _operationModeData.Initialize();
         }
 
         /// <summary>
@@ -212,6 +213,7 @@ namespace Sparrow.Threading
                     // is over. This call to Wait may throw with an
                     // AggregateException
                     await localState.Item2.Task.ConfigureAwait(false);
+                    return;
                 }
 
                 try

@@ -1170,18 +1170,17 @@ namespace Raven.Server.Documents.Replication
                 }
                 finally
                 {
-                    var record = rawRecord.MaterializedRecord;
                     ThreadPool.QueueUserWorkItem(_ =>
                         {
                             try
                             {
-                                _server.DatabasesLandlord.DeleteDatabase(dbName, deletionInProgress[_server.NodeTag], record);
+                                _server.DatabasesLandlord.DeleteIfNeeded(dbName, fromReplication: true);
                             }
                             catch (Exception e)
                             {
                                 if (_log.IsOperationsEnabled)
                                 {
-                                    _log.Operations("Unexpected error during database deletion from replication loader",e);
+                                    _log.Operations("Unexpected error during database deletion from replication loader", e);
                                 }
                             }
                         }
@@ -1750,12 +1749,21 @@ namespace Raven.Server.Documents.Replication
         public Dictionary<string, long> GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType tombstoneType)
         {
             var minEtag = Math.Min(GetMinimalEtagForTombstoneCleanupWithHubReplication(), GetMinimalEtagForReplication());
+            if (minEtag == long.MaxValue)
+                return null;
 
-            var result = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase)
+            var result = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
+            switch (tombstoneType)
             {
-                { Constants.Documents.Collections.AllDocumentsCollection, minEtag },
-                { Constants.TimeSeries.All, minEtag }
-            };
+                case ITombstoneAware.TombstoneType.Documents:
+                    result.Add(Constants.Documents.Collections.AllDocumentsCollection, minEtag);
+                    break;
+                case ITombstoneAware.TombstoneType.TimeSeries:
+                    result.Add(Constants.TimeSeries.All, minEtag);
+                    break;
+                default:
+                    throw new NotSupportedException($"Tombstone type '{tombstoneType}' is not supported.");
+            }
 
             if (Destinations == null)
                 return result;
