@@ -13,6 +13,11 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
 
         private readonly GenerateEntityIdOnTheClient _generateEntityIdOnTheClient;
 
+        internal BlittableJsonReader GetReaderForCurrentThread()
+        {
+            return _reader.Value;
+        }
+
         public NewtonsoftJsonBlittableEntitySerializer(ISerializationConventions conventions)
         {
             _generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(conventions.Conventions, null);

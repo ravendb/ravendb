@@ -1581,6 +1581,17 @@ namespace Raven.Server.ServerWide
                 UpdateExternalReplications();
             }
 
+            if (addDatabaseCommand.Record.Topology.Stamp == null)
+            {
+                addDatabaseCommand.Record.Topology.Stamp = new LeaderStamp
+                {
+                    Index = index,
+                    LeadersTicks = -2,
+                    Term = _parent.CurrentTerm
+                };
+                hasChanges = true;
+            }
+
             return hasChanges
                 ? DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(addDatabaseCommand.Record, context)
                 : newDatabaseRecord;
