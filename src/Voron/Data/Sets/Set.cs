@@ -174,40 +174,72 @@ namespace Voron.Data.Sets
             return parent.LastSearchPosition == 0 ? 1 : parent.LastSearchPosition - 1;
         }
 
-        public void Add(SortedList<long, long> values)
+        public void Add(List<long> values)
         {
+            // NOTE: We assume that values is sorted
+            
             int index = 0;
+#if DEBUG
+            var prev = long.MinValue;
+#endif
             while (index < values.Count)
             {               
-                FindPageFor(values.Values[index]);
+                FindPageFor(values[index]);
                 ref var state = ref _stk[_pos];
 
                 state.Page = _llt.ModifyPage(state.Page.PageNumber);
 
                 var leafPage = new SetLeafPage(state.Page.Pointer);
 
-                long last = long.MaxValue;
-                if (_pos > 0)
+                long last = NextParentLimit();
+                if (leafPage.IsValidValue(last) == false)
                 {
-                    //TODO: Go up and find the next page start as a limit
-                    //_stk[_pos-1].Page
+                    // must still fit in the page
+                    last = leafPage.Header.Baseline + int.MaxValue;
+                    if (values[index] > last)
+                    {
+                        // add a single item, forcing new page creation
+                        Add(values[index++]);
+                        continue;
+                    }
                 }
-                // if (leafPage.IsValidValue(value) == false)
-                //     break;
 
-                for (; index < values.Count && values.Values[index] < last; index++)
+                for (; index < values.Count && values[index] < last; index++)
                 {
-                    if(leafPage.Add(_llt, values.Values[index]))
+#if DEBUG
+                    if(prev > values[index])
+                        throw new InvalidOperationException("Values not sorted");
+                    prev = values[index];
+#endif
+                    if(leafPage.Add(_llt, values[index]))
                         continue; // successfully added
                     // we couldn't add to the page (but it fits, need to split)
-                    var (separator, newPage) = SplitLeafPage(values.Values[index]);
+                    var (separator, newPage) = SplitLeafPage(values[index]);
                     AddToParentPage(separator, newPage);
-                    index--; // go back and repeat on the next page
+#if DEBUG
+                    prev = values[index];
+#endif
                     break; 
                 }
             }
         }
-        
+
+        private long NextParentLimit()
+        {
+            var cur = _pos;
+            while (cur > 0)
+            {
+                ref var state = ref _stk[cur - 1];
+                if (state.LastSearchPosition + 1 < state.BranchHeader->NumberOfEntries)
+                {
+                    var (key, _) = new SetBranchPage(state.Page.Pointer).GetByIndex(state.LastSearchPosition + 1);
+                    return key;
+                }
+                cur--;
+            }
+            return long.MaxValue;
+        }
+
         public void Add(long value)
         {
             if (value < 0)
@@ -227,6 +259,20 @@ namespace Voron.Data.Sets
             if (leafPage.IsValidValue(value) && // may have enough space, but too far out to fit 
                 leafPage.Add(_llt, value))
                 return; // successfully added
+
+            if (leafPage.IsValidValue(value) == false) 
+            {
+                if (leafPage.Header.NumberOfCompressedPositions == 0 &&
+                    leafPage.Header.NumberOfRawValues == 0)
+                {
+                    // never had a write, the baseline is wrong, can update 
+                    // this and move on
+                    leafPage.Header.Baseline = value & ~int.MaxValue;
+                    if(leafPage.Add(_llt, value) == false)
+                        throw new InvalidOperationException("Adding value to empty page failed?!");
+                    return;
+                }
+            }
 
             var (separator, newPage) = SplitLeafPage(value);
             AddToParentPage(separator, newPage);
@@ -348,7 +394,6 @@ namespace Voron.Data.Sets
             // we have to split this in the middle page
             var page = _llt.AllocatePage(1);
             var newPage = new SetLeafPage(page.Pointer);
-            long baseline = curPage.Header->Baseline;
 
             curPage.SplitHalfInto(ref newPage);
 

@@ -10,6 +10,7 @@ using Corax;
 using FastTests.Corax;
 using FastTests.Sparrow;
 using FastTests.Voron;
+using FastTests.Voron.Sets;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -134,8 +135,9 @@ namespace Tryouts
 
         public static async Task Main(string[] args)
         {
-
-            new ContainerTests(new ConsoleTestOutputHelper()).CanStoreMoreThanASinglePage();
+            CoraxEnron.Index();
+            //new SetTests(new ConsoleTestOutputHelper()).CanCreateSet();
+            //new ContainerTests(new ConsoleTestOutputHelper()).CanStoreMoreThanASinglePage();
             //new IntegerEncodingTests(new ConsoleTestOutputHelper()).WriteVariableSizeIntegers();
             //SyncMain();
 

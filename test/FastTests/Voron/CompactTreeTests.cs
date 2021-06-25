@@ -18,6 +18,30 @@ namespace FastTests.Voron
         }
 
         [Fact]
+        public void TrickyAttempts()
+        {
+            using (var wtx = Env.WriteTransaction())
+            {
+                var tree = CompactTree.Create(wtx.LowLevelTransaction, "test");
+                tree.Add("Pipeline", 5);
+                tree.Add("Pipeline\r", 6);
+                wtx.Commit();
+            }
+            
+            using (var wtx = Env.WriteTransaction())
+            {
+                var tree = CompactTree.Create(wtx.LowLevelTransaction, "test");
+                tree.Add("Pipeline", 7);
+                //tree.Add("Pipeline\r", 8);
+            
+                Assert.True(tree.TryGetValue("Pipeline", out var r));
+                Assert.Equal(7, r);
+                
+                Assert.True(tree.TryGetValue("Pipeline\r", out  r));
+                Assert.Equal(6, r);
+            }
+        }
+        [Fact]
         public void CanCreateCompactTree()
         {
             using (var wtx = Env.WriteTransaction())

@@ -162,7 +162,6 @@ namespace Corax
         {
             Debug.Assert(field < _knownFields.Count);
             Debug.Assert(_knownFieldsLocations[field] == Invalid);
-            Debug.Assert(values.Length < ushort.MaxValue);
 
             if (values.Length == 0)
                 return;

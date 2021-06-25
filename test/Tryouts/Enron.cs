@@ -9,7 +9,7 @@ namespace Tryouts
 {
     public static class Enron
     {
-        public const string DatasetFile = @"..\..\enron_mail_20150507.tar.gz";
+        public const string DatasetFile = @"C:\Users\Oren\Downloads\enron_mail_20150507.tar.gz";
     }
 
     public class Message

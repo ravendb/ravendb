@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using System.Runtime.InteropServices;
 using Sparrow.Server;
 using Voron;
@@ -51,10 +52,11 @@ namespace Corax
             }
         }
 
-        private readonly SortedList<Slice, SortedList<Slice, SortedList<long, long>>> _buffer =
-            new SortedList<Slice, SortedList<Slice, SortedList<long, long>>>(SliceComparer.Instance);
+        private readonly Dictionary<Slice, Dictionary<Slice, List<long>>> _buffer =
+            new Dictionary<Slice, Dictionary<Slice, List<long>>>(SliceComparer.Instance);
 
         private readonly long _containerId;
+        private static bool DebugThis;
 
         public long Index(string id, Span<byte> data, Dictionary<Slice, int> knownFields)
         {
@@ -81,7 +83,7 @@ namespace Corax
             {
                 if (_buffer.TryGetValue(key, out var field) == false)
                 {
-                    _buffer[key] = field = new SortedList<Slice, SortedList<long, long>>(SliceComparer.Instance);
+                    _buffer[key] = field = new Dictionary<Slice, List<long>>(SliceComparer.Instance);
                 }
 
                 InsertToken(context, ref entryReader, tokenField, field, entryId);
@@ -90,7 +92,7 @@ namespace Corax
             return entryId;
         }
 
-        private void InsertToken(ByteStringContext context, ref IndexEntryReader entryReader, int tokenField, SortedList<Slice, SortedList<long, long>> field, long entryId)
+        private void InsertToken(ByteStringContext context, ref IndexEntryReader entryReader, int tokenField, Dictionary<Slice, List<long>> field, long entryId)
         {
             var fieldType = entryReader.GetFieldType(tokenField);
             if (fieldType.HasFlag(IndexEntryFieldType.List) && fieldType.HasFlag(IndexEntryFieldType.Tuple))
@@ -104,10 +106,10 @@ namespace Corax
                     if (field.TryGetValue(slice, out var term) == false)
                     {
                         var fieldName = slice.Clone(context);
-                        field[fieldName] = term = new SortedList<long, long>();
+                        field[fieldName] = term = new List<long>();
                     }
                         
-                    term[entryId] = entryId;
+                    term.Add(entryId);
                 }
             }
             else if (fieldType.HasFlag(IndexEntryFieldType.List))
@@ -121,10 +123,10 @@ namespace Corax
                     if (field.TryGetValue(slice, out var term) == false)
                     {
                         var fieldName = slice.Clone(context);
-                        field[fieldName] = term = new SortedList<long, long>();
+                        field[fieldName] = term = new List<long>();
                     }
 
-                    term[entryId] = entryId;
+                    term.Add(entryId);
                 }
             }
             else if (fieldType.HasFlag(IndexEntryFieldType.Tuple))
@@ -135,9 +137,9 @@ namespace Corax
                 if (field.TryGetValue(slice, out var term) == false)
                 {
                     var fieldName = slice.Clone(context);
-                    field[fieldName] = term = new SortedList<long, long>();
+                    field[fieldName] = term = new List<long>();
                 }
-                term[entryId] = entryId;
+                term.Add(entryId);
             }
             else if (!fieldType.HasFlag(IndexEntryFieldType.Invalid))
             {
@@ -147,14 +149,14 @@ namespace Corax
                 if (field.TryGetValue(slice, out var term) == false)
                 {
                     var fieldName = slice.Clone(context);
-                    field[fieldName] = term = new SortedList<long, long>();
+                    field[fieldName] = term = new List<long>();
                 }
-                term[entryId] = entryId;
+                term.Add(entryId);
             }
             // TODO: Do we want to index nulls? If so, how do we do that?
         }
 
-        public unsafe void Commit()
+        public void Commit()
         {
             using var _ = Transaction.Allocator.Allocate(Container.MaxSizeInsideContainerPage, out Span<byte> tmpBuf);
             Tree fieldsTree = Transaction.CreateTree("Fields");
@@ -162,8 +164,19 @@ namespace Corax
             {
                 var fieldTree = fieldsTree.CompactTreeFor(field);
                 var llt = Transaction.LowLevelTransaction;
-                foreach (var (term, entries) in terms)
+                var sortedTerms = terms.Keys.ToArray();
+                Array.Sort(sortedTerms, SliceComparer.Instance);
+                foreach (var term in sortedTerms)
                 {
+                    if (term.ToString() == "Pipeline")
+                    {
+                        Console.WriteLine();
+                    }
+                    if (DebugThis)
+                    {
+                        ReadOnlySpan<byte> readOnlySpan = Container.Get(llt,16492);
+                    }
+                    var entries = terms[term];
                     ReadOnlySpan<byte> termsSpan = term.AsSpan();
 
                     // TODO: For now if the term is null (termsSpan.Length == 0) we will not do anything... this happens
@@ -183,6 +196,7 @@ namespace Corax
                         var setSpace = Container.GetMutable(llt, id);
                         ref var setState = ref MemoryMarshal.AsRef<SetState>(setSpace);
                         var set = new Set(llt, Slices.Empty, setState);
+                        entries.Sort();
                         set.Add(entries);
                         setState = set.State;
                     }
@@ -194,7 +208,7 @@ namespace Corax
                         while (smallSet.IsEmpty == false)
                         {
                             var value = ZigZag.Decode(smallSet, out var len);
-                            entries[value] = value;
+                            entries.Add(value);
                             smallSet = smallSet.Slice(len);
                         }
                         Container.Delete(llt, _containerId, id);
@@ -203,10 +217,10 @@ namespace Corax
                     else // single
                     {
                         // Same element to add, nothing to do here. 
-                        if (entries.Count == 1 && entries.Keys[0] == existing)
+                        if (entries.Count == 1 && entries[0] == existing)
                             continue;
 
-                        entries[existing] = existing;
+                        entries.Add(existing);
                         AddNewTerm(entries, fieldTree, termsSpan, tmpBuf);
                     }
                 }
@@ -224,7 +238,7 @@ namespace Corax
             Set = 2
         }
         
-        private unsafe void AddNewTerm(SortedList<long, long> entries, CompactTree fieldTree, ReadOnlySpan<byte> termsSpan, Span<byte> tmpBuf)
+        private unsafe void AddNewTerm(List<long> entries, CompactTree fieldTree, ReadOnlySpan<byte> termsSpan, Span<byte> tmpBuf)
         {
             // common for unique values (guid, date, etc)
             if (entries.Count == 1) 
@@ -232,19 +246,21 @@ namespace Corax
                 Debug.Assert(fieldTree.TryGetValue(termsSpan, out var _) == false);
 
                 // just a single entry, store the value inline
-                fieldTree.Add(termsSpan, entries.Keys[0] | (long)TermIdMask.Single);
+                fieldTree.Add(termsSpan, entries[0] | (long)TermIdMask.Single);
                 return;
             }
 
+            entries.Sort();
+            
             // try to insert to container value
             //TODO: using simplest delta encoding, need to do better here
-            int pos = ZigZag.Encode(tmpBuf, entries.Keys[0]);
+            int pos = ZigZag.Encode(tmpBuf, entries[0]);
             var llt = Transaction.LowLevelTransaction;
             for (int i = 1; i < entries.Count; i++)
             {
-                if (pos + 10 >= tmpBuf.Length)
+                if (pos + 10 < tmpBuf.Length)
                 {
-                    pos += ZigZag.Encode(tmpBuf.Slice(pos), entries.Keys[i] - entries.Keys[i - 1]);
+                    pos += ZigZag.Encode(tmpBuf.Slice(pos), entries[i] - entries[i - 1]);
                     continue;
                 }
 
@@ -253,6 +269,7 @@ namespace Corax
                 ref var setState = ref MemoryMarshal.AsRef<SetState>(setSpace);
                 Set.Initialize(llt, ref setState);
                 var set = new Set(llt, Slices.Empty, setState);
+                entries.Sort();
                 set.Add(entries);
                 setState = set.State;
                 fieldTree.Add(termsSpan, setId | (long)TermIdMask.Set);
@@ -260,6 +277,10 @@ namespace Corax
             }
 
             var termId = Container.Allocate(llt, _containerId, pos, out var space);
+            if (termId == 16492)
+            {
+                DebugThis = true;
+            }
             tmpBuf.Slice(0, pos).CopyTo(space);
             fieldTree.Add(termsSpan, termId | (long)TermIdMask.Small);
         }
