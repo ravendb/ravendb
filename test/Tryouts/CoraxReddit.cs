@@ -73,7 +73,7 @@ namespace Tryouts
                 var entry = ctx.ReadObject(value, $"entry/{i}");
 
                 indexOnlySp.Restart();
-                indexWriter.Index($"entry/{i}", entry);
+                //indexWriter.Index($"entry/{i}", entry);
                 justIndex += indexOnlySp.ElapsedMilliseconds;
 
                 if (i % 1024 * 512 == 0)

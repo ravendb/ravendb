@@ -22,6 +22,8 @@ namespace Corax
         private static readonly Slice IndexEntriesByNameSlice;
         private static readonly Slice TagsByNameSlice;
 
+        private static readonly Slice NullSlice;
+
         public static readonly TableSchema IndexEntriesSchema;
 
         private readonly Table _entries;
@@ -40,6 +42,7 @@ namespace Corax
                 Slice.From(ctx, "IndexEntries", ByteStringType.Immutable, out IndexEntriesSlice);
                 Slice.From(ctx, "IndexEntriesByName", ByteStringType.Immutable, out IndexEntriesByNameSlice);
                 Slice.From(ctx, "Tags", ByteStringType.Immutable, out TagsByNameSlice);
+                Slice.From(ctx, "<<RDB__NULL>>", ByteStringType.Immutable, out NullSlice);
 
                 IndexEntriesSchema = new()
                 {
@@ -82,40 +85,152 @@ namespace Corax
                 throw new NotSupportedException("Data move are not supported for index entries");
         }
 
-        public long Index(string id, BlittableJsonReaderObject item)
+        //public long Index(string id, BlittableJsonReaderObject item)
+        //{
+        //    using var _ = Slice.From(_transaction.Allocator, id, out var idSlice);
+        //    return Index(idSlice, item);
+        //}
+
+        private readonly SortedList<Slice, SortedList<Slice, SortedList<long, long>>> _buffer =
+            new SortedList<Slice, SortedList<Slice, SortedList<long, long>>>(SliceComparer.Instance);
+
+
+        public long Index(string id, Span<byte> data, Dictionary<Slice, int> knownFields)
         {
             using var _ = Slice.From(_transaction.Allocator, id, out var idSlice);
-            return Index(idSlice, item);
+            return Index(idSlice, data, knownFields);
         }
 
-        private readonly SortedList<string, SortedList<string, SortedList<long, long>>> _buffer =
-            new SortedList<string, SortedList<string, SortedList<long, long>>>();
-
-        public unsafe long Index(Slice id, BlittableJsonReaderObject item)
+        public long Index(Slice id, Span<byte> data, Dictionary<Slice, int> knownFields)
         {
             using (_entries.Allocate(out var builder))
             {
                 builder.Add(id);
-                builder.Add(item.BasePointer, item.Size);
+                builder.Add(data);
                 long entryId = _entries.Insert(builder);
 
-                BlittableJsonReaderObject.PropertyDetails prop = default;
-                for (int i = 0; i < item.Count; i++)
-                {
-                    item.GetPropertyByIndex(i, ref prop, addObjectToCache: false);
+                var context = _transaction.Allocator;
+                var entryReader = new IndexEntryReader(data);
+                entryReader.DebugDump(knownFields);
 
-                    var key = prop.Name.ToString();
+                foreach (var (key, tokenField) in knownFields)
+                {
                     if (_buffer.TryGetValue(key, out var field) == false)
                     {
-                        _buffer[key] = field = new SortedList<string, SortedList<long, long>>();
+                        _buffer[key] = field = new SortedList<Slice, SortedList<long, long>>(SliceComparer.Instance);
                     }
-                    InsertToken(field, prop.Value, prop.Token, entryId);
+
+                    InsertToken(context, ref entryReader, tokenField, field, entryId );
                 }
-                
+
+                //BlittableJsonReaderObject.PropertyDetails prop = default;
+                //for (int i = 0; i < item.Count; i++)
+                //{
+                //    item.GetPropertyByIndex(i, ref prop, addObjectToCache: false);
+
+                //    var key = prop.Name.ToString();
+                //    if (_buffer.TryGetValue(key, out var field) == false)
+                //    {
+                //        _buffer[key] = field = new SortedList<string, SortedList<long, long>>();
+                //    }
+                //    InsertToken(field, prop.Value, prop.Token, entryId);
+                //}
+
                 return entryId;
             }
 
         }
+
+        private void InsertToken(ByteStringContext context, ref IndexEntryReader entryReader, int tokenField, SortedList<Slice, SortedList<long, long>> field, long entryId)
+        {
+            var fieldType = entryReader.GetFieldType(tokenField);
+            if (fieldType.HasFlag(IndexEntryFieldType.List) && fieldType.HasFlag(IndexEntryFieldType.Tuple))
+            {
+                var iterator = entryReader.ReadMany(tokenField);
+                while (iterator.ReadNext())
+                {
+                    var value = iterator.Sequence;
+
+                    using var _ = Slice.From(context, value, ByteStringType.Mutable, out var slice);
+                    if (field.TryGetValue(slice, out var term) == false)
+                    {
+                        var fieldName = slice.Clone(context);
+                        field[fieldName] = term = new SortedList<long, long>();
+                    }
+                        
+                    term[entryId] = entryId;
+                }
+            }
+            else if (fieldType.HasFlag(IndexEntryFieldType.List))
+            {
+                var iterator = entryReader.ReadMany(tokenField);
+                while (iterator.ReadNext())
+                {
+                    var value = iterator.Sequence;
+
+                    using var _ = Slice.From(context, value, ByteStringType.Mutable, out var slice);
+                    if (field.TryGetValue(slice, out var term) == false)
+                    {
+                        var fieldName = slice.Clone(context);
+                        field[fieldName] = term = new SortedList<long, long>();
+                    }
+
+                    term[entryId] = entryId;
+                }
+            }
+            else if (fieldType.HasFlag(IndexEntryFieldType.Tuple))
+            {
+                entryReader.Read(tokenField, out var value);
+
+                using var _ = Slice.From(context, value, ByteStringType.Mutable, out var slice);
+                if (field.TryGetValue(slice, out var term) == false)
+                {
+                    var fieldName = slice.Clone(context);
+                    field[fieldName] = term = new SortedList<long, long>();
+                }
+                term[entryId] = entryId;
+            }
+            else if (fieldType.HasFlag(IndexEntryFieldType.Invalid))
+            {
+                if (field.TryGetValue(NullSlice, out var term) == false)
+                    field[NullSlice] = term = new SortedList<long, long>();
+                term[entryId] = entryId;
+            }
+            else
+            {
+                entryReader.Read(tokenField, out var value);
+
+                using var _ = Slice.From(context, value, ByteStringType.Mutable, out var slice);
+                if (field.TryGetValue(slice, out var term) == false)
+                {
+                    var fieldName = slice.Clone(context);
+                    field[fieldName] = term = new SortedList<long, long>();
+                }
+                term[entryId] = entryId;
+            }
+        }
+
+        //public unsafe long Index(Slice id, BlittableJsonReaderObject item)
+        //{
+        //    using (_entries.Allocate(out var builder))
+        //    {
+        //        builder.Add(id);
+        //        builder.Add(item.BasePointer, item.Size);
+        //        long entryId = _entries.Insert(builder);
+        //        BlittableJsonReaderObject.PropertyDetails prop = default;
+        //        for (int i = 0; i < item.Count; i++)
+        //        {
+        //            item.GetPropertyByIndex(i, ref prop, addObjectToCache: false);
+        //            var key = prop.Name.ToString();
+        //            if (_buffer.TryGetValue(key, out var field) == false)
+        //            {
+        //                _buffer[key] = field = new SortedList<string, SortedList<long, long>>();
+        //            }
+        //            InsertToken(field, prop.Value, prop.Token, entryId);
+        //        }
+        //        return entryId;
+        //    }
+        //}
 
         private static void InsertToken(SortedList<string, SortedList<long, long>> field, object val, BlittableJsonToken token, long entryId)
         {

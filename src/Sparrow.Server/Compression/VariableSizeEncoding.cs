@@ -306,7 +306,7 @@ namespace Sparrow.Server.Compression
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         public static int WriteMany<T>(Span<byte> dest, ReadOnlySpan<T> values, int pos = 0) where T : unmanaged
         {
-            if (dest.Length > 9 * values.Length)
+            if ((dest.Length - pos) < (Unsafe.SizeOf<T>() + 1) * values.Length)
                 ThrowNotEnoughOutputSpace();
 
             int startPos = pos;
