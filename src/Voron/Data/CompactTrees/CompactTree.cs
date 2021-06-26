@@ -721,8 +721,8 @@ namespace Voron.Data.CompactTrees
             Debug.Assert(state.Header->FreeSpace >= (state.Header->Upper - state.Header->Lower));
             if (state.Header->Upper - state.Header->Lower < requiredSize + sizeof(short))
             {
-                //if (state.Header->FreeSpace >= requiredSize + sizeof(short))
-                //    DefragPage(); // has enough free space, but not available try to defrag?
+                if (state.Header->FreeSpace >= requiredSize + sizeof(short))
+                    DefragPage(); // has enough free space, but not available try to defrag?
 
                 if (state.Header->Upper - state.Header->Lower < requiredSize + sizeof(short))
                 {
@@ -865,6 +865,14 @@ namespace Voron.Data.CompactTrees
 
         private bool TryRecompressPage(in CursorState state)
         {
+            if (_pos > 0 || state.Page.PageNumber % 32 != 0)
+            {
+                //TODO: figure out better policy on when to recompress
+                //TODO: need to record the compression rate and only recompress if we are 15% or higher off
+                // we don't want to do recompression too often  
+                return false;
+            }
+            
             var oldDictionary = _dictionaries[state.Header->DictionaryId];
             var newDictionary = PersistentHopeDictionary.Create(_llt, new TreePageList(this, state, _dictionaries[state.Header->DictionaryId]));
 
