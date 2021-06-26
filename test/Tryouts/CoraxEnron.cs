@@ -18,7 +18,7 @@ namespace Tryouts
 
     class CoraxEnron
     {
-        public const string DirectoryEnron = "enron-corax";
+        public const string DirectoryEnron = @"C:\Work\ravendb-5.1\test\Tryouts\bin\release\net5.0\enron-corax";
         private static char[] trimChars = {' ', ',', '\t', '\n'};
 
         private static IEnumerable<string> NormalizeEmails(IEnumerable<string> emails)
@@ -60,7 +60,7 @@ namespace Tryouts
         {
             var path =  Enron.DatasetFile;
 
-            string storagePath = Path.Join(outputDirectory, DirectoryEnron);
+            string storagePath = DirectoryEnron;
             if (Directory.Exists(storagePath))
                 Directory.Delete(storagePath, true);
 
