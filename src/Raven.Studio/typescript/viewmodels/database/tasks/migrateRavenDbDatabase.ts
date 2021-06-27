@@ -143,6 +143,7 @@ class migrateRavenDbDatabase extends viewModelBase {
     
     compositionComplete() {
         super.compositionComplete();
+        this.setupDisableReasons();
 
         popoverUtils.longWithHover($("#scriptPopover"),
             {

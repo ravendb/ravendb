@@ -58,6 +58,7 @@ class migrateRavenDbDatabaseModel {
     showApiKeyCredentialInputs: KnockoutComputed<boolean>;
     isUnsecuredBasicAuthentication: KnockoutComputed<boolean>;
     isSecuredConnection: KnockoutComputed<boolean>;
+    enableAdvanced: KnockoutComputed<boolean>;
 
     validationGroup: KnockoutValidationGroup;
     importDefinitionHasIncludes: KnockoutComputed<boolean>;
@@ -298,6 +299,10 @@ class migrateRavenDbDatabaseModel {
                 this.removeAnalyzers(false);
             }
         });
+
+        this.enableAdvanced = ko.pureComputed(() => {
+            return this.isRavenDb() && !this.ravenFsImport() && this.serverUrl.isValid()
+        })
     }
     
     private initValidation() {
