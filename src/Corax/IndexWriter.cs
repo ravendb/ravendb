@@ -21,15 +21,17 @@ namespace Corax
 
         public readonly Transaction Transaction;        
 
-        private static readonly Slice ContainerIdSlice;
+        public static readonly Slice PostingListsSlice, EntriesContainerSlice;
 
         static IndexWriter()
         {
             using (StorageEnvironment.GetStaticContext(out var ctx))
             {
-                Slice.From(ctx, "ContainerId", ByteStringType.Immutable, out ContainerIdSlice);
+                Slice.From(ctx, "PostingLists", ByteStringType.Immutable, out PostingListsSlice);
+                Slice.From(ctx, "Entries", ByteStringType.Immutable, out EntriesContainerSlice);
             }
         }
+
 
         // The reason why we want to have the transaction open for us is so that we avoid having
         // to explicitly provide the index writer with opening semantics and also every new
@@ -40,22 +42,33 @@ namespace Corax
             _transactionPersistentContext = new TransactionPersistentContext(true);
             Transaction = _environment.WriteTransaction(_transactionPersistentContext);            
 
-            var exists = Transaction.LowLevelTransaction.RootObjects.Read(ContainerIdSlice);
+            var exists = Transaction.LowLevelTransaction.RootObjects.Read(PostingListsSlice);
             if (exists == null)
             {
-                _containerId = Container.Create(Transaction.LowLevelTransaction);
-                Transaction.LowLevelTransaction.RootObjects.Add(ContainerIdSlice, _containerId);
+                _postingListContainerId = Container.Create(Transaction.LowLevelTransaction);
+                Transaction.LowLevelTransaction.RootObjects.Add(PostingListsSlice, _postingListContainerId);
             }
             else
             {
-                _containerId = exists.Reader.ReadLittleEndianInt64();
+                _postingListContainerId = exists.Reader.ReadLittleEndianInt64();
             }
+            exists = Transaction.LowLevelTransaction.RootObjects.Read(EntriesContainerSlice);
+            if (exists == null)
+            {
+                _entriesContainerId = Container.Create(Transaction.LowLevelTransaction);
+                Transaction.LowLevelTransaction.RootObjects.Add(EntriesContainerSlice, _entriesContainerId);
+            }
+            else
+            {
+                _entriesContainerId = exists.Reader.ReadLittleEndianInt64();
+            }
+
         }
 
         private readonly Dictionary<Slice, Dictionary<Slice, List<long>>> _buffer =
             new Dictionary<Slice, Dictionary<Slice, List<long>>>(SliceComparer.Instance);
 
-        private readonly long _containerId;
+        private readonly long _postingListContainerId, _entriesContainerId;
 
         public long Index(string id, Span<byte> data, Dictionary<Slice, int> knownFields)
         {
@@ -67,7 +80,7 @@ namespace Corax
         {
             Span<byte> buf = stackalloc byte[10];
             var idLen = ZigZag.Encode(buf, id.Size);
-            var entryId = Container.Allocate(Transaction.LowLevelTransaction, _containerId, idLen + id.Size + data.Length, out var space);
+            var entryId = Container.Allocate(Transaction.LowLevelTransaction, _entriesContainerId, idLen + id.Size + data.Length, out var space);
             buf.Slice(0, idLen).CopyTo(space);
             space = space.Slice(idLen);
             id.CopyTo(space);
@@ -211,7 +224,7 @@ namespace Corax
                             entries.Add(cur);
                             smallSet = smallSet.Slice(len);
                         }
-                        Container.Delete(llt, _containerId, id);
+                        Container.Delete(llt, _postingListContainerId, id);
                         AddNewTerm(entries, fieldTree, termsSpan, tmpBuf);
                     }
                     else // single
@@ -231,7 +244,7 @@ namespace Corax
         // container ids are guaranteed to be aligned on 
         // 4 bytes boundary, we're using this to store metadata
         // about the data
-        private enum TermIdMask : long
+        public enum TermIdMask : long
         {
             Single = 0,
             Small = 1,
@@ -269,7 +282,7 @@ namespace Corax
                 }
 
                 // too big, convert to a set
-                var setId = Container.Allocate(llt, _containerId, sizeof(SetState), out var setSpace);
+                var setId = Container.Allocate(llt, _postingListContainerId, sizeof(SetState), out var setSpace);
                 ref var setState = ref MemoryMarshal.AsRef<SetState>(setSpace);
                 Set.Initialize(llt, ref setState);
                 var set = new Set(llt, Slices.Empty, setState);
@@ -280,7 +293,7 @@ namespace Corax
                 return;
             }
 
-            var termId = Container.Allocate(llt, _containerId, pos, out var space);
+            var termId = Container.Allocate(llt, _postingListContainerId, pos, out var space);
             tmpBuf.Slice(0, pos).CopyTo(space);
             fieldTree.Add(termsSpan, termId | (long)TermIdMask.Small);
         }
