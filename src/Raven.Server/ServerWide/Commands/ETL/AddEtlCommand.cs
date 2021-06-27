@@ -58,9 +58,11 @@ namespace Raven.Server.ServerWide.Commands.ETL
 
         }
 
-        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long index)
         {
-            Add(ref record.RavenEtls, record, etag);
+            Add(ref record.RavenEtls, record, index);
+
+            record.ClusterState.LastRavenEtlsIndex = index;
         }
     }
 
@@ -94,9 +96,11 @@ namespace Raven.Server.ServerWide.Commands.ETL
 
         }
 
-        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long index)
         {
-            Add(ref record.OlapEtls, record, etag);
+            Add(ref record.OlapEtls, record, index);
+
+            record.ClusterState.LastOlapEtlsIndex = index;
         }
     }
 }

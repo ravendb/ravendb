@@ -867,7 +867,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
-        public void UpdateConfigurations(DatabaseRecord databaseRecord)
+        public void UpdateConfigurations(RawDatabaseRecord databaseRecord)
         {
             if (_disposed)
                 return;

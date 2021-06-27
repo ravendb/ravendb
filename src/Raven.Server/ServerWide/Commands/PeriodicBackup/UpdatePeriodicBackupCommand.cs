@@ -16,27 +16,27 @@ namespace Raven.Server.ServerWide.Commands.PeriodicBackup
             // for deserialization
         }
 
-        public UpdatePeriodicBackupCommand(PeriodicBackupConfiguration configuration, string databaseName, string uniqueRequestId) 
+        public UpdatePeriodicBackupCommand(PeriodicBackupConfiguration configuration, string databaseName, string uniqueRequestId)
             : base(databaseName, uniqueRequestId)
         {
             Configuration = configuration;
         }
 
-        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long index)
         {
             bool newTask = false;
             if (Configuration.TaskId == 0)
             {
                 // this is a new backup configuration
                 newTask = true;
-                Configuration.TaskId = etag;
+                Configuration.TaskId = index;
             }
             else
             {
                 // modified periodic backup, remove the old one
                 record.DeletePeriodicBackupConfiguration(Configuration.TaskId);
             }
-            
+
             if (string.IsNullOrEmpty(Configuration.Name))
             {
                 Configuration.Name = record.EnsureUniqueTaskName(Configuration.GetDefaultTaskName());
@@ -50,6 +50,7 @@ namespace Raven.Server.ServerWide.Commands.PeriodicBackup
             EnsureTaskNameIsNotUsed(record, Configuration.Name);
 
             record.PeriodicBackups.Add(Configuration);
+            record.ClusterState.LastPeriodicBackupsIndex = index;
         }
 
         public override void FillJson(DynamicJsonValue json)

@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.Handlers
                 RefreshConfiguration refreshConfig;
                 using (var recordRaw = Server.ServerStore.Cluster.ReadRawDatabaseRecord(context, Database.Name))
                 {
-                    refreshConfig = recordRaw?.RefreshConfiguration;
+                    refreshConfig = recordRaw?.Refresh;
                 }
 
                 if (refreshConfig != null)

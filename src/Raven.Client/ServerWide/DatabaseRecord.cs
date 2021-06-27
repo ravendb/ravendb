@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Linq.Expressions;
+using System.Runtime.CompilerServices;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Analysis;
 using Raven.Client.Documents.Operations.Backups;
@@ -23,6 +23,109 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.ServerWide
 {
+    internal static class DatabaseRecordClusterStateExtensions
+    {
+        internal static bool ShouldProcessStaticIndexes(this DatabaseRecordClusterState state, DatabaseRecordClusterState current)
+        {
+            if (state == null || current == null)
+                return true;
+
+            if (state.ShouldProcess(current))
+                return true;
+
+            if (state.LastIndexesIndex == null || current.LastIndexesIndex == null)
+                return true;
+
+            return state.LastIndexesIndex > current.LastIndexesIndex;
+        }
+
+        internal static bool ShouldProcessAutoIndexes(this DatabaseRecordClusterState state, DatabaseRecordClusterState current)
+        {
+            if (state == null || current == null)
+                return true;
+
+            if (state.ShouldProcess(current))
+                return true;
+
+            if (state.LastAutoIndexesIndex == null || current.LastAutoIndexesIndex == null)
+                return true;
+
+            return state.LastAutoIndexesIndex > current.LastAutoIndexesIndex;
+        }
+
+        internal static bool ShouldProcessSorters(this DatabaseRecordClusterState state, DatabaseRecordClusterState current)
+        {
+            if (state == null || current == null)
+                return true;
+
+            if (state.ShouldProcess(current))
+                return true;
+
+            if (state.LastSortersIndex == null || current.LastSortersIndex == null)
+                return true;
+
+            return state.LastSortersIndex > current.LastSortersIndex;
+        }
+
+        internal static bool ShouldProcessAnalyzers(this DatabaseRecordClusterState state, DatabaseRecordClusterState current)
+        {
+            if (state == null || current == null)
+                return true;
+
+            if (state.ShouldProcess(current))
+                return true;
+
+            if (state.LastAnalyzersIndex == null || current.LastAnalyzersIndex == null)
+                return true;
+
+            return state.LastAnalyzersIndex > current.LastAnalyzersIndex;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool ShouldProcess(this DatabaseRecordClusterState state, DatabaseRecordClusterState current)
+        {
+            if (state == null || current == null)
+                return true;
+
+            return state.LastIndex > current.LastIndex;
+        }
+    }
+
+    public class DatabaseRecordClusterState
+    {
+        public long? LastIndex;
+
+        public long? LastSortersIndex;
+
+        public long? LastAnalyzersIndex;
+
+        public long? LastAutoIndexesIndex;
+
+        public long? LastIndexesIndex;
+
+        public long? LastRevisionsIndex;
+
+        public long? LastOlapEtlsIndex;
+
+        public long? LastRavenEtlsIndex;
+
+        public long? LastSqlEtlsIndex;
+
+        public long? LastPeriodicBackupsIndex;
+
+        public long? LastReplicationsIndex;
+
+        public long? LastClientIndex;
+
+        public long? LastDocumentsCompressionIndex;
+
+        public long? LastExpirationIndex;
+
+        public long? LastRefreshIndex;
+
+        public long? LastTimeSeriesIndex;
+    }
+
     public class DatabaseRecordWithEtag : DatabaseRecord
     {
         public long Etag { get; set; }
@@ -33,9 +136,10 @@ namespace Raven.Client.ServerWide
     {
         public DatabaseRecord()
         {
+            ClusterState = new DatabaseRecordClusterState();
         }
 
-        public DatabaseRecord(string databaseName)
+        public DatabaseRecord(string databaseName) : this()
         {
             DatabaseName = databaseName.Trim();
         }
@@ -115,30 +219,36 @@ namespace Raven.Client.ServerWide
 
         public HashSet<string> UnusedDatabaseIds = new HashSet<string>();
 
-        public void AddSorter(SorterDefinition definition)
+        public DatabaseRecordClusterState ClusterState;
+
+        public void AddSorter(SorterDefinition definition, long index)
         {
             if (Sorters == null)
                 Sorters = new Dictionary<string, SorterDefinition>(StringComparer.OrdinalIgnoreCase);
 
             Sorters[definition.Name] = definition;
+            ClusterState.LastSortersIndex = index;
         }
 
-        public void DeleteSorter(string sorterName)
+        public void DeleteSorter(string sorterName, long index)
         {
             Sorters?.Remove(sorterName);
+            ClusterState.LastSortersIndex = index;
         }
 
-        public void AddAnalyzer(AnalyzerDefinition definition)
+        public void AddAnalyzer(AnalyzerDefinition definition, long index)
         {
             if (Analyzers == null)
                 Analyzers = new Dictionary<string, AnalyzerDefinition>(StringComparer.OrdinalIgnoreCase);
 
             Analyzers[definition.Name] = definition;
+            ClusterState.LastAnalyzersIndex = index;
         }
 
-        public void DeleteAnalyzer(string sorterName)
+        public void DeleteAnalyzer(string sorterName, long index)
         {
             Analyzers?.Remove(sorterName);
+            ClusterState.LastAnalyzersIndex = index;
         }
 
         public void AddIndex(IndexDefinition definition, string source, DateTime createdAt, long raftIndex, int revisionsToKeep, IndexDeploymentMode globalDeploymentMode)
@@ -221,6 +331,8 @@ namespace Raven.Client.ServerWide
                     definition.DeploymentMode = IndexDeploymentMode.Rolling;
                 }
             }
+
+            ClusterState.LastIndexesIndex = raftIndex;
         }
 
         public void AddIndex(AutoIndexDefinition definition)
@@ -247,12 +359,14 @@ namespace Raven.Client.ServerWide
             }
 
             AutoIndexes[definition.Name] = definition;
-            
+
             if (globalDeploymentMode == IndexDeploymentMode.Rolling)
             {
                 if (differences == null || (differences.Value & IndexDefinition.ReIndexRequiredMask) != 0)
                     InitializeRollingDeployment(definition.Name, createdAt);
             }
+
+            ClusterState.LastAutoIndexesIndex = raftIndex;
         }
 
         internal static bool IsRolling(IndexDeploymentMode? fromDefinition, IndexDeploymentMode fromSetting)
@@ -266,7 +380,7 @@ namespace Raven.Client.ServerWide
         private void InitializeRollingDeployment(string indexName, DateTime createdAt)
         {
             RollingIndexes ??= new Dictionary<string, RollingIndex>();
-            
+
             var rollingIndex = new RollingIndex();
             RollingIndexes[indexName] = rollingIndex;
 
@@ -313,12 +427,15 @@ namespace Raven.Client.ServerWide
             return chosenNode;
         }
 
-        public void DeleteIndex(string name)
+        public void DeleteIndex(string name, long index)
         {
             Indexes?.Remove(name);
             AutoIndexes?.Remove(name);
             IndexesHistory?.Remove(name);
             RollingIndexes?.Remove(name);
+
+            ClusterState.LastIndexesIndex = index;
+            ClusterState.LastAutoIndexesIndex = index;
         }
 
         public void DeletePeriodicBackupConfiguration(long backupTaskId)

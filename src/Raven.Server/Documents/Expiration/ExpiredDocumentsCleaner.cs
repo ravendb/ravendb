@@ -13,6 +13,7 @@ using Raven.Client.Documents.Operations.Refresh;
 using Raven.Client.ServerWide;
 using Raven.Server.Background;
 using Raven.Server.NotificationCenter.Notifications;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Logging;
@@ -43,7 +44,7 @@ namespace Raven.Server.Documents.Expiration
             _refreshPeriod = TimeSpan.FromSeconds(RefreshConfiguration?.RefreshFrequencyInSec ?? 60);
         }
 
-        public static ExpiredDocumentsCleaner LoadConfigurations(DocumentDatabase database, DatabaseRecord dbRecord, ExpiredDocumentsCleaner expiredDocumentsCleaner)
+        public static ExpiredDocumentsCleaner LoadConfigurations(DocumentDatabase database, RawDatabaseRecord dbRecord, ExpiredDocumentsCleaner expiredDocumentsCleaner)
         {
             try
             {

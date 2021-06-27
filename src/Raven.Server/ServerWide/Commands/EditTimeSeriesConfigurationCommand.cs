@@ -17,11 +17,12 @@ namespace Raven.Server.ServerWide.Commands
             Configuration = configuration;
         }
 
-        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long index)
         {
             Configuration?.InitializeRollupAndRetention();
 
             record.TimeSeries = Configuration;
+            record.ClusterState.LastTimeSeriesIndex = index;
         }
 
         public override void FillJson(DynamicJsonValue json)

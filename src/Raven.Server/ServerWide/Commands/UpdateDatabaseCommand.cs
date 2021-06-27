@@ -21,7 +21,7 @@ namespace Raven.Server.ServerWide.Commands
             DatabaseName = databaseName;
         }
 
-        public abstract void UpdateDatabaseRecord(DatabaseRecord record, long etag);
+        public abstract void UpdateDatabaseRecord(DatabaseRecord record, long index);
 
         public virtual void AfterDatabaseRecordUpdate(ClusterOperationContext ctx, Table items, Logger clusterAuditLog)
         {

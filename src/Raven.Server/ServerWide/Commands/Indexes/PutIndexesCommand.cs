@@ -39,19 +39,19 @@ namespace Raven.Server.ServerWide.Commands.Indexes
             DefaultStaticDeploymentMode = staticDeploymentMode;
         }
 
-        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long index)
         {
 
             if (Static != null)
             {
                 foreach (var definition in Static)
-                    record.AddIndex(definition, Source, CreatedAt, etag, RevisionsToKeep, DefaultStaticDeploymentMode ?? IndexDeploymentMode.Parallel);
+                    record.AddIndex(definition, Source, CreatedAt, index, RevisionsToKeep, DefaultStaticDeploymentMode ?? IndexDeploymentMode.Parallel);
             }
 
             if (Auto != null)
             {
                 foreach (var definition in Auto)
-                    record.AddIndex(definition, CreatedAt, etag, DefaultAutoDeploymentMode ?? IndexDeploymentMode.Parallel);
+                    record.AddIndex(definition, CreatedAt, index, DefaultAutoDeploymentMode ?? IndexDeploymentMode.Parallel);
             }
 
         }

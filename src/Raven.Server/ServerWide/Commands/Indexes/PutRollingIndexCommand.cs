@@ -39,7 +39,7 @@ namespace Raven.Server.ServerWide.Commands.Indexes
             FinishedAt = finishedAt;
         }
 
-        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long index)
         {
             if (record.RollingIndexes == null)
             {

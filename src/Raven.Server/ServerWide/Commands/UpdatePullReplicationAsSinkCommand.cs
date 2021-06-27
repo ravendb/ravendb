@@ -19,14 +19,14 @@ namespace Raven.Server.ServerWide.Commands
 
         }
 
-        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long index)
         {
             if (PullReplicationAsSink == null)
                 return ;
 
             if (PullReplicationAsSink.TaskId == 0)
             {
-                PullReplicationAsSink.TaskId = etag;
+                PullReplicationAsSink.TaskId = index;
             }
             else
             {
@@ -63,6 +63,8 @@ namespace Raven.Server.ServerWide.Commands
 
             record.EnsureTaskNameIsNotUsed(PullReplicationAsSink.Name);
             record.SinkPullReplications.Add(PullReplicationAsSink);
+
+            record.ClusterState.LastReplicationsIndex = index;
         }
 
         public override void FillJson(DynamicJsonValue json)

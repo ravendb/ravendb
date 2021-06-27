@@ -41,7 +41,7 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
 
         }
 
-        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long index)
         {
             if (ConnectionString.Name.StartsWith(ServerWideExternalReplication.RavenConnectionStringPrefix, StringComparison.OrdinalIgnoreCase))
             {
@@ -51,6 +51,7 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
             }
 
             record.RavenConnectionStrings[ConnectionString.Name] = ConnectionString;
+            record.ClusterState.LastRavenEtlsIndex = index;
         }
     }
 
@@ -66,9 +67,10 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
 
         }
 
-        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long index)
         {
             record.SqlConnectionStrings[ConnectionString.Name] = ConnectionString;
+            record.ClusterState.LastSqlEtlsIndex = index;
         }
     }
 
@@ -84,9 +86,10 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
 
         }
 
-        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long index)
         {
             record.OlapConnectionStrings[ConnectionString.Name] = ConnectionString;
+            record.ClusterState.LastOlapEtlsIndex = index;
         }
     }
 

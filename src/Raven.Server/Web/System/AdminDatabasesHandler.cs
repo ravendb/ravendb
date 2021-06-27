@@ -1071,7 +1071,7 @@ namespace Raven.Server.Web.System
                 using (var rawRecord = ServerStore.Cluster.ReadRawDatabaseRecord(context, name))
                 {
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
-                    var conflictSolverConfig = rawRecord.ConflictSolverConfiguration;
+                    var conflictSolverConfig = rawRecord.ConflictSolverConfig;
                     if (conflictSolverConfig == null)
                         throw new InvalidOperationException($"Database record doesn't have {nameof(DatabaseRecord.ConflictSolverConfig)} property.");
 

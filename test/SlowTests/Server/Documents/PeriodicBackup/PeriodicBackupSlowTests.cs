@@ -33,6 +33,7 @@ using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
@@ -260,7 +261,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var status = await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false, expectedEtag: 2);
-            }
+                }
 
             using (var store = GetDocumentStore(new Options
             {
@@ -1306,8 +1307,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         Assert.Null(mediocreUser2);
                     }
                 }
+                }
             }
-        }
 
         private static async Task<long> RunBackupOperationAndAssertCompleted(DocumentStore store, bool isFullBackup, long taskId)
         {
@@ -1443,7 +1444,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 var config = Backup.CreateBackupConfiguration(backupPath, incrementalBackupFrequency: "0 0 1 1 *", backupEncryptionSettings: new BackupEncryptionSettings()
                 {
-                    EncryptionMode = EncryptionMode.UseDatabaseKey
+                        EncryptionMode = EncryptionMode.UseDatabaseKey
                 });
                 var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store, opStatus: OperationStatus.Faulted);
                 var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
@@ -1506,6 +1507,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 Assert.True(status.DurationInMs > 0, "status.DurationInMs > 0");
             }
         }
+
 
         [Fact, Trait("Category", "Smuggler")]
         public async Task FullBackupShouldSkipDeadSegments()
@@ -2243,7 +2245,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
+                using (var profileStream = new MemoryStream(new byte[] {1, 2, 3}))
                 {
                     var result = store.Operations.Send(new PutAttachmentOperation(documentId, "test_attachment", profileStream, "image/png"));
                     Assert.Equal("test_attachment", result.Name);
@@ -2342,5 +2344,5 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
             });
         }
-    }
-}
+            }
+                }

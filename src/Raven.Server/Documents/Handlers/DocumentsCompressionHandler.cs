@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.Handlers
                 DocumentsCompressionConfiguration compressionConfig;
                 using (var recordRaw = Server.ServerStore.Cluster.ReadRawDatabaseRecord(context, Database.Name))
                 {
-                    compressionConfig = recordRaw?.DocumentsCompressionConfiguration;
+                    compressionConfig = recordRaw?.DocumentsCompression;
                 }
 
                 if (compressionConfig != null)

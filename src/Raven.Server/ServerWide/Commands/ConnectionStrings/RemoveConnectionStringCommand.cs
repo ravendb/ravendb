@@ -39,9 +39,10 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
             
         }
 
-        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long index)
         {
             record.RavenConnectionStrings.Remove(ConnectionStringName);
+            record.ClusterState.LastRavenEtlsIndex = index;
         }
     }
 
@@ -57,9 +58,10 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
 
         }
 
-        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long index)
         {
             record.SqlConnectionStrings.Remove(ConnectionStringName);
+            record.ClusterState.LastSqlEtlsIndex = index;
         }
     }
 
@@ -75,9 +77,10 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
 
         }
 
-        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long index)
         {
             record.OlapConnectionStrings.Remove(ConnectionStringName);
+            record.ClusterState.LastOlapEtlsIndex = index;
         }
     }
 }

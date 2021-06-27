@@ -27,17 +27,18 @@ namespace Raven.Server.ServerWide.Commands.Indexes
             IndexName = name;
         }
 
-        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long index)
         {
             if (record.AutoIndexes.TryGetValue(IndexName, out AutoIndexDefinition autoIndex))
             {
                 autoIndex.State = State;
+                record.ClusterState.LastAutoIndexesIndex = index;
             }
             else if (record.Indexes.TryGetValue(IndexName, out IndexDefinition indexDefinition))
             {
                 indexDefinition.State = State;
+                record.ClusterState.LastIndexesIndex = index;
             }
-
         }
 
         public override void FillJson(DynamicJsonValue json)

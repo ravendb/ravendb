@@ -16,6 +16,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents.Replication;
+using Raven.Server.ServerWide;
 using Sparrow.Server;
 using static Raven.Server.Documents.DocumentsStorage;
 using Constants = Raven.Client.Constants;
@@ -114,7 +115,7 @@ namespace Raven.Server.Documents
 
             var newEtag = _documentsStorage.GenerateNextEtag();
             var modifiedTicks = _documentsStorage.GetOrCreateLastModifiedTicks(lastModifiedTicks);
-            
+
             var compareClusterTransaction = new CompareClusterTransactionId(this);
             if (oldChangeVectorForClusterTransactionIndexCheck != null)
             {
@@ -291,7 +292,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public void InitializeFromDatabaseRecord(DatabaseRecord record)
+        public void InitializeFromDatabaseRecord(RawDatabaseRecord record)
         {
             if (_documentsCompression.Equals(record.DocumentsCompression))
                 return;

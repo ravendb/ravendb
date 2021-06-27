@@ -18,9 +18,9 @@ namespace Raven.Server.ServerWide.Commands.Indexes
             IndexName = name;
         }
 
-        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long index)
         {
-            record.DeleteIndex(IndexName);
+            record.DeleteIndex(IndexName, index);
         }
 
         public override void FillJson(DynamicJsonValue json)

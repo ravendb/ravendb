@@ -9,6 +9,7 @@ using Raven.Client.ServerWide;
 using Raven.Server.Background;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Extensions;
@@ -38,7 +39,7 @@ namespace Raven.Server.Documents.TimeSeries
             _checkFrequency = Configuration.PolicyCheckFrequency ?? TimeSeriesConfiguration.DefaultPolicyCheckFrequency;
         }
 
-        public static TimeSeriesPolicyRunner LoadConfigurations(DocumentDatabase database, DatabaseRecord dbRecord, TimeSeriesPolicyRunner policyRunner)
+        public static TimeSeriesPolicyRunner LoadConfigurations(DocumentDatabase database, RawDatabaseRecord dbRecord, TimeSeriesPolicyRunner policyRunner)
         {
             try
             {

@@ -1,15 +1,11 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.ServerWide;
-using Raven.Server.Config;
-using Raven.Server.Documents.Indexes;
 using Raven.Server.Rachis;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json.Parsing;
-using Index = Raven.Server.Documents.Indexes.Index;
 
 namespace Raven.Server.ServerWide.Commands.Indexes
 {
@@ -40,7 +36,7 @@ namespace Raven.Server.ServerWide.Commands.Indexes
         
         public int RevisionsToKeep { get; set; }
 
-        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long index)
         {
             try
             {
@@ -51,7 +47,7 @@ namespace Raven.Server.ServerWide.Commands.Indexes
                     throw new InvalidOperationException($"Can not add index: {Definition.Name} because an index with the same name but different casing already exist");
                 }
 
-                record.AddIndex(Definition, Source, CreatedAt, etag, RevisionsToKeep, DefaultDeploymentMode ?? IndexDeploymentMode.Parallel);
+                record.AddIndex(Definition, Source, CreatedAt, index, RevisionsToKeep, DefaultDeploymentMode ?? IndexDeploymentMode.Parallel);
 
             }
             catch (Exception e)

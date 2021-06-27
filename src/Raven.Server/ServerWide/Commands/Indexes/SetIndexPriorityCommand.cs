@@ -22,18 +22,19 @@ namespace Raven.Server.ServerWide.Commands.Indexes
             Priority = priority;
         }
 
-        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long index)
         {
             if (record.Indexes.TryGetValue(IndexName, out IndexDefinition staticIndex))
             {
                 staticIndex.Priority = Priority;
+                record.ClusterState.LastIndexesIndex = index;
             }
 
             if (record.AutoIndexes.TryGetValue(IndexName, out AutoIndexDefinition autoIndex))
             {
                 autoIndex.Priority = Priority;
+                record.ClusterState.LastAutoIndexesIndex = index;
             }
-
         }
 
         public override void FillJson(DynamicJsonValue json)

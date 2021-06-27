@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Configuration;
+using Raven.Server.ServerWide;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
@@ -88,7 +89,7 @@ namespace StressTests.Server.Documents.PeriodicBackup
                                   "so when the task status is back to be ActiveByCurrentNode, UpdateConfigurations will be able to reassign the backup timer");
 
                 responsibleDatabase.PeriodicBackupRunner._forTestingPurposes = null;
-                responsibleDatabase.PeriodicBackupRunner.UpdateConfigurations(record1);
+                responsibleDatabase.PeriodicBackupRunner.UpdateConfigurations(new RawDatabaseRecord(record1));
                 var getPeriodicBackupStatus = new GetPeriodicBackupStatusOperation(taskId);
 
                 val = WaitForValue(() => store.Maintenance.Send(getPeriodicBackupStatus).Status?.LastFullBackup != null, true, timeout: 66666, interval: 444);

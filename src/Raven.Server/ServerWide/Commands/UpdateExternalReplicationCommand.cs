@@ -20,7 +20,7 @@ namespace Raven.Server.ServerWide.Commands
 
         }
 
-        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long index)
         {
             Watcher.AssertValidReplication();
 
@@ -29,7 +29,7 @@ namespace Raven.Server.ServerWide.Commands
 
             if (Watcher.TaskId == 0)
             {
-                Watcher.TaskId = etag;                
+                Watcher.TaskId = index;                
             }
             else
             {
@@ -52,6 +52,7 @@ namespace Raven.Server.ServerWide.Commands
             EnsureTaskNameIsNotUsed(record, Watcher.Name);
 
             record.ExternalReplications.Add(Watcher);
+            record.ClusterState.LastReplicationsIndex = index;
         }
 
         public override void FillJson(DynamicJsonValue json)
