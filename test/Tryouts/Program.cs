@@ -135,7 +135,9 @@ namespace Tryouts
 
         public static async Task Main(string[] args)
         {
+            //CoraxEnron.Stats();
             CoraxEnron.Index();
+            //LuceneEnron.Index();
             //new SetTests(new ConsoleTestOutputHelper()).CanCreateSet();
             //new ContainerTests(new ConsoleTestOutputHelper()).CanStoreMoreThanASinglePage();
             //new IntegerEncodingTests(new ConsoleTestOutputHelper()).WriteVariableSizeIntegers();
