@@ -2,8 +2,10 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using Sparrow.Json;
 using Voron;
@@ -12,6 +14,7 @@ using Voron.Data.Fixed;
 using Voron.Data.Tables;
 using Voron.Impl;
 using Newtonsoft.Json;
+using Voron.Data.CompactTrees;
 using Voron.Data.Sets;
 using Voron.Debugging;
 using Container = Voron.Data.Containers.Container;
@@ -32,6 +35,78 @@ namespace Corax
             _transaction = environment.ReadTransaction();
         }
 
+        struct Match
+        {
+            public long TotalResults;
+            public long Current;
+            public void SeekTo(long next){}
+            //public bool MoveNext(out long v){}
+        }
+        
+        // foreach term in 2010 .. 2020
+        //     yield return TermMatch(field, term)// <-- one term , not sorted
+        
+        // userid = UID and date between 2010 and 2020 <-- 100 million terms here 
+        // foo = bar and published = true
+
+        // foo = bar
+        public IEnumerable<long> TermQuery(string field, string term)
+        {
+            var fields = _transaction.ReadTree("Fields");
+            var terms = fields.CompactTreeFor(field);
+            if (terms == null)
+                return Array.Empty<long>();
+            
+            if (terms.TryGetValue(term, out var value) == false)
+                return Array.Empty<long>();
+
+            if ((value & (long)IndexWriter.TermIdMask.Set) != 0)
+            {
+                var setId = value & ~0b11;
+                var setStateSpan = Container.Get(_transaction.LowLevelTransaction, setId);
+                ref readonly var setState = ref MemoryMarshal.AsRef<SetState>(setStateSpan);
+                //TODO: See how we can reuse those instances
+                var set = new Set(_transaction.LowLevelTransaction, Slices.Empty, setState);
+                return YieldSetContents(set);
+            }
+
+            if((value & (long)IndexWriter.TermIdMask.Single) != 0)
+            {
+                var smallSetId = value & ~0b11;
+                var small = Container.Get(_transaction.LowLevelTransaction, smallSetId);
+                return YieldSmallSet(small);
+            }
+
+            return YieldOnce(value);
+
+            IEnumerable<long> YieldOnce(long i)
+            {
+                yield return i;
+            }                
+
+            IEnumerable<long> YieldSetContents(Set set)
+            {
+                using var it = set.Iterate();
+                if (it.Seek(0))
+                {
+                    do
+                    {
+                        yield return it.Current;
+                    } while (it.MoveNext());
+                }
+            }
+
+            IEnumerable<long> YieldSmallSet(ReadOnlySpan<byte> small)
+            {
+                while (small.IsEmpty == false)
+                {
+                    var val = ZigZag.Decode(small, out var len);
+                    small = small.Slice(len);
+                    yield return val;
+                }
+            }
+        }
+        
         public IEnumerable<string> Query(JsonOperationContext context, QueryOp q, int take, string sort)
         {
             // Table entries = _transaction.OpenTable(IndexWriter.IndexEntriesSchema, IndexWriter.IndexEntriesSlice);

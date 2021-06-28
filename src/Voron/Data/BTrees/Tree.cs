@@ -1339,6 +1339,13 @@ namespace Voron.Data.BTrees
             _recentlyFoundPages?.Clear();
         }
 
+        public CompactTree CompactTreeFor(string key)
+        {
+            using var _ = Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out var keySlice);
+            return CompactTreeFor(keySlice);
+        }
+
+        
         public CompactTree CompactTreeFor(Slice key)
         {
             _compactTrees ??= new Dictionary<Slice, CompactTree>(SliceComparer.Instance);
@@ -1346,7 +1353,10 @@ namespace Voron.Data.BTrees
             if (_compactTrees.TryGetValue(key, out var compactTree) == false)
             {
                 compactTree = CompactTree.Create(_llt, this, key);
-                _compactTrees[key] = compactTree;
+                if (compactTree == null) // missing value on read transaction
+                    return null;
+                
+                _compactTrees[key.Clone(_llt.Allocator)] = compactTree;
             }
 
             State.Flags |= TreeFlags.CompactTrees;

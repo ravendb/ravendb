@@ -260,6 +260,9 @@ namespace Voron.Data.CompactTrees
             var existing = parent.Read(name);
             if (existing == null)
             {
+                if (llt.Flags != TransactionFlags.ReadWrite)
+                    return null;
+                
                 // TODO: This can be created a single time and stored in the root tree. 
                 var dictionaryId = PersistentHopeDictionary.CreateEmpty(llt);
                 var newPage = llt.AllocatePage(1);

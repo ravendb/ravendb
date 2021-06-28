@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
@@ -23,6 +24,8 @@ namespace Corax
 
         public static readonly Slice PostingListsSlice, EntriesContainerSlice;
 
+        private Queue<long> _lastEntries; // keep last 256 items
+
         static IndexWriter()
         {
             using (StorageEnvironment.GetStaticContext(out var ctx))
@@ -32,7 +35,6 @@ namespace Corax
             }
         }
 
-
         // The reason why we want to have the transaction open for us is so that we avoid having
         // to explicitly provide the index writer with opening semantics and also every new
         // writer becomes essentially a unit of work which makes reusing assets tracking more explicit.
@@ -40,30 +42,16 @@ namespace Corax
         {
             _environment = environment;
             _transactionPersistentContext = new TransactionPersistentContext(true);
-            Transaction = _environment.WriteTransaction(_transactionPersistentContext);            
+            Transaction = _environment.WriteTransaction(_transactionPersistentContext);
 
-            var exists = Transaction.LowLevelTransaction.RootObjects.Read(PostingListsSlice);
-            if (exists == null)
-            {
-                _postingListContainerId = Container.Create(Transaction.LowLevelTransaction);
-                Transaction.LowLevelTransaction.RootObjects.Add(PostingListsSlice, _postingListContainerId);
-            }
-            else
-            {
-                _postingListContainerId = exists.Reader.ReadLittleEndianInt64();
-            }
-            exists = Transaction.LowLevelTransaction.RootObjects.Read(EntriesContainerSlice);
-            if (exists == null)
-            {
-                _entriesContainerId = Container.Create(Transaction.LowLevelTransaction);
-                Transaction.LowLevelTransaction.RootObjects.Add(EntriesContainerSlice, _entriesContainerId);
-            }
-            else
-            {
-                _entriesContainerId = exists.Reader.ReadLittleEndianInt64();
-            }
-
+            _postingListContainerId = Transaction.OpenContainer(PostingListsSlice);
+            _entriesContainerId = Transaction.OpenContainer(EntriesContainerSlice);
         }
+        
+        // CPU bound - embarassingly parallel
+        // 
+        // private readonly ConcurrentDictionary<Slice, Dictionary<Slice, ConcurrentQueue<long>>> _bufferConcurrent =
+        //     new ConcurrentDictionary<Slice, ConcurrentDictionary<Slice, ConcurrentQueue<long>>>(SliceComparer.Instance);
 
         private readonly Dictionary<Slice, Dictionary<Slice, List<long>>> _buffer =
             new Dictionary<Slice, Dictionary<Slice, List<long>>>(SliceComparer.Instance);
@@ -174,7 +162,59 @@ namespace Corax
                 term.Add(entryId);
             }
         }
-
+        
+        /*
+         * 20 indexes - 8 CPU cores
+         * * Optimal: single threaded per index - 100%
+         *
+         * 1 new index - 8 CPU cores
+         * * Optimal - worker threads - 100% 
+         *
+         * Not doing: Thread Pool / Task, etc
+         *
+         * Thread - Priorities:
+         *   * Cluster work - AboveNormal
+         *   * Requests / queries / etc - Normal
+         *   * Indexing - BelowNormal
+         *   * Offload - Low
+         *
+         * 
+         * Offload Index Threads: 
+         *     Queue<Queue<WorkItem>> _globalIndexingWork;
+         * 
+         *     while(true){
+         *         var indexQueue = _globalIndexingWork.Take();
+         *         using var _ = index.AddWorker(this);
+         *         while(indexQueue.TryTake(out var workItem){
+         *             workItem.Execute();
+         *         }
+         *     }
+         *
+         * Index thread:
+         *
+         *  while(work){
+         *      while(indexQueue.Count < 256){
+         *              var workItem = generateWorkItem();
+         *              indexQueue.Enqueue(workItem);
+         *              _globalIndexingWork.Enqueue(indexQueue);
+         *      }
+         *      while(indexQueue.Count > 32 && indexQueue.TryTake(out item)){
+         *             item.Execute();
+         *      }
+         *  }
+         *  while(remaining){
+         *  }
+         *  WaitingForOffload(); <-- boost the offload
+         */
+        
+        
+        /*
+         * Work we have to do:
+         * ----------
+         *   * Analyze / process single document in isolation - work item
+         * ----------
+         *   * Prepare phase - sort the terms / entries for term - work item
+         */
         public void Commit()
         {
             using var _ = Transaction.Allocator.Allocate(Container.MaxSizeInsideContainerPage, out Span<byte> tmpBuf);
@@ -184,6 +224,7 @@ namespace Corax
                 var fieldTree = fieldsTree.CompactTreeFor(field);
                 var llt = Transaction.LowLevelTransaction;
                 var sortedTerms = terms.Keys.ToArray();
+                // CPU bounded - embarssingly parallel
                 Array.Sort(sortedTerms, SliceComparer.Instance);
                 foreach (var term in sortedTerms)
                 {
