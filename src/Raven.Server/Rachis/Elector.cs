@@ -386,8 +386,6 @@ namespace Raven.Server.Rachis
 
             if (_electorLongRunningWork != null && _electorLongRunningWork.ManagedThreadId != Thread.CurrentThread.ManagedThreadId)
                 _electorLongRunningWork.Join(int.MaxValue);
-
-            _engine.InMemoryDebug.RemoveRecorderOlderThan(DateTime.UtcNow.AddMinutes(-5));
         }
     }
 }
