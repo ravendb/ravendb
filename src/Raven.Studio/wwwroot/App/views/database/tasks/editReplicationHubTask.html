@@ -80,6 +80,17 @@
                                     <div class="help-block" data-bind="validationMessage: replicationMode"></div>
                                 </div>
                             </div>
+                            <div class="form-group margin-bottom margin-bottom-xs">
+                                <label class="control-label">&nbsp;</label>
+                                <div class="flex-vertical">
+                                    <div class="toggle">
+                                        <div data-placement="right" data-toggle="tooltip" title="Control whether delete operations are replicated to the Hub from the Sink" data-animation="true">
+                                            <input id="preventDeletion" type="checkbox" data-bind="checked: preventDeletions" />
+                                            <label for="preventDeletion">Prevent deletions on Hub</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                             <div class="form-group margin-bottom margin-bottom-xs" data-bind="visible: $root.canDefineCertificates">
                                 <label class="control-label">&nbsp;</label>
                                 <div class="toggle">

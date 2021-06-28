@@ -194,6 +194,7 @@ class editReplicationHubTask extends viewModelBase {
             model.mentorNode,
             model.delayReplicationTime,
             model.showDelayReplication,
+            model.preventDeletions,
             model.withFiltering,
             model.allowReplicationFromHubToSink,
             model.allowReplicationFromSinkToHub
