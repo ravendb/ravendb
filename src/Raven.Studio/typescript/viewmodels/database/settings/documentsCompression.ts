@@ -10,7 +10,9 @@ class documentsCompression extends viewModelBase {
 
     allExistingCollections: KnockoutComputed<Array<string>>;
     collectionsToCompress = ko.observableArray<string>();
+    
     compressRevisions = ko.observable<boolean>();
+    compressAllCollections = ko.observable<boolean>();
     
     collectionToAdd = ko.observable<string>();
     canAddAllCollections: KnockoutComputed<boolean>;
@@ -38,7 +40,7 @@ class documentsCompression extends viewModelBase {
             return dirty && !saving;
         });
 
-        this.dirtyFlag = new ko.DirtyFlag([this.collectionsToCompress, this.compressRevisions]);
+        this.dirtyFlag = new ko.DirtyFlag([this.collectionsToCompress, this.compressRevisions, this.compressAllCollections]);
         
         this.canAddAllCollections = ko.pureComputed(() => {
            return !!_.difference(this.allExistingCollections(), this.collectionsToCompress()).length;
@@ -70,6 +72,7 @@ class documentsCompression extends viewModelBase {
 
     onConfigurationLoaded(data: Raven.Client.ServerWide.DocumentsCompressionConfiguration) {
         this.compressRevisions(data ? data.CompressRevisions : false);
+        this.compressAllCollections(data ? data.CompressAllCollections : false);
         this.collectionsToCompress(data ? data.Collections : []);
         this.dirtyFlag().reset();
     }
@@ -126,8 +129,9 @@ class documentsCompression extends viewModelBase {
 
     toDto(): Raven.Client.ServerWide.DocumentsCompressionConfiguration {
         return {
-            Collections: this.collectionsToCompress(),
-            CompressRevisions: this.compressRevisions()
+            Collections: this.compressAllCollections() ? [] : this.collectionsToCompress(),
+            CompressRevisions: this.compressRevisions(),
+            CompressAllCollections: this.compressAllCollections()
         }
     }
 }
