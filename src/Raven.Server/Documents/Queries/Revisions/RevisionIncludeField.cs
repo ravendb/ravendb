@@ -1,17 +1,30 @@
 ﻿using System;
 using System.Collections.Generic;
+using Raven.Server.Documents.Queries.AST;
 
 namespace Raven.Server.Documents.Queries.Revisions
 {
     public class RevisionIncludeField
     {
-        public HashSet<string> Revisions;
+        internal HashSet<string> RevisionsChangeVectorsPaths;
+        internal HashSet<string> RevisionsChangeVectors;
+        internal DateTime? RevisionsBeforeDateTime;
 
-        public void AddRevision(string field)
+        public RevisionIncludeField()
         {
-            Revisions ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            RevisionsChangeVectorsPaths = new HashSet<string>();
+            RevisionsChangeVectors = new HashSet<string>();
+            RevisionsBeforeDateTime = new DateTime?();
+        }
 
-            Revisions.Add(field);
+        public void AddRevision(string path)
+        {
+            RevisionsChangeVectorsPaths.Add(path);
+        }
+        
+        public void AddRevision(DateTime dateTime)
+        {
+            RevisionsBeforeDateTime = dateTime;
         }
     }
 }

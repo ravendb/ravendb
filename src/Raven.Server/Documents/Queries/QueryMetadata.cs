@@ -28,7 +28,9 @@ using Raven.Server.Documents.Queries.Revisions;
 using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.Documents.Queries.TimeSeries;
 using Raven.Server.Extensions;
+using Raven.Server.Documents.ETL.Providers.OLAP;
 using Sparrow;
+using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Utils;
 using Spatial4n.Core.Shapes;
@@ -584,47 +586,80 @@ namespace Raven.Server.Documents.Queries
 
         private void AddToRevisionsInclude(RevisionIncludeField revisionIncludes, MethodExpression expression, BlittableJsonReaderObject parameters)
         {
-            foreach (var queryExpression in expression.Arguments)
+            var numberOfArguments = expression.Arguments?.Count;
+            switch (numberOfArguments)
             {
-                switch (queryExpression)
+                case 1:
                 {
-                    case FieldExpression fe:
+                    foreach (var queryExpression in expression.Arguments)
                     {
-                        if (Query.From.Alias?.Value.Equals(fe.Compound[0].Value) == false)
-                            throw new InvalidOperationException(
-                                $"Cannot include revisions for related Expression '{fe}', " + 
-                                        $"Parent alias is different than include alias '{Query.From.Alias?.Value}'" + 
-                                        $" compare to '{fe.Compound[0].Value}';. ");
-                      
-                        if (string.IsNullOrEmpty(fe.FieldValueWithoutAlias) == false)
-                            revisionIncludes.AddRevision(fe.FieldValueWithoutAlias);
-                        
-                        else revisionIncludes.AddRevision(fe.FieldValue);
-                        break;
-                    }
-                    case ValueExpression ve:
-                     {
-                        var vt = QueryBuilder.GetValue(Query, this, parameters, ve);
-                        var split = vt.Value.ToString()?.Split('.');
-                        
-                        if(split.Length >= 2 && split[0] == Query.From.Alias?.Value)
+                        switch (queryExpression)
                         {
-                            var field = vt.Value.ToString()?.Substring(split[0].Length + 1);
-                            revisionIncludes.AddRevision(field);
-                            break;
-                        }
+                            case FieldExpression fe:
+                            {
+                                if (Query.From.Alias?.Value.Equals(fe.Compound[0].Value) == false)
+                                    throw new InvalidOperationException($"Cannot include revisions for related Expression '{fe}', " +
+                                                                        $"Parent alias is different than include alias '{Query.From.Alias?.Value}'" +
+                                                                        $" compare to '{fe.Compound[0].Value}';. ");
 
-                        if (split[0] != vt.Value.ToString())
-                            throw new InvalidOperationException(
-                                $"Cannot include revisions for related Expression '{vt}', " +
-                                       $"Parent alias is different than include alias '{Query.From.Alias.Value}'" +
-                                       $" compare to '{split[0]}';. ");
-                        
-                        revisionIncludes.AddRevision(vt.Value.ToString());
-                        break;
+                                if (string.IsNullOrEmpty(fe.FieldValueWithoutAlias) == false)
+                                    revisionIncludes.AddRevision(fe.FieldValueWithoutAlias);
+                                else
+                                    revisionIncludes.AddRevision(fe.FieldValue);
+                                break;
+                            }
+                            case ValueExpression ve:
+                            {
+                                var valueType = QueryBuilder.GetValue(Query, this, parameters, ve);
+                                
+                                if (string.IsNullOrEmpty(valueType.Value.ToString()))
+                                    return;
+                                  
+                                if(ParquetTransformedItems.TryParseDate(valueType.Value.ToString(), out var dateTimeOffset) == false)
+                                    throw new InvalidOperationException($"Could not parse Revision({valueType.Value}");
+                                
+                                revisionIncludes.AddRevision(dateTimeOffset.DateTime);
+                                break;
+                            }
+                            //
+                            // case ValueExpression
+                            // {
+                            //     Value: ValueTokenType.Parameter
+                            // } ve:
+                            // {
+                            //     var vt = QueryBuilder.GetValue(Query, this, parameters, ve);
+                            //     var split = vt.Value.ToString()?.Split('.');
+                            //
+                            //     if (split.Length >= 2 && split[0] == Query.From.Alias?.Value)
+                            //     {
+                            //         var field = vt.Value.ToString()?.Substring(split[0].Length + 1);
+                            //         revisionIncludes.AddRevision(field);
+                            //         break;
+                            //     }
+                            //
+                            //     if (vt.Value is DateTime)
+                            //     {
+                            //         revisionIncludes.AddRevision(vt.Value.ToString());
+                            //     }
+                            //     if (split[0] != (string)vt.Value)
+                            //         throw new InvalidOperationException($"Cannot include revisions for related Expression '{vt}', " +
+                            //                                             $"Parent alias is different than incl" +
+                            //                                             $"ude alias '{Query.From.Alias.Value}'" +
+                            //                                             $" compare to '{split[0]}';. ");
+                            //     revisionIncludes.AddRevision(vt.Value.ToString());
+                            //     break;
+                            // }
+
+                    
+
+                        }
                     }
                 }
-            } 
+                    break;
+                default:
+                    return;
+            }
+
         }
         
         private static ExplanationField CreateExplanationField(MethodExpression expression)

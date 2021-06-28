@@ -1251,6 +1251,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                 ExplanationToken == null &&
                 QueryTimings == null &&
                 CounterIncludesTokens == null &&
+                RevisionsIncludesTokens == null &&
                 TimeSeriesIncludesTokens == null &&
                 CompareExchangeValueIncludesTokens == null)
                 return;
@@ -1271,6 +1272,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
 
             WriteIncludeTokens(CounterIncludesTokens);
             WriteIncludeTokens(TimeSeriesIncludesTokens);
+            WriteIncludeTokens(RevisionsIncludesTokens);
             WriteIncludeTokens(CompareExchangeValueIncludesTokens);
             WriteIncludeTokens(HighlightingTokens);
 
@@ -1838,6 +1840,14 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             if (TimeSeriesIncludesTokens != null)
             {
                 foreach (var token in TimeSeriesIncludesTokens)
+                {
+                    token.AddAliasToPath(fromAlias);
+                }
+            }
+            
+            if (RevisionsIncludesTokens != null)
+            {
+                foreach (var token in RevisionsIncludesTokens)
                 {
                     token.AddAliasToPath(fromAlias);
                 }

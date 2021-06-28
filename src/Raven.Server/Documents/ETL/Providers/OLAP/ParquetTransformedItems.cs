@@ -726,7 +726,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             }
         }
 
-        private static unsafe bool TryParseDate(string str, out DateTimeOffset dto)
+        internal static unsafe bool TryParseDate(string str, out DateTimeOffset dto)
         {
             fixed (char* c = str)
             {

@@ -5,6 +5,7 @@ using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session.Loaders;
 using Raven.Client.Documents.Session.Tokens;
 using Raven.Client.Extensions;
+using Sparrow.Extensions;
 
 namespace Raven.Client.Documents.Session
 {
@@ -15,6 +16,8 @@ namespace Raven.Client.Documents.Session
         protected List<CounterIncludesToken> CounterIncludesTokens;
 
         internal List<CompareExchangeValueIncludesToken> CompareExchangeValueIncludesTokens;
+        
+        internal List<RevisionIncludesToken> RevisionsIncludesTokens;
 
         /// <summary>
         /// The paths to include when loading the query
@@ -58,7 +61,17 @@ namespace Raven.Client.Documents.Session
             {
                 IncludeTimeSeries(includes.Alias, includes.TimeSeriesToIncludeBySourceAlias);
             }
-
+            
+            if (includes.RevisionsToIncludeByDateTime != null)
+            {
+                IncludeRevisions(includes.RevisionsToIncludeByDateTime);
+            }
+            
+            if (includes.RevisionsToIncludeByChangeVector != null)
+            {
+                IncludeRevisions(includes.Alias, includes.RevisionsToIncludeByChangeVector);
+            }
+            
             if (includes.CompareExchangeValuesToInclude != null)
             {
                 CompareExchangeValueIncludesTokens = new List<CompareExchangeValueIncludesToken>();
@@ -110,5 +123,23 @@ namespace Raven.Client.Documents.Session
                 }
             }
         }
+        
+        private void IncludeRevisions(DateTime? dateTime)
+        {
+            RevisionsIncludesTokens ??= new List<RevisionIncludesToken>();
+            RevisionsIncludesTokens.Add(RevisionIncludesToken.Create(dateTime.Value));
+        }
+        
+        private void IncludeRevisions(string alias, HashSet<string> revisionsToIncludeByChangeVector)
+        {
+            RevisionsIncludesTokens ??= new List<RevisionIncludesToken>();
+            _includesAlias ??= alias;
+            
+            foreach (var changeVector in revisionsToIncludeByChangeVector)
+            {
+                RevisionsIncludesTokens.Add(RevisionIncludesToken.Create(alias, changeVector));
+            }
+        }
+
     }
 }
