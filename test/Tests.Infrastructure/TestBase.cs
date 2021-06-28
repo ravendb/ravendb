@@ -13,6 +13,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using Raven.Client;
+using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Util;
 using Raven.Debug.StackTrace;
@@ -799,7 +800,7 @@ namespace FastTests
             return Task.CompletedTask;
         }
 
-        protected static void DisposeServer(RavenServer server, int timeoutInMs = 60_000)
+        protected static void DisposeServer(RavenServer server, int timeoutInMs = 300_000)
         {
             if (server == null)
                 return;
@@ -811,6 +812,7 @@ namespace FastTests
             var debugTag = server.DebugTag;
             var timeout = TimeSpan.FromMilliseconds(timeoutInMs);
 
+            using (DebugHelper.GatherVerboseDatabaseDisposeInformation(server, timeoutInMs))
             using (var mre = new ManualResetEventSlim())
             {
                 server.AfterDisposal += () => mre.Set();
@@ -823,7 +825,7 @@ namespace FastTests
             }
         }
 
-        protected static async Task DisposeServerAsync(RavenServer server, int timeoutInMs = 60_000)
+        protected static async Task DisposeServerAsync(RavenServer server, int timeoutInMs = 300_000)
         {
             if (server == null)
                 return;
@@ -835,6 +837,7 @@ namespace FastTests
             var debugTag = server.DebugTag;
             var timeout = TimeSpan.FromMilliseconds(timeoutInMs);
 
+            using (await DebugHelper.GatherVerboseDatabaseDisposeInformationAsync(server, timeoutInMs))
             using (var mre = new AsyncManualResetEvent())
             {
                 server.AfterDisposal += () => mre.Set();
@@ -866,7 +869,6 @@ namespace FastTests
 
                     throw new InvalidOperationException($"Could not dispose server with URL '{url}' and DebugTag: '{debugTag}' in '{timeout}'. StackTraces available at: '{tempPath}'");
                 }
-
             }
         }
     }

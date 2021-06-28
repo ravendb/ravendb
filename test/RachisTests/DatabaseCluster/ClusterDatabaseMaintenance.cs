@@ -279,6 +279,9 @@ namespace RachisTests.DatabaseCluster
                 [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "5",
             };
             var cluster = await CreateRaftCluster(clusterSize, false, 0, watcherCluster: true, customSettings: settings);
+
+            Servers.ForEach(x => x.ForTestingPurposesOnly().GatherVerboseDatabaseDisposeInformation = true);
+
             using (var store = new DocumentStore { Urls = new[] { cluster.Leader.WebUrl } }.Initialize())
             {
                 var names = new List<string>();
@@ -311,6 +314,8 @@ namespace RachisTests.DatabaseCluster
                     DataDirectory = result.DataDirectory,
                     CustomSettings = settings
                 });
+
+                cluster.Nodes[2].ForTestingPurposesOnly().GatherVerboseDatabaseDisposeInformation = true;
 
                 var preferredCount = new Dictionary<string, int> { ["A"] = 0, ["B"] = 0, ["C"] = 0 };
 

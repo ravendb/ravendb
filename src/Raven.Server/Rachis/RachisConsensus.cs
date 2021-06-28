@@ -100,7 +100,7 @@ namespace Raven.Server.Rachis
             if (_serverStore.Initialized == false)
                 throw new InvalidOperationException("Server store isn't initialized.");
 
-            return StateMachine.ConnectToPeer(url, tag, certificate);
+            return StateMachine.ConnectToPeer(url, tag, certificate, _serverStore.ServerShutdown);
         }
 
         private class NullDisposable : IDisposable

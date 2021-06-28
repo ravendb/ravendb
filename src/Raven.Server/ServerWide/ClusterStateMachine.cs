@@ -1831,7 +1831,7 @@ namespace Raven.Server.ServerWide
             {
                 certs.DeleteByKey(thumbprintSlice);
             }
-            
+
             if (_clusterAuditLog.IsInfoEnabled)
                 _clusterAuditLog.Info($"Deleted certificate '{thumbprint}' from the cluster.");
         }
@@ -3404,7 +3404,7 @@ namespace Raven.Server.ServerWide
             return TcpConnectionHeaderMessage.ClusterTcpVersion;
         }
 
-        public override async Task<RachisConnection> ConnectToPeer(string url, string tag, X509Certificate2 certificate)
+        public override async Task<RachisConnection> ConnectToPeer(string url, string tag, X509Certificate2 certificate, CancellationToken token)
         {
             if (url == null)
                 throw new ArgumentNullException(nameof(url));
@@ -3414,18 +3414,20 @@ namespace Raven.Server.ServerWide
                 throw new InvalidOperationException($"Failed to connect to node {url}. Connections from encrypted store must use HTTPS.");
 
             TcpConnectionInfo info;
-            using (var cts = new CancellationTokenSource(_parent.TcpConnectionTimeout))
+            using (var cts = CancellationTokenSource.CreateLinkedTokenSource(token))
             {
+                cts.CancelAfter(_parent.TcpConnectionTimeout);
+
                 info = await ReplicationUtils.GetTcpInfoAsync(url, null, "Cluster", certificate, cts.Token);
             }
 
             TcpClient tcpClient = null;
-            string choosenUrl = null;
             Stream stream = null;
             try
             {
-                (tcpClient, choosenUrl) = await TcpUtils.ConnectAsyncWithPriority(info, _parent.TcpConnectionTimeout).ConfigureAwait(false);
-                stream = await TcpUtils.WrapStreamWithSslAsync(tcpClient, info, _parent.ClusterCertificate, _parent.CipherSuitesPolicy, _parent.TcpConnectionTimeout);
+                string choosenUrl = null;
+                (tcpClient, choosenUrl) = await TcpUtils.ConnectAsyncWithPriority(info, _parent.TcpConnectionTimeout, token).ConfigureAwait(false);
+                stream = await TcpUtils.WrapStreamWithSslAsync(tcpClient, info, _parent.ClusterCertificate, _parent.CipherSuitesPolicy, _parent.TcpConnectionTimeout, token);
 
                 var parameters = new AsyncTcpNegotiateParameters
                 {
