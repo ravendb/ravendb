@@ -55,25 +55,50 @@ namespace Raven.Server.Config.Categories
             [ConfigurationEntry("Monitoring.Snmp.AuthenticationProtocol", ConfigurationEntryScope.ServerWideOnly)]
             public SnmpAuthenticationProtocol AuthenticationProtocol { get; set; }
 
+            [Description("Authentication protocol used by secondary user for SNMP v3 authentication. Default: SHA1")]
+            [DefaultValue(SnmpAuthenticationProtocol.SHA1)]
+            [ConfigurationEntry("Monitoring.Snmp.AuthenticationProtocol.Secondary", ConfigurationEntryScope.ServerWideOnly)]
+            public SnmpAuthenticationProtocol AuthenticationProtocolSecondary { get; set; }
+
             [Description("Authentication user used for SNMP v3 authentication. Default: ravendb")]
             [DefaultValue("ravendb")]
             [ConfigurationEntry("Monitoring.Snmp.AuthenticationUser", ConfigurationEntryScope.ServerWideOnly)]
             public string AuthenticationUser { get; set; }
+
+            [Description("Authentication secondary user used for SNMP v3 authentication. Default: null (disabled)")]
+            [DefaultValue(null)]
+            [ConfigurationEntry("Monitoring.Snmp.AuthenticationUser.Secondary", ConfigurationEntryScope.ServerWideOnly)]
+            public string AuthenticationUserSecondary { get; set; }
 
             [Description("Authentication password used for SNMP v3 authentication. If null value from 'Monitoring.Snmp.Community' is used. Default: null")]
             [DefaultValue(null)]
             [ConfigurationEntry("Monitoring.Snmp.AuthenticationPassword", ConfigurationEntryScope.ServerWideOnly)]
             public string AuthenticationPassword { get; set; }
 
+            [Description("Authentication password used by secondary user for SNMP v3 authentication.")]
+            [DefaultValue(null)]
+            [ConfigurationEntry("Monitoring.Snmp.AuthenticationPassword.Secondary", ConfigurationEntryScope.ServerWideOnly)]
+            public string AuthenticationPasswordSecondary { get; set; }
+
             [Description("Privacy protocol used for SNMP v3 privacy. Default: None")]
             [DefaultValue(SnmpPrivacyProtocol.None)]
             [ConfigurationEntry("Monitoring.Snmp.PrivacyProtocol", ConfigurationEntryScope.ServerWideOnly)]
             public SnmpPrivacyProtocol PrivacyProtocol { get; set; }
 
+            [Description("Privacy protocol used by secondary user for SNMP v3 privacy. Default: None")]
+            [DefaultValue(SnmpPrivacyProtocol.None)]
+            [ConfigurationEntry("Monitoring.Snmp.PrivacyProtocol.Secondary", ConfigurationEntryScope.ServerWideOnly)]
+            public SnmpPrivacyProtocol PrivacyProtocolSecondary { get; set; }
+
             [Description("Privacy password used for SNMP v3 privacy. Default: ravendb")]
             [DefaultValue("ravendb")]
             [ConfigurationEntry("Monitoring.Snmp.PrivacyPassword", ConfigurationEntryScope.ServerWideOnly)]
             public string PrivacyPassword { get; set; }
+
+            [Description("Privacy password used by secondary user for SNMP v3 privacy.")]
+            [DefaultValue(null)]
+            [ConfigurationEntry("Monitoring.Snmp.PrivacyPassword.Secondary", ConfigurationEntryScope.ServerWideOnly)]
+            public string PrivacyPasswordSecondary { get; set; }
 
             [Description("List of supported SNMP versions. Values must be semicolon separated. Default: V2C;V3")]
             [DefaultValue("V2C;V3")]
