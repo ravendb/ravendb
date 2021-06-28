@@ -69,8 +69,10 @@ namespace SlowTests.Issues
                         var attachments = session.Advanced.Attachments.GetNames(user);
                         Assert.Empty(attachments);
 
-                        var photo = session.Advanced.Attachments.Get(user, "photo.jpg");
-                        Assert.Null(photo);
+                        using (var photo = session.Advanced.Attachments.Get(user, "photo.jpg"))
+                        {
+                            Assert.Null(photo);
+                        }
 
                         var metadata = session.Advanced.GetMetadataFor(user);
                         Assert.False(metadata.TryGetValue(Constants.Documents.Metadata.Attachments, out _));

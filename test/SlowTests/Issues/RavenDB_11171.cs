@@ -117,14 +117,16 @@ namespace SlowTests.Issues
 
                 foreach (var attachmentName in attachmentNames)
                 {
-                    var attachment = await session.Advanced.Attachments.GetAsync(company, attachmentName.Name);
-                    Assert.NotNull(attachment);
-                    Assert.NotNull(attachment.Stream);
-
-                    using (var sr = new StreamReader(attachment.Stream))
+                    using (var attachment = await session.Advanced.Attachments.GetAsync(company, attachmentName.Name))
                     {
-                        var value = sr.ReadToEnd();
-                        Assert.Equal("123", value);
+                        Assert.NotNull(attachment);
+                        Assert.NotNull(attachment.Stream);
+
+                        using (var sr = new StreamReader(attachment.Stream))
+                        {
+                            var value = sr.ReadToEnd();
+                            Assert.Equal("123", value);
+                        }
                     }
                 }
             }

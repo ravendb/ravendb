@@ -1538,11 +1538,13 @@ namespace SlowTests.Server
 
                 using (var session = store.OpenSession())
                 {
-                    var attachmentResult = session.Advanced.Attachments.Get(id, attachmentName);
-                    var actual = attachmentResult.Stream.ReadData();
+                    using (var attachmentResult = session.Advanced.Attachments.Get(id, attachmentName))
+                    {
+                        var actual = attachmentResult.Stream.ReadData();
 
-                    //Assert
-                    Assert.Equal(actual, expected);
+                        //Assert
+                        Assert.Equal(actual, expected);
+                    }
                 }
             }
         }
@@ -1589,10 +1591,11 @@ namespace SlowTests.Server
 
                 using (var session = store.OpenSession())
                 {
-                    var attachmentResult = session.Advanced.Attachments.Get(id, attachmentName);
-
-                    //Assert
-                    Assert.Null(attachmentResult);
+                    using (var attachmentResult = session.Advanced.Attachments.Get(id, attachmentName))
+                    {
+                        //Assert
+                        Assert.Null(attachmentResult);
+                    }
                 }
             }
         }
