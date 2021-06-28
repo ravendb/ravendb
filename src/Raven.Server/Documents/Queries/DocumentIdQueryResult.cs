@@ -16,9 +16,12 @@ namespace Raven.Server.Documents.Queries
 
         public override void AddResult(Document result)
         {
-            _token.Delay();
+            using (result)
+            {
+                _token.Delay();
 
-            ResultIds.Enqueue(result.Id);
+                ResultIds.Enqueue(result.Id);
+            }
         }
     }
 }
