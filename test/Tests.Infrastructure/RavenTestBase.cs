@@ -242,6 +242,24 @@ namespace FastTests
             throw new TimeoutException(message);
         }
 
+        public static string CollectLogsFromNodes(List<RavenServer> nodes)
+        {
+            var message = "";
+            for (var i = 0; i < nodes.Count; i++)
+            {
+                message += $"{Environment.NewLine}Url: {nodes[i].WebUrl}.";
+                using (nodes[i].ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    message +=
+                        $"{Environment.NewLine}Log for server '{nodes[i].ServerStore.NodeTag}':" +
+                        $"{Environment.NewLine}{context.ReadObject(nodes[i].ServerStore.GetLogDetails(context), "LogSummary/" + i)}";
+                }
+            }
+
+            return message;
+        }
+
         protected virtual DocumentStore GetDocumentStore(Options options = null, [CallerMemberName] string caller = null)
         {
             try
@@ -428,11 +446,12 @@ namespace FastTests
             }
         }
 
-        private static void ApplySkipDrainAllRequestsToDatabase(RavenServer serverToUse, string name)
+        private void ApplySkipDrainAllRequestsToDatabase(RavenServer serverToUse, string name)
         {
             try
             {
                 var documentDatabase = AsyncHelpers.RunSync(async () => await serverToUse.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(name));
+                Assert.True(documentDatabase != null, $"(RavenDB-16924) documentDatabase is null on '{serverToUse.ServerStore.NodeTag}' {Environment.NewLine}{CollectLogsFromNodes(Servers)}");
                 documentDatabase.ForTestingPurposesOnly().SkipDrainAllRequests = true;
             }
             catch (DatabaseNotRelevantException)
@@ -839,19 +858,42 @@ namespace FastTests
             } while (true);
         }
 
-        public static void WaitForUserToContinueTheTest(string url, bool debug = true)
+        public static void WaitForUserToContinueTheTest(string url, bool debug = true, X509Certificate2 clientCert = null)
         {
             if (debug && Debugger.IsAttached == false)
                 return;
 
-            var documentsPage = url + "/studio/index.html";
-
-            OpenBrowser(documentsPage);// start the server
-
-            do
+            if (clientCert != null && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                Thread.Sleep(500);
-            } while (debug == false || Debugger.IsAttached);
+                using (var userPersonalStore = new X509Store(StoreName.My, StoreLocation.CurrentUser))
+                {
+                    userPersonalStore.Open(OpenFlags.ReadWrite);
+                    userPersonalStore.Add(clientCert);
+                }
+            }
+
+            try
+            {
+                var documentsPage = url + "/studio/index.html";
+
+                OpenBrowser(documentsPage);// start the server
+
+                do
+                {
+                    Thread.Sleep(500);
+                } while (debug == false || Debugger.IsAttached);
+            }
+            finally
+            {
+                if (clientCert != null && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    using (var userPersonalStore = new X509Store(StoreName.My, StoreLocation.CurrentUser))
+                    {
+                        userPersonalStore.Open(OpenFlags.ReadWrite);
+                        userPersonalStore.Remove(clientCert);
+                    }
+                }
+            }
         }
 
         public static void WaitForUserToContinueTheTest(IDocumentStore documentStore, bool debug = true, string database = null, X509Certificate2 clientCert = null)

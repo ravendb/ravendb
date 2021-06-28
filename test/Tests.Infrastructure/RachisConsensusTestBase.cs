@@ -409,7 +409,7 @@ namespace Tests.Infrastructure
                 return slice.ToString() == "values";
             }
 
-            public override async Task<RachisConnection> ConnectToPeer(string url, string tag, X509Certificate2 certificate)
+            public override async Task<RachisConnection> ConnectToPeer(string url, string tag, X509Certificate2 certificate, CancellationToken token)
             {
                 TimeSpan time;
                 using (ContextPoolForReadOnlyOperations.AllocateOperationContext(out ClusterOperationContext ctx))
@@ -417,7 +417,7 @@ namespace Tests.Infrastructure
                 {
                     time = _parent.ElectionTimeout * (_parent.GetTopology(ctx).AllNodes.Count - 2);
                 }
-                var tcpClient = await TcpUtils.ConnectAsync(url, time);
+                var tcpClient = await TcpUtils.ConnectAsync(url, time, token: token);
                 try
                 {
                     var stream = tcpClient.GetStream();
