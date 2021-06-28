@@ -3056,7 +3056,7 @@ namespace Raven.Server.Documents.Indexes
                                     includeRevisionsCommand = new IncludeRevisionsCommand(
                                         DocumentDatabase,
                                         queryContext.Documents,
-                                        query.Metadata.RevisionIncludes.Revisions);
+                                        query.Metadata.RevisionIncludes);
                                 }
 
                                 var includeCompareExchangeValuesCommand = IncludeCompareExchangeValuesCommand.ExternalScope(queryContext, query.Metadata.CompareExchangeValueIncludes);

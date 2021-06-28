@@ -19,7 +19,7 @@ namespace Raven.Client.Documents.Session
     {
         DocumentConventions Conventions { get; }
 
-        Dictionary<string, T> LoadInternal<T>(string[] ids, string[] includes, string[] counterIncludes = null, bool includeAllCounters = false, IEnumerable<AbstractTimeSeriesRange> timeSeriesIncludes = null, string[] compareExchangeValueIncludes = null);
+        Dictionary<string, T> LoadInternal<T>(string[] ids, string[] includes, string[] counterIncludes = null, string[] revisionIncludes = null, bool includeAllCounters = false, IEnumerable<AbstractTimeSeriesRange> timeSeriesIncludes = null, string[] compareExchangeValueIncludes = null);
 
         Lazy<Dictionary<string, T>> LazyLoadInternal<T>(string[] ids, string[] includes, Action<Dictionary<string, T>> onEval);
     }

@@ -135,7 +135,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                 var fieldsToFetch = new FieldsToFetch(query, null);
                 var includeDocumentsCommand  = new IncludeDocumentsCommand(Database.DocumentsStorage, context.Documents, query.Metadata.Includes, fieldsToFetch.IsProjection);
-                var includeRevisionsCommand  = new IncludeRevisionsCommand(Database, context.Documents, query.Metadata.RevisionIncludes?.Revisions);
+                var includeRevisionsCommand  = new IncludeRevisionsCommand(Database, context.Documents, query.Metadata.RevisionIncludes);
                 
                 var includeCompareExchangeValuesCommand = IncludeCompareExchangeValuesCommand.ExternalScope(context, query.Metadata.CompareExchangeValueIncludes);
 
@@ -176,7 +176,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     includeRevisionsCommand = new IncludeRevisionsCommand(
                         Database,
                         context.Documents,
-                        query.Metadata.RevisionIncludes.Revisions);
+                        query.Metadata.RevisionIncludes);
                 }
                 
                 if (query.Metadata.CounterIncludes != null)

@@ -1185,6 +1185,7 @@ namespace Raven.Client.Documents.Session
                 Negate = Negate,
                 DocumentIncludes = new HashSet<string>(DocumentIncludes),
                 CounterIncludesTokens = CounterIncludesTokens,
+                RevisionsIncludesTokens = RevisionsIncludesTokens,
                 TimeSeriesIncludesTokens = TimeSeriesIncludesTokens,
                 CompareExchangeValueIncludesTokens = CompareExchangeValueIncludesTokens,
                 RootTypes = { typeof(T) },

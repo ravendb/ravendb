@@ -143,7 +143,8 @@ namespace Raven.Server.Documents.Queries
                         var fieldsToFetch = new FieldsToFetch(query, null);
                         idc = new IncludeDocumentsCommand(Database.DocumentsStorage, queryContext.Documents, query.Metadata.Includes, fieldsToFetch.IsProjection);
                         icevc = IncludeCompareExchangeValuesCommand.ExternalScope(queryContext, query.Metadata.CompareExchangeValueIncludes);
-                        irc = new IncludeRevisionsCommand(database: Database, context: queryContext.Documents, pathsForRevisionsInDocuments: query.Metadata.RevisionIncludes?.Revisions);
+                        irc = new IncludeRevisionsCommand(database: Database, context: queryContext.Documents, query.Metadata.RevisionIncludes);
+
                         
                         var resultRetriever = new GraphQueryResultRetriever(
                             q.GraphQuery,

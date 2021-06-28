@@ -9,6 +9,8 @@ namespace Raven.Client.Documents.Commands
         public BlittableJsonReaderArray Results { get; set; }
 
         public BlittableJsonReaderObject CounterIncludes { get; set; }
+        
+        public BlittableJsonReaderObject RevisionIncludes { get; set; }
 
         public BlittableJsonReaderObject TimeSeriesIncludes { get; set; }
 

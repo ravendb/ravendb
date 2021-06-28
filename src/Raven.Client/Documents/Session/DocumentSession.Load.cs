@@ -22,6 +22,7 @@ namespace Raven.Client.Documents.Session
     /// </summary>
     public partial class DocumentSession
     {
+
         /// <inheritdoc />
         public T Load<T>(string id)
         {
@@ -78,13 +79,14 @@ namespace Raven.Client.Documents.Session
                 ids.ToArray(),
                 includeBuilder.DocumentsToInclude?.ToArray(),
                 includeBuilder.CountersToInclude?.ToArray(),
+                includeBuilder.RevisionToInclude?.ToArray(),
                 includeBuilder.AllCounters,
                 includeBuilder.TimeSeriesToInclude,
                 includeBuilder.CompareExchangeValuesToInclude?.ToArray());
         }
 
         /// <inheritdoc />
-        public Dictionary<string, T> LoadInternal<T>(string[] ids, string[] includes, string[] counterIncludes = null, bool includeAllCounters = false, IEnumerable<AbstractTimeSeriesRange> timeSeriesIncludes = null, string[] compareExchangeValueIncludes = null)
+        public Dictionary<string, T> LoadInternal<T>(string[] ids, string[] includes, string[] counterIncludes = null, string[] revisionIncludes = null, bool includeAllCounters = false, IEnumerable<AbstractTimeSeriesRange> timeSeriesIncludes = null, string[] compareExchangeValueIncludes = null)
         {
             if (ids == null)
                 throw new ArgumentNullException(nameof(ids));
@@ -102,6 +104,7 @@ namespace Raven.Client.Documents.Session
                 loadOperation.WithCounters(counterIncludes);
             }
 
+            loadOperation.WithRevisions(revisionIncludes);
             loadOperation.WithTimeSeries(timeSeriesIncludes);
             loadOperation.WithCompareExchange(compareExchangeValueIncludes);
 
@@ -201,5 +204,7 @@ namespace Raven.Client.Documents.Session
                     operation.SetResult(command.Result);
             }
         }
+
+
     }
 }

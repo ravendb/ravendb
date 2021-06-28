@@ -76,10 +76,10 @@ namespace Raven.Server.Documents.Queries
         
         public override void AddRevisionIncludes(IncludeRevisionsCommand command)
         {
-            if (command.Results is null)
+            if (command.RevisionsChangeVectorResults is null)
                 return;
             
-            throw new NotImplementedException();
+            throw new NotSupportedException();
         }
 
 

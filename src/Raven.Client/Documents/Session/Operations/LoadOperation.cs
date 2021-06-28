@@ -16,6 +16,7 @@ namespace Raven.Client.Documents.Session.Operations
         private string[] _ids;
         private string[] _includes;
         private string[] _countersToInclude;
+        private string[] _revisionsToInclude;
         private string[] _compareExchangeValuesToInclude;
         private bool _includeAllCounters;
         private IEnumerable<AbstractTimeSeriesRange> _timeSeriesToInclude;
@@ -32,15 +33,18 @@ namespace Raven.Client.Documents.Session.Operations
         {
             if (_session.CheckIfIdAlreadyIncluded(_ids, _includes))
                 return null;
-
+            
+            if (_session.CheckIfChangeVectorAlreadyIncluded(_revisionsToInclude))
+                return null;
+            
             _session.IncrementRequestCount();
             if (Logger.IsInfoEnabled)
                 Logger.Info($"Requesting the following ids '{string.Join(", ", _ids)}' from {_session.StoreIdentifier}");
 
             if (_includeAllCounters)
                 return new GetDocumentsCommand(_ids, _includes, includeAllCounters: true, timeSeriesIncludes: _timeSeriesToInclude, compareExchangeValueIncludes: _compareExchangeValuesToInclude, metadataOnly: false);
-
-            return new GetDocumentsCommand(_ids, _includes, _countersToInclude, _timeSeriesToInclude, _compareExchangeValuesToInclude, metadataOnly: false);
+            
+            return new GetDocumentsCommand(_ids, _includes, _countersToInclude, _revisionsToInclude, _timeSeriesToInclude, _compareExchangeValuesToInclude, metadataOnly: false);
         }
 
         public LoadOperation ById(string id)
@@ -72,7 +76,14 @@ namespace Raven.Client.Documents.Session.Operations
                 _countersToInclude = counters;
             return this;
         }
-
+        
+        public LoadOperation WithRevisions(string[] revisions)
+        {
+            if (revisions != null)
+                _revisionsToInclude = revisions;
+            return this;
+        }
+        
         public LoadOperation WithAllCounters()
         {
             _includeAllCounters = true;
@@ -196,6 +207,11 @@ namespace Raven.Client.Documents.Session.Operations
             if (_timeSeriesToInclude != null)
             {
                 _session.RegisterTimeSeries(result.TimeSeriesIncludes);
+            }
+            
+            if (_revisionsToInclude != null)
+            {
+                _session.RegisterRevisionIncludes(result.RevisionIncludes);
             }
 
             if (_compareExchangeValuesToInclude != null)

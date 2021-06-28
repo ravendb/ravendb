@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using JetBrains.Annotations;
+using Raven.Server.Documents.Queries.Revisions;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
@@ -9,9 +11,10 @@ namespace Raven.Server.Documents.Includes
     {
         private readonly DocumentDatabase _database;
         private readonly DocumentsOperationContext _context;
-        private readonly HashSet<string> _pathsForRevisionsInDocuments;
-
-        public Dictionary<string, Document> Results { get; private set; }
+        private readonly DateTime? _revisionsBeforeDateTime;
+        private readonly HashSet<string> _pathsForRevisionsChangeVectors;
+        private readonly HashSet<string> _revisionsChangeVectors;
+        public Dictionary<string, Document> RevisionsChangeVectorResults { get; private set; }
 
         private IncludeRevisionsCommand(DocumentDatabase database, DocumentsOperationContext context)
         {
@@ -19,66 +22,100 @@ namespace Raven.Server.Documents.Includes
             _context  = context;
         }
         
-        public IncludeRevisionsCommand(DocumentDatabase database, DocumentsOperationContext context, HashSet<string> pathsForRevisionsInDocuments)
-            : this(database, context)
+        public IncludeRevisionsCommand(DocumentDatabase database, DocumentsOperationContext context, RevisionIncludeField revisionIncludeField): this(database, context)
         {
-            _pathsForRevisionsInDocuments = pathsForRevisionsInDocuments ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            _revisionsChangeVectors = revisionIncludeField?.RevisionsChangeVectors ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            _pathsForRevisionsChangeVectors = revisionIncludeField?.RevisionsChangeVectorsPaths ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase); 
+            _revisionsBeforeDateTime = revisionIncludeField?.RevisionsBeforeDateTime ?? new DateTime();
         }
 
         public void Fill(Document document)
         {
             if (document == null)
                 return;
-
-            foreach (var fieldName in _pathsForRevisionsInDocuments)
+            
+            if (_revisionsBeforeDateTime != default(DateTime))
             {
-                if (document.Data.TryGet(fieldName, out object singleOrMultipleCv) == false)
-                    return;
-                
-                switch (singleOrMultipleCv)
+                var doc = _database.DocumentsStorage.RevisionsStorage.GetRevisionBefore(context: _context, id: document.Id, max: _revisionsBeforeDateTime.GetValueOrDefault()); 
+                if (doc is null) return; 
+                RevisionsChangeVectorResults ??= new Dictionary<string, Document>(StringComparer.OrdinalIgnoreCase); 
+                RevisionsChangeVectorResults[doc.ChangeVector] = doc; 
+            }
+
+            if (_revisionsChangeVectors?.Count > 0)
+            {
+                foreach (var changeVector in _revisionsChangeVectors)
                 {
-                    case BlittableJsonReaderArray blittableJsonReaderArray:
-                    {
-                        foreach (object cvObj in blittableJsonReaderArray)
-                        {
-                            var changeVector = Convert.ToString(cvObj);
-                            var getRevisionsByCv  = _database.DocumentsStorage.RevisionsStorage.GetRevision(context: _context, changeVector:changeVector);
-                            Results ??= new Dictionary<string, Document>(StringComparer.OrdinalIgnoreCase);
-                            Results[changeVector] = getRevisionsByCv;
-                        }
-                        break;
-                    }
-                    
-                    case LazyStringValue lazyStringValue:
-                    {
-                        var getRevisionsByCv  = _database.DocumentsStorage.RevisionsStorage.GetRevision(context: _context, changeVector:lazyStringValue);
-                        Results ??= new Dictionary<string, Document>(StringComparer.OrdinalIgnoreCase);
-                        Results[lazyStringValue] = getRevisionsByCv;
-                        break;
-                    }
-                    
-                    case LazyCompressedStringValue lazyCompressedStringValue:
-                    {
-                        var toLazyStringValue = lazyCompressedStringValue.ToLazyStringValue();
-                        var getRevisionsByCv  = _database.DocumentsStorage.RevisionsStorage.GetRevision(context: _context, changeVector:toLazyStringValue);
-                        Results ??= new Dictionary<string, Document>(StringComparer.OrdinalIgnoreCase);
-                        Results[toLazyStringValue] = getRevisionsByCv;
-                        break;
-                    }
+                    RevisionsChangeVectorResults ??= new Dictionary<string, Document>(StringComparer.OrdinalIgnoreCase);
+                    if (RevisionsChangeVectorResults.ContainsKey(changeVector))
+                        continue;
+                    var doc  = _database.DocumentsStorage.RevisionsStorage.GetRevision(context: _context, changeVector:changeVector);
+                    if (doc is null) return;
+                    RevisionsChangeVectorResults[changeVector] = doc;
                 }
             }
-        }
 
-        public void AddRange(HashSet<string> revisionsCvs)
+            if (_pathsForRevisionsChangeVectors?.Count > 0)
+            {
+                  foreach (var path in _pathsForRevisionsChangeVectors)
+                  {
+                      if (document.Data.TryGet(path, out object singleOrMultipleCv) == false)
+                          return;
+                                
+                      switch (singleOrMultipleCv)
+                      {
+                          case BlittableJsonReaderArray blittableJsonReaderArray:
+                          {
+                              foreach (object cvObj in blittableJsonReaderArray)
+                              {
+                                  var changeVector = Convert.ToString(cvObj);
+                                  RevisionsChangeVectorResults ??= new Dictionary<string, Document>(StringComparer.OrdinalIgnoreCase);
+                                  if (RevisionsChangeVectorResults.ContainsKey(changeVector))
+                                      continue;
+                                  var doc  = _database.DocumentsStorage.RevisionsStorage.GetRevision(context: _context, changeVector:changeVector);
+                                  if (doc is null) return;
+                                  RevisionsChangeVectorResults[changeVector] = doc;
+                              }
+                              break;
+                          }
+                                    
+                          case LazyStringValue cvAsLazyStringValue:
+                          {
+                              RevisionsChangeVectorResults ??= new Dictionary<string, Document>(StringComparer.OrdinalIgnoreCase);
+                              if (RevisionsChangeVectorResults.ContainsKey(cvAsLazyStringValue))
+                                  continue;
+                              var doc  = _database.DocumentsStorage.RevisionsStorage.GetRevision(context: _context, changeVector:cvAsLazyStringValue);
+                              if (doc is null) return;
+                              RevisionsChangeVectorResults[cvAsLazyStringValue] = doc;
+                              break;
+                          }
+                                    
+                          case LazyCompressedStringValue cvAsLazyCompressedStringValue:
+                          {
+                              var cvAsLazyStringValue = cvAsLazyCompressedStringValue.ToLazyStringValue();
+                              RevisionsChangeVectorResults ??= new Dictionary<string, Document>(StringComparer.OrdinalIgnoreCase);
+                              if (RevisionsChangeVectorResults.ContainsKey(cvAsLazyStringValue))
+                                  continue;
+                              var doc  = _database.DocumentsStorage.RevisionsStorage.GetRevision(context: _context, changeVector:cvAsLazyStringValue);
+                              if (doc is null) return;
+                              RevisionsChangeVectorResults[cvAsLazyStringValue] = doc;
+                              break;
+                          }
+                      }
+                  }
+            }
+          
+        }
+        public void AddRange(HashSet<string> changeVectorPaths)
         {
-            if (revisionsCvs is null)
+            if (changeVectorPaths is null)
                 return;
             
-            foreach (string revisionsCv in revisionsCvs)
+            foreach (string changeVector in changeVectorPaths)
             {
-                var getRevisionsByCv  = _database.DocumentsStorage.RevisionsStorage.GetRevision(context: _context, changeVector:revisionsCv);
-                Results ??= new Dictionary<string, Document>(StringComparer.OrdinalIgnoreCase);
-                Results[revisionsCv] = getRevisionsByCv;
+                var getRevisionsByCv  = _database.DocumentsStorage.RevisionsStorage.GetRevision(context: _context, changeVector:changeVector);
+                RevisionsChangeVectorResults ??= new Dictionary<string, Document>(StringComparer.OrdinalIgnoreCase);
+                RevisionsChangeVectorResults[changeVector] = getRevisionsByCv;
             }  
         }
     }

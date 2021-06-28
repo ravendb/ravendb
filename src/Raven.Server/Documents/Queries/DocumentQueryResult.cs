@@ -57,7 +57,7 @@ namespace Raven.Server.Documents.Queries
         
         public override void AddRevisionIncludes(IncludeRevisionsCommand command)
         {
-            _revisions = command.Results;
+            _revisions = command.RevisionsChangeVectorResults;
         }
 
         public override Dictionary<string, Document>  GetRevisionIncludes() => _revisions;
