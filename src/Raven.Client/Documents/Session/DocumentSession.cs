@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Commands.MultiGet;
 using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Session.Operations.Lazy;
 
@@ -251,5 +252,6 @@ namespace Raven.Client.Documents.Session
             }
             return false;
         }
+
     }
 }

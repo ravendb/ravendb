@@ -1476,7 +1476,7 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        private static async Task WriterRevisionIncludesAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, Dictionary<string,Document> includes, CancellationToken token = default)
+        internal static async Task WriterRevisionIncludesAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, Dictionary<string,Document> includes, CancellationToken token = default)
         {
             writer.WriteStartObject();
 

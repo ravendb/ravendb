@@ -17,13 +17,14 @@ namespace Raven.Client.Documents.Commands
     public class GetDocumentsCommand : RavenCommand<GetDocumentsResult>
     {
         private readonly string _id;
-
+        
         private readonly string[] _ids;
         private readonly string[] _includes;
         private readonly string[] _counters;
         private readonly bool _includeAllCounters;
 
         private readonly IEnumerable<AbstractTimeSeriesRange> _timeSeriesIncludes;
+        private readonly IEnumerable<string> _revisionsIncludes;
         private readonly string[] _compareExchangeValueIncludes;
         private readonly bool _metadataOnly;
 
@@ -61,6 +62,15 @@ namespace Raven.Client.Documents.Commands
             : this(ids, includes, metadataOnly)
         {
             _counters = counterIncludes;
+            _timeSeriesIncludes = timeSeriesIncludes;
+            _compareExchangeValueIncludes = compareExchangeValueIncludes;
+        }
+        
+        public GetDocumentsCommand(string[] ids, string[] includes, string[] counterIncludes, IEnumerable<string> revisionIncludes, IEnumerable<AbstractTimeSeriesRange> timeSeriesIncludes, string[] compareExchangeValueIncludes, bool metadataOnly)
+            : this(ids, includes, metadataOnly)
+        {
+            _counters = counterIncludes;
+            _revisionsIncludes = revisionIncludes;
             _timeSeriesIncludes = timeSeriesIncludes;
             _compareExchangeValueIncludes = compareExchangeValueIncludes;
         }
@@ -155,6 +165,14 @@ namespace Raven.Client.Documents.Commands
                         default:
                             throw new InvalidOperationException($"Unexpected TimesSeries range {tsInclude.GetType()}");
                     }
+                }
+            }
+
+            if (_revisionsIncludes != null && _revisionsIncludes.Any())
+            {
+                foreach (var changeVector in _revisionsIncludes)
+                {
+                    pathBuilder.Append("&revisions=").Append(Uri.EscapeDataString(changeVector));
                 }
             }
 
