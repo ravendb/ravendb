@@ -11,6 +11,7 @@ using System.Runtime.InteropServices;
 using Sparrow.Json;
 using Sparrow.Server;
 using Voron.Data.CompactTrees;
+using Voron.Data.Containers;
 using Voron.Data.RawData;
 using Voron.Data.Sets;
 using Constants = Voron.Global.Constants;
@@ -138,6 +139,20 @@ namespace Voron.Impl
         public void EndAsyncCommit()
         {
             _lowLevelTransaction.EndAsyncCommit();
+        }
+
+        public long OpenContainer(string name)
+        {
+            using (Slice.From(Allocator, name, ByteStringType.Immutable, out Slice nameSlice))
+            {
+                return OpenContainer(nameSlice);
+            }
+        }
+
+        public long OpenContainer(Slice name)
+        {
+            var exists = LowLevelTransaction.RootObjects.Read(name);
+            return exists?.Reader.ReadLittleEndianInt64() ?? Container.Create(LowLevelTransaction);
         }
 
         public Set OpenSet(string name)

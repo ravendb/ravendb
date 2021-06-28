@@ -8,14 +8,10 @@ using System.Text;
 using Corax;
 using MimeKit;
 using MimeKit.Text;
-using Raven.Client;
 using Sparrow;
-using Sparrow.Json;
 using Sparrow.Server;
 using Sparrow.Threading;
 using Voron;
-using Voron.Data.BTrees;
-using Voron.Data.CompactTrees;
 using Voron.Data.Containers;
 using Voron.Data.Sets;
 using Voron.Impl;
@@ -64,13 +60,10 @@ namespace Tryouts
             public string InReplyTo;
         }
 
-        public static void Stats()
+        private static void ReportStats(StorageEnvironment env)
         {
-            string storagePath = DirectoryEnron;
-            using var options = StorageEnvironmentOptions.ForPath(storagePath);
-            using var env = new StorageEnvironment(options);
-
             using var rtx = env.ReadTransaction();
+            var reports = env.GenerateReport(rtx);
 
             long  big = 0L;
             var tree = rtx.ReadTree("Fields");
@@ -134,11 +127,11 @@ namespace Tryouts
             }
 
             Console.WriteLine($"Total size: {size:##,###}");
-            Console.WriteLine($"ItemSize\tTotalItemSize\tNumberOfItems");
-            foreach (var (itemSize, counts) in dic.OrderBy(x => x.Key))
-            {
-                Console.WriteLine($"{itemSize:##,###}\t{counts.Item1:##,###}\t{counts.Item2:##,###}");
-            }
+            // Console.WriteLine($"ItemSize\tTotalItemSize\tNumberOfItems");
+            // foreach (var (itemSize, counts) in dic.OrderBy(x => x.Key))
+            // {
+            //     Console.WriteLine($"{itemSize:##,###}\t{counts.Item1:##,###}\t{counts.Item2:##,###}");
+            // }
         }
 
         public static void Index(bool recreateDatabase = true, string outputDirectory = ".")
@@ -234,7 +227,7 @@ namespace Tryouts
                         // var entryReader = new IndexEntryReader(data);
 
 
-                        if (i % (1024*128) == 0)
+                        if (i % (1024*32) == 0)
                         {
                             ms += sp.ElapsedMilliseconds;
                             Console.WriteLine($"Elapsed: {sp.ElapsedMilliseconds} total: {i:##,###}");
@@ -253,6 +246,8 @@ namespace Tryouts
                     indexWriter.Commit();
                     Console.WriteLine($"Indexing time: {justIndex}");
                     Console.WriteLine($"Total execution time: {ms}");
+                    
+                    ReportStats(env);
                 }
                 finally
                 {
