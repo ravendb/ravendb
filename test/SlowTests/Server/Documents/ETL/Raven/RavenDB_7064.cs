@@ -92,9 +92,10 @@ person.addAttachment('photo2.jpg-etl', loadAttachment('photo2.jpg'));
 
                     Assert.True(metadata.ContainsKey(Constants.Documents.Metadata.Attachments));
 
-                    var attachment = session.Advanced.Attachments.Get("users/1", "photo1.jpg-etl");
-
-                    Assert.Null(attachment); // this attachment was removed
+                    using (var attachment = session.Advanced.Attachments.Get("users/1", "photo1.jpg-etl"))
+                    {
+                        Assert.Null(attachment); // this attachment was removed
+                    }
                 }
 
                 AssertAttachments(dest, new[]
@@ -118,12 +119,22 @@ person.addAttachment('photo2.jpg-etl', loadAttachment('photo2.jpg'));
                 {
                     Assert.Null(session.Load<User>("users/1"));
 
-                    Assert.Null(session.Advanced.Attachments.Get("users/1", "photo1.jpg-etl"));
-                    Assert.Null(session.Advanced.Attachments.Get("users/1", "photo2.jpg-etl"));
+                    using (var attachment = session.Advanced.Attachments.Get("users/1", "photo1.jpg-etl"))
+                    {
+                        Assert.Null(attachment);
+                    }
+
+                    using (var attachment = session.Advanced.Attachments.Get("users/1", "photo2.jpg-etl"))
+                    {
+                        Assert.Null(attachment);
+                    }
 
                     Assert.Empty(session.Advanced.LoadStartingWith<Person>("users/1/people/"));
 
-                    Assert.Null(session.Advanced.Attachments.Get(personId, "photo2.jpg-etl"));
+                    using (var attachment = session.Advanced.Attachments.Get(personId, "photo2.jpg-etl"))
+                    {
+                        Assert.Null(attachment);
+                    }
                 }
             }
         }

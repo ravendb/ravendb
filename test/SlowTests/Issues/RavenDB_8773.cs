@@ -51,7 +51,10 @@ namespace SlowTests.Issues
 
                     session.SaveChanges();
 
-                   Assert.Null(session.Advanced.Attachments.Get("#", "#"));
+                    using (var attachment = session.Advanced.Attachments.Get("#", "#"))
+                    {
+                        Assert.Null(attachment);
+                    }
 
                     session.Delete("#");
 

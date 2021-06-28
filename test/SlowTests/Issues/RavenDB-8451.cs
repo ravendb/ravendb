@@ -122,15 +122,19 @@ namespace SlowTests.Issues
 
                         foreach (Employee l1 in list1)
                         {
-                            var opGetAttach = session.Advanced.Attachments.Get(l1, "photo.jpg");
-                            var revCnt = session.Advanced.Revisions.GetFor<Employee>(l1.Id).Count;
-                            msg.AppendLine($"Employee {l1.Id} Attachment = {opGetAttach?.Details?.DocumentId}, RevCount=" + revCnt);
+                            using (var opGetAttach = session.Advanced.Attachments.Get(l1, "photo.jpg"))
+                            {
+                                var revCnt = session.Advanced.Revisions.GetFor<Employee>(l1.Id).Count;
+                                msg.AppendLine($"Employee {l1.Id} Attachment = {opGetAttach?.Details?.DocumentId}, RevCount=" + revCnt);
+                            }
                         }
                         foreach (Category l2 in list2)
                         {
-                            var opGetAttach = session.Advanced.Attachments.Get(l2, "image.jpg");
-                            var revCnt = session.Advanced.Revisions.GetFor<Employee>(l2.Id).Count;
-                            msg.AppendLine($"Category {l2.Id} Attachment = {opGetAttach?.Details?.DocumentId}, RevCount=" + revCnt);
+                            using (var opGetAttach = session.Advanced.Attachments.Get(l2, "image.jpg"))
+                            {
+                                var revCnt = session.Advanced.Revisions.GetFor<Employee>(l2.Id).Count;
+                                msg.AppendLine($"Category {l2.Id} Attachment = {opGetAttach?.Details?.DocumentId}, RevCount=" + revCnt);
+                            }
                         }
 
                         var documentDatabase = await GetDatabase(store.Database);

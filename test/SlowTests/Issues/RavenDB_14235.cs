@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Session;
 using Xunit;
 using Xunit.Abstractions;
@@ -232,14 +233,15 @@ namespace SlowTests.Issues
                 exceptionsCounter++;
             }
 
+            Task<AttachmentResult> getAttachmentTask = null;
             try
             {
                 tryCounter++;
                 using var session = store.OpenAsyncSession();
-                var task = session.Advanced.Attachments.GetAsync(name, name);
+                getAttachmentTask = session.Advanced.Attachments.GetAsync(name, name);
                 using (((InMemoryDocumentSessionOperations)session).ForTestingPurposesOnly().CallOnSessionDisposeAboutToThrowDueToRunningAsyncTask(() =>
                 {
-                    task.Wait();
+                    getAttachmentTask.Wait();
                 }))
                 {
 
@@ -249,6 +251,10 @@ namespace SlowTests.Issues
             {
                 Assert.Equal(typeof(InvalidOperationException), e.GetType());
                 exceptionsCounter++;
+            }
+            finally
+            {
+                getAttachmentTask?.Result?.Dispose();
             }
 
             try
