@@ -153,24 +153,13 @@ namespace Raven.Server.Documents.Queries
 
             const int batchSize = 1024;
 
-            Queue<string> resultIds;
+            DocumentIdQueryResult results;
+
             try
             {
-                var results = await index.Query(query, context, token).ConfigureAwait(false);
+                results = await index.IdQuery(query, context, token).ConfigureAwait(false);
                 if (options.AllowStale == false && results.IsStale)
                     throw new InvalidOperationException("Cannot perform bulk operation. Index is stale.");
-
-                resultIds = new Queue<string>(results.Results.Count);
-
-                foreach (var document in results.Results)
-                {
-                    using (document)
-                    {
-                        token.Delay();
-
-                        resultIds.Enqueue(document.Id.ToString());
-                    }
-                }
             }
             finally // make sure to close tx if DocumentConflictException is thrown
             {
@@ -179,7 +168,7 @@ namespace Raven.Server.Documents.Queries
 
             var progress = new DeterminateProgress
             {
-                Total = resultIds.Count,
+                Total = results.ResultIds.Count,
                 Processed = 0
             };
 
@@ -190,9 +179,9 @@ namespace Raven.Server.Documents.Queries
 
             using (var rateGate = options.MaxOpsPerSecond.HasValue ? new RateGate(options.MaxOpsPerSecond.Value, TimeSpan.FromSeconds(1)) : null)
             {
-                while (resultIds.Count > 0)
+                while (results.ResultIds.Count > 0)
                 {
-                    var command = new ExecuteRateLimitedOperations<string>(resultIds, id =>
+                    var command = new ExecuteRateLimitedOperations<string>(results.ResultIds, id =>
                     {
                         var subCommand = createCommandForId(id, options.RetrieveDetails);
 
