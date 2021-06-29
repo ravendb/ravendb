@@ -174,19 +174,21 @@ namespace Raven.Client.Json
                 if (numOfEscapePositions == 0)
                     return false;
 
-                var memoryStream = new MemoryStream();
-                using (var textWriter = new BlittableJsonTextWriter(context, memoryStream))
+                using (var memoryStream = new MemoryStream())
                 {
-                    textWriter.WriteString(lsv);
-                    textWriter.Flush();
-                }
-                memoryStream.TryGetBuffer(out var bytes);
-                fixed (byte* pBuff = bytes.Array)
-                {
-                    // need to ignore the quote marks
-                    using var str = context.AllocateStringValue(null, pBuff + bytes.Offset + 1, (int)memoryStream.Length - 2);
+                    using (var textWriter = new BlittableJsonTextWriter(context, memoryStream))
+                    {
+                        textWriter.WriteString(lsv);
+                        textWriter.Flush();
+                    }
+                    memoryStream.TryGetBuffer(out var bytes);
+                    fixed (byte* pBuff = bytes.Array)
+                    {
+                        // need to ignore the quote marks
+                        using var str = context.AllocateStringValue(null, pBuff + bytes.Offset + 1, (int)memoryStream.Length - 2);
 
-                    return newProp.Value.Equals(str);
+                        return newProp.Value.Equals(str);
+                    }
                 }
             }
             return false;
