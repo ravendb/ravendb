@@ -5,7 +5,7 @@ using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Server.Config;
-using Xunit;
+using Tests.Infrastructure;
 using Xunit.Abstractions;
 
 namespace SlowTests.Issues
@@ -16,8 +16,8 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public async Task CRUD_Operations()
+        [Fact64Bit]
+        public async Task Should_Delete_All_Documents_Without_Timeout()
         {
             using (var store = GetDocumentStore(new Options
             {
@@ -27,8 +27,8 @@ namespace SlowTests.Issues
                 }
             }))
             {
-                var rnd = new Random();
                 var now = DateTime.UtcNow;
+                var toSave = now.AddHours(-2);
 
                 new SearchIndex().Execute(store);
 
@@ -38,20 +38,18 @@ namespace SlowTests.Issues
                     {
                         bulk.Store(new Unit
                         {
-                            DateTime = now.AddHours(-rnd.Next(3, 200))
+                            DateTime = toSave
                         });
                     }
                 }
 
                 WaitForIndexing(store);
 
-                var startDate = DateTime.UtcNow;
-
                 var operation = await store.Operations.SendAsync(
                     new DeleteByQueryOperation<SearchIndex.Result, SearchIndex>(x =>
-                        x.DateTime < startDate));
+                        x.DateTime < now));
 
-                await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(30));
+                await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(2));
             }
         }
 
