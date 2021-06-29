@@ -175,7 +175,7 @@ namespace Raven.Client.Json
                     return false;
 
                 var memoryStream = new MemoryStream();
-                using (var textWriter = new AsyncBlittableJsonTextWriter(context, memoryStream, CancellationToken.None))
+                using (var textWriter = new BlittableJsonTextWriter(context, memoryStream))
                 {
                     textWriter.WriteString(lsv);
                     textWriter.Flush();
