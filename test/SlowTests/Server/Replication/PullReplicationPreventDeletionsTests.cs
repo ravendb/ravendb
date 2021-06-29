@@ -13,6 +13,7 @@ using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.Expiration;
 using Raven.Client.Documents.Operations.Replication;
+using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Session;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.ServerWide.Context;
@@ -359,6 +360,129 @@ namespace SlowTests.Server.Replication
             }
         }
 
+        [Fact]
+        public async Task MakeSureDeletionsRevisionsDontReplicate()
+        {
+            var certificates = SetupServerAuthentication();
+            var adminCert = RegisterClientCertificate(certificates.ServerCertificate.Value, certificates
+                .ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+
+            var hubDatabase = GetDatabaseName("HUB");
+            var sinkDatabase = GetDatabaseName("SINK");
+
+            using var hubStore = GetDocumentStore(new RavenTestBase.Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+                ModifyDatabaseName = x => hubDatabase
+            });
+
+            using var sinkStore = GetDocumentStore(new RavenTestBase.Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+                ModifyDatabaseName = x => sinkDatabase
+            });
+
+            //setup expiration
+            await SetupExpiration(sinkStore);
+
+            var pullCert = new X509Certificate2(File.ReadAllBytes(certificates.ClientCertificate2Path), (string)null,
+                X509KeyStorageFlags.Exportable);
+
+            await hubStore.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
+            {
+                Name = "pullRepHub",
+                Mode = PullReplicationMode.SinkToHub | PullReplicationMode.HubToSink,
+                PreventDeletionsMode = PreventDeletionsMode.PreventSinkToHubDeletions
+            }));
+
+            await hubStore.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation("pullRepHub",
+                new ReplicationHubAccess { Name = "hubAccess", CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert)) }));
+
+            await sinkStore.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
+            {
+                Database = hubStore.Database,
+                Name = hubStore.Database + "ConStr",
+                TopologyDiscoveryUrls = hubStore.Urls
+            }));
+
+            await sinkStore.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(new PullReplicationAsSink
+            {
+                ConnectionStringName = hubStore.Database + "ConStr",
+                Mode = PullReplicationMode.SinkToHub | PullReplicationMode.HubToSink,
+                CertificateWithPrivateKey = Convert.ToBase64String(pullCert.Export(X509ContentType.Pfx)),
+                HubName = "pullRepHub"
+            }));
+
+            //enable revisions
+            await RevisionsHelper.SetupRevisions(Server.ServerStore, sinkStore.Database, r => r.Collections["Users"].PurgeOnDelete = false);
+
+            //create doc in sink
+            using (var s = sinkStore.OpenAsyncSession())
+            {
+                dynamic user1 = new User {Source = "Sink"};
+                await s.StoreAsync(user1, "users/insink/1");
+                s.Advanced.GetMetadataFor(user1)[Constants.Documents.Metadata.Expires] = DateTime.UtcNow.AddMinutes(10);
+                
+                await s.SaveChangesAsync();
+            }
+            
+            //create revision
+            using (var s = sinkStore.OpenAsyncSession())
+            {
+                var user1 = await s.LoadAsync<User>("users/insink/1");
+                user1.Source = "SinkAfterChange";
+                await s.SaveChangesAsync();
+            }
+
+            //create doc in hub
+            using (var s = hubStore.OpenAsyncSession())
+            {
+                await s.StoreAsync(new { Source = "Hub" }, "users/inhub/1");
+                await s.SaveChangesAsync();
+            }
+            
+            Assert.True(WaitForDocument(sinkStore, "users/inhub/1"));
+
+            //make sure hub got both docs and expires gets deleted
+            using (var h = hubStore.OpenAsyncSession())
+            {
+                //check hub got both docs
+                var doc1 = await h.LoadAsync<dynamic>("users/insink/1");
+                Assert.NotNull(doc1);
+                
+                //check expired does not exist in users/insink/1
+                IMetadataDictionary metadata = h.Advanced.GetMetadataFor(doc1);
+                Assert.False(metadata?.ContainsKey(Constants.Documents.Metadata.Expires));
+            }
+
+            //delete doc from sink
+            using (var s = sinkStore.OpenAsyncSession())
+            {
+                s.Delete("users/insink/1");
+                await s.SaveChangesAsync();
+            }
+
+            EnsureReplicating(hubStore, sinkStore);
+            EnsureReplicating(sinkStore, hubStore);
+
+            //make sure doc is deleted from sink
+            Assert.True(WaitForDocumentDeletion(sinkStore, "users/insink/1"));
+
+            //make sure doc not deleted from hub and still doesn't contain expires
+            using (var h = hubStore.OpenAsyncSession())
+            {
+                //check hub got doc
+                var doc1 = await h.LoadAsync<dynamic>("users/insink/1");
+                Assert.NotNull(doc1);
+
+                //check expires does not exist in users/insink/1
+                IMetadataDictionary metadata = h.Advanced.GetMetadataFor(doc1);
+                Assert.False(metadata?.ContainsKey(Constants.Documents.Metadata.Expires));
+            }
+        }
+
         private async Task SetupExpiration(DocumentStore store)
         {
             var config = new ExpirationConfiguration
@@ -368,6 +492,12 @@ namespace SlowTests.Server.Replication
             };
 
             await ExpirationHelper.SetupExpiration(store, Server.ServerStore, config);
+        }
+
+        public class User
+        {
+            public string Id;
+            public string Source;
         }
     }
 }

@@ -591,14 +591,7 @@ namespace Raven.Server.Documents.Replication
 
             if (_shouldSkipSendingTombstones)
             {
-                switch (item.Type)
-                {
-                    case ReplicationBatchItem.ReplicationItemType.RevisionTombstone:
-                    case ReplicationBatchItem.ReplicationItemType.AttachmentTombstone:
-                    case ReplicationBatchItem.ReplicationItemType.DocumentTombstone:
-                    case ReplicationBatchItem.ReplicationItemType.DeletedTimeSeriesRange:
-                        return true;
-                }
+                return ReplicationLoader.IsOfTypePreventDeletions(item);
             }
 
             switch (item)

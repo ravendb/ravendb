@@ -643,14 +643,11 @@ namespace Raven.Server.Documents.Replication
 
                 if (_preventIncomingSinkDeletions)
                 {
-                    switch (item)
+                    if (ReplicationLoader.IsOfTypePreventDeletions(item))
                     {
-                        case DocumentReplicationItem { Type: ReplicationBatchItem.ReplicationItemType.DeletedTimeSeriesRange }:
-                        case DocumentReplicationItem { Type: ReplicationBatchItem.ReplicationItemType.RevisionTombstone }:
-                        case DocumentReplicationItem { Type: ReplicationBatchItem.ReplicationItemType.AttachmentTombstone }:
-                        case DocumentReplicationItem { Type: ReplicationBatchItem.ReplicationItemType.DocumentTombstone }:
-                            throw new InvalidOperationException($"This hub does not allow for tombstone replication via pull replication '{_incomingPullReplicationParams.Name}'." +
-                                                                " Replication aborted");
+                        throw new InvalidOperationException(
+                            $"This hub does not allow for tombstone replication via pull replication '{_incomingPullReplicationParams.Name}'." +
+                            " Replication aborted");
                     }
                 }
             }
