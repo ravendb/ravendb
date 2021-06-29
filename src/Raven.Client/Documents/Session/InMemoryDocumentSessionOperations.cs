@@ -118,7 +118,7 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Translate between an CV and its associated entity
         /// </summary>
-        internal  Dictionary<string, DocumentInfo> IncludeRevisionsByChangeVector;
+        internal Dictionary<string, DocumentInfo> IncludeRevisionsByChangeVector;
         
         /// <summary>
         /// hold the data required to manage the data for RavenDB's Unit of Work
@@ -143,10 +143,7 @@ namespace Raven.Client.Documents.Session
 
         private Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>> _timeSeriesByDocId;
         
-
         protected readonly DocumentStoreBase _documentStore;
-
-
         
         public string DatabaseName { get; }
 
@@ -1455,7 +1452,7 @@ more responsive application.
                 if (propertyDetails.Value is BlittableJsonReaderObject json == false)
                     continue;
 
-                 json = (BlittableJsonReaderObject)propertyDetails.Value;
+                json = (BlittableJsonReaderObject)propertyDetails.Value;
 
                 var newDocumentInfo = DocumentInfo.GetNewDocumentInfo(json);
                 if (newDocumentInfo.Metadata.TryGetConflict(out var conflict) && conflict)
