@@ -645,9 +645,12 @@ namespace Raven.Server.Documents.Replication
                 {
                     if (ReplicationLoader.IsOfTypePreventDeletions(item))
                     {
-                        throw new InvalidOperationException(
-                            $"This hub does not allow for tombstone replication via pull replication '{_incomingPullReplicationParams.Name}'." +
-                            " Replication aborted");
+                        using (var infoHelper = new DocumentInfoHelper())
+                        {
+                            throw new InvalidOperationException(
+                                $"This hub does not allow for tombstone replication via pull replication '{_incomingPullReplicationParams.Name}'." +
+                                $" Replication of item '{infoHelper.GetItemInformation(item)}' has been aborted for sink connection: '{this.ConnectionInfo.ToString()}'.");
+                        }
                     }
                 }
             }
