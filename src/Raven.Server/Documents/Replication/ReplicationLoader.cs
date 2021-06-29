@@ -23,6 +23,7 @@ using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
 using Raven.Server.Config.Settings;
+using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Extensions;
 using Raven.Server.Json;
@@ -1972,6 +1973,24 @@ namespace Raven.Server.Documents.Replication
         {
             return Interlocked.Increment(ref _replicationStatsId);
         }
+
+        public static bool IsOfTypePreventDeletions(ReplicationBatchItem item)
+        {
+            switch (item.Type)
+            {
+                case ReplicationBatchItem.ReplicationItemType.RevisionTombstone:
+                case ReplicationBatchItem.ReplicationItemType.AttachmentTombstone:
+                case ReplicationBatchItem.ReplicationItemType.DocumentTombstone:
+                case ReplicationBatchItem.ReplicationItemType.DeletedTimeSeriesRange:
+                    return true;
+                case ReplicationBatchItem.ReplicationItemType.Document:
+                    if (item is DocumentReplicationItem doc && doc.Flags.Contain(DocumentFlags.DeleteRevision))
+                        return true;
+                    break;
+            }
+
+            return false;
+        }
     }
 
     public class OutgoingReplicationFailureToConnectReporter : IReportOutgoingReplicationPerformance
@@ -2010,5 +2029,6 @@ namespace Raven.Server.Documents.Replication
         {
             return new[] { _stats.ToReplicationPerformanceStats() };
         }
+
     }
 }
