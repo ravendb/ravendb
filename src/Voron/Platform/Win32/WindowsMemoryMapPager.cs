@@ -327,7 +327,10 @@ namespace Voron.Platform.Win32
                         {
                             var cur = pagesWritten.Keys[i];
                             if (end < cur)
+                            {
+                                i--;
                                 break;
+                            }
                             end = pagesWritten.Values[i];
                         }
 

@@ -776,7 +776,7 @@ namespace Voron.Impl.Paging
             
             lock (_pageWritesLock)
             {
-                var end = pageNumber + Math.Min(256, numberOfPages);
+                var end = pageNumber + Math.Min(1024, numberOfPages);
                 _pageWrites.TryGetValue(pageNumber, out var prev);
                 _pageWrites[pageNumber] = Math.Max(prev, end);
             }
