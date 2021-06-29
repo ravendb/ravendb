@@ -1128,7 +1128,7 @@ namespace Voron.Impl.Journal
                     {
                         // We do the sync _outside_ of the lock, letting the rest of the stuff proceed
                         var sp = Stopwatch.StartNew();
-                        _parent._waj._dataPager.Sync(Interlocked.Read(ref _parent._totalWrittenButUnsyncedBytes));
+                        _parent._waj._dataPager.Sync(Interlocked.Read(ref _parent._totalWrittenButUnsyncedBytes), minimumWrites: true);
                         if (_parent._waj._logger.IsInfoEnabled)
                         {
                             var sizeInKb = (_parent._waj._dataPager.NumberOfAllocatedPages * Constants.Storage.PageSize) / Constants.Size.Kilobyte;

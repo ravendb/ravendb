@@ -342,6 +342,11 @@ namespace Voron.Impl.Paging
 
         public abstract void Sync(long totalUnsynced);
 
+        public virtual void Sync(long totalUnsynced, bool minimumWrites)
+        {
+            Sync(totalUnsynced);
+        }
+
         public PagerState EnsureContinuous(long requestedPageNumber, int numberOfPages)
         {
             if (DisposeOnceRunner.Disposed)
@@ -745,6 +750,37 @@ namespace Voron.Impl.Paging
         {
             _lowMemoryFlag.Lower();
         }
+
+        protected bool ShouldTrackWrittenPages;
+        
+        private SortedList<long, long> _pageWrites = new SortedList<long, long>();
+        private readonly object _pageWritesLock = new object();
+
+        protected SortedList<long, long> GetWrittenPages()
+        {
+            if(ShouldTrackWrittenPages == false)
+                throw new NotSupportedException("Not supported by this pager");
+            
+            lock (_pageWritesLock)
+            {
+                var copy = _pageWrites;
+                _pageWrites = new SortedList<long, long>();
+                return copy;
+            }
+        }
+        
+        public void RecordPageWrite(long pageNumber, long numberOfPages)
+        {
+            if (ShouldTrackWrittenPages == false)
+                return;
+            
+            lock (_pageWritesLock)
+            {
+                var end = pageNumber + Math.Min(256, numberOfPages);
+                _pageWrites.TryGetValue(pageNumber, out var prev);
+                _pageWrites[pageNumber] = Math.Max(prev, end);
+            }
+        }
     }
 
     public interface I4KbBatchWrites : IDisposable
@@ -773,6 +809,7 @@ namespace Voron.Impl.Paging
                 numberOfPages++;
 
             var newPagerState = _abstractPager.EnsureContinuous(pageNumber, numberOfPages);
+            _abstractPager.RecordPageWrite(pageNumber, numberOfPages);
             if (newPagerState != null)
             {
                 _pagerState.Release();

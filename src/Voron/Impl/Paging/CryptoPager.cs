@@ -119,6 +119,11 @@ namespace Voron.Impl.Paging
             Inner.Sync(totalUnsynced);
         }
 
+        public override void Sync(long totalUnsynced, bool minimumWrites)
+        {
+            Inner.Sync(totalUnsynced, minimumWrites);
+        }
+
         protected internal override PagerState AllocateMorePages(long newLength)
         {
             return Inner.AllocateMorePages(newLength);

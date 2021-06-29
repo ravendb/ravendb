@@ -3,9 +3,11 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.IO.MemoryMappedFiles;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Microsoft.Win32.SafeHandles;
+using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Server.Meters;
 using Sparrow.Server.Platform;
@@ -53,6 +55,8 @@ namespace Voron.Platform.Win32
             bool usePageProtection = false)
             : base(options, !fileAttributes.HasFlag(Win32NativeFileAttributes.Temporary), usePageProtection)
         {
+            ShouldTrackWrittenPages = true;
+            
             SYSTEM_INFO systemInfo;
             GetSystemInfo(out systemInfo);
             FileName = file;
@@ -277,6 +281,77 @@ namespace Voron.Platform.Win32
             if (_fileInfo == null)
                 return "Unknown";
             return "MemMap: " + _fileInfo.FullName;
+        }
+
+        public override void Sync(long totalUnsynced, bool minimumWrites)
+        {
+            var pagesWritten = GetWrittenPages(); 
+            if (minimumWrites == false)
+            {
+                Sync(totalUnsynced);
+                return;
+            }
+            
+            if (DisposeOnceRunner.Disposed)
+                ThrowAlreadyDisposedException();
+
+            if ((_fileAttributes & Win32NativeFileAttributes.Temporary) == Win32NativeFileAttributes.Temporary ||
+                (_fileAttributes & Win32NativeFileAttributes.DeleteOnClose) == Win32NativeFileAttributes.DeleteOnClose)
+                return; // no need to do this
+
+
+            var currentState = GetPagerStateAndAddRefAtomically();
+            try
+            {
+                using (var metric = Options.IoMetrics.MeterIoRate(FileName.FullPath, IoMetrics.MeterType.DataSync, 0))
+                {
+                    var biggest = currentState.AllocationInfos[0];
+                    for (int i = 1; i < currentState.AllocationInfos.Length; i++)
+                    {
+                        if (biggest.Size < currentState.AllocationInfos[i].Size)
+                        {
+                            biggest = currentState.AllocationInfos[i];
+                        }
+                    }
+                    
+                    metric.IncrementFileSize(biggest.Size);
+
+                    for (int i = 0; i < pagesWritten.Count; i++)
+                    {
+                        var page = pagesWritten.Keys[i];
+                        var end = pagesWritten.Values[i];
+
+                        i++;
+                        
+                        for (; i < pagesWritten.Count; i++)
+                        {
+                            var cur = pagesWritten.Keys[i];
+                            if (end < cur)
+                                break;
+                            end = pagesWritten.Values[i];
+                        }
+
+                        var sizeToFlush = (end - page) * Constants.Storage.PageSize;
+                        metric.IncrementSize(sizeToFlush);
+                        byte* biggestBaseAddress = biggest.BaseAddress + (page * Constants.Storage.PageSize);
+                        if (Win32MemoryMapNativeMethods.FlushViewOfFile(biggestBaseAddress, new IntPtr(sizeToFlush)) == false)
+                        {
+                            var lasterr = Marshal.GetLastWin32Error();
+                            throw new Win32Exception(lasterr);
+                        }
+                    }
+                    
+                    if (Win32MemoryMapNativeMethods.FlushFileBuffers(_handle) == false)
+                    {
+                        var lasterr = Marshal.GetLastWin32Error();
+                        throw new Win32Exception(lasterr);
+                    }
+                }
+            }
+            finally
+            {
+                currentState.Release();
+            }
         }
 
         public override void Sync(long totalUnsynced)
