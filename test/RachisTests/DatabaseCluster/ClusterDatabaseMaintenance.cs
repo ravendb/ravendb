@@ -1769,7 +1769,7 @@ namespace RachisTests.DatabaseCluster
                 var node = cluster.Nodes.Single(n => n.ServerStore.NodeTag == "B");
                 await DisposeServerAndWaitForFinishOfDisposalAsync(node);
 
-                cluster.Leader.ServerStore.Engine.CurrentLeader.StepDown();
+                await ActionWithLeader(l => l.ServerStore.Engine.CurrentLeader.StepDown());
 
                 await Task.Delay(3_000);
 
