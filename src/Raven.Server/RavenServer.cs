@@ -362,7 +362,7 @@ namespace Raven.Server
                 {
                     msg += $" Automatic renewal is no longer possible. Please check the logs for errors and contact support@ravendb.net.";
                 }
-                
+
                 ServerStore.NotificationCenter.Add(AlertRaised.Create(null, CertificateReplacement.CertReplaceAlertTitle, msg, AlertType.Certificates_Expiration, NotificationSeverity.Error));
 
                 if (Logger.IsOperationsEnabled)
@@ -388,7 +388,7 @@ namespace Raven.Server
 
                 ServerStore.NotificationCenter.Add(AlertRaised.Create(null, CertificateReplacement.CertReplaceAlertTitle, msg, AlertType.Certificates_Expiration, severity));
 
-                if (Logger.IsOperationsEnabled) 
+                if (Logger.IsOperationsEnabled)
                     Logger.Operations(msg);
             }
             else
@@ -906,7 +906,7 @@ namespace Raven.Server
         public void RefreshClusterCertificateTimerCallback(object state)
         {
             RefreshClusterCertificate(state, RaftIdGenerator.NewId());
-            
+
             try
             {
                 UpdateCertificateExpirationAlert();
@@ -1366,7 +1366,7 @@ namespace Raven.Server
                     if (Logger.IsOperationsEnabled)
                         Logger.Operations($"You are using the configuration property '{RavenConfiguration.GetKey(x => x.Security.CertificateLoadExec)}', without specifying '{RavenConfiguration.GetKey(x => x.Security.CertificateRenewExec)}' and '{RavenConfiguration.GetKey(x => x.Security.CertificateChangeExec)}'. This configuration requires you to renew the certificate manually across the entire cluster.");
                 }
-                
+
                 return LoadCertificate();
             }
             catch (Exception e)
@@ -1979,7 +1979,7 @@ namespace Raven.Server
                         _tcpLogger.Info("Failure when processing tcp connection", e);
                     }
                 }
-            }, TaskCreationOptions.LongRunning);
+            });
         }
 
         private async Task DispatchTcpConnection(TcpConnectionHeaderMessage header, TcpConnectionOptions tcp, JsonOperationContext.ManagedPinnedBuffer buffer)
