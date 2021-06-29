@@ -2439,9 +2439,10 @@ namespace Raven.Server.Documents.Indexes
         public virtual async Task<DocumentIdQueryResult> IdQuery(
             IndexQueryServerSide query,
             DocumentsOperationContext queryContext,
+            Queue<string> resultIds,
             OperationCancelToken token)
         {
-            var result = new DocumentIdQueryResult(token);
+            var result = new DocumentIdQueryResult(resultIds, token);
             await QueryInternal(result, query, queryContext, pulseDocsReadingTransaction: false, token: token);
             return result;
         }
