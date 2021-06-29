@@ -725,7 +725,7 @@ class editIndex extends viewModelBase {
                     .execute()
                     .done((savedIndexName) => {
                         this.resetDirtyFlag();
-                        router.navigate(appUrl.forIndexes(db));
+                        router.navigate(appUrl.forIndexes(db, this.editedIndex().name()));
                     });
             });
     }

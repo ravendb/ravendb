@@ -693,6 +693,23 @@ class genUtils {
 
         return result;
     }
+    
+    static scrollToElement(element: Element) {
+        const containerSelector = ".js-scroll-container";
+        
+        const containerRect = document.querySelector(containerSelector).getBoundingClientRect();
+        const rectTop = containerRect.top;
+        const rectBottom = rectTop + containerRect.height;
+
+        const elementRect = element.getBoundingClientRect();
+        const elementTop = elementRect.top;
+        const elementBottom = elementTop + elementRect.height;
+
+        // Scroll vertically only if element is outside of viewport 
+        if ((elementTop < rectTop) || (elementBottom > rectBottom)){
+            $(containerSelector).scrollTop(elementTop);
+        }
+    }
 } 
 
 export = genUtils;

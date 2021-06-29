@@ -152,7 +152,7 @@
                 <small class="on-base-background" data-bind="html: searchCriteriaDescription"></small>
             </div>
         </div>
-        <div class="flex-grow scroll">
+        <div class="flex-grow scroll js-scroll-container">
             <div data-bind="foreach: sortedGroups">
                 <h2 class="on-base-background" data-bind="text: entityName, visible: !groupHidden(), attr: { title: 'Collection: ' + entityName }"></h2>
                 <div data-bind="foreach: indexes, visible: !groupHidden()">
@@ -165,7 +165,8 @@
                                 <div class="padding flex-horizontal">
                                     <div class="title">Side by side</div>
                                     <div class="flex-separator"></div>
-                                    <button class="btn btn-sm btn-warning" data-bind="click: _.partial($root.forceSideBySide, $data.parent), css: { 'btn-spinner': _.includes($root.spinners.swapNow(), parent.name) }, disable: _.includes($root.spinners.swapNow(), parent.name)">
+                                    <button class="btn btn-sm btn-warning" 
+                                            data-bind="click: _.partial($root.forceSideBySide, $data.parent), css: { 'btn-spinner': _.includes($root.spinners.swapNow(), parent.name) }, disable: _.includes($root.spinners.swapNow(), parent.name)">
                                         <i class="icon-force"></i> <span>Swap now</span>
                                     </button>
                                 </div>
@@ -183,7 +184,7 @@
 </div>
 
 <script type="text/html" id="index-template">
-    <div class="padding padding-sm">
+    <div data-bind="attr: { class: 'padding padding-sm js-index-template ' + ($root.shouldHighlightIndex(name) ? 'blink-style-basic' : ''), id: 'id_' + name }">
         <div data-bind="attr: { class: 'state ' + badgeClass(), 'data-state-text' : badgeText() }"></div>
         <div class="row">
             <div class="col-xs-12 col-sm-6 col-xl-4 info-container">
@@ -200,7 +201,6 @@
                     <i class="icon-timeseries" data-bind="visible: sourceType() === 'TimeSeries'" title="Index source: Time Series"></i>
                     <i class="icon-documents" data-bind="visible: sourceType() === 'Documents'" title="Index source: Documents"></i>
                 </div>
-               
                 <div class="flex-horizontal clear-left index-info nospacing">
                     <div class="index-type-icon" data-placement="right" data-toggle="tooltip" data-animation="true" data-html="true" data-bind="tooltipText: mapReduceIndexInfoTooltip">
                             <span data-bind="if: reduceOutputCollectionName() && !patternForReferencesToReduceOutputCollection()"><i class="icon-output-collection"></i></span>

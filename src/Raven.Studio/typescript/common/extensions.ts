@@ -331,21 +331,9 @@ class extensions {
         };
 
         ko.bindingHandlers["scrollTo"] = {
-            update: (element: any, valueAccessor: KnockoutObservable<boolean>) => {
+            update: (element: Element, valueAccessor: KnockoutObservable<boolean>) => {
                 if (valueAccessor()) {
-                  
-                    const $container = $("#page-host-root");
-                    const scrollTop = $container.scrollTop();
-                    const scrollBottom = scrollTop + $container.height();
-
-                    const $element = $(element);
-                    const elementTop = $element.position().top;
-                    const elementBottom = elementTop + $element.height();
-
-                    // Scroll vertically only if element is outside of viewport 
-                    if ((elementTop < scrollTop) || (elementBottom > scrollBottom)){
-                        $container.scrollTop(elementTop);
-                    } 
+                    genUtils.scrollToElement(element);
                 }
             }
         };

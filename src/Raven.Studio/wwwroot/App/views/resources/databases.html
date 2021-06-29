@@ -135,7 +135,7 @@
             </div>
         </div>
     </div>
-    <div class="flex-grow scroll" data-bind="if: databases().sortedDatabases().length, visible: databases().sortedDatabases().length">
+    <div class="flex-grow scroll js-scroll-container" data-bind="if: databases().sortedDatabases().length, visible: databases().sortedDatabases().length">
         <div class="database-counter on-base-background">
             <span>
                 <strong data-bind="text: databases().sortedDatabases().length"></strong> Databases
@@ -158,7 +158,7 @@
         </div>
         <div data-bind="foreach: databases().sortedDatabases">
             <div data-bind="click: $root.databasePanelClicked, scrollTo: isCurrentlyActiveDatabase(), visible: !filteredOut(),
-                            attr: { class: 'panel panel-hover panel-state database-item ' + badgeClass() + ' ' + (isCurrentlyActiveDatabase() ? 'active' : '') + ' ' + ($root.createIsLocalDatabaseObservable(name)() ? 'relevant' : '') }">
+                            attr: { class: 'panel panel-hover panel-state database-item ' + badgeClass() + ' ' + (isCurrentlyActiveDatabase() ? 'active blink-style-basic' : '') + ' ' + ($root.createIsLocalDatabaseObservable(name)() ? 'relevant' : '') }">
                 <div data-bind="attr: { 'data-state-text': $root.createIsLocalDatabaseObservable(name)() ? badgeText : 'remote', class: 'state ' + ($root.createIsLocalDatabaseObservable(name)() ? badgeClass() : 'state-remote') }"></div>
                 <div class="padding">
                     <div class="database-header">

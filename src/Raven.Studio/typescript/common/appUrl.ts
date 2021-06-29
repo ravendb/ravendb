@@ -455,10 +455,12 @@ class appUrl {
         }
     }
 
-    static forIndexes(db: database | databaseInfo, staleOnly = false): string {
+    static forIndexes(db: database | databaseInfo, indexName: string = null, staleOnly = false): string {
         const databasePart = appUrl.getEncodedDbPart(db);
+        const indexNamePart = indexName ? `&indexName=${indexName}` : "";
         const stalePart = staleOnly ? "&stale=true" : "";
-        return "#databases/indexes?" + databasePart + stalePart;
+        
+        return "#databases/indexes?" + databasePart + indexNamePart + stalePart;
     }
 
     static forNewIndex(db: database | databaseInfo): string {

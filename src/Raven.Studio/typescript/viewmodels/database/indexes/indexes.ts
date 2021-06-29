@@ -47,6 +47,7 @@ class indexes extends viewModelBase {
     requestedIndexingInProgress = false;
     indexesCount: KnockoutComputed<number>;
     searchCriteriaDescription: KnockoutComputed<string>;
+    indexNameToHighlight = ko.observable<string>(null);
 
     private clusterManager = clusterTopologyManager.default;
     localNodeTag = ko.observable<string>();
@@ -239,6 +240,7 @@ class indexes extends viewModelBase {
             }
             return firstLockMode;
         });
+        
         this.indexesSelectionState = ko.pureComputed<checkbox>(() => {
             const selectedCount = this.selectedIndexesName().length;
             const indexesCount = this.getAllIndexes().length;
@@ -257,6 +259,10 @@ class indexes extends viewModelBase {
         if (args && args.stale) {
             this.indexStatusFilter(["Stale"]);
         }
+        
+        if (args && args.indexName) {
+            this.indexNameToHighlight(args.indexName);
+        }
 
         return this.fetchIndexes();
     }
@@ -271,6 +277,17 @@ class indexes extends viewModelBase {
         super.compositionComplete();
 
         $('.index-info [data-toggle="tooltip"]').tooltip();
+        
+        this.scrollToIndex();
+    }
+
+    private scrollToIndex(): void {
+        const indexToHighlight = this.indexNameToHighlight();
+        
+        if (indexToHighlight) {
+            const indexElement = document.getElementById(`id_${indexToHighlight}`);
+            generalUtils.scrollToElement(indexElement);
+        }
     }
     
     private fetchIndexes(forceRefresh: boolean = false): JQueryPromise<void> {
@@ -933,6 +950,10 @@ class indexes extends viewModelBase {
     forceParallelDeployment(progress: indexProgress) {
         const forceParallelDeploymentDialog = new forceParallelDeploymentConfirm(progress, this.localNodeTag(), this.activeDatabase());
         app.showBootstrapDialog(forceParallelDeploymentDialog);
+    }
+    
+    shouldHighlightIndex(indexName: string) {
+        return this.indexNameToHighlight() === indexName;
     }
 }
 
