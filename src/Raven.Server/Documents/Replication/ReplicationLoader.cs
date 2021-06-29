@@ -247,11 +247,13 @@ namespace Raven.Server.Documents.Replication
         private ClusterTopology _clusterTopology = new ClusterTopology();
         private int _numberOfSiblings;
         public ConflictSolver ConflictSolverConfig;
-
+        private readonly CancellationToken _shutdownToken;
         public ReplicationLoader(DocumentDatabase database, ServerStore server)
         {
             _server = server;
             Database = database;
+            _shutdownToken = database.DatabaseShutdown;
+
             var config = Database.Configuration.Replication;
             var reconnectTime = config.RetryReplicateAfter.AsTimeSpan;
             _log = LoggingSource.Instance.GetLogger<ReplicationLoader>(Database.Name);
@@ -1391,7 +1393,7 @@ namespace Raven.Server.Documents.Replication
                 }
                     case InternalReplication internalNode:
                 {
-                    using (var cts = CancellationTokenSource.CreateLinkedTokenSource(Database.DatabaseShutdown))
+                    using (var cts = CancellationTokenSource.CreateLinkedTokenSource(_shutdownToken))
                     {
                         cts.CancelAfter(_server.Engine.TcpConnectionTimeout);
                                 return ReplicationUtils.GetTcpInfo(internalNode.Url, internalNode.Database, Database.DbId.ToString(), Database.ReadLastEtag(),
@@ -1406,7 +1408,7 @@ namespace Raven.Server.Documents.Replication
             }
             catch (Exception e)
             {
-                if (Database.DatabaseShutdown.IsCancellationRequested)
+                if (_shutdownToken.IsCancellationRequested)
                     return null;
 
                 // will try to fetch it again later
@@ -1496,7 +1498,7 @@ namespace Raven.Server.Documents.Replication
 
                     try
                     {
-                        requestExecutor.ExecuteWithCancellationToken(cmd, ctx, Database.DatabaseShutdown);
+                        requestExecutor.ExecuteWithCancellationToken(cmd, ctx, _shutdownToken);
                     }
                     catch (Exception e)
                     {
@@ -1524,7 +1526,7 @@ namespace Raven.Server.Documents.Replication
 
                     try
                     {
-                        requestExecutor.ExecuteWithCancellationToken(cmd, ctx, Database.DatabaseShutdown);
+                        requestExecutor.ExecuteWithCancellationToken(cmd, ctx, _shutdownToken);
                     }
                     finally
                     {
@@ -1547,7 +1549,7 @@ namespace Raven.Server.Documents.Replication
                 var cmd = new GetTcpInfoCommand(ExternalReplicationTag, database, Database.DbId.ToString(), Database.ReadLastEtag());
                 try
                 {
-                    requestExecutor.ExecuteWithCancellationToken(cmd, ctx, Database.DatabaseShutdown);
+                    requestExecutor.ExecuteWithCancellationToken(cmd, ctx, _shutdownToken);
                 }
                 finally
                 {
