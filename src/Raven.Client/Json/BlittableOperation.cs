@@ -167,28 +167,29 @@ namespace Raven.Client.Json
             // this is called if the values are NOT equal, but we need to check if the oldProp was read from network and already resolved 
             // the escape characters
 
-            if (oldProp.Value is not LazyStringValue lsv) 
-                return false;
-
-            int pos = lsv.Size;
-            int numOfEscapePositions = BlittableJsonReaderBase.ReadVariableSizeInt(lsv.Buffer, ref pos);
-            if (numOfEscapePositions == 0)
-                return false;
-
-            var memoryStream = new MemoryStream();
-            using (var textWriter = new AsyncBlittableJsonTextWriter(context, memoryStream, CancellationToken.None))
+            if (oldProp.Value is LazyStringValue lsv)
             {
-                textWriter.WriteString(lsv);
-                textWriter.Flush();
-            }
-            memoryStream.TryGetBuffer(out var bytes);
-            fixed (byte* pBuff = bytes.Array)
-            {
-                // need to ignore the quote marks
-                using var str = context.AllocateStringValue(null, pBuff + bytes.Offset + 1, (int)memoryStream.Length -2);
+                int pos = lsv.Size;
+                int numOfEscapePositions = BlittableJsonReaderBase.ReadVariableSizeInt(lsv.Buffer, ref pos);
+                if (numOfEscapePositions == 0)
+                    return false;
 
-                return newProp.Value.Equals(str);
+                var memoryStream = new MemoryStream();
+                using (var textWriter = new AsyncBlittableJsonTextWriter(context, memoryStream, CancellationToken.None))
+                {
+                    textWriter.WriteString(lsv);
+                    textWriter.Flush();
+                }
+                memoryStream.TryGetBuffer(out var bytes);
+                fixed (byte* pBuff = bytes.Array)
+                {
+                    // need to ignore the quote marks
+                    using var str = context.AllocateStringValue(null, pBuff + bytes.Offset + 1, (int)memoryStream.Length - 2);
+
+                    return newProp.Value.Equals(str);
+                }
             }
+            return false;
         }
 
         private static string FieldPathCombine(string path1, string path2) 
