@@ -800,7 +800,7 @@ namespace FastTests
             return Task.CompletedTask;
         }
 
-        protected static void DisposeServer(RavenServer server, int timeoutInMs = 300_000)
+        protected static void DisposeServer(RavenServer server, int timeoutInMs = 60_000)
         {
             if (server == null)
                 return;
@@ -825,7 +825,7 @@ namespace FastTests
             }
         }
 
-        protected static async Task DisposeServerAsync(RavenServer server, int timeoutInMs = 300_000)
+        protected static async Task DisposeServerAsync(RavenServer server, int timeoutInMs = 60_000)
         {
             if (server == null)
                 return;
