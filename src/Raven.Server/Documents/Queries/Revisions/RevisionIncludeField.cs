@@ -16,7 +16,7 @@ namespace Raven.Server.Documents.Queries.Revisions
             RevisionsChangeVectors = new HashSet<string>();
             RevisionsBeforeDateTime = new DateTime?();
         }
-
+        
         public void AddRevision(string path)
         {
             RevisionsChangeVectorsPaths.Add(path);
