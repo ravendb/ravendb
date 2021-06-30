@@ -198,6 +198,20 @@ namespace Sparrow.Server
             }
         }
 
+        public int Size
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get
+            {
+                if (_pointer == null)
+                    return 0;
+
+                EnsureIsNotBadPointer();
+
+                return _pointer->Size;
+            }
+        }
+
         public bool HasValue
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -705,7 +719,7 @@ namespace Sparrow.Server
         private readonly List<SegmentInformation> _wholeSegments;
         private int _allocationBlockSize;
 
-        private long _totalAllocated, _currentlyAllocated;
+        internal long _totalAllocated, _currentlyAllocated;
 
         /// <summary>
         /// This list keeps the hot segments released for use. It is important to note that we will never put into this list
