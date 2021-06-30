@@ -2436,12 +2436,14 @@ namespace Raven.Server.Documents.Indexes
             DocumentDatabase.QueryMetadataCache.MaybeAddToCache(query.Metadata, Name);
         }
 
-        public async Task<DocumentIdQueryResult> IdQuery(
+        public virtual async Task<DocumentIdQueryResult> IdQuery(
             IndexQueryServerSide query,
             DocumentsOperationContext queryContext,
+            DeterminateProgress progress,
+            Action<DeterminateProgress> onProgress,
             OperationCancelToken token)
         {
-            var result = new DocumentIdQueryResult(token);
+            var result = new DocumentIdQueryResult(progress, onProgress, token);
             await QueryInternal(result, query, queryContext, pulseDocsReadingTransaction: false, token: token);
             return result;
         }

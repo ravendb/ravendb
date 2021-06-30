@@ -154,9 +154,17 @@ namespace Raven.Server.Documents.Queries
 
             Queue<string> resultIds;
 
+            var progress = new DeterminateProgress
+            {
+                Total = 0,
+                Processed = 0
+            };
+
+            onProgress(progress);
+
             try
             {
-                var results = await index.IdQuery(query, context, token).ConfigureAwait(false);
+                var results = await index.IdQuery(query, context, progress, onProgress, token).ConfigureAwait(false);
                 if (options.AllowStale == false && results.IsStale)
                     throw new InvalidOperationException("Cannot perform bulk operation. Index is stale.");
 
@@ -166,14 +174,6 @@ namespace Raven.Server.Documents.Queries
             {
                 context.CloseTransaction();
             }
-
-            var progress = new DeterminateProgress
-            {
-                Total = resultIds.Count,
-                Processed = 0
-            };
-
-            onProgress(progress);
 
             var result = new BulkOperationResult();
             void RetrieveDetails(IBulkOperationDetails details) => result.Details.Add(details);
