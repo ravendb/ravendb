@@ -10,6 +10,7 @@ using Raven.Server.Utils.Metrics;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.LowMemory;
+using Sparrow.Utils;
 using Voron.Util;
 
 namespace Raven.Server.Documents.TcpHandlers
@@ -198,11 +199,24 @@ namespace Raven.Server.Documents.TcpHandlers
             _bytesReceivedMetric?.SetMinimalHumaneMeterData("Received", stats);
             _bytesSentMetric?.SetMinimalHumaneMeterData("Sent", stats);
 
+            if (Stream is ReadWriteCompressedStream rwcs)
+            {
+                SetCompressedDecompressedData(stats, rwcs, "Received");
+                SetCompressedDecompressedData(stats, rwcs, "Sent");
+            }
+                
 
             _bytesReceivedMetric?.SetMinimalMeterData("Received", stats);
             _bytesSentMetric?.SetMinimalMeterData("Sent", stats);
 
             return stats;
+        }
+
+        private void SetCompressedDecompressedData(DynamicJsonValue stats, ReadWriteCompressedStream rwcs, string name)
+        {
+            (long compressedBytes, long uncompressedBytes) = rwcs.GetTotalBytes(name);
+            stats["HumaneTotalCompressedBytes" + name] = Sizes.Humane(compressedBytes) + 
+                                                         $" (UncompressedBytes: {Sizes.Humane(uncompressedBytes)})";
         }
     }
 }
