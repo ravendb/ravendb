@@ -5,12 +5,12 @@ namespace Raven.Server.Documents.Queries
 {
     public class DocumentIdQueryResult : DocumentQueryResult
     {
-        private readonly Queue<string> _resultIds;
         private readonly OperationCancelToken _token;
 
-        public DocumentIdQueryResult(Queue<string> resultIds, OperationCancelToken token)
+        public readonly Queue<string> DocumentIds = new Queue<string>();
+
+        public DocumentIdQueryResult(OperationCancelToken token)
         {
-            _resultIds = resultIds;
             _token = token;
         }
 
@@ -19,7 +19,7 @@ namespace Raven.Server.Documents.Queries
             using (result)
             {
                 _token.Delay();
-                _resultIds.Enqueue(result.Id);
+                DocumentIds.Enqueue(result.Id);
             }
         }
     }
