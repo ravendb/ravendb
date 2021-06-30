@@ -55,9 +55,9 @@ namespace Raven.Server.Documents.Queries
 
         public override Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>> GetCompareExchangeValueIncludes() => _compareExchangeValueIncludes;
         
-        public override void AddRevisionIncludes(IncludeRevisionsCommand includeRevisionsCommand)
+        public override void AddRevisionIncludes(IncludeRevisionsCommand command)
         {
-            _revisions  = includeRevisionsCommand.Results;
+            _revisions = command.Results;
         }
 
         public override Dictionary<string, Document>  GetRevisionIncludes() => _revisions;

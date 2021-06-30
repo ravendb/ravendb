@@ -103,7 +103,7 @@ namespace Raven.Server.Documents.Queries
 
         public abstract Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>> GetCompareExchangeValueIncludes();
 
-        public abstract void AddRevisionIncludes(IncludeRevisionsCommand includeRevisionsCommand);
+        public abstract void AddRevisionIncludes(IncludeRevisionsCommand command);
        
         public abstract Dictionary<string, Document> GetRevisionIncludes();
     }

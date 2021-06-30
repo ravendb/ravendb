@@ -1,8 +1,5 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
-using Raven.Client.Extensions;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
@@ -12,15 +9,14 @@ namespace Raven.Server.Documents.Includes
     {
         private readonly DocumentDatabase _database;
         private readonly DocumentsOperationContext _context;
-        private HashSet<string> _pathsForRevisionsInDocuments;
+        private readonly HashSet<string> _pathsForRevisionsInDocuments;
 
-        public Dictionary<string, Document> Results { get;  }
+        public Dictionary<string, Document> Results { get; private set; }
 
         private IncludeRevisionsCommand(DocumentDatabase database, DocumentsOperationContext context)
         {
             _database = database;
             _context  = context;
-            Results   = new Dictionary<string, Document>(StringComparer.OrdinalIgnoreCase);
         }
         
         public IncludeRevisionsCommand(DocumentDatabase database, DocumentsOperationContext context, HashSet<string> pathsForRevisionsInDocuments)
@@ -36,29 +32,33 @@ namespace Raven.Server.Documents.Includes
 
             foreach (var fieldName in _pathsForRevisionsInDocuments)
             {
-                
                 if (document.Data.TryGet(fieldName, out object singleOrMultipleCv) == false  )
                 {
                     throw new InvalidOperationException($"Cannot include revisions for related document '{document.Id}', " +
                                                         $"document {document.Id} doesn't have a field named '{fieldName}'. ");
                 }
 
-                if(singleOrMultipleCv is BlittableJsonReaderArray blittableJsonReaderArray)
+                switch (singleOrMultipleCv)
                 {
-                    foreach (object cvObj in blittableJsonReaderArray)
+                    case BlittableJsonReaderArray blittableJsonReaderArray:
                     {
-                        var changeVector = Convert.ToString(cvObj);
-                        var getRevisionsByCv  = _database.DocumentsStorage.RevisionsStorage.GetRevision(context: _context, changeVector:changeVector);
-                        Results[changeVector] = getRevisionsByCv;
+                        foreach (object cvObj in blittableJsonReaderArray)
+                        {
+                            var changeVector = Convert.ToString(cvObj);
+                            var getRevisionsByCv  = _database.DocumentsStorage.RevisionsStorage.GetRevision(context: _context, changeVector:changeVector);
+                            Results ??= new Dictionary<string, Document>(StringComparer.OrdinalIgnoreCase);
+                            Results[changeVector] = getRevisionsByCv;
+                        }
+                        break;
+                    }
+                    case LazyStringValue lazyStringValue:
+                    {
+                        var getRevisionsByCv  = _database.DocumentsStorage.RevisionsStorage.GetRevision(context: _context, changeVector:lazyStringValue);
+                        Results ??= new Dictionary<string, Document>(StringComparer.OrdinalIgnoreCase);
+                        Results[lazyStringValue] = getRevisionsByCv;
+                        break;
                     }
                 }
-                else if (singleOrMultipleCv is LazyStringValue lazyStringValue)
-                {
-                    var getRevisionsByCv  = _database.DocumentsStorage.RevisionsStorage.GetRevision(context: _context, changeVector:lazyStringValue);
-                    Results[lazyStringValue] = getRevisionsByCv;
-                }
-                
-
             }
         }
 
@@ -70,6 +70,7 @@ namespace Raven.Server.Documents.Includes
             foreach (string revisionsCv in revisionsCvs)
             {
                 var getRevisionsByCv  = _database.DocumentsStorage.RevisionsStorage.GetRevision(context: _context, changeVector:revisionsCv);
+                Results ??= new Dictionary<string, Document>(StringComparer.OrdinalIgnoreCase);
                 Results[revisionsCv] = getRevisionsByCv;
             }  
         }
