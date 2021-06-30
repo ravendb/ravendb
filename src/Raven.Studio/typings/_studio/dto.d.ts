@@ -386,6 +386,8 @@ interface EtlPerformanceBaseWithCache extends Raven.Server.Documents.ETL.Stats.E
     CompletedAsDate: Date;
     Type: Raven.Client.Documents.Operations.ETL.EtlType;
     HasErrors: boolean;
+    HasLoadErrors: boolean;
+    HasTransformErrors: boolean;
 }
 
 interface SubscriptionConnectionPerformanceStatsWithCache extends Raven.Server.Documents.Subscriptions.Stats.SubscriptionConnectionPerformanceStats {

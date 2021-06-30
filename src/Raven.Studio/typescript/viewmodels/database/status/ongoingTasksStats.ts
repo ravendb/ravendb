@@ -1851,6 +1851,15 @@ class ongoingTasksStats extends viewModelBase {
                     case "Sql":
                     case "Olap": {
                         const elementWithData = context.rootStats as EtlPerformanceBaseWithCache;
+                        
+                        if (elementWithData.HasTransformErrors) {
+                            tooltipHtml += `<div class="tooltip-li text-danger">ETL task has Transform errors:<div class="value">Open notification center for details </div></div>`;
+                        }
+                        
+                        if (elementWithData.HasLoadErrors) {
+                            tooltipHtml += `<div class="tooltip-li text-danger">ETL task has Load errors:<div class="value">Open notification center for details </div></div>`;
+                        }
+                        
                         if (elementWithData.BatchCompleteReason) {
                             tooltipHtml += `<div class="tooltip-li">Batch complete reason: <div class="value">${elementWithData.BatchCompleteReason} </div></div>`;
                         }
