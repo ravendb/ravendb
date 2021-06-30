@@ -96,7 +96,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                 case "First":
                 case "FirstOrDefault":
                 case "Last":
-                case "LastOfDefault":
+                case "LastOrDefault":
                 case "Single":
                 case "Where":
                 case "Count":
@@ -135,7 +135,26 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 
         private static SyntaxNode ModifyLambdaForBools(LambdaExpressionSyntax node)
         {
-            return SyntaxFactory.ParseExpression($"(Func<dynamic, bool>)({node})");
+            var parentInvocation = GetInvocationParent(node);
+            switch (parentInvocation)
+            {
+                case "ToDictionary":
+                    return SyntaxFactory.ParseExpression($"(Func<KeyValuePair<dynamic, dynamic>, bool>)({node})");
+                default:
+                    return SyntaxFactory.ParseExpression($"(Func<dynamic, bool>)({node})");
+            }
+        }
+        private static string GetInvocationParent(SyntaxNode node)
+        {
+            if (node == null)
+            {
+                return "";
+            }
+            if (node.Parent is InvocationExpressionSyntax parent)
+            {
+                return GetParentMethod(parent);
+            }
+            return GetInvocationParent(node.Parent);
         }
 
         private SyntaxNode ModifyLambdaForSelectMany(LambdaExpressionSyntax node, InvocationExpressionSyntax currentInvocation)
