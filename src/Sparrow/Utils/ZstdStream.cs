@@ -16,6 +16,9 @@ namespace Sparrow.Utils
         private byte[] _tempBuffer = ArrayPool<byte>.Shared.Rent(1024);
         private Memory<byte> _decompressionInput = Memory<byte>.Empty;
         private readonly DisposeOnce<SingleAttempt> _disposeOnce;
+        private long _compressedBytesCount;
+        private long _uncompressedBytesCount;
+
         private ZstdStream(Stream inner, bool compression)
         {
             _inner = inner ?? throw new ArgumentNullException(nameof(inner));
@@ -31,7 +34,8 @@ namespace Sparrow.Utils
         public override bool CanWrite => _compression;
         public override long Length => throw new NotSupportedException();
         public override long Position { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
-
+        public long CompressedBytesCount { get => _compressedBytesCount; }
+        public long UncompressedBytesCount { get => _uncompressedBytesCount; }
         public override long Seek(long offset, SeekOrigin origin)
         {
             throw new NotSupportedException();
@@ -55,6 +59,8 @@ namespace Sparrow.Utils
                     var input = new ZstdLib.ZSTD_inBuffer {Source = pOutput, Position = UIntPtr.Zero, Size = (UIntPtr)_decompressionInput.Length};
                     var v = ZstdLib.ZSTD_decompressStream(_compressContext.Streaming, &output, &input);
                     ZstdLib.AssertZstdSuccess(v);
+                    _compressedBytesCount += (long)input.Position;
+                    _uncompressedBytesCount += (long)output.Position;
                     _decompressionInput = _decompressionInput.Slice((int)input.Position);
                     return (int)output.Position;
                 }
@@ -74,6 +80,8 @@ namespace Sparrow.Utils
                     var output = new ZstdLib.ZSTD_outBuffer {Source = pTempBuffer, Position = UIntPtr.Zero, Size = (UIntPtr)_tempBuffer.Length};
                     var v = ZstdLib.ZSTD_compressStream2(_compressContext.Compression, &output, &input, directive);
                     ZstdLib.AssertZstdSuccess(v);
+                    _compressedBytesCount += (long)output.Position;
+                    _uncompressedBytesCount += (long)input.Position;
                     return ((int)output.Position, (int)input.Position, v == UIntPtr.Zero);
                 }
             }
@@ -218,7 +226,7 @@ namespace Sparrow.Utils
                 while (_compression)
                 {
                     var (outputBytes, _, done) = CompressStep(ReadOnlySpan<byte>.Empty, ZstdLib.ZSTD_EndDirective.ZSTD_e_end);
-
+                   
                     if (done)
                         break;
 
