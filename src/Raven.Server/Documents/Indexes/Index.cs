@@ -2641,7 +2641,7 @@ namespace Raven.Server.Documents.Indexes
 
         public virtual async Task<DocumentIdQueryResult> IdQuery(
             IndexQueryServerSide query,
-            DocumentsOperationContext queryContext,
+            QueryOperationContext queryContext,
             DeterminateProgress progress,
             Action<DeterminateProgress> onProgress,
             OperationCancelToken token)

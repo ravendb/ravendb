@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading;
+using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
 using Raven.Server.ServerWide;
 
@@ -21,7 +23,7 @@ namespace Raven.Server.Documents.Queries
             _token = token;
         }
 
-        public override void AddResult(Document result)
+        public override ValueTask AddResultAsync(Document result, CancellationToken token)
         {
             using (result)
             {
@@ -35,6 +37,8 @@ namespace Raven.Server.Documents.Queries
                     _onProgress.Invoke(_progress);
                 }
             }
+
+            return default;
         }
     }
 }

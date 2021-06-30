@@ -8,6 +8,7 @@ using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Util.RateLimiting;
+using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.Documents.TransactionCommands;
@@ -170,7 +171,7 @@ namespace Raven.Server.Documents.Queries
                     throw new InvalidOperationException("Cannot perform bulk operation. Index is stale.");
 
                 resultIds = results.DocumentIds;
-                    }
+            }
             finally // make sure to close tx if DocumentConflictException is thrown
             {
                 queryContext.CloseTransaction();
