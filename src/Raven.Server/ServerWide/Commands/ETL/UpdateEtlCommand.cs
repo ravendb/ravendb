@@ -1,5 +1,6 @@
 ﻿using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.Elasticsearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.OngoingTasks;
@@ -93,6 +94,25 @@ namespace Raven.Server.ServerWide.Commands.ETL
         {
             new DeleteOngoingTaskCommand(TaskId, OngoingTaskType.OlapEtl, DatabaseName, null).UpdateDatabaseRecord(record, etag);
             new AddOlapEtlCommand(Configuration, DatabaseName, null).UpdateDatabaseRecord(record, etag);
+        }
+    }
+    
+    public class UpdateElasticsearchEtlCommand : UpdateEtlCommand<ElasticsearchEtlConfiguration, ElasticsearchConnectionString>
+    {
+        public UpdateElasticsearchEtlCommand()
+        {
+            // for deserialization
+        }
+
+        public UpdateElasticsearchEtlCommand(long taskId, ElasticsearchEtlConfiguration configuration, string databaseName, string uniqueRequestId) : base(taskId, configuration, EtlType.Elasticsearch, databaseName, uniqueRequestId)
+        {
+
+        }
+
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        {
+            new DeleteOngoingTaskCommand(TaskId, OngoingTaskType.ElasticsearchEtl, DatabaseName, null).UpdateDatabaseRecord(record, etag);
+            new AddElasticsearchEtlCommand(Configuration, DatabaseName, null).UpdateDatabaseRecord(record, etag);
         }
     }
 }

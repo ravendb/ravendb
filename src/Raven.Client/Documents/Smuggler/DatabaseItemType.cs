@@ -56,6 +56,8 @@ namespace Raven.Client.Documents.Smuggler
         Analyzers = 1 << 17,
         LockMode = 1 << 18,
         OlapConnectionStrings = 1 << 19,
-        OlapEtls = 1 << 20
+        OlapEtls = 1 << 20,
+        ElasticsearchConnectionStrings = 1 << 21,
+        ElasticsearchEtls = 1 << 22
     }
 }
