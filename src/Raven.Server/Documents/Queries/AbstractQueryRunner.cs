@@ -175,6 +175,8 @@ namespace Raven.Server.Documents.Queries
                 context.CloseTransaction();
             }
 
+            onProgress(progress);
+
             var result = new BulkOperationResult();
             void RetrieveDetails(IBulkOperationDetails details) => result.Details.Add(details);
 
