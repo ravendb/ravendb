@@ -199,45 +199,31 @@ namespace Raven.Server.Monitoring.Snmp
 
             if (versions.Contains(SnmpVersion.V3))
             {
+                var authenticationUser = server.Configuration.Monitoring.Snmp.AuthenticationUser;
+
+                var authenticationProtocol = server.Configuration.Monitoring.Snmp.AuthenticationProtocol;
                 var authenticationPassword = server.Configuration.Monitoring.Snmp.AuthenticationPassword ?? server.Configuration.Monitoring.Snmp.Community;
 
-                IAuthenticationProvider authenticationProvider;
-                switch (server.Configuration.Monitoring.Snmp.AuthenticationProtocol)
-                {
-                    case SnmpAuthenticationProtocol.SHA1:
-                        authenticationProvider = new SHA1AuthenticationProvider(new OctetString(authenticationPassword));
-                        break;
-
-                    case SnmpAuthenticationProtocol.MD5:
-                        authenticationProvider = new MD5AuthenticationProvider(new OctetString(authenticationPassword));
-                        break;
-
-                    default:
-                        throw new InvalidOperationException($"Unknown authentication protocol '{server.Configuration.Monitoring.Snmp.AuthenticationProtocol}'.");
-                }
-
+                var privacyProtocol = server.Configuration.Monitoring.Snmp.PrivacyProtocol;
                 var privacyPassword = server.Configuration.Monitoring.Snmp.PrivacyPassword;
 
-                IPrivacyProvider privacyProvider;
-                switch (server.Configuration.Monitoring.Snmp.PrivacyProtocol)
+                var privacyProvider = CreatePrivacyProvider(authenticationUser, authenticationProtocol, authenticationPassword, privacyProtocol, privacyPassword);
+
+                listener.Users.Add(new OctetString(authenticationUser), privacyProvider);
+
+                var authenticationUserSecondary = server.Configuration.Monitoring.Snmp.AuthenticationUserSecondary;
+                if (string.IsNullOrWhiteSpace(authenticationUserSecondary) == false)
                 {
-                    case SnmpPrivacyProtocol.None:
-                        privacyProvider = new DefaultPrivacyProvider(authenticationProvider);
-                        break;
+                    var authenticationProtocolSecondary = server.Configuration.Monitoring.Snmp.AuthenticationProtocolSecondary;
+                    var authenticationPasswordSecondary = server.Configuration.Monitoring.Snmp.AuthenticationPasswordSecondary;
 
-                    case SnmpPrivacyProtocol.DES:
-                        privacyProvider = new BouncyCastleDESPrivacyProvider(new OctetString(privacyPassword), authenticationProvider);
-                        break;
+                    var privacyProtocolSecondary = server.Configuration.Monitoring.Snmp.PrivacyProtocolSecondary;
+                    var privacyPasswordSecondary = server.Configuration.Monitoring.Snmp.PrivacyPasswordSecondary;
 
-                    case SnmpPrivacyProtocol.AES:
-                        privacyProvider = new BouncyCastleAESPrivacyProvider(new OctetString(privacyPassword), authenticationProvider);
-                        break;
+                    var privacyProviderSecondary = CreatePrivacyProvider(authenticationUserSecondary, authenticationProtocolSecondary, authenticationPasswordSecondary, privacyProtocolSecondary, privacyPasswordSecondary);
 
-                    default:
-                        throw new InvalidOperationException($"Unknown privacy protocol '{server.Configuration.Monitoring.Snmp.AuthenticationProtocol}'.");
+                    listener.Users.Add(new OctetString(authenticationUserSecondary), privacyProviderSecondary);
                 }
-
-                listener.Users.Add(new OctetString(server.Configuration.Monitoring.Snmp.AuthenticationUser), privacyProvider);
             }
 
             int engineBoots;
@@ -264,6 +250,55 @@ namespace Raven.Server.Monitoring.Snmp
             };
 
             return engine;
+
+            static IPrivacyProvider CreatePrivacyProvider(string authenticationUser, SnmpAuthenticationProtocol authenticationProtocol, string authenticationPassword, SnmpPrivacyProtocol privacyProtocol, string privacyPassword)
+            {
+                try
+                {
+                    if (authenticationPassword == null)
+                        throw new ArgumentNullException(nameof(authenticationPassword));
+
+                    IAuthenticationProvider authenticationProvider;
+                    switch (authenticationProtocol)
+                    {
+                        case SnmpAuthenticationProtocol.SHA1:
+                            authenticationProvider = new SHA1AuthenticationProvider(new OctetString(authenticationPassword));
+                            break;
+
+                        case SnmpAuthenticationProtocol.MD5:
+                            authenticationProvider = new MD5AuthenticationProvider(new OctetString(authenticationPassword));
+                            break;
+
+                        default:
+                            throw new InvalidOperationException($"Unknown authentication protocol '{authenticationProtocol}'.");
+                    }
+
+                    switch (privacyProtocol)
+                    {
+                        case SnmpPrivacyProtocol.None:
+                            return new DefaultPrivacyProvider(authenticationProvider);
+
+                        case SnmpPrivacyProtocol.DES:
+                            if (privacyPassword == null)
+                                throw new ArgumentNullException(nameof(privacyPassword));
+
+                            return new BouncyCastleDESPrivacyProvider(new OctetString(privacyPassword), authenticationProvider);
+
+                        case SnmpPrivacyProtocol.AES:
+                            if (privacyPassword == null)
+                                throw new ArgumentNullException(nameof(privacyPassword));
+
+                            return new BouncyCastleAESPrivacyProvider(new OctetString(privacyPassword), authenticationProvider);
+
+                        default:
+                            throw new InvalidOperationException($"Unknown privacy protocol '{privacyProtocol}'.");
+                    }
+                }
+                catch (Exception e)
+                {
+                    throw new InvalidOperationException($"Could not create SNMP user '{authenticationUser}'.", e);
+                }
+            }
         }
 
         private static Func<int[], int, int, bool> GetIsInTime(MonitoringConfiguration monitoringConfiguration)
