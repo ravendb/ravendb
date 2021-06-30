@@ -87,8 +87,11 @@ namespace Raven.Server.Documents.Queries
             throw new NotSupportedException();
         }
 
-        public override void AddRevisionIncludes(IncludeRevisionsCommand includeRevisionsCommand)
+        public override void AddRevisionIncludes(IncludeRevisionsCommand command)
         {
+            if (command.Results is null)
+                return;
+            
             throw new NotSupportedException();
         }
         

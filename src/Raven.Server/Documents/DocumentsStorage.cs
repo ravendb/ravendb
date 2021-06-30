@@ -1084,7 +1084,7 @@ namespace Raven.Server.Documents
             };
         }
 
-        public Document  Get(DocumentsOperationContext context, string id, DocumentFields fields = DocumentFields.All, bool throwOnConflict = true)
+        public Document Get(DocumentsOperationContext context, string id, DocumentFields fields = DocumentFields.All, bool throwOnConflict = true)
         {
             if (string.IsNullOrWhiteSpace(id))
                 throw new ArgumentException("Argument is null or whitespace", nameof(id));

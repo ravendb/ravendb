@@ -1490,7 +1490,7 @@ more responsive application.
                 
                 if (newDocumentInfo.Metadata.TryGet(Constants.Documents.Metadata.ChangeVector,out string cv))
                     
-                IncludedRevisionByChangeVectors[cv] = newDocumentInfo;
+                    IncludedRevisionByChangeVectors[cv] = newDocumentInfo;
             }
         }
         
