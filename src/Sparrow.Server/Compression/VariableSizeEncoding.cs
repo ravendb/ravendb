@@ -329,8 +329,16 @@ namespace Sparrow.Server.Compression
                 else
                     b = (byte)(object)value;
 
-                dest[pos] = b;
-                return 1;
+                int i = 0;
+                if ((b & ContinueMask) == 0)
+                    goto End;
+                dest[pos] = (byte)(b | 0x80);
+                b >>= 7;
+                i++;
+
+            End:
+                dest[pos + i] = b;
+                return i + 1;
             }
 
             if (typeof(T) == typeof(short) || typeof(T) == typeof(ushort))
@@ -354,7 +362,13 @@ namespace Sparrow.Server.Compression
                 us >>= 7;
                 i++;
 
-                End:
+                if ((us & ContinueMask) == 0)
+                    goto End;
+                dest[pos + 2] = (byte)(us | 0x80);
+                us >>= 7;
+                i++;
+
+            End:
                 dest[pos + i] = (byte)us;
                 return i + 1;
             }
@@ -392,7 +406,13 @@ namespace Sparrow.Server.Compression
                 ui >>= 7;
                 i++;
 
-                End:
+                if ((ui & ContinueMask) == 0)
+                    goto End;
+                dest[pos + 4] = (byte)(ui | 0x80);
+                ui >>= 7;
+                i++;
+
+            End:
                 dest[pos + i] = (byte)ui;
                 return i + 1;
             }
@@ -454,7 +474,13 @@ namespace Sparrow.Server.Compression
                 ul >>= 7;
                 i++;
 
-                End:
+                if ((ul & ContinueMask) == 0)
+                    goto End;
+                dest[pos + 8] = (byte)(ul | 0x80);
+                ul >>= 7;
+                i++;
+
+            End:
                 dest[pos + i] = (byte)ul;
                 return i + 1;
             }
