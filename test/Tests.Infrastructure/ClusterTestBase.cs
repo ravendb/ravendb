@@ -279,6 +279,15 @@ namespace Tests.Infrastructure
                 return timeoutTask.IsCompleted == false;
             }
         }
+        
+        protected Task<RavenServer> ActionWithLeader(Action<RavenServer> act, List<RavenServer> servers = null)
+        {
+            return ActionWithLeader(l =>
+            {
+                act(l);
+                return Task.CompletedTask;
+            }, servers);
+        }
 
         protected async Task<RavenServer> ActionWithLeader(Func<RavenServer, Task> act, List<RavenServer> servers = null)
         {
