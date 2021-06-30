@@ -146,12 +146,12 @@ namespace Raven.Server.Documents.Indexes.Static.Linq
             return result;
         }
 
-        public static dynamic Min(IEnumerable source, Func<dynamic, dynamic> selector)
+        public static dynamic Min<TSource, TResult>(IEnumerable<TSource> source, Func<TSource, TResult> selector)
         {
-            return Min(Enumerable.Select(source.Cast<dynamic>(), selector));
+            return Min(Enumerable.Select(source, selector));
         }
 
-        public static dynamic Max(IEnumerable source)
+        public static dynamic Max<TSource>(IEnumerable<TSource> source)
         {
             if (source == null) return DynamicNullObject.Null;
 
@@ -165,9 +165,9 @@ namespace Raven.Server.Documents.Indexes.Static.Linq
             return result;
         }
 
-        public static dynamic Max(IEnumerable source, Func<dynamic, dynamic> selector)
+        public static dynamic Max<TSource, TResult>(IEnumerable<TSource> source, Func<TSource, TResult> selector)
         {
-            return Max(Enumerable.Select(source.Cast<dynamic>(), selector));
+            return Max(Enumerable.Select(source, selector));
         }
 
         public static IEnumerable<dynamic> Concat(object source, object other)

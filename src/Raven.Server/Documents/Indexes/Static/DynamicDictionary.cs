@@ -368,12 +368,12 @@ namespace Raven.Server.Documents.Indexes.Static
             return new DynamicDictionary(_dictionary.Reverse());
         }
 
-        public bool All(Func<dynamic, bool> predicate)
+        public bool All(Func<KeyValuePair<dynamic, dynamic>, bool> predicate)
         {
             return Enumerable.All(this, predicate);
         }
 
-        public bool Any(Func<dynamic, bool> predicate)
+        public bool Any(Func<KeyValuePair<dynamic, dynamic>, bool> predicate)
         {
             return Enumerable.Any(this, predicate);
         }
@@ -544,7 +544,7 @@ namespace Raven.Server.Documents.Indexes.Static
             return Enumerable.LongCount(_dictionary);
         }
 
-        public long LongCount(Func<dynamic, bool> predicate)
+        public long LongCount(Func<KeyValuePair<dynamic, dynamic>, bool> predicate)
         {
             return Enumerable.LongCount(this, predicate);
         }
