@@ -68,6 +68,19 @@ namespace Sparrow.Utils
             set => _inner.WriteTimeout = value;
         }
 
+        public (long CompressedBytes, long UncompressedBytes) GetTotalBytes(string str)
+        {
+            switch (str)
+            {
+                case "Sent":
+                    return (_output.CompressedBytesCount, _output.UncompressedBytesCount);
+                case "Received":
+                    return (_input.CompressedBytesCount, _input.UncompressedBytesCount);
+                default:
+                    return (0, 0);
+            }
+        }
+
         public override long Seek(long offset, SeekOrigin origin)
         {
             throw new NotSupportedException();
