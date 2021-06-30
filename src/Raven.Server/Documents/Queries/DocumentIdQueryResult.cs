@@ -11,7 +11,6 @@ namespace Raven.Server.Documents.Queries
         private readonly DeterminateProgress _progress;
         private readonly Action<DeterminateProgress> _onProgress;
         private readonly OperationCancelToken _token;
-        private readonly Stopwatch _sp;
 
         public readonly Queue<string> DocumentIds = new Queue<string>();
 
@@ -20,7 +19,6 @@ namespace Raven.Server.Documents.Queries
             _progress = progress;
             _onProgress = onProgress;
             _token = token;
-            _sp = Stopwatch.StartNew();
         }
 
         public override void AddResult(Document result)
@@ -32,10 +30,9 @@ namespace Raven.Server.Documents.Queries
 
                 _progress.Total++;
 
-                if (_sp.ElapsedMilliseconds > 1000)
+                if (_progress.Total % 10_000 == 0)
                 {
                     _onProgress.Invoke(_progress);
-                    _sp.Restart();
                 }
             }
         }
