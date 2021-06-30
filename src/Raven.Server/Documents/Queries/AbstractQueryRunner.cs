@@ -8,7 +8,6 @@ using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Util.RateLimiting;
-using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.Documents.TransactionCommands;
@@ -155,34 +154,27 @@ namespace Raven.Server.Documents.Queries
             const int batchSize = 1024;
 
             Queue<string> resultIds;
+
+            var progress = new DeterminateProgress
+            {
+                Total = 0,
+                Processed = 0
+            };
+
+            onProgress(progress);
+
             try
             {
-                var results = await index.Query(query, queryContext, token).ConfigureAwait(false);
+                var results = await index.IdQuery(query, queryContext, progress, onProgress, token).ConfigureAwait(false);
                 if (options.AllowStale == false && results.IsStale)
                     throw new InvalidOperationException("Cannot perform bulk operation. Index is stale.");
 
-                resultIds = new Queue<string>(results.Results.Count);
-
-                foreach (var document in results.Results)
-                {
-                    using (document)
-                    {
-                        token.Delay();
-
-                        resultIds.Enqueue(document.Id.ToString());
+                resultIds = results.DocumentIds;
                     }
-                }
-            }
             finally // make sure to close tx if DocumentConflictException is thrown
             {
                 queryContext.CloseTransaction();
             }
-
-            var progress = new DeterminateProgress
-            {
-                Total = resultIds.Count,
-                Processed = 0
-            };
 
             onProgress(progress);
 
