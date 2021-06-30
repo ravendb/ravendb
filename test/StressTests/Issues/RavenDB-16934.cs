@@ -49,7 +49,7 @@ namespace SlowTests.Issues
                     new DeleteByQueryOperation<SearchIndex.Result, SearchIndex>(x =>
                         x.DateTime < now));
 
-                await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(2));
+                await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
             }
         }
 
