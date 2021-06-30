@@ -18,7 +18,7 @@ namespace Raven.Server.Documents
         private readonly OperationCancelToken _token;
         private readonly int? _maxTransactionSizeInPages;
         private readonly int? _batchSize;
-        private CancellationToken _cancellationToken;
+        private readonly CancellationToken _cancellationToken;
 
         internal ExecuteRateLimitedOperations(
             Queue<T> documentIds, 
