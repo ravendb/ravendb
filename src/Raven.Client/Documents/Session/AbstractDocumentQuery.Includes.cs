@@ -5,7 +5,6 @@ using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session.Loaders;
 using Raven.Client.Documents.Session.Tokens;
 using Raven.Client.Extensions;
-using Sparrow.Extensions;
 
 namespace Raven.Client.Documents.Session
 {
