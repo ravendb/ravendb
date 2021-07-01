@@ -199,24 +199,29 @@ namespace Raven.Server.Documents.TcpHandlers
             _bytesReceivedMetric?.SetMinimalHumaneMeterData("Received", stats);
             _bytesSentMetric?.SetMinimalHumaneMeterData("Sent", stats);
 
-            if (Stream is ReadWriteCompressedStream rwcs)
-            {
-                SetCompressedDecompressedData(stats, rwcs, "Received");
-                SetCompressedDecompressedData(stats, rwcs, "Sent");
-            }
-                
-
             _bytesReceivedMetric?.SetMinimalMeterData("Received", stats);
             _bytesSentMetric?.SetMinimalMeterData("Sent", stats);
 
-            return stats;
-        }
+            if (Stream is ReadWriteCompressedStream rwcs)
+            {
+                var compressionInfo = new DynamicJsonValue();
+                
+                var totalBytes = rwcs.GetTotalBytesSent();
+                compressionInfo["TotalCompressedBytesSent"] = totalBytes.Compressed;
+                compressionInfo["HumaneTotalCompressedBytesSent"] = Sizes.Humane(totalBytes.Compressed);
+                compressionInfo["TotalUncompressedBytesSent"] = totalBytes.Uncompressed;
+                compressionInfo["HumaneTotalUncompressedBytesSent"] = Sizes.Humane(totalBytes.Uncompressed);
 
-        private void SetCompressedDecompressedData(DynamicJsonValue stats, ReadWriteCompressedStream rwcs, string name)
-        {
-            (long compressedBytes, long uncompressedBytes) = rwcs.GetTotalBytes(name);
-            stats["HumaneTotalCompressedBytes" + name] = Sizes.Humane(compressedBytes) + 
-                                                         $" (UncompressedBytes: {Sizes.Humane(uncompressedBytes)})";
+                totalBytes = rwcs.GetTotalBytesReceived();
+                compressionInfo["TotalCompressedBytesReceived"] = totalBytes.Compressed;
+                compressionInfo["HumaneTotalCompressedBytesReceived"] = Sizes.Humane(totalBytes.Compressed);
+                compressionInfo["TotalUncompressedBytesReceived"] = totalBytes.Uncompressed;
+                compressionInfo["HumaneTotalUncompressedBytesReceived"] = Sizes.Humane(totalBytes.Uncompressed);
+
+                stats["CompressionInfo"] = compressionInfo;
+            }
+
+            return stats;
         }
     }
 }
