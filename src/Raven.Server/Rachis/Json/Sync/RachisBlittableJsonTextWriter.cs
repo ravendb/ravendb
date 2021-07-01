@@ -1,9 +1,10 @@
 ﻿using System;
 using System.IO;
-using System.Runtime.CompilerServices;
 using Sparrow.Json;
+using Sparrow.Json.Sync;
+using Sparrow.Server.Json.Sync;
 
-namespace Sparrow.Server.Json.Sync
+namespace Raven.Server.Rachis.Json.Sync
 {
     internal class RachisBlittableJsonTextWriter : BlittableJsonTextWriter
     {
@@ -21,24 +22,6 @@ namespace Sparrow.Server.Json.Sync
                 _afterFlush?.Invoke();
 
             return flushed;
-        }
-    }
-
-    public class BlittableJsonTextWriter : AbstractBlittableJsonTextWriter, IDisposable
-    {
-        public BlittableJsonTextWriter(JsonOperationContext context, Stream stream) : base(context, stream)
-        {
-        }
-
-        public void Dispose()
-        {
-            DisposeInternal();
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Flush()
-        {
-            FlushInternal();
         }
     }
 }

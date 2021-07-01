@@ -5,6 +5,7 @@ using Raven.Client.Util;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using Sparrow.Json.Sync;
 using Sparrow.Logging;
 using Sparrow.Server.Json.Sync;
 
@@ -59,7 +60,7 @@ namespace Raven.Server.ServerWide
             writer.WriteEndObject();
         }
 
-        public void WriteTo(BlittableJsonTextWriter writer)
+        internal void WriteTo(BlittableJsonTextWriter writer)
         {
             writer.WriteStartObject();
 
