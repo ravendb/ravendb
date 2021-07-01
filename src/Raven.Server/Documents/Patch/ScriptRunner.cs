@@ -1029,7 +1029,7 @@ namespace Raven.Server.Documents.Patch
             
             private JsValue IncludeRevisions(JsValue self, JsValue[] args)
             {
-                if(args is null)
+                if (args == null)
                     return JsValue.Null;
 
                 IncludeRevisionsChangeVectors ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);

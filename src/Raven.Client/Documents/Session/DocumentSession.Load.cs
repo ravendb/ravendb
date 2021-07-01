@@ -79,14 +79,14 @@ namespace Raven.Client.Documents.Session
                 ids.ToArray(),
                 includeBuilder.DocumentsToInclude?.ToArray(),
                 includeBuilder.CountersToInclude?.ToArray(),
-                includeBuilder.RevisionToInclude?.ToArray(),
                 includeBuilder.AllCounters,
                 includeBuilder.TimeSeriesToInclude,
-                includeBuilder.CompareExchangeValuesToInclude?.ToArray());
+                includeBuilder.CompareExchangeValuesToInclude?.ToArray(),
+                includeBuilder.RevisionToInclude?.ToArray());
         }
 
         /// <inheritdoc />
-        public Dictionary<string, T> LoadInternal<T>(string[] ids, string[] includes, string[] counterIncludes = null, string[] revisionIncludes = null, bool includeAllCounters = false, IEnumerable<AbstractTimeSeriesRange> timeSeriesIncludes = null, string[] compareExchangeValueIncludes = null)
+        public Dictionary<string, T> LoadInternal<T>(string[] ids, string[] includes, string[] counterIncludes = null, bool includeAllCounters = false, IEnumerable<AbstractTimeSeriesRange> timeSeriesIncludes = null, string[] compareExchangeValueIncludes = null, string[] revisionIncludes = null)
         {
             if (ids == null)
                 throw new ArgumentNullException(nameof(ids));

@@ -17,7 +17,6 @@ namespace Raven.Client.Documents.Commands
     public class GetDocumentsCommand : RavenCommand<GetDocumentsResult>
     {
         private readonly string _id;
-        
         private readonly string[] _ids;
         private readonly string[] _includes;
         private readonly string[] _counters;
