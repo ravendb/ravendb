@@ -1,9 +1,10 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection.Metadata;
 using System.Runtime.InteropServices;
 using System.Xml;
+using Sparrow.Server.Compression;
 using Voron.Global;
 using Voron.Impl;
 
@@ -18,9 +19,9 @@ namespace Voron.Data.Sets
             _base = baseline;
         }
 
-        public long First => ZigZag.Decode(Span.Slice(Positions[0]));
+        public long First => ZigZagEncoding.Decode<long>(Span, Positions[0]);
         
-        public long Last =>  ZigZag.Decode(Span.Slice(Positions[^1]));
+        public long Last => ZigZagEncoding.Decode<long>(Span, Positions[^1]);
 
         public void Init()
         {
@@ -59,7 +60,7 @@ namespace Voron.Data.Sets
             for (int i = 0; i < positions.Length; i++)
             {
                 Span<byte> entry = Span.Slice(positions[i]);
-                var len = ZigZag.SizeOfBoth(entry);
+                var len = ZigZagEncoding.SizeOf2<long>(entry);
 
                 header->Upper -= (ushort)len;
                 Debug.Assert(header->Upper >= endOfPositionsArray);
@@ -107,7 +108,7 @@ namespace Voron.Data.Sets
                     key = -1;
                     return false;
                 }
-                (key, page) = ZigZag.DecodeBoth(_parent.Span.Slice(_parent.Positions[_pos++]));
+                (key, page) = ZigZagEncoding.Decode2<long>(_parent.Span, out int _, _parent.Positions[_pos++]);
                 return true;
             }
         }
@@ -120,13 +121,13 @@ namespace Voron.Data.Sets
             if (match != 0)
                 index--; // went too far
             var actual = Math.Min(Header->NumberOfEntries - 1, index);
-            var (_, value) = ZigZag.DecodeBoth(Span.Slice(Positions[actual]));
+            var (_, value) = ZigZagEncoding.Decode2<long>(Span, out var _, Positions[actual]);
             return (value, index, match);
         }
 
         public (long Key, long Page) GetByIndex(int index)
         {
-            return ZigZag.DecodeBoth(Span.Slice(Positions[index]));
+            return ZigZagEncoding.Decode2<long>(Span, out var _, Positions[index]);
         }
 
         public bool TryGetValue(long key, out long value)
@@ -137,7 +138,7 @@ namespace Voron.Data.Sets
                 value = -1;
                 return false;
             }
-            (_, value) = ZigZag.DecodeBoth(Span.Slice(Positions[index]));
+            (_, value) = ZigZagEncoding.Decode2<long>(Span, out var _, Positions[index]);
             return true;
         }
 
@@ -155,13 +156,13 @@ namespace Voron.Data.Sets
         public bool TryAdd(LowLevelTransaction tx, long key, long page)
         {
             Span<byte> buffer = stackalloc byte[24];
-            var len = ZigZag.Encode(buffer, key);
-            len += ZigZag.Encode(buffer.Slice(len), page);
+            var len = ZigZagEncoding.Encode(buffer, key);
+            len += ZigZagEncoding.Encode(buffer, page, pos: len);
 
             var (index, match) = SearchInPage(key);
             if (match ==  0)
             {
-                var (_, existing) = ZigZag.DecodeBoth(Span.Slice(Positions[index]));
+                var (_, existing) = ZigZagEncoding.Decode2<long>(Span, out var _, Positions[index]);
                 if (existing == page)
                     return true; // already here
                 
@@ -203,7 +204,7 @@ namespace Voron.Data.Sets
             {
                 mid = (high + low) / 2;
                 var offset = Positions[mid];
-                var cur = ZigZag.Decode(Span.Slice(offset));
+                var cur = ZigZagEncoding.Decode<long>(Span, offset);
                 match = key.CompareTo(cur);
 
                 if (match == 0)
