@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.ConnectionStrings;
@@ -10,8 +8,6 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Exceptions;
-using Raven.Client.ServerWide.Tcp;
-using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
@@ -36,7 +32,7 @@ namespace InterversionTests
             using var store = GetDocumentStore();
             using (var session = store.OpenAsyncSession())
             {
-                await session.StoreAsync(new User { Name = "Egor" }, "user/322");
+                await session.StoreAsync(new User {Name = "Egor"}, "user/322");
                 session.TimeSeriesFor("user/322", "a").Append(DateTime.UtcNow, 1);
                 await session.SaveChangesAsync();
             }
@@ -85,3 +81,4 @@ namespace InterversionTests
             return await store.Maintenance.SendAsync(op);
         }
     }
+}
