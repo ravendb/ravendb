@@ -162,11 +162,42 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             if (currentInvocation.ArgumentList.Arguments.Count == 0)
                 return node;
 
+            var parentInvocation = GetInvocationParent(node);
+
             if (currentInvocation.ArgumentList.Arguments.Count > 0 && currentInvocation.ArgumentList.Arguments[0].Expression == node)
-                return Visit(SyntaxFactory.ParseExpression($"(Func<dynamic, IEnumerable<dynamic>>)({node})"));
+            {
+                if (node is SimpleLambdaExpressionSyntax)
+                {
+                    switch (parentInvocation)
+                    {
+                        case "ToDictionary":
+                            return Visit(SyntaxFactory.ParseExpression($"(Func<KeyValuePair<dynamic, dynamic>, IEnumerable<KeyValuePair<dynamic, dynamic>>>)({node})"));
+                        default:
+                            return Visit(SyntaxFactory.ParseExpression($"(Func<dynamic, IEnumerable<dynamic>>)({node})"));
+                    }
+                }
+                else
+                {
+                    switch (parentInvocation)
+                    {
+                        case "ToDictionary":
+                            return Visit(SyntaxFactory.ParseExpression($"(Func<KeyValuePair<dynamic, dynamic>, int, IEnumerable<KeyValuePair<dynamic, dynamic>>>)({node})"));
+                        default:
+                            return Visit(SyntaxFactory.ParseExpression($"(Func<dynamic, int, IEnumerable<KeyValuePair<dynamic, dynamic>>>)({node})"));
+                    }
+                }
+            }
 
             if (currentInvocation.ArgumentList.Arguments.Count > 1 && currentInvocation.ArgumentList.Arguments[1].Expression == node)
-                return Visit(SyntaxFactory.ParseExpression($"(Func<dynamic, dynamic, dynamic>)({node})"));
+            {
+                switch (parentInvocation)
+                {
+                    case "ToDictionary":
+                        return Visit(SyntaxFactory.ParseExpression($"(Func<KeyValuePair<dynamic, dynamic>, KeyValuePair<dynamic, dynamic>, KeyValuePair<dynamic, dynamic>>)({node})"));
+                    default:
+                        return Visit(SyntaxFactory.ParseExpression($"(Func<dynamic, dynamic, dynamic>)({node})"));
+                }
+            }
 
             return node;
         }
