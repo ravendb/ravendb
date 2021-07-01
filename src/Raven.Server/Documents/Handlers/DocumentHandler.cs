@@ -432,7 +432,6 @@ namespace Raven.Server.Documents.Handlers
                 {
                     writer.WriteComma();
                     writer.WritePropertyName(nameof(GetDocumentsResult.RevisionIncludes));
-                    //TODO:Ask about token parameter
                     await writer.WriterRevisionIncludesAsync(context:context, revisions);
                 }
 

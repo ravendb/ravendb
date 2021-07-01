@@ -6,6 +6,7 @@ using FastTests;
 using FastTests.Utils;
 using Raven.Client;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
 using Xunit;
 using Xunit.Abstractions;
@@ -17,7 +18,7 @@ namespace SlowTests.Tests.Linq
         public CanQueryAndIncludeRevisions(ITestOutputHelper output) : base(output)
         {
         }
-
+        
         [Fact]
         public void Load_IncludeBuilder_SanityChecks()
         {
@@ -25,7 +26,7 @@ namespace SlowTests.Tests.Linq
             {
                 const string id = "users/omer";
 
-                RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database).Wait();
 
                 using (var session = store.OpenSession())
                 {
@@ -47,7 +48,7 @@ namespace SlowTests.Tests.Linq
                     exArgumentNullException = Assert.Throws<ArgumentNullException>(() => session.Load<User>(id, builder => builder.IncludeRevisions(obj)));
                     Assert.Equal("Value cannot be null. (Parameter 'changeVector')", exArgumentNullException.Message);
                     var exInvalidOperationException = Assert.Throws<InvalidOperationException>(() => session.Load<User>(id, builder => builder.IncludeRevisions(default(DateTime))));
-                    Assert.Equal("The usage of DateTime can be done within Query time.", exInvalidOperationException.Message);
+                    Assert.Equal("IIncludeBuilder: The usage of including date time can only be done within 'IQueryIncludeBuilder'.", exInvalidOperationException.Message);
                 }
             }
         }
@@ -59,7 +60,7 @@ namespace SlowTests.Tests.Linq
             {
                 const string id = "users/omer";
 
-                RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -81,7 +82,7 @@ namespace SlowTests.Tests.Linq
                     exArgumentNullException = await  Assert.ThrowsAsync<ArgumentNullException>(async () => await session.LoadAsync<User>(id, builder => builder.IncludeRevisions(obj)));
                     Assert.Equal("Value cannot be null. (Parameter 'changeVector')",  exArgumentNullException.Message);
                     var exInvalidOperationException = await Assert.ThrowsAsync<InvalidOperationException>(async () => await session.LoadAsync<User>(id, builder => builder.IncludeRevisions(default(DateTime))));
-                    Assert.Equal("The usage of DateTime can be done within Query time.", exInvalidOperationException.Message);
+                    Assert.Equal("IIncludeBuilder: The usage of including date time can only be done within 'IQueryIncludeBuilder'.", exInvalidOperationException.Message);
                 }
             }
         }
@@ -95,7 +96,7 @@ namespace SlowTests.Tests.Linq
 
                 const string id = "users/omer";
 
-                RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database).Wait();
 
                 using (var session = store.OpenSession())
                 {
@@ -258,7 +259,7 @@ namespace SlowTests.Tests.Linq
             using (var store = GetDocumentStore())
             {
                 const string id = "users/omer";
-                RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database).Wait();
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User {Name = "Omer",},
@@ -321,7 +322,7 @@ namespace SlowTests.Tests.Linq
                 const string id = "users/omer";
                 var cvList = new List<string>();
 
-                RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database).Wait();
 
                 using (var session = store.OpenSession())
                 {
@@ -457,7 +458,7 @@ namespace SlowTests.Tests.Linq
 
                 const string id = "users/omer";
 
-                RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database).Wait();
 
                 using (var session = store.OpenSession())
                 {
@@ -511,13 +512,13 @@ namespace SlowTests.Tests.Linq
                                 .IncludeRevisions(x => x.FirstRevision)
                                 .IncludeRevisions(x => x.SecondRevision)));
                     
-                    Assert.Equal("The usage of property including change vector inside property only can be done within Query", ex.Message);
+                    Assert.Equal("IIncludeBuilder: The usage of property, including change vector inside property, can only be done within a 'IQueryIncludeBuilder'.", ex.Message);
 
                     ex = Assert.Throws<InvalidOperationException>(() =>
                              session.Load<User>(id, builder => builder
                             .IncludeRevisions(x => x.FirstRevision)));
                     
-                    Assert.Equal("The usage of property including change vector inside property only can be done within Query", ex.Message);
+                    Assert.Equal("IIncludeBuilder: The usage of property, including change vector inside property, can only be done within a 'IQueryIncludeBuilder'.", ex.Message);
                 }
             }
         }
@@ -588,13 +589,13 @@ namespace SlowTests.Tests.Linq
                                 .IncludeRevisions(x => x.FirstRevision)
                                 .IncludeRevisions(x => x.SecondRevision)));
                     
-                    Assert.Equal("The usage of property including change vector inside property only can be done within Query", ex.Message);
+                    Assert.Equal("IIncludeBuilder: The usage of property, including change vector inside property, can only be done within a 'IQueryIncludeBuilder'.", ex.Message);
 
                     ex = await Assert.ThrowsAsync<InvalidOperationException>( async() => await 
                              session.LoadAsync<User>(id, builder => builder
                             .IncludeRevisions(x => x.FirstRevision)));
                     
-                    Assert.Equal("The usage of property including change vector inside property only can be done within Query", ex.Message);
+                    Assert.Equal("IIncludeBuilder: The usage of property, including change vector inside property, can only be done within a 'IQueryIncludeBuilder'.", ex.Message);
                 }
             }
         }
@@ -605,7 +606,7 @@ namespace SlowTests.Tests.Linq
             using (var store = GetDocumentStore())
             {
                 const string id = "users/omer";
-                RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database).Wait();
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User
@@ -620,7 +621,7 @@ namespace SlowTests.Tests.Linq
                     var ex = Assert.Throws<InvalidOperationException>(()=> 
                         session.Load<User>(id, builder => builder.IncludeRevisions(DateTime.UtcNow)));
                     
-                    Assert.Equal("The usage of DateTime can be done within Query time.", ex.Message);
+                    Assert.Equal("IIncludeBuilder: The usage of including date time can only be done within 'IQueryIncludeBuilder'.", ex.Message);
          
                 }
             }
@@ -632,7 +633,7 @@ namespace SlowTests.Tests.Linq
             using (var store = GetDocumentStore())
             {
                 const string id = "users/omer";
-                RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
                 using (var session = store.OpenAsyncSession())
                 {
                     session.StoreAsync(new User
@@ -647,7 +648,7 @@ namespace SlowTests.Tests.Linq
                     var ex = await Assert.ThrowsAsync<InvalidOperationException>(async()=> await 
                         session.LoadAsync<User>(id, builder => builder.IncludeRevisions(DateTime.UtcNow)));
                     
-                    Assert.Equal("The usage of DateTime can be done within Query time.", ex.Message);
+                    Assert.Equal("IIncludeBuilder: The usage of including date time can only be done within 'IQueryIncludeBuilder'.", ex.Message);
          
                 }
             }
@@ -659,7 +660,7 @@ namespace SlowTests.Tests.Linq
             using (var store = GetDocumentStore())
             {
                 const string id = "users/omer";
-                RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database).Wait();
                 using (var session = store.OpenSession())
                 {
                      session.Store(new User
@@ -735,7 +736,7 @@ namespace SlowTests.Tests.Linq
             using (var store = GetDocumentStore())
             {
                 const string id = "users/omer";
-                RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database).Wait();
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User
@@ -763,7 +764,6 @@ namespace SlowTests.Tests.Linq
             }
         }
         
-                
         [Fact]
         public void Query_RawQueryChangeVectorInsidePropertyWithIndex()
         {
@@ -771,7 +771,7 @@ namespace SlowTests.Tests.Linq
             {
                 const string id = "users/omer";
 
-                 RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database).Wait();
 
                 using (var session = store.OpenSession())
                 {
@@ -865,7 +865,7 @@ namespace SlowTests.Tests.Linq
             {
                 const string id = "users/omer";
                 
-                 RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                 RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database).Wait();
         
                 using (var session = store.OpenSession())
                 {
@@ -935,15 +935,186 @@ namespace SlowTests.Tests.Linq
                 }
             }
         }
+
+        [Fact]
+        public void Query_RawQuery_IncludeRevisions_Jint_StaticIndexQuery()
+        {
+            
+            using (var store = GetDocumentStore())
+            {
+                new NameIndex().Execute(store);
+                WaitForIndexing(store);
+
+                const string id = "users/omer";
+
+                RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database).Wait();
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User
+                        {
+                            Name = "Omer",
+                        },
+                        id);
+
+                    session.SaveChanges();
+                    
+                }
+                string changeVector;
+                using (var session = store.OpenSession())
+                {
+                    var metadatas =  session.Advanced.Revisions.GetMetadataFor(id);
+                    Assert.Equal(1, metadatas.Count);
+
+                    changeVector = metadatas.First().GetString(Constants.Documents.Metadata.ChangeVector);
+
+                    session.Advanced.Patch<User, string>(id, x => x.ChangeVector, changeVector);
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query =  session.Advanced
+                        .RawQuery<User>(
+                            @"
+declare function Foo(i) {
+    includes.revisions(i.ChangeVector)
+    return i;
+}
+from Users as u
+where Name != null 
+select Foo(u)"
+                        )
+                        .ToList();
+                    
+                    var revision = session.Advanced.Revisions.Get<User>(changeVector);
+
+                    Assert.NotNull(revision);
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+                }
+            }
+        }
         
         [Fact]
-        public async Task Query_RawQuery_IncludeRevisions_Jint()
+        public async Task Query_RawQuery_IncludeRevisions_Jint_StaticIndexQueryAsync()
+        {
+            using (var store = GetDocumentStore())
+            {
+                await new NameIndex().ExecuteAsync(store);
+                WaitForIndexing(store);
+                const string id = "users/omer";
+
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User
+                        {
+                            Name = "Omer",
+                        },
+                        id);
+
+                    await session.SaveChangesAsync();
+                }
+                WaitForIndexing(store);
+                string changeVector;
+                using (var session = store.OpenAsyncSession())
+                {
+                    var metadatas = await session.Advanced.Revisions.GetMetadataForAsync(id);
+                    Assert.Equal(1, metadatas.Count);
+
+                    changeVector = metadatas.First().GetString(Constants.Documents.Metadata.ChangeVector);
+
+                    session.Advanced.Patch<User, string>(id, x => x.ChangeVector, changeVector);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var query = await session.Advanced
+                        .AsyncRawQuery<User>(
+                            @"
+declare function Foo(i) {
+    includes.revisions(i.ChangeVector)
+    return i;
+}
+from Users as u
+where Name != null 
+select Foo(u)"
+                        )
+                        .ToListAsync();
+                    
+                    var revision = await session.Advanced.Revisions.GetAsync<User>(changeVector);
+
+                    Assert.NotNull(revision);
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+                }
+            }
+        }
+        
+        [Fact]
+        public void Query_RawQuery_IncludeRevisions_Jint_IndexQuery()
         {
             using (var store = GetDocumentStore())
             {
                 const string id = "users/omer";
 
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database).Wait();
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User
+                        {
+                            Name = "Omer",
+                        },
+                        id);
+
+                    session.SaveChanges();
+                }
+
+                string changeVector;
+                using (var session = store.OpenSession())
+                {
+                    var metadatas =  session.Advanced.Revisions.GetMetadataFor(id);
+                    Assert.Equal(1, metadatas.Count);
+
+                    changeVector = metadatas.First().GetString(Constants.Documents.Metadata.ChangeVector);
+
+                    session.Advanced.Patch<User, string>(id, x => x.ChangeVector, changeVector);
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query =  session.Advanced
+                        .RawQuery<User>(
+                            @"
+declare function Foo(i) {
+    includes.revisions(i.ChangeVector)
+    return i;
+}
+from Users as u
+where Name != null 
+select Foo(u)"
+                        )
+                        .ToList();
+                    
+                    var revision = session.Advanced.Revisions.Get<User>(changeVector);
+
+                    Assert.NotNull(revision);
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+                }
+            }
+        }
+        
+        [Fact]
+        public void Query_RawQuery_IncludeRevisions_Jint()
+        {
+            using (var store = GetDocumentStore())
+            {
+                const string id = "users/omer";
+
+                RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database).Wait();
 
                 using (var session = store.OpenSession())
                 {
@@ -1048,6 +1219,9 @@ select Foo(u)"
         {
             using (var store = GetDocumentStore())
             {
+                await new NameIndex().ExecuteAsync(store);
+                WaitForIndexing(store);
+                
                 const string id = "users/omer";
                 var cvList = new List<string>();
 
@@ -1105,8 +1279,8 @@ declare function Foo(i) {
     includes.revisions(i.FirstRevision, i.SecondRevision, i.ThirdRevision)
     return i;
 }
-from Users as u
-where ID(u) = 'users/omer' 
+from Index 'NameIndex' as u
+where u.Name = 'Omer' 
 select Foo(u)"
                         )
                         .ToList();
@@ -1212,7 +1386,7 @@ select Foo(u)"
             {
                 const string id = "users/omer";
 
-                 RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database).Wait();
 
                 using (var session = store.OpenSession())
                 {
@@ -1302,7 +1476,7 @@ select Foo(u)"
 
                 const string id = "users/omer";
 
-                RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database).Wait();
 
                 using (var session = store.OpenSession())
                 {
@@ -1491,7 +1665,7 @@ select Foo(u)"
         }
 
         [Fact]
-        public async Task Query_RawQueryWithParameters_IncludeRevisions_Array_SecondOption()
+        public void Query_RawQueryWithParameters_IncludeRevisions_Array_SecondOption()
         {
             using (var store = GetDocumentStore())
             {
@@ -1499,7 +1673,7 @@ select Foo(u)"
                 
                 const string id = "users/omer";
                 
-                RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database).Wait();
                 
                 using (var session = store.OpenSession())
                 {
@@ -1693,7 +1867,7 @@ select Foo(u)"
 
                 const string id = "users/omer";
 
-                RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database).Wait();
 
                 using (var session = store.OpenSession())
                 {
@@ -1790,7 +1964,19 @@ select Foo(u)"
             public string SecondRevision { get; set; }
             public string ThirdRevision { get; set; }
             public List<string> ChangeVectors { get; set; }
-
         }
+        
+        private class NameIndex : AbstractIndexCreationTask<User>
+        {
+            public NameIndex()
+            {
+                Map = users => from u in users
+                    select new
+                    {
+                        Name = u.Name,
+                    };
+            }
+        }
+
     }
 }

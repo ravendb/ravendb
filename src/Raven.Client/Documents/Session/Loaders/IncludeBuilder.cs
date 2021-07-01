@@ -55,11 +55,10 @@ namespace Raven.Client.Documents.Session.Loaders
 
     public interface IRevisionIncludeBuilder<T, out TBuilder> 
     {
-        TBuilder IncludeRevisions(string path);
+        TBuilder IncludeRevisions(string changeVector);
         TBuilder IncludeRevisions(Expression<Func<T, string>> path);
-        TBuilder IncludeRevisions(Expression<Func<T, IEnumerable<string>>> paths);
+        TBuilder IncludeRevisions(Expression<Func<T, IEnumerable<string>>> path);
         TBuilder IncludeRevisions(DateTime dateTime);
-        
         TBuilder IncludeRevisions(IEnumerable<string> changeVectors);
 
     }
@@ -105,7 +104,7 @@ namespace Raven.Client.Documents.Session.Loaders
         
         IQueryIncludeBuilder<T> IncludeTimeSeries(Expression<Func<T, string>> path, string name, DateTime from, DateTime to);
         
-        IQueryIncludeBuilder<T> IncludeRevisions(DateTime dateTime);
+        //IQueryIncludeBuilder<T> IncludeRevisions(DateTime dateTime);
 
     }
 
@@ -139,15 +138,8 @@ namespace Raven.Client.Documents.Session.Loaders
             }
         }
 
-        internal HashSet<string> RevisionToInclude
-        {
-            get
-            {
-                return RevisionsToIncludeByChangeVector;
-            }
-        }
+        internal HashSet<string> RevisionToInclude => RevisionsToIncludeByChangeVector;
 
-        
         internal bool AllCounters
         {
             get
@@ -174,7 +166,6 @@ namespace Raven.Client.Documents.Session.Loaders
     internal class IncludeBuilder<T> : IncludeBuilder, IQueryIncludeBuilder<T>, IIncludeBuilder<T>, ISubscriptionIncludeBuilder<T>, ITimeSeriesIncludeBuilder
     {
         private readonly DocumentConventions _conventions;
-        private IQueryIncludeBuilder<T> _queryIncludeBuilderImplementation;
 
         internal IncludeBuilder(DocumentConventions conventions)
         {
@@ -568,6 +559,7 @@ namespace Raven.Client.Documents.Session.Loaders
             RevisionsToIncludeByChangeVector ??= new HashSet<string>();
             RevisionsToIncludeByChangeVector.Add(changeVector);
         }
+        
         private void IncludeRevisionsByChangeVectors(IEnumerable<string> changeVectors)
         {
             RevisionsToIncludeByChangeVector ??= new HashSet<string>();
@@ -576,6 +568,7 @@ namespace Raven.Client.Documents.Session.Loaders
                 RevisionsToIncludeByChangeVector.Add(changeVector);
             }
         }
+        
         private void IncludeRevisionsByChangeVectors(string path)
         {
             if (string.IsNullOrWhiteSpace(path))
@@ -815,19 +808,14 @@ namespace Raven.Client.Documents.Session.Loaders
 
         IIncludeBuilder<T> IRevisionIncludeBuilder<T, IIncludeBuilder<T>>.IncludeRevisions(Expression<Func<T, string>> changeVectorPath)
         {
-            throw new InvalidOperationException("The usage of property including change vector inside property only can be done within Query");
+            throw new InvalidOperationException("IIncludeBuilder: The usage of property, including change vector inside property, can only be done within a 'IQueryIncludeBuilder'.");
         }
 
         IIncludeBuilder<T> IRevisionIncludeBuilder<T, IIncludeBuilder<T>>.IncludeRevisions(Expression<Func<T, IEnumerable<string>>> changeVectorPaths)
         {
-            throw new InvalidOperationException("The usage of property including change vector inside property only can be done within Query");
+            throw new InvalidOperationException("IIncludeBuilder: The usage of property, including change vector inside property, can only be done within a 'IQueryIncludeBuilder'.");
         }
-
-        IQueryIncludeBuilder<T> IRevisionIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeRevisions(DateTime dateTime)
-        {
-            throw new NotImplementedException();
-        }
-
+        
         IIncludeBuilder<T> IRevisionIncludeBuilder<T, IIncludeBuilder<T>>.IncludeRevisions(IEnumerable<string> changeVectors)
         {
             IncludeRevisionsByChangeVectors(changeVectors);
@@ -836,23 +824,23 @@ namespace Raven.Client.Documents.Session.Loaders
 
         IQueryIncludeBuilder<T> IRevisionIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeRevisions(IEnumerable<string> changeVectors)
         {
-            throw new InvalidOperationException("The usage of including `IEnumerable<string> changeVectors` can be done within Load");
+            throw new InvalidOperationException("IQueryIncludeBuilder: The usage of including change vectors can only be done within 'IIncludeBuilder'.");
         }
 
-        IQueryIncludeBuilder<T> IRevisionIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeRevisions(string path)
+        IQueryIncludeBuilder<T> IRevisionIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeRevisions(string changeVector)
         {
-            throw new NotImplementedException("The usage of change vector only can be done within Load");
+            throw new InvalidOperationException("IQueryIncludeBuilder: The usage of including change vector can only be done within 'IIncludeBuilder'.");
         }
-
-        IQueryIncludeBuilder<T> IQueryIncludeBuilder<T>.IncludeRevisions(DateTime dateTime)
+        
+        IQueryIncludeBuilder<T> IRevisionIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeRevisions(DateTime dateTime)
         {
-           IncludeRevisionsBefore(dateTime);
-           return this;
-        }
-
+            IncludeRevisionsBefore(dateTime);
+            return this;
+        }     
+        
         IIncludeBuilder<T> IRevisionIncludeBuilder<T, IIncludeBuilder<T>>.IncludeRevisions(DateTime dateTime)
         {
-            throw new InvalidOperationException("The usage of DateTime can be done within Query time.");
+            throw new InvalidOperationException("IIncludeBuilder: The usage of including date time can only be done within 'IQueryIncludeBuilder'.");
         }       
 
         IQueryIncludeBuilder<T> IRevisionIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeRevisions(Expression<Func<T, IEnumerable<string>>> changeVectorPaths)
@@ -861,8 +849,6 @@ namespace Raven.Client.Documents.Session.Loaders
             IncludeRevisionsByChangeVectors(changeVectorPaths.ToPropertyPath());
             return this;
         }
-        
-
     }
 
     internal class AbstractTimeSeriesRangeComparer : IEqualityComparer<AbstractTimeSeriesRange>

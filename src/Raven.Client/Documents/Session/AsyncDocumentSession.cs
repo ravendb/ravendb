@@ -5,16 +5,13 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Identity;
 using Raven.Client.Documents.Linq;
-using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Session.Operations.Lazy;
-using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Extensions;
 
 namespace Raven.Client.Documents.Session

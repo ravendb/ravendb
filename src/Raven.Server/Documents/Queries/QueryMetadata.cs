@@ -606,10 +606,10 @@ namespace Raven.Server.Documents.Queries
                     case ValueExpression ve:
                         foreach ((object Value, ValueTokenType Type) valueType in QueryBuilder.GetValues(Query, this, parameters, ve))
                         {
-                            string[] split = valueType.Value.ToString()?.Split('.');
-
                             if (string.IsNullOrEmpty(valueType.Value.ToString()))
                                 return;
+
+                            string[] split = valueType.Value.ToString()?.Split('.');
 
                             if (split.Length >= 2 && split[0] == Query.From.Alias?.Value)
                             {
