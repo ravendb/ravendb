@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using McMaster.Extensions.CommandLineUtils;
+using Raven.Client.Documents.Changes;
 using Sparrow.Platform;
 
 namespace rvn
@@ -34,6 +36,7 @@ namespace rvn
             ConfigureAdminChannelCommand();
             ConfigureWindowsServiceCommand();
             ConfigureLogsCommand();
+            ConfigureTrafficWatchCommand();
 
             _app.OnExecute(() =>
             {
@@ -83,6 +86,94 @@ namespace rvn
 
                     using (logStream)
                         logStream.Connect().Wait();
+
+                    return 0;
+                });
+            });
+        }
+
+        private static void ConfigureTrafficWatchCommand()
+        {
+            _app.Command("traffic-watch", cmd =>
+            {
+                cmd.ExtendedHelpText = cmd.Description = "Log traffic watch entries.";
+                cmd.HelpOption(HelpOptionString);
+
+                var urlArg = cmd.Argument("Url", "Server URL.");
+                var pathArg = cmd.Argument("Path", "Path to save the traffic watch log.");
+                var typesArg = cmd.Argument("Types", "Path to save the traffic watch log.");
+                var certArg = cmd.Argument("Certificate", "Path to certificate.");
+                var pidArg = cmd.Argument("ProcessID", "RavenDB Server process ID");
+
+                cmd.OnExecute(() =>
+                {
+                    string path;
+                    string url;
+
+                    int? pid = null;
+                    string cert = null;
+                    List<TrafficWatchChangeType> changeTypes = null;
+
+                    if (string.IsNullOrEmpty(urlArg.Value) == false)
+                    {
+                        url = urlArg.Value;
+                    }
+                    else
+                    {
+                        return ExitWithError("Url argument is invalid.", cmd);
+                    }
+
+                    if (string.IsNullOrEmpty(pathArg.Value) == false)
+                    {
+                        path = pathArg.Value;
+                    }
+                    else
+                    {
+                        return ExitWithError("Path argument is invalid.", cmd);
+                    }
+
+                    if (string.IsNullOrEmpty(typesArg.Value) == false && typesArg.Value != "all")
+                    {
+                        changeTypes = new List<TrafficWatchChangeType>();
+                        try
+                        {
+                            foreach (var type in typesArg.Value.Split(','))
+                            {
+                                if (Enum.TryParse(type, out TrafficWatchChangeType parsed))
+                                {
+                                    changeTypes.Add(parsed);
+                                }
+                                else
+                                {
+                                    return ExitWithError("Types argument is invalid.", cmd);
+                                }
+                            }
+                        }
+                        catch
+                        {
+                            ExitWithError("Types argument is invalid.", cmd);
+                        }
+                    }
+
+                    if (string.IsNullOrEmpty(certArg.Value) == false)
+                    {
+                        cert = certArg.Value;
+                    }
+
+                    if (string.IsNullOrEmpty(pidArg.Value) == false)
+                    {
+                        if (int.TryParse(pidArg.Value, out int pidInt))
+                            pid = pidInt;
+                        else
+                            return ExitWithError("RavenDB server PID argument is invalid.", cmd);
+                    }
+
+                    LogTrafficWatch logTrafficWatch = new LogTrafficWatch(pid, url, cert, path, changeTypes);
+
+                    Console.CancelKeyPress += (sender, args) => logTrafficWatch.Stop();
+
+                    using (logTrafficWatch)
+                        logTrafficWatch.Connect().Wait();
 
                     return 0;
                 });
