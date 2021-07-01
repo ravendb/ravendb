@@ -68,17 +68,28 @@ namespace Sparrow.Utils
             set => _inner.WriteTimeout = value;
         }
 
-        public (long CompressedBytes, long UncompressedBytes) GetTotalBytes(string str)
+        public class TotalBytes
         {
-            switch (str)
+            public long Compressed { get; set; }
+            public long Uncompressed { get; set; }
+        }
+
+        public TotalBytes GetTotalBytesSent()
+        {
+            return new TotalBytes
             {
-                case "Sent":
-                    return (_output.CompressedBytesCount, _output.UncompressedBytesCount);
-                case "Received":
-                    return (_input.CompressedBytesCount, _input.UncompressedBytesCount);
-                default:
-                    return (0, 0);
-            }
+                Compressed = _output.CompressedBytesCount,
+                Uncompressed = _output.UncompressedBytesCount,
+            };
+        }
+
+        public TotalBytes GetTotalBytesReceived()
+        {
+            return new TotalBytes
+            {
+                Compressed = _input.CompressedBytesCount,
+                Uncompressed = _input.UncompressedBytesCount,
+            };
         }
 
         public override long Seek(long offset, SeekOrigin origin)
