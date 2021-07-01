@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using Raven.Client.Documents.Session;
 using Sparrow.Json;
 
@@ -98,7 +99,8 @@ namespace Raven.Client.Json
                     case BlittableJsonToken.LazyNumber:
                     case BlittableJsonToken.CompressedString:
                     case BlittableJsonToken.String:
-                        if (newProp.Value.Equals(oldProp.Value) || CompareValues(oldProp, newProp))
+                        if (newProp.Value.Equals(oldProp.Value) || CompareValues(oldProp, newProp) || 
+                            CompareStringsWithEscapePositions(newBlittable._context, oldProp, newProp))
                             break;
                         if (changes == null)
                             return true;
@@ -165,6 +167,39 @@ namespace Raven.Client.Json
 
             changes[id] = docChanges.ToArray();
             return true;
+        }
+
+        private static unsafe bool CompareStringsWithEscapePositions(JsonOperationContext context, BlittableJsonReaderObject.PropertyDetails oldProp,
+            BlittableJsonReaderObject.PropertyDetails newProp)
+        {
+            // this is called if the values are NOT equal, but we need to check if the oldProp was read from network and already resolved 
+            // the escape characters
+
+            if (oldProp.Value is LazyStringValue lsv)
+            {
+                int pos = lsv.Size;
+                int numOfEscapePositions = BlittableJsonReaderBase.ReadVariableSizeInt(lsv.Buffer, ref pos);
+                if (numOfEscapePositions == 0)
+                    return false;
+
+                using (var memoryStream = new MemoryStream())
+                {
+                    using (var textWriter = new BlittableJsonTextWriter(context, memoryStream))
+                    {
+                        textWriter.WriteString(lsv);
+                        textWriter.Flush();
+                    }
+                    memoryStream.TryGetBuffer(out var bytes);
+                    fixed (byte* pBuff = bytes.Array)
+                    {
+                        // need to ignore the quote marks
+                        using var str = context.AllocateStringValue(null, pBuff + bytes.Offset + 1, (int)memoryStream.Length - 2);
+
+                        return newProp.Value.Equals(str);
+                    }
+                }
+            }
+            return false;
         }
 
         private static string FieldPathCombine(string path1, string path2) 

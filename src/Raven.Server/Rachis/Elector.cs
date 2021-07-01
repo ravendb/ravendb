@@ -1,4 +1,6 @@
 using System;
+using System.Diagnostics;
+using System.Threading;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Server.Rachis.Remote;
@@ -7,7 +9,7 @@ using Raven.Server.Utils;
 
 namespace Raven.Server.Rachis
 {
-    public class Elector
+    public class Elector : IDisposable
     {
         private readonly RachisConsensus _engine;
         private readonly RemoteConnection _connection;
@@ -22,6 +24,8 @@ namespace Raven.Server.Rachis
 
         public void Run()
         {
+            _engine.AppendElector(this);
+
             _electorLongRunningWork = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => HandleVoteRequest(), null, $"Elector for candidate {_connection.Source}");
         }
 
@@ -30,13 +34,27 @@ namespace Raven.Server.Rachis
             return $"Elector {_engine.Tag} for {_connection.Source}";
         }
 
-        public void HandleVoteRequest()
+        private void HandleVoteRequest()
         {
             try
             {
-                while (true)
+                try
                 {
-                    using (_engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+                    Thread.CurrentThread.Priority = ThreadPriority.AboveNormal;
+                }
+                catch (Exception e)
+                {
+                    if (_engine.Log.IsInfoEnabled)
+                    {
+                        _engine.Log.Info("Elector was unable to set the thread priority, will continue with the same priority", e);
+                    }
+                }
+
+                using (this)
+                {
+                    while (_engine.IsDisposed == false)
+                    {
+                        using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                     {
                         var rv = _connection.Read<RequestVote>(context);
 
@@ -97,25 +115,32 @@ namespace Raven.Server.Rachis
                                 NotInTopology = _engine.CurrentState == RachisState.Leader,
                                 Message = $"Node {rv.Source} is not in my topology, cannot vote for it"
                             });
-                            _connection.Dispose();
                             return;
                         }
 
                         var currentTerm = _engine.CurrentTerm;
                         if (rv.Term == currentTerm && rv.ElectionResult == ElectionResult.Won)
                         {
-                            _electionWon = true;
                             if (Follower.CheckIfValidLeader(_engine, _connection, out var negotiation))
                             {
+                                    _electionWon = true;
+                                    try
+                                    {
                                 var follower = new Follower(_engine, negotiation.Term, _connection);
                                 follower.AcceptConnection(negotiation);
                             }
+                                    catch
+                                    {
+                                        _electionWon = false;
+                                        throw;
+                                    }
+                                }
+
                             return;
                         }
 
                         if (rv.ElectionResult != ElectionResult.InProgress)
                         {
-                            _connection.Dispose();
                             return;
                         }
 
@@ -127,7 +152,6 @@ namespace Raven.Server.Rachis
                                 VoteGranted = false,
                                 Message = "My term is higher or equals to yours"
                             });
-                            _connection.Dispose();
                             return;
                         }
 
@@ -139,7 +163,6 @@ namespace Raven.Server.Rachis
                                 VoteGranted = false,
                                 Message = $"My last log term is {lastLogTerm} and higher than yours {rv.LastLogTerm}"
                             });
-                            _connection.Dispose();
                             return;
                         }
 
@@ -157,7 +180,6 @@ namespace Raven.Server.Rachis
                                 VoteGranted = false,
                                 Message = "I'm a leader in good standing, coup will be resisted"
                             });
-                            _connection.Dispose();
                             return;
                         }
 
@@ -277,6 +299,7 @@ namespace Raven.Server.Rachis
                     }
                 }
             }
+            }
             catch (Exception e) when (IsExpectedException(e))
             {
             }
@@ -287,14 +310,7 @@ namespace Raven.Server.Rachis
                     _engine.Log.Info($"Failed to talk to candidate: {_engine.Tag}", e);
                 }
             }
-            finally
-            {
-                if (_electionWon == false)
-                {
-                    _connection.Dispose();
                 }
-            }
-        }
 
         private static bool IsExpectedException(Exception e)
         {
@@ -357,5 +373,19 @@ namespace Raven.Server.Rachis
 
             return result;
         }
+
+        public void Dispose()
+        {
+            if (_electionWon == false)
+                _connection.Dispose();
+
+            if (_engine.Log.IsInfoEnabled)
+            {
+                _engine.Log.Info($"{ToString()}: Disposing");
+    }
+
+            if (_electorLongRunningWork != null && _electorLongRunningWork.ManagedThreadId != Thread.CurrentThread.ManagedThreadId)
+                _electorLongRunningWork.Join(int.MaxValue);
+}
     }
 }

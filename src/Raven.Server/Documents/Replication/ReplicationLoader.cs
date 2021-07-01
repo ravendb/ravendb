@@ -1950,6 +1950,21 @@ namespace Raven.Server.Documents.Replication
         {
             return Interlocked.Increment(ref _replicationStatsId);
         }
+
+        internal TestingStuff ForTestingPurposes;
+
+        internal TestingStuff ForTestingPurposesOnly()
+        {
+            if (ForTestingPurposes != null)
+                return ForTestingPurposes;
+
+            return ForTestingPurposes = new TestingStuff();
+        }
+
+        internal class TestingStuff
+        {
+            public Action<OutgoingReplicationHandler> OnOutgoingReplicationStart;
+        }
     }
 
     public class OutgoingReplicationFailureToConnectReporter : IReportOutgoingReplicationPerformance
