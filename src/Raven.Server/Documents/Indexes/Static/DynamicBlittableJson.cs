@@ -10,7 +10,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
-    public class DynamicBlittableJson : DynamicObject, IEnumerable<object>, IBlittableJsonContainer
+    public class DynamicBlittableJson : DynamicObject, IEnumerable<object>, IEnumerable<KeyValuePair<object, object>>, IBlittableJsonContainer
     {
         private const int DocumentIdFieldNameIndex = 0;
         private const int MetadataIdPropertyIndex = 1;
@@ -194,6 +194,14 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
+        IEnumerator<KeyValuePair<object, object>> IEnumerable<KeyValuePair<object, object>>.GetEnumerator()
+        {
+            foreach (var propertyName in BlittableJson.GetPropertyNames())
+            {
+                yield return new KeyValuePair<object, object>(TypeConverter.ToDynamicType(propertyName), TypeConverter.ToDynamicType(BlittableJson[propertyName]));
+            }
+        }
+
         public IDictionary<object, object> ToDictionary(Func<object, object> keySelector)
         {
             return new DynamicDictionary(Enumerable.ToDictionary(this, keySelector));
@@ -241,17 +249,17 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public IEnumerable<object> Take(int count)
         {
-            return new DynamicArray(Enumerable.Take(this, count));
+            return new DynamicArray(Enumerable.Take((IEnumerable<object>)this, count));
         }
 
         public IEnumerable<object> Skip(int count)
         {
-            return new DynamicArray(Enumerable.Skip(this, count));
+            return new DynamicArray(Enumerable.Skip((IEnumerable<object>)this, count));
         }
 
         public IEnumerable<object> Reverse()
         {
-            return new DynamicArray(Enumerable.Reverse(this));
+            return new DynamicArray(Enumerable.Reverse((IEnumerable<object>)this));
         }
 
         public dynamic DefaultIfEmpty(object defaultValue = null)
