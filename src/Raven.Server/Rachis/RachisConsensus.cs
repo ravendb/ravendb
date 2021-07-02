@@ -33,6 +33,7 @@ using Voron;
 using Voron.Data;
 using Voron.Data.Tables;
 using Voron.Impl;
+using Sparrow.Collections;
 
 namespace Raven.Server.Rachis
 {
@@ -306,6 +307,7 @@ namespace Raven.Server.Rachis
         private StorageEnvironment _persistentState;
         internal Logger Log;
 
+        private readonly ConcurrentQueue<Elector> _electors = new ConcurrentQueue<Elector>();
         private readonly List<IDisposable> _disposables = new List<IDisposable>();
 
         public long CurrentTerm { get; private set; }
@@ -754,6 +756,9 @@ namespace Raven.Server.Rachis
             var toDispose = new List<IDisposable>(_disposables);
             _disposables.Clear();
 
+            while (_electors.TryDequeue(out var elector))
+                toDispose.Add(elector);
+
             if (parent != null)
             {
                 _disposables.Add(parent);
@@ -876,6 +881,11 @@ namespace Raven.Server.Rachis
             CurrentState = RachisState.Leader;
             TaskExecutor.CompleteAndReplace(ref _stateChanged);
             return true;
+        }
+
+        public void AppendElector(Elector elector)
+        {
+            _electors.Enqueue(elector);
         }
 
         public void AppendStateDisposable(IDisposable parentState, IDisposable disposeOnStateChange)

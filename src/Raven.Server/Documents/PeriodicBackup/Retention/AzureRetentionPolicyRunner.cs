@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Raven.Server.Documents.Indexes.Static.Extensions;
 using Raven.Server.Documents.PeriodicBackup.Azure;
 using Raven.Server.Documents.PeriodicBackup.Restore;
 
@@ -15,7 +14,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
 
         private const string Delimiter = "/";
 
-        private string _nextMarker = null;
+        private string _continuationToken = null;
 
         public AzureRetentionPolicyRunner(RetentionPolicyBaseParameters parameters, RavenAzureClient client)
             : base(parameters)
@@ -26,13 +25,13 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
         protected override GetFoldersResult GetSortedFolders()
         {
             var prefix = string.IsNullOrWhiteSpace(_client.RemoteFolderName) ? string.Empty : $"{_client.RemoteFolderName}{Delimiter}";
-            var result = _client.ListBlobs(prefix, Delimiter, listFolders: true, marker: _nextMarker);
-            _nextMarker = result.NextMarker;
+            var result = _client.ListBlobs(prefix, Delimiter, listFolders: true, continuationToken: _continuationToken);
+            _continuationToken = result.ContinuationToken;
 
             return new GetFoldersResult
             {
                 List = result.List.Select(x => x.Name).OrderBy(x => x).ToList(),
-                HasMore = result.NextMarker != null
+                HasMore = result.ContinuationToken != null
             };
         }
 
@@ -44,12 +43,12 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
         protected override GetBackupFolderFilesResult GetBackupFilesInFolder(string folder, DateTime startDateOfRetentionRange)
         {
             var backupFiles = new GetBackupFolderFilesResult();
-            string blobsNextMarker = null;
+            string continuationToken = null;
             bool firstFileSet = false;
 
             do
             {
-                var blobs = _client.ListBlobs(folder, delimiter: null, listFolders: false, marker: blobsNextMarker);
+                var blobs = _client.ListBlobs(folder, delimiter: null, listFolders: false, continuationToken: continuationToken);
 
                 foreach (var blob in blobs.List)
                 {
@@ -67,9 +66,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
                     }
                 }
 
-                blobsNextMarker = blobs.NextMarker;
+                continuationToken = blobs.ContinuationToken;
                 CancellationToken.ThrowIfCancellationRequested();
-            } while (blobsNextMarker != null);
+            } while (continuationToken != null);
 
             return backupFiles;
         }
@@ -81,11 +80,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
 
             foreach (var folder in folders)
             {
-                string blobsNextMarker = null;
+                string continuationToken = null;
 
                 do
                 {
-                    var blobs = _client.ListBlobs(folder, delimiter: null, listFolders: false, marker: blobsNextMarker);
+                    var blobs = _client.ListBlobs(folder, delimiter: null, listFolders: false, continuationToken: continuationToken);
 
                     foreach (var blob in blobs.List)
                     {
@@ -98,11 +97,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
                         blobsToDelete.Add(blob.Name);
                     }
 
-                    blobsNextMarker = blobs.NextMarker;
+                    continuationToken = blobs.ContinuationToken;
 
                     CancellationToken.ThrowIfCancellationRequested();
 
-                } while (blobsNextMarker != null);
+                } while (continuationToken != null);
             }
 
             if (blobsToDelete.Count > 0)

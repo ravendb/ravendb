@@ -35,6 +35,7 @@ using Raven.Server.Utils;
 using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Json.Sync;
 using Sparrow.Logging;
 using Sparrow.Server.Json.Sync;
 using Sparrow.Server.Utils;
@@ -424,7 +425,7 @@ namespace Raven.Server.Documents.Replication
                                 throw new InvalidOperationException(
                                     "Incoming filtered replication is not supported on legacy replication hub. Make sure that there are no inline certificates on the replication hub: " +
                                     pullReplicationDefinition.Name);
-                            
+
                             allowedPaths = DetailedReplicationHubAccess.Preferred(header.ReplicationHubAccess.AllowedSinkToHubPaths, header.ReplicationHubAccess.AllowedHubToSinkPaths);
                             preventDeletionsMode = pullReplicationDefinition.PreventDeletionsMode;
 
@@ -469,20 +470,21 @@ namespace Raven.Server.Documents.Replication
 
             var taskId = pullReplicationDefinition.TaskId; // every connection to this pull replication on the hub will have the same task id.
             var externalReplication = pullReplicationDefinition.ToExternalReplication(initialRequest, taskId);
-            
+
             var outgoingReplication = new OutgoingReplicationHandler(null, this, Database, externalReplication, external: true, initialRequest.Info)
             {
-                _outgoingPullReplicationParams = new PullReplicationParams { 
+                _outgoingPullReplicationParams = new PullReplicationParams
+                {
                     Name = initialRequest.PullReplicationDefinitionName,
                     PreventDeletionsMode = pullReplicationDefinition.PreventDeletionsMode,
                     Mode = pullReplicationDefinition.Mode,
                     Type = PullReplicationParams.ConnectionType.Outgoing
                 },
-                
+
                 PullReplicationDefinitionName = initialRequest.PullReplicationDefinitionName,
                 CertificateThumbprint = tcpConnectionOptions.Certificate?.Thumbprint
             };
-            
+
             if (header.ReplicationHubAccess != null)
             {
                 // Note that if the certificate isn't registered *specifically* in the pull replication, we don't do
@@ -1038,7 +1040,7 @@ namespace Raven.Server.Documents.Replication
                             ex.DelayReplicationFor = newDestinationEx.DelayReplicationFor;
                         }
                     }
-                    
+
                     continue;
                 }
 
@@ -1123,8 +1125,8 @@ namespace Raven.Server.Documents.Replication
 
                     i += 1;
                     externalReplications.Insert(i, other);
+                }
             }
-        }
         }
 
         private List<ExternalReplicationBase> GetMyNewDestinations(DatabaseRecord newRecord, List<ExternalReplicationBase> added)
@@ -1409,29 +1411,29 @@ namespace Raven.Server.Documents.Replication
                 {
                     case ExternalReplicationBase exNode:
                         {
-                    var database = exNode.ConnectionString.Database;
-                    if (node is PullReplicationAsSink sink)
-                    {
-                        return GetPullReplicationTcpInfo(sink, certificate, database);
-                    }
+                            var database = exNode.ConnectionString.Database;
+                            if (node is PullReplicationAsSink sink)
+                            {
+                                return GetPullReplicationTcpInfo(sink, certificate, database);
+                            }
 
-                    // normal external replication
-                    return GetExternalReplicationTcpInfo(exNode as ExternalReplication, certificate, database);
-                }
+                            // normal external replication
+                            return GetExternalReplicationTcpInfo(exNode as ExternalReplication, certificate, database);
+                        }
                     case InternalReplication internalNode:
-                {
-                    using (var cts = CancellationTokenSource.CreateLinkedTokenSource(_shutdownToken))
-                    {
-                        cts.CancelAfter(_server.Engine.TcpConnectionTimeout);
+                        {
+                            using (var cts = CancellationTokenSource.CreateLinkedTokenSource(_shutdownToken))
+                            {
+                                cts.CancelAfter(_server.Engine.TcpConnectionTimeout);
                                 return ReplicationUtils.GetTcpInfo(internalNode.Url, internalNode.Database, Database.DbId.ToString(), Database.ReadLastEtag(),
                                     "Replication",
                             certificate, cts.Token);
-                    }
-                }
+                            }
+                        }
                     default:
-                throw new InvalidOperationException(
-                    $"Unexpected replication node type, Expected to be '{typeof(ExternalReplication)}' or '{typeof(InternalReplication)}', but got '{node.GetType()}'");
-            }
+                        throw new InvalidOperationException(
+                            $"Unexpected replication node type, Expected to be '{typeof(ExternalReplication)}' or '{typeof(InternalReplication)}', but got '{node.GetType()}'");
+                }
             }
             catch (Exception e)
             {
@@ -1461,7 +1463,7 @@ namespace Raven.Server.Documents.Replication
                         AlertType.Replication,
                         NotificationSeverity.Error);
 
-                        _server.NotificationCenter.Add(alert);
+                    _server.NotificationCenter.Add(alert);
                 }
 
                 var replicationPulse = new LiveReplicationPulsesCollector.ReplicationPulse
@@ -1992,6 +1994,21 @@ namespace Raven.Server.Documents.Replication
             }
 
             return false;
+        }
+
+        internal TestingStuff ForTestingPurposes;
+
+        internal TestingStuff ForTestingPurposesOnly()
+        {
+            if (ForTestingPurposes != null)
+                return ForTestingPurposes;
+
+            return ForTestingPurposes = new TestingStuff();
+        }
+
+        internal class TestingStuff
+        {
+            public Action<OutgoingReplicationHandler> OnOutgoingReplicationStart;
         }
     }
 

@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Documents.PeriodicBackup;
@@ -25,25 +26,25 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         }
 
         [AzureFact]
-        public void put_blob_4MB_chunked()
+        public Task put_blob_4MB_chunked()
         {
-            PutBlob(sizeInMB: 4, testBlobKeyAsFolder: false, UploadType.Chunked);
+            return PutBlobAsync(sizeInMB: 4, testBlobKeyAsFolder: false, UploadType.Chunked);
         }
 
         [AzureFact]
-        public void put_blob_into_folder_4MB_chunked()
+        public Task put_blob_into_folder_4MB_chunked()
         {
-            PutBlob(sizeInMB: 4, testBlobKeyAsFolder: true, UploadType.Chunked);
+            return PutBlobAsync(sizeInMB: 4, testBlobKeyAsFolder: true, UploadType.Chunked);
         }
 
         // ReSharper disable once InconsistentNaming
-        private void PutBlob(int sizeInMB, bool testBlobKeyAsFolder, UploadType uploadType)
+        private async Task PutBlobAsync(int sizeInMB, bool testBlobKeyAsFolder, UploadType uploadType)
         {
             var progress = new Progress();
             using (var holder = new Azure.AzureClientHolder(AzureFactAttribute.AzureSettings, progress))
             {
-                holder.Client.MaxUploadPutBlobInBytes = 3 * 1024 * 1024;
-                holder.Client.OnePutBlockSizeLimitInBytes = 1 * 1024 * 1024;
+                holder.Client.MaxUploadPutBlob = new Size(3, SizeUnit.Megabytes);
+                //holder.Client.OnePutBlockSizeLimitInBytes = 1 * 1024 * 1024; // TODO [ppekrol]
 
                 var blobKey = testBlobKeyAsFolder == false
                     ? holder.Settings.RemoteFolderName
@@ -84,7 +85,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         });
                 }
 
-                var blob = holder.Client.GetBlob(blobKey);
+                var blob = await holder.Client.GetBlobAsync(blobKey);
                 Assert.NotNull(blob);
 
                 using (var reader = new StreamReader(blob.Data))

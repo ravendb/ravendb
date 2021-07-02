@@ -40,6 +40,7 @@ using Raven.Server.Utils;
 using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Json.Sync;
 using Sparrow.Platform;
 using Sparrow.Server.Json.Sync;
 using Tests.Infrastructure;
@@ -768,6 +769,12 @@ namespace FastTests
             var actualValue = await WaitForGreaterThanAsync(act, expectedVal, timeout, interval);
             Assert.True(actualValue.CompareTo(expectedVal) > 0);
             return actualValue;
+        }
+
+        protected async Task WaitAndAssertForValueAsync<T>(Func<T> act, T expectedVal, int timeout = 15000, int interval = 100)
+        {
+            var val = await WaitForPredicateAsync(t => t.Equals(expectedVal), () => Task.FromResult(act.Invoke()), timeout, interval);
+            Assert.Equal(expectedVal, val);
         }
 
         private static async Task<T> WaitForPredicateAsync<T>(Predicate<T> predicate, Func<Task<T>> act, int timeout = 15000, int interval = 100)
