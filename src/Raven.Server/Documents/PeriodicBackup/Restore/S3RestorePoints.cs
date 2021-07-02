@@ -48,7 +48,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             foreach (var obj in allObjects)
             {
                 if (TryExtractDateFromFileName(obj.FullPath, out var lastModified) == false)
-                    lastModified = Convert.ToDateTime(obj.LastModifiedAsString);
+                    lastModified = obj.LastModified;
 
                 var fullPath = obj.FullPath;
                 var directoryPath = GetDirectoryName(fullPath);

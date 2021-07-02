@@ -6,10 +6,10 @@ using System.Text;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Json;
-using Raven.Client.Util;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Aws;
 using SlowTests.Server.Documents.PeriodicBackup.Restore;
+using Sparrow;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -22,9 +22,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         {
         }
 
-        private const string AwsAccessKey = "<aws_access_key>";
-        private const string AwsSecretKey = "<aws_secret_key>";
-        private const string AwsSessionToken = "<aws_session_token>";
         private const string EastRegion1 = "us-east-1";
         private const string WestRegion2 = "us-west-2";
 
@@ -86,7 +83,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                                 new Dictionary<string, string>());
                         }
                     });
-                Assert.Equal($"AWS location is set to \"{region2}\", but the bucket named: \"'{bucketName}'\" is located in: {region1}", error2.Message);
+                Assert.Equal($"AWS location is set to '{region2}', but the bucket named: '{bucketName}' is located in: {region1}", error2.Message);
             }
         }
 
@@ -114,8 +111,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             var progress = new Progress();
             using (var client = new RavenAwsS3Client(settings, progress))
             {
-                client.MaxUploadPutObjectSizeInBytes = 10 * 1024 * 1024; // 10MB
-                client.MinOnePartUploadSizeLimitInBytes = 7 * 1024 * 1024; // 7MB
+                client.MaxUploadPutObject = new Sparrow.Size(10, SizeUnit.Megabytes);
+                client.MinOnePartUploadSizeLimit = new Sparrow.Size(7, SizeUnit.Megabytes);
 
                 var value1 = Guid.NewGuid().ToString();
                 var value2 = Guid.NewGuid().ToString();
@@ -158,16 +155,16 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Theory(Skip = "Requires Amazon AWS Glacier Credentials")]
+        [AmazonGlacierTheory]
         [InlineData(EastRegion1)]
         [InlineData(WestRegion2)]
-        public void upload_archive(string region)
+        public async Task upload_archive(string region)
         {
             var vaultName = $"testing-{Guid.NewGuid()}";
 
             using (var client = new RavenAwsGlacierClient(GetGlacierSettings(region, vaultName)))
             {
-                client.PutVault();
+                await client.PutVaultAsync();
 
                 var archiveId = client.UploadArchive(
                     new MemoryStream(Encoding.UTF8.GetBytes("321")),
@@ -177,10 +174,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Theory(Skip = "Requires Amazon AWS Glacier Credentials")]
+        [AmazonGlacierTheory]
         [InlineData(EastRegion1)]
         [InlineData(WestRegion2)]
-        public void upload_archive_with_remote_folder_name(string region)
+        public async Task upload_archive_with_remote_folder_name(string region)
         {
             var vaultName = $"testing-{Guid.NewGuid()}";
 
@@ -188,7 +185,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             glacierSettings.RemoteFolderName = Guid.NewGuid().ToString();
             using (var client = new RavenAwsGlacierClient(glacierSettings))
             {
-                client.PutVault();
+                await client.PutVaultAsync();
 
                 var archiveId = client.UploadArchive(
                     new MemoryStream(Encoding.UTF8.GetBytes("321")),
@@ -198,7 +195,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Theory(Skip = "Requires Amazon AWS Glacier Credentials")]
+        [AmazonGlacierTheory]
         [InlineData(EastRegion1, WestRegion2)]
         [InlineData(WestRegion2, EastRegion1)]
         public void can_get_correct_error_glacier(string region1, string region2)
@@ -211,9 +208,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             {
                 var e = Assert.Throws<VaultNotFoundException>(() =>
                 {
-                   clientRegion2.UploadArchive(
-                        new MemoryStream(Encoding.UTF8.GetBytes("321")),
-                        "sample description");
+                    clientRegion2.UploadArchive(
+                         new MemoryStream(Encoding.UTF8.GetBytes("321")),
+                         "sample description");
                 });
                 Assert.Equal(e.Message, $"Vault name '{vaultName2}' doesn't exist in {region2}!");
 
@@ -227,7 +224,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Theory(Skip = "Requires Amazon AWS Glacier Credentials")]
+        [AmazonGlacierTheory]
         [InlineData(EastRegion1, 5, 2, UploadType.Regular)]
         [InlineData(EastRegion1, 5, 3, UploadType.Regular)]
         [InlineData(WestRegion2, 5, 2, UploadType.Regular)]
@@ -248,28 +245,26 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [InlineData(EastRegion1, 14, 3, UploadType.Chunked)]
         [InlineData(WestRegion2, 14, 2, UploadType.Chunked)]
         [InlineData(WestRegion2, 14, 3, UploadType.Chunked)]
-        public void upload_archive_multipart(string region, 
+        public Task upload_archive_multipart(string region,
             int sizeInMB, int minOnePartSizeInMB, UploadType uploadType)
         {
-            UploadArchive(region, sizeInMB, minOnePartSizeInMB, uploadType);
+            return UploadArchiveAsync(region, sizeInMB, minOnePartSizeInMB, uploadType);
         }
 
         // ReSharper disable once InconsistentNaming
-        private static void UploadArchive(string region, 
+        private static async Task UploadArchiveAsync(string region,
             int sizeInMB, int minOnePartSizeInMB, UploadType uploadType)
         {
             var vaultName = $"testing-{Guid.NewGuid()}";
 
             var progress = new Progress();
-            var maxUploadArchiveSizeInBytes = ExpressionHelper.CreateFieldSetter<RavenAwsGlacierClient, int>("MaxUploadArchiveSizeInBytes");
-            var minOnePartUploadSizeLimitInBytes = ExpressionHelper.CreateFieldSetter<RavenAwsGlacierClient, int>("MinOnePartUploadSizeLimitInBytes");
 
             using (var client = new RavenAwsGlacierClient(GetGlacierSettings(region, vaultName), progress))
             {
-                maxUploadArchiveSizeInBytes(client, 10 * 1024 * 1024); // 9MB
-                minOnePartUploadSizeLimitInBytes(client, minOnePartSizeInMB * 1024 * 1024);
+                client.MaxUploadArchiveSize = new Size(9, SizeUnit.Megabytes);
+                client.MinOnePartUploadSizeLimit = new Size(minOnePartSizeInMB, SizeUnit.Megabytes);
 
-                client.PutVault();
+                await client.PutVaultAsync();
 
                 var sb = new StringBuilder();
                 for (var i = 0; i < sizeInMB * 1024 * 1024; i++)
@@ -294,88 +289,21 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact]
-        public void AuthorizationHeaderValueForAwsS3ShouldBeCalculatedCorrectly1()
-        {
-            var s3Settings = new S3Settings
-            {
-                AwsAccessKey = "AKIAIOSFODNN7EXAMPLE",
-                AwsSecretKey = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
-                AwsRegionName = "us-east-1",
-                BucketName = "examplebucket"
-            };
-
-            using (var client = new RavenAwsS3Client(s3Settings))
-            {
-                var date = new DateTime(2013, 5, 24);
-
-                var stream = new MemoryStream(Encoding.UTF8.GetBytes("Welcome to Amazon S3."));
-                var payloadHash = RavenAwsHelper.CalculatePayloadHash(stream);
-
-                Assert.Equal("44ce7dd67c959e0d3524ffac1771dfbba87d2b6b4b4e99e42034a8b803f8b072", payloadHash);
-
-                var url = client.GetUrl() + "/test%24file.text";
-                var headers = new Dictionary<string, string>
-                {
-                    {"x-amz-date", RavenAwsHelper.ConvertToString(date)},
-                    {"x-amz-content-sha256", payloadHash},
-                    {"x-amz-storage-class", "REDUCED_REDUNDANCY"},
-                    {"Date", date.ToString("R")},
-                    {"Host", "s3.amazonaws.com"}
-                };
-
-                var auth = client.CalculateAuthorizationHeaderValue(HttpMethods.Put, url, date, headers);
-
-                Assert.Equal("AWS4-HMAC-SHA256", auth.Scheme);
-                Assert.Equal("Credential=AKIAIOSFODNN7EXAMPLE/20130524/us-east-1/s3/aws4_request,SignedHeaders=date;host;x-amz-content-sha256;x-amz-date;x-amz-storage-class,Signature=d2dd2e48b10d2cb89c271a6464d0748686c158b5fde44e8d83936fd9b30b5c4c", auth.Parameter);
-            }
-        }
-
-        [Fact]
-        public void AuthorizationHeaderValueForAwsS3ShouldBeCalculatedCorrectly2()
-        {
-            var s3Settings = new S3Settings
-            {
-                AwsAccessKey = "AKIAIOSFODNN7EXAMPLE",
-                AwsSecretKey = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
-                AwsRegionName = "us-east-1",
-                BucketName = "examplebucket"
-            };
-
-            using (var client = new RavenAwsS3Client(s3Settings))
-            {
-                var date = new DateTime(2013, 5, 24);
-                var payloadHash = RavenAwsHelper.CalculatePayloadHash(null);
-
-                Assert.Equal("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", payloadHash);
-
-                var url = client.GetUrl() + "/test.txt";
-                var headers = new Dictionary<string, string>
-                {
-                    {"x-amz-date", RavenAwsHelper.ConvertToString(date)},
-                    {"x-amz-content-sha256", payloadHash},
-                    {"Date", date.ToString("R")},
-                    {"Host", "s3.amazonaws.com"},
-                    {"Range", "bytes=0-9"}
-                };
-
-                var auth = client.CalculateAuthorizationHeaderValue(HttpMethods.Get, url, date, headers);
-
-                Assert.Equal("AWS4-HMAC-SHA256", auth.Scheme);
-                Assert.Equal("Credential=AKIAIOSFODNN7EXAMPLE/20130524/us-east-1/s3/aws4_request,SignedHeaders=host;range;x-amz-content-sha256;x-amz-date,Signature=819484c483cfb97d16522b1ac156f87e61677cc8f1f2545c799650ef178f4aa8", auth.Parameter);
-            }
-        }
-
         private static GlacierSettings GetGlacierSettings(string region, string vaultName)
         {
-            return new GlacierSettings
+            var glacierSettings = AmazonGlacierFactAttribute.GlacierSettings;
+            if (glacierSettings == null)
+                return null;
+
+            var settings = new GlacierSettings
             {
-                AwsAccessKey = AwsAccessKey,
-                AwsSecretKey = AwsSecretKey,
-                AwsSessionToken = AwsSessionToken,
-                AwsRegionName = region,
-                VaultName = vaultName
+                VaultName = vaultName,
+                AwsAccessKey = glacierSettings.AwsAccessKey,
+                AwsSecretKey = glacierSettings.AwsSecretKey,
+                AwsRegionName = region
             };
+
+            return settings;
         }
     }
 }

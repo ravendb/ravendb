@@ -30,6 +30,7 @@ using Raven.Server.ServerWide.Tcp.Sync;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Json.Sync;
 using Sparrow.Logging;
 using Sparrow.Server;
 using Sparrow.Server.Json.Sync;
@@ -294,6 +295,7 @@ namespace Raven.Server.Documents.Replication
         {
             try
             {
+                _parent.ForTestingPurposes?.OnOutgoingReplicationStart?.Invoke(this);
                 replicationAction();
             }
             catch (AggregateException e)
@@ -1175,6 +1177,21 @@ namespace Raven.Server.Documents.Replication
         private void OnSuccessfulTwoWaysCommunication() => SuccessfulTwoWaysCommunication?.Invoke(this);
 
         private void OnSuccessfulReplication() => SuccessfulReplication?.Invoke(this);
+
+        internal TestingStuff ForTestingPurposes;
+
+        internal TestingStuff ForTestingPurposesOnly()
+        {
+            if (ForTestingPurposes != null)
+                return ForTestingPurposes;
+
+            return ForTestingPurposes = new TestingStuff();
+        }
+
+        internal class TestingStuff
+        {
+            public Action OnDocumentSenderFetchNewItem;
+        }
     }
 
     public interface IReportOutgoingReplicationPerformance

@@ -211,6 +211,17 @@ namespace Raven.Server.Documents.Replication
                     // filtering a lot of documents, because we need to let the other side know about this, and 
                     // at the same time, we need to send a heartbeat to keep the tcp connection alive
                     _lastEtag = _parent._lastSentDocumentEtag;
+
+                    var lastEtagFromDestinationChangeVector = ChangeVectorUtils.GetEtagById(_parent.LastAcceptedChangeVector, _parent._database.DbBase64Id);
+                    if (lastEtagFromDestinationChangeVector > _lastEtag)
+                    {
+                        if (_log.IsInfoEnabled)
+                        {
+                            _log.Info($"We jump to get items from etag {lastEtagFromDestinationChangeVector} instead of {_lastEtag}, because we got a bigger etag for the destination database change vector ({_parent.LastAcceptedChangeVector})");
+                        }
+                        _lastEtag = lastEtagFromDestinationChangeVector;
+                    }
+
                     _parent.CancellationToken.ThrowIfCancellationRequested();
 
                     var skippedReplicationItemsInfo = new SkippedReplicationItemsInfo();
@@ -231,6 +242,8 @@ namespace Raven.Server.Documents.Replication
                     {
                         foreach (var item in GetReplicationItems(_parent._database, documentsContext, _lastEtag, _stats, _parent.SupportedFeatures.Replication.CaseInsensitiveCounters))
                         {
+                            _parent.ForTestingPurposes?.OnDocumentSenderFetchNewItem?.Invoke();
+
                             _parent.CancellationToken.ThrowIfCancellationRequested();
 
                             if (replicationState.LastTransactionMarker != item.TransactionMarker)

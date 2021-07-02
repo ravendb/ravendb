@@ -36,6 +36,7 @@ using Raven.Server.Web.Authentication;
 
 using Sparrow;
 using Sparrow.Json;
+using Sparrow.Json.Sync;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Platform;

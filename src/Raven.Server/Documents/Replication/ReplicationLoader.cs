@@ -34,6 +34,7 @@ using Raven.Server.Utils;
 using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Json.Sync;
 using Sparrow.Logging;
 using Sparrow.Server.Json.Sync;
 using Sparrow.Server.Utils;
@@ -1949,6 +1950,21 @@ namespace Raven.Server.Documents.Replication
         public int GetNextReplicationStatsId()
         {
             return Interlocked.Increment(ref _replicationStatsId);
+        }
+
+        internal TestingStuff ForTestingPurposes;
+
+        internal TestingStuff ForTestingPurposesOnly()
+        {
+            if (ForTestingPurposes != null)
+                return ForTestingPurposes;
+
+            return ForTestingPurposes = new TestingStuff();
+        }
+
+        internal class TestingStuff
+        {
+            public Action<OutgoingReplicationHandler> OnOutgoingReplicationStart;
         }
     }
 
