@@ -109,7 +109,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private void UploadToS3(S3Settings settings, Stream stream, Progress progress)
         {
-            using (var client = new RavenAwsS3Client(settings, progress, _logger, TaskCancelToken.Token))
+            using (var client = new RavenAwsS3Client(settings, progress, TaskCancelToken.Token))
             {
                 var key = CombinePathAndKey(settings.RemoteFolderName, useSafeFolderName: _useSafeFolderName);
                 client.PutObject(key, stream, new Dictionary<string, string>
@@ -130,7 +130,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private void UploadToGlacier(GlacierSettings settings, Stream stream, Progress progress)
         {
-            using (var client = new RavenAwsGlacierClient(settings, progress, _logger, TaskCancelToken.Token))
+            using (var client = new RavenAwsGlacierClient(settings, progress, TaskCancelToken.Token))
             {
                 var key = CombinePathAndKey(settings.RemoteFolderName ?? _uploaderSettings.DatabaseName, useSafeFolderName: _useSafeFolderName);
                 var archiveId = client.UploadArchive(stream, key);
@@ -164,7 +164,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private void UploadToAzure(AzureSettings settings, Stream stream, Progress progress)
         {
-            using (var client = new RavenAzureClient(settings, progress, _logger, TaskCancelToken.Token))
+            using (var client = new RavenAzureClient(settings, progress, TaskCancelToken.Token))
             {
                 var key = CombinePathAndKey(settings.RemoteFolderName, useSafeFolderName: _useSafeFolderName);
                 client.PutBlob(key, stream, new Dictionary<string, string>
@@ -206,7 +206,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private void DeleteFromS3(S3Settings settings)
         {
-            using (var client = new RavenAwsS3Client(settings, progress: null, _logger, TaskCancelToken.Token))
+            using (var client = new RavenAwsS3Client(settings, progress: null, TaskCancelToken.Token))
             {
                 var key = CombinePathAndKey(settings.RemoteFolderName, useSafeFolderName: _useSafeFolderName);
                 client.DeleteObject(key);
@@ -218,7 +218,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private void DeleteFromAzure(AzureSettings settings)
         {
-            using (var client = new RavenAzureClient(settings, progress : null, _logger, TaskCancelToken.Token))
+            using (var client = new RavenAzureClient(settings, progress : null, TaskCancelToken.Token))
             {
                 var key = CombinePathAndKey(settings.RemoteFolderName, useSafeFolderName: _useSafeFolderName);
                 client.DeleteBlobs(new List<string>{ key });

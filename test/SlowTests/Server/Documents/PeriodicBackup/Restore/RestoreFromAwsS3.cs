@@ -33,22 +33,22 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                 var restoreBackupTask = new RestoreBackupOperation(restoreConfiguration);
 
                 var e = Assert.Throws<RavenException>(() => store.Maintenance.Server.Send(restoreBackupTask));
-                Assert.Contains("AWS access key cannot be null or empty", e.InnerException.Message);
+                Assert.Contains("AWS Access Key cannot be null or empty", e.InnerException.Message);
 
                 restoreConfiguration.Settings.AwsAccessKey = "test";
                 restoreBackupTask = new RestoreBackupOperation(restoreConfiguration);
                 e = Assert.Throws<RavenException>(() => store.Maintenance.Server.Send(restoreBackupTask));
-                Assert.Contains("AWS secret key cannot be null or empty", e.InnerException.Message);
+                Assert.Contains("AWS Secret Key cannot be null or empty", e.InnerException.Message);
 
                 restoreConfiguration.Settings.AwsSecretKey = "test";
                 restoreBackupTask = new RestoreBackupOperation(restoreConfiguration);
                 e = Assert.Throws<RavenException>(() => store.Maintenance.Server.Send(restoreBackupTask));
-                Assert.Contains("AWS Bucket name cannot be null or empty", e.InnerException.Message);
+                Assert.Contains("AWS Bucket Name cannot be null or empty", e.InnerException.Message);
 
                 restoreConfiguration.Settings.BucketName = "test";
                 restoreBackupTask = new RestoreBackupOperation(restoreConfiguration);
                 e = Assert.Throws<RavenException>(() => store.Maintenance.Server.Send(restoreBackupTask));
-                Assert.Contains("AWS region name cannot be null or empty", e.InnerException.Message);
+                Assert.Contains("AWS Region Name cannot be null or empty", e.InnerException.Message);
             }
         }
         

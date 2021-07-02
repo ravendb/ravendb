@@ -1871,7 +1871,7 @@ namespace Raven.Server
 
         private void ListenToNewTcpConnection(TcpListener listener)
         {
-            Task.Run(async () =>
+            Task.Factory.StartNew(async () =>
             {
                 var tcpClient = await AcceptTcpClientAsync(listener);
                 if (tcpClient == null)

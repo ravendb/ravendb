@@ -2,11 +2,12 @@
 using System.IO;
 using Raven.Client.ServerWide.Tcp;
 using Sparrow.Json;
+using Sparrow.Json.Sync;
 using Sparrow.Server.Json.Sync;
 
 namespace Raven.Server.ServerWide.Tcp.Sync
 {
-    public sealed class TcpNegotiateParameters : AbstractTcpNegotiateParameters
+    internal sealed class TcpNegotiateParameters : AbstractTcpNegotiateParameters
     {
         /// <summary>
         /// ReadResponseAndGetVersion Function should take care reading the TcpConnectionHeaderResponse respond from the input 'stream'

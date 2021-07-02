@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using Raven.Server.Rachis.Json.Sync;
 using Raven.Server.ServerWide;
 using Sparrow;
 using Sparrow.Collections;

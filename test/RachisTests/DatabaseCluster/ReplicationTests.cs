@@ -145,6 +145,83 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
+        
+        [Fact]
+        public async Task FailoverReplicationShouldFindEtagFromChangeVector()
+        {
+            var clusterSize = 3;
+            var cluster = await CreateRaftCluster(clusterSize, watcherCluster: true);
+
+            using (var source = GetDocumentStore(new Options {ReplicationFactor = clusterSize, Server = cluster.Leader}))
+            using (var dest = GetDocumentStore(new Options {ReplicationFactor = 1, Server = cluster.Leader}))
+            {
+                await WaitAndAssertForValueAsync(() => GetMembersCount(source, source.Database), 3);
+
+                var list = await SetupReplicationAsync(source, cluster.Nodes[0].ServerStore.NodeTag, dest);
+                Assert.Equal(list.Count, 1);
+                var exReplication = list[0];
+                Assert.Equal(exReplication.ResponsibleNode, cluster.Nodes[0].ServerStore.NodeTag);
+
+                using (var session = source.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User(), "foo/bar");
+                    await session.SaveChangesAsync();
+                }
+
+                WaitForDocument(dest, "foo/bar");
+
+                var node = dest.GetRequestExecutor().Topology.Nodes.Single();
+                var server = Servers.Single(s => s.ServerStore.NodeTag == node.ClusterTag);
+                var destDb = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dest.Database);
+
+                // wait for the change vector on the dest to be synced
+                await WaitAndAssertForValueAsync(() => destDb.ReadLastEtagAndChangeVector().ChangeVector.ToChangeVectorList().Count, 3);
+
+                var otherNode = cluster.Nodes.First(x => x.ServerStore.NodeTag != exReplication.ResponsibleNode).ServerStore;
+                var sourceDb = await otherNode.DatabasesLandlord.TryGetOrCreateResourceStore(source.Database);
+
+                var fetched = 0;
+                sourceDb.ReplicationLoader.ForTestingPurposesOnly().OnOutgoingReplicationStart = (o) =>
+                {
+                    if (o.Destination.Database == dest.Database)
+                    {
+                        o.ForTestingPurposesOnly().OnDocumentSenderFetchNewItem = () =>
+                        {
+                            fetched++;
+                        };
+                    }
+                };
+
+                // change replication node
+                var otherNodeTag = otherNode.NodeTag;
+                var op = new UpdateExternalReplicationOperation(new ExternalReplication(dest.Database, $"ConnectionString-{dest.Identifier}")
+                {
+                    TaskId = exReplication.TaskId, MentorNode = otherNodeTag
+                });
+
+                var update = await source.Maintenance.SendAsync(op);
+                await WaitForRaftIndexToBeAppliedInCluster(update.RaftCommandIndex);
+
+                await WaitAndAssertForValueAsync(() =>
+                {
+                    return Servers.SelectMany(s =>
+                    {
+                        var db = s.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(source.Database).Result;
+                        return db.ReplicationLoader.OutgoingHandlers.Where(h => h.Destination.Database == dest.Database);
+                    }).Single()._parent._server.NodeTag;
+                }, otherNodeTag);
+
+                using (var session = source.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User(), "foo/bar/2");
+                    await session.SaveChangesAsync();
+                }
+
+                WaitForDocument(dest, "foo/bar/2");
+                Assert.Equal(1, fetched);
+            }
+        }
+
         [Theory]
         [InlineData(false)]
         [InlineData(true)]
