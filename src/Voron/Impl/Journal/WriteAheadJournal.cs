@@ -314,15 +314,7 @@ namespace Voron.Impl.Journal
                 }
                 else
                 {
-                    if (RuntimeInformation.OSArchitecture == Architecture.Arm || RuntimeInformation.OSArchitecture == Architecture.Arm64)
-                    {
-                        addToInitLog?.Invoke($"SkipChecksumValidationOnDbLoading set to true. Skipping checksum validation of {modifiedPages.Count} pages.");
-                    }
-                    else
-                    {
-                        throw new InvalidDataException( // RavenDB-13017
-                            $"{nameof(_env.Options.SkipChecksumValidationOnDatabaseLoading)} set to true is not allowed on non ARM architecture. This instance running on {RuntimeInformation.OSArchitecture}");
-                    }
+                    addToInitLog?.Invoke($"SkipChecksumValidationOnDbLoading set to true. Skipping checksum validation of {modifiedPages.Count} pages.");
                 }
             }
 
