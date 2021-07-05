@@ -185,7 +185,7 @@ class clientConfigurationModel {
     toDto() {
         return {
             IdentityPartsSeparator: _.includes(this.isDefined(), "identityPartsSeparator") ? this.identityPartsSeparator() : null,
-            LoadBalanceBehavior: _.includes(this.isDefined(), "useSessionContextForLoadBehavior") ? "UseSessionContext" : null,
+            LoadBalanceBehavior: _.includes(this.isDefined(), "useSessionContextForLoadBehavior") ? "UseSessionContext" : "None",
             LoadBalancerContextSeed: _.includes(this.isDefined(), "useSessionContextForLoadBehavior") && _.includes(this.isDefined(), "loadBalanceContextSeed") ? this.loadBalanceContextSeed() : null,
             ReadBalanceBehavior: _.includes(this.isDefined(), "readBalanceBehavior") ? this.readBalanceBehavior() : null,
             MaxNumberOfRequestsPerSession: _.includes(this.isDefined(), "maxNumberOfRequestsPerSession") ? this.maxNumberOfRequestsPerSession() : null,
