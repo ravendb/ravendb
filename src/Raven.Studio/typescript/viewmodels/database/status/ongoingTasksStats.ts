@@ -1853,11 +1853,11 @@ class ongoingTasksStats extends viewModelBase {
                         const elementWithData = context.rootStats as EtlPerformanceBaseWithCache;
                         
                         if (elementWithData.HasTransformErrors) {
-                            tooltipHtml += `<div class="tooltip-li text-danger">ETL task has Transform errors:<div class="value">Open notification center for details </div></div>`;
+                            tooltipHtml += `<div class="tooltip-li text-danger">ETL task has Transform errors:<div class="value">Open Notification Center for details </div></div>`;
                         }
                         
                         if (elementWithData.HasLoadErrors) {
-                            tooltipHtml += `<div class="tooltip-li text-danger">ETL task has Load errors:<div class="value">Open notification center for details </div></div>`;
+                            tooltipHtml += `<div class="tooltip-li text-danger">ETL task has Load errors:<div class="value">Open Notification Center for details </div></div>`;
                         }
                         
                         if (elementWithData.BatchCompleteReason) {
