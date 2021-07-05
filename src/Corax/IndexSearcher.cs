@@ -14,6 +14,7 @@ using Voron.Data.Fixed;
 using Voron.Data.Tables;
 using Voron.Impl;
 using Newtonsoft.Json;
+using Sparrow.Server.Compression;
 using Voron.Data.CompactTrees;
 using Voron.Data.Sets;
 using Voron.Debugging;
@@ -100,7 +101,7 @@ namespace Corax
             {
                 while (small.IsEmpty == false)
                 {
-                    var val = ZigZag.Decode(small, out var len);
+                    var val = ZigZagEncoding.Decode<long>(small, out var len);
                     small = small.Slice(len);
                     yield return val;
                 }
@@ -217,7 +218,7 @@ namespace Corax
         unsafe string ExtractDocumentId(Table entries, long entryId)
         {
             var span = Container.Get(_transaction.LowLevelTransaction, entryId);
-            var length = (int)ZigZag.Decode(span, out var sizeLen);
+            var length = (int)ZigZagEncoding.Decode<long>(span, out var sizeLen);
             return Encoding.UTF8.GetString(span.Slice(sizeLen, length));
         }
 

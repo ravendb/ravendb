@@ -1,36 +1,46 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 
 namespace Voron.Data.Sets
 {
-    public ref struct PForDecoder
-    {
-        private readonly Span<byte> _input;
-        private int _bitPos;
-        private readonly int _maxBits;
-        private int _prevValue;
-        private readonly Span<int> _nums;
-        
-        public int NumberOfReads;
 
-        public PForDecoder(Span<byte> input, Span<int> scratch)
+    public static class PForDecoder
+    {
+        public struct DecoderState
         {
-            _input = input;
-            _bitPos = 0;
-            _maxBits = input.Length * 8;
-            _prevValue = 0;
-            NumberOfReads = 0;
-            _nums = scratch.Slice(0, PForEncoder.BufferLen);
+            public readonly int BufferSize;
+            public readonly int MaxBits => BufferSize * 8;
+
+            public int NumberOfReads;
+
+            internal int _bitPos;
+            internal int _prevValue;    
+            
+            public DecoderState(int bufferSize)
+            {
+                _bitPos = 0;
+                _prevValue = 0;
+                NumberOfReads = 0;
+                BufferSize = bufferSize;
+            }
         }
 
-        public Span<int> Decode()
+        public static DecoderState Initialize(Span<byte> inputBuffer)
         {
-            var bits = Read(2);
+            return new DecoderState(inputBuffer.Length);
+        }
+
+        public static int Decode(ref DecoderState state, in Span<byte> inputBuffer, in Span<int> outputBuffer)
+        {
+            Debug.Assert(inputBuffer.Length == state.BufferSize);
+
+            var bits = Read(ref state, inputBuffer, 2);
             switch (bits)
             {
                 case 0b00: // fixed header
-                    bits = Read(7);
+                    bits = Read(ref state, inputBuffer, 7);
                     int numOfValues = (bits >> 5) switch
                     {
                         0b000 => 1,
@@ -39,80 +49,78 @@ namespace Voron.Data.Sets
                         0b011 => 128,
                         _ => throw new ArgumentOutOfRangeException((bits >> 5) + " isn't a valid number of items for fixed header")
                     };
-                    return ReadNumbers((int)(0x1F & bits), numOfValues);
+                    return ReadNumbers(ref state, inputBuffer, outputBuffer, (int)(0x1F & bits), numOfValues);
                 case 0b01: // variable size
-                    bits = Read(13);
-                    return ReadNumbers((int)(0x1F & bits), (int)(bits >> 5));
+                    bits = Read(ref state, inputBuffer, 13);
+                    return ReadNumbers(ref state, inputBuffer, outputBuffer, (int)(0x1F & bits), (int)(bits >> 5));
                 case 0b10: // repeated header
-                    bits = Read(13);
+                    bits = Read(ref state, inputBuffer, 13);
                     int numOfRepeatedValues = (int)(bits >> 5);
                     int numOfBits = (int)(0x1F & bits);
-                    var repeatedDelta = (int)Read(numOfBits);
+                    var repeatedDelta = (int)Read(ref state, inputBuffer, numOfBits);
                     for (int i = 0; i < numOfRepeatedValues; i++)
                     {
-                        _prevValue += repeatedDelta;
-                        _nums[i] = _prevValue;
+                        state._prevValue += repeatedDelta;
+                        outputBuffer[i] = state._prevValue;
                     }
 
-                    NumberOfReads += numOfRepeatedValues;
-                    return _nums.Slice(0, numOfRepeatedValues);
+                    state.NumberOfReads += numOfRepeatedValues;
+                    return numOfRepeatedValues;
                 case 0b11:
-                    return Span<int>.Empty;
+                    return 0;
                 default:
                     throw new ArgumentOutOfRangeException(bits + " isn't a valid header marker");
             }
         }
 
-        private Span<int> ReadNumbers(int numOfBits, int numOfValues)
+        private static int ReadNumbers(ref DecoderState state, in Span<byte> inputBuffer, in Span<int> outputBuffer, int numOfBits, int numOfValues)
         {
             if (numOfBits == 0)
-                return Span<int>.Empty;
+                return 0;
+
             for (int i = 0; i < numOfValues; i++)
             {
-                var v = Read(numOfBits);
-                _prevValue += (int)v;
-                _nums[i] = _prevValue;
+                var v = Read(ref state, inputBuffer, numOfBits);
+                state._prevValue += (int)v;
+                outputBuffer[i] = state._prevValue;
             }
 
-            NumberOfReads += numOfValues;
-            return _nums.Slice(0, numOfValues);
+            state.NumberOfReads += numOfValues;
+            return numOfValues;
         }
 
-        private ulong Read(int bitsToRead)
+        private static ulong Read(ref DecoderState state, in Span<byte> inputBuffer, int bitsToRead)
         {
-            int end = _bitPos + bitsToRead;
-            if (end > _maxBits)
+            int end = state._bitPos + bitsToRead;
+            if (end > state.MaxBits)
                 throw new EndOfStreamException();
 
-            ulong value = 0; ;
-            while (_bitPos < end)
+            ulong value = 0;
+            while (state._bitPos < end)
             {
                 value <<= 1;
-                ulong bit = (ulong)(_input[_bitPos >> 3] >> 7 - (_bitPos & 0x7) & 1);
+                ulong bit = (ulong)(inputBuffer[state._bitPos >> 3] >> 7 - (state._bitPos & 0x7) & 1);
                 value += bit;
-                _bitPos++;
+                state._bitPos++;
             }
             return value;
-        }
-
-        public List<int> GetDebugOutput()
-        {
-            return GetDebugOutput(_input);
         }
 
         public static List<int> GetDebugOutput(Span<byte> buf)
         {
             Span<int> scratch = stackalloc int[128];
-            var decoder = new PForDecoder(buf, scratch);
-
+            
             var list = new List<int>();
+            var state = Initialize(buf);
             while (true)
             {
-                var d = decoder.Decode();
-                if (d.IsEmpty) break;
-                foreach (var t in d)
+                var len = Decode(ref state, buf, scratch);
+                if (len == 0)
+                    break;
+
+                for (int i = 0; i < len; i++)
                 {
-                    list.Add(t);
+                    list.Add(scratch[i]);
                 }
             }
             return list;

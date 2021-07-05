@@ -29,7 +29,7 @@ namespace FastTests.Voron
 
             var actual = Container.Get(wtx.LowLevelTransaction, id);
             
-            Assert.Equal(expected.ToArray(), actual.ToArray());
+            Assert.Equal(expected.ToArray(), actual.ToSpan().ToArray());
         }
 
         
@@ -99,7 +99,7 @@ namespace FastTests.Voron
             foreach (var itemId in ids)
             {
                 var data = Container.Get(wtx.LowLevelTransaction, itemId);
-                Assert.True(data.Slice(0, 4).SequenceEqual(expected));
+                Assert.True(data.ToSpan().Slice(0, 4).SequenceEqual(expected));
             }
         }
 
@@ -126,7 +126,7 @@ namespace FastTests.Voron
             foreach (var itemId in ids)
             {
                 var data = Container.Get(wtx.LowLevelTransaction, itemId);
-                Assert.True(data.Slice(0, 4).SequenceEqual(expected));
+                Assert.True(data.ToSpan().Slice(0, 4).SequenceEqual(expected));
             }
         }
     }

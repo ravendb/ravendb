@@ -12,11 +12,11 @@ namespace Voron.Data.Sets
 {
     public readonly unsafe struct SetBranchPage
     {
-        private readonly byte* _base;
+        private readonly Page _page;
 
-        public SetBranchPage(byte* baseline)
+        public SetBranchPage(Page page)
         {
-            _base = baseline;
+            _page = page;
         }
 
         public long First => ZigZagEncoding.Decode<long>(Span, Positions[0]);
@@ -40,13 +40,13 @@ namespace Voron.Data.Sets
         /// </summary>
         public const int MinNumberOfValuesBeforeMerge = 180;
         
-        public SetBranchPageHeader* Header => (SetBranchPageHeader*)_base;
+        public SetBranchPageHeader* Header => (SetBranchPageHeader*)_page.Pointer;
         
-        private Span<ushort> Positions => new Span<ushort>(_base + PageHeader.SizeOf, Header->NumberOfEntries);
+        private Span<ushort> Positions => new Span<ushort>(_page.Pointer + PageHeader.SizeOf, Header->NumberOfEntries);
 
         private int FreeSpace => Header->Upper - PageHeader.SizeOf - (Header->NumberOfEntries * sizeof(ushort));
         
-        private Span<byte> Span => new Span<byte>(_base, Constants.Storage.PageSize);
+        private readonly Span<byte> Span => new Span<byte>(_page.Pointer, Constants.Storage.PageSize);
 
         private void Defrag(LowLevelTransaction tx)
         {
