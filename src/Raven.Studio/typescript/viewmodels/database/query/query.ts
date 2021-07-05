@@ -676,6 +676,10 @@ class query extends viewModelBase {
                         
                         itemsSoFar += queryResults.items.length;
                         
+                        if (itemsSoFar > totalFromQuery) {
+                            itemsSoFar = totalFromQuery;
+                        }
+                        
                         this.totalResultsForUi(totalFromQuery);
                     
                         if (queryResults.additionalResultInfo.TotalResults === -1) {
