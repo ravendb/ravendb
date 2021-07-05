@@ -8,9 +8,9 @@ namespace Raven.Client.Documents.Session.Tokens
     {
         public abstract void WriteTo(StringBuilder writer);
 
-        protected  void WriteField(StringBuilder writer, string field)
+        public static void WriteField(StringBuilder writer, string field)
         {
-            var keyWord = RqlKeywords.Contains(field);
+            var keyWord = IsKeyword(field);
 
             if (keyWord)
                 writer.Append("'");
@@ -21,7 +21,12 @@ namespace Raven.Client.Documents.Session.Tokens
                 writer.Append("'");
         }
 
-        private static readonly HashSet<string> RqlKeywords = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        public static bool IsKeyword(string field)
+        {
+            return RqlKeywords.Contains(field);
+        }
+
+        internal static readonly HashSet<string> RqlKeywords = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             "as",
             "select",
