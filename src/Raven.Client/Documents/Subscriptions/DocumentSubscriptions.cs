@@ -18,6 +18,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.Loaders;
+using Raven.Client.Documents.Session.Tokens;
 using Raven.Client.Extensions;
 using Raven.Client.Util;
 using Sparrow.Collections;
@@ -192,7 +193,7 @@ namespace Raven.Client.Documents.Subscriptions
                         if (IncludesUtil.RequiresQuotes(include, out var escapedInclude))
                             criteria.Query += $"'{escapedInclude}'";
                         else
-                            criteria.Query += include;
+                            criteria.Query += QueryToken.IsKeyword(include) ? $"'{include}'" : include;
                     }
                 }
             }
