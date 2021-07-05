@@ -21,7 +21,6 @@ namespace Voron.Data.Containers
         public ExtendedPageType ContainerFlags;
 
         // this is used only by the first page
-        
         [FieldOffset(14)] 
         public int NumberOfPages;
 

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Sparrow.Server;
 using Voron;
@@ -34,7 +34,7 @@ namespace Tryouts
         [InlineData(4096 + 257)] // with compressed x 16 (so will recompress) 
         public void CanAddAndRead(int size)
         {
-            var leaf = new SetLeafPage(_pagePtr);
+            var leaf = new SetLeafPage(new Page(_pagePtr));
             leaf.Init(0);
             var list = new List<long>();
             var buf = new int[] {12, 18};
@@ -45,7 +45,7 @@ namespace Tryouts
                 list.Add(start);
                 Assert.True(leaf.Add(_llt, start));
             }
-            Assert.Equal(list, leaf.GetDebugOutput());
+            Assert.Equal(list, leaf.GetDebugOutput(_llt));
         }
         
         [Theory]
@@ -56,7 +56,7 @@ namespace Tryouts
         [InlineData(4096 + 257)] // with compressed x 16 (so will recompress) 
         public void CanAddAndRemove(int size)
         {
-            var leaf = new SetLeafPage(_pagePtr);
+            var leaf = new SetLeafPage(new Page(_pagePtr));
             leaf.Init(0);
             var buf = new int[] {12, 18};
             var start = 24;
@@ -72,7 +72,7 @@ namespace Tryouts
                 start += buf[i % buf.Length];
                 Assert.True(leaf.Remove(_llt, start));
             }
-            Assert.Empty(leaf.GetDebugOutput());
+            Assert.Empty(leaf.GetDebugOutput(_llt));
         }
 
         
@@ -84,7 +84,7 @@ namespace Tryouts
         [InlineData(4096 + 257)] // with compressed x 16 (so will recompress) 
         public void CanHandleDuplicateValues(int size)
         {
-            var leaf = new SetLeafPage(_pagePtr);
+            var leaf = new SetLeafPage(new Page(_pagePtr));
             leaf.Init(0);
             var list = new List<long>();
             var buf = new int[] {12, 18};
@@ -96,7 +96,7 @@ namespace Tryouts
                 start += buf[i % buf.Length];
             }
             Assert.True(leaf.Add(_llt, 24)); // should be no op
-            Assert.Equal(list, leaf.GetDebugOutput());
+            Assert.Equal(list, leaf.GetDebugOutput(_llt));
         }
 
         public void Dispose()

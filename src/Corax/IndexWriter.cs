@@ -6,6 +6,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.InteropServices;
 using Sparrow.Server;
+using Sparrow.Server.Compression;
 using Voron;
 using Voron.Data.BTrees;
 using Voron.Data.CompactTrees;
@@ -67,7 +68,7 @@ namespace Corax
         public long Index(Slice id, Span<byte> data, Dictionary<Slice, int> knownFields)
         {
             Span<byte> buf = stackalloc byte[10];
-            var idLen = ZigZag.Encode(buf, id.Size);
+            var idLen = ZigZagEncoding.Encode(buf, id.Size);
             var entryId = Container.Allocate(Transaction.LowLevelTransaction, _entriesContainerId, idLen + id.Size + data.Length, out var space);
             buf.Slice(0, idLen).CopyTo(space);
             space = space.Slice(idLen);
@@ -260,7 +261,7 @@ namespace Corax
                         var cur = 0L;
                         while (smallSet.IsEmpty == false)
                         {
-                            var value = ZigZag.Decode(smallSet, out var len);
+                            var value = ZigZagEncoding.Decode<long>(smallSet, out var len);
                             cur += value;
                             entries.Add(cur);
                             smallSet = smallSet.Slice(len);
@@ -308,7 +309,7 @@ namespace Corax
             
             // try to insert to container value
             //TODO: using simplest delta encoding, need to do better here
-            int pos = ZigZag.Encode(tmpBuf, entries[0]);
+            int pos = ZigZagEncoding.Encode(tmpBuf, entries[0]);
             var llt = Transaction.LowLevelTransaction;
             for (int i = 1; i < entries.Count; i++)
             {
@@ -318,7 +319,7 @@ namespace Corax
                     if (entry == 0)
                         continue; // we don't need to store duplicates
                     
-                    pos += ZigZag.Encode(tmpBuf.Slice(pos), entry);
+                    pos += ZigZagEncoding.Encode(tmpBuf.Slice(pos), entry);
                     continue;
                 }
 

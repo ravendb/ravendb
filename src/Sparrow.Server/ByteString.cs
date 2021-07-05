@@ -1,10 +1,12 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
+using System.Xml;
 using Sparrow.Binary;
 using Sparrow.Collections;
 using Sparrow.Extensions;
@@ -845,6 +847,46 @@ namespace Sparrow.Server
             output = MemoryMarshal.Cast<byte, T>(str.ToSpan());
             return r;
         }
+        
+        private class ByteStringMemoryManager<T> : MemoryManager<T> where T : unmanaged
+        {
+            private readonly ByteStringContext<TAllocator> _context;
+            private ByteString _str;
+            public ByteStringMemoryManager(ByteStringContext<TAllocator> context, ByteString str)
+            {
+                _context = context;
+                _str = str;
+            }
+
+            public override Memory<T> Memory => CreateMemory(_str.Length);
+
+            public override Span<T> GetSpan() => new Span<T>(_str._pointer, _str.Length);
+
+            public override MemoryHandle Pin(int elementIndex = 0)
+            {
+                if (elementIndex < 0 || elementIndex >= _str.Length / sizeof(T))
+                    throw new ArgumentOutOfRangeException(nameof(elementIndex));
+
+                return new MemoryHandle(_str._pointer + (elementIndex*sizeof(T)));
+            }
+
+            public override void Unpin()
+            {
+            }
+
+            protected override void Dispose(bool disposing)
+            {
+                _context.Release(ref _str);
+            }
+        }
+
+        public IDisposable Allocate<T>(int length, out Memory<T> buffer) where T : unmanaged
+        {
+            var output = AllocateInternal(length * sizeof(T), ByteStringType.Mutable);
+            var memoryManager = new ByteStringMemoryManager<T>(this, output);
+            buffer = memoryManager.Memory;
+            return memoryManager;
+        } 
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public InternalScope Allocate(int length, out ByteString output)

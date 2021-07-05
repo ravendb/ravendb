@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -373,12 +373,12 @@ namespace Voron.Debugging
         private static unsafe void RenderPageInternal(Set tree, Page page, TextWriter sw, string text, bool open)
         {
             var header = new SetCursorState { Page = page };
-            var leaf = new SetLeafPage(page.Pointer);
-            var branch = new SetBranchPage(page.Pointer);
+            var leaf = new SetLeafPage(page);
+            var branch = new SetBranchPage(page);
 
             List<long> leafEntries = null;
             if (header.IsLeaf)
-                leafEntries = leaf.GetDebugOutput();
+                leafEntries = leaf.GetDebugOutput(tree.Llt);
             sw.WriteLine(
                 string.Format("<ul><li><input type='checkbox' id='page-{0}' {3} /><label for='page-{0}'>{4}: Page {0:#,#;;0} - {1} - {2:#,#;;0} entries - {5}</label><ul>",
                     page.PageNumber, header.IsLeaf ? "leaf" : "branch", header.IsLeaf ? leafEntries!.Count : branch.Header->NumberOfEntries, open ? "checked" : "", text, 
