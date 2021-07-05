@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Linq;
-
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -205,12 +204,19 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
         private static SyntaxNode ModifyLambdaForSelect(LambdaExpressionSyntax node, InvocationExpressionSyntax currentInvocation)
         {
             var parentMethod = GetParentMethod(currentInvocation);
+
             switch (parentMethod)
             {
                 case "GroupBy":
                     return SyntaxFactory.ParseExpression($"(Func<IGrouping<dynamic, dynamic>, dynamic>)({node})");
                 default:
-                    return SyntaxFactory.ParseExpression($"(Func<dynamic, dynamic>)({node})");
+                {
+                    if (node is SimpleLambdaExpressionSyntax)
+                        return SyntaxFactory.ParseExpression($"(Func<dynamic, dynamic>)({node})");
+                    else
+                        return SyntaxFactory.ParseExpression($"(Func<dynamic, int, dynamic>)({node})");
+
+                }
             }
         }
 
