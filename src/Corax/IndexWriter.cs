@@ -219,12 +219,13 @@ namespace Corax
                         var smallSet = Container.Get(llt, id).ToSpan();
                         // combine with existing value
                         var cur = 0L;
+                        ZigZagEncoding.Decode<int>(smallSet, out var pos); // discard the first entry, the count
                         while (smallSet.IsEmpty == false)
                         {
-                            var value = ZigZagEncoding.Decode<long>(smallSet, out var len);
+                            var value = ZigZagEncoding.Decode<long>(smallSet, out var len, pos);
+                            pos += len;
                             cur += value;
                             entries.Add(cur);
-                            smallSet = smallSet.Slice(len);
                         }
                         Container.Delete(llt, _postingListContainerId, id);
                         AddNewTerm(entries, fieldTree, termsSpan, tmpBuf);
@@ -259,11 +260,12 @@ namespace Corax
             
             // try to insert to container value
             //TODO: using simplest delta encoding, need to do better here
-            int pos = ZigZagEncoding.Encode(tmpBuf, entries[0]);
+            int pos = ZigZagEncoding.Encode(tmpBuf, entries.Count);
+            pos += ZigZagEncoding.Encode(tmpBuf, entries[0], pos);
             var llt = Transaction.LowLevelTransaction;
             for (int i = 1; i < entries.Count; i++)
             {
-                if (pos + 10 < tmpBuf.Length)
+                if (pos + ZigZagEncoding.MaxEncodedSize < tmpBuf.Length)
                 {
                     long entry = entries[i] - entries[i - 1];
                     if (entry == 0)

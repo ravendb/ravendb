@@ -132,11 +132,11 @@ namespace Corax
                 return true;
             }
 
-            // Right now we dont have a way to know the total amount of results in the container.
-            // https://issues.hibernatingrhinos.com/issue/RavenDB-16946
-            return new TermMatch(&SeekFunc, &MoveNextFunc, 30000)
+            var itemsCount = ZigZagEncoding.Decode<int>(containerItem.ToSpan(), out var len);
+            return new TermMatch(&SeekFunc, &MoveNextFunc, itemsCount)
             {
-                _container = containerItem
+                _container = containerItem,
+                _currentIdx = len
             };
         }
 
@@ -157,9 +157,7 @@ namespace Corax
                 return hasMove;
             }
 
-            // Right now we dont have a way to know the total amount of results in the container.
-            // https://issues.hibernatingrhinos.com/issue/RavenDB-16946
-            return new TermMatch(&SeekFunc, &MoveNextFunc, 100000)
+            return new TermMatch(&SeekFunc, &MoveNextFunc, set.State.NumberOfEntries)
             {                
                 _set = set.Iterate()
             };

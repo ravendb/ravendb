@@ -80,11 +80,11 @@ namespace Tryouts
                     fieldTree.Seek("\0");
                     while (fieldTree.Next(out _, out var l))
                     {
-                        if ((l & (long)IndexWriter.TermIdMask.Set) != 0)
+                        if ((l & (long)TermIdMask.Set) != 0)
                         {
                             numberOfTerms++;
                             var setSpace = Container.Get(rtx.LowLevelTransaction, (l & ~0b11));
-                            ref var setState = ref MemoryMarshal.GetReference<SetState>(MemoryMarshal.Cast<byte,SetState>(setSpace));
+                            ref var setState = ref MemoryMarshal.GetReference<SetState>(MemoryMarshal.Cast<byte,SetState>(setSpace.ToSpan()));
                             Set set = new Set(rtx.LowLevelTransaction, Slices.Empty, setState);
                             using var sit = set.Iterate();
                             if (sit.Seek(0))

@@ -14,9 +14,11 @@ namespace Voron.Data.Sets
         [FieldOffset(8)]
         public long RootPage;
         [FieldOffset(16)]
-        public long BranchPages;
+        public int BranchPages;
+        [FieldOffset(20)]
+        public int LeafPages;
         [FieldOffset(24)]
-        public long LeafPages;
+        public long NumberOfEntries;
 
         public override string ToString()
         {
