@@ -1,27 +1,268 @@
 using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
 using System.Runtime.InteropServices;
-using System.Text;
-using Sparrow.Json;
-using Voron;
-using Voron.Data.BTrees;
-using Voron.Data.Fixed;
-using Voron.Data.Tables;
-using Voron.Impl;
-using Newtonsoft.Json;
+using System.Runtime.CompilerServices;
 using Sparrow.Server.Compression;
-using Voron.Data.CompactTrees;
+using Voron;
+using Voron.Impl;
 using Voron.Data.Sets;
-using Voron.Debugging;
-using Container = Voron.Data.Containers.Container;
+using Voron.Data.Containers;
 
 namespace Corax
 {
+    public interface IIndexMatch
+    {
+        long TotalResults { get; }
+        long Current { get; }
+
+        bool SeekTo(long next = 0);
+        bool MoveNext(out long v);
+    }
+
+    public static class QueryMatch
+    {
+        public const long Invalid = -1;
+    }
+
+    public unsafe struct TermMatch : IIndexMatch
+    {
+        private readonly delegate*<ref TermMatch, long, bool> _seekToFunc;
+        private readonly delegate*<ref TermMatch, out long, bool> _moveNext;
+
+        private long _totalResults;
+        private long _currentIdx;
+        private long _current;
+        
+        private Container.Item _container;
+        private Set.Iterator _set;
+
+        public long TotalResults => _totalResults;
+        public long Current => _currentIdx == QueryMatch.Invalid ? QueryMatch.Invalid : _current;
+
+        private TermMatch(delegate*<ref TermMatch, long, bool> seekFunc, delegate*<ref TermMatch, out long, bool> moveNext, long totalResults)
+        {
+            _totalResults = totalResults;
+            _current = QueryMatch.Invalid;
+            _currentIdx = QueryMatch.Invalid;
+            _seekToFunc = seekFunc;
+            _moveNext = moveNext;
+
+            _container = default;
+            _set = default;
+        }
+
+        public static TermMatch CreateEmpty()
+        {
+            static bool SeekFunc(ref TermMatch term, long next)
+            {
+                term._current = QueryMatch.Invalid;
+                return false;
+            }
+
+            static bool MoveNextFunc(ref TermMatch term, out long v)
+            {
+                Unsafe.SkipInit(out v);
+                return false;
+            }
+
+            return new TermMatch(&SeekFunc, &MoveNextFunc, 0);
+        }
+
+        public static TermMatch YieldOnce(long value)
+        {
+            static bool SeekFunc(ref TermMatch term, long next)
+            {
+                term._currentIdx = next > term._current ? QueryMatch.Invalid : 0;
+                return term._currentIdx == 0;
+            }
+
+            static bool MoveNextFunc(ref TermMatch term, out long v)
+            {
+                Unsafe.SkipInit(out v);
+                term._currentIdx = QueryMatch.Invalid;
+                return false;
+            }
+
+            return new TermMatch(&SeekFunc, &MoveNextFunc, 1)
+            {
+                _current = value
+            };
+        }
+
+        public static TermMatch YieldSmall(Container.Item containerItem)
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            static bool SeekFunc(ref TermMatch term, long next)
+            {
+                var stream = term._container.ToSpan();
+
+                int pos = 0;
+                long current = QueryMatch.Invalid;
+                while (pos < stream.Length)
+                {
+                    current = ZigZagEncoding.Decode<long>(stream, out var len, pos);
+                    pos += len;
+                    if (current > next)
+                    {
+                        // We found values bigger than next.
+                        term._current = current;
+                        term._currentIdx = pos;
+                        return true;
+                    }
+                }
+
+                term._current = QueryMatch.Invalid;
+                term._currentIdx = QueryMatch.Invalid;
+                return false;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            static bool MoveNextFunc(ref TermMatch term, out long v)
+            {
+                var stream = term._container.ToSpan();
+                if (term._currentIdx == QueryMatch.Invalid || term._currentIdx >= stream.Length)
+                {
+                    Unsafe.SkipInit(out v);
+                    return false;
+                }
+
+                v = ZigZagEncoding.Decode<long>(stream, out var len, (int)term._currentIdx);
+                term._current = v;
+                term._currentIdx += len;
+
+                return true;
+            }
+
+            // Right now we dont have a way to know the total amount of results in the container.
+            // https://issues.hibernatingrhinos.com/issue/RavenDB-16946
+            return new TermMatch(&SeekFunc, &MoveNextFunc, 30000)
+            {
+                _container = containerItem
+            };
+        }
+
+        public static TermMatch YieldSet(Set set)
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            static bool SeekFunc(ref TermMatch term, long next)
+            {
+                return term._set.Seek(next);
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            static bool MoveNextFunc(ref TermMatch term, out long v)
+            {
+                bool hasMove = term._set.MoveNext();
+                v = hasMove ? term._set.Current : QueryMatch.Invalid;
+                term._current = v;
+                return hasMove;
+            }
+
+            // Right now we dont have a way to know the total amount of results in the container.
+            // https://issues.hibernatingrhinos.com/issue/RavenDB-16946
+            return new TermMatch(&SeekFunc, &MoveNextFunc, 100000)
+            {                
+                _set = set.Iterate()
+            };
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool SeekTo(long next = 0)
+        {
+            return _seekToFunc(ref this, next);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool MoveNext(out long v)
+        {
+            return _moveNext(ref this, out v);
+        }
+    }
+
+    public unsafe struct BinaryMatch : IIndexMatch
+    {
+        private readonly delegate*<ref BinaryMatch, long, bool> _seekToFunc;
+        private readonly delegate*<ref BinaryMatch, out long, bool> _moveNext;
+
+        private readonly IIndexMatch _inner;
+        private readonly IIndexMatch _outer;
+
+        private long _totalResults;
+        private long _current;
+
+        public long TotalResults => _totalResults;
+        public long Current => _current;
+
+        private BinaryMatch(delegate*<ref BinaryMatch, long, bool> seekFunc, delegate*<ref BinaryMatch, out long, bool> moveNext, long totalResults)
+        {
+            _totalResults = totalResults;
+            _current = QueryMatch.Invalid;
+            _seekToFunc = seekFunc;
+            _moveNext = moveNext;
+            _inner = default;
+            _outer = default;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool SeekTo(long next = 0)
+        {
+            return _seekToFunc(ref this, next);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool MoveNext(out long v)
+        {
+            return _moveNext(ref this, out v);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static BinaryMatch YieldAnd<TInner, TOuter>(ref TInner inner, ref TOuter outer)
+            where TInner : struct, IIndexMatch
+            where TOuter : struct, IIndexMatch
+        {
+            static bool SeekToFunc(ref BinaryMatch match, long v)
+            {
+                var inner = (TInner)match._inner;
+                var outer = (TOuter)match._outer;
+
+                return inner.SeekTo(v) && outer.SeekTo(v);
+            }
+
+            static bool MoveNextFunc(ref BinaryMatch match, out long v)
+            {
+                var inner = (TInner)match._inner;
+                var outer = (TOuter)match._outer;
+
+                Unsafe.SkipInit(out v);
+                if (inner.Current == QueryMatch.Invalid || outer.Current == QueryMatch.Invalid)
+                    return false;
+
+                while (inner.Current != outer.Current)
+                {
+                    if (inner.Current < outer.Current)
+                    {
+                        if (inner.MoveNext(out v) == false)
+                            return false;
+                    }
+                    else
+                    {
+                        if (outer.MoveNext(out v) == false)
+                            return false;
+                    }
+                }
+                return inner.Current == outer.Current;
+            }
+
+            return new BinaryMatch(&SeekToFunc, &MoveNextFunc, Math.Min(inner.TotalResults, outer.TotalResults));
+        }
+
+        public static BinaryMatch YieldOr<TInner, TOuter>(ref TInner inner, ref TOuter outer)
+            where TInner : struct, IIndexMatch
+            where TOuter : struct, IIndexMatch
+        {
+            throw new NotImplementedException();
+        }
+    }
+
     public class IndexSearcher : IDisposable
     {
         private readonly StorageEnvironment _environment;
@@ -36,419 +277,58 @@ namespace Corax
             _transaction = environment.ReadTransaction();
         }
 
-        struct Match
-        {
-            public long TotalResults;
-            public long Current;
-            public void SeekTo(long next){}
-            //public bool MoveNext(out long v){}
-        }
-        
         // foreach term in 2010 .. 2020
         //     yield return TermMatch(field, term)// <-- one term , not sorted
-        
+
         // userid = UID and date between 2010 and 2020 <-- 100 million terms here 
         // foo = bar and published = true
 
         // foo = bar
-        public IEnumerable<long> TermQuery(string field, string term)
+        public TermMatch TermQuery(string field, string term)
         {
-            var fields = _transaction.ReadTree("Fields");
+            var fields = _transaction.ReadTree(IndexWriter.FieldsSlice);
             var terms = fields.CompactTreeFor(field);
-            if (terms == null)
-                return Array.Empty<long>();
+            if (terms == null || terms.TryGetValue(term, out var value) == false)
+                return TermMatch.CreateEmpty();
             
-            if (terms.TryGetValue(term, out var value) == false)
-                return Array.Empty<long>();
-
-            if ((value & (long)IndexWriter.TermIdMask.Set) != 0)
+            TermMatch matches;
+            if ((value & (long)TermIdMask.Set) != 0)
             {
                 var setId = value & ~0b11;
-                var setStateSpan = Container.Get(_transaction.LowLevelTransaction, setId);
+                var setStateSpan = Container.Get(_transaction.LowLevelTransaction, setId).ToSpan();
                 ref readonly var setState = ref MemoryMarshal.AsRef<SetState>(setStateSpan);
-                //TODO: See how we can reuse those instances
                 var set = new Set(_transaction.LowLevelTransaction, Slices.Empty, setState);
-                return YieldSetContents(set);
+                matches = TermMatch.YieldSet(set);                
             }
-
-            if((value & (long)IndexWriter.TermIdMask.Single) != 0)
+            else if ((value & (long)TermIdMask.Single) != 0)
             {
                 var smallSetId = value & ~0b11;
                 var small = Container.Get(_transaction.LowLevelTransaction, smallSetId);
-                return YieldSmallSet(small);
+                matches = TermMatch.YieldSmall(small);                
             }
-
-            return YieldOnce(value);
-
-            IEnumerable<long> YieldOnce(long i)
+            else
             {
-                yield return i;
-            }                
-
-            IEnumerable<long> YieldSetContents(Set set)
-            {
-                using var it = set.Iterate();
-                if (it.Seek(0))
-                {
-                    do
-                    {
-                        yield return it.Current;
-                    } while (it.MoveNext());
-                }
+                matches = TermMatch.YieldOnce(value);
             }
-
-            IEnumerable<long> YieldSmallSet(ReadOnlySpan<byte> small)
-            {
-                while (small.IsEmpty == false)
-                {
-                    var val = ZigZagEncoding.Decode<long>(small, out var len);
-                    small = small.Slice(len);
-                    yield return val;
-                }
-            }
-        }
-        
-        public IEnumerable<string> Query(JsonOperationContext context, QueryOp q, int take, string sort)
-        {
-            // Table entries = _transaction.OpenTable(IndexWriter.IndexEntriesSchema, IndexWriter.IndexEntriesSlice);
-            //
-            // if (take < 1024)  // query "planner"
-            // {
-            //     return FilterByOrder(context, q, take, sort, entries);
-            // }
-            //
-            // return SearchThenSort(context, take, sort, q, entries);
-            throw new NotSupportedException();
+                
+            matches.SeekTo(0);
+            return matches;
         }
 
-        public IEnumerable<string> QueryExact(JsonOperationContext context, QueryOp q, int take = 1, string sort = null)
-        {
-            // Table entries = _transaction.OpenTable(IndexWriter.IndexEntriesSchema, IndexWriter.IndexEntriesSlice);
-            //
-            // if (take <= 1)
-            // {
-            //     return SearchExactSingle(context, q, entries);
-            // }
-            //
-            // if (take < 1024)  // query "planner"
-            // {
-            //     return FilterByOrder(context, q, take, sort, entries);
-            // }
-            //
-            // return SearchThenSort(context, take, sort, q, entries);
-            throw new NotSupportedException();
-        }
 
-        private IEnumerable<string> SearchExactSingle(JsonOperationContext context, QueryOp q, Table entries)
-        {
-            var results = new Bitmap();
-            q.Apply(_transaction, results, BitmapOp.Or);
+        //public BinaryMatch And(in TermMatch set1, in TermMatch set2)
+        //{
+        //    return BinaryMatch.YieldAnd(set1, set2);
+        //}
 
-            if( results.Count == 0 )
-                return Enumerable.Empty<string>();
-
-            return new[] { ExtractDocumentId(entries, results.First()) };
-        }
-
-        private IEnumerable<string> FilterByOrder(JsonOperationContext context, QueryOp q, int take, string sort, Table entries)
-        {
-            Tree sortTree = _transaction.ReadTree(sort);
-            if (sortTree == null)
-                return Enumerable.Empty<string>();
-
-            using var it = sortTree.Iterate(false);
-            if (it.Seek(Slices.BeforeAllKeys) == false)
-                return Enumerable.Empty<string>();
-            
-            var list = new List<string>(take);
-            do
-            {
-                FixedSizeTree fst = sortTree.FixedTreeFor(it.CurrentKey);
-                using var fstIt = fst.Iterate();
-                if (fstIt.Seek(0) == false)
-                    continue;
-                do
-                {
-                    long entryId = fstIt.CurrentKey;
-                    var bjro = GetBlittable(context, entries, entryId);
-                    if (q.IsMatch(bjro))
-                    {
-                        list.Add(ExtractDocumentId(entries, entryId));
-                        if (list.Count == take)
-                            return list;
-                    }
-                } while (fstIt.MoveNext());
-            } while (it.MoveNext());
-
-            return list;
-        }
-
-        private IEnumerable<string> SearchThenSort(JsonOperationContext context, int take, string sort, QueryOp q, Table entries)
-        {
-            var results = new Bitmap();
-            q.Apply(_transaction, results, BitmapOp.Or);
-
-            var heap = new SortedList<string, string>();
-
-            foreach (var entryId in results)
-            {
-                var id = ExtractDocumentId(entries, entryId);
-                string sortField = ExtractField(entryId, context, entries, sort);
-                if (heap.Count < take)
-                {
-                    heap.Add(sortField, id);
-                }
-                else if (string.Compare(heap.Keys[heap.Count - 1], sortField, StringComparison.Ordinal) > 0)
-                {
-                    heap.RemoveAt(heap.Count - 1);
-                    heap.Add(sortField, id);
-                }
-            }
-
-            return heap.Values;
-        }
-
-        private string ExtractField(long entryId, JsonOperationContext context, Table entries, string sort)
-        {
-            var bjro = GetBlittable(context, entries, entryId);
-
-            return bjro[sort].ToString();
-        }
-
-        unsafe string ExtractDocumentId(Table entries, long entryId)
-        {
-            var span = Container.Get(_transaction.LowLevelTransaction, entryId);
-            var length = (int)ZigZagEncoding.Decode<long>(span, out var sizeLen);
-            return Encoding.UTF8.GetString(span.Slice(sizeLen, length));
-        }
-
-        private static unsafe BlittableJsonReaderObject GetBlittable(JsonOperationContext context, Table entries, long entryId)
-        {
-            entries.DirectRead(entryId, out TableValueReader tvr);
-
-            throw new NotSupportedException();
-            // byte* ptr = tvr.Read((int) IndexWriter.IndexEntriesTable.Entry, out var size);
-            //
-            // var bjro = new BlittableJsonReaderObject(ptr, size, context);
-            // return bjro;
-        }
+        //public BinaryMatch Or(in TermMatch set1, in TermMatch set2)
+        //{
+        //    return BinaryMatch.YieldOr(set1, set2);
+        //}
 
         public void Dispose()
         {
             _transaction?.Dispose();
-        }
-    }
-
-    public enum BitmapOp
-    {
-        Or,
-        And
-    }
-
-    public abstract class QueryOp
-    {
-        public abstract void Apply(Transaction transaction, Bitmap bitmap, BitmapOp op);
-
-        public abstract override string ToString();
-
-        protected void NoMatches(Bitmap bitmap, BitmapOp op)
-        {
-            switch (op)
-            {
-                case BitmapOp.Or:
-                    return;
-                case BitmapOp.And:
-                    bitmap.Clear(); // no results, clear the whole thing
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(op), op, null);
-            }
-        }
-
-        public abstract bool IsMatch(BlittableJsonReaderObject bjro);
-    }
-    
-    public class BinaryQuery : QueryOp
-    {
-        private readonly QueryOp[] _queries;
-        private readonly BitmapOp _mergeOp;
-
-        public BinaryQuery(QueryOp[] queries, BitmapOp mergeOp)
-        {
-            _queries = queries;
-            _mergeOp = mergeOp;
-        }
-        
-        public override void Apply(Transaction transaction, Bitmap bitmap, BitmapOp op)
-        {
-            var innerBitmap = new Bitmap();
-            _queries[0].Apply(transaction, innerBitmap, BitmapOp.Or);
-            for (var index = 1; index < _queries.Length; index++)
-            {
-                _queries[index].Apply(transaction, innerBitmap, _mergeOp);
-            }
-
-            innerBitmap.Apply(bitmap, op);
-        }
-
-        public override string ToString()
-        {
-            return string.Join(_mergeOp.ToString(), _queries.Select(x => x.ToString()));
-        }
-
-        public override bool IsMatch(BlittableJsonReaderObject bjro)
-        {
-            var first = _queries[0].IsMatch(bjro);
-            for (int i = 1; i < _queries.Length; i++)
-            {
-                var cur = _queries[i].IsMatch(bjro);
-                if (_mergeOp == BitmapOp.Or)
-                    first |= cur;
-                else
-                    first &= cur;
-            }
-
-            return first;
-        }
-    }
-
-    // where User = $userId and startsWith(Name, 'a')
-    public class TermQuery : QueryOp
-    {
-        private readonly string _field;
-        private readonly string _term;
-
-        public TermQuery(string field, string term)
-        {
-            _field = field;
-            _term = term;
-        }
-        
-        public override void Apply(Transaction transaction, Bitmap bitmap, BitmapOp op)
-        {
-            Tree tree = transaction.ReadTree(_field);
-            if (tree == null) // not such field
-            {
-                NoMatches(bitmap, op);
-                return;
-            }
-
-            var fst = tree.FixedTreeFor(_term);
-
-            using var it = fst.Iterate();
-            if (it.Seek(0) == false) // no matching entries
-            {
-                NoMatches(bitmap, op);
-                return;
-            }
-
-            var actual = op == BitmapOp.Or ? bitmap : new Bitmap();
-            
-            do
-            {
-                actual.Set(it.CurrentKey);
-            } while (it.MoveNext());
-
-
-            if (op == BitmapOp.And)
-            {
-                actual.Apply(bitmap, BitmapOp.And);
-            }
-        }
-
-        public override string ToString()
-        {
-            return $"{_field} == '{_term}'";
-        }
-
-        public override bool IsMatch(BlittableJsonReaderObject bjro)
-        {
-            if (bjro.TryGetMember(_field, out object val) == false)
-                return false;
-
-            if (val is string s)
-            {
-                return s == _term;
-            }
-            if (val is LazyStringValue lsv)
-            {
-                return lsv.ToString() == _term;
-            }
-            else if (val is BlittableJsonReaderArray a)
-            {
-                for (int i = 0; i < a.Length; i++)
-                {
-                    if (a.GetByIndex<string>(i) == _term)
-                        return true;
-                }
-            }
-
-            return false;
-        }
-    }
-
-    public class Bitmap : IEnumerable<long>
-    {
-        private readonly SortedList<long, long> _inner = new SortedList<long, long>();
-
-        public void Set(long entryId)
-        {
-            if (_inner.ContainsKey(entryId) == false)
-                _inner[entryId] = entryId;
-        }
-
-        public void Clear(long entryId)
-        {
-            _inner.Remove(entryId);
-        }
-        
-        public void Clear()
-        {
-            _inner.Clear();
-        }
-
-        public void Apply(Bitmap other, BitmapOp op)
-        {
-            switch (op)
-            {
-                case BitmapOp.Or:
-                    for (int i = 0; i < _inner.Count; i++)
-                    {
-                        other.Set(_inner.Keys[i]);
-                    }
-                    break;
-                case BitmapOp.And:
-                    for (int i = other._inner.Count - 1; i >= 0; i--)
-                    {
-                        if (_inner.ContainsKey(other._inner.Keys[i]) == false)
-                            other._inner.RemoveAt(i);
-                    }
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(op), op, null);
-            }
-        }
-
-        public IEnumerator<long> GetEnumerator()
-        {
-            return _inner.Keys.GetEnumerator();
-        }
-
-        IEnumerator IEnumerable.GetEnumerator()
-        {
-            return GetEnumerator();
-        }
-
-        public long Count => _inner.Count;
-
-        public void Remove(long entryId)
-        {
-            _inner.Remove(entryId);
-        }
-        
-        public long GetAt(long index)
-        {
-            return _inner.Keys[(int)index];
         }
     }
 }

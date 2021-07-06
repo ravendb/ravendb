@@ -16,6 +16,17 @@ using Voron.Impl;
 
 namespace Corax
 {
+
+    // container ids are guaranteed to be aligned on 
+    // 4 bytes boundary, we're using this to store metadata
+    // about the data
+    public enum TermIdMask : long
+    {
+        Single = 0,
+        Small = 1,
+        Set = 2
+    }
+
     public class IndexWriter : IDisposable // single threaded, controlled by caller
     {
         private readonly StorageEnvironment _environment;
@@ -23,7 +34,7 @@ namespace Corax
 
         public readonly Transaction Transaction;        
 
-        public static readonly Slice PostingListsSlice, EntriesContainerSlice;
+        public static readonly Slice PostingListsSlice, EntriesContainerSlice, FieldsSlice;
 
         private Queue<long> _lastEntries; // keep last 256 items
 
@@ -31,6 +42,7 @@ namespace Corax
         {
             using (StorageEnvironment.GetStaticContext(out var ctx))
             {
+                Slice.From(ctx, "Fields", ByteStringType.Immutable, out FieldsSlice);
                 Slice.From(ctx, "PostingLists", ByteStringType.Immutable, out PostingListsSlice);
                 Slice.From(ctx, "Entries", ByteStringType.Immutable, out EntriesContainerSlice);
             }
@@ -163,63 +175,11 @@ namespace Corax
                 term.Add(entryId);
             }
         }
-        
-        /*
-         * 20 indexes - 8 CPU cores
-         * * Optimal: single threaded per index - 100%
-         *
-         * 1 new index - 8 CPU cores
-         * * Optimal - worker threads - 100% 
-         *
-         * Not doing: Thread Pool / Task, etc
-         *
-         * Thread - Priorities:
-         *   * Cluster work - AboveNormal
-         *   * Requests / queries / etc - Normal
-         *   * Indexing - BelowNormal
-         *   * Offload - Low
-         *
-         * 
-         * Offload Index Threads: 
-         *     Queue<Queue<WorkItem>> _globalIndexingWork;
-         * 
-         *     while(true){
-         *         var indexQueue = _globalIndexingWork.Take();
-         *         using var _ = index.AddWorker(this);
-         *         while(indexQueue.TryTake(out var workItem){
-         *             workItem.Execute();
-         *         }
-         *     }
-         *
-         * Index thread:
-         *
-         *  while(work){
-         *      while(indexQueue.Count < 256){
-         *              var workItem = generateWorkItem();
-         *              indexQueue.Enqueue(workItem);
-         *              _globalIndexingWork.Enqueue(indexQueue);
-         *      }
-         *      while(indexQueue.Count > 32 && indexQueue.TryTake(out item)){
-         *             item.Execute();
-         *      }
-         *  }
-         *  while(remaining){
-         *  }
-         *  WaitingForOffload(); <-- boost the offload
-         */
-        
-        
-        /*
-         * Work we have to do:
-         * ----------
-         *   * Analyze / process single document in isolation - work item
-         * ----------
-         *   * Prepare phase - sort the terms / entries for term - work item
-         */
+
         public void Commit()
         {
             using var _ = Transaction.Allocator.Allocate(Container.MaxSizeInsideContainerPage, out Span<byte> tmpBuf);
-            Tree fieldsTree = Transaction.CreateTree("Fields");
+            Tree fieldsTree = Transaction.CreateTree(FieldsSlice);
             foreach (var (field, terms) in _buffer)
             {
                 var fieldTree = fieldsTree.CompactTreeFor(field);
@@ -256,7 +216,7 @@ namespace Corax
                     else if ((existing & (long)TermIdMask.Small) != 0)
                     {
                         var id = existing & ~0b11;
-                        var smallSet = Container.Get(llt, id);
+                        var smallSet = Container.Get(llt, id).ToSpan();
                         // combine with existing value
                         var cur = 0L;
                         while (smallSet.IsEmpty == false)
@@ -281,16 +241,6 @@ namespace Corax
                 }
             }
             Transaction.Commit();
-        }
-
-        // container ids are guaranteed to be aligned on 
-        // 4 bytes boundary, we're using this to store metadata
-        // about the data
-        public enum TermIdMask : long
-        {
-            Single = 0,
-            Small = 1,
-            Set = 2
         }
         
         private unsafe void AddNewTerm(List<long> entries, CompactTree fieldTree, ReadOnlySpan<byte> termsSpan, Span<byte> tmpBuf)
@@ -319,7 +269,7 @@ namespace Corax
                     if (entry == 0)
                         continue; // we don't need to store duplicates
                     
-                    pos += ZigZagEncoding.Encode(tmpBuf.Slice(pos), entry);
+                    pos += ZigZagEncoding.Encode(tmpBuf, entry, pos);
                     continue;
                 }
 
