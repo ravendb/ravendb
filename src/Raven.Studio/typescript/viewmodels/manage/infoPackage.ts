@@ -5,10 +5,15 @@ import eventsCollector = require("common/eventsCollector");
 import getNextOperationId = require("commands/database/studio/getNextOperationId");
 import messagePublisher = require("common/messagePublisher");
 import notificationCenter = require("common/notifications/notificationCenter");
+import viewHelpers = require("common/helpers/view/viewHelpers");
+import killOperationCommand = require("commands/operations/killOperationCommand");
 
 class infoPackage extends viewModelBase {
     
+    operationId: number;
+    
     spinners = {
+        abort: ko.observable<boolean>(false),
         clusterWide: ko.observable<boolean>(false),
         serverWide: ko.observable<boolean>(false),
         anyInProgress: null as KnockoutComputed<boolean>
@@ -23,6 +28,14 @@ class infoPackage extends viewModelBase {
             
             return cluster || server;
         })
+    }
+    
+    canDeactivate(isClose: boolean): boolean | JQueryPromise<canDeactivateResultDto> {
+        if (this.spinners.anyInProgress()) {
+            return this.confirmLeavingPage();
+        }
+        
+        return true;
     }
 
     private getNextOperationId(): JQueryPromise<number> {
@@ -47,13 +60,13 @@ class infoPackage extends viewModelBase {
     }
 
     private startDownload(url: string) {
-        const $form = $("#downloadInfoPackageForm");
-        
-        
         this.getNextOperationId()
             .done((operationId: number) => {
+                this.operationId = operationId;
                 const operationPart = "?operationId=" + operationId;
-                $form.attr("action", appUrl.baseUrl + url);
+
+                const $form = $("#downloadInfoPackageForm");
+                $form.attr("action", appUrl.baseUrl + url + operationPart);
                 $("[name=operationId]", $form).val(operationId.toString());
                 $form.submit();
 
@@ -61,7 +74,42 @@ class infoPackage extends viewModelBase {
                     .always(() => {
                         this.spinners.clusterWide(false);
                         this.spinners.serverWide(false);
+                        this.spinners.abort(false);
                     });
+            });
+    }
+
+    private confirmLeavingPage() {
+        const abort = "Leave and Abort";
+        const stay = "Stay on this page";
+        const abortResult = $.Deferred<confirmDialogResult>();
+
+        const confirmation = this.confirmationMessage("Abort Debug Package Creation", "Leaving this page will abort package creation.<br>How do you want to proceed?", {
+            buttons: [stay, abort],
+            forceRejectWithResolve: true,
+            html: true
+        });
+
+        confirmation.done((result: confirmDialogResult) => abortResult.resolve(result));
+
+        return abortResult;
+    }
+    
+    abortCreatePackage() {
+        return viewHelpers.confirmationMessage("Are you sure?", "Do you want to abort package creation?", {
+            forceRejectWithResolve: true,
+            buttons: ["Cancel", "Abort"]
+        })
+            .done((result: confirmDialogResult) => {
+                if (result.can) {
+                    const operationId = this.operationId;
+
+                    new killOperationCommand(null, operationId)
+                        .execute()
+                        .always(() => {
+                            this.spinners.abort(true);
+                        });
+                }
             });
     }
 }
