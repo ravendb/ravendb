@@ -80,7 +80,7 @@ namespace Raven.Client.Documents.Operations.Replication
 
         public override string GetDefaultTaskName()
         {
-            return $"Replication Sink from {HubName}";
+            return $"Replication Sink for {HubName}";
         }
     }
 }
