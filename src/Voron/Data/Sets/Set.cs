@@ -54,6 +54,7 @@ namespace Voron.Data.Sets
 
             if (leaf.Remove(_llt, value)) // removed value properly
             {
+                _state.NumberOfEntries = Math.Max(0, _state.NumberOfEntries - 1);
                 if (_pos == 0)
                     return;  // this is the root page
 
@@ -254,7 +255,11 @@ namespace Voron.Data.Sets
             var leafPage = new SetLeafPage(state.Page);
             if (leafPage.IsValidValue(value) && // may have enough space, but too far out to fit 
                 leafPage.Add(_llt, value))
+            {
+                _state.NumberOfEntries++;
                 return; // successfully added
+            }
+        
 
             if (leafPage.IsValidValue(value) == false) 
             {

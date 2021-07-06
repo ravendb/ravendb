@@ -479,16 +479,16 @@ namespace Voron.Data.Containers
         {
             private readonly Page Page;
             private readonly int Offset;
-            private readonly int Lenght;
+            public readonly int Length;
 
             public Item(Page page, int offset, int size)
             {
                 Page = page;
                 Offset = offset;
-                Lenght = size;
+                Length = size;
             }
 
-            public Span<byte> ToSpan() => new Span<byte>(Page.Pointer + Offset, Lenght);
+            public Span<byte> ToSpan() => new Span<byte>(Page.Pointer + Offset, Length);
         }
     }
 }

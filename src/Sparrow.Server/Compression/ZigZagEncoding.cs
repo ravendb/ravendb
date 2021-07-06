@@ -9,6 +9,7 @@ namespace Sparrow.Server.Compression
 {
     public static class ZigZagEncoding
     {
+        public const int MaxEncodedSize = 10;
         public static int Encode<T>(Span<byte> buffer, T value, int pos = 0) where T : unmanaged
         {
             int sizeOfTInBits = Unsafe.SizeOf<T>() * 8 - 1;

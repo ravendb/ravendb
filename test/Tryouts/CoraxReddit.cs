@@ -131,9 +131,9 @@ namespace Tryouts
 
                 using (var searcher = new IndexSearcher(env))
                 {
-                    var query = new TermQuery("Name", name);
-
-                    var results = searcher.QueryExact(ctx, query);
+                    // var query = new TermQuery("Name", name);
+                    //
+                    // var results = searcher.QueryExact(ctx, query);
 
                     //foreach (object result in results)
                     //{
