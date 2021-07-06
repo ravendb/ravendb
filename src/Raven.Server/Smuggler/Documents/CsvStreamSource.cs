@@ -222,7 +222,7 @@ namespace Raven.Server.Smuggler.Documents
                 if (ProcessFieldsIfNeeded())
                     continue;
 
-                var context = actions.GetContextForNewDocument();
+                var context = actions.GetContextForNewDocument(); // TODO - EFRAT
                 DocumentItem item;
                 try
                 {
@@ -238,7 +238,7 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        private DocumentItem ConvertRecordToDocumentItem(DocumentsOperationContext context, string[] csvReaderCurrentRecord, string[] csvReaderFieldHeaders, string collection)
+        private DocumentItem ConvertRecordToDocumentItem(JsonOperationContext context, string[] csvReaderCurrentRecord, string[] csvReaderFieldHeaders, string collection)
         {
             try
             {

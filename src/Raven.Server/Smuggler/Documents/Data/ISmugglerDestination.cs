@@ -66,7 +66,7 @@ namespace Raven.Server.Smuggler.Documents.Data
 
     public interface INewDocumentActions
     {
-        DocumentsOperationContext GetContextForNewDocument();
+        JsonOperationContext GetContextForNewDocument();
 
         Stream GetTempStream();
     }

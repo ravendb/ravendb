@@ -752,6 +752,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     smugglerSource,
                     smugglerDestination,
                     _database.Time,
+                    context,
                     options: options,
                     result: _backupResult,
                     onProgress: _onProgress,
