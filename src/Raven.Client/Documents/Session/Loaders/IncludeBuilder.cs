@@ -540,31 +540,16 @@ namespace Raven.Client.Documents.Session.Loaders
 
         private void IncludeRevisionsBefore(DateTime? dateTime)
         {
+            if (dateTime == null)
+                return;
+            
             if(dateTime == default(DateTime))
                 throw new ArgumentNullException(nameof(dateTime));
-            
+    
             RevisionsToIncludeByDateTime ??= new DateTime();
-            RevisionsToIncludeByDateTime = dateTime;
+            RevisionsToIncludeByDateTime = dateTime.Value.ToUniversalTime();
         }
-        
-        private void IncludeRevisionsByChangeVector(string changeVector)
-        {
-            if (string.IsNullOrWhiteSpace(changeVector))
-                throw new ArgumentNullException(nameof(changeVector));
-            
-            RevisionsToIncludeByChangeVector ??= new HashSet<string>();
-            RevisionsToIncludeByChangeVector.Add(changeVector);
-        }
-        
-        private void IncludeRevisionsByChangeVectors(IEnumerable<string> changeVectors)
-        {
-            RevisionsToIncludeByChangeVector ??= new HashSet<string>();
-            foreach (var changeVector in changeVectors)
-            {
-                RevisionsToIncludeByChangeVector.Add(changeVector);
-            }
-        }
-        
+
         private void IncludeRevisionsByChangeVectors(string path)
         {
             if (string.IsNullOrWhiteSpace(path))

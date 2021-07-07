@@ -1468,77 +1468,39 @@ more responsive application.
                 IncludedDocumentsById[newDocumentInfo.Id] = newDocumentInfo;
             }
         }
-        
-        internal void RegisterRevisionIncludesByChangeVector(BlittableJsonReaderObject includes)
+
+        internal void RegisterRevisionIncludes(BlittableJsonReaderArray revisionIncludes)
         {
             if (NoTracking)
                 return;
 
-            if (includes == null)
+            if (revisionIncludes == null)
                 return;
-
+            
             IncludeRevisionsByChangeVector ??= new Dictionary<string, DocumentInfo>(StringComparer.OrdinalIgnoreCase);
-            var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
-            for (int i = 0; i < includes.Count; i++)
-            {
-                includes.GetPropertyByIndex(i, ref propertyDetails);
-
-                if (propertyDetails.Value == null)
-                    continue;
-
-                var json = (BlittableJsonReaderObject)propertyDetails.Value;
-
-                var newDocumentInfo = DocumentInfo.GetNewDocumentInfo(json);
-                if (newDocumentInfo.Metadata.TryGetConflict(out var conflict) && conflict)
-                    continue;
-                if (newDocumentInfo.Metadata.TryGet(Constants.Documents.Metadata.ChangeVector, out string cv) == false)
-                    continue;
-                IncludeRevisionsByChangeVector[cv] = newDocumentInfo;
-            }
-        }
-        
-        internal void  RegisterRevisionIncludesIdByDateTimeBefore(BlittableJsonReaderObject revisionIncludesIdByDateTIme)
-        {
-            if (NoTracking)
-                return;
-        
-            if (revisionIncludesIdByDateTIme == null)
-                return;
-
             IncludeRevisionsIdByDateTimeBefore ??= new Dictionary<string, Dictionary<DateTime, DocumentInfo>>(StringComparer.OrdinalIgnoreCase);
-            var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
-            for (int i = 0; i < revisionIncludesIdByDateTIme.Count; i++)
+            foreach (var obj in revisionIncludes)
             {
-                revisionIncludesIdByDateTIme.GetPropertyByIndex(i, ref propertyDetails);
-        
-                if (propertyDetails.Value == null)
+                if (obj is BlittableJsonReaderObject json == false)
                     continue;
-        
-                var id = propertyDetails.Name;
-
-                if (propertyDetails.Value is not BlittableJsonReaderArray arrayOfKvp)
-                    throw new InvalidDataException($"Unable to read date time to document range results on document : '{id}'.");
                 
-                var propertyKvpDetails = new BlittableJsonReaderObject.PropertyDetails();
-
-                foreach (var obj in arrayOfKvp)
-                {
-                    var beforeDateTimeAsBlittableObject = (BlittableJsonReaderObject)obj;
-                    if (beforeDateTimeAsBlittableObject.TryGet("Before", out DateTime dateTime) == false)
-                        continue;
-                    if (beforeDateTimeAsBlittableObject.TryGet("Revision", out BlittableJsonReaderObject revision) == false)
-                        continue;
-                    
+                json = ((BlittableJsonReaderObject)obj);
+                json.TryGet("Id", out string id);
+                json.TryGet("ChangeVector", out string changeVector);
+                json.TryGet("Before", out DateTime dateTime);
+                json.TryGet("Revision", out BlittableJsonReaderObject revision);
+                
+                IncludeRevisionsByChangeVector[changeVector] = DocumentInfo.GetNewDocumentInfo(revision);
+                
+                if(dateTime != default && string.IsNullOrWhiteSpace(id) == false)
                     IncludeRevisionsIdByDateTimeBefore[id] = new Dictionary<DateTime, DocumentInfo> {
                     {
                         dateTime,
                         new DocumentInfo {Document = revision}
                     }};
-                }
-                
             }
         }
-        
+
         public void RegisterMissingIncludes(BlittableJsonReaderArray results, BlittableJsonReaderObject includes, ICollection<string> includePaths)
         {
             if (NoTracking)
@@ -2193,7 +2155,9 @@ more responsive application.
         
         internal bool CheckIfChangeVectorAlreadyIncluded(IEnumerable<string> changeVectors)
         {
-            if (IncludeRevisionsByChangeVector is null) return false;
+            if (IncludeRevisionsByChangeVector is null) 
+                 return false;
+            
             foreach (var cv in changeVectors)
             {
                 if (IncludeRevisionsByChangeVector.TryGetValue(cv, out DocumentInfo documentInfo) == false )
@@ -2206,16 +2170,15 @@ more responsive application.
             return true;
         }
         
-        internal bool CheckIfRevisionByIdDateTimeBeforeAlreadyIncluded(string id, DateTime dateTime)
+        internal bool CheckIfRevisionByDateTimeBeforeAlreadyIncluded(string id, DateTime dateTime)
         {
-            if (IncludeRevisionsIdByDateTimeBefore is null) return false;
-            foreach (var kvp in IncludeRevisionsIdByDateTimeBefore)
-            {
-                if(IncludeRevisionsIdByDateTimeBefore.TryGetValue(id, out var dictionaryDateTimeToDocument));
-                 if (dictionaryDateTimeToDocument.TryGetValue(dateTime, out var documentInfo))
+            if (IncludeRevisionsIdByDateTimeBefore is null)
+                return false;
+            
+            if(IncludeRevisionsIdByDateTimeBefore.TryGetValue(id, out var dictionaryDateTimeToDocument)) 
+                if(dictionaryDateTimeToDocument.TryGetValue(dateTime, out var documentInfo)) 
                     return true;
-                
-            }
+            
             return false;
         }
         public bool CheckIfIdAlreadyIncluded(string[] ids, KeyValuePair<string, Type>[] includes)

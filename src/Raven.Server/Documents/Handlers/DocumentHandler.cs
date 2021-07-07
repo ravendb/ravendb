@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -301,20 +302,20 @@ namespace Raven.Server.Documents.Handlers
         private void GetRevisionsQueryString(DocumentDatabase database, DocumentsOperationContext context, out IncludeRevisionsCommand includeRevisions)
         {
             includeRevisions = null;
-
+            
+            var rif = new RevisionIncludeField();
             var revisionsByChangeVectors = GetStringValuesQueryString("revisions", required: false);
-            var revisionByDateTimeBefore = GetStringValuesQueryString("revisionBefore", required: false);
+            var revisionByDateTimeBefore = GetStringValuesQueryString("revisionBeforeDateTime", required: false);
+            
             if (revisionsByChangeVectors.Count == 0 && revisionByDateTimeBefore.Count == 0)
                 return;
 
-            var rif = new RevisionIncludeField();
-
-            rif.RevisionsBeforeDateTime = Convert.ToDateTime(revisionByDateTimeBefore);
+            if (DateTime.TryParseExact(revisionByDateTimeBefore.ToString(), DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture,DateTimeStyles.AssumeUniversal, out var dateTime))
+                rif.RevisionsBeforeDateTime = dateTime.ToUniversalTime();
             
             foreach (var changeVector in revisionsByChangeVectors)
-            {
                 rif.RevisionsChangeVectorsPaths.Add(changeVector);
-            }
+
             includeRevisions = new IncludeRevisionsCommand(database, context, rif);
         }
 
@@ -405,8 +406,8 @@ namespace Raven.Server.Documents.Handlers
 
         private async Task<long> WriteDocumentsJsonAsync(
             JsonOperationContext context, bool metadataOnly, IEnumerable<Document> documentsToWrite, List<Document> includes,
-            Dictionary<string, List<CounterDetail>> counters, Dictionary<string, Document> revisionsByChangeVector,
-            Dictionary<string, Dictionary<DateTime, Document>> includeRevisionsIdByRevisionsByDateTimeResults,
+            Dictionary<string, List<CounterDetail>> counters, Dictionary<string, Document> revisionByChangeVectorResults,
+            Dictionary<string, Dictionary<DateTime, Document>> revisionsByDateTimeResults,
             Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>> timeseries,
             Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>> compareExchangeValues)
         {
@@ -428,33 +429,26 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteStartObject();
                     writer.WriteEndObject();
                 }
-
                 if (counters?.Count > 0)
                 {
                     writer.WriteComma();
                     writer.WritePropertyName(nameof(GetDocumentsResult.CounterIncludes));
                     await writer.WriteCountersAsync(counters, Database.DatabaseShutdown);
                 }
-                if (revisionsByChangeVector?.Count > 0)
-                {
-                    writer.WriteComma();
-                    writer.WritePropertyName(nameof(GetDocumentsResult.RevisionIncludesByChangeVector));
-                    await writer.WriterRevisionIncludesAsync(context:context, revisionsByChangeVector);
-                }  
-                if (includeRevisionsIdByRevisionsByDateTimeResults?.Count > 0)
-                {
-                    writer.WriteComma();
-                    writer.WritePropertyName(nameof(GetDocumentsResult.RevisionIncludesIdByDateTime));
-                    await writer.WriterRevisionIncludesDateTimeBeforeAsync(context:context, includeRevisionsIdByRevisionsByDateTimeResults);
-                }
-
                 if (timeseries?.Count > 0)
                 {
                     writer.WriteComma();
                     writer.WritePropertyName(nameof(GetDocumentsResult.TimeSeriesIncludes));
                     await writer.WriteTimeSeriesAsync(timeseries, Database.DatabaseShutdown);
                 }
-
+                if(revisionByChangeVectorResults?.Count > 0 || revisionsByDateTimeResults?.Count > 0)
+                {
+                    writer.WriteComma();
+                    writer.WritePropertyName(nameof(GetDocumentsResult.RevisionIncludes));
+                    writer.WriteStartArray();
+                    await writer.WriteRevisionIncludes(context:context, revisionsByChangeVector: revisionByChangeVectorResults, revisionsByDateTime: revisionsByDateTimeResults); 
+                    writer.WriteEndArray();
+                }
                 if (compareExchangeValues?.Count > 0)
                 {
                     writer.WriteComma();
