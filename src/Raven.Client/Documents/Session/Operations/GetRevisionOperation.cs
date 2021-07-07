@@ -109,7 +109,7 @@ namespace Raven.Client.Documents.Session.Operations
         public T GetRevision<T>()
         {
             if (_result == null)
-                ;       {
+            {
                 if (_session.IncludeRevisionsByChangeVector is not null && 
                     _session.IncludeRevisionsIdByDateTimeBefore is null &&
                     _session.IncludeRevisionsByChangeVector.TryGetValue(_command.ChangeVector, out var revision))
