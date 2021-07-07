@@ -26,7 +26,7 @@ namespace Voron.Impl.Paging
     public abstract unsafe class AbstractPager : IDisposable, ILowMemoryHandler
     {
         public readonly Logger Log = LoggingSource.Instance.GetLogger<AbstractPager>("AbstractPager");
-        private readonly StorageEnvironmentOptions _options;
+        public readonly StorageEnvironmentOptions _options;
 
         public static ConcurrentDictionary<string, uint> PhysicalDrivePerMountCache = new ConcurrentDictionary<string, uint>();
 
