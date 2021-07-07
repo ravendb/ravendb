@@ -13,21 +13,21 @@ namespace Raven.Client.Documents.Commands
     {
         internal readonly string ChangeVector;
         public readonly string[] ChangeVectors;
-        private readonly string _id;
+        internal readonly string Id;
         private readonly int? _start;
         private readonly int? _pageSize;
         private readonly bool _metadataOnly;
-        private readonly DateTime? _before;
+        internal readonly DateTime? Before;
 
         public GetRevisionsCommand(string id, DateTime before)
         {
-            _id = id ?? throw new ArgumentNullException(nameof(id));
-            _before = before;
+            Id = id ?? throw new ArgumentNullException(nameof(id));
+            Before = before;
         }
 
         public GetRevisionsCommand(string id, int? start, int? pageSize, bool metadataOnly = false)
         {
-            _id = id ?? throw new ArgumentNullException(nameof(id));
+            Id = id ?? throw new ArgumentNullException(nameof(id));
             _start = start;
             _pageSize = pageSize;
             _metadataOnly = metadataOnly;
@@ -63,8 +63,8 @@ namespace Raven.Client.Documents.Commands
 
         internal void GetRequestQueryString(StringBuilder pathBuilder)
         {
-            if (_id != null)
-                pathBuilder.Append("&id=").Append(Uri.EscapeDataString(_id));
+            if (Id != null)
+                pathBuilder.Append("&id=").Append(Uri.EscapeDataString(Id));
             else if (ChangeVector != null)
                 pathBuilder.Append("&changeVector=").Append(Uri.EscapeDataString(ChangeVector));
             else if (ChangeVectors != null)
@@ -75,8 +75,8 @@ namespace Raven.Client.Documents.Commands
                 }
             }
 
-            if (_before.HasValue)
-                pathBuilder.Append("&before=").Append(_before.Value.GetDefaultRavenFormat());
+            if (Before.HasValue)
+                pathBuilder.Append("&before=").Append(Before.Value.GetDefaultRavenFormat());
             if (_start.HasValue)
                 pathBuilder.Append("&start=").Append(_start);
             if (_pageSize.HasValue)

@@ -33,6 +33,7 @@ using Raven.Server.Extensions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -202,6 +203,7 @@ namespace Raven.Server.Documents.Patch
             public bool PutOrDeleteCalled;
             public HashSet<string> Includes;
             public HashSet<string> IncludeRevisionsChangeVectors;
+            public DateTime? IncludeRevisionByDateTimeBefore;
             public HashSet<string> CompareExchangeValueIncludes;
             private HashSet<string> _documentIds;
 
@@ -1039,6 +1041,11 @@ namespace Raven.Server.Documents.Patch
                     switch (arg.Type)
                     {
                         case Types.String:
+                            if (DateTime.TryParseExact(arg.ToString(), DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture,DateTimeStyles.AssumeUniversal, out var dateTime))
+                            {
+                                IncludeRevisionByDateTimeBefore = dateTime.ToUniversalTime();
+                                continue;
+                            }
                             IncludeRevisionsChangeVectors.Add(arg.ToString());
                             break;
                         case Types.Object when arg.IsArray():
@@ -1901,6 +1908,7 @@ namespace Raven.Server.Documents.Patch
 
                 Includes?.Clear();
                 IncludeRevisionsChangeVectors?.Clear();
+                IncludeRevisionByDateTimeBefore = null;
                 CompareExchangeValueIncludes?.Clear();
                 DocumentCountersToUpdate?.Clear();
                 DocumentTimeSeriesToUpdate?.Clear();
@@ -1970,6 +1978,7 @@ namespace Raven.Server.Documents.Patch
                 _run.DebugOutput?.Clear();
                 _run.DebugActions?.Clear();
                 _run.IncludeRevisionsChangeVectors?.Clear();
+                _run.IncludeRevisionByDateTimeBefore = null;
 
                 _run.Includes?.Clear();
                 _run.CompareExchangeValueIncludes?.Clear();

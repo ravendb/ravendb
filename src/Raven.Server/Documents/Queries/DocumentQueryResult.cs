@@ -25,7 +25,9 @@ namespace Raven.Server.Documents.Queries
 
         private Dictionary<string, List<CounterDetail>> _counterIncludes;
         
-        private Dictionary<string, Document> _revisions;
+        private Dictionary<string, Document> _revisionsChangeVectorResults;
+        
+        private Dictionary<string, Dictionary<DateTime, Document>> _revisionsDateTimeBeforeResults;
 
         private Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>> _timeSeriesIncludes;
 
@@ -57,10 +59,13 @@ namespace Raven.Server.Documents.Queries
         
         public override void AddRevisionIncludes(IncludeRevisionsCommand command)
         {
-            _revisions = command.RevisionsChangeVectorResults;
+            _revisionsChangeVectorResults = command.RevisionsChangeVectorResults;
+            _revisionsDateTimeBeforeResults = command.IdByRevisionsByDateTimeResults;
+            
         }
 
-        public override Dictionary<string, Document>  GetRevisionIncludes() => _revisions;
+        public override Dictionary<string, Document>  GetRevisionIncludesByChangeVector() => _revisionsChangeVectorResults;
+        public Dictionary<string, Dictionary<DateTime, Document>>  GetRevisionIncludesIdByDateTime() => _revisionsDateTimeBeforeResults;
 
         public override ValueTask AddResultAsync(Document result, CancellationToken token)
         {

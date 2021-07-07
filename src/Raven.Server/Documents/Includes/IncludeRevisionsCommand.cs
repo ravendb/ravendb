@@ -15,6 +15,7 @@ namespace Raven.Server.Documents.Includes
         private readonly HashSet<string> _pathsForRevisionsChangeVectors;
         private readonly HashSet<string> _revisionsChangeVectors;
         public Dictionary<string, Document> RevisionsChangeVectorResults { get; private set; }
+        public Dictionary<string, Dictionary<DateTime, Document>> IdByRevisionsByDateTimeResults { get; private set; }
 
         private IncludeRevisionsCommand(DocumentDatabase database, DocumentsOperationContext context)
         {
@@ -113,10 +114,28 @@ namespace Raven.Server.Documents.Includes
             
             foreach (string changeVector in changeVectorPaths)
             {
-                var getRevisionsByCv  = _database.DocumentsStorage.RevisionsStorage.GetRevision(context: _context, changeVector:changeVector);
+                var doc  = _database.DocumentsStorage.RevisionsStorage.GetRevision(context: _context, changeVector:changeVector);
+                if (doc is null) return;
                 RevisionsChangeVectorResults ??= new Dictionary<string, Document>(StringComparer.OrdinalIgnoreCase);
-                RevisionsChangeVectorResults[changeVector] = getRevisionsByCv;
+                RevisionsChangeVectorResults[changeVector] = doc;
             }  
         }
+        
+        public void AddRevisionByDateTimeBefore(DateTime? dateTime, string documentId)
+        {
+            if (dateTime.HasValue == false)
+                return;
+
+            var doc = _database.DocumentsStorage.RevisionsStorage.GetRevisionBefore(context: _context, id: documentId, max: dateTime.Value); 
+            if (doc is null)
+                return;
+            
+            RevisionsChangeVectorResults ??= new Dictionary<string, Document>(StringComparer.OrdinalIgnoreCase); 
+            IdByRevisionsByDateTimeResults ??= new Dictionary<string, Dictionary<DateTime, Document>>(StringComparer.OrdinalIgnoreCase); 
+            RevisionsChangeVectorResults[doc.ChangeVector] = doc;
+            IdByRevisionsByDateTimeResults[documentId] = new Dictionary<DateTime, Document> (){{dateTime.Value, doc}};
+        }
+
+       
     }
 }

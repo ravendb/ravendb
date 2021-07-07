@@ -29,7 +29,7 @@ namespace Raven.Client.Documents.Session
             }
         }
         
-        public void IncrementRequestCount()
+        internal void IncrementRequestCount()
         {
            _session.IncrementRequestCount();
         }
