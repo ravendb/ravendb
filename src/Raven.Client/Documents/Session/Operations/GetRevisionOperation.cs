@@ -52,7 +52,7 @@ namespace Raven.Client.Documents.Session.Operations
                 return _session.CheckIfChangeVectorAlreadyIncluded(new[] {_command.ChangeVector}) ? null : _command;
             
             if (_command.Before is not null)
-                return _session.CheckIfRevisionByIdDateTimeBeforeAlreadyIncluded(_command.Id, _command.Before.Value) ? null : _command;
+                return _session.CheckIfRevisionByDateTimeBeforeAlreadyIncluded(_command.Id, _command.Before.Value) ? null : _command;
             
             return _command;
         }
@@ -110,20 +110,25 @@ namespace Raven.Client.Documents.Session.Operations
         {
             if (_result == null)
             {
-                if (_session.IncludeRevisionsByChangeVector is not null && 
-                    _session.IncludeRevisionsIdByDateTimeBefore is null &&
-                    _session.IncludeRevisionsByChangeVector.TryGetValue(_command.ChangeVector, out var revision))
+                DocumentInfo revision;
+                if (_command.ChangeVectors != null)
                 {
-                    return GetRevision<T>(revision.Document);
+                    foreach (var changeVector in _command.ChangeVectors) 
+                        if(_session.IncludeRevisionsByChangeVector.TryGetValue(changeVector, out revision))
+                            return GetRevision<T>(revision.Document);
                 }
-
-                if (_session.IncludeRevisionsIdByDateTimeBefore != null &&
-                    _session.IncludeRevisionsIdByDateTimeBefore.TryGetValue(_command.Id, out var dictionaryDateTimeToDocument))
-                {
-                    if(dictionaryDateTimeToDocument.TryGetValue(_command.Before.Value, out revision)) 
-                        return GetRevision<T>(revision.Document);
-                } 
-
+                
+                if (_command.ChangeVector != null
+                    && _session.IncludeRevisionsByChangeVector != null
+                    && _session.IncludeRevisionsByChangeVector.TryGetValue(_command.ChangeVector, out revision))
+                    return GetRevision<T>(revision.Document);
+                
+                if (_command.Before != null 
+                    && _session.IncludeRevisionsIdByDateTimeBefore != null
+                    && _session.IncludeRevisionsIdByDateTimeBefore.TryGetValue(_command.Id, out var dictionaryDateTimeToDocument) 
+                    && dictionaryDateTimeToDocument.TryGetValue(_command.Before.Value, out revision)) 
+                    return GetRevision<T>(revision.Document);
+                
                 return default(T);
             }
 
@@ -134,6 +139,15 @@ namespace Raven.Client.Documents.Session.Operations
         public Dictionary<string, T> GetRevisions<T>()
         {
             var results = new Dictionary<string, T>(StringComparer.OrdinalIgnoreCase);
+            if (_result == null)
+            {
+                foreach (var changeVector in _command.ChangeVectors)
+                {
+                    if (_session.IncludeRevisionsByChangeVector.TryGetValue(changeVector, out DocumentInfo revision)) 
+                        results[changeVector] = GetRevision<T>(revision.Document);
+                }
+                return results;
+            }
             for (var i = 0; i < _command.ChangeVectors.Length; i++)
             {
                 var changeVector = _command.ChangeVectors[i];

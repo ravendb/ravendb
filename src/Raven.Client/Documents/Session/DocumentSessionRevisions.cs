@@ -107,7 +107,7 @@ namespace Raven.Client.Documents.Session
         {
             var operation = new GetRevisionOperation(Session, changeVectors);
             var command = operation.CreateRequest();
-            if (command == null) return operation.GetRevision<Dictionary<string, T>>();
+            if (command == null) return operation.GetRevisions<T>();
             SessionInfo?.IncrementRequestCount();
             RequestExecutor.Execute(command, Context, sessionInfo: SessionInfo);
             operation.SetResult(command.Result);

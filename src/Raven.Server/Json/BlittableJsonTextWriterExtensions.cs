@@ -565,23 +565,17 @@ namespace Raven.Server.Json
 
                 writer.WriteEndObject();
             }
-           
-            var revisionByChangeVector = result.GetRevisionIncludesByChangeVector();
-            if (revisionByChangeVector != null)
+            var revisionByCv = result.GetRevisionIncludesByChangeVector();
+            var revisionByDateTime = result.GetRevisionIncludesIdByDateTime();
+            if (revisionByCv != null || revisionByDateTime != null)
             {
                 writer.WriteComma();
-                writer.WritePropertyName(nameof(result.RevisionIncludesByChangeVector));
-                await writer.WriterRevisionIncludesAsync(context:context, includes:revisionByChangeVector, token: token);
-                
+                writer.WritePropertyName(nameof(result.RevisionIncludes));
+                writer.WriteStartArray();
+                await writer.WriteRevisionIncludes(context:context, revisionsByChangeVector: revisionByCv, revisionsByDateTime: revisionByDateTime, token: token); 
+                writer.WriteEndArray();
             }
-            
-            var revisionIncludesIdByDateTime = result.GetRevisionIncludesIdByDateTime();
-            if (revisionIncludesIdByDateTime != null)
-            {
-                writer.WriteComma();
-                writer.WritePropertyName(nameof(result.RevisionIncludesIdByDateTime));
-                await writer.WriterRevisionIncludesDateTimeBeforeAsync(context:context, revisionIncludesIdByDateTime, token: token);
-            }
+
             
             var counters = result.GetCounterIncludes();
             if (counters != null)
@@ -1484,51 +1478,67 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        internal static async Task WriterRevisionIncludesAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, Dictionary<string,Document> includes, CancellationToken token = default)
+        internal static async Task WriteRevisionIncludes(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, Dictionary<string,Document> revisionsByChangeVector, Dictionary<string, Dictionary<DateTime, Document>> revisionsByDateTime, CancellationToken token = default)
         {
-            writer.WriteStartObject();
-
             var first = true;
-            foreach (var kvp in includes)
+            if (revisionsByDateTime != null)
             {
-                if (first == false)
-                    writer.WriteComma();
-                first = false;
-                
-                writer.WritePropertyName(kvp.Key);
-                WriteDocument(writer, context, metadataOnly: false, document: kvp.Value);
-                await writer.MaybeFlushAsync(token);
-            }
-
-            writer.WriteEndObject();
-        }
-        
-        internal static async Task WriterRevisionIncludesDateTimeBeforeAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, Dictionary<string, Dictionary<DateTime, Document>> revisionsIdByDateTime, CancellationToken token = default)
-        {
-            writer.WriteStartObject();
-            var first = true;
-            foreach ((string key, var dictionary) in revisionsIdByDateTime)
-            {
-                if (first == false)
-                    writer.WriteComma();
-                first = false;
-                
-                writer.WritePropertyName(key);
-                writer.WriteStartArray();
-                foreach (var kvp in dictionary)
+                foreach ((string id, var dateTimeToDictionary) in revisionsByDateTime)
                 {
+                    if (first == false)
+                        writer.WriteComma();
+                    first = false;
+                
+                    foreach ((DateTime dateTime, Document doc) in dateTimeToDictionary)
+                    {
+
+                        writer.WriteStartObject();
+                    
+                        writer.WritePropertyName("Id");
+                        writer.WriteString(id);
+                        writer.WriteComma();
+                    
+                        writer.WritePropertyName("ChangeVector");
+                        writer.WriteString(doc.ChangeVector);
+                        writer.WriteComma();
+                    
+                        writer.WritePropertyName("Before");
+                        writer.WriteDateTime(dateTime,true);
+                        writer.WriteComma();
+                    
+                        writer.WritePropertyName("Revision");
+                        WriteDocument(writer, context, metadataOnly: false, document: doc);
+                    
+                        writer.WriteEndObject();
+                    }
+                }
+            }
+            if (revisionsByChangeVector != null)
+            {
+                foreach ((string key, Document document) in revisionsByChangeVector)
+                {
+                    if (first == false)
+                        writer.WriteComma();
+                    first = false;
+                
                     writer.WriteStartObject();
-                    writer.WritePropertyName("Before");
-                    writer.WriteDateTime(kvp.Key,true);
+                
+                    writer.WritePropertyName("ChangeVector");
+                    writer.WriteString(key);
                     writer.WriteComma();
+                
+                    writer.WritePropertyName("Id");
+                    writer.WriteString(document.Id.ToString());
+                    writer.WriteComma();
+                
                     writer.WritePropertyName("Revision");
-                    WriteDocument(writer, context, metadataOnly: false, document: kvp.Value);
+                    WriteDocument(writer, context, metadataOnly: false, document: document);
+                    await writer.MaybeFlushAsync(token);
+                
                     writer.WriteEndObject();
                 }
-                writer.WriteEndArray();
-                await writer.MaybeFlushAsync(token);
             }
-            writer.WriteEndObject();
+            await writer.MaybeFlushAsync(token);
         }
         
         private static void WriteConflict(AbstractBlittableJsonTextWriter writer, IncludeDocumentsCommand.ConflictDocument conflict)
