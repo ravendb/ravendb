@@ -35,11 +35,6 @@ namespace Raven.Client.Documents.Session.Operations
             if (_session.CheckIfIdAlreadyIncluded(_ids, _includes))
                 return null;
             
-            if (_session.CheckIfChangeVectorAlreadyIncluded(_revisionsToIncludeByChangeVector))
-                return null;
-            
-            //TODO: Add cache for dateTime
-            
             _session.IncrementRequestCount();
             if (Logger.IsInfoEnabled)
                 Logger.Info($"Requesting the following ids '{string.Join(", ", _ids)}' from {_session.StoreIdentifier}");
@@ -218,15 +213,9 @@ namespace Raven.Client.Documents.Session.Operations
             {
                 _session.RegisterTimeSeries(result.TimeSeriesIncludes);
             }
-            
-            if (_revisionsToIncludeByChangeVector != null)
+            if (_revisionsToIncludeByChangeVector != null || _revisionsToIncludeByDateTimeBefore != null)
             {
-                _session.RegisterRevisionIncludesByChangeVector(result.RevisionIncludesByChangeVector);
-            }
-            
-            if (_revisionsToIncludeByDateTimeBefore != null)
-            {
-                _session.RegisterRevisionIncludesIdByDateTimeBefore(result.RevisionIncludesIdByDateTime);
+               _session.RegisterRevisionIncludes(result.RevisionIncludes);
             }
 
             if (_compareExchangeValuesToInclude != null)

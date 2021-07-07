@@ -179,7 +179,7 @@ namespace Raven.Client.Documents.Commands
             
             if (_revisionsIncludeByDateTime != null)
             {
-                    pathBuilder.Append("&revisionBefore=").Append(Uri.EscapeDataString(_revisionsIncludeByDateTime.Value.GetDefaultRavenFormat()));
+                pathBuilder.Append("&revisionBeforeDateTime=").Append(Uri.EscapeDataString(_revisionsIncludeByDateTime.Value.GetDefaultRavenFormat()));
             }
 
             if (_compareExchangeValueIncludes != null)
