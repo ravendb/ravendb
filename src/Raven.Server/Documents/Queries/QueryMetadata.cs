@@ -586,21 +586,24 @@ namespace Raven.Server.Documents.Queries
 
         private void AddToRevisionsInclude(RevisionIncludeField revisionIncludes, MethodExpression expression, BlittableJsonReaderObject parameters)
         {
+            DateTimeOffset dateTimeOffset;
             foreach (var queryExpression in expression.Arguments)
             {
                 switch (queryExpression)
                 {
+                    
                     case FieldExpression fe:
-                        if (Query.From.Alias?.Value.Equals(fe.Compound[0].Value) == false)
-                            throw new InvalidOperationException(
-                                $"Cannot include revisions for related parameter '{fe.FieldValue}', " +
-                                $"Parent alias is different than include alias '{Query.From.Alias?.Value}'" +
-                                $" compare to '{fe.Compound[0].Value}'.");
+                        
+                        if (Query.From.Alias!= null)
+                            throw new InvalidOperationException($"Alias is not supported `include revisions(..)`.");
 
-                        if (string.IsNullOrEmpty(fe.FieldValueWithoutAlias) == false)
-                            revisionIncludes.AddRevision(fe.FieldValueWithoutAlias);
-
-                        else revisionIncludes.AddRevision(fe.FieldValue);
+                        if (ParquetTransformedItems.TryParseDate(fe.FieldValueWithoutAlias, out dateTimeOffset) == false && fe.Compound.Count >= 2)
+                            throw new InvalidOperationException($"Alias is not supported `include revisions(..)`.");
+                        
+                        if (dateTimeOffset != null)
+                            revisionIncludes.AddRevision(dateTimeOffset.DateTime);
+                        
+                        revisionIncludes.AddRevision(fe.FieldValue);
                         break;
                     
                     case ValueExpression ve:
@@ -608,28 +611,18 @@ namespace Raven.Server.Documents.Queries
                         {
                             if (string.IsNullOrEmpty(valueType.Value.ToString()))
                                 return;
-
+                              
+                            if (Query.From.Alias != null)
+                                throw new InvalidOperationException($"Alias is not supported `include revisions(..)`.");
+                              
                             string[] split = valueType.Value.ToString()?.Split('.');
+                            
+                            if (ParquetTransformedItems.TryParseDate(valueType.Value.ToString(), out dateTimeOffset) == false && split.Length >= 2)
+                                throw new InvalidOperationException($"Alias is not supported `include revisions(..)`.");
 
-                            if (split.Length >= 2 && split[0] == Query.From.Alias?.Value)
-                            {
-                                string field = valueType.Value.ToString()?.Substring(split[0].Length + 1);
-                                revisionIncludes.AddRevision(field);
-                                break;
-                            }
-
-                            if (ParquetTransformedItems.TryParseDate(valueType.Value.ToString(), out DateTimeOffset dateTimeOffset))
-                            {
+                            if (dateTimeOffset != null)
                                 revisionIncludes.AddRevision(dateTimeOffset.DateTime);
-                                break;
-                            }
-
-                            if (split[0] != (string)valueType.Value)
-                                throw new InvalidOperationException($"Cannot include revisions for parameter '{valueType.Value}', " +
-                                                                    $"Parent alias is different than incl" +
-                                                                    $"ude alias '{Query.From.Alias.Value}'" +
-                                                                    $" compare to '{split[0]}'.");
-
+                            
                             revisionIncludes.AddRevision(valueType.Value.ToString());
                             break;
                         }

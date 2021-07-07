@@ -105,6 +105,6 @@ namespace Raven.Server.Documents.Queries
 
         public abstract void AddRevisionIncludes(IncludeRevisionsCommand command);
        
-        public abstract Dictionary<string, Document> GetRevisionIncludes();
+        public abstract Dictionary<string, Document> GetRevisionIncludesByChangeVector();
     }
 }

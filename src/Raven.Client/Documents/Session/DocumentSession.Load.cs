@@ -82,11 +82,12 @@ namespace Raven.Client.Documents.Session
                 includeBuilder.AllCounters,
                 includeBuilder.TimeSeriesToInclude,
                 includeBuilder.CompareExchangeValuesToInclude?.ToArray(),
-                includeBuilder.RevisionToInclude?.ToArray());
+                includeBuilder.RevisionsToIncludeByChangeVector?.ToArray(),
+                includeBuilder.RevisionsToIncludeByDateTime);
         }
 
         /// <inheritdoc />
-        public Dictionary<string, T> LoadInternal<T>(string[] ids, string[] includes, string[] counterIncludes = null, bool includeAllCounters = false, IEnumerable<AbstractTimeSeriesRange> timeSeriesIncludes = null, string[] compareExchangeValueIncludes = null, string[] revisionIncludes = null)
+        public Dictionary<string, T> LoadInternal<T>(string[] ids, string[] includes, string[] counterIncludes = null, bool includeAllCounters = false, IEnumerable<AbstractTimeSeriesRange> timeSeriesIncludes = null, string[] compareExchangeValueIncludes = null, string[] revisionIncludesByChangeVector = null,  DateTime? revisionIncludeByDateTimeBefore = null)
         {
             if (ids == null)
                 throw new ArgumentNullException(nameof(ids));
@@ -104,7 +105,8 @@ namespace Raven.Client.Documents.Session
                 loadOperation.WithCounters(counterIncludes);
             }
 
-            loadOperation.WithRevisions(revisionIncludes);
+            loadOperation.WithRevisions(revisionIncludesByChangeVector);
+            loadOperation.WithRevisions(revisionIncludeByDateTimeBefore);
             loadOperation.WithTimeSeries(timeSeriesIncludes);
             loadOperation.WithCompareExchange(compareExchangeValueIncludes);
 

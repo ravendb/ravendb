@@ -188,9 +188,14 @@ namespace Raven.Client.Documents.Session.Operations
                 if (queryResult.CompareExchangeValueIncludes != null)
                     _session.GetClusterSession().RegisterCompareExchangeValues(queryResult.CompareExchangeValueIncludes);
                 
-                if (queryResult.RevisionIncludes != null)
+                if (queryResult.RevisionIncludesByChangeVector != null)
                 {
-                    _session.RegisterRevisionIncludes(queryResult.RevisionIncludes);
+                    _session.RegisterRevisionIncludesByChangeVector(queryResult.RevisionIncludesByChangeVector);
+                }  
+                
+                if (queryResult.RevisionIncludesIdByDateTime != null)
+                {
+                    _session.RegisterRevisionIncludesIdByDateTimeBefore(queryResult.RevisionIncludesIdByDateTime);
                 }
             }
         }
