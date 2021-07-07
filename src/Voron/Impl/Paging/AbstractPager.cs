@@ -3,9 +3,7 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Threading;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Logging;
@@ -17,7 +15,6 @@ using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron.Data;
 using Voron.Exceptions;
-using Voron.Platform;
 using Voron.Util.Settings;
 using Constants = Voron.Global.Constants;
 
@@ -26,7 +23,7 @@ namespace Voron.Impl.Paging
     public abstract unsafe class AbstractPager : IDisposable, ILowMemoryHandler
     {
         public readonly Logger Log = LoggingSource.Instance.GetLogger<AbstractPager>("AbstractPager");
-        private readonly StorageEnvironmentOptions _options;
+        public readonly StorageEnvironmentOptions _options;
 
         public static ConcurrentDictionary<string, uint> PhysicalDrivePerMountCache = new ConcurrentDictionary<string, uint>();
 
@@ -635,6 +632,9 @@ namespace Voron.Impl.Paging
 
         public virtual void DiscardWholeFile()
         {
+            if (_options.DiscardVirtualMemory == false)
+                return;
+
             long size = 0;
             void* baseAddress = null;
             var pagerState = PagerState;
