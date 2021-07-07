@@ -1828,10 +1828,10 @@ namespace Voron.Impl.Journal
         /// <returns></returns>
         private static int AdjustPagesRequiredFor32Bits(int pagesRequired)
         {
-            var bytes = pagesRequired * Constants.Storage.PageSize;
+            var bytes = (long)pagesRequired * Constants.Storage.PageSize;
             if (bytes < Constants.Size.Megabyte / 2)
             {
-                pagesRequired = Bits.PowerOf2(bytes) / Constants.Storage.PageSize;
+                pagesRequired = (int)Bits.PowerOf2(bytes) / Constants.Storage.PageSize;
             }
             else
             {
