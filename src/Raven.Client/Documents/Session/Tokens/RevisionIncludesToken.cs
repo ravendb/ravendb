@@ -6,32 +6,25 @@ namespace Raven.Client.Documents.Session.Tokens
 {
     public class RevisionIncludesToken : QueryToken
     {
-        private string _sourcePath;
         private readonly string _dateTime;
-        private readonly string _changeVector;
-        
+        private readonly string _path;
         
         private RevisionIncludesToken(DateTime dateTime)
         {
             _dateTime = dateTime.GetDefaultRavenFormat();
         }
-        private RevisionIncludesToken(string sourcePath, string changeVector)
+        private RevisionIncludesToken(string path)
         {
-            _sourcePath = sourcePath;
-            _changeVector = changeVector;
+            _path = path;
         }
         
         internal static RevisionIncludesToken Create(DateTime dateTime)
         {
             return new RevisionIncludesToken(dateTime);
         }
-        internal static RevisionIncludesToken Create(string sourcePath, string changeVector)
+        internal static RevisionIncludesToken Create(string path)
         {
-            return new RevisionIncludesToken(sourcePath, changeVector);
-        }
-        public void AddAliasToPath(string alias)
-        {
-            _sourcePath ??= alias;
+            return new RevisionIncludesToken(path);
         }
         
         public override void WriteTo(StringBuilder writer)
@@ -45,9 +38,9 @@ namespace Raven.Client.Documents.Session.Tokens
 
             }
 
-            else if(string.IsNullOrEmpty(_changeVector) == false)
+            else if(string.IsNullOrEmpty(_path) == false)
             {
-                writer.Append($"{_sourcePath}.{_changeVector}");
+                writer.Append($"{_path}");
             }
             writer.Append(')');
         }

@@ -262,7 +262,7 @@ namespace Raven.Server.Documents.Handlers
 
                 HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + actualEtag + "\"";
 
-                var numberOfResults = await WriteDocumentsJsonAsync(context, metadataOnly, documents, includes, includeCounters?.Results, includeRevisions?.RevisionsChangeVectorResults, includeTimeSeries?.Results,
+                var numberOfResults = await WriteDocumentsJsonAsync(context, metadataOnly, documents, includes, includeCounters?.Results, includeRevisions?.RevisionsChangeVectorResults, includeRevisions?.IdByRevisionsByDateTimeResults, includeTimeSeries?.Results,
                     includeCompareExchangeValues?.Results);
 
                 AddPagingPerformanceHint(PagingOperationType.Documents, nameof(GetDocumentsByIdAsync), HttpContext.Request.QueryString.Value, numberOfResults,
@@ -303,14 +303,17 @@ namespace Raven.Server.Documents.Handlers
             includeRevisions = null;
 
             var revisionsByChangeVectors = GetStringValuesQueryString("revisions", required: false);
-            if (revisionsByChangeVectors.Count == 0)
+            var revisionByDateTimeBefore = GetStringValuesQueryString("revisionBefore", required: false);
+            if (revisionsByChangeVectors.Count == 0 && revisionByDateTimeBefore.Count == 0)
                 return;
 
             var rif = new RevisionIncludeField();
 
+            rif.RevisionsBeforeDateTime = Convert.ToDateTime(revisionByDateTimeBefore);
+            
             foreach (var changeVector in revisionsByChangeVectors)
             {
-                rif.RevisionsChangeVectors.Add(changeVector);
+                rif.RevisionsChangeVectorsPaths.Add(changeVector);
             }
             includeRevisions = new IncludeRevisionsCommand(database, context, rif);
         }
@@ -400,8 +403,12 @@ namespace Raven.Server.Documents.Handlers
             includeTimeSeries = new IncludeTimeSeriesCommand(context, new Dictionary<string, HashSet<AbstractTimeSeriesRange>> { { string.Empty, hs } });
         }
 
-        private async Task<long> WriteDocumentsJsonAsync(JsonOperationContext context, bool metadataOnly, IEnumerable<Document> documentsToWrite, List<Document> includes,
-            Dictionary<string, List<CounterDetail>> counters, Dictionary<string, Document> revisions, Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>> timeseries, Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>> compareExchangeValues)
+        private async Task<long> WriteDocumentsJsonAsync(
+            JsonOperationContext context, bool metadataOnly, IEnumerable<Document> documentsToWrite, List<Document> includes,
+            Dictionary<string, List<CounterDetail>> counters, Dictionary<string, Document> revisionsByChangeVector,
+            Dictionary<string, Dictionary<DateTime, Document>> includeRevisionsIdByRevisionsByDateTimeResults,
+            Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>> timeseries,
+            Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>> compareExchangeValues)
         {
             long numberOfResults;
             await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -428,11 +435,17 @@ namespace Raven.Server.Documents.Handlers
                     writer.WritePropertyName(nameof(GetDocumentsResult.CounterIncludes));
                     await writer.WriteCountersAsync(counters, Database.DatabaseShutdown);
                 }
-                if (revisions?.Count > 0)
+                if (revisionsByChangeVector?.Count > 0)
                 {
                     writer.WriteComma();
-                    writer.WritePropertyName(nameof(GetDocumentsResult.RevisionIncludes));
-                    await writer.WriterRevisionIncludesAsync(context:context, revisions);
+                    writer.WritePropertyName(nameof(GetDocumentsResult.RevisionIncludesByChangeVector));
+                    await writer.WriterRevisionIncludesAsync(context:context, revisionsByChangeVector);
+                }  
+                if (includeRevisionsIdByRevisionsByDateTimeResults?.Count > 0)
+                {
+                    writer.WriteComma();
+                    writer.WritePropertyName(nameof(GetDocumentsResult.RevisionIncludesIdByDateTime));
+                    await writer.WriterRevisionIncludesDateTimeBeforeAsync(context:context, includeRevisionsIdByRevisionsByDateTimeResults);
                 }
 
                 if (timeseries?.Count > 0)

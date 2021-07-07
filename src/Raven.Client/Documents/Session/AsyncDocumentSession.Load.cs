@@ -76,12 +76,13 @@ namespace Raven.Client.Documents.Session
                 includeBuilder.AllCounters,
                 includeBuilder.TimeSeriesToInclude,
                 includeBuilder.CompareExchangeValuesToInclude?.ToArray(),
-                includeBuilder.RevisionToInclude?.ToArray(),
+                includeBuilder.RevisionsToIncludeByChangeVector?.ToArray(),
+                includeBuilder.RevisionsToIncludeByDateTime,
                 token);
         }
 
         /// <inheritdoc />
-        public async Task<Dictionary<string, T>> LoadAsyncInternal<T>(string[] ids, string[] includes, string[] counterIncludes = null, bool includeAllCounters = false, IEnumerable<AbstractTimeSeriesRange> timeSeriesIncludes = null, string[] compareExchangeValueIncludes = null, string[] revisionIncludes = null, CancellationToken token = default)
+        public async Task<Dictionary<string, T>> LoadAsyncInternal<T>(string[] ids, string[] includes, string[] counterIncludes = null, bool includeAllCounters = false, IEnumerable<AbstractTimeSeriesRange> timeSeriesIncludes = null, string[] compareExchangeValueIncludes = null, string[] revisionIncludesByChangeVector = null, DateTime? revisionsToIncludeByDateTime = null, CancellationToken token = default)
         {
             using (AsyncTaskHolder())
             {
@@ -101,7 +102,8 @@ namespace Raven.Client.Documents.Session
                     loadOperation.WithCounters(counterIncludes);
                 }
                 
-                loadOperation.WithRevisions(revisionIncludes);
+                loadOperation.WithRevisions(revisionIncludesByChangeVector);
+                loadOperation.WithRevisions(revisionsToIncludeByDateTime);
                 loadOperation.WithTimeSeries(timeSeriesIncludes);
                 loadOperation.WithCompareExchange(compareExchangeValueIncludes);
 

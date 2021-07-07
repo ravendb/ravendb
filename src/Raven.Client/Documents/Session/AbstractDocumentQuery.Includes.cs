@@ -68,7 +68,7 @@ namespace Raven.Client.Documents.Session
             
             if (includes.RevisionsToIncludeByChangeVector != null)
             {
-                IncludeRevisions(includes.Alias, includes.RevisionsToIncludeByChangeVector);
+                IncludeRevisions(includes.RevisionsToIncludeByChangeVector);
             }
             
             if (includes.CompareExchangeValuesToInclude != null)
@@ -129,16 +129,13 @@ namespace Raven.Client.Documents.Session
             RevisionsIncludesTokens.Add(RevisionIncludesToken.Create(dateTime.Value));
         }
         
-        private void IncludeRevisions(string alias, HashSet<string> revisionsToIncludeByChangeVector)
+        private void IncludeRevisions(HashSet<string> revisionsToIncludeByChangeVector)
         {
             RevisionsIncludesTokens ??= new List<RevisionIncludesToken>();
-            _includesAlias ??= alias;
-            
             foreach (var changeVector in revisionsToIncludeByChangeVector)
             {
-                RevisionsIncludesTokens.Add(RevisionIncludesToken.Create(alias, changeVector));
+                RevisionsIncludesTokens.Add(RevisionIncludesToken.Create(changeVector));
             }
         }
-
     }
 }

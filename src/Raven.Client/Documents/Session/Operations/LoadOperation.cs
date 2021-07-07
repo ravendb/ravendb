@@ -16,7 +16,8 @@ namespace Raven.Client.Documents.Session.Operations
         private string[] _ids;
         private string[] _includes;
         private string[] _countersToInclude;
-        private string[] _revisionsToInclude;
+        private string[] _revisionsToIncludeByChangeVector;
+        private DateTime? _revisionsToIncludeByDateTimeBefore;
         private string[] _compareExchangeValuesToInclude;
         private bool _includeAllCounters;
         private IEnumerable<AbstractTimeSeriesRange> _timeSeriesToInclude;
@@ -34,8 +35,10 @@ namespace Raven.Client.Documents.Session.Operations
             if (_session.CheckIfIdAlreadyIncluded(_ids, _includes))
                 return null;
             
-            if (_session.CheckIfChangeVectorAlreadyIncluded(_revisionsToInclude))
+            if (_session.CheckIfChangeVectorAlreadyIncluded(_revisionsToIncludeByChangeVector))
                 return null;
+            
+            //TODO: Add cache for dateTime
             
             _session.IncrementRequestCount();
             if (Logger.IsInfoEnabled)
@@ -44,7 +47,7 @@ namespace Raven.Client.Documents.Session.Operations
             if (_includeAllCounters)
                 return new GetDocumentsCommand(_ids, _includes, includeAllCounters: true, timeSeriesIncludes: _timeSeriesToInclude, compareExchangeValueIncludes: _compareExchangeValuesToInclude, metadataOnly: false);
             
-            return new GetDocumentsCommand(_ids, _includes, _countersToInclude, _revisionsToInclude, _timeSeriesToInclude, _compareExchangeValuesToInclude, metadataOnly: false);
+            return new GetDocumentsCommand(_ids, _includes, _countersToInclude, _revisionsToIncludeByChangeVector, _revisionsToIncludeByDateTimeBefore, _timeSeriesToInclude, _compareExchangeValuesToInclude, metadataOnly: false);
         }
 
         public LoadOperation ById(string id)
@@ -77,10 +80,17 @@ namespace Raven.Client.Documents.Session.Operations
             return this;
         }
         
-        public LoadOperation WithRevisions(string[] revisions)
+        public LoadOperation WithRevisions(string[] revisionsByChangeVector)
         {
-            if (revisions != null)
-                _revisionsToInclude = revisions;
+            if (revisionsByChangeVector != null)
+                _revisionsToIncludeByChangeVector = revisionsByChangeVector;
+            return this;
+        }
+        
+        public LoadOperation WithRevisions(DateTime? revisionByDateTimeBefore)
+        {
+            if (revisionByDateTimeBefore != null)
+                _revisionsToIncludeByDateTimeBefore = revisionByDateTimeBefore;
             return this;
         }
         
@@ -209,9 +219,14 @@ namespace Raven.Client.Documents.Session.Operations
                 _session.RegisterTimeSeries(result.TimeSeriesIncludes);
             }
             
-            if (_revisionsToInclude != null)
+            if (_revisionsToIncludeByChangeVector != null)
             {
-                _session.RegisterRevisionIncludes(result.RevisionIncludes);
+                _session.RegisterRevisionIncludesByChangeVector(result.RevisionIncludesByChangeVector);
+            }
+            
+            if (_revisionsToIncludeByDateTimeBefore != null)
+            {
+                _session.RegisterRevisionIncludesIdByDateTimeBefore(result.RevisionIncludesIdByDateTime);
             }
 
             if (_compareExchangeValuesToInclude != null)

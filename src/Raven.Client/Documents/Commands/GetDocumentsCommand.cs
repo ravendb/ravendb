@@ -23,7 +23,8 @@ namespace Raven.Client.Documents.Commands
         private readonly bool _includeAllCounters;
 
         private readonly IEnumerable<AbstractTimeSeriesRange> _timeSeriesIncludes;
-        private readonly IEnumerable<string> _revisionsIncludes;
+        private readonly IEnumerable<string> _revisionsIncludeByChangeVector;
+        private readonly DateTime? _revisionsIncludeByDateTime;
         private readonly string[] _compareExchangeValueIncludes;
         private readonly bool _metadataOnly;
 
@@ -65,11 +66,12 @@ namespace Raven.Client.Documents.Commands
             _compareExchangeValueIncludes = compareExchangeValueIncludes;
         }
         
-        public GetDocumentsCommand(string[] ids, string[] includes, string[] counterIncludes, IEnumerable<string> revisionIncludes, IEnumerable<AbstractTimeSeriesRange> timeSeriesIncludes, string[] compareExchangeValueIncludes, bool metadataOnly)
+        public GetDocumentsCommand(string[] ids, string[] includes, string[] counterIncludes, IEnumerable<string> revisionsIncludesByChangeVector, DateTime? revisionIncludeByDateTimeBefore, IEnumerable<AbstractTimeSeriesRange> timeSeriesIncludes, string[] compareExchangeValueIncludes, bool metadataOnly)
             : this(ids, includes, metadataOnly)
         {
             _counters = counterIncludes;
-            _revisionsIncludes = revisionIncludes;
+            _revisionsIncludeByChangeVector = revisionsIncludesByChangeVector;
+            _revisionsIncludeByDateTime = revisionIncludeByDateTimeBefore;
             _timeSeriesIncludes = timeSeriesIncludes;
             _compareExchangeValueIncludes = compareExchangeValueIncludes;
         }
@@ -167,12 +169,17 @@ namespace Raven.Client.Documents.Commands
                 }
             }
 
-            if (_revisionsIncludes != null && _revisionsIncludes.Any())
+            if (_revisionsIncludeByChangeVector != null && _revisionsIncludeByChangeVector.Any())
             {
-                foreach (var changeVector in _revisionsIncludes)
+                foreach (var changeVector in _revisionsIncludeByChangeVector)
                 {
                     pathBuilder.Append("&revisions=").Append(Uri.EscapeDataString(changeVector));
                 }
+            }
+            
+            if (_revisionsIncludeByDateTime != null)
+            {
+                    pathBuilder.Append("&revisionBefore=").Append(Uri.EscapeDataString(_revisionsIncludeByDateTime.Value.GetDefaultRavenFormat()));
             }
 
             if (_compareExchangeValueIncludes != null)

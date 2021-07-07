@@ -846,6 +846,7 @@ namespace Raven.Server.Documents.Queries.Results
             {
                 _includeDocumentsCommand?.AddRange(run.Includes, documentId);
                 _includeRevisionsCommand?.AddRange(run.IncludeRevisionsChangeVectors);
+                _includeRevisionsCommand?.AddRevisionByDateTimeBefore(run.IncludeRevisionByDateTimeBefore, documentId);
                 _includeCompareExchangeValuesCommand?.AddRange(run.CompareExchangeValueIncludes);
                 
 

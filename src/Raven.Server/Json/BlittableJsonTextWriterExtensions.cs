@@ -566,13 +566,21 @@ namespace Raven.Server.Json
                 writer.WriteEndObject();
             }
            
-            var revision = result.GetRevisionIncludes();
-            if (revision != null)
+            var revisionByChangeVector = result.GetRevisionIncludesByChangeVector();
+            if (revisionByChangeVector != null)
             {
                 writer.WriteComma();
-                writer.WritePropertyName(nameof(result.RevisionIncludes));
-                await writer.WriterRevisionIncludesAsync(context:context, includes:revision, token: token);
+                writer.WritePropertyName(nameof(result.RevisionIncludesByChangeVector));
+                await writer.WriterRevisionIncludesAsync(context:context, includes:revisionByChangeVector, token: token);
                 
+            }
+            
+            var revisionIncludesIdByDateTime = result.GetRevisionIncludesIdByDateTime();
+            if (revisionIncludesIdByDateTime != null)
+            {
+                writer.WriteComma();
+                writer.WritePropertyName(nameof(result.RevisionIncludesIdByDateTime));
+                await writer.WriterRevisionIncludesDateTimeBeforeAsync(context:context, revisionIncludesIdByDateTime, token: token);
             }
             
             var counters = result.GetCounterIncludes();
@@ -1492,6 +1500,34 @@ namespace Raven.Server.Json
                 await writer.MaybeFlushAsync(token);
             }
 
+            writer.WriteEndObject();
+        }
+        
+        internal static async Task WriterRevisionIncludesDateTimeBeforeAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, Dictionary<string, Dictionary<DateTime, Document>> revisionsIdByDateTime, CancellationToken token = default)
+        {
+            writer.WriteStartObject();
+            var first = true;
+            foreach ((string key, var dictionary) in revisionsIdByDateTime)
+            {
+                if (first == false)
+                    writer.WriteComma();
+                first = false;
+                
+                writer.WritePropertyName(key);
+                writer.WriteStartArray();
+                foreach (var kvp in dictionary)
+                {
+                    writer.WriteStartObject();
+                    writer.WritePropertyName("Before");
+                    writer.WriteDateTime(kvp.Key,true);
+                    writer.WriteComma();
+                    writer.WritePropertyName("Revision");
+                    WriteDocument(writer, context, metadataOnly: false, document: kvp.Value);
+                    writer.WriteEndObject();
+                }
+                writer.WriteEndArray();
+                await writer.MaybeFlushAsync(token);
+            }
             writer.WriteEndObject();
         }
         

@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using System.Dynamic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -35,6 +36,7 @@ using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Serialization;
 using Raven.Client.Util;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -119,6 +121,11 @@ namespace Raven.Client.Documents.Session
         /// Translate between an CV and its associated entity
         /// </summary>
         internal Dictionary<string, DocumentInfo> IncludeRevisionsByChangeVector;
+        
+        /// <summary>
+        /// Translate between an ID and its associated entity
+        /// </summary>
+        internal Dictionary<string, Dictionary<DateTime, DocumentInfo>> IncludeRevisionsIdByDateTimeBefore;
         
         /// <summary>
         /// hold the data required to manage the data for RavenDB's Unit of Work
@@ -1462,7 +1469,7 @@ more responsive application.
             }
         }
         
-        internal void RegisterRevisionIncludes(BlittableJsonReaderObject includes)
+        internal void RegisterRevisionIncludesByChangeVector(BlittableJsonReaderObject includes)
         {
             if (NoTracking)
                 return;
@@ -1487,6 +1494,62 @@ more responsive application.
                 if (newDocumentInfo.Metadata.TryGet(Constants.Documents.Metadata.ChangeVector, out string cv) == false)
                     continue;
                 IncludeRevisionsByChangeVector[cv] = newDocumentInfo;
+            }
+        }
+        
+        internal void  RegisterRevisionIncludesIdByDateTimeBefore(BlittableJsonReaderObject revisionIncludesIdByDateTIme)
+        {
+            if (NoTracking)
+                return;
+        
+            if (revisionIncludesIdByDateTIme == null)
+                return;
+
+            IncludeRevisionsIdByDateTimeBefore ??= new Dictionary<string, Dictionary<DateTime, DocumentInfo>>(StringComparer.OrdinalIgnoreCase);
+            var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
+            for (int i = 0; i < revisionIncludesIdByDateTIme.Count; i++)
+            {
+                revisionIncludesIdByDateTIme.GetPropertyByIndex(i, ref propertyDetails);
+        
+                if (propertyDetails.Value == null)
+                    continue;
+        
+                var id = propertyDetails.Name;
+
+                if (propertyDetails.Value is not BlittableJsonReaderArray arrayOfKvp)
+                    throw new InvalidDataException($"Unable to read date time to document range results on document : '{id}'.");
+                
+                var propertyKvpDetails = new BlittableJsonReaderObject.PropertyDetails();
+
+                
+                foreach (var obj in arrayOfKvp)
+                {
+                    var beforeDateTimeAsBlittableObject = (BlittableJsonReaderObject)obj;
+                    if (beforeDateTimeAsBlittableObject.TryGet("Before", out DateTime dateTime) == false)
+                        continue;
+                    if (beforeDateTimeAsBlittableObject.TryGetMember("Revision", out var revision) == false)
+                        continue;
+                    
+                    
+                    //IncludeRevisionsIdByDateTimeBefore[id] = new Dictionary<DateTime, DocumentInfo> {{dateTime, revision}};
+                }
+                
+                // for (int j = 0; j < arrayOfKvp.Length; j++)
+                //
+                //     //dtToDocDictionary.GetPropertyByIndex(1, ref revisionPopDetails);
+                //     if (beforePropDetails.Value == null || revisionPopDetails.Value == null)
+                //         continue;
+                //     
+                //     if (DateTime.TryParseExact(beforePropDetails.Value.ToString(), DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture,DateTimeStyles.None, out var dateTime) == false)
+                //         throw new InvalidDataException($"Unable to read date time to document range results on document : '{id}'.");
+                //
+                //     var doc = (BlittableJsonReaderObject)revisionPopDetails.Value;
+                //     var newDocumentInfo = DocumentInfo.GetNewDocumentInfo(doc);
+                //     if (newDocumentInfo.Metadata.TryGetConflict(out var conflict) && conflict)
+                //         continue;
+                //     
+                //     IncludeRevisionsIdByDateTimeBefore[id] = new Dictionary<DateTime, DocumentInfo> {{dateTime, newDocumentInfo}};
+                // }
             }
         }
         
@@ -2156,7 +2219,19 @@ more responsive application.
 
             return true;
         }
-
+        
+        internal bool CheckIfRevisionByIdDateTimeBeforeAlreadyIncluded(string id, DateTime dateTime)
+        {
+            if (IncludeRevisionsIdByDateTimeBefore is null) return false;
+            foreach (var kvp in IncludeRevisionsIdByDateTimeBefore)
+            {
+                if(IncludeRevisionsIdByDateTimeBefore.TryGetValue(id, out var dictionaryDateTimeToDocument));
+                 if (dictionaryDateTimeToDocument.TryGetValue(dateTime, out var documentInfo))
+                    return true;
+                
+            }
+            return false;
+        }
         public bool CheckIfIdAlreadyIncluded(string[] ids, KeyValuePair<string, Type>[] includes)
         {
             return CheckIfIdAlreadyIncluded(ids, includes.Select(x => x.Key));
