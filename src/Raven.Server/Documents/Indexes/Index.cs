@@ -619,6 +619,7 @@ namespace Raven.Server.Documents.Indexes
             options.CompressTxAboveSizeInBytes = documentDatabase.Configuration.Storage.CompressTxAboveSize.GetValue(SizeUnit.Bytes);
             options.ForceUsing32BitsPager = documentDatabase.Configuration.Storage.ForceUsing32BitsPager;
             options.EnablePrefetching = documentDatabase.Configuration.Storage.EnablePrefetching;
+            options.DiscardVirtualMemory = documentDatabase.Configuration.Storage.DiscardVirtualMemory;
             options.TimeToSyncAfterFlushInSec = (int)documentDatabase.Configuration.Storage.TimeToSyncAfterFlush.AsTimeSpan.TotalSeconds;
             options.NumOfConcurrentSyncsPerPhysDrive = documentDatabase.Configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
             options.Encryption.MasterKey = documentDatabase.MasterKey?.ToArray(); //clone

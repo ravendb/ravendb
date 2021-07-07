@@ -1210,6 +1210,7 @@ namespace Voron
         public bool? IgnoreInvalidJournalErrors { get; set; }
         public bool IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions { get; set; }
         public bool SkipChecksumValidationOnDatabaseLoading { get; set; }
+        public bool DiscardVirtualMemory { get; set; }
 
         private readonly Logger _log;
 

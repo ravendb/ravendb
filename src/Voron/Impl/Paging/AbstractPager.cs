@@ -616,6 +616,9 @@ namespace Voron.Impl.Paging
 
         public virtual void DiscardPages(long pageNumber, int numberOfPages)
         {
+            if (_options.DiscardVirtualMemory == false)
+                return;
+
             var pagerState = PagerState;
             Debug.Assert(pagerState.AllocationInfos.Length == 1);
 
@@ -647,7 +650,7 @@ namespace Voron.Impl.Paging
                 {
                     continue; // if adjacent ranges make one syscall
                 }
-
+               
                 Pal.rvn_discard_virtual_memory(baseAddress, size, out _);
 
                 size = 0;

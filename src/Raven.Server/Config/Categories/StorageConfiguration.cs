@@ -2,12 +2,26 @@ using System.ComponentModel;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
 using Sparrow;
+using Sparrow.Platform;
 
 namespace Raven.Server.Config.Categories
 {
     [ConfigurationCategory(ConfigurationCategoryType.Storage)]
     public class StorageConfiguration : ConfigurationCategory
     {
+        
+        public StorageConfiguration()
+        {
+            // On Windows, DiscardVirtualMemory can result in high CPU usage due to contention on the
+            // PTE entry (in Win Server 2016 and Win Server 2019), we want to avoid it by default.
+            DiscardVirtualMemory = PlatformDetails.RunningOnPosix;
+        }
+
+        [Description("You can use this setting to specify whether to disable or enable discard virtual memory. By default, on windows, it will be disabled.")]
+        [DefaultValue(DefaultValueSetInConstructor)]
+        [ConfigurationEntry("Storage.DiscardVirtualMemory", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public bool DiscardVirtualMemory { get; set; }
+        
         [Description("You can use this setting to specify a different path to temporary files. By default it is empty, which means that temporary files will be created at same location as data file.")]
         [DefaultValue(null)]
         [ConfigurationEntry("Storage.TempPath", ConfigurationEntryScope.ServerWideOrPerDatabase)]

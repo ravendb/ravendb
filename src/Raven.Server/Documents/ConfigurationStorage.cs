@@ -47,6 +47,7 @@ namespace Raven.Server.Documents
             options.SchemaUpgrader = SchemaUpgrader.Upgrader(SchemaUpgrader.StorageType.Configuration, this, null, null);
             options.ForceUsing32BitsPager = db.Configuration.Storage.ForceUsing32BitsPager;
             options.EnablePrefetching = db.Configuration.Storage.EnablePrefetching;
+            options.DiscardVirtualMemory = db.Configuration.Storage.DiscardVirtualMemory;
             options.TimeToSyncAfterFlushInSec = (int)db.Configuration.Storage.TimeToSyncAfterFlush.AsTimeSpan.TotalSeconds;
             options.NumOfConcurrentSyncsPerPhysDrive = db.Configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
             options.Encryption.MasterKey = db.MasterKey?.ToArray();

@@ -654,6 +654,7 @@ namespace Raven.Server.ServerWide
             options.BeforeSchemaUpgrade = _server.BeforeSchemaUpgrade;
             options.ForceUsing32BitsPager = Configuration.Storage.ForceUsing32BitsPager;
             options.EnablePrefetching = Configuration.Storage.EnablePrefetching;
+            options.DiscardVirtualMemory = Configuration.Storage.DiscardVirtualMemory;
 
             if (Configuration.Storage.MaxScratchBufferSize.HasValue)
                 options.MaxScratchBufferSize = Configuration.Storage.MaxScratchBufferSize.Value.GetValue(SizeUnit.Bytes);
