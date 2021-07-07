@@ -1521,35 +1521,21 @@ more responsive application.
                 
                 var propertyKvpDetails = new BlittableJsonReaderObject.PropertyDetails();
 
-                
                 foreach (var obj in arrayOfKvp)
                 {
                     var beforeDateTimeAsBlittableObject = (BlittableJsonReaderObject)obj;
                     if (beforeDateTimeAsBlittableObject.TryGet("Before", out DateTime dateTime) == false)
                         continue;
-                    if (beforeDateTimeAsBlittableObject.TryGetMember("Revision", out var revision) == false)
+                    if (beforeDateTimeAsBlittableObject.TryGet("Revision", out BlittableJsonReaderObject revision) == false)
                         continue;
                     
-                    
-                    //IncludeRevisionsIdByDateTimeBefore[id] = new Dictionary<DateTime, DocumentInfo> {{dateTime, revision}};
+                    IncludeRevisionsIdByDateTimeBefore[id] = new Dictionary<DateTime, DocumentInfo> {
+                    {
+                        dateTime,
+                        new DocumentInfo {Document = revision}
+                    }};
                 }
                 
-                // for (int j = 0; j < arrayOfKvp.Length; j++)
-                //
-                //     //dtToDocDictionary.GetPropertyByIndex(1, ref revisionPopDetails);
-                //     if (beforePropDetails.Value == null || revisionPopDetails.Value == null)
-                //         continue;
-                //     
-                //     if (DateTime.TryParseExact(beforePropDetails.Value.ToString(), DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture,DateTimeStyles.None, out var dateTime) == false)
-                //         throw new InvalidDataException($"Unable to read date time to document range results on document : '{id}'.");
-                //
-                //     var doc = (BlittableJsonReaderObject)revisionPopDetails.Value;
-                //     var newDocumentInfo = DocumentInfo.GetNewDocumentInfo(doc);
-                //     if (newDocumentInfo.Metadata.TryGetConflict(out var conflict) && conflict)
-                //         continue;
-                //     
-                //     IncludeRevisionsIdByDateTimeBefore[id] = new Dictionary<DateTime, DocumentInfo> {{dateTime, newDocumentInfo}};
-                // }
             }
         }
         
