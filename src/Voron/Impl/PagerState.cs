@@ -293,7 +293,7 @@ namespace Voron.Impl
 
         public void DiscardDataOnDisk()
         {
-            if (_pager._options.DiscardVirtualMemory == false)
+            if (_pager.Options.DiscardVirtualMemory == false)
                 return;
 
             if (AllocationInfos != null)
