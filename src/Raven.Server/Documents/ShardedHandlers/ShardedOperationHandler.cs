@@ -1,0 +1,59 @@
+﻿using System.Net;
+using System.Threading.Tasks;
+using Raven.Client.Documents.Changes;
+using Raven.Client.Documents.Commands;
+using Raven.Server.Documents.Sharding;
+using Raven.Server.Routing;
+using Raven.Server.ServerWide.Context;
+using Raven.Server.TrafficWatch;
+using Sparrow.Json;
+
+namespace Raven.Server.Documents.ShardedHandlers
+{
+    public class ShardedOperationHandler : ShardedRequestHandler
+    {
+        [RavenShardedAction("/databases/*/operations/next-operation-id", "GET")]
+        public async Task GetNextOperationId()
+        {
+            var nextId = ServerStore.Operations.GetNextOperationId();
+
+            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    writer.WriteStartObject();
+                    writer.WritePropertyName("Id");
+                    writer.WriteInteger(nextId);
+                    writer.WriteComma();
+                    writer.WritePropertyName(nameof(GetNextOperationIdCommand.NodeTag));
+                    writer.WriteString(Server.ServerStore.NodeTag);
+                    writer.WriteEndObject();
+                }
+            }
+        }
+
+        [RavenShardedAction("/databases/*/operations/state", "GET")]
+        public async Task State()
+        {
+            var id = GetLongQueryString("id");
+            var state = ServerStore.Operations.GetOperation(id)?.State;
+
+            if (state == null)
+            {
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                return;
+            }
+
+            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    context.Write(writer, state.ToJson());
+                    // writes Patch response
+                    if (TrafficWatchManager.HasRegisteredClients)
+                        AddStringToHttpContext(writer.ToString(), TrafficWatchChangeType.Operations);
+                }
+            }
+        }
+    }
+}
