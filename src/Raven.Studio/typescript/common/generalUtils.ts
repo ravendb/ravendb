@@ -694,9 +694,7 @@ class genUtils {
         return result;
     }
     
-    static scrollToElement(element: Element) {
-        const containerSelector = ".js-scroll-container";
-        
+    static scrollToElement(element: Element, containerSelector: string = ".js-scroll-container") {
         const containerRect = document.querySelector(containerSelector).getBoundingClientRect();
         const rectTop = containerRect.top;
         const rectBottom = rectTop + containerRect.height;
