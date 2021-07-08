@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using Raven.Client.Documents.Session;
+using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Sync;
 
@@ -221,6 +222,14 @@ namespace Raven.Client.Json
                 var @double = ((LazyNumberValue)newProp.Value).ToDouble(CultureInfo.InvariantCulture);
 
                 return @double % 1 == 0 && @long.Equals((long)@double);
+            }
+
+            if (oldProp.Token == BlittableJsonToken.LazyNumber && newProp.Token == BlittableJsonToken.LazyNumber)
+            {
+                var oldDouble = ((LazyNumberValue)oldProp.Value).ToDouble(CultureInfo.InvariantCulture);
+                var newDouble = ((LazyNumberValue)newProp.Value).ToDouble(CultureInfo.InvariantCulture);
+
+                return oldDouble.AlmostEquals(newDouble);
             }
 
             return false;
