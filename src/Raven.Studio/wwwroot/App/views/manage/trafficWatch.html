@@ -12,9 +12,17 @@
                     <i class="icon-export"></i><span>Export</span>
                 </button>
             </div>
-            <div class="btn-group">
-                <select id="visibleTypesSelector" size="5" multiple="multiple"
-                        data-bind="options: filteredTypeData, selectedOptions: selectedTypeNames, optionsText: 'propertyName', optionsValue: 'propertyName'"></select>
+            <div class="btn-group-label" data-label="HTTP">
+                <div class="btn-group">
+                    <select id="visibleTypesSelectorHttp" multiple="multiple"
+                            data-bind="options: filteredTypeDataHttp, selectedOptions: selectedTypeNamesHttp, optionsText: 'propertyName', optionsValue: 'propertyName'"></select>
+                </div>
+            </div>
+            <div class="btn-group-label" data-label="TCP">
+                <div class="btn-group">
+                    <select id="visibleTypesSelectorTcp" multiple="multiple"
+                            data-bind="options: filteredTypeDataTcp, selectedOptions: selectedTypeNamesTcp, optionsText: 'propertyName', optionsValue: 'propertyName'"></select>
+                </div>
             </div>
             <div id="trafficFilter">
                 <input class="form-control" placeholder="Filter" data-bind="textInput: filter">
@@ -24,52 +32,23 @@
                 <label for="onlyErrors">Show errors only</label>
             </div>
         </div>
-        <div class="flex-separator"></div>
-        <div class="panel margin-bottom margin-sm flex-grow">
-            <div class="panel-addon">
-                <div class="flex-horizontal flex-wrap margin-top">
-                    <div class="properties-container flex-horizontal">
-                        <div class="property">
-                            <h5><i class="icon-running-tasks"></i> Requests</h5>
-                            <strong data-bind="text: stats.count"></strong>
-                        </div>
-                        <div class="property">
-                            <h5><i class="icon-arrow-filled-down"></i> Minimum duration</h5>
-                            <strong data-bind="text: stats.min"></strong>
-                        </div>
-                        <div class="property" data-toggle="tooltip" title="Average request duration (excluding web sockets)" data-placement="bottom">
-                            <h5><i class="icon-average"></i> Average duration</h5>
-                            <strong data-bind="text: stats.avg"></strong>
-                        </div>
-                        <div class="property">
-                            <h5><i class="icon-arrow-filled-up"></i> Maximum duration</h5>
-                            <strong data-bind="text: stats.max"></strong>
-                        </div>
-                    </div>
-                    <div class="flex-separator"></div>
-                    <div class="properties-container percentiles-container" data-label="Percentiles" data-toggle="tooltip" title="Percentiles" data-placement="top">
-                        <div class="property">
-                            <h5>90%</h5>
-                            <strong data-bind="text: stats.percentile_90"></strong>
-                        </div>
-                        <div class="property">
-                            <h5>99%</h5>
-                            <strong data-bind="text: stats.percentile_99"></strong>
-                        </div>
-                        <div class="property">
-                            <h5>99.9%</h5>
-                            <strong data-bind="text: stats.percentile_99_9"></strong>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
     </div>
     <div class="flex-horizontal">
         <div class="flex-separator"></div>
         <div class="btn-group">
+
+            <div class="btn-group btn-group-sm" role="group">
+                <div class="dropdown pull-right">
+                    <button class="btn btn-default btn-sm dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                        <i class="icon-stats"></i><span>Stats</span>
+                        <span class="caret"></span>
+                    </button>
+                    <div class="dropdown-menu stats-menu" data-bind="dropdownPanel: true, template: { name: 'stats-template' }">
+                    </div>
+                </div>
+            </div>
             <button class="btn btn-sm btn-info btn-checkable" data-bind="click: toggleTail, css: { active: tailEnabled }">
-                <i class="icon-logs"></i> <span>Monitoring (tail -f)</span>
+                <i class="icon-logs"></i><span>Monitoring (tail -f)</span>
             </button>
             <button class="btn btn-sm btn-danger" data-bind="click: clear">
                 <i class="icon-cancel"></i><span>Clear</span>
@@ -98,6 +77,48 @@
 
 <script type="text/html" id="empty-traffic-watch-template">
     No entries for now.
+</script>
+
+<script type="text/html" id="stats-template">
+        <div class="panel margin-top margin-top-sm margin-left margin-left-sm margin-right margin-right-sm flex-grow">
+            <div class="padding padding-lg">
+                <div class="flex-horizontal flex-wrap margin-top">
+                    <div class="properties-container stats-container flex-horizontal" data-label="Stats">
+                        <div class="property">
+                            <h5><i class="icon-running-tasks"></i><span>Requests</span></h5>
+                            <strong data-bind="text: stats.count" class="stats-property"></strong>
+                        </div>
+                        <div class="property">
+                            <h5><i class="icon-arrow-filled-down"></i><span>Minimum duration</span></h5>
+                            <strong data-bind="text: stats.min" class="stats-property"></strong>
+                        </div>
+                        <div class="property" data-toggle="tooltip" title="Average request duration (excluding web sockets)" data-placement="top">
+                            <h5><i class="icon-average"></i><span>Average duration</span></h5>
+                            <strong data-bind="text: stats.avg" class="stats-property"></strong>
+                        </div>
+                        <div class="property">
+                            <h5><i class="icon-arrow-filled-up"></i><span>Maximum duration</span></h5>
+                            <strong data-bind="text: stats.max" class="stats-property"></strong>
+                        </div>
+                    </div>
+                    <div class="flex-separator"></div>
+                    <div class="properties-container stats-container" data-label="Percentiles" data-toggle="tooltip" title="Percentiles" data-placement="top">
+                        <div class="property">
+                            <h5>90%</h5>
+                            <strong data-bind="text: stats.percentile_90"></strong>
+                        </div>
+                        <div class="property">
+                            <h5>99%</h5>
+                            <strong data-bind="text: stats.percentile_99"></strong>
+                        </div>
+                        <div class="property">
+                            <h5>99.9%</h5>
+                            <strong data-bind="text: stats.percentile_99_9"></strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 </script>
 
 <div class="tooltip json-preview lg js-traffic-watch-tooltip" style="opacity: 0">
