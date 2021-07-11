@@ -544,7 +544,8 @@ namespace Raven.Server.Documents.Revisions
             long numberOfRevisionsToDelete;
             if (configuration.MinimumRevisionsToKeep.HasValue)
             {
-                numberOfRevisionsToDelete = revisionsCount - configuration.MinimumRevisionsToKeep.Value;
+                numberOfRevisionsToDelete = Math.Min(revisionsCount - configuration.MinimumRevisionsToKeep.Value,
+                        _database.Configuration.Databases.MaxRevisionsToDeleteUponDocumentUpdate);
                 if (numberOfRevisionsToDelete <= 0)
                     return;
             }
