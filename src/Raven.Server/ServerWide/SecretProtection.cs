@@ -767,32 +767,40 @@ namespace Raven.Server.ServerWide
 
         public static void ValidateKeyUsages(string source, X509Certificate2 loadedCertificate)
         {
-            var supported = false;
+            var clientCert = false;
+            var serverCert = false;
+            var keyUsages = false;
+
             foreach (var extension in loadedCertificate.Extensions)
             {
-                if (!(extension is X509EnhancedKeyUsageExtension e)) //Enhanced Key Usage extension
-                    continue;
-
-                var clientCert = false;
-                var serverCert = false;
-
-                foreach (var usage in e.EnhancedKeyUsages)
+                if (extension is X509KeyUsageExtension kue)
                 {
-                    if (usage.Value == "1.3.6.1.5.5.7.3.2")
-                        clientCert = true;
-                    if (usage.Value == "1.3.6.1.5.5.7.3.1")
-                        serverCert = true;
+                    keyUsages = kue.KeyUsages.HasFlag(X509KeyUsageFlags.DigitalSignature) &&
+                                kue.KeyUsages.HasFlag(X509KeyUsageFlags.KeyEncipherment);
+                }
+                if (extension is X509EnhancedKeyUsageExtension ekue) //Enhanced Key Usage extension
+                {
+                    foreach (var usage in ekue.EnhancedKeyUsages)
+                    {
+                        switch (usage.Value)
+                        {
+                            case "1.3.6.1.5.5.7.3.2":
+                                clientCert = true;
+                                break;
+                            case "1.3.6.1.5.5.7.3.1":
+                                serverCert = true;
+                                break;
+                        }
+                    }
                 }
 
-                supported = clientCert && serverCert;
-                if (supported)
-                    break;
+              
             }
 
-            if (supported == false)
+            if (clientCert  == false ||  serverCert == false || keyUsages == false)
             {
                 var msg = "Server certificate " + loadedCertificate.FriendlyName + "from " + source +
-                          " must be defined with the following 'Enhanced Key Usages': Client Authentication (Oid 1.3.6.1.5.5.7.3.2) & Server Authentication (Oid 1.3.6.1.5.5.7.3.1)";
+                          " must be defined with the 'Key Usages' 'DigitalSignature' and 'KeyEncipherment' as well as  'Enhanced Key Usages': Client Authentication (Oid 1.3.6.1.5.5.7.3.2) & Server Authentication (Oid 1.3.6.1.5.5.7.3.1)";
                 if (Logger.IsOperationsEnabled)
                     Logger.Operations(msg);
                 throw new EncryptionException(msg);
