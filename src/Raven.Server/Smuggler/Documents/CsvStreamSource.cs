@@ -222,7 +222,7 @@ namespace Raven.Server.Smuggler.Documents
                 if (ProcessFieldsIfNeeded())
                     continue;
 
-                var context = actions.GetContextForNewDocument(); // TODO - EFRAT
+                var context = actions.GetContextForNewDocument();
                 DocumentItem item;
                 try
                 {
@@ -442,6 +442,11 @@ namespace Raven.Server.Smuggler.Documents
         public SmugglerSourceType GetSourceType()
         {
             return SmugglerSourceType.Import;
+        }
+
+        public Stream GetAttachmentStream(LazyStringValue hash, out string tag)
+        {
+            throw new NotImplementedException();
         }
 
         public void Dispose()

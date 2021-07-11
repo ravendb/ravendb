@@ -25,7 +25,6 @@ using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Indexes;
-using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.TransactionCommands;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -145,6 +144,29 @@ namespace Raven.Server.Smuggler.Documents
         public IIndexActions Indexes()
         {
             return new DatabaseIndexActions(_database);
+        }
+
+        public bool SkipItem(string docId)
+        {
+            if (ShardHelper.IsShardedName(_database.Name) == false)
+                return false;
+            using (_database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (var tx = context.OpenReadTransaction())
+            {
+                var name = ShardHelper.ToDatabaseName(_database.Name);
+                var record = _database.ServerStore.Cluster.ReadDatabase(context, name);
+                var index = ShardHelper.TryGetShardIndex(_database.Name);
+                var docIndex = ShardHelper.GetShardId(context, docId);
+
+                for (int i = 0; i < record.ShardAllocations.Count - 1; i++)
+                {
+                    if (docIndex < record.ShardAllocations[i + 1].RangeStart)
+                    {
+                        return i != index;
+                    }
+                }
+                return record.ShardAllocations.Count - 1 != index;
+            }
         }
 
         private class DatabaseIndexActions : IIndexActions

@@ -44,6 +44,8 @@ namespace Raven.Server.Documents.Sharding
 
         public bool Encrypted => _record.Encrypted;
 
+        public int ShardCount => _record.Shards.Length;
+
         /// <summary>
         /// The shard id is a hash of the document id, lower case, reduced to
         /// 20 bits. This gives us 0 .. 1M range of shard ids and means that assuming

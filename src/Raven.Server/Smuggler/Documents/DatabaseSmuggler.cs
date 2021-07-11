@@ -22,16 +22,15 @@ namespace Raven.Server.Smuggler.Documents
 {
     public class DatabaseSmuggler
     {
-        private readonly DocumentDatabase _database;
-        private readonly ISmugglerSource _source;
+        private readonly List<ISmugglerSource> _source;
         private readonly ISmugglerDestination _destination;
         private readonly DatabaseSmugglerOptionsServerSide _options;
+        private readonly JsonOperationContext _context;
         private readonly SmugglerResult _result;
         private readonly SystemTime _time;
         private readonly Action<IOperationProgress> _onProgress;
         private readonly SmugglerPatcher _patcher;
         private readonly CancellationToken _token;
-
         public Action<IndexDefinitionAndType> OnIndexAction;
         public Action<DatabaseRecord> OnDatabaseRecordAction;
 
@@ -49,17 +48,41 @@ namespace Raven.Server.Smuggler.Documents
             return id.Contains(PreV4RevisionsDocumentId, StringComparison.OrdinalIgnoreCase);
         }
 
-        public DatabaseSmuggler(DocumentDatabase database, ISmugglerSource source, ISmugglerDestination destination, SystemTime time,
+        public DatabaseSmuggler(List<ISmugglerSource> sources, ISmugglerDestination destination, SystemTime time, JsonOperationContext context,
             DatabaseSmugglerOptionsServerSide options = null, SmugglerResult result = null, Action<IOperationProgress> onProgress = null,
             CancellationToken token = default)
         {
-            _database = database;
-            _source = source;
+            _source = sources;
             _destination = destination;
             _options = options ?? new DatabaseSmugglerOptionsServerSide();
             _result = result;
             _token = token;
+            _context = context;
 
+            // if (string.IsNullOrWhiteSpace(_options.TransformScript) == false)
+            //     _patcher = new SmugglerPatcher(_options, database); //TODO - EFRAT
+
+            foreach (var source in sources)
+            {
+                Debug.Assert((source is DatabaseSource && destination is DatabaseDestination) == false,
+                    "When both source and destination are database, we might get into a delayed write for the dest while the " +
+                    "source already pulsed its' read transaction, resulting in bad memory read.");
+            }
+
+            _time = time;
+            _onProgress = onProgress ?? (progress => { });
+        }
+
+        public DatabaseSmuggler(DocumentDatabase database, ISmugglerSource source, ISmugglerDestination destination, SystemTime time, JsonOperationContext context,
+            DatabaseSmugglerOptionsServerSide options = null, SmugglerResult result = null, Action<IOperationProgress> onProgress = null,
+            CancellationToken token = default)
+        {
+            _source =  new List<ISmugglerSource>{source};
+            _destination = destination;
+            _options = options ?? new DatabaseSmugglerOptionsServerSide();
+            _result = result;
+            _token = token;
+            _context = context;
             if (string.IsNullOrWhiteSpace(_options.TransformScript) == false)
                 _patcher = new SmugglerPatcher(_options, database);
 
@@ -80,29 +103,63 @@ namespace Raven.Server.Smuggler.Documents
         public async Task<SmugglerResult> ExecuteAsync(bool ensureStepsProcessed = true, bool isLastFile = true)
         {
             var result = _result ?? new SmugglerResult();
-
-            using (_patcher?.Initialize())
-            using (var initializeResult = await _source.InitializeAsync(_options, result))
-            await using (_destination.InitializeAsync(_options, result, initializeResult.BuildNumber))
+            var initializeResult = new List<SmugglerInitializeResult>();
+            try
             {
-                ModifyV41OperateOnTypes(initializeResult.BuildNumber, isLastFile);
-
-                var buildType = BuildVersion.Type(initializeResult.BuildNumber);
-                var currentType = await _source.GetNextTypeAsync();
-                while (currentType != DatabaseItemType.None)
+                foreach (var source in _source)
                 {
-                    await ProcessTypeAsync(currentType, result, buildType, ensureStepsProcessed);
-
-                    currentType = await _source.GetNextTypeAsync();
+                    var initializeAsync = await source.InitializeAsync(_options, result);
+                    initializeResult.Add(initializeAsync);
                 }
 
-                if (ensureStepsProcessed)
-                {
-                    EnsureProcessed(result);
-                }
+                ModifyV41OperateOnTypes(initializeResult[0].BuildNumber, isLastFile);
+                var buildType = BuildVersion.Type(initializeResult[0].BuildNumber);
 
-                return result;
+                using (_patcher?.Initialize())
+                await using (_destination.InitializeAsync(_options, result, initializeResult[0].BuildNumber))
+                {
+                     try // TODO - efrat - remove
+                     {
+                        var currentType = await GetNextType();
+
+                        while (currentType != DatabaseItemType.None)
+                        {
+                            await ProcessTypeAsync(currentType, result, buildType, ensureStepsProcessed);
+                            currentType = await GetNextType();
+                        }
+
+                        if (ensureStepsProcessed)
+                        {
+                            EnsureProcessed(result);
+                        }
+                     }
+                     catch (Exception e) // efrat - remove
+                     {
+                         Console.WriteLine(e);
+                         throw;
+                     }
+
+                     return result;
+                }
             }
+            finally
+            {
+                foreach (var res in initializeResult)
+                {
+                    res.Dispose();
+                }
+            }
+
+        }
+
+        private async Task<DatabaseItemType> GetNextType()
+        {
+            var currentType = DatabaseItemType.None;
+            foreach (var source in _source)
+            {
+                currentType = await source.GetNextTypeAsync();
+            }
+            return currentType;
         }
 
         private void ModifyV41OperateOnTypes(long buildVersion, bool isLastFile)
@@ -393,7 +450,7 @@ namespace Raven.Server.Smuggler.Documents
                 _onProgress.Invoke(result.Progress);
             }
 
-            var numberOfItemsSkipped = await _source.SkipTypeAsync(type, OnSkipped, _token);
+            var numberOfItemsSkipped = await _source[0].SkipTypeAsync(type, OnSkipped, _token); //TODO -EFRAT - need to skip in all sources
 
             if (ensureStepProcessed == false)
                 return;
@@ -418,33 +475,36 @@ namespace Raven.Server.Smuggler.Documents
 
             await using (var actions = _destination.Identities())
             {
-                await foreach (var identity in _source.GetIdentitiesAsync())
+                foreach (var source in _source)
                 {
-                    _token.ThrowIfCancellationRequested();
-                    result.Identities.ReadCount++;
-
-                    if (identity.Equals(default))
+                    await foreach (var identity in source.GetIdentitiesAsync())
                     {
-                        result.Identities.ErroredCount++;
-                        continue;
-                    }
+                        _token.ThrowIfCancellationRequested();
+                        result.Identities.ReadCount++;
 
-                    try
-                    {
-                        string identityPrefix = identity.Prefix;
-                        if (buildType == BuildVersionType.V3)
+                        if (identity.Equals(default))
                         {
-                            // ends with a "/"
-                            identityPrefix = identityPrefix.Substring(0, identityPrefix.Length - 1) + "|";
+                            result.Identities.ErroredCount++;
+                            continue;
                         }
 
-                        await actions.WriteKeyValueAsync(identityPrefix, identity.Value);
-                        result.Identities.LastEtag = identity.Index;
-                    }
-                    catch (Exception e)
-                    {
-                        result.Identities.ErroredCount++;
-                        result.AddError($"Could not write identity '{identity.Prefix}->{identity.Value}': {e.Message}");
+                        try
+                        {
+                            string identityPrefix = identity.Prefix;
+                            if (buildType == BuildVersionType.V3)
+                            {
+                                // ends with a "/"
+                                identityPrefix = identityPrefix.Substring(0, identityPrefix.Length - 1) + "|";
+                            }
+
+                            await actions.WriteKeyValueAsync(identityPrefix, identity.Value);
+                            result.Identities.LastEtag = identity.Index;
+                        }
+                        catch (Exception e)
+                        {
+                            result.Identities.ErroredCount++;
+                            result.AddError($"Could not write identity '{identity.Prefix}->{identity.Value}': {e.Message}");
+                        }
                     }
                 }
             }
@@ -458,89 +518,92 @@ namespace Raven.Server.Smuggler.Documents
 
             await using (var actions = _destination.Indexes())
             {
-                await foreach (var index in _source.GetIndexesAsync())
+                foreach (var source in _source)
                 {
-                    _token.ThrowIfCancellationRequested();
-                    result.Indexes.ReadCount++;
-
-                    if (index == null)
+                    await foreach (var index in source.GetIndexesAsync())
                     {
-                        result.Indexes.ErroredCount++;
-                        continue;
-                    }
+                        _token.ThrowIfCancellationRequested();
+                        result.Indexes.ReadCount++;
 
-                    if (OnIndexAction != null)
-                    {
-                        OnIndexAction(index);
-                        continue;
-                    }
+                        if (index == null)
+                        {
+                            result.Indexes.ErroredCount++;
+                            continue;
+                        }
 
-                    switch (index.Type)
-                    {
-                        case IndexType.AutoMap:
-                            var autoMapIndexDefinition = (AutoMapIndexDefinition)index.IndexDefinition;
+                        if (OnIndexAction != null)
+                        {
+                            OnIndexAction(index);
+                            continue;
+                        }
 
-                            try
-                            {
-                                await actions.WriteIndexAsync(autoMapIndexDefinition, IndexType.AutoMap);
-                            }
-                            catch (Exception e)
-                            {
-                                result.Indexes.ErroredCount++;
-                                result.AddError($"Could not write auto map index '{autoMapIndexDefinition.Name}': {e.Message}");
-                            }
-                            break;
+                        switch (index.Type)
+                        {
+                            case IndexType.AutoMap:
+                                var autoMapIndexDefinition = (AutoMapIndexDefinition)index.IndexDefinition;
 
-                        case IndexType.AutoMapReduce:
-                            var autoMapReduceIndexDefinition = (AutoMapReduceIndexDefinition)index.IndexDefinition;
-                            try
-                            {
-                                await actions.WriteIndexAsync(autoMapReduceIndexDefinition, IndexType.AutoMapReduce);
-                            }
-                            catch (Exception e)
-                            {
-                                result.Indexes.ErroredCount++;
-                                result.AddError($"Could not write auto map-reduce index '{autoMapReduceIndexDefinition.Name}': {e.Message}");
-                            }
-                            break;
+                                try
+                                {
+                                    await actions.WriteIndexAsync(autoMapIndexDefinition, IndexType.AutoMap);
+                                }
+                                catch (Exception e)
+                                {
+                                    result.Indexes.ErroredCount++;
+                                    result.AddError($"Could not write auto map index '{autoMapIndexDefinition.Name}': {e.Message}");
+                                }
+                                break;
 
-                        case IndexType.Map:
-                        case IndexType.MapReduce:
-                        case IndexType.JavaScriptMap:
-                        case IndexType.JavaScriptMapReduce:
-                            var indexDefinition = (IndexDefinition)index.IndexDefinition;
-                            if (string.Equals(indexDefinition.Name, "Raven/DocumentsByEntityName", StringComparison.OrdinalIgnoreCase))
-                            {
-                                result.AddInfo("Skipped 'Raven/DocumentsByEntityName' index. It is no longer needed.");
-                                continue;
-                            }
+                            case IndexType.AutoMapReduce:
+                                var autoMapReduceIndexDefinition = (AutoMapReduceIndexDefinition)index.IndexDefinition;
+                                try
+                                {
+                                    await actions.WriteIndexAsync(autoMapReduceIndexDefinition, IndexType.AutoMapReduce);
+                                }
+                                catch (Exception e)
+                                {
+                                    result.Indexes.ErroredCount++;
+                                    result.AddError($"Could not write auto map-reduce index '{autoMapReduceIndexDefinition.Name}': {e.Message}");
+                                }
+                                break;
 
-                            if (string.Equals(indexDefinition.Name, "Raven/ConflictDocuments", StringComparison.OrdinalIgnoreCase))
-                            {
-                                result.AddInfo("Skipped 'Raven/ConflictDocuments' index. It is no longer needed.");
-                                continue;
-                            }
+                            case IndexType.Map:
+                            case IndexType.MapReduce:
+                            case IndexType.JavaScriptMap:
+                            case IndexType.JavaScriptMapReduce:
+                                var indexDefinition = (IndexDefinition)index.IndexDefinition;
+                                if (string.Equals(indexDefinition.Name, "Raven/DocumentsByEntityName", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    result.AddInfo("Skipped 'Raven/DocumentsByEntityName' index. It is no longer needed.");
+                                    continue;
+                                }
 
-                            if (indexDefinition.Name.StartsWith("Auto/", StringComparison.OrdinalIgnoreCase))
-                            {
-                                // legacy auto index
-                                indexDefinition.Name = $"Legacy/{indexDefinition.Name}";
-                            }
+                                if (string.Equals(indexDefinition.Name, "Raven/ConflictDocuments", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    result.AddInfo("Skipped 'Raven/ConflictDocuments' index. It is no longer needed.");
+                                    continue;
+                                }
 
-                            await WriteIndexAsync(result, indexDefinition, actions);
-                            break;
+                                if (indexDefinition.Name.StartsWith("Auto/", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    // legacy auto index
+                                    indexDefinition.Name = $"Legacy/{indexDefinition.Name}";
+                                }
 
-                        case IndexType.Faulty:
-                            break;
+                                await WriteIndexAsync(result, indexDefinition, actions);
+                                break;
 
-                        default:
-                            throw new NotSupportedException(index.Type.ToString());
-                    }
+                            case IndexType.Faulty:
+                                break;
 
-                    if (result.Indexes.ReadCount % 10 == 0)
-                    {
-                        var message = $"Read {result.Indexes.ReadCount:#,#;;0} indexes.";
-                        AddInfoToSmugglerResult(result, message);
+                            default:
+                                throw new NotSupportedException(index.Type.ToString());
+                        }
+
+                        if (result.Indexes.ReadCount % 10 == 0)
+                        {
+                            var message = $"Read {result.Indexes.ReadCount:#,#;;0} indexes.";
+                            AddInfoToSmugglerResult(result, message);
+                        }
                     }
                 }
             }
@@ -605,29 +668,36 @@ namespace Raven.Server.Smuggler.Documents
         private async Task<SmugglerProgressBase.DatabaseRecordProgress> ProcessDatabaseRecordAsync(SmugglerResult result)
         {
             result.DatabaseRecord.Start();
-
+            var first = true;
             await using (var actions = _destination.DatabaseRecord())
             {
-                var databaseRecord = await _source.GetDatabaseRecordAsync();
-
-                _token.ThrowIfCancellationRequested();
-
-                if (OnDatabaseRecordAction != null)
+                foreach (var source in _source)
                 {
-                    OnDatabaseRecordAction(databaseRecord);
-                    return new SmugglerProgressBase.DatabaseRecordProgress();
-                }
+                    var databaseRecord = await source.GetDatabaseRecordAsync();
+                    if (first == false)
+                        continue;
 
-                result.DatabaseRecord.ReadCount++;
+                    first = false;
+                    _token.ThrowIfCancellationRequested();
 
-                try
-                {
-                    await actions.WriteDatabaseRecordAsync(databaseRecord, result.DatabaseRecord, _options.AuthorizationStatus, _options.OperateOnDatabaseRecordTypes);
-                }
-                catch (Exception e)
-                {
-                    result.AddError($"Could not write database record: {e.Message}");
-                    result.DatabaseRecord.ErroredCount++;
+                    if (OnDatabaseRecordAction != null)
+                    {
+                        OnDatabaseRecordAction(databaseRecord);
+                        return new SmugglerProgressBase.DatabaseRecordProgress();
+                    }
+
+                    result.DatabaseRecord.ReadCount++;
+
+                    try
+                    {
+                        await actions.WriteDatabaseRecordAsync(databaseRecord, result.DatabaseRecord, _options.AuthorizationStatus,
+                            _options.OperateOnDatabaseRecordTypes);
+                    }
+                    catch (Exception e)
+                    {
+                        result.AddError($"Could not write database record: {e.Message}");
+                        result.DatabaseRecord.ErroredCount++;
+                    }
                 }
             }
 
@@ -640,30 +710,32 @@ namespace Raven.Server.Smuggler.Documents
 
             await using (var actions = _destination.RevisionDocuments())
             {
-                await foreach (var item in _source.GetRevisionDocumentsAsync(_options.Collections, actions))
+                foreach (var source in _source)
                 {
-                    _token.ThrowIfCancellationRequested();
-                    result.RevisionDocuments.ReadCount++;
-
-                    if (result.RevisionDocuments.ReadCount % 1000 == 0)
-                        AddInfoToSmugglerResult(result, $"Read {result.RevisionDocuments.ReadCount:#,#;;0} revision documents.");
-
-                    if (item.Document == null)
+                    await foreach (var item in source.GetRevisionDocumentsAsync(_options.Collections, actions))
                     {
-                        result.RevisionDocuments.ErroredCount++;
-                        continue;
+                        _token.ThrowIfCancellationRequested();
+                        result.RevisionDocuments.ReadCount++;
+
+                        if (result.RevisionDocuments.ReadCount % 1000 == 0)
+                            AddInfoToSmugglerResult(result, $"Read {result.RevisionDocuments.ReadCount:#,#;;0} revision documents.");
+
+                        if (item.Document == null)
+                        {
+                            result.RevisionDocuments.ErroredCount++;
+                            continue;
+                        }
+
+                        Debug.Assert(item.Document.Id != null);
+
+                        item.Document.NonPersistentFlags |= NonPersistentDocumentFlags.FromSmuggler;
+
+                        await actions.WriteDocumentAsync(item, result.RevisionDocuments);
+
+                        result.RevisionDocuments.LastEtag = item.Document.Etag;
                     }
-
-                    Debug.Assert(item.Document.Id != null);
-
-                    item.Document.NonPersistentFlags |= NonPersistentDocumentFlags.FromSmuggler;
-
-                    await actions.WriteDocumentAsync(item, result.RevisionDocuments);
-
-                    result.RevisionDocuments.LastEtag = item.Document.Etag;
                 }
             }
-
             return result.RevisionDocuments;
         }
 
@@ -676,81 +748,82 @@ namespace Raven.Server.Smuggler.Documents
             await using (var actions = _destination.Documents(throwOnCollectionMismatchError))
             {
                 List<LazyStringValue> legacyIdsToDelete = null;
-
-                await foreach (DocumentItem item in _source.GetDocumentsAsync(_options.Collections, actions))
+                foreach (var source in _source)
                 {
-                    _token.ThrowIfCancellationRequested();
-
-                    var isPreV4Revision = IsPreV4Revision(buildType, item.Document.Id, item.Document);
-                    if (isPreV4Revision)
+                    await foreach (DocumentItem item in source.GetDocumentsAsync(_options.Collections, actions))
                     {
-                        result.RevisionDocuments.ReadCount++;
-                    }
-                    else
-                    {
-                        result.Documents.ReadCount++;
-                    }
+                        _token.ThrowIfCancellationRequested();
 
-                    if (result.Documents.ReadCount % 1000 == 0)
-                    {
-                        var message = $"Read {result.Documents.ReadCount:#,#;;0} documents.";
-                        if (result.Documents.Attachments.ReadCount > 0)
-                            message += $" Read {result.Documents.Attachments.ReadCount:#,#;;0} attachments.";
-                        AddInfoToSmugglerResult(result, message);
-                    }
+                        var isPreV4Revision = IsPreV4Revision(buildType, item.Document.Id, item.Document);
+                        if (isPreV4Revision)
+                        {
+                            result.RevisionDocuments.ReadCount++;
+                        }
+                        else
+                        {
+                            result.Documents.ReadCount++;
+                        }
 
-                    if (item.Document == null)
-                    {
-                        result.Documents.ErroredCount++;
-                        if (result.Documents.ErroredCount % 1000 == 0)
-                            AddInfoToSmugglerResult(result, $"Error Count: {result.Documents.ErroredCount:#,#;;0}.");
-                        continue;
-                    }
+                        if (result.Documents.ReadCount % 1000 == 0)
+                        {
+                            var message = $"Read {result.Documents.ReadCount:#,#;;0} documents.";
+                            if (result.Documents.Attachments.ReadCount > 0)
+                                message += $" Read {result.Documents.Attachments.ReadCount:#,#;;0} attachments.";
+                            AddInfoToSmugglerResult(result, message);
+                        }
 
-                    if (item.Document.Id == null)
-                        ThrowInvalidData();
-
-                    result.Documents.LastEtag = item.Document.Etag;
-
-                    if (CanSkipDocument(item.Document, buildType))
-                    {
-                        SkipDocument(item, result);
-                        continue;
-                    }
-
-                    if (_options.IncludeExpired == false &&
-                        ExpirationStorage.HasPassed(item.Document.Data, _time.GetUtcNow()))
-                    {
-                        SkipDocument(item, result);
-                        continue;
-                    }
-
-                    if (_options.IncludeArtificial == false && item.Document.Flags.HasFlag(DocumentFlags.Artificial))
-                    {
-                        SkipDocument(item, result);
-                        continue;
-                    }
-
-                    if (_patcher != null)
-                    {
-                        item.Document = _patcher.Transform(item.Document, actions.GetContextForNewDocument());
                         if (item.Document == null)
                         {
-                            result.Documents.SkippedCount++;
-                            if (result.Documents.SkippedCount % 1000 == 0)
-                                AddInfoToSmugglerResult(result, $"Skipped {result.Documents.SkippedCount:#,#;;0} documents.");
+                            result.Documents.ErroredCount++;
+                            if (result.Documents.ErroredCount % 1000 == 0)
+                                AddInfoToSmugglerResult(result, $"Error Count: {result.Documents.ErroredCount:#,#;;0}.");
                             continue;
                         }
+
+                        if (item.Document.Id == null)
+                            ThrowInvalidData();
+
+                        result.Documents.LastEtag = item.Document.Etag;
+
+                        if (CanSkipDocument(item.Document, buildType))
+                        {
+                            SkipDocument(item, result);
+                            continue;
+                        }
+
+                        if (_options.IncludeExpired == false &&
+                            ExpirationStorage.HasPassed(item.Document.Data, _time.GetUtcNow()))
+                        {
+                            SkipDocument(item, result);
+                            continue;
+                        }
+
+                        if (_options.IncludeArtificial == false && item.Document.Flags.HasFlag(DocumentFlags.Artificial))
+                        {
+                            SkipDocument(item, result);
+                            continue;
+                        }
+
+                        if (_patcher != null)
+                        {
+                            item.Document = _patcher.Transform(item.Document, actions.GetContextForNewDocument());
+                            if (item.Document == null)
+                            {
+                                result.Documents.SkippedCount++;
+                                if (result.Documents.SkippedCount % 1000 == 0)
+                                    AddInfoToSmugglerResult(result, $"Skipped {result.Documents.SkippedCount:#,#;;0} documents.");
+                                continue;
+                            }
+                        }
+
+                        SetDocumentOrTombstoneFlags(ref item.Document.Flags, ref item.Document.NonPersistentFlags, buildType);
+
+                        if (SkipDocument(buildType, isPreV4Revision, item, result, ref legacyIdsToDelete))
+                            continue;
+
+                        await actions.WriteDocumentAsync(item, result.Documents);
                     }
-
-                    SetDocumentOrTombstoneFlags(ref item.Document.Flags, ref item.Document.NonPersistentFlags, buildType);
-
-                    if (SkipDocument(buildType, isPreV4Revision, item, result, ref legacyIdsToDelete))
-                        continue;
-
-                    await actions.WriteDocumentAsync(item, result.Documents);
                 }
-
                 await TryHandleLegacyDocumentTombstonesAsync(legacyIdsToDelete, actions, result);
             }
 
@@ -839,31 +912,33 @@ namespace Raven.Server.Smuggler.Documents
         {
             result.CompareExchange.Start();
 
-            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            await using (var actions = _destination.CompareExchange(context))
+            await using (var actions = _destination.CompareExchange(_context))
             {
-                await foreach (var kvp in _source.GetCompareExchangeValuesAsync(actions))
+                foreach (var source in _source)
                 {
-                    _token.ThrowIfCancellationRequested();
-                    result.CompareExchange.ReadCount++;
-                    if (result.CompareExchange.ReadCount != 0 && result.CompareExchange.ReadCount % 1000 == 0)
-                        AddInfoToSmugglerResult(result, $"Read {result.CompareExchange.ReadCount:#,#;;0} compare exchange values.");
+                    await foreach (var kvp in source.GetCompareExchangeValuesAsync(actions))
+                    {
+                        _token.ThrowIfCancellationRequested();
+                        result.CompareExchange.ReadCount++;
+                        if (result.CompareExchange.ReadCount != 0 && result.CompareExchange.ReadCount % 1000 == 0)
+                            AddInfoToSmugglerResult(result, $"Read {result.CompareExchange.ReadCount:#,#;;0} compare exchange values.");
 
-                    if (kvp.Equals(default))
-                    {
-                        result.CompareExchange.ErroredCount++;
-                        continue;
-                    }
+                        if (kvp.Equals(default))
+                        {
+                            result.CompareExchange.ErroredCount++;
+                            continue;
+                        }
 
-                    try
-                    {
-                        await actions.WriteKeyValueAsync(kvp.Key.Key, kvp.Value);
-                        result.CompareExchange.LastEtag = kvp.Index;
-                    }
-                    catch (Exception e)
-                    {
-                        result.CompareExchange.ErroredCount++;
-                        result.AddError($"Could not write compare exchange '{kvp.Key.Key}->{kvp.Value}': {e.Message}");
+                        try
+                        {
+                            await actions.WriteKeyValueAsync(kvp.Key.Key, kvp.Value);
+                            result.CompareExchange.LastEtag = kvp.Index;
+                        }
+                        catch (Exception e)
+                        {
+                            result.CompareExchange.ErroredCount++;
+                            result.AddError($"Could not write compare exchange '{kvp.Key.Key}->{kvp.Value}': {e.Message}");
+                        }
                     }
                 }
             }
@@ -877,17 +952,20 @@ namespace Raven.Server.Smuggler.Documents
 
             await using (var actions = _destination.Counters(result))
             {
-                await foreach (var counterGroup in _source.GetCounterValuesAsync(_options.Collections, actions))
+                foreach (var source in _source)
                 {
-                    _token.ThrowIfCancellationRequested();
-                    result.Counters.ReadCount++;
+                    await foreach (var counterGroup in source.GetCounterValuesAsync(_options.Collections, actions))
+                    {
+                        _token.ThrowIfCancellationRequested();
+                        result.Counters.ReadCount++;
 
-                    if (result.Counters.ReadCount % 1000 == 0)
-                        AddInfoToSmugglerResult(result, $"Read {result.Counters.ReadCount:#,#;;0} counters.");
+                        if (result.Counters.ReadCount % 1000 == 0)
+                            AddInfoToSmugglerResult(result, $"Read {result.Counters.ReadCount:#,#;;0} counters.");
 
-                    await actions.WriteCounterAsync(counterGroup);
+                        await actions.WriteCounterAsync(counterGroup);
 
-                    result.Counters.LastEtag = counterGroup.Etag;
+                        result.Counters.LastEtag = counterGroup.Etag;
+                    }
                 }
             }
 
@@ -898,20 +976,22 @@ namespace Raven.Server.Smuggler.Documents
         {
             await using (var actions = _destination.Counters(result))
             {
-                await foreach (var counterDetail in _source.GetLegacyCounterValuesAsync())
+                foreach (var source in _source)
                 {
-                    _token.ThrowIfCancellationRequested();
-                    result.Counters.ReadCount++;
+                    await foreach (var counterDetail in source.GetLegacyCounterValuesAsync())
+                    {
+                        _token.ThrowIfCancellationRequested();
+                        result.Counters.ReadCount++;
 
-                    if (result.Counters.ReadCount % 1000 == 0)
-                        AddInfoToSmugglerResult(result, $"Read {result.Counters.ReadCount:#,#;;0} counters.");
+                        if (result.Counters.ReadCount % 1000 == 0)
+                            AddInfoToSmugglerResult(result, $"Read {result.Counters.ReadCount:#,#;;0} counters.");
 
-                    await actions.WriteLegacyCounterAsync(counterDetail);
+                        await actions.WriteLegacyCounterAsync(counterDetail);
 
-                    result.Counters.LastEtag = counterDetail.Etag;
+                        result.Counters.LastEtag = counterDetail.Etag;
+                    }
                 }
             }
-
             return result.Counters;
         }
 
@@ -919,26 +999,28 @@ namespace Raven.Server.Smuggler.Documents
         {
             await using (var actions = _destination.Documents())
             {
-                await foreach (var item in _source.GetLegacyAttachmentsAsync(actions))
+                foreach (var source in _source)
                 {
-                    _token.ThrowIfCancellationRequested();
+                    await foreach (var item in source.GetLegacyAttachmentsAsync(actions))
+                    {
+                        _token.ThrowIfCancellationRequested();
 
-                    result.Documents.ReadCount++;
-                    result.Documents.Attachments.ReadCount++;
-                    if (result.Documents.Attachments.ReadCount % 1000 == 0)
-                        AddInfoToSmugglerResult(result, $"Read {result.Documents.Attachments.ReadCount:#,#;;0} legacy attachments.");
+                        result.Documents.ReadCount++;
+                        result.Documents.Attachments.ReadCount++;
+                        if (result.Documents.Attachments.ReadCount % 1000 == 0)
+                            AddInfoToSmugglerResult(result, $"Read {result.Documents.Attachments.ReadCount:#,#;;0} legacy attachments.");
 
-                    if (item.Document.Id == null)
-                        ThrowInvalidData();
+                        if (item.Document.Id == null)
+                            ThrowInvalidData();
 
-                    item.Document.NonPersistentFlags |= NonPersistentDocumentFlags.FromSmuggler;
+                        item.Document.NonPersistentFlags |= NonPersistentDocumentFlags.FromSmuggler;
 
-                    await actions.WriteDocumentAsync(item, result.Documents);
+                        await actions.WriteDocumentAsync(item, result.Documents);
 
-                    result.Documents.LastEtag = item.Document.Etag;
+                        result.Documents.LastEtag = item.Document.Etag;
+                    }
                 }
             }
-
             return result.Documents;
         }
 
@@ -947,25 +1029,27 @@ namespace Raven.Server.Smuggler.Documents
             var counts = new SmugglerProgressBase.Counts();
             await using (var actions = _destination.Documents())
             {
-                await foreach (var id in _source.GetLegacyAttachmentDeletionsAsync())
+                foreach (var source in _source)
                 {
-                    counts.ReadCount++;
-
-                    if (counts.ReadCount % 1000 == 0)
-                        AddInfoToSmugglerResult(result, $"Read {counts.ReadCount:#,#;;0} legacy attachment deletions.");
-
-                    try
+                    await foreach (var id in source.GetLegacyAttachmentDeletionsAsync())
                     {
-                        await actions.DeleteDocumentAsync(id);
-                    }
-                    catch (Exception e)
-                    {
-                        counts.ErroredCount++;
-                        result.AddError($"Could not delete document (legacy attachment deletion) with id '{id}': {e.Message}");
+                        counts.ReadCount++;
+
+                        if (counts.ReadCount % 1000 == 0)
+                            AddInfoToSmugglerResult(result, $"Read {counts.ReadCount:#,#;;0} legacy attachment deletions.");
+
+                        try
+                        {
+                            await actions.DeleteDocumentAsync(id);
+                        }
+                        catch (Exception e)
+                        {
+                            counts.ErroredCount++;
+                            result.AddError($"Could not delete document (legacy attachment deletion) with id '{id}': {e.Message}");
+                        }
                     }
                 }
             }
-
             return counts;
         }
 
@@ -974,25 +1058,27 @@ namespace Raven.Server.Smuggler.Documents
             var counts = new SmugglerProgressBase.Counts();
             await using (var actions = _destination.Documents())
             {
-                await foreach (var id in _source.GetLegacyDocumentDeletionsAsync())
+                foreach (var source in _source)
                 {
-                    counts.ReadCount++;
-
-                    if (counts.ReadCount % 1000 == 0)
-                        AddInfoToSmugglerResult(result, $"Read {counts.ReadCount:#,#;;0} legacy document deletions.");
-
-                    try
+                    await foreach (var id in source.GetLegacyDocumentDeletionsAsync())
                     {
-                        await actions.DeleteDocumentAsync(id);
-                    }
-                    catch (Exception e)
-                    {
-                        counts.ErroredCount++;
-                        result.AddError($"Could not delete document (legacy document deletion) with id '{id}': {e.Message}");
+                        counts.ReadCount++;
+
+                        if (counts.ReadCount % 1000 == 0)
+                            AddInfoToSmugglerResult(result, $"Read {counts.ReadCount:#,#;;0} legacy document deletions.");
+
+                        try
+                        {
+                            await actions.DeleteDocumentAsync(id);
+                        }
+                        catch (Exception e)
+                        {
+                            counts.ErroredCount++;
+                            result.AddError($"Could not delete document (legacy document deletion) with id '{id}': {e.Message}");
+                        }
                     }
                 }
             }
-
             return counts;
         }
 
@@ -1002,71 +1088,73 @@ namespace Raven.Server.Smuggler.Documents
 
             await using (var actions = _destination.Tombstones())
             {
-                await foreach (var tombstone in _source.GetTombstonesAsync(_options.Collections, actions))
+                foreach (var source in _source)
                 {
-                    _token.ThrowIfCancellationRequested();
-                    result.Tombstones.ReadCount++;
-
-                    if (result.Tombstones.ReadCount % 1000 == 0)
-                        AddInfoToSmugglerResult(result, $"Read {result.Tombstones.ReadCount:#,#;;0} tombstones.");
-
-                    if (tombstone == null)
+                    await foreach (var tombstone in source.GetTombstonesAsync(_options.Collections, actions))
                     {
-                        result.Tombstones.ErroredCount++;
-                        continue;
+                        _token.ThrowIfCancellationRequested();
+                        result.Tombstones.ReadCount++;
+
+                        if (result.Tombstones.ReadCount % 1000 == 0)
+                            AddInfoToSmugglerResult(result, $"Read {result.Tombstones.ReadCount:#,#;;0} tombstones.");
+
+                        if (tombstone == null)
+                        {
+                            result.Tombstones.ErroredCount++;
+                            continue;
+                        }
+
+                        if (tombstone.LowerId == null)
+                            ThrowInvalidData();
+
+
+                        if (_options.IncludeArtificial == false && tombstone.Flags.HasFlag(DocumentFlags.Artificial))
+                        {
+                            continue;
+                        }
+
+                        var _ = NonPersistentDocumentFlags.None;
+                        SetDocumentOrTombstoneFlags(ref tombstone.Flags, ref _, buildType);
+
+                        await actions.WriteTombstoneAsync(tombstone, result.Tombstones);
+
+                        result.Tombstones.LastEtag = tombstone.Etag;
                     }
-
-                    if (tombstone.LowerId == null)
-                        ThrowInvalidData();
-
-
-                    if (_options.IncludeArtificial == false && tombstone.Flags.HasFlag(DocumentFlags.Artificial))
-                    {
-                        continue;
-                    }
-
-                    var _ = NonPersistentDocumentFlags.None;
-                    SetDocumentOrTombstoneFlags(ref tombstone.Flags, ref _, buildType);
-
-                    await actions.WriteTombstoneAsync(tombstone, result.Tombstones);
-
-                    result.Tombstones.LastEtag = tombstone.Etag;
                 }
             }
-
             return result.Tombstones;
         }
 
         private async Task<SmugglerProgressBase.Counts> ProcessCompareExchangeTombstonesAsync(SmugglerResult result)
         {
             result.CompareExchangeTombstones.Start();
-
-            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            await using (var actions = _destination.CompareExchangeTombstones(context))
+            await using (var actions = _destination.CompareExchangeTombstones(_context))
             {
-                await foreach (var key in _source.GetCompareExchangeTombstonesAsync())
+                foreach (var source in _source)
                 {
-                    _token.ThrowIfCancellationRequested();
-                    result.CompareExchangeTombstones.ReadCount++;
+                    await foreach (var key in source.GetCompareExchangeTombstonesAsync())
+                    {
+                        _token.ThrowIfCancellationRequested();
+                        result.CompareExchangeTombstones.ReadCount++;
 
-                    if (key.Equals(default))
-                    {
-                        result.CompareExchangeTombstones.ErroredCount++;
-                        continue;
-                    }
+                        if (key.Equals(default))
+                        {
+                            result.CompareExchangeTombstones.ErroredCount++;
+                            continue;
+                        }
 
-                    try
-                    {
-                        await actions.WriteTombstoneKeyAsync(key.Key.Key);
-                    }
-                    catch (Exception e)
-                    {
-                        result.CompareExchangeTombstones.ErroredCount++;
-                        result.AddError($"Could not write compare exchange '{key}: {e.Message}");
+                        try
+                        {
+                            await actions.WriteTombstoneKeyAsync(key.Key.Key);
+                        }
+                        catch (Exception e)
+                        {
+                            result.CompareExchangeTombstones.ErroredCount++;
+                            result.AddError($"Could not write compare exchange '{key}: {e.Message}");
+                        }
                     }
                 }
             }
-
             return result.CompareExchangeTombstones;
         }
 
@@ -1076,29 +1164,31 @@ namespace Raven.Server.Smuggler.Documents
 
             await using (var actions = _destination.Conflicts())
             {
-                await foreach (var conflict in _source.GetConflictsAsync(_options.Collections, actions))
+                foreach (var source in _source)
                 {
-                    _token.ThrowIfCancellationRequested();
-                    result.Conflicts.ReadCount++;
-
-                    if (result.Conflicts.ReadCount % 1000 == 0)
-                        AddInfoToSmugglerResult(result, $"Read {result.Conflicts.ReadCount:#,#;;0} conflicts.");
-
-                    if (conflict == null)
+                    await foreach (var conflict in source.GetConflictsAsync(_options.Collections, actions))
                     {
-                        result.Conflicts.ErroredCount++;
-                        continue;
+                        _token.ThrowIfCancellationRequested();
+                        result.Conflicts.ReadCount++;
+
+                        if (result.Conflicts.ReadCount % 1000 == 0)
+                            AddInfoToSmugglerResult(result, $"Read {result.Conflicts.ReadCount:#,#;;0} conflicts.");
+
+                        if (conflict == null)
+                        {
+                            result.Conflicts.ErroredCount++;
+                            continue;
+                        }
+
+                        if (conflict.Id == null)
+                            ThrowInvalidData();
+
+                        await actions.WriteConflictAsync(conflict, result.Conflicts);
+
+                        result.Conflicts.LastEtag = conflict.Etag;
                     }
-
-                    if (conflict.Id == null)
-                        ThrowInvalidData();
-
-                    await actions.WriteConflictAsync(conflict, result.Conflicts);
-
-                    result.Conflicts.LastEtag = conflict.Etag;
                 }
             }
-
             return result.Conflicts;
         }
 
@@ -1108,15 +1198,18 @@ namespace Raven.Server.Smuggler.Documents
 
             await using (var actions = _destination.Subscriptions())
             {
-                await foreach (var subscription in _source.GetSubscriptionsAsync())
+                foreach (var source in _source)
                 {
-                    _token.ThrowIfCancellationRequested();
-                    result.Subscriptions.ReadCount++;
+                    await foreach (var subscription in source.GetSubscriptionsAsync())
+                    {
+                        _token.ThrowIfCancellationRequested();
+                        result.Subscriptions.ReadCount++;
 
-                    if (result.Subscriptions.ReadCount % 1000 == 0)
-                        AddInfoToSmugglerResult(result, $"Read {result.Subscriptions.ReadCount:#,#;;0} subscription.");
+                        if (result.Subscriptions.ReadCount % 1000 == 0)
+                            AddInfoToSmugglerResult(result, $"Read {result.Subscriptions.ReadCount:#,#;;0} subscription.");
 
-                    await actions.WriteSubscriptionAsync(subscription);
+                        await actions.WriteSubscriptionAsync(subscription);
+                    }
                 }
             }
 
@@ -1129,15 +1222,18 @@ namespace Raven.Server.Smuggler.Documents
 
             await using (var actions = _destination.ReplicationHubCertificates())
             {
-                await foreach (var (hub, access) in _source.GetReplicationHubCertificatesAsync())
+                foreach (var source in _source)
                 {
-                    _token.ThrowIfCancellationRequested();
-                    result.ReplicationHubCertificates.ReadCount++;
+                    await foreach (var (hub, access) in source.GetReplicationHubCertificatesAsync())
+                    {
+                        _token.ThrowIfCancellationRequested();
+                        result.ReplicationHubCertificates.ReadCount++;
 
-                    if (result.ReplicationHubCertificates.ReadCount % 1000 == 0)
-                        AddInfoToSmugglerResult(result, $"Read {result.ReplicationHubCertificates.ReadCount:#,#;;0} subscription.");
+                        if (result.ReplicationHubCertificates.ReadCount % 1000 == 0)
+                            AddInfoToSmugglerResult(result, $"Read {result.ReplicationHubCertificates.ReadCount:#,#;;0} subscription.");
 
-                    await actions.WriteReplicationHubCertificateAsync(hub, access);
+                        await actions.WriteReplicationHubCertificateAsync(hub, access);
+                    }
                 }
             }
 
@@ -1150,20 +1246,23 @@ namespace Raven.Server.Smuggler.Documents
 
             await using (var actions = _destination.TimeSeries())
             {
-                var isFullBackup = _source.GetSourceType() == SmugglerSourceType.FullExport;
-                await foreach (var ts in _source.GetTimeSeriesAsync(_options.Collections))
+                foreach (var source in _source)
                 {
-                    _token.ThrowIfCancellationRequested();
-                    result.TimeSeries.ReadCount += ts.Segment.NumberOfEntries;
+                    var isFullBackup = source.GetSourceType() == SmugglerSourceType.FullExport;
+                    await foreach (var ts in source.GetTimeSeriesAsync(_options.Collections))
+                    {
+                        _token.ThrowIfCancellationRequested();
+                        result.TimeSeries.ReadCount += ts.Segment.NumberOfEntries;
 
-                    if (result.TimeSeries.ReadCount % 1000 == 0)
-                        AddInfoToSmugglerResult(result, $"Read {result.TimeSeries.ReadCount:#,#;;0} time series.");
+                        if (result.TimeSeries.ReadCount % 1000 == 0)
+                            AddInfoToSmugglerResult(result, $"Read {result.TimeSeries.ReadCount:#,#;;0} time series.");
 
-                    result.TimeSeries.LastEtag = ts.Etag;
+                        result.TimeSeries.LastEtag = ts.Etag;
 
-                    var shouldSkip = isFullBackup && ts.Segment.NumberOfLiveEntries == 0;
-                    if (shouldSkip == false)
-                        await actions.WriteTimeSeriesAsync(ts);
+                        var shouldSkip = isFullBackup && ts.Segment.NumberOfLiveEntries == 0;
+                        if (shouldSkip == false)
+                            await actions.WriteTimeSeriesAsync(ts);
+                    }
                 }
             }
 

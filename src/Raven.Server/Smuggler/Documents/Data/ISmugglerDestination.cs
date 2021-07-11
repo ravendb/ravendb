@@ -11,7 +11,6 @@ using Raven.Client.ServerWide;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Routing;
-using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
 namespace Raven.Server.Smuggler.Documents.Data
@@ -45,6 +44,8 @@ namespace Raven.Server.Smuggler.Documents.Data
         IReplicationHubCertificateActions ReplicationHubCertificates();
 
         ITimeSeriesActions TimeSeries();
+
+        bool SkipItem(string docId);
     }
 
     public interface IDocumentActions : INewDocumentActions, IAsyncDisposable
