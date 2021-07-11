@@ -245,7 +245,7 @@ namespace Raven.Server.Utils
             X509V3CertificateGenerator certificateGenerator = new X509V3CertificateGenerator();
             var authorityKeyIdentifier = new AuthorityKeyIdentifierStructure(issuerKeyPair.PublicKey);
             certificateGenerator.AddExtension(X509Extensions.AuthorityKeyIdentifier.Id, false, authorityKeyIdentifier);
-
+            certificateGenerator.AddExtension(X509Extensions.KeyUsage.Id, true, new KeyUsage(KeyUsage.DigitalSignature | KeyUsage.KeyEncipherment));
             if (isClientCertificate)
             {
                 certificateGenerator.AddExtension(X509Extensions.ExtendedKeyUsage.Id, true, new ExtendedKeyUsage(KeyPurposeID.IdKPClientAuth));
