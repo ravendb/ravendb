@@ -55,9 +55,6 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         private const string DateTimeFormat = "yyyy-MM-dd-HH-mm-ss.ffffff";
         private const string Extension = "parquet";
 
-        private static readonly HashSet<char> SpecialChars = new HashSet<char> { '&', '@', ':', ',', '$', '=', '+', '?', ';', ' ', '"', '^', '`', '>', '<', '{', '}', '[', ']', '#', '\'', '~', '|' };
-        private const string EncodingFormat = "%{0:X2}";
-
         private static readonly HashSet<char> InvalidFileNameChars = Path.GetInvalidFileNameChars().ToHashSet();
 
         private static readonly long UnixEpochTicks = new DateTime(1970, 1, 1).Ticks;
@@ -135,8 +132,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             uploadInfo = new UploadInfo
             {
                 FileName = $"{nowAsString}-{_fileNameSuffix}.{Extension}", 
-                FolderName = _key, 
-                SafeFolderName = _remoteFolderName
+                FolderName = _remoteFolderName, 
             };
 
             var localPath = Path.Combine(_tmpFilePath, _localFolderName ?? string.Empty, uploadInfo.FileName);
@@ -785,12 +781,6 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                 if (@char == '/')
                 {
                     builder.Append('_');
-                    continue;
-                }
-
-                if (SpecialChars.Contains(@char) || @char <= 31 || @char == 127)
-                {
-                    builder.AppendFormat(EncodingFormat, (int)@char);
                     continue;
                 }
 

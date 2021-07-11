@@ -45,8 +45,6 @@ namespace Raven.Server.Documents.PeriodicBackup
         private const string GoogleCloudName = "Google Cloud";
         private const string FtpName = "FTP";
 
-        private readonly bool _useSafeFolderName;
-
         public BackupUploader(UploaderSettings uploaderSettings, RetentionPolicyBaseParameters retentionPolicyParameters, Logger logger, BackupResult backupResult, Action<IOperationProgress> onProgress, OperationCancelToken taskCancelToken)
         {
             _uploaderSettings = uploaderSettings;
@@ -55,7 +53,6 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             _retentionPolicyParameters = retentionPolicyParameters;
             _isFullBackup = retentionPolicyParameters?.IsFullBackup ?? false;
-            _useSafeFolderName = _uploaderSettings.BackupType.HasValue == false;
 
             TaskCancelToken = taskCancelToken;
             _logger = logger;
@@ -111,7 +108,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         {
             using (var client = new RavenAwsS3Client(settings, progress, TaskCancelToken.Token))
             {
-                var key = CombinePathAndKey(settings.RemoteFolderName, useSafeFolderName: _useSafeFolderName);
+                var key = CombinePathAndKey(settings.RemoteFolderName);
                 client.PutObject(key, stream, new Dictionary<string, string>
                 {
                     { "Description", GetArchiveDescription() }
@@ -132,7 +129,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         {
             using (var client = new RavenAwsGlacierClient(settings, progress, TaskCancelToken.Token))
             {
-                var key = CombinePathAndKey(settings.RemoteFolderName ?? _uploaderSettings.DatabaseName, useSafeFolderName: _useSafeFolderName);
+                var key = CombinePathAndKey(settings.RemoteFolderName ?? _uploaderSettings.DatabaseName);
                 var archiveId = client.UploadArchive(stream, key);
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"{ReportSuccess(GlacierName)}, archive ID: {archiveId}");
@@ -166,7 +163,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         {
             using (var client = new RavenAzureClient(settings, progress, TaskCancelToken.Token))
             {
-                var key = CombinePathAndKey(settings.RemoteFolderName, useSafeFolderName: _useSafeFolderName);
+                var key = CombinePathAndKey(settings.RemoteFolderName);
                 client.PutBlob(key, stream, new Dictionary<string, string>
                 {
                     { "Description", GetArchiveDescription() }
@@ -208,7 +205,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         {
             using (var client = new RavenAwsS3Client(settings, progress: null, TaskCancelToken.Token))
             {
-                var key = CombinePathAndKey(settings.RemoteFolderName, useSafeFolderName: _useSafeFolderName);
+                var key = CombinePathAndKey(settings.RemoteFolderName);
                 client.DeleteObject(key);
 
                 if (_logger.IsInfoEnabled)
@@ -220,7 +217,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         {
             using (var client = new RavenAzureClient(settings, progress : null, TaskCancelToken.Token))
             {
-                var key = CombinePathAndKey(settings.RemoteFolderName, useSafeFolderName: _useSafeFolderName);
+                var key = CombinePathAndKey(settings.RemoteFolderName);
                 client.DeleteBlobs(new List<string>{ key });
 
                 if (_logger.IsInfoEnabled)
@@ -240,17 +237,14 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
-        private string CombinePathAndKey(string path, bool useSafeFolderName = false)
+        private string CombinePathAndKey(string path)
         {
             if (path?.EndsWith('/') == true)
                 path = path[..^1];
 
             var prefix = string.IsNullOrWhiteSpace(path) == false ? $"{path}/" : string.Empty;
-            var folderName = useSafeFolderName
-                ? _uploaderSettings.SafeFolderName
-                : _uploaderSettings.FolderName;
-            
-            return $"{prefix}{folderName}/{_uploaderSettings.FileName}";
+
+            return $"{prefix}{_uploaderSettings.FolderName}/{_uploaderSettings.FileName}";
         }
 
         private void CreateUploadTaskIfNeeded<S, T>(S settings, Action<S, FileStream, Progress> uploadToServer, T uploadStatus, string targetName)
@@ -465,7 +459,5 @@ namespace Raven.Server.Documents.PeriodicBackup
         public string TaskName;
 
         public BackupType? BackupType;
-
-        public string SafeFolderName;
     }
 }
