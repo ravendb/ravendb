@@ -99,5 +99,10 @@ namespace Raven.Server.Config.Categories
         [SizeUnit(SizeUnit.Megabytes)]
         [ConfigurationEntry("Databases.PulseReadTransactionLimitInMb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public Size PulseReadTransactionLimit { get; set; }
+
+        [Description("Max number of revision to delete upon document update after revision configuration changed ")]
+        [DefaultValue(int.MaxValue)]
+        [ConfigurationEntry("Databases.MaxRevisionsToDeleteUponDocumentUpdate", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public int MaxRevisionsToDeleteUponDocumentUpdate { get; set; }
     }
 }
