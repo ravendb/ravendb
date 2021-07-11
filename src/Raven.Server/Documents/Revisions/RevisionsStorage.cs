@@ -545,7 +545,7 @@ namespace Raven.Server.Documents.Revisions
             if (configuration.MinimumRevisionsToKeep.HasValue)
             {
                 numberOfRevisionsToDelete = Math.Min(revisionsCount - configuration.MinimumRevisionsToKeep.Value,
-                        _database.Configuration.Databases.MaxRevisionsToDeleteUponDocumentUpdate);
+                        configuration.MaxRevisionsToDeleteUponDocumentUpdate > 0 ? configuration.MaxRevisionsToDeleteUponDocumentUpdate : int.MaxValue);
                 if (numberOfRevisionsToDelete <= 0)
                     return;
             }
@@ -1225,7 +1225,7 @@ namespace Raven.Server.Documents.Revisions
 
                 var prevRevisionsCount = GetRevisionsCount(context, id);
                 var configuration = GetRevisionsConfiguration(collectionName.Name);
-
+                configuration.MaxRevisionsToDeleteUponDocumentUpdate = 0;
                 if (configuration == ConflictConfiguration.Default || configuration == _emptyConfiguration)
                 {
                     configuration = ZeroConfiguration;
