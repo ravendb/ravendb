@@ -586,44 +586,31 @@ namespace Raven.Server.Documents.Queries
 
         private void AddToRevisionsInclude(RevisionIncludeField revisionIncludes, MethodExpression expression, BlittableJsonReaderObject parameters)
         {
-            DateTimeOffset dateTimeOffset;
             foreach (var queryExpression in expression.Arguments)
             {
                 switch (queryExpression)
                 {
-                    
                     case FieldExpression fe:
-                        
                         if (Query.From.Alias!= null)
                             throw new InvalidOperationException($"Alias is not supported `include revisions(..)`.");
 
-                        if (ParquetTransformedItems.TryParseDate(fe.FieldValueWithoutAlias, out dateTimeOffset) == false && fe.Compound.Count >= 2)
-                            throw new InvalidOperationException($"Alias is not supported `include revisions(..)`.");
-                        
-                        if (dateTimeOffset != null)
-                            revisionIncludes.AddRevision(dateTimeOffset.DateTime);
-                        
                         revisionIncludes.AddRevision(fe.FieldValue);
                         break;
                     
                     case ValueExpression ve:
-                        foreach ((object Value, ValueTokenType Type) valueType in QueryBuilder.GetValues(Query, this, parameters, ve))
+                        foreach ((object value, _)  in QueryBuilder.GetValues(Query, this, parameters, ve))
                         {
-                            if (string.IsNullOrEmpty(valueType.Value.ToString()))
+                            string? path = value.ToString();
+                            if (string.IsNullOrEmpty(path))
                                 return;
                               
                             if (Query.From.Alias != null)
                                 throw new InvalidOperationException($"Alias is not supported `include revisions(..)`.");
-                              
-                            string[] split = valueType.Value.ToString()?.Split('.');
-                            
-                            if (ParquetTransformedItems.TryParseDate(valueType.Value.ToString(), out dateTimeOffset) == false && split.Length >= 2)
-                                throw new InvalidOperationException($"Alias is not supported `include revisions(..)`.");
 
-                            if (dateTimeOffset != null)
+                            if (ParquetTransformedItems.TryParseDate(path, out var dateTimeOffset))
                                 revisionIncludes.AddRevision(dateTimeOffset.DateTime);
-                            
-                            revisionIncludes.AddRevision(valueType.Value.ToString());
+                            else
+                                revisionIncludes.AddRevision(path);
                             break;
                         }
                         break;
