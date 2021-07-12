@@ -80,45 +80,46 @@
 </script>
 
 <script type="text/html" id="stats-template">
-        <div class="panel margin-top margin-top-sm margin-left margin-left-sm margin-right margin-right-sm flex-grow">
-            <div class="padding padding-lg">
-                <div class="flex-horizontal flex-wrap margin-top">
-                    <div class="properties-container stats-container flex-horizontal" data-label="Stats">
-                        <div class="property">
-                            <h5><i class="icon-running-tasks"></i><span>Requests</span></h5>
-                            <strong data-bind="text: stats.count" class="stats-property"></strong>
-                        </div>
-                        <div class="property">
-                            <h5><i class="icon-arrow-filled-down"></i><span>Minimum duration</span></h5>
-                            <strong data-bind="text: stats.min" class="stats-property"></strong>
-                        </div>
-                        <div class="property" data-toggle="tooltip" title="Average request duration (excluding web sockets)" data-placement="top">
-                            <h5><i class="icon-average"></i><span>Average duration</span></h5>
-                            <strong data-bind="text: stats.avg" class="stats-property"></strong>
-                        </div>
-                        <div class="property">
-                            <h5><i class="icon-arrow-filled-up"></i><span>Maximum duration</span></h5>
-                            <strong data-bind="text: stats.max" class="stats-property"></strong>
-                        </div>
+    <div class="panel margin-left margin-left-sm margin-right margin-right-sm">
+        <div class="padding padding-lg margin-top margin-top-sm">
+            <div class="row margin-top">
+                <div class="properties-container stats-container flex-horizontal padding padding-sm" data-label="Stats">
+                    <div class="property">
+                        <h5><i class="icon-running-tasks"></i><span>Requests</span></h5>
+                        <strong data-bind="text: stats.count" class="stats-property"></strong>
                     </div>
-                    <div class="flex-separator"></div>
-                    <div class="properties-container stats-container" data-label="Percentiles" data-toggle="tooltip" title="Percentiles" data-placement="top">
-                        <div class="property">
-                            <h5>90%</h5>
-                            <strong data-bind="text: stats.percentile_90"></strong>
-                        </div>
-                        <div class="property">
-                            <h5>99%</h5>
-                            <strong data-bind="text: stats.percentile_99"></strong>
-                        </div>
-                        <div class="property">
-                            <h5>99.9%</h5>
-                            <strong data-bind="text: stats.percentile_99_9"></strong>
-                        </div>
+                    <div class="property">
+                        <h5><i class="icon-arrow-filled-down"></i><span>Minimum duration</span></h5>
+                        <strong data-bind="text: stats.min" class="stats-property"></strong>
+                    </div>
+                    <div class="property" data-toggle="tooltip" title="Average request duration (excluding web sockets)" data-placement="top">
+                        <h5><i class="icon-average"></i><span>Average duration</span></h5>
+                        <strong data-bind="text: stats.avg" class="stats-property"></strong>
+                    </div>
+                    <div class="property">
+                        <h5><i class="icon-arrow-filled-up"></i><span>Maximum duration</span></h5>
+                        <strong data-bind="text: stats.max" class="stats-property"></strong>
+                    </div>
+                </div>
+            </div>
+            <div class="row margin-top">
+                <div class="properties-container stats-container padding padding-sm" data-label="Percentiles" data-toggle="tooltip" title="Percentiles" data-placement="top">
+                    <div class="property">
+                        <h5>90%</h5>
+                        <strong data-bind="text: stats.percentile_90"></strong>
+                    </div>
+                    <div class="property">
+                        <h5>99%</h5>
+                        <strong data-bind="text: stats.percentile_99"></strong>
+                    </div>
+                    <div class="property">
+                        <h5>99.9%</h5>
+                        <strong data-bind="text: stats.percentile_99_9"></strong>
                     </div>
                 </div>
             </div>
         </div>
+    </div>
 </script>
 
 <div class="tooltip json-preview lg js-traffic-watch-tooltip" style="opacity: 0">

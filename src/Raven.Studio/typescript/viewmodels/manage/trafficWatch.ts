@@ -142,7 +142,7 @@ class trafficWatch extends viewModelBase {
     attached() {
         super.attached();
         
-        awesomeMultiselect.build($("#visibleTypesSelectorHttp"),this.getOptions(this.filteredTypeDataHttp));
+        awesomeMultiselect.build($("#visibleTypesSelectorHttp"), this.getOptions(this.filteredTypeDataHttp));
         awesomeMultiselect.build($("#visibleTypesSelectorTcp"), this.getOptions(this.filteredTypeDataTcp));
     }
     
