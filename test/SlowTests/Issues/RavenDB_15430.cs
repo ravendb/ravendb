@@ -6,6 +6,7 @@ using FastTests;
 using FastTests.Server.Replication;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session;
+using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
 using Raven.Server.Documents.TimeSeries;
@@ -42,8 +43,13 @@ namespace SlowTests.Issues
                     },
                     PolicyCheckFrequency = TimeSpan.FromSeconds(1)
                 };
-
-                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                DatabaseRecordWithEtag record = null;
+                await WaitForValueAsync(async () =>
+                {
+                    record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                    return record.Topology.Members.Count;
+                }, 3);
+                Assert.Equal(3, record.Topology.Members.Count);
                 var firstNode = record.Topology.Members[0];
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
 
@@ -103,7 +109,12 @@ namespace SlowTests.Issues
                     }
                 }
 
-                record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                await WaitForValueAsync(async () =>
+                {
+                    record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                    return record.Topology.Members.Count;
+                }, 3);
+                Assert.Equal(3, record.Topology.Members.Count);
                 var firstNode2 = record.Topology.Members[0];
                 Assert.Equal(firstNode2, firstNode);
 
@@ -111,7 +122,12 @@ namespace SlowTests.Issues
                 var list = record.Topology.Members;
                 list.Reverse();
                 await store.Maintenance.Server.SendAsync(new ReorderDatabaseMembersOperation(store.Database, list));
-                record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                await WaitForValueAsync(async () =>
+                {
+                    record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                    return record.Topology.Members.Count;
+                }, 3);
+                Assert.Equal(3, record.Topology.Members.Count);
                 firstNode2 = record.Topology.Members[0];
                 Assert.NotEqual(firstNode2, firstNode);
 
@@ -147,7 +163,13 @@ namespace SlowTests.Issues
                     Assert.True(val.Length > res[Servers[0].ServerStore.NodeTag]);
                 }
 
-                record = store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database)).Result;
+                
+                await WaitForValueAsync(async () =>
+                {
+                    record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                    return record.Topology.Members.Count;
+                }, 3);
+                Assert.Equal(3, record.Topology.Members.Count);
                 firstNode2 = record.Topology.Members[0];
                 Assert.NotEqual(firstNode2, firstNode);
             }
