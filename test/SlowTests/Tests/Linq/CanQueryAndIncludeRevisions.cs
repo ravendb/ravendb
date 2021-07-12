@@ -8,7 +8,6 @@ using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
-using Sparrow.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -569,7 +568,7 @@ namespace SlowTests.Tests.Linq
                         .IncludeRevisions(x=>x.ChangeVectors));
                     
                     var revision = session.Advanced.Revisions.Get<User>(id, dateTime.ToUniversalTime());
-                    var revision2 =session.Advanced.Revisions.Get<User>(changeVector);
+                    var revision2 = session.Advanced.Revisions.Get<User>(changeVector);
                     Assert.NotNull(query);
                     Assert.NotNull(revision);
                     Assert.NotNull(revision2);
@@ -1782,29 +1781,6 @@ select Foo(u)"
                         , error.Message);
                 }
                 
-                using (var session = store.OpenSession())
-                {
-                    var error =  Assert.Throws<RavenException>( () =>  session.Advanced
-                        .RawQuery<User>("from Users include revisions($p0, $p1, $p2)")
-                        .AddParameter("p0", "u.FirstRevision")
-                        .AddParameter("p1", "u.SecondRevision")
-                        .AddParameter("p2", "x.ThirdRevision")
-                        .ToList());
-                    
-                    Assert.Contains("System.InvalidOperationException: Alias is not supported `include revisions(..)`." 
-                        , error.Message);
-                }
-                
-                using (var session = store.OpenSession())
-                {
-                    var error =  Assert.Throws<RavenException>( () =>  session.Advanced
-                        .RawQuery<User>("from Users u include revisions($p0)")
-                        .AddParameter("p0", DateTime.UtcNow)
-                        .ToList());
-                    
-                    Assert.Contains("System.InvalidOperationException: Alias is not supported `include revisions(..)`." 
-                        , error.Message);
-                }
             }
         }
         
@@ -1847,30 +1823,6 @@ select Foo(u)"
                         .AddParameter("p0", "u.FirstRevision")
                         .AddParameter("p1", "u.SecondRevision")
                         .AddParameter("p2", "x.ThirdRevision")
-                        .ToListAsync());
-                    
-                    Assert.Contains("System.InvalidOperationException: Alias is not supported `include revisions(..)`." 
-                        , error.Message);
-                }
-                
-                using (var session = store.OpenAsyncSession())
-                {
-                    var error = await Assert.ThrowsAsync<RavenException>( async () => await  session.Advanced
-                        .AsyncRawQuery<User>("from Users include revisions($p0, $p1, $p2)")
-                        .AddParameter("p0", "u.FirstRevision")
-                        .AddParameter("p1", "u.SecondRevision")
-                        .AddParameter("p2", "x.ThirdRevision")
-                        .ToListAsync());
-                    
-                    Assert.Contains("System.InvalidOperationException: Alias is not supported `include revisions(..)`." 
-                        , error.Message);
-                }
-                
-                using (var session = store.OpenAsyncSession())
-                {
-                    var error = await Assert.ThrowsAsync<RavenException>( async () => await  session.Advanced
-                        .AsyncRawQuery<User>("from Users u include revisions($p0)")
-                        .AddParameter("p0", DateTime.UtcNow)
                         .ToListAsync());
                     
                     Assert.Contains("System.InvalidOperationException: Alias is not supported `include revisions(..)`." 

@@ -46,10 +46,10 @@ namespace Raven.Client.Documents.Session.Operations
         public GetRevisionsCommand CreateRequest()
         {
             if (_command.ChangeVectors is not null)
-                return _session.CheckIfChangeVectorAlreadyIncluded(_command.ChangeVectors) ? null : _command ;
+                return _session.CheckIfAllChangeVectorsAreAlreadyIncluded(_command.ChangeVectors) ? null : _command ;
             
             if (_command.ChangeVector is not null)
-                return _session.CheckIfChangeVectorAlreadyIncluded(new[] {_command.ChangeVector}) ? null : _command;
+                return _session.CheckIfAllChangeVectorsAreAlreadyIncluded(new[] {_command.ChangeVector}) ? null : _command;
             
             if (_command.Before is not null)
                 return _session.CheckIfRevisionByDateTimeBeforeAlreadyIncluded(_command.Id, _command.Before.Value) ? null : _command;

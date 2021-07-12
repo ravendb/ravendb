@@ -8,6 +8,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Operations.Counters;
+using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Facets;
@@ -1494,19 +1495,19 @@ namespace Raven.Server.Json
 
                         writer.WriteStartObject();
                     
-                        writer.WritePropertyName("Id");
+                        writer.WritePropertyName(nameof(RevisionIncludeResult.Id));
                         writer.WriteString(id);
                         writer.WriteComma();
                     
-                        writer.WritePropertyName("ChangeVector");
+                        writer.WritePropertyName(nameof(RevisionIncludeResult.ChangeVector));
                         writer.WriteString(doc.ChangeVector);
                         writer.WriteComma();
                     
-                        writer.WritePropertyName("Before");
+                        writer.WritePropertyName(nameof(RevisionIncludeResult.Before));
                         writer.WriteDateTime(dateTime,true);
                         writer.WriteComma();
                     
-                        writer.WritePropertyName("Revision");
+                        writer.WritePropertyName(nameof(RevisionIncludeResult.Revision));
                         WriteDocument(writer, context, metadataOnly: false, document: doc);
                     
                         writer.WriteEndObject();
