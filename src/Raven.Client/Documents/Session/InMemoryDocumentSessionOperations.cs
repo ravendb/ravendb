@@ -23,6 +23,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Identity;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Counters;
+using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Client.Documents.Session.Operations;
@@ -1456,11 +1457,9 @@ more responsive application.
             {
                 includes.GetPropertyByIndex(i, ref propertyDetails);
 
-                if (propertyDetails.Value is BlittableJsonReaderObject json == false)
+                if (propertyDetails.Value is not BlittableJsonReaderObject json) 
                     continue;
-
-                json = (BlittableJsonReaderObject)propertyDetails.Value;
-
+                
                 var newDocumentInfo = DocumentInfo.GetNewDocumentInfo(json);
                 if (newDocumentInfo.Metadata.TryGetConflict(out var conflict) && conflict)
                     continue;
@@ -1468,7 +1467,7 @@ more responsive application.
                 IncludedDocumentsById[newDocumentInfo.Id] = newDocumentInfo;
             }
         }
-
+        
         internal void RegisterRevisionIncludes(BlittableJsonReaderArray revisionIncludes)
         {
             if (NoTracking)
@@ -1481,23 +1480,23 @@ more responsive application.
             IncludeRevisionsIdByDateTimeBefore ??= new Dictionary<string, Dictionary<DateTime, DocumentInfo>>(StringComparer.OrdinalIgnoreCase);
             foreach (var obj in revisionIncludes)
             {
-                if (obj is BlittableJsonReaderObject json == false)
+                if (obj is not BlittableJsonReaderObject json) 
                     continue;
-                
                 json = ((BlittableJsonReaderObject)obj);
-                json.TryGet("Id", out string id);
-                json.TryGet("ChangeVector", out string changeVector);
-                json.TryGet("Before", out DateTime dateTime);
-                json.TryGet("Revision", out BlittableJsonReaderObject revision);
-                
+                json.TryGet(nameof(RevisionIncludeResult.Id), out string id);
+                json.TryGet(nameof(RevisionIncludeResult.ChangeVector), out string changeVector);
+                json.TryGet(nameof(RevisionIncludeResult.Before), out DateTime dateTime);
+                json.TryGet(nameof(RevisionIncludeResult.Revision), out BlittableJsonReaderObject revision);
+
                 IncludeRevisionsByChangeVector[changeVector] = DocumentInfo.GetNewDocumentInfo(revision);
-                
-                if(dateTime != default && string.IsNullOrWhiteSpace(id) == false)
-                    IncludeRevisionsIdByDateTimeBefore[id] = new Dictionary<DateTime, DocumentInfo> {
+
+                if (dateTime != default && string.IsNullOrWhiteSpace(id) == false)
+                {
+                    IncludeRevisionsIdByDateTimeBefore[id] = new Dictionary<DateTime, DocumentInfo>
                     {
-                        dateTime,
-                        new DocumentInfo {Document = revision}
-                    }};
+                        [dateTime] = new() {Document = revision}
+                    };
+                }
             }
         }
 
@@ -2153,17 +2152,14 @@ more responsive application.
             return JsonConverter.FromBlittable(entityType, ref document, id, trackEntity);
         }
         
-        internal bool CheckIfChangeVectorAlreadyIncluded(IEnumerable<string> changeVectors)
+        internal bool CheckIfAllChangeVectorsAreAlreadyIncluded(IEnumerable<string> changeVectors)
         {
             if (IncludeRevisionsByChangeVector is null) 
                  return false;
             
             foreach (var cv in changeVectors)
             {
-                if (IncludeRevisionsByChangeVector.TryGetValue(cv, out DocumentInfo documentInfo) == false )
-                    return false;
-                
-                if ((documentInfo.Entity == null) && (documentInfo.Document == null))
+                if (IncludeRevisionsByChangeVector.ContainsKey(cv)  == false )
                     return false;
             }
 
@@ -2174,18 +2170,16 @@ more responsive application.
         {
             if (IncludeRevisionsIdByDateTimeBefore is null)
                 return false;
-            
-            if(IncludeRevisionsIdByDateTimeBefore.TryGetValue(id, out var dictionaryDateTimeToDocument)) 
-                if(dictionaryDateTimeToDocument.TryGetValue(dateTime, out var documentInfo)) 
+
+            if (IncludeRevisionsIdByDateTimeBefore.TryGetValue(id, out var dictionaryDateTimeToDocument))
+            {
+                if (dictionaryDateTimeToDocument.ContainsKey(dateTime))
                     return true;
-            
+            }
+
             return false;
         }
-        public bool CheckIfIdAlreadyIncluded(string[] ids, KeyValuePair<string, Type>[] includes)
-        {
-            return CheckIfIdAlreadyIncluded(ids, includes.Select(x => x.Key));
-        }
-
+        
         public bool CheckIfIdAlreadyIncluded(string[] ids, IEnumerable<string> includes)
         {
             foreach (var id in ids)

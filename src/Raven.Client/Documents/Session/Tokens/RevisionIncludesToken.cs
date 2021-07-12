@@ -29,20 +29,17 @@ namespace Raven.Client.Documents.Session.Tokens
         
         public override void WriteTo(StringBuilder writer)
         {
-            writer.Append("revisions(");
+            writer.Append("revisions(\'");
             if (_dateTime != null)
             {
-                writer.Append('\'');
                 writer.Append(_dateTime);
-                writer.Append('\'');
 
             }
-
             else if(string.IsNullOrEmpty(_path) == false)
             {
-                writer.Append($"{_path}");
+                writer.Append(_path);
             }
-            writer.Append(')');
+            writer.Append("\')");
         }
     }
 }

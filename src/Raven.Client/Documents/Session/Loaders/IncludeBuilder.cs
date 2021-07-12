@@ -133,8 +133,6 @@ namespace Raven.Client.Documents.Session.Loaders
                 return value.CountersToInclude;
             }
         }
-        //TODO:delete
-        //internal HashSet<string> RevisionToInclude => RevisionsToIncludeByChangeVector;
 
         internal bool AllCounters
         {
@@ -538,16 +536,10 @@ namespace Raven.Client.Documents.Session.Loaders
             IncludeCounters(path.ToPropertyPath(), names);
         }
 
-        private void IncludeRevisionsBefore(DateTime? dateTime)
+        private void IncludeRevisionsBefore(DateTime dateTime)
         {
-            if (dateTime == null)
-                return;
-            
-            if(dateTime == default(DateTime))
-                throw new ArgumentNullException(nameof(dateTime));
-    
             RevisionsToIncludeByDateTime ??= new DateTime();
-            RevisionsToIncludeByDateTime = dateTime.Value.ToUniversalTime();
+            RevisionsToIncludeByDateTime = dateTime.ToUniversalTime();
         }
 
         private void IncludeRevisionsByChangeVectors(string path)

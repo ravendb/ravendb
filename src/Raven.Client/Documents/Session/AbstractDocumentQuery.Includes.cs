@@ -63,7 +63,7 @@ namespace Raven.Client.Documents.Session
             
             if (includes.RevisionsToIncludeByDateTime != null)
             {
-                IncludeRevisions(includes.RevisionsToIncludeByDateTime);
+                IncludeRevisions(includes.RevisionsToIncludeByDateTime.Value);
             }
             
             if (includes.RevisionsToIncludeByChangeVector != null)
@@ -123,10 +123,10 @@ namespace Raven.Client.Documents.Session
             }
         }
         
-        private void IncludeRevisions(DateTime? dateTime)
+        private void IncludeRevisions(DateTime dateTime)
         {
             RevisionsIncludesTokens ??= new List<RevisionIncludesToken>();
-            RevisionsIncludesTokens.Add(RevisionIncludesToken.Create(dateTime.Value));
+            RevisionsIncludesTokens.Add(RevisionIncludesToken.Create(dateTime));
         }
         
         private void IncludeRevisions(HashSet<string> revisionsToIncludeByChangeVector)
