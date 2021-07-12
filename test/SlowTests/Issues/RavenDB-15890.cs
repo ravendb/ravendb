@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
@@ -637,6 +638,24 @@ namespace SlowTests.Issues
                 }
             }
         }
+
+        [Fact]
+        public async Task RavemDB_16982()
+        {
+            var indexName = "SimpleIndex";
+            using (var store = GetDocumentStore())
+            {
+                await new SimpleIndex().ExecuteAsync(store);
+
+                var documentDatabase = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                var definition = documentDatabase.IndexStore.GetIndex(indexName).Definition;
+                Assert.Equal(definition.State, IndexState.Normal);
+
+                var compare = definition.Compare(new IndexDefinition() {Name = definition.Name, State = null, Maps = new HashSet<string>(){ "docs.Users.Select(user => new {\r\n    Name = user.Name\r\n})" } });
+                Assert.Equal(compare, IndexDefinitionCompareDifferences.None);
+            }
+        }
+
 
         private class SimpleIndex : AbstractIndexCreationTask<User>
         {
