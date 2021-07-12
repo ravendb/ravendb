@@ -40,7 +40,12 @@ class trafficWatch extends viewModelBase {
     
     private liveClient = ko.observable<trafficWatchWebSocketClient>();
     private allData = [] as Raven.Client.Documents.Changes.TrafficWatchChangeBase[];
+    
     private filteredData = [] as Raven.Client.Documents.Changes.TrafficWatchChangeBase[];
+    private filteredDataHttp = [] as Raven.Client.Documents.Changes.TrafficWatchHttpChange[];
+    private filteredDataTcp = [] as Raven.Client.Documents.Changes.TrafficWatchTcpChange[];
+    
+    private clientIps: string[] = [];
 
     certificatesCache = new Map<string, certificateInfo>();
 
@@ -61,7 +66,9 @@ class trafficWatch extends viewModelBase {
     onlyErrors = ko.observable<boolean>(false);
 
     stats = {
-        count: ko.observable<string>(),
+        clientCount: ko.observable<string>(),
+        httpRequestCount: ko.observable<string>(),
+        tcpOperationCount: ko.observable<string>(),
         min: ko.observable<string>(),
         avg: ko.observable<string>(),
         max: ko.observable<string>(),
@@ -71,6 +78,7 @@ class trafficWatch extends viewModelBase {
     };
     
     filter = ko.observable<string>();
+    isDataFiltered = ko.observable<boolean>(false);
     
     private appendElementsTask: number;
 
@@ -212,74 +220,80 @@ class trafficWatch extends viewModelBase {
         return item.TrafficWatchType === "Tcp";
     }
 
-    private updateStats() {
-        const firstHttpItem = this.filteredData.find(x => trafficWatch.isHttpItem(x)) as Raven.Client.Documents.Changes.TrafficWatchHttpChange;
+    private updateStats(): void {
+        this.clientIps = [];
         
-        if (!firstHttpItem) {
-            this.statsNotAvailable();
-        } else {
-            let sum = 0;
-            let min = firstHttpItem.ElapsedMilliseconds;
-            let max = firstHttpItem.ElapsedMilliseconds;
-            
-            for (let i = 0; i < this.filteredData.length; i++) {
-                const item = this.filteredData[i];
-                if (!trafficWatch.isHttpItem(item)) {
-                    continue;
-                }
-                
-                if (item.ResponseStatusCode === 101) {
-                    // it is websocket - don't include in stats
-                    continue;
-                }
-
-                if (item.ElapsedMilliseconds < min) {
-                    min = item.ElapsedMilliseconds;
-                }
-
-                if (item.ElapsedMilliseconds > max) {
-                    max = item.ElapsedMilliseconds;
-                }
-
-                sum += item.ElapsedMilliseconds;
+        this.filteredData.forEach(x => {
+            if (!_.includes(this.clientIps, x.ClientIP)) {
+                this.clientIps.push(x.ClientIP);
             }
+        });
+        
+        this.filteredDataHttp = this.filteredData.filter(x => trafficWatch.isHttpItem(x))
+            .map(x => x as Raven.Client.Documents.Changes.TrafficWatchHttpChange);
+        
+        this.filteredDataTcp = this.filteredData.filter(x => trafficWatch.isTcpItem(x))
+            .map(x => x as Raven.Client.Documents.Changes.TrafficWatchTcpChange);
 
-            this.stats.min(generalUtils.formatTimeSpan(min, false));
-            this.stats.max(generalUtils.formatTimeSpan(max, false));
-            this.stats.count(this.filteredData.length.toLocaleString());
-            if (this.filteredData.length) {
-                this.stats.avg(generalUtils.formatTimeSpan(sum / this.filteredData.length));
-                this.updatePercentiles();
+        this.stats.clientCount(this.clientIps.length.toLocaleString());
+        this.stats.httpRequestCount(this.filteredDataHttp.length.toLocaleString());
+        this.stats.tcpOperationCount(this.filteredDataTcp.length.toLocaleString());
+
+        if (!this.filteredDataHttp.length) {
+            this.httpStatsNotAvailable();
+        } else {
+            const filteredDataHttpNoWebSockets = this.filteredDataHttp.filter(x => x.ResponseStatusCode !== 101);
+            
+            if (filteredDataHttpNoWebSockets.length === 0) {
+                this.httpStatsNotAvailable();
             } else {
-                this.statsNotAvailable();
+                this.updateDurationStats(filteredDataHttpNoWebSockets);
+                this.updatePercentiles(filteredDataHttpNoWebSockets);
             }
         }
     }
     
-    private statsNotAvailable() {
+    private httpStatsNotAvailable(): void {
         this.stats.avg("N/A");
         this.stats.min("N/A");
         this.stats.max("N/A");
-        this.stats.count("0");
 
         this.stats.percentile_90("N/A");
         this.stats.percentile_99("N/A");
         this.stats.percentile_99_9("N/A");
     }
+
+    private updateDurationStats(data: Raven.Client.Documents.Changes.TrafficWatchHttpChange[]): void {
+        const firstItem = data[0];
+
+        let sum = 0;
+        let min = firstItem.ElapsedMilliseconds;
+        let max = firstItem.ElapsedMilliseconds;
+
+        for (let i = 0; i < data.length; i++) {
+            const item = data[i];
+
+            if (item.ElapsedMilliseconds < min) {
+                min = item.ElapsedMilliseconds;
+            }
+
+            if (item.ElapsedMilliseconds > max) {
+                max = item.ElapsedMilliseconds;
+            }
+
+            sum += item.ElapsedMilliseconds;
+        }
+
+        this.stats.min(generalUtils.formatTimeSpan(min, false));
+        this.stats.max(generalUtils.formatTimeSpan(max, false));
+        this.stats.avg(generalUtils.formatTimeSpan(sum / data.length));
+    }
     
-    private updatePercentiles() {
+    private updatePercentiles(data: Raven.Client.Documents.Changes.TrafficWatchHttpChange[]): void {
         const timings = [] as number[];
 
-        for (let i = this.filteredData.length - 1; i >= 0; i--) {
-            const item = this.filteredData[i];
-            if (!trafficWatch.isHttpItem(item)) {
-                continue;
-            }
-
-            if (item.ResponseStatusCode === 101) {
-                // it is websocket - don't include in stats
-                continue;
-            }
+        for (let i = data.length - 1; i >= 0; i--) {
+            const item = data[i];
 
             if (timings.length === 2048) {
                 // compute using max 2048 latest values
@@ -348,7 +362,9 @@ class trafficWatch extends viewModelBase {
     compositionComplete() {
         super.compositionComplete();
 
-        $('.traffic-watch [data-toggle="tooltip"]').tooltip();
+        $('.traffic-watch [data-toggle="tooltip"]').tooltip({
+            html: true
+        });
 
         const rowHighlightRules = (item: Raven.Client.Documents.Changes.TrafficWatchChangeBase) => {
             if (trafficWatch.isHttpItem(item)) {
@@ -472,9 +488,12 @@ class trafficWatch extends viewModelBase {
         
         if (textFilterDefined || filterUsingTypeHttp || filterUsingTypeTcp || filterUsingStatus) {
             this.filteredData = this.allData.filter(item => this.matchesFilters(item));
+            this.isDataFiltered(true);
         } else {
             this.filteredData = this.allData;
+            this.isDataFiltered(false);
         }
+        
         this.updateStats();
 
         return $.when({
@@ -551,6 +570,8 @@ class trafficWatch extends viewModelBase {
         eventsCollector.default.reportEvent("traffic-watch", "clear");
         this.allData = [];
         this.filteredData = [];
+        this.clientIps = [];
+        
         this.isBufferFull(false);
         this.clearTypeCounter();
         this.gridController().reset(true);

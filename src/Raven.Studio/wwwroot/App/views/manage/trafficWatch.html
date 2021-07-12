@@ -36,7 +36,6 @@
     <div class="flex-horizontal">
         <div class="flex-separator"></div>
         <div class="btn-group">
-
             <div class="btn-group btn-group-sm" role="group">
                 <div class="dropdown pull-right">
                     <button class="btn btn-default btn-sm dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
@@ -83,16 +82,29 @@
     <div class="panel margin-left margin-left-sm margin-right margin-right-sm">
         <div class="padding padding-lg margin-top margin-top-sm">
             <div class="row margin-top">
-                <div class="properties-container stats-container flex-horizontal padding padding-sm" data-label="Stats">
+                <div class="properties-container stats-container flex-horizontal padding padding-sm" data-label="General">
                     <div class="property">
-                        <h5><i class="icon-running-tasks"></i><span>Requests</span></h5>
-                        <strong data-bind="text: stats.count" class="stats-property"></strong>
+                        <h5><i class="icon-client"></i><span>Clients</span></h5>
+                        <strong data-bind="text: stats.clientCount" class="stats-property"></strong>
                     </div>
+                    <div class="property" data-toggle="tooltip" title="Number of HTTP requests <br> (including web sockets)" data-placement="top">
+                        <h5><i class="icon-running-tasks"></i><span>Http Requests</span></h5>
+                        <strong data-bind="text: stats.httpRequestCount" class="stats-property"></strong>
+                    </div>
+                    <div class="property">
+                        <h5><i class="icon-running-tasks"></i><span>TCP operations</span></h5>
+                        <strong data-bind="text: stats.tcpOperationCount" class="stats-property"></strong>
+                    </div>
+                </div>
+            </div>
+            <div class="row margin-top">
+                <div class="properties-container stats-container flex-horizontal padding padding-sm" data-label="Duration (HTTP)"
+                     data-toggle="tooltip" title="Requests duration info <br> (excluding web sockets)" data-placement="top">
                     <div class="property">
                         <h5><i class="icon-arrow-filled-down"></i><span>Minimum duration</span></h5>
                         <strong data-bind="text: stats.min" class="stats-property"></strong>
                     </div>
-                    <div class="property" data-toggle="tooltip" title="Average request duration (excluding web sockets)" data-placement="top">
+                    <div class="property">
                         <h5><i class="icon-average"></i><span>Average duration</span></h5>
                         <strong data-bind="text: stats.avg" class="stats-property"></strong>
                     </div>
@@ -103,7 +115,8 @@
                 </div>
             </div>
             <div class="row margin-top">
-                <div class="properties-container stats-container padding padding-sm" data-label="Percentiles" data-toggle="tooltip" title="Percentiles" data-placement="top">
+                <div class="properties-container stats-container padding padding-sm" data-label="Percentiles (HTTP)"
+                     data-toggle="tooltip" title="Percentiles info <br> (excluding web sockets)" data-placement="top">
                     <div class="property">
                         <h5>90%</h5>
                         <strong data-bind="text: stats.percentile_90"></strong>
@@ -116,6 +129,13 @@
                         <h5>99.9%</h5>
                         <strong data-bind="text: stats.percentile_99_9"></strong>
                     </div>
+                </div>
+            </div>
+            <div class="row" data-bind="visible: isDataFiltered">
+                <div class="properties-container pull-right">
+                    <small class="text-warning bg-warning padding padding-xs">
+                        <i class="icon-warning"></i><span>Showing stats on filtered data</span>
+                    </small>
                 </div>
             </div>
         </div>
