@@ -6,13 +6,14 @@ using Microsoft.AspNetCore.Http.Features.Authentication;
 using Raven.Client;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Server.Config;
-using Raven.Server.Config.Attributes;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using ConfigurationEntryScope = Raven.Server.Config.Attributes.ConfigurationEntryScope;
 
 namespace Raven.Server.Documents.Handlers.Admin
 {
@@ -70,6 +71,40 @@ namespace Raven.Server.Documents.Handlers.Admin
                     context.Write(writer, settingsResult.ToJson());
                 }
             }
+        }
+
+        //TODO
+        [RavenAction("/databases/*/admin/configuration/settings2", "GET", AuthorizationStatus.DatabaseAdmin, IsDebugInformationEndpoint = true)]
+        public async Task GetSettingForClient()
+        {
+            var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
+            DatabaseRecord databaseRecord;
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                var dbId = Constants.Documents.Prefix + Database.Name;
+                using (context.OpenReadTransaction())
+                using (var dbDoc = ServerStore.Cluster.Read(context, dbId, out long etag))
+                {
+                    if (dbDoc == null)
+                    {
+                        HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                        return;
+                    }
+
+                    databaseRecord = JsonDeserializationCluster.DatabaseRecord(dbDoc);
+                }
+            }
+
+            var response = new DatabaseConfigurationSettings() { Values = databaseRecord.Settings};
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    context.Write(writer, response.ToJson());
+                }
+            }
+
         }
 
         [RavenAction("/databases/*/admin/configuration/settings", "PUT", AuthorizationStatus.DatabaseAdmin)]
