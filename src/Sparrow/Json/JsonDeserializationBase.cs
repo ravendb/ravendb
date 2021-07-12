@@ -66,8 +66,11 @@ namespace Sparrow.Json
                 }
 
                 var propInit = new List<MemberBinding>();
-                foreach (var fieldInfo in typeof(T).GetFields())
+                foreach (var fieldInfo in typeof(T).GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
                 {
+                    if ((fieldInfo.IsPublic == false) && (fieldInfo.IsDefined(typeof(JsonDeserializationNoIgnoreAttribute)) == false))
+                        continue;
+
                     if (fieldInfo.IsStatic || fieldInfo.IsDefined(typeof(JsonDeserializationIgnoreAttribute)))
                         continue;
 
@@ -77,8 +80,12 @@ namespace Sparrow.Json
                     propInit.Add(Expression.Bind(fieldInfo, GetValue(fieldInfo.Name, fieldInfo.FieldType, fieldInfo.GetCustomAttributes().ToList(), json, vars)));
                 }
 
-                foreach (var propertyInfo in typeof(T).GetProperties())
+                foreach (var propertyInfo in typeof(T).GetProperties(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic |BindingFlags.Instance))
                 {
+                    if ((propertyInfo.GetGetMethod(true)?.IsPublic == false ) &&
+                        propertyInfo.IsDefined(typeof(JsonDeserializationNoIgnoreAttribute)) == false)
+                        continue;
+
                     if (propertyInfo.CanWrite == false || propertyInfo.IsDefined(typeof(JsonDeserializationIgnoreAttribute)))
                         continue;
 

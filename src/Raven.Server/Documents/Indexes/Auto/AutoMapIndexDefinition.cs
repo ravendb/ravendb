@@ -56,7 +56,7 @@ namespace Raven.Server.Documents.Indexes.Auto
             return indexDefinition;
         }
 
-        public override IndexDefinitionCompareDifferences Compare(IndexDefinitionBase other)
+        public override IndexDefinitionCompareDifferences Compare(IndexDefinitionBaseServerSide other)
         {
             var otherDefinition = other as AutoMapIndexDefinition;
             if (otherDefinition == null)

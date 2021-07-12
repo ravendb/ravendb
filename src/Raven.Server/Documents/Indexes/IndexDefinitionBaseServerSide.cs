@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
+using Newtonsoft.Json;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Extensions;
 using Raven.Server.ServerWide;
@@ -15,7 +16,7 @@ using Voron.Impl;
 
 namespace Raven.Server.Documents.Indexes
 {
-    public abstract class IndexDefinitionBase
+    public abstract class IndexDefinitionBaseServerSide
     {
         public string Name { get; protected set; }
 
@@ -28,6 +29,8 @@ namespace Raven.Server.Documents.Indexes
         public IndexPriority Priority { get; set; }
 
         public IndexState State { get; set; }
+
+        internal ClusterState _clusterState;
 
         public virtual bool HasDynamicFields => false;
 
@@ -115,7 +118,7 @@ namespace Raven.Server.Documents.Indexes
 
         protected internal abstract IndexDefinition GetOrCreateIndexDefinitionInternal();
 
-        public abstract IndexDefinitionCompareDifferences Compare(IndexDefinitionBase indexDefinition);
+        public abstract IndexDefinitionCompareDifferences Compare(IndexDefinitionBaseServerSide indexDefinition);
 
         public abstract IndexDefinitionCompareDifferences Compare(IndexDefinition indexDefinition);
 
@@ -136,7 +139,7 @@ namespace Raven.Server.Documents.Indexes
         }
     }
 
-    public abstract class IndexDefinitionBase<T> : IndexDefinitionBase where T : IndexFieldBase
+    public abstract class IndexDefinitionBaseServerSide<T> : IndexDefinitionBaseServerSide where T : IndexFieldBase
     {
         protected const string MetadataFileName = "metadata";
 
@@ -144,13 +147,14 @@ namespace Raven.Server.Documents.Indexes
         private long _indexVersion;
         private int? _cachedHashCode;
 
-        protected IndexDefinitionBase(string name, IEnumerable<string> collections, IndexLockMode lockMode, IndexPriority priority, IndexState state, T[] mapFields, long indexVersion)
+        protected IndexDefinitionBaseServerSide(string name, IEnumerable<string> collections, IndexLockMode lockMode, IndexPriority priority, IndexState state, T[] mapFields, long indexVersion, long? clusterIndexForState)
         {
             Name = name;
             Collections = new HashSet<string>(collections, StringComparer.OrdinalIgnoreCase);
 
             MapFields = new Dictionary<string, IndexFieldBase>(StringComparer.Ordinal);
             IndexFields = new Dictionary<string, IndexField>(StringComparer.Ordinal);
+            _clusterState = new ClusterState();
 
             foreach (var field in mapFields)
             {
@@ -171,9 +175,10 @@ namespace Raven.Server.Documents.Indexes
             Priority = priority;
             State = state;
             _indexVersion = indexVersion;
+            _clusterState.LastStateIndex = clusterIndexForState ?? 0;
         }
 
-        static IndexDefinitionBase()
+        static IndexDefinitionBaseServerSide()
         {
             using (StorageEnvironment.GetStaticContext(out var ctx))
             {

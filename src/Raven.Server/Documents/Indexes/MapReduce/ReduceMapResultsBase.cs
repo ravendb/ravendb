@@ -26,7 +26,7 @@ using Constants = Voron.Global.Constants;
 
 namespace Raven.Server.Documents.Indexes.MapReduce
 {
-    public abstract unsafe class ReduceMapResultsBase<T> : IIndexingWork where T : IndexDefinitionBase
+    public abstract unsafe class ReduceMapResultsBase<T> : IIndexingWork where T : IndexDefinitionBaseServerSide
     {
         private static readonly TimeSpan MinReduceDurationToCalculateProcessMemoryUsage = TimeSpan.FromSeconds(3);
         internal static readonly Slice PageNumberSlice;

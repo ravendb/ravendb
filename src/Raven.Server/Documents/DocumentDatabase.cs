@@ -1000,7 +1000,7 @@ namespace Raven.Server.Documents
                     case StorageEnvironmentWithType.StorageEnvironmentType.Index:
                         yield return new FullBackup.StorageEnvironmentInformation
                         {
-                            Name = IndexDefinitionBase.GetIndexNameSafeForFileSystem(storageEnvironmentWithType.Name),
+                            Name = IndexDefinitionBaseServerSide.GetIndexNameSafeForFileSystem(storageEnvironmentWithType.Name),
                             Folder = Constants.Documents.PeriodicBackup.Folders.Indexes,
                             Env = storageEnvironmentWithType.Environment
                         };

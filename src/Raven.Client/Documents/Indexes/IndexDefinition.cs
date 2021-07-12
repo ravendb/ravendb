@@ -15,27 +15,12 @@ namespace Raven.Client.Documents.Indexes
     /// <summary>
     /// A definition of a RavenIndex
     /// </summary>
-    public class IndexDefinition
+    public class IndexDefinition : IndexDefinitionBase
     {
         public IndexDefinition()
         {
             _configuration = new IndexConfiguration();
         }
-
-        /// <summary>
-        /// This is the means by which the outside world refers to this index definition
-        /// </summary>
-        public string Name { get; set; }
-
-        /// <summary>
-        /// Priority of an index
-        /// </summary>
-        public IndexPriority? Priority { get; set; }
-
-        /// <summary>
-        /// Index state
-        /// </summary>
-        public IndexState? State { get; set; }
 
         /// <summary>
         /// Index lock mode:
@@ -469,7 +454,8 @@ namespace Raven.Client.Documents.Indexes
                 OutputReduceToCollection = OutputReduceToCollection,
                 ReduceOutputIndex = ReduceOutputIndex,
                 PatternForOutputReduceToCollectionReferences = PatternForOutputReduceToCollectionReferences,
-                PatternReferencesCollectionName = PatternReferencesCollectionName
+                PatternReferencesCollectionName = PatternReferencesCollectionName,
+                _clusterState = (_clusterState == null) ? null : new ClusterState(_clusterState)
             };
 
             foreach (var kvp in _configuration)

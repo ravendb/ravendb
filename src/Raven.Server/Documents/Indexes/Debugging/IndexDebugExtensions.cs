@@ -320,7 +320,7 @@ namespace Raven.Server.Documents.Indexes.Debugging
             };
         }
 
-        private static string GetTreeName(BlittableJsonReaderObject reduceEntry, IndexDefinitionBase indexDefinition, JsonOperationContext context)
+        private static string GetTreeName(BlittableJsonReaderObject reduceEntry, IndexDefinitionBaseServerSide indexDefinition, JsonOperationContext context)
         {
             Dictionary<string, CompiledIndexField> groupByFields;
 

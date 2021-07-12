@@ -143,7 +143,7 @@ namespace Raven.Server.Smuggler.Documents
                     _batch = _database.IndexStore.CreateIndexBatch();
             }
 
-            public void WriteIndex(IndexDefinitionBase indexDefinition, IndexType indexType)
+            public void WriteIndex(IndexDefinitionBaseServerSide indexDefinition, IndexType indexType)
             {
                 if (_batch != null)
                 {

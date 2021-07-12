@@ -54,7 +54,7 @@ namespace SlowTests.Issues
                 Assert.Equal(path3, database.Configuration.Indexing.TempPath.FullPath);
 
                 var indexInstance = database.IndexStore.GetIndex(index.IndexName);
-                var safeName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(indexInstance.Name);
+                var safeName = IndexDefinitionBaseServerSide.GetIndexNameSafeForFileSystem(indexInstance.Name);
                 var tempPath = Path.Combine(path3, safeName);
 
                 Assert.True(Directory.Exists(tempPath));
@@ -91,7 +91,7 @@ namespace SlowTests.Issues
                     Assert.Equal(Path.Combine(path3, "Databases", store.Database), database.Configuration.Indexing.TempPath.FullPath);
 
                     var indexInstance = database.IndexStore.GetIndex(index.IndexName);
-                    var safeName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(indexInstance.Name);
+                    var safeName = IndexDefinitionBaseServerSide.GetIndexNameSafeForFileSystem(indexInstance.Name);
                     var tempPath = Path.Combine(path3, "Databases", store.Database, safeName);
 
                     Assert.True(Directory.Exists(tempPath));
