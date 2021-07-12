@@ -640,7 +640,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public async Task RavemDB_16982()
+        public async Task IndexDefinitionCompareState_RavenDB_16982()
         {
             var indexName = "SimpleIndex";
             using (var store = GetDocumentStore())
