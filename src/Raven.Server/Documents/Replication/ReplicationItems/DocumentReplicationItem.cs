@@ -163,16 +163,11 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                 var documentSize = *(int*)Reader.ReadExactly(sizeof(int));
                 if (documentSize != -1) //if -1, then this is a tombstone
                 {
-                    using (var read = stats.For(ReplicationOperation.Incoming.DocumentRead).Start())
-                    {
-                        read.RecordDocumentRead();
+                    var mem = Reader.AllocateMemory(documentSize);
+                    Reader.ReadExactly(mem, documentSize);
 
-                        var mem = Reader.AllocateMemory(documentSize);
-                        Reader.ReadExactly(mem, documentSize);
-
-                        Data = new BlittableJsonReaderObject(mem, documentSize, context);
-                        Data.BlittableValidation();
-                    }
+                    Data = new BlittableJsonReaderObject(mem, documentSize, context);
+                    Data.BlittableValidation();
                 }
                 else
                 {
