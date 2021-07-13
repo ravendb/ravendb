@@ -146,7 +146,7 @@ namespace Raven.Server.Documents.Indexes
                     catch (Exception e)
                     {
                         if (lazyIndex.IsValueCreated)
-                            lazyIndex.Value.Dispose(delete: true);
+                            DeleteIndexInternal(lazyIndex.Value, raiseNotification: true);
 
                         _documentDatabase.RachisLogIndexNotifications.NotifyListenersAbout(raftIndex, e);
 
