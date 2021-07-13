@@ -27,6 +27,5 @@ namespace Raven.Server.Documents.Sharding
 
             return result;
         }
-
     }
 }

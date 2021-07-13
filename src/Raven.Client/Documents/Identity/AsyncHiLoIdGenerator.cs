@@ -78,7 +78,7 @@ namespace Raven.Client.Documents.Identity
         /// </summary>
         /// <param name="entity">The entity.</param>
         /// <returns></returns>
-        public async Task<string> GenerateDocumentIdAsync(object entity)
+        public async Task<string> GenerateDocumentIdAsync()
         {
             var nextId = await NextIdAsync().ConfigureAwait(false);
             return GetDocumentIdFromId(nextId);
@@ -149,7 +149,7 @@ namespace Raven.Client.Documents.Identity
 
         public async Task ReturnUnusedRangeAsync()
         {
-            var returnCommand = new HiLoReturnCommand(_tag, Range.Current, Range.Max);
+            var returnCommand = new HiLoReturnCommand(_tag, Range.Current, Range.Max, ShardIndex);
 
             var re = _store.GetRequestExecutor(_dbName);
             using (re.ContextPool.AllocateOperationContext(out JsonOperationContext context))

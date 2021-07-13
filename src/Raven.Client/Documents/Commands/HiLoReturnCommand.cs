@@ -10,8 +10,9 @@ namespace Raven.Client.Documents.Commands
         private readonly string _tag;
         private readonly long _last;
         private readonly long _end;
+        private readonly int? _shardIndex;
 
-        public HiLoReturnCommand(string tag, long last, long end)
+        public HiLoReturnCommand(string tag, long last, long end, int? shardIndex = null)
         {
             if (last < 0)
                 throw new ArgumentOutOfRangeException(nameof(last));
@@ -21,11 +22,12 @@ namespace Raven.Client.Documents.Commands
             _tag = tag ?? throw new ArgumentNullException(nameof(tag));
             _last = last;
             _end = end;
+            _shardIndex = shardIndex;
         }
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
-            url = $"{node.Url}/databases/{node.Database}/hilo/return?tag={_tag}&end={_end}&last={_last}";
+            url = $"{node.Url}/databases/{node.Database}/hilo/return?tag={_tag}&end={_end}&last={_last}&shardIndex={_shardIndex}";
 
             return new HttpRequestMessage
             {
