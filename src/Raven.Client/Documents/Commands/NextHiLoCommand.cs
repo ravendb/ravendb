@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Net.Http;
+using System.Text;
 using Raven.Client.Documents.Identity;
 using Raven.Client.Http;
 using Raven.Client.Json.Serialization;
@@ -14,27 +15,37 @@ namespace Raven.Client.Documents.Commands
         private readonly DateTime _lastRangeAt;
         private readonly char _identityPartsSeparator;
         private readonly long _lastRangeMax;
+        private readonly int? _shardIndex;
 
-        public NextHiLoCommand(string tag, long lastBatchSize, DateTime lastRangeAt, char identityPartsSeparator, long lastRangeMax)
+        public NextHiLoCommand(string tag, long lastBatchSize, DateTime lastRangeAt, char identityPartsSeparator, long lastRangeMax, int? shardIndex)
         {
             _tag = tag ?? throw new ArgumentNullException(nameof(tag));
             _lastBatchSize = lastBatchSize;
             _lastRangeAt = lastRangeAt;
             _identityPartsSeparator = identityPartsSeparator;
             _lastRangeMax = lastRangeMax;
+            _shardIndex = shardIndex;
         }
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
-            var path = $"hilo/next?tag={Uri.EscapeDataString(_tag)}&lastBatchSize={_lastBatchSize}&lastRangeAt={_lastRangeAt:o}&identityPartsSeparator={Uri.EscapeDataString(_identityPartsSeparator.ToString())}&lastMax={_lastRangeMax}";
+            var pathBuilder = new StringBuilder();
 
-            var request = new HttpRequestMessage
+            pathBuilder.Append($"{node.Url}/databases/{node.Database}/hilo/next")
+                .Append($"?tag={Uri.EscapeDataString(_tag)}")
+                .Append($"&lastBatchSize={_lastBatchSize}")
+                .Append($"&lastRangeAt={_lastRangeAt: o}")
+                .Append($"&identityPartsSeparator={Uri.EscapeDataString(_identityPartsSeparator.ToString())}");
+
+            if (_shardIndex.HasValue == false)
+                pathBuilder.Append($"&lastMax={_lastRangeMax}");
+
+            url = pathBuilder.ToString();
+
+            return new HttpRequestMessage
             {
                 Method = HttpMethod.Get
             };
-
-            url = $"{node.Url}/databases/{node.Database}/" + path;
-            return request;
         }
 
         public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
