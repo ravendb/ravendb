@@ -13,7 +13,7 @@ namespace Raven.Client.Documents.Operations.Revisions
 
         public bool PurgeOnDelete { get; set; }
 
-        public int MaxRevisionsToDeleteUponDocumentUpdate { get; set; }
+        public int? MaxRevisionsToDeleteUponDocumentUpdate { get; set; }
 
         protected bool Equals(RevisionsCollectionConfiguration other)
         {
