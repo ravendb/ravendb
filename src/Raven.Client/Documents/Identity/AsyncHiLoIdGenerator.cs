@@ -131,7 +131,7 @@ namespace Raven.Client.Documents.Identity
 
         private async Task GetNextRangeAsync()
         {
-            var hiloCommand = new NextHiLoCommand(_tag, _lastBatchSize, _lastRangeDate, _identityPartsSeparator, Range.Max);
+            var hiloCommand = new NextHiLoCommand(_tag, _lastBatchSize, _lastRangeDate, _identityPartsSeparator, Range.Max, ShardIndex);
 
             var re = _store.GetRequestExecutor(_dbName);
             using (re.ContextPool.AllocateOperationContext(out JsonOperationContext context))
