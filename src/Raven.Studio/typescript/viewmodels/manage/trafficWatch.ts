@@ -45,7 +45,7 @@ class trafficWatch extends viewModelBase {
     private filteredDataHttp = [] as Raven.Client.Documents.Changes.TrafficWatchHttpChange[];
     private filteredDataTcp = [] as Raven.Client.Documents.Changes.TrafficWatchTcpChange[];
     
-    private clientIps: string[] = [];
+    private sourceIps: string[] = [];
 
     certificatesCache = new Map<string, certificateInfo>();
 
@@ -66,7 +66,7 @@ class trafficWatch extends viewModelBase {
     onlyErrors = ko.observable<boolean>(false);
 
     stats = {
-        clientCount: ko.observable<string>(),
+        sourceIpsCount: ko.observable<string>(),
         httpRequestCount: ko.observable<string>(),
         tcpOperationCount: ko.observable<string>(),
         min: ko.observable<string>(),
@@ -221,11 +221,11 @@ class trafficWatch extends viewModelBase {
     }
 
     private updateStats(): void {
-        this.clientIps = [];
+        this.sourceIps = [];
         
         this.filteredData.forEach(x => {
-            if (!_.includes(this.clientIps, x.ClientIP)) {
-                this.clientIps.push(x.ClientIP);
+            if (!_.includes(this.sourceIps, x.ClientIP)) {
+                this.sourceIps.push(x.ClientIP);
             }
         });
         
@@ -235,7 +235,7 @@ class trafficWatch extends viewModelBase {
         this.filteredDataTcp = this.filteredData.filter(x => trafficWatch.isTcpItem(x))
             .map(x => x as Raven.Client.Documents.Changes.TrafficWatchTcpChange);
 
-        this.stats.clientCount(this.clientIps.length.toLocaleString());
+        this.stats.sourceIpsCount(this.sourceIps.length.toLocaleString());
         this.stats.httpRequestCount(this.filteredDataHttp.length.toLocaleString());
         this.stats.tcpOperationCount(this.filteredDataTcp.length.toLocaleString());
 
@@ -570,7 +570,7 @@ class trafficWatch extends viewModelBase {
         eventsCollector.default.reportEvent("traffic-watch", "clear");
         this.allData = [];
         this.filteredData = [];
-        this.clientIps = [];
+        this.sourceIps = [];
         
         this.isBufferFull(false);
         this.clearTypeCounter();
