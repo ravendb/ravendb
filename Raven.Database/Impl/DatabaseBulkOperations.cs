@@ -148,6 +148,12 @@ namespace Raven.Database.Impl
                                     shouldWaitNow = true;
                                     break;
                                 }
+
+                                if (batchCount % 16 == 0 && duration.ElapsedMilliseconds > 5000)
+                                {
+                                    shouldWaitNow = true;
+                                    break;
+                                }
                             }
                         });
                     }
