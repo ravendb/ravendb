@@ -125,7 +125,7 @@ namespace Raven.Database.Actions
         {
             Stopwatch sp = null;
             var count = 0;
-
+            
             using (Database.DocumentLock.Lock())
             using (Database.TransactionalStorage.DisableBatchNesting())
             {
@@ -170,7 +170,7 @@ namespace Raven.Database.Actions
                         {
                             if (sp == null)
                                 sp = Stopwatch.StartNew();
-                            if (sp.Elapsed >= TimeSpan.FromSeconds(30))
+                            if (sp.Elapsed >= Database.Configuration.CheckReferenceBecauseOfDocumentUpdateTimeout)
                             {
                                 throw new TimeoutException("Early failure when checking references for document '" + key + "', we waited over 30 seconds to touch all of the documents referenced by this document.\r\n" +
                                                            "The operation (and transaction) has been aborted, since to try longer (we already touched " + count + " documents) risk a thread abort.\r\n" +
@@ -180,6 +180,9 @@ namespace Raven.Database.Actions
                     }
                 });
             }
+
+            if (sp != null)
+                Log.Info("Updated references for {0}, count: {1}, took: {2}", key, count, sp.ElapsedMilliseconds);
 
             return count;
         }
