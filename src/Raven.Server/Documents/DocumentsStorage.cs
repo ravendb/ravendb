@@ -1482,6 +1482,8 @@ namespace Raven.Server.Documents
 
                 if (tombstoneTable.IsOwned(local.Tombstone.StorageId))
                 {
+                    if (_logger.IsOperationsEnabled && local.Tombstone.Collection.ToString().Equals("executiontasks", StringComparison.OrdinalIgnoreCase))
+                        _logger.Operations($"{nameof(DocumentsStorage)}.{nameof(Delete)} TombstoneId:{local.Tombstone.LowerId} docId:{lowerId}, StorageId{local.Tombstone.StorageId}");
                     tombstoneTable.Delete(local.Tombstone.StorageId);
                 }
 
@@ -1800,6 +1802,9 @@ namespace Raven.Server.Documents
                     tvb.Add(cv.Content.Ptr, cv.Size);
                     tvb.Add(lastModifiedTicks);
                     table.Insert(tvb);
+
+                    if (_logger.IsOperationsEnabled && collectionName.Name.Equals("executiontasks", StringComparison.OrdinalIgnoreCase))
+                        _logger.Operations($"{nameof(CreateTombstone)} - doc:{{Id:{lowerId}, Etag:{documentEtag}}}, tombstone:{{Id:{nonConflictedLowerId}, Etag:{newEtag}}}");
                 }
             }
             catch (VoronConcurrencyErrorException e)
@@ -1921,7 +1926,8 @@ namespace Raven.Server.Documents
             public DocumentFlags Flags;
         }
 
-        public void DeleteWithoutCreatingTombstone(DocumentsOperationContext context, string collection, long storageId, bool isTombstone)
+        public void DeleteWithoutCreatingTombstone(DocumentsOperationContext context, string collection, long storageId, LazyStringValue oldVersionLowerId,
+            bool isTombstone)
         {
             // we delete the data directly, without generating a tombstone, because we have a
             // conflict instead
@@ -1937,6 +1943,8 @@ namespace Raven.Server.Documents
                 tx.OpenTable(TombstonesSchema, collectionName) :
                 tx.OpenTable(DocsSchema, collectionName);
 
+            if (_logger.IsOperationsEnabled && collection.Equals("executiontasks", StringComparison.OrdinalIgnoreCase))
+                _logger.Operations($"{nameof(DeleteWithoutCreatingTombstone)}, isTombstone:{isTombstone}, oldVersionId:{oldVersionLowerId} storageId:{storageId}");
             table.Delete(storageId);
         }
 

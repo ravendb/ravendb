@@ -357,7 +357,7 @@ namespace Raven.Server.Documents.Replication
             if (oldVersionCollectionName.Equals(conflict.Collection, StringComparison.OrdinalIgnoreCase))
                 return;
 
-            _database.DocumentsStorage.DeleteWithoutCreatingTombstone(ctx, oldVersionCollectionName, oldVersion.StorageId, isTombstone: false);
+            _database.DocumentsStorage.DeleteWithoutCreatingTombstone(ctx, oldVersionCollectionName, oldVersion.StorageId, oldVersion.LowerId, isTombstone: false);
         }
 
         public bool TryResolveConflictByScriptInternal(

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using Sparrow;
+using Sparrow.Logging;
 using Sparrow.Server;
 using Voron.Data.BTrees;
 using Voron.Data.Fixed;
@@ -16,6 +17,8 @@ namespace Voron.Data.Tables
 {
     public unsafe class Table : IDisposable
     {
+        private static readonly Logger _logger;
+
         private readonly bool _forGlobalReadsOnly;
         private readonly TableSchema _schema;
         private readonly Transaction _tx;
@@ -62,14 +65,17 @@ namespace Voron.Data.Tables
 
         private void OnDataMoved(long previousId, long newId, byte* data, int size)
         {
-#if DEBUG
             if (IsOwned(previousId) == false || IsOwned(newId) == false)
             {
-                VoronUnrecoverableErrorException.Raise(_tx.LowLevelTransaction,
-                    $"Cannot move data in section because the old ({previousId}) or new ({newId}) belongs to a different owner");
+                if (_logger.IsOperationsEnabled)
+                {
 
+                    _logger.Operations(
+                        $"Cannot move data in section because the old ({previousId}) or new ({newId}) belongs to a different owner. " +
+                        $"LastTxState: {_tx.LowLevelTransaction.GetTxState()} {_tx.LowLevelTransaction.Environment.Options.DataPager.FileName.FullPath}");
+                }
             }
-#endif
+
             var tvr = new TableValueReader(data, size);
             DeleteValueFromIndex(previousId, ref tvr);
             InsertIndexValuesFor(newId, ref tvr);

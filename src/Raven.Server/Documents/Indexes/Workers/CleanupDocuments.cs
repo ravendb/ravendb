@@ -48,13 +48,23 @@ namespace Raven.Server.Documents.Indexes.Workers
 
             foreach (var collection in _index.Collections)
             {
+                var shouldExtraLogs = _logger.IsOperationsEnabled && collection.Equals("executiontasks", StringComparison.OrdinalIgnoreCase);
+
                 using (var collectionStats = stats.For("Collection_" + collection))
                 {
                     var lastMappedEtag = _indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection);
                     var lastTombstoneEtag = _indexStorage.ReadLastProcessedTombstoneEtag(indexContext.Transaction, collection);
 
                     if (_logger.IsInfoEnabled)
-                        _logger.Info($"Executing cleanup for '{_index} ({_index.Name})'. Collection: {collection}. LastMappedEtag: {lastMappedEtag:#,#;;0}. LastTombstoneEtag: {lastTombstoneEtag:#,#;;0}.");
+                    {
+                        _logger.Info(
+                            $"Executing cleanup for '{_index} ({_index.Name})'. Collection: {collection}. LastMappedEtag: {lastMappedEtag:#,#;;0}. LastTombstoneEtag: {lastTombstoneEtag:#,#;;0}.");
+                    }
+                    else if (shouldExtraLogs)
+                    {
+                        _logger.Operations(
+                            $"Executing cleanup for '{_index} ({_index.Name})'. Collection: {collection}. LastMappedEtag: {lastMappedEtag:#,#;;0}. LastTombstoneEtag: {lastTombstoneEtag:#,#;;0}.");
+                    }
 
                     var inMemoryStats = _index.GetStats(collection);
                     var lastEtag = lastTombstoneEtag;
@@ -92,11 +102,19 @@ namespace Raven.Server.Documents.Indexes.Workers
                                 inMemoryStats.UpdateLastEtag(lastEtag, isTombstone: true);
 
                                 if (_logger.IsInfoEnabled && count % 2048 == 0)
+                                {
                                     _logger.Info($"Executing cleanup for '{_index.Name}'. Processed count: {count:#,#;;0} etag: {lastEtag}.");
+                                }
+                                else if (shouldExtraLogs)
+                                {
+                                    _logger.Operations($"Executing cleanup for '{_index.Name}'. Processed count: {count:#,#;;0} etag: {lastEtag}, tombstone.Type:{tombstone.Type}.");
+                                }
 
                                 if (tombstone.Type != Tombstone.TombstoneType.Document)
                                     continue; // this can happen when we have '@all_docs'
 
+                                if (shouldExtraLogs)
+                                    _logger.Operations($"{nameof(_index.HandleDelete)} - Id:{tombstone.LowerId}, DeletedEtag: {tombstone.DeletedEtag}, Etag: {tombstone.Etag}, ChangeVector: {tombstone.ChangeVector}");
                                 _index.HandleDelete(tombstone, collection, indexWriter, indexContext, collectionStats);
 
                                 if (CanContinueBatch(databaseContext, indexContext, collectionStats, indexWriter, lastEtag, lastCollectionEtag, batchCount) == false)
@@ -118,7 +136,15 @@ namespace Raven.Server.Documents.Indexes.Workers
                         continue;
 
                     if (_logger.IsInfoEnabled)
-                        _logger.Info($"Executing cleanup for '{_index} ({_index.Name})'. Processed {count} tombstones in '{collection}' collection in {collectionStats.Duration.TotalMilliseconds:#,#;;0} ms.");
+                    {
+                        _logger.Info(
+                            $"Executing cleanup for '{_index} ({_index.Name})'. Processed {count} tombstones in '{collection}' collection in {collectionStats.Duration.TotalMilliseconds:#,#;;0} ms.");
+                    }
+                    else if (shouldExtraLogs)
+                    {
+                        _logger.Operations(
+                            $"Executing cleanup for '{_index} ({_index.Name})'. Processed {count} tombstones in '{collection}' collection in {collectionStats.Duration.TotalMilliseconds:#,#;;0} ms.");
+                    }
 
                     if (_index.Type.IsMap())
                     {

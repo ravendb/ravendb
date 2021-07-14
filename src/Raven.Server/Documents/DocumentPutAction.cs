@@ -13,6 +13,7 @@ using Voron.Data.Tables;
 using System.Linq;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Exceptions;
+using Sparrow.Logging;
 using Raven.Client.Exceptions.Documents;
 using Sparrow.Server;
 using static Raven.Server.Documents.DocumentsStorage;
@@ -22,6 +23,7 @@ namespace Raven.Server.Documents
 {
     public unsafe class DocumentPutAction
     {
+        private static readonly Logger _logger = LoggingSource.Instance.GetLogger<DocumentPutAction>(nameof(DocumentPutAction));
         private readonly DocumentsStorage _documentsStorage;
         private readonly DocumentDatabase _documentDatabase;
 
@@ -582,6 +584,8 @@ namespace Raven.Server.Documents
 
                     if (tombstoneTable.IsOwned(tvh.Reader.Id))
                     {
+                        if(_logger.IsOperationsEnabled && collectionName.Name.Equals("executiontasks", StringComparison.OrdinalIgnoreCase))
+                            _logger.Operations($"{nameof(DeleteTombstoneIfNeeded)} tombstoneKey:{tombstoneKey} docId:{id}, storageId:{tvh.Reader.Id}");
                         tombstoneTable.Delete(tvh.Reader.Id);
                         return; // there could be only one tombstone per collection
                     }
