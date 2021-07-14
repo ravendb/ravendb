@@ -504,6 +504,8 @@ namespace Raven.Database.Config
 
         public TimeSpan TimeToWaitBeforeMarkingIdleIndexAsAbandoned { get; private set; }
 
+        public TimeSpan CheckReferenceBecauseOfDocumentUpdateTimeout { get; set; }
+
         private void CheckDirectoryPermissions()
         {
             var tempPath = TempPath;

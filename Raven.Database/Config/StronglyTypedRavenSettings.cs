@@ -232,6 +232,8 @@ namespace Raven.Database.Config
 
             TimeToWaitBeforeMarkingIdleIndexAsAbandoned = new TimeSpanSetting(settings["Raven/TimeToWaitBeforeMarkingIdleIndexAsAbandoned"], TimeSpan.FromHours(72), TimeSpanArgumentType.FromParse);
 
+            CheckReferenceBecauseOfDocumentUpdateTimeout = new TimeSpanSetting(settings["Raven/CheckReferenceBecauseOfDocumentUpdateTimeoutInSeconds"], TimeSpan.FromSeconds(30), TimeSpanArgumentType.FromParse);
+
             TimeToWaitBeforeRunningAbandonedIndexes = new TimeSpanSetting(settings["Raven/TimeToWaitBeforeRunningAbandonedIndexes"], TimeSpan.FromHours(3), TimeSpanArgumentType.FromParse);
 
             DisableClusterDiscovery = new BooleanSetting(settings["Raven/DisableClusterDiscovery"], false);
@@ -518,6 +520,8 @@ namespace Raven.Database.Config
         public TimeSpanSetting TimeToWaitBeforeMarkingAutoIndexAsIdle { get; private set; }
 
         public TimeSpanSetting TimeToWaitBeforeMarkingIdleIndexAsAbandoned { get; private set; }
+
+        public TimeSpanSetting CheckReferenceBecauseOfDocumentUpdateTimeout { get; private set; }
 
         public TimeSpanSetting TimeToWaitBeforeRunningAbandonedIndexes { get; private set; }
 

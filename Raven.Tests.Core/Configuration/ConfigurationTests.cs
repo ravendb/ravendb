@@ -231,6 +231,7 @@ namespace Raven.Tests.Core.Configuration
             configurationComparer.Assert(expected => expected.TimeToWaitBeforeRunningIdleIndexes.Value, actual => actual.TimeToWaitBeforeRunningIdleIndexes);
             configurationComparer.Assert(expected => expected.TimeToWaitBeforeRunningAbandonedIndexes.Value, actual => actual.TimeToWaitBeforeRunningAbandonedIndexes);
             configurationComparer.Assert(expected => expected.TimeToWaitBeforeMarkingIdleIndexAsAbandoned.Value, actual => actual.TimeToWaitBeforeMarkingIdleIndexAsAbandoned);
+            configurationComparer.Assert(expected => expected.CheckReferenceBecauseOfDocumentUpdateTimeout.Value, actual => actual.TimeToWaitBeforeMarkingIdleIndexAsAbandoned);
 
             configurationComparer.Assert(expected => expected.WebSockets.InitialBufferPoolSize.Value, actual => actual.WebSockets.InitialBufferPoolSize);
 
