@@ -4,6 +4,7 @@ using System.Text;
 using Raven.Client.Documents.Identity;
 using Raven.Client.Http;
 using Raven.Client.Json.Serialization;
+using Sparrow.Extensions;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
@@ -34,7 +35,7 @@ namespace Raven.Client.Documents.Commands
             pathBuilder.Append($"{node.Url}/databases/{node.Database}/hilo/next")
                 .Append($"?tag={Uri.EscapeDataString(_tag)}")
                 .Append($"&lastBatchSize={_lastBatchSize}")
-                .Append($"&lastRangeAt={_lastRangeAt: o}")
+                .Append($"&lastRangeAt={_lastRangeAt.GetDefaultRavenFormat()}")
                 .Append($"&identityPartsSeparator={Uri.EscapeDataString(_identityPartsSeparator.ToString())}");
 
             if (_shardIndex.HasValue == false)

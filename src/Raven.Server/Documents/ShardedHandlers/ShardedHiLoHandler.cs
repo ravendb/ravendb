@@ -1,12 +1,11 @@
 // -----------------------------------------------------------------------
-//  <copyright file="HiLoHandler.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="ShardedHiLoHandler.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
 
 using System;
 using System.Diagnostics;
-using System.Net;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Identity;
@@ -15,7 +14,6 @@ using Raven.Server.Documents.ShardedHandlers.ShardedCommands;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
