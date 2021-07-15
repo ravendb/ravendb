@@ -5,7 +5,7 @@
                 <div>
                     <button data-bind="click: addNode, enable: canAddNodes, visible: accessManager.canAddNode" class="btn btn-primary"><i class="icon-plus"></i><span>Add Node to cluster</span></button>
                     <button data-bind="click: bootstrapCluster, visible: canBootstrapCluster, css: { 'btn-spinner': $root.spinners.bootstrap }, disable: $root.spinners.bootstrap"
-                            class="btn btn-primary" title="Perform cluster initialization"><i class="icon-cluster"></i><span>Bootstrap cluster</span></button>    
+                            class="btn btn-primary" title="Perform cluster initialization"><i class="icon-cluster"></i><span>Bootstrap cluster</span></button>
                 </div>
                 <div class="flex-separator"></div>
                 <div class="flex-end text-muted resources" data-bind="if: utilizedCores() > 0, visible: accessManager.showCoresInfo">
@@ -31,7 +31,7 @@
                 <div class="panel panel-state">
                     <div data-bind="attr: { 'data-state-text': createStateObservable($root.topology), class: 'state ' + createStateClassObservable($root.topology)() } "></div>
                     <div class="padding flex-horizontal flex-wrap">
-                        <div class="info-container flex-horizontal">                  
+                        <div class="info-container flex-horizontal">
                                 <div class="node flex-grow">
                                     <h5>TAG</h5>
                                     <div class="flex-horizontal">
@@ -53,7 +53,7 @@
                                     <h3 data-bind="visible: $root.topology().leader() !== tag()">
                                         <i data-bind="attr: { class: cssIcon, title: type }" ></i> <span data-bind="text: type"></span>
                                     </h3>
-                                </div>                            
+                                </div>
                         </div>
                         <div class="actions-container flex-grow">
                             <div class="actions">
@@ -67,7 +67,6 @@
                                                    disable: _.includes($root.spinners.demote(), tag()), visible: createCanBeDemotedObservable($root.topology)" >
                                     <i class="icon-demote"></i> <span>Demote</span>
                                 </button>
-
                                 <div class="btn-group" data-bind="visible: $root.isOperatorOrAbove">
                                     <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" 
                                             data-bind="enable: connected() && !isPassive()">

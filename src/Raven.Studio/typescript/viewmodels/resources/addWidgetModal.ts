@@ -16,8 +16,7 @@ class addWidgetModal extends dialogViewModelBase {
             name: "Welcome Screen",
             type: "Welcome",
             icon: "welcome-icon"
-        },
-        {
+        }, {
             name: "License info",
             type: "License",
             icon: "text-icon"
@@ -34,25 +33,29 @@ class addWidgetModal extends dialogViewModelBase {
             icon: "graph-icon",
             type: "Indexing"
         }, {
+            name: "Indexing per Database",
+            icon: "list-icon",
+            type: "DatabaseIndexing"
+        }, {
             name: "Traffic",
             icon: "list-icon",
             type: "Traffic"
         }, {
-            name: "Indexing per database", 
+            name: "Traffic per Database",
             icon: "list-icon",
-            type: "DatabaseIndexing"
-        }, {
-            name: "Storage per database",
-            icon: "list-icon",
-            type: "DatabaseStorageUsage"
+            type: "DatabaseTraffic"
         }, {
             name: "Storage",
             icon: "chart-icon",
             type: "StorageUsage"
         }, {
-            name: "Traffic per database",
+            name: "Storage per Database",
             icon: "list-icon",
-            type: "DatabaseTraffic"
+            type: "DatabaseStorageUsage"
+        }, {
+            name: "Database Overview",
+            icon: "list-icon",
+            type: "DatabaseOverview"
         }
     ]
     
@@ -73,6 +76,15 @@ class addWidgetModal extends dialogViewModelBase {
             return;
         }
         this.onWidgetSelected(type);
+        this.close();
+    }
+
+    addAllWidgets() {
+        this.widgets.forEach(x => {
+           if (this.canAddWidget(x.type)) {
+               this.onWidgetSelected(x.type);
+           } 
+        });
         this.close();
     }
     
