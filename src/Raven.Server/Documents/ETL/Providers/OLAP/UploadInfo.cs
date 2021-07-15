@@ -4,6 +4,5 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
     {
         public string FileName;
         public string FolderName;
-        public string SafeFolderName;
     }
 }
