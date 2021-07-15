@@ -16,9 +16,13 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Sparrow.Server.Compression;
+using Sparrow.Threading;
 using Tests.Infrastructure;
 using Voron;
 using Voron.Data.CompactTrees;
+using Voron.Data.Sets;
+using Raven.Server.Documents.Queries.Parser;
+using Corax.Queries;
 
 namespace Tryouts
 {
@@ -133,45 +137,162 @@ namespace Tryouts
             }
         }
 
-        public static async Task Main(string[] args)
+        public static void Main()
         {
-            //CoraxEnron.Stats();
-            CoraxEnron.Index();
-            //LuceneEnron.Index();
-            //new SetTests(new ConsoleTestOutputHelper()).CanCreateSet();
-            //new ContainerTests(new ConsoleTestOutputHelper()).CanStoreMoreThanASinglePage();
-            //new IntegerEncodingTests(new ConsoleTestOutputHelper()).WriteVariableSizeIntegers();
-            //SyncMain();
+            var parser = new QueryParser();
+            parser.Init("from Dogs where Type = 'Dog' and Age = '15'");
+            QueryDefinition queryDefinition = new QueryDefinition("Name", parser.Parse());
+
+            using var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly());
+
+            GenerateData(env);
+            
+            using var indexSearcher = new IndexSearcher(env);
+
+            
+            var query = indexSearcher.Search(queryDefinition.Query.Where);
+
+            int i = 0;
+            //Span<long> ids = stackalloc long[128];
+            while (query.MoveNext(out long v))
+            {
+                //ids[i++] = v;
+                Console.WriteLine(indexSearcher.GetEntryById(v));
+            }
+
+            //new IndexSearcherTest(new ConsoleTestOutputHelper()).SimpleAndOr();
 
 
-            // var tests = new Encoder3GramTests();
-            // tests.VerifyOrderPreservation();
 
-            //CoraxEnron.Index(true, "Z:\\corax-d");
-            //LuceneEnron.IndexInLucene(true);
+            //using (var writer = new IndexWriter(env))
+            //{
+            //    using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            //    Slice.From(bsc, "Name", ByteStringType.Immutable, out var nameSlice);
+            //    Slice.From(bsc, "Family", ByteStringType.Immutable, out var familySlice);
+            //    Slice.From(bsc, "Age", ByteStringType.Immutable, out var ageSlice);
+            //    Slice.From(bsc, "Type", ByteStringType.Immutable, out var typeSlice);
 
-            //CoraxReddit.Index(true, "Z:\\corax");
-            //LuceneReddit.Index(true, "Z:\\corax");
-            //CoraxReddit.SearchExact("Z:\\corax");
-            //LuceneReddit.SearchExact("Z:\\corax");
+            //    Span<byte> buffer = new byte[256];
+            //    var fields = new Dictionary<Slice,int>
+            //    {
+            //        [nameSlice] = 0,
+            //        [familySlice] = 1,
+            //        [ageSlice] = 2,
+            //        [typeSlice] = 3
+            //    };
+
+            //    {
+            //        var entryWriter = new IndexEntryWriter(buffer, fields);
+            //        entryWriter.Write(0, Encoding.UTF8.GetBytes("Arava"));
+            //        entryWriter.Write(1, Encoding.UTF8.GetBytes("Eini"));
+            //        entryWriter.Write(2, BitConverter.GetBytes(12), 12L, 12D);
+            //        entryWriter.Write(3, Encoding.UTF8.GetBytes("Dog"));
+            //        entryWriter.Finish(out var entry);
+
+            //        writer.Index("dogs/arava", entry, fields);
+            //    }
+
+            //    {
+            //        var entryWriter = new IndexEntryWriter(buffer, fields);
+            //        entryWriter.Write(0, Encoding.UTF8.GetBytes("Phoebe"));
+            //        entryWriter.Write(1, Encoding.UTF8.GetBytes("Eini"));
+            //        entryWriter.Write(2, BitConverter.GetBytes(7), 7L, 7D);
+            //        entryWriter.Write(3, Encoding.UTF8.GetBytes("Dog"));
+            //        entryWriter.Finish(out var entry);
+
+            //        writer.Index("dogs/phoebe", entry, fields);
+            //    }
+
+            //    for (int i = 0; i < 10_000; i++)
+            //    {
+            //        var entryWriter = new IndexEntryWriter(buffer, fields);
+            //        entryWriter.Write(0, Encoding.UTF8.GetBytes("Dog #" + i));
+            //        entryWriter.Write(1, Encoding.UTF8.GetBytes("families/" + (i % 1024)));
+            //        var age = i % 17;
+            //        entryWriter.Write(2, BitConverter.GetBytes(age), age, age);
+            //        entryWriter.Write(3, Encoding.UTF8.GetBytes("Dog"));
+            //        entryWriter.Finish(out var entry);
+
+            //        writer.Index("dogs/" + i, entry, fields);
+            //    }
+
+            //    writer.Commit();
+            //}
+
 
             //using (var searcher = new IndexSearcher(env))
             //{
-            //    QueryOp q = new BinaryQuery(
-            //        new QueryOp[] {new TermQuery("Dogs", "Arava"), new TermQuery("Gender", "Male"),},
-            //        BitmapOp.And
-            //    );
-            //    using var ctx = JsonOperationContext.ShortTermSingleUse();
-            //    var results = searcher.Query(ctx, q, 2, "Name");
-
-            //    foreach (object result in results)
-            //    {
-            //        Console.WriteLine(result);
-            //    }
+            //    var termMatch = searcher.Search("from Dogs where Type = 'Dog' and Family = 'Eini'");
+            //    PrintIds(termMatch, searcher);
             //}
 
-            Console.WriteLine("Done");
-            //Console.ReadLine();
+        }
+
+        private static void GenerateData(StorageEnvironment env)
+        {
+            using (var writer = new IndexWriter(env))
+            {
+                using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+                Slice.From(bsc, "Name", ByteStringType.Immutable, out var nameSlice);
+                Slice.From(bsc, "Family", ByteStringType.Immutable, out var familySlice);
+                Slice.From(bsc, "Age", ByteStringType.Immutable, out var ageSlice);
+                Slice.From(bsc, "Type", ByteStringType.Immutable, out var typeSlice);
+
+                Span<byte> buffer = new byte[256];
+                var fields = new Dictionary<Slice, int> {[nameSlice] = 0, [familySlice] = 1, [ageSlice] = 2, [typeSlice] = 3};
+
+                {
+                    var entryWriter = new IndexEntryWriter(buffer, fields);
+                    entryWriter.Write(0, Encoding.UTF8.GetBytes("Arava"));
+                    entryWriter.Write(1, Encoding.UTF8.GetBytes("Eini"));
+                    //entryWriter.Write(2, BitConverter.GetBytes(12), 12L, 12D);
+                    entryWriter.Write(2, Encoding.UTF8.GetBytes(12L.ToString()), 12L, 12D);
+                    entryWriter.Write(3, Encoding.UTF8.GetBytes("Dog"));
+                    entryWriter.Finish(out var entry);
+
+                    writer.Index("dogs/arava", entry, fields);
+                }
+
+                {
+                    var entryWriter = new IndexEntryWriter(buffer, fields);
+                    entryWriter.Write(0, Encoding.UTF8.GetBytes("Phoebe"));
+                    entryWriter.Write(1, Encoding.UTF8.GetBytes("Eini"));
+                    //entryWriter.Write(2, BitConverter.GetBytes(7), 7L, 7D);
+                    entryWriter.Write(2, Encoding.UTF8.GetBytes(7.ToString()), 7L, 7D);
+                    entryWriter.Write(3, Encoding.UTF8.GetBytes("Dog"));
+                    entryWriter.Finish(out var entry);
+
+                    writer.Index("dogs/phoebe", entry, fields);
+                }
+
+                for (int i = 0; i < 10_000; i++)
+                {
+                    var entryWriter = new IndexEntryWriter(buffer, fields);
+                    entryWriter.Write(0, Encoding.UTF8.GetBytes("Dog #" + i));
+                    entryWriter.Write(1, Encoding.UTF8.GetBytes("families/" + (i % 1024)));
+                    var age = i % 17;
+                    //entryWriter.Write(2, BitConverter.GetBytes(age), age, age);
+                    entryWriter.Write(2, Encoding.UTF8.GetBytes(age.ToString()), age, age);
+                    entryWriter.Write(3, Encoding.UTF8.GetBytes("Dog"));
+                    entryWriter.Finish(out var entry);
+
+                    writer.Index("dogs/" + i, entry, fields);
+                }
+
+                writer.Commit();
+            }
+        }
+
+        private static void PrintIds(IIndexMatch termMatch, IndexSearcher searcher)
+        {
+            var list = new List<string>();
+            while (termMatch.MoveNext(out var id))
+            {
+                list.Add(searcher.GetEntryById(id));
+            }
+
+            Console.WriteLine(list.Count + " results");
+            Console.WriteLine(string.Join(", ", list.Take(16)));
         }
     }
 }

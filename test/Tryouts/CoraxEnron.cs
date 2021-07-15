@@ -247,7 +247,7 @@ namespace Tryouts
                     Console.WriteLine($"Indexing time: {justIndex}");
                     Console.WriteLine($"Total execution time: {ms}");
                     
-                    ReportStats(env);
+                    //ReportStats(env);
                 }
                 finally
                 {
@@ -260,6 +260,23 @@ namespace Tryouts
             }
         }
 
+        public static void Search(string field, string term)
+        {
+
+            var options = StorageEnvironmentOptions.ForPath(DirectoryEnron);
+            var env = new StorageEnvironment(options);
+
+            using (var searcher = new IndexSearcher(env))
+            {
+                var q = searcher.TermQuery(field, term);
+                while (q.MoveNext(out var id))
+                {
+                    Console.WriteLine(searcher.GetEntryById(id));
+                }
+            }
+
+        }
+        
         private readonly struct StringArrayIterator : IReadOnlySpanEnumerator
         {
             private readonly string[] _values;

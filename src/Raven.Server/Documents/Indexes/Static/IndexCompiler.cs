@@ -136,7 +136,7 @@ namespace Raven.Server.Documents.Indexes.Static
             SyntaxFactory.UsingDirective(SyntaxFactory.IdentifierName("Raven.Server.Documents.Indexes.Static.Extensions"))
         };
 
-        internal static readonly MetadataReference[] References =
+        public static readonly MetadataReference[] References =
         {
             CreateMetadataReferenceFromAssembly(typeof(object).Assembly),
             CreateMetadataReferenceFromAssembly(typeof(ExpressionType).Assembly),
@@ -154,7 +154,7 @@ namespace Raven.Server.Documents.Indexes.Static
             CreateMetadataReferenceFromAssembly(typeof(IPAddress).Assembly)
         };
 
-        private unsafe static MetadataReference CreateMetadataReferenceFromAssembly(Assembly assembly)
+        public static unsafe MetadataReference CreateMetadataReferenceFromAssembly(Assembly assembly)
         {
             assembly.TryGetRawMetadata(out var blob, out var length);
             var moduleMetadata = ModuleMetadata.CreateFromMetadata((IntPtr)blob, length);

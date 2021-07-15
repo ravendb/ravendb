@@ -208,8 +208,11 @@ namespace Voron.Data.Sets
                         throw new InvalidOperationException("Values not sorted");
                     prev = values[index];
 #endif
-                    if(leafPage.Add(_llt, values[index]))
+                    if (leafPage.Add(_llt, values[index]))
+                    {
+                        _state.NumberOfEntries++;
                         continue; // successfully added
+                    }
                     // we couldn't add to the page (but it fits, need to split)
                     var (separator, newPage) = SplitLeafPage(values[index]);
                     AddToParentPage(separator, newPage);
@@ -506,10 +509,13 @@ namespace Voron.Data.Sets
             {
                 _parent = parent;
                 Current = default;
-                _it = default;
+                _parent.FindPageFor(long.MinValue);
+                ref var state = ref _parent._stk[_parent._pos];
+                var leafPage = new SetLeafPage(state.Page);
+                _it = leafPage.GetIterator(_parent._llt);
             }
 
-            public bool Seek(long from)
+            public bool Seek(long from = long.MinValue)
             {
                 _parent.FindPageFor(from);
                 ref var state = ref _parent._stk[_parent._pos];
@@ -517,6 +523,9 @@ namespace Voron.Data.Sets
                 _it.Dispose();
 
                 _it = leafPage.GetIterator(_parent._llt);
+                if (from == long.MinValue)
+                    return true;
+
                 _it.SkipTo(from);
                 while (_it.MoveNext(out long v))
                 {

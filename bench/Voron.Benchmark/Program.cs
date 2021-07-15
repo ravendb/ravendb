@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using BenchmarkDotNet.Running;
 using Voron.Benchmark.BTree;
 using Constants = Voron.Global.Constants;
 
@@ -11,6 +12,7 @@ namespace Voron.Benchmark
     {
         public static void Main()
         {
+            BenchmarkRunner.Run<Corax.QueriesBenchmark>();
             //BenchmarkRunner.Run<BTree.BTreeFillRandom>();
             //BenchmarkRunner.Run<BTree.BTreeFillSequential>();
             //BenchmarkRunner.Run<BTree.BTreeReadAndIterate>();
@@ -20,21 +22,21 @@ namespace Voron.Benchmark
             //BenchmarkRunner.Run<Table.TableReadAndIterate>();
             //BenchmarkRunner.Run<Table.TableInsertRandom>();
 
-            Console.WriteLine("Size " + Constants.Storage.PageSize);
-            var list = new List<long>();
-            for (int i = 0; i < 3; i++)
-            {
-                var a = new BTreeFillRandom();
-                {
-                    a.Setup();
-                    var sp = Stopwatch.StartNew();
-                    a.FillRandomMultipleTransactions();
-                    list.Add(sp.ElapsedMilliseconds);
-                    Console.WriteLine(". " + sp.ElapsedMilliseconds);
-                    a.Cleanup();
-                }
-            }
-            Console.WriteLine($"Min {list.Min()} Max {list.Max()} Avg {list.Average()}");
+            //Console.WriteLine("Size " + Constants.Storage.PageSize);
+            //var list = new List<long>();
+            //for (int i = 0; i < 3; i++)
+            //{
+            //    var a = new BTreeFillRandom();
+            //    {
+            //        a.Setup();
+            //        var sp = Stopwatch.StartNew();
+            //        a.FillRandomMultipleTransactions();
+            //        list.Add(sp.ElapsedMilliseconds);
+            //        Console.WriteLine(". " + sp.ElapsedMilliseconds);
+            //        a.Cleanup();
+            //    }
+            //}
+            //Console.WriteLine($"Min {list.Min()} Max {list.Max()} Avg {list.Average()}");
         }
     }
 }

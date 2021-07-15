@@ -220,7 +220,7 @@ namespace Corax
                         // combine with existing value
                         var cur = 0L;
                         ZigZagEncoding.Decode<int>(smallSet, out var pos); // discard the first entry, the count
-                        while (smallSet.IsEmpty == false)
+                        while (pos < smallSet.Length)
                         {
                             var value = ZigZagEncoding.Decode<long>(smallSet, out var len, pos);
                             pos += len;
