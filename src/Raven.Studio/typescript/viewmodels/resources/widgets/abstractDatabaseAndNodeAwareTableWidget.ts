@@ -83,7 +83,7 @@ abstract class abstractDatabaseAndNodeAwareTableWidget<TRaw, TStats extends stat
         this.gridController().reset(false);
     }
 
-    private withStats(nodeTag: string, action: (stats: TStats) => void) {
+    private withStats(nodeTag: string, action: (stats: TStats) => void): void {
         const stats = this.nodeStats().find(x => x.tag === nodeTag);
         if (stats) {
             action(stats);
@@ -150,6 +150,7 @@ abstract class abstractDatabaseAndNodeAwareTableWidget<TRaw, TStats extends stat
         });
         
         const nodesPerDatabase = new Map<string, string[]>();
+        
         items.forEach(item => {
             const nodes = nodesPerDatabase.get(item.database) || [];
             nodes.push(item.nodeTag);
@@ -171,13 +172,19 @@ abstract class abstractDatabaseAndNodeAwareTableWidget<TRaw, TStats extends stat
         });
 
         this.sortGridData(items);
-
+        
+        this.manageItems(items);
+        
         this.applyPerDatabaseStripes(items);
 
         return $.when({
             totalResultCount: items.length,
             items
         });
+    }
+
+    protected manageItems(items: TTableItem[]): void {
+         // optional - implement in child class
     }
     
     protected abstract generateLocalLink(database: string): string;
