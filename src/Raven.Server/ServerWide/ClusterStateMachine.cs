@@ -1397,11 +1397,10 @@ namespace Raven.Server.ServerWide
                     }
 
                     bool shouldSetClientConfigEtag;
-                    var dbId = Constants.Documents.Prefix + addDatabaseCommand.Name;
-                    using (var oldDatabaseRecord = Read(context, dbId, out _))
+                    using (var oldDatabaseRecord = ReadRawDatabaseRecord(context, addDatabaseCommand.Name))
                     {
-                        VerifyUnchangedTasks(oldDatabaseRecord);
-                        shouldSetClientConfigEtag = ShouldSetClientConfigEtag(newDatabaseRecord, oldDatabaseRecord);
+                        VerifyUnchangedTasks(oldDatabaseRecord?.Raw);
+                        shouldSetClientConfigEtag = ShouldSetClientConfigEtag(newDatabaseRecord, oldDatabaseRecord?.Raw);
                     }
 
                     using (var databaseRecordAsJson = UpdateDatabaseRecordIfNeeded(databaseExists, shouldSetClientConfigEtag, index, addDatabaseCommand, newDatabaseRecord, context))
@@ -1492,7 +1491,7 @@ namespace Raven.Server.ServerWide
                 UpdatePeriodicBackups();
             }
 
-            if (addDatabaseCommand.Record.Topology.Stamp == null)
+            if (TopologyChanged())
             {
                 addDatabaseCommand.Record.Topology.Stamp = new LeaderStamp
                 {
@@ -1506,6 +1505,19 @@ namespace Raven.Server.ServerWide
             return hasChanges
                 ? EntityToBlittable.ConvertCommandToBlittable(addDatabaseCommand.Record, context)
                 : newDatabaseRecord;
+
+            bool TopologyChanged()
+            {
+                if (databaseExists == false)
+                    return true;
+
+                if (addDatabaseCommand.Record.Topology.Stamp == null)
+                    return true;
+
+                var topology = ReadDatabaseTopology(context, addDatabaseCommand.Name);
+
+                return topology.AllNodes.SequenceEqual(addDatabaseCommand.Record.Topology.AllNodes) == false;
+            }
 
             void UpdatePeriodicBackups()
             {
@@ -1535,15 +1547,23 @@ namespace Raven.Server.ServerWide
         {
             const string clientPropName = nameof(DatabaseRecord.Client);
             var hasNewConfiguration = newDatabaseRecord.TryGet(clientPropName, out BlittableJsonReaderObject newDbClientConfig) && newDbClientConfig != null;
+
             if (oldDatabaseRecord == null)
                 return hasNewConfiguration;
+
+            var hasOldConfiguration = oldDatabaseRecord.TryGet(clientPropName, out BlittableJsonReaderObject oldDbClientConfig)
+                && oldDbClientConfig != null;
+
+            if (hasNewConfiguration != hasOldConfiguration)
+                return true;
+
+            if (oldDbClientConfig == null && newDbClientConfig == null)
+                return false;
 
             if (hasNewConfiguration == false)
                 return true;
 
-            return oldDatabaseRecord.TryGet(clientPropName, out BlittableJsonReaderObject oldDbClientConfig) == false
-                   || oldDbClientConfig == null
-                   || oldDbClientConfig.Equals(newDbClientConfig) == false;
+            return oldDbClientConfig.Equals(newDbClientConfig) == false;
         }
 
         private static void SetDatabaseValues(
