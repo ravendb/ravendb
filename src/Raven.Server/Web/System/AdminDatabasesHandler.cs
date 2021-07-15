@@ -186,7 +186,13 @@ namespace Raven.Server.Web.System
                 }
 
                 databaseRecord.Topology.ReplicationFactor++;
-                var (newIndex, _) = await ServerStore.WriteDatabaseRecordAsync(name, databaseRecord, index, raftRequestId);
+
+                var update = new UpdateTopologyCommand(name, raftRequestId)
+                {
+                    Topology = databaseRecord.Topology
+                };
+
+                var (newIndex, _) = await ServerStore.SendToLeaderAsync(update);
 
                 try
                 {
