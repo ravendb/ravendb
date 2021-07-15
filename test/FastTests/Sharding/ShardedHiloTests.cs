@@ -88,13 +88,13 @@ namespace FastTests.Sharding
                 var hiLoKeyGenerator = new AsyncHiLoIdGenerator("users", (DocumentStore)store, store.Database,
                     store.Conventions.IdentityPartsSeparator);
 
-                var docId = await hiLoKeyGenerator.GenerateDocumentIdAsync();
+                var docId = await hiLoKeyGenerator.GenerateDocumentIdAsync(null);
                 Assert.True(docId.StartsWith("users/33"));
                 var ids = new HashSet<string> { docId };
 
                 for (int i = 0; i < 128; i++)
                 {
-                    var nextId = await hiLoKeyGenerator.GenerateDocumentIdAsync();
+                    var nextId = await hiLoKeyGenerator.GenerateDocumentIdAsync(null);
                     Assert.True(ids.Add(nextId), "Failed at " + i);
                 }
 
@@ -213,7 +213,7 @@ namespace FastTests.Sharding
                     store.Conventions.IdentityPartsSeparator);
 
                 for (var i = 0; i < 32; i++)
-                    await hiLoKeyGenerator.GenerateDocumentIdAsync();
+                    await hiLoKeyGenerator.GenerateDocumentIdAsync(null);
 
                 int? hiloShardIndex = null;
                 var maxValues = new long[numOfShards];
@@ -255,7 +255,7 @@ namespace FastTests.Sharding
                 Assert.True(hiloShardIndex.HasValue);
 
                 //we should be receiving a range of 64 now
-                await hiLoKeyGenerator.GenerateDocumentIdAsync();
+                await hiLoKeyGenerator.GenerateDocumentIdAsync(null);
 
                 hiloShardIndex = null;
                 for (int i = 0; i < numOfShards; i++)

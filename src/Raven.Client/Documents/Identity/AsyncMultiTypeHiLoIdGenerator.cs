@@ -48,14 +48,14 @@ namespace Raven.Client.Documents.Identity
             var tag = Conventions.TransformTypeCollectionNameToDocumentIdPrefix(typeTagName);
             if (_idGeneratorsByTag.TryGetValue(tag, out var value))
             {
-                return await value.GenerateDocumentIdAsync().ConfigureAwait(false);
+                return await value.GenerateDocumentIdAsync(entity).ConfigureAwait(false);
             }
 
             await _generatorLock.WaitAsync().ConfigureAwait(false);
             try
             {
                 if (_idGeneratorsByTag.TryGetValue(tag, out value))
-                    return await value.GenerateDocumentIdAsync().ConfigureAwait(false);
+                    return await value.GenerateDocumentIdAsync(entity).ConfigureAwait(false);
 
                 value = CreateGeneratorFor(tag);
                 _idGeneratorsByTag.TryAdd(tag, value);
@@ -65,7 +65,7 @@ namespace Raven.Client.Documents.Identity
                 _generatorLock.Release();
             }
 
-            return await value.GenerateDocumentIdAsync().ConfigureAwait(false);
+            return await value.GenerateDocumentIdAsync(entity).ConfigureAwait(false);
         }
 
         private async Task MaybeRefresh(char identityPartsSeparator)

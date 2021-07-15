@@ -78,7 +78,7 @@ namespace Raven.Client.Documents.Identity
         /// </summary>
         /// <param name="entity">The entity.</param>
         /// <returns></returns>
-        public async Task<string> GenerateDocumentIdAsync()
+        public async Task<string> GenerateDocumentIdAsync(object entity)
         {
             var nextId = await NextIdAsync().ConfigureAwait(false);
             return GetDocumentIdFromId(nextId);

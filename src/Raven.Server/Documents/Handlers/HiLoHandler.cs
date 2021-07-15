@@ -100,9 +100,6 @@ namespace Raven.Server.Documents.Handlers
             public string Prefix;
             public long OldMax;
 
-            private const string Max = "Max";
-
-
             protected override long ExecuteCmd(DocumentsOperationContext context)
             {
                 var hiLoDocumentId = RavenHiloIdPrefix + Key;
@@ -127,7 +124,7 @@ namespace Raven.Server.Documents.Handlers
                         var newDoc = new DynamicJsonValue();
 
                         OldMax = LastRangeMax;
-                        newDoc[Max] = OldMax + Capacity;
+                        newDoc[nameof(HiloDocument.Max)] = OldMax + Capacity;
                         newDoc[Constants.Documents.Metadata.Key] = new DynamicJsonValue
                         {
                             [Constants.Documents.Metadata.Collection] = CollectionName.HiLoCollection
@@ -138,12 +135,12 @@ namespace Raven.Server.Documents.Handlers
                     }
                     else
                     {
-                        hiloDocReader.TryGet(Max, out long oldMax);
+                        hiloDocReader.TryGet(nameof(HiloDocument.Max), out long oldMax);
                         OldMax = Math.Max(oldMax, LastRangeMax);
 
                         hiloDocReader.Modifications = new DynamicJsonValue(hiloDocReader)
                         {
-                            [Max] = OldMax + Capacity
+                            [nameof(HiloDocument.Max)] = OldMax + Capacity
                         };
 
                         using (var freshHilo = context.ReadObject(hiloDocReader, hiLoDocumentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
@@ -209,13 +206,13 @@ namespace Raven.Server.Documents.Handlers
                 if (document == null)
                     return 1;
 
-                document.Data.TryGet("Max", out long oldMax);
+                document.Data.TryGet(nameof(HiloDocument.Max), out long oldMax);
                 if (oldMax != End || Last > oldMax)
                     return 1;
 
                 document.Data.Modifications = new DynamicJsonValue
                 {
-                    ["Max"] = Last
+                    [nameof(HiloDocument.Max)] = Last
                 };
 
                 using (var hiloReader = context.ReadObject(document.Data, hiLoDocumentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk))

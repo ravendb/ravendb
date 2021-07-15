@@ -18,13 +18,18 @@ namespace Raven.Client.Documents.Commands
         private readonly long _lastRangeMax;
         private readonly int? _shardIndex;
 
-        public NextHiLoCommand(string tag, long lastBatchSize, DateTime lastRangeAt, char identityPartsSeparator, long lastRangeMax, int? shardIndex)
+        public NextHiLoCommand(string tag, long lastBatchSize, DateTime lastRangeAt, char identityPartsSeparator, long lastRangeMax)
         {
             _tag = tag ?? throw new ArgumentNullException(nameof(tag));
             _lastBatchSize = lastBatchSize;
             _lastRangeAt = lastRangeAt;
             _identityPartsSeparator = identityPartsSeparator;
             _lastRangeMax = lastRangeMax;
+        }
+
+        public NextHiLoCommand(string tag, long lastBatchSize, DateTime lastRangeAt, char identityPartsSeparator, long lastRangeMax, int? shardIndex) 
+            : this(tag, lastBatchSize, lastRangeAt, identityPartsSeparator, lastRangeMax)
+        {
             _shardIndex = shardIndex;
         }
 
@@ -32,11 +37,17 @@ namespace Raven.Client.Documents.Commands
         {
             var pathBuilder = new StringBuilder();
 
-            pathBuilder.Append($"{node.Url}/databases/{node.Database}/hilo/next")
-                .Append($"?tag={Uri.EscapeDataString(_tag)}")
-                .Append($"&lastBatchSize={_lastBatchSize}")
-                .Append($"&lastRangeAt={_lastRangeAt.GetDefaultRavenFormat()}")
-                .Append($"&identityPartsSeparator={Uri.EscapeDataString(_identityPartsSeparator.ToString())}");
+            pathBuilder.Append(node.Url)
+                    .Append("/databases/")
+                    .Append(node.Database)
+                    .Append("/hilo/next?tag=")
+                    .Append(Uri.EscapeDataString(_tag))
+                    .Append("&lastBatchSize=")
+                    .Append(_lastBatchSize)
+                    .Append("&lastRangeAt=")
+                    .Append(_lastRangeAt.GetDefaultRavenFormat())
+                    .Append("&identityPartsSeparator=")
+                    .Append(Uri.EscapeDataString(_identityPartsSeparator.ToString()));
 
             if (_shardIndex.HasValue == false)
                 pathBuilder.Append($"&lastMax={_lastRangeMax}");
