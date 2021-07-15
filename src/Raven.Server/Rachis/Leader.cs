@@ -856,6 +856,19 @@ namespace Raven.Server.Rachis
 
                         foreach (var entry in _entries)
                         {
+                            if (entry.Value.OnNotify != null)
+                            {
+                                try
+                                {
+                                    entry.Value.OnNotify(entry.Value.TaskCompletionSource);
+                                }
+                                catch (Exception e)
+                                {
+                                    entry.Value.TaskCompletionSource.TrySetException(e);
+                                    continue;
+                                }
+                            }
+
                             if (te == null)
                             {
                                 entry.Value.TaskCompletionSource.TrySetCanceled();
