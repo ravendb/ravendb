@@ -965,30 +965,25 @@ namespace Raven.Client.Http
             var refreshTopology = response.GetBoolHeader(Constants.Headers.RefreshTopology) ?? false;
             var refreshClientConfiguration = response.GetBoolHeader(Constants.Headers.RefreshClientConfiguration) ?? false;
 
-            if (refreshTopology || refreshClientConfiguration)
+            var refreshTask = Task.CompletedTask;
+            var refreshClientConfigurationTask = Task.CompletedTask;
+
+            if (refreshTopology)
             {
-                var tasks = new Task[2];
-
-                tasks[0] = refreshTopology
-                    ? UpdateTopologyAsync(new UpdateTopologyParameters(new ServerNode
+                refreshTask = UpdateTopologyAsync(
+                    new UpdateTopologyParameters(chosenNode)
                     {
-                        Url = chosenNode.Url,
-                        Database = _databaseName
-                    })
-                    {
-                        TimeoutInMs = 0,
+                        TimeoutInMs = 0, 
                         DebugTag = "refresh-topology-header"
-                    })
-                    : Task.CompletedTask;
-
-                tasks[1] = refreshClientConfiguration
-                    ? UpdateClientConfigurationAsync(chosenNode)
-                    : Task.CompletedTask;
-
-                return Task.WhenAll(tasks);
+                    });
             }
 
-            return Task.CompletedTask;
+            if (refreshClientConfiguration)
+            {
+                refreshClientConfigurationTask = UpdateClientConfigurationAsync(chosenNode);
+            }
+
+            return Task.WhenAll(refreshTask, refreshClientConfigurationTask);
         }
 
         private async Task<HttpResponseMessage> SendRequestToServer<TResult>(

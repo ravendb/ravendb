@@ -758,8 +758,8 @@ namespace RachisTests.DatabaseCluster
                     await session.SaveChangesAsync();
                 }
                 Assert.True(await WaitForDocumentInClusterAsync<User>(doc.Topology, databaseName, "users/1", u => u.Name == "Karmel", TimeSpan.FromSeconds(5)));
-                DisposeServerAndWaitForFinishOfDisposal(Servers[1]);
-                DisposeServerAndWaitForFinishOfDisposal(Servers[2]);
+                await DisposeServerAndWaitForFinishOfDisposalAsync(Servers[1]);
+                await DisposeServerAndWaitForFinishOfDisposalAsync(Servers[2]);
 
                 // the db should move to D & E
                 var newTopology = new DatabaseTopology();
