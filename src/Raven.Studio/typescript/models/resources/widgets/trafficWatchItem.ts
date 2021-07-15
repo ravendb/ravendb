@@ -10,6 +10,7 @@ class trafficWatchItem implements databaseAndNodeAwareStats {
     
     hideDatabaseName: boolean;
     even: boolean = false;
+    isCommonItem: boolean = false;
     
     constructor(nodeTag: string, data: Raven.Server.Dashboard.TrafficWatchItem) {
         this.nodeTag = nodeTag;
@@ -31,7 +32,6 @@ class trafficWatchItem implements databaseAndNodeAwareStats {
         item.database = database;
         return item;
     }
-    
 }
 
 export = trafficWatchItem;

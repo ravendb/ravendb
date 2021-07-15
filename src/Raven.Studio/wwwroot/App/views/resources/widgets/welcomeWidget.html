@@ -1,11 +1,12 @@
 <div>
     <div class="cluster-dashboard-item-header">
         <h3> <i class="icon-coffee"></i> <span>Let's get started</span></h3>
-        <button class="btn btn-warning btn-sm" data-bind="click: remove">
+        <button class="btn btn-warning btn-sm" data-bind="click: remove" title="Remove widget from board">
             <i class="icon-trash"></i>
         </button>
         <button class="btn btn-default btn-sm" data-bind="click: toggleFullscreen">
-            <i data-bind="css: { 'icon-fullscreen': !fullscreen(), 'icon-exit-fullscreen': fullscreen }"></i>
+            <i data-bind="css: { 'icon-fullscreen': !fullscreen(), 'icon-exit-fullscreen': fullscreen },
+                          attr: { title: fullscreen() ? 'Minimize widget' : 'Maximize widget' }"></i>
         </button>
     </div>
     <div class="property-container padding padding-lg">

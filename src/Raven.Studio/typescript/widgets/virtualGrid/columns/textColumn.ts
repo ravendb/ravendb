@@ -167,7 +167,6 @@ class textColumn<T> implements virtualColumn {
             serializedValue: this.valueAccessor.toString()
         }
     }
-
 }
 
 export = textColumn;

@@ -16,6 +16,7 @@ import welcomeWidget = require("viewmodels/resources/widgets/welcomeWidget");
 import databaseIndexingWidget = require("viewmodels/resources/widgets/databaseIndexingWidget");
 import databaseStorageWidget = require("viewmodels/resources/widgets/databaseStorageWidget");
 import databaseTrafficWidget = require("viewmodels/resources/widgets/databaseTrafficWidget");
+import databaseOverviewWidget = require("viewmodels/resources/widgets/databaseOverviewWidget");
 import storageKeyProvider = require("common/storage/storageKeyProvider");
 
 interface savedWidgetsLayout {
@@ -135,7 +136,7 @@ class clusterDashboard extends viewModelBase {
         
         const rules = nodes.map((node, idx) => {
             const color = clusterDashboard.nodeColors[idx % clusterDashboard.nodeColors.length];
-            return `.node-${node.tag()} { --node-color: ${color}; } `; 
+            return `.node-${node.tag()} { --node-color: ${color}; } `;
         });
         
         styles.innerHTML = rules.join(" ");
@@ -164,7 +165,7 @@ class clusterDashboard extends viewModelBase {
                     awaitClusterInit.dispose();
                     
                     setTimeout(() => {
-                        this.initDashboard();    
+                        this.initDashboard();
                     }, 500);
                 }
             });
@@ -242,6 +243,7 @@ class clusterDashboard extends viewModelBase {
             this.addWidget(new licenseWidget(this));
             this.addWidget(new databaseStorageWidget(this));
             this.addWidget(new welcomeWidget(this));
+            this.addWidget(new databaseOverviewWidget(this));
             
             const initialWidgets = this.widgets();
             
@@ -412,6 +414,9 @@ class clusterDashboard extends viewModelBase {
                 break;
             case "DatabaseTraffic":
                 widget = new databaseTrafficWidget(this);
+                break;
+            case "DatabaseOverview":
+                widget = new databaseOverviewWidget(this);
                 break;
             default:
                 throw new Error("Unsupported widget type = " + type);

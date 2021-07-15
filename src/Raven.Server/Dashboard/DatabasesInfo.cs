@@ -69,6 +69,8 @@ namespace Raven.Server.Dashboard
         public long IndexingErrorsCount { get; set; }
 
         public BackupInfo BackupInfo { get; set; }
+        
+        public long OngoingTasksCount { get; set; }
 
         public DynamicJsonValue ToJson()
         {
@@ -85,7 +87,8 @@ namespace Raven.Server.Dashboard
                 [nameof(BackupInfo)] = BackupInfo?.ToJson(),
                 [nameof(Online)] = Online,
                 [nameof(Disabled)] = Disabled,
-                [nameof(Irrelevant)] = Irrelevant
+                [nameof(Irrelevant)] = Irrelevant,
+                [nameof(OngoingTasksCount)] = OngoingTasksCount
             };
         }
     }
