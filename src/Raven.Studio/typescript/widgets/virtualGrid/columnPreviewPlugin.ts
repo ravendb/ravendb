@@ -18,7 +18,7 @@ class columnPreviewPlugin<T> {
     private static readonly delay = 500;
     private static readonly enterTooltipDelay = 100;
     
-    private static defaultMarkupProvider(value: any, isValueHtml: boolean = false) {
+    private static defaultMarkupProvider(value: any, wrapValue: boolean = true) {
         const copySyntax = '<button class="btn btn-default btn-sm copy"><i class="icon-copy"></i><span>Copy to clipboard</span></button>';
         
         if (moment.isMoment(value)) { // value instanceof moment isn't reliable 
@@ -39,14 +39,14 @@ class columnPreviewPlugin<T> {
                         </div>
                     </div>` + copySyntax;
         } else {
-            return isValueHtml ? `${value}${copySyntax}` :
-                                 `<pre><code class="white-space-pre">${value}</code></pre>${copySyntax}`;
+            return wrapValue ? `<pre><code class="white-space-pre">${value}</code></pre>${copySyntax}` :
+                               `${value}${copySyntax}`;
         }
     }
 
     install(containerSelector: string, tooltipSelector: string,
             previewContextProvider: (item: T, column: virtualColumn, event: JQueryEventObject,
-                                     onValueProvided: (value: any, valueToCopy?: any, isValueHtml?: boolean) => void) => void) {
+                                     onValueProvided: (value: any, valueToCopy?: any, wrapValue?: boolean) => void) => void) {
         const $grid = $(containerSelector + " .virtual-grid");
         const grid = ko.dataFor($grid[0]) as virtualGrid<T>;
         if (!grid || !(grid instanceof virtualGrid)) {
@@ -73,8 +73,8 @@ class columnPreviewPlugin<T> {
                 if (document.body.contains(e.target)) {
                     this.previewVisible = true;
 
-                    previewContextProvider(element, column, e, (value, valueToCopy, isValueHtml) => {
-                        const markup = markupProvider(value, isValueHtml);
+                    previewContextProvider(element, column, e, (value, valueToCopy, wrapValue) => {
+                        const markup = markupProvider(value, wrapValue);
                         this.show(markup, e);
                         this.currentValue = _.isUndefined(valueToCopy) ? value : valueToCopy;
                     });

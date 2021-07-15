@@ -310,9 +310,9 @@ class trafficWatch extends viewModelBase {
                  </div>`);
         } else {
             if (cert) {
-                return "Source: " + item.ClientIP + ", Certificate Name = " + certName + ", Certificate Thumbprint =  " + thumbprint;
+                return `Source: ${item.ClientIP}, Certificate Name = ${generalUtils.escapeHtml(certName)}, Certificate Thumbprint = ${thumbprint}`;
             }
-            return "Source: " + item.ClientIP;
+            return `Source: ${item.ClientIP}`;
         }
     }
 
@@ -353,74 +353,67 @@ class trafficWatch extends viewModelBase {
         grid.headerVisible(true);
         grid.init((s, t) => this.fetchTraffic(s, t), () =>
             [
-                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>(grid, x => generalUtils.formatUtcDateAsLocal(x.TimeStamp, trafficWatch.dateTimeFormat), "Timestamp", "12%", {
+                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>(grid,
+                    x => generalUtils.formatUtcDateAsLocal(x.TimeStamp, trafficWatch.dateTimeFormat),
+                    "Timestamp", "12%", {
                     extraClass: rowHighlightRules,
                     sortable: "string"
                 }),
-                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>(grid, x => `<span class="icon-info text-default"></span>`, "Src", "50px", {
+                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>(grid,
+                    x => trafficWatch.usingHttps ? `<span class="icon-certificate text-info margin-right margin-right-xs"></span>${x.ClientIP}` : x.ClientIP,
+                    "Src", "8%", {
                     extraClass: rowHighlightRules,
                     useRawValue: () => true
                 }),
-                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>(
-                     grid, 
+                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>(grid, 
                     x => trafficWatch.isHttpItem(x) ? x.ResponseStatusCode : "n/a", 
-                    "HTTP Status", 
-                    "8%", 
-                    {
+                    "HTTP Status", "8%", {
                         extraClass: rowHighlightRules,
                         sortable: "number"
-                    }),
-                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>(grid, x => x.DatabaseName, "Database Name", "8%", {
-                    extraClass: rowHighlightRules,
-                    sortable: "string",
-                    customComparator: generalUtils.sortAlphaNumeric
                 }),
-                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>(
-                    grid,
+                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>(grid,
+                    x => x.DatabaseName,
+                    "Database Name", "8%", {
+                        extraClass: rowHighlightRules,
+                        sortable: "string",
+                        customComparator: generalUtils.sortAlphaNumeric
+                }),
+                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>(grid,
                     x => trafficWatch.isHttpItem(x) ? x.ElapsedMilliseconds : "n/a",
-                    "Duration",
-                    "8%",
-                    {
+                    "Duration", "6%", {
                         extraClass: rowHighlightRules,
                         sortable: "number"
-                    }),
-                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>(
-                    grid,
-                    x => trafficWatch.isHttpItem(x) ? x.HttpMethod : "TCP",
-                    "Method",
-                    "6%",
-                    {
-                        extraClass: rowHighlightRules,
-                        sortable: "string"
-                    }),
-                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>(
-                    grid,
-                    x => trafficWatch.isHttpItem(x) ? x.Type : (trafficWatch.isTcpItem(x) ? x.Operation : "n/a"),
-                    "Type",
-                    "6%",
-                    {
-                        extraClass: rowHighlightRules,
-                        sortable: "string"
-                    }),
-                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>(grid, x => x.CustomInfo, "Custom Info", "8%", {
-                    extraClass: rowHighlightRules,
-                    sortable: "string"
                 }),
-                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>(
-                    grid,
-                    x => trafficWatch.formatDetails(x),
-                    "Details",
-                    "35%",
-                    {
+                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>(grid,
+                    x => trafficWatch.isHttpItem(x) ? x.HttpMethod : "TCP",
+                    "Method", "6%", {
                         extraClass: rowHighlightRules,
                         sortable: "string"
-                    })
+                }),
+                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>(grid,
+                    x => trafficWatch.isHttpItem(x) ? x.Type : (trafficWatch.isTcpItem(x) ? x.Operation : "n/a"),
+                    "Type", "6%", {
+                        extraClass: rowHighlightRules,
+                        sortable: "string"
+                }),
+                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>(grid,
+                    x => x.CustomInfo,
+                    "Custom Info", "8%", {
+                        extraClass: rowHighlightRules,
+                        sortable: "string"
+                }),
+                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>(grid,
+                    x => trafficWatch.formatDetails(x),
+                    "Details", "35%", {
+                        extraClass: rowHighlightRules,
+                        sortable: "string"
+                })
             ]
         );
 
         this.columnPreview.install("virtual-grid", ".js-traffic-watch-tooltip",
             (item: Raven.Client.Documents.Changes.TrafficWatchChangeBase, column: textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>,
-             e: JQueryEventObject, onValue: (context: any, valueToCopy?: string, ivValueHtml?: boolean) => void) => {
+             e: JQueryEventObject, onValue: (value: any, valueToCopy?: string, wrapValue?: boolean) => void) => {
                 if (column.header === "Details") {
                     onValue(trafficWatch.formatDetails(item));
                 } else if (column.header === "Timestamp") {
@@ -428,9 +421,7 @@ class trafficWatch extends viewModelBase {
                 } else if (column.header === "Custom Info") {
                     onValue(generalUtils.escapeHtml(item.CustomInfo), item.CustomInfo);
                 } else if (column.header === "Src") {
-                    onValue(this.formatSource(item, true), this.formatSource(item, false), true);
-                } else if (column.header === "Client IP") {
-                    onValue(item.ClientIP);
+                    onValue(this.formatSource(item, true), this.formatSource(item, false), false);
                 }
             });
 
@@ -441,6 +432,7 @@ class trafficWatch extends viewModelBase {
 
             this.duringManualScrollEvent = false;
         });
+        
         this.connectWebSocket();
     }
 
