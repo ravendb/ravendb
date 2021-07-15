@@ -376,14 +376,14 @@ class editIndex extends viewModelBase {
     creationTimeTooltip(item: Raven.Client.ServerWide.IndexHistoryEntry) {
         return ko.pureComputed(() => {
             if (item) {
-                return `<div class="date-container">
+                return `<div class="data-container">
                             <div>
-                                <div class="date-label">UTC:</div>
-                                <div class="date-value">${item.CreatedAt}</div>
+                                <div class="data-label">UTC:</div>
+                                <div class="data-value">${item.CreatedAt}</div>
                             </div>
                             <div>
-                                <div class="date-label">Relative:</div>
-                                <div class="date-value">${generalUtils.formatDurationByDate(moment.utc(item.CreatedAt), true)}</div>
+                                <div class="data-label">Relative:</div>
+                                <div class="data-value">${generalUtils.formatDurationByDate(moment.utc(item.CreatedAt), true)}</div>
                             </div>
                         </div>`;
             }
