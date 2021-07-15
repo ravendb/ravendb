@@ -286,28 +286,28 @@ class trafficWatch extends viewModelBase {
         if (asHtml) {
             if (cert) {
                 return (
-                    `<div class="dataContainer dataContainer-lg">
+                    `<div class="data-container data-container-lg">
                         <div>
-                            <div class="dataLabel">Source: </div>
-                            <div class="dataValue">${generalUtils.escapeHtml(item.ClientIP)}</div>
+                            <div class="data-label">Source: </div>
+                            <div class="data-value">${generalUtils.escapeHtml(item.ClientIP)}</div>
                         </div>
                         <div>
-                            <div class="dataLabel">Certificate: </div>
-                            <div class="dataValue">${generalUtils.escapeHtml(cert.name)}</div>
+                            <div class="data-label">Certificate: </div>
+                            <div class="data-value">${generalUtils.escapeHtml(cert.name)}</div>
                         </div>
                         <div>
-                            <div class="dataLabel">Thumbprint: </div>
-                            <div class="dataValue">${generalUtils.escapeHtml(thumbprint)}</div>
+                            <div class="data-label">Thumbprint: </div>
+                            <div class="data-value">${generalUtils.escapeHtml(thumbprint)}</div>
                         </div>
                     </div>`);
             }
             return (
-                `<div class="dataContainer">
-                        <div>
-                            <div class="dataLabel">Source: </div>
-                            <div class="dataValue">${generalUtils.escapeHtml(item.ClientIP)}</div>
-                        </div>
-                    </div>`);
+                `<div class="data-container">
+                     <div>
+                        <div class="data-label">Source: </div>
+                        <div class="data-value">${generalUtils.escapeHtml(item.ClientIP)}</div>
+                     </div>
+                 </div>`);
         } else {
             if (cert) {
                 return "Source: " + item.ClientIP + ", Certificate Name = " + certName + ", Certificate Thumbprint =  " + thumbprint;
@@ -420,7 +420,7 @@ class trafficWatch extends viewModelBase {
 
         this.columnPreview.install("virtual-grid", ".js-traffic-watch-tooltip",
             (item: Raven.Client.Documents.Changes.TrafficWatchChangeBase, column: textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>,
-             e: JQueryEventObject, onValue: (context: any, valueToCopy?: string) => void) => {
+             e: JQueryEventObject, onValue: (context: any, valueToCopy?: string, ivValueHtml?: boolean) => void) => {
                 if (column.header === "Details") {
                     onValue(trafficWatch.formatDetails(item));
                 } else if (column.header === "Timestamp") {
@@ -428,7 +428,7 @@ class trafficWatch extends viewModelBase {
                 } else if (column.header === "Custom Info") {
                     onValue(generalUtils.escapeHtml(item.CustomInfo), item.CustomInfo);
                 } else if (column.header === "Src") {
-                    onValue(this.formatSource(item, true), this.formatSource(item, false));
+                    onValue(this.formatSource(item, true), this.formatSource(item, false), true);
                 } else if (column.header === "Client IP") {
                     onValue(item.ClientIP);
                 }

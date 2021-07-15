@@ -18,7 +18,7 @@ class columnPreviewPlugin<T> {
     private static readonly delay = 500;
     private static readonly enterTooltipDelay = 100;
     
-    private static defaultMarkupProvider(value: any) {
+    private static defaultMarkupProvider(value: any, isValueHtml: boolean = false) {
         const copySyntax = '<button class="btn btn-default btn-sm copy"><i class="icon-copy"></i><span>Copy to clipboard</span></button>';
         
         if (moment.isMoment(value)) { // value instanceof moment isn't reliable 
@@ -28,24 +28,25 @@ class columnPreviewPlugin<T> {
             const isUtc = dateAsMoment.isUtc();
             const dateFormatted = isUtc ? dateAsMoment.format() : dateAsMoment.format(columnPreviewPlugin.localDateFormat);
             
-            return `<div class="date-container">
+            return `<div class="data-container">
                         <div>
-                            <div class="date-label">${isUtc ? "UTC" : "Local"}: </div>
-                            <div class="date-value">${dateFormatted}</div>
+                            <div class="data-label">${isUtc ? "UTC" : "Local"}: </div>
+                            <div class="data-value">${dateFormatted}</div>
                         </div>
                         <div>
-                            <div class="date-label">Relative: </div>
-                            <div class="date-value">${fullDuration}</div>
+                            <div class="data-label">Relative: </div>
+                            <div class="data-value">${fullDuration}</div>
                         </div>
-                </div>` + copySyntax;
+                    </div>` + copySyntax;
         } else {
-            return '<pre><code class="white-space-pre">' + value + '</code></pre>' + copySyntax;
+            return isValueHtml ? `${value}${copySyntax}` :
+                                 `<pre><code class="white-space-pre">${value}</code></pre>${copySyntax}`;
         }
     }
 
-    install(containerSelector: string, tooltipSelector: string, 
-            previewContextProvider: (item: T, column: virtualColumn, event: JQueryEventObject, onValueProvided: (context: any, valueToCopy?: any) => void) => void) {
-        
+    install(containerSelector: string, tooltipSelector: string,
+            previewContextProvider: (item: T, column: virtualColumn, event: JQueryEventObject,
+                                     onValueProvided: (value: any, valueToCopy?: any, isValueHtml?: boolean) => void) => void) {
         const $grid = $(containerSelector + " .virtual-grid");
         const grid = ko.dataFor($grid[0]) as virtualGrid<T>;
         if (!grid || !(grid instanceof virtualGrid)) {
@@ -72,11 +73,11 @@ class columnPreviewPlugin<T> {
                 if (document.body.contains(e.target)) {
                     this.previewVisible = true;
 
-                    previewContextProvider(element, column, e, (value, valueToCopy) => {
-                        const markup = markupProvider(value);
-                        this.show(markup, e); 
+                    previewContextProvider(element, column, e, (value, valueToCopy, isValueHtml) => {
+                        const markup = markupProvider(value, isValueHtml);
+                        this.show(markup, e);
                         this.currentValue = _.isUndefined(valueToCopy) ? value : valueToCopy;
-                    });    
+                    });
                 }
             }, columnPreviewPlugin.delay);
         });
