@@ -98,49 +98,47 @@ namespace SlowTests.Issues
         public async Task UpdateTopologyWhenNeeded()
         {
             var (_, leader) = await CreateRaftCluster(3);
-
+            var toplogyUpdatesCount = 0;
+            Topology topology = null;
             using (var store = GetDocumentStore(new Options
             {
                 Server = leader,
-                ReplicationFactor = 2
+                ReplicationFactor = 2,
+                ModifyDocumentStore = s =>
+                {
+                    s.OnTopologyUpdated += (sender, tuple) =>
+                    {
+                        if (sender?.GetType() == typeof(RequestExecutor))
+                        {
+                            toplogyUpdatesCount++;
+                            topology = tuple.Topology;
+                        }
+                    };
+                }
             }))
             {
                 var databaseName = store.Database;
-                var toplogyUpdatesCount = 0;
-                Topology topology = null;
-                store.OnTopologyUpdated += (sender, tuple) =>
-                {
-                    toplogyUpdatesCount++;
-                    topology = tuple.Topology;
-                };
-
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User());
                     session.SaveChanges();
                 }
 
-                ExecuteQuery(store);
-                WaitForIndexing(store);
-
-                var server = Servers.Single(x => x.ServerStore.NodeTag == topology.Nodes.First().ClusterTag);
-                var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName).ConfigureAwait(false);
-                var prop = database.GetType().GetField("_lastTopologyIndex", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                prop.SetValue(database, -2);
+                Assert.Equal(1, toplogyUpdatesCount);
 
                 // shouldn't trigger a topology update
                 ExecuteQuery(store);
+                WaitForIndexing(store);
 
                 Assert.Equal(1, toplogyUpdatesCount);
 
                 var topologyEtag = topology.Etag;
-                var nodeTagToAdd = Servers.Select(x => x.ServerStore.NodeTag).Except(topology.Nodes.Select(x => x.ClusterTag)).First();
+                var nodeTagToAdd = Servers.Select(x => x.ServerStore.NodeTag).Except(topology.Nodes.Select(x => x.ClusterTag)).Single();
                 await store.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(databaseName, nodeTagToAdd));
 
-                WaitForValue(() =>
-                {
-                    return topology.Etag > topologyEtag;
-                }, true);
+                ExecuteQuery(store);
+
+                await WaitAndAssertForValueAsync(() => topology.Etag > topologyEtag, true);
 
                 Assert.Equal(2, toplogyUpdatesCount);
             }
