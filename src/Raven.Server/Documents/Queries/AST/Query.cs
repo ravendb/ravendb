@@ -4,11 +4,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
-using Raven.Client;
-using Raven.Client.Documents.Queries.TimeSeries;
-using Raven.Client.Exceptions;
-using Raven.Server.Documents.TimeSeries;
 using Sparrow;
+using Raven.Client;
+using Raven.Client.Exceptions;
 
 namespace Raven.Server.Documents.Queries.AST
 {
