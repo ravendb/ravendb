@@ -32,7 +32,7 @@ namespace Raven.Server.Documents.ShardedHandlers
 
                 for (int i = 0; i < numOfShards; i++)
                 {
-                    var cmd = new ShardedCommand(this, Headers.IfMatch);
+                    var cmd = new ShardedCommand(this, Headers.None);
 
                     try
                     {
@@ -74,7 +74,7 @@ namespace Raven.Server.Documents.ShardedHandlers
             if (shardIndex >= ShardedContext.RequestExecutors.Length)
                 throw new ArgumentException($"Value of query string 'shardIndex' is invalid, got '{shardIndex}' while the number of shards is '{ShardedContext.RequestExecutors.Length}'.");
 
-            var cmd = new ShardedCommand(this, Headers.IfMatch);
+            var cmd = new ShardedCommand(this, Headers.None);
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 // ReSharper disable once PossibleInvalidOperationException

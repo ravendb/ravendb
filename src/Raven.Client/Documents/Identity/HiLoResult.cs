@@ -32,4 +32,9 @@ namespace Raven.Client.Documents.Identity
         public int? ShardIndex { get; set; }
 
     }
+
+    public class HiloDocument
+    {
+        public long Max { get; set; }
+    }
 }

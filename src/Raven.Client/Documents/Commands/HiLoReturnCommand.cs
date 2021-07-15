@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Net.Http;
+using System.Text;
 using Raven.Client.Http;
 using Sparrow.Json;
 
@@ -12,7 +13,7 @@ namespace Raven.Client.Documents.Commands
         private readonly long _end;
         private readonly int? _shardIndex;
 
-        public HiLoReturnCommand(string tag, long last, long end, int? shardIndex = null)
+        public HiLoReturnCommand(string tag, long last, long end)
         {
             if (last < 0)
                 throw new ArgumentOutOfRangeException(nameof(last));
@@ -22,12 +23,31 @@ namespace Raven.Client.Documents.Commands
             _tag = tag ?? throw new ArgumentNullException(nameof(tag));
             _last = last;
             _end = end;
+        }
+
+        public HiLoReturnCommand(string tag, long last, long end, int? shardIndex) : this(tag, last, end)
+        {
             _shardIndex = shardIndex;
         }
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
-            url = $"{node.Url}/databases/{node.Database}/hilo/return?tag={_tag}&end={_end}&last={_last}&shardIndex={_shardIndex}";
+            var builder = new StringBuilder();
+
+            builder.Append(node.Url)
+                .Append("/databases/")
+                .Append(node.Database)
+                .Append("/hilo/return?tag=")
+                .Append(_tag)
+                .Append("&end=")
+                .Append(_end)
+                .Append("&last=")
+                .Append(_last);
+
+            if (_shardIndex.HasValue)
+                builder.Append("&shardIndex=").Append(_shardIndex);
+
+            url = builder.ToString();
 
             return new HttpRequestMessage
             {
