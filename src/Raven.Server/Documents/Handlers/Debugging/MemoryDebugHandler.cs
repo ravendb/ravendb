@@ -318,6 +318,10 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 [nameof(MemoryInfo.HighMemSinceStartup)] = memoryUsageRecords.High.SinceStartup.ToString(),
                 [nameof(MemoryInfo.LowMemSinceStartup)] = memoryUsageRecords.Low.SinceStartup.ToString(),
             };
+            if (memInfo.Remarks != null)
+            {
+                djv[nameof(MemoryInfo.Remarks)] = memInfo.Remarks;
+            }
 
             writer.WritePropertyName(nameof(MemoryInformation));
             context.Write(writer, djv);
@@ -504,6 +508,8 @@ namespace Raven.Server.Documents.Handlers.Debugging
         {
             public string PhysicalMemory { get; set; }
             public string WorkingSet { get; set; }
+            
+            public string Remarks { get; set; }
             public string ManagedAllocations { get; set; }
             public string UnmanagedAllocations { get; set; }
             public string EncryptionBuffersInUse { get; set; }
