@@ -201,9 +201,9 @@ namespace Raven.Client.Http
 
         public event EventHandler<SucceedRequestEventArgs> OnSucceedRequest;
 
-        private void OnFailedRequestInvoke(string url, Exception e)
+        private void OnFailedRequestInvoke(string url, Exception e, HttpResponseMessage response = null, HttpRequestMessage request = null)
         {
-            _onFailedRequest?.Invoke(this, new FailedRequestEventArgs(_databaseName, url, e));
+            _onFailedRequest?.Invoke(this, new FailedRequestEventArgs(_databaseName, url, e, response, request));
         }
 
         private event EventHandler<TopologyUpdatedEventArgs> _onTopologyUpdated;
@@ -1536,7 +1536,7 @@ namespace Raven.Client.Http
                     return false; //we tried all the nodes...nothing left to do
             }
 
-            OnFailedRequestInvoke(url, e);
+            OnFailedRequestInvoke(url, e, response, request);
 
             await ExecuteAsync(currentNode, currentIndex, context, command, shouldRetry, sessionInfo: sessionInfo, token: token).ConfigureAwait(false);
 
