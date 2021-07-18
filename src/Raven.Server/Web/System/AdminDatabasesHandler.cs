@@ -187,7 +187,7 @@ namespace Raven.Server.Web.System
 
                 databaseRecord.Topology.ReplicationFactor++;
 
-                var update = new UpdateTopologyCommand(name, raftRequestId)
+                var update = new UpdateTopologyCommand(name, SystemTime.UtcNow, raftRequestId)
                 {
                     Topology = databaseRecord.Topology
                 };
@@ -465,7 +465,7 @@ namespace Raven.Server.Web.System
                 topology.Rehabs = reorderedTopology.Rehabs;
                 topology.PriorityOrder = parameters.Fixed ? parameters.MembersOrder : null;
 
-                var reorder = new UpdateTopologyCommand(name, GetRaftRequestIdFromQuery())
+                var reorder = new UpdateTopologyCommand(name, SystemTime.UtcNow, GetRaftRequestIdFromQuery())
                 {
                     Topology = topology
                 };

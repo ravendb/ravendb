@@ -53,6 +53,8 @@ namespace RachisTests.DatabaseCluster
                     }
                 };
                 var res = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc));
+
+                Assert.False(res.Topology.Members.Single() == leader.ServerStore.NodeTag, res.Topology.ToString());
                 Assert.NotEqual(res.Topology.Members.First(), leader.ServerStore.NodeTag);
 
                 using (var session = store.OpenAsyncSession())
