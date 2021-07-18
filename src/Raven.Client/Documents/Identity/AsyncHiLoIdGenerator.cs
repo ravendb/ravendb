@@ -20,7 +20,6 @@ namespace Raven.Client.Documents.Identity
     {
         protected string Prefix;
         protected string ServerTag;
-        protected int? ShardIndex;
 
         private readonly DocumentStore _store;
         private readonly string _tag;
@@ -45,11 +44,7 @@ namespace Raven.Client.Documents.Identity
 
         protected virtual string GetDocumentIdFromId(long nextId)
         {
-            string suffix = null;
-            if (ShardIndex.HasValue)
-                suffix = $"/{ShardIndex.Value}";
-
-            return $"{Prefix}{nextId}-{ServerTag}{suffix}";
+            return $"{Prefix}{nextId}-{ServerTag}";
         }
 
         protected RangeValue Range
@@ -131,7 +126,7 @@ namespace Raven.Client.Documents.Identity
 
         private async Task GetNextRangeAsync()
         {
-            var hiloCommand = new NextHiLoCommand(_tag, _lastBatchSize, _lastRangeDate, _identityPartsSeparator, Range.Max, ShardIndex);
+            var hiloCommand = new NextHiLoCommand(_tag, _lastBatchSize, _lastRangeDate, _identityPartsSeparator, Range.Max);
 
             var re = _store.GetRequestExecutor(_dbName);
             using (re.ContextPool.AllocateOperationContext(out JsonOperationContext context))
@@ -141,7 +136,6 @@ namespace Raven.Client.Documents.Identity
 
             Prefix = hiloCommand.Result.Prefix;
             ServerTag = hiloCommand.Result.ServerTag;
-            ShardIndex = hiloCommand.Result.ShardIndex;
             _lastRangeDate = hiloCommand.Result.LastRangeAt;
             _lastBatchSize = hiloCommand.Result.LastSize;
             Range = new RangeValue(hiloCommand.Result.Low, hiloCommand.Result.High);
@@ -149,7 +143,7 @@ namespace Raven.Client.Documents.Identity
 
         public async Task ReturnUnusedRangeAsync()
         {
-            var returnCommand = new HiLoReturnCommand(_tag, Range.Current, Range.Max, ShardIndex);
+            var returnCommand = new HiLoReturnCommand(_tag, Range.Current, Range.Max);
 
             var re = _store.GetRequestExecutor(_dbName);
             using (re.ContextPool.AllocateOperationContext(out JsonOperationContext context))
