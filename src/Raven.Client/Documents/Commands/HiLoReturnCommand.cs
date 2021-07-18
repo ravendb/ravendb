@@ -11,7 +11,6 @@ namespace Raven.Client.Documents.Commands
         private readonly string _tag;
         private readonly long _last;
         private readonly long _end;
-        private readonly int? _shardIndex;
 
         public HiLoReturnCommand(string tag, long last, long end)
         {
@@ -23,11 +22,6 @@ namespace Raven.Client.Documents.Commands
             _tag = tag ?? throw new ArgumentNullException(nameof(tag));
             _last = last;
             _end = end;
-        }
-
-        public HiLoReturnCommand(string tag, long last, long end, int? shardIndex) : this(tag, last, end)
-        {
-            _shardIndex = shardIndex;
         }
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
@@ -43,9 +37,6 @@ namespace Raven.Client.Documents.Commands
                 .Append(_end)
                 .Append("&last=")
                 .Append(_last);
-
-            if (_shardIndex.HasValue)
-                builder.Append("&shardIndex=").Append(_shardIndex);
 
             url = builder.ToString();
 

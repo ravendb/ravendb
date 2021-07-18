@@ -16,7 +16,6 @@ namespace Raven.Client.Documents.Commands
         private readonly DateTime _lastRangeAt;
         private readonly char _identityPartsSeparator;
         private readonly long _lastRangeMax;
-        private readonly int? _shardIndex;
 
         public NextHiLoCommand(string tag, long lastBatchSize, DateTime lastRangeAt, char identityPartsSeparator, long lastRangeMax)
         {
@@ -25,12 +24,6 @@ namespace Raven.Client.Documents.Commands
             _lastRangeAt = lastRangeAt;
             _identityPartsSeparator = identityPartsSeparator;
             _lastRangeMax = lastRangeMax;
-        }
-
-        public NextHiLoCommand(string tag, long lastBatchSize, DateTime lastRangeAt, char identityPartsSeparator, long lastRangeMax, int? shardIndex) 
-            : this(tag, lastBatchSize, lastRangeAt, identityPartsSeparator, lastRangeMax)
-        {
-            _shardIndex = shardIndex;
         }
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
@@ -47,10 +40,9 @@ namespace Raven.Client.Documents.Commands
                     .Append("&lastRangeAt=")
                     .Append(_lastRangeAt.GetDefaultRavenFormat())
                     .Append("&identityPartsSeparator=")
-                    .Append(Uri.EscapeDataString(_identityPartsSeparator.ToString()));
-
-            if (_shardIndex.HasValue == false)
-                pathBuilder.Append($"&lastMax={_lastRangeMax}");
+                    .Append(Uri.EscapeDataString(_identityPartsSeparator.ToString()))
+                    .Append("&lastMax=")
+                    .Append(_lastRangeMax);
 
             url = pathBuilder.ToString();
 
