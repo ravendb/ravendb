@@ -507,7 +507,8 @@ namespace Sparrow.LowMemory
                 TotalSwapUsage = swapUsage,
                 WorkingSetSwapUsage = fromProcMemInfo.WorkingSetSwap,
                 
-                IsExtended = extended
+                IsExtended = extended,
+                Remarks = maxMemoryUsage != 0 ? "Memory constrained by cgroups limits" :  null
             };
         }
 
