@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Http;
 using Sparrow;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.ServerWide
@@ -102,46 +104,6 @@ namespace Raven.Client.ServerWide
         }
     }
 
-    public class InternalReplication : ReplicationNode
-    {
-        private string _nodeTag;
-        public string NodeTag
-        {
-            get => _nodeTag;
-            set
-            {
-                if (HashCodeSealed)
-                    throw new InvalidOperationException(
-$"NodeTag of 'InternalReplication' can't be modified after 'GetHashCode' was invoked, if you see this error it is likley a bug (NodeTag={_nodeTag} value={value} Url={Url}).");
-                _nodeTag = value;
-            }
-        }
-        public override string FromString()
-        {
-            return $"[{NodeTag}/{Url}]";
-        }
-
-        public override bool IsEqualTo(ReplicationNode other)
-        {
-            if (other is InternalReplication internalNode)
-            {
-                return base.IsEqualTo(internalNode) &&
-                       string.Equals(Url, internalNode.Url, StringComparison.OrdinalIgnoreCase);
-            }
-            return false;
-        }
-        
-        public override int GetHashCode()
-        {
-            unchecked
-            {
-                var hashCode = (int)CalculateStringHash(NodeTag);
-                HashCodeSealed = true;
-                return hashCode;
-            }
-        }
-    }
-
     internal static class ThreadSafeRandom
     {
         [ThreadStatic]
@@ -176,6 +138,7 @@ $"NodeTag of 'InternalReplication' can't be modified after 'GetHashCode' was inv
         public bool DynamicNodesDistribution;
         public int ReplicationFactor = 1;
         public List<string> PriorityOrder;
+        public DateTime? NodesModifiedAt;
 
         internal void ReorderMembers()
         {
@@ -402,6 +365,7 @@ $"NodeTag of 'InternalReplication' can't be modified after 'GetHashCode' was inv
                 [nameof(Promotables)] = new DynamicJsonArray(Promotables),
                 [nameof(Rehabs)] = new DynamicJsonArray(Rehabs),
                 [nameof(Stamp)] = Stamp?.ToJson(),
+                [nameof(NodesModifiedAt)] = NodesModifiedAt,
                 [nameof(PromotablesStatus)] = DynamicJsonValue.Convert(PromotablesStatus),
                 [nameof(DemotionReasons)] = DynamicJsonValue.Convert(DemotionReasons),
                 [nameof(DynamicNodesDistribution)] = DynamicNodesDistribution,
@@ -409,6 +373,14 @@ $"NodeTag of 'InternalReplication' can't be modified after 'GetHashCode' was inv
                 [nameof(DatabaseTopologyIdBase64)] = DatabaseTopologyIdBase64,
                 [nameof(PriorityOrder)] = PriorityOrder != null ? new DynamicJsonArray(PriorityOrder) : null
             };
+        }
+
+        public override string ToString()
+        {
+            using (var ctx = JsonOperationContext.ShortTermSingleUse())
+            {
+                return ctx.ReadObject(ToJson(), "database-topology").ToString();
+            }
         }
 
         public void RemoveFromTopology(string delDbFromNode)

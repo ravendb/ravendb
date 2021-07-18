@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -72,9 +73,9 @@ namespace Raven.Server.ServerWide.Maintenance
             _supervisorSamplePeriod = config.SupervisorSamplePeriod.AsTimeSpan;
             _stabilizationTime = config.StabilizationTime.AsTimeSpan;
             _stabilizationTimeMs = (long)config.StabilizationTime.AsTimeSpan.TotalMilliseconds;
-            _moveToRehabTime = (long)config.MoveToRehabGraceTime.AsTimeSpan.TotalMilliseconds;
+            _moveToRehabTimeMs = (long)config.MoveToRehabGraceTime.AsTimeSpan.TotalMilliseconds;
             _maxChangeVectorDistance = config.MaxChangeVectorDistance;
-            _rotateGraceTime = (long)config.RotatePreferredNodeGraceTime.AsTimeSpan.TotalMilliseconds;
+            _rotateGraceTimeMs = (long)config.RotatePreferredNodeGraceTime.AsTimeSpan.TotalMilliseconds;
             _breakdownTimeout = config.AddReplicaTimeout.AsTimeSpan;
             _hardDeleteOnReplacement = config.HardDeleteOnReplacement;
 
@@ -95,9 +96,9 @@ namespace Raven.Server.ServerWide.Maintenance
         private readonly BlockingCollection<ClusterObserverLogEntry> _decisionsLog = new BlockingCollection<ClusterObserverLogEntry>();
         private long _iteration;
         private readonly long _term;
-        private readonly long _moveToRehabTime;
+        private readonly long _moveToRehabTimeMs;
         private readonly long _maxChangeVectorDistance;
-        private readonly long _rotateGraceTime;
+        private readonly long _rotateGraceTimeMs;
         private long _lastIndexCleanupTimeInTicks;
         internal long _lastTombstonesCleanupTimeInTicks;
         private bool _hasMoreTombstones = false;
@@ -215,10 +216,34 @@ namespace Raven.Server.ServerWide.Maintenance
                         }
 
                         var databaseTopology = rawRecord.Topology;
-                        var topologyStamp = databaseTopology?.Stamp ?? new LeaderStamp {Index = -1, LeadersTicks = -1, Term = -1};
+
+                        if (databaseTopology == null)
+                        {
+                            LogMessage($"Can't analyze the stats of database the {database}, because the database topology is null.", database: database);
+                            continue;
+                        }
+
+                        if (databaseTopology.Count == 0)
+                        {
+                            // database being deleted
+                            LogMessage($"Skip analyze the stats of database the {database}, because it being deleted", database: database);
+                            continue;
+                        }
+
+                        if (databaseTopology.NodesModifiedAt == null)
+                        {
+                            AddToDecisionLog(database, $"Updating ModifiedAt");
+
+                            var cmd = new UpdateTopologyCommand(database, now, RaftIdGenerator.NewId()) {Topology = databaseTopology, RaftCommandIndex = etag};
+
+                            updateCommands.Add((cmd, "Updating ModifiedAt"));
+                            continue;
+                        }
+
+                        var topologyStamp = databaseTopology.Stamp;
                         var graceIfLeaderChanged = _term > topologyStamp.Term && currentLeader.LeaderShipDuration < _stabilizationTimeMs;
                         var letStatsBecomeStable = _term == topologyStamp.Term &&
-                                                   (currentLeader.LeaderShipDuration - topologyStamp.LeadersTicks < _stabilizationTimeMs);
+                                                   ((now - databaseTopology.NodesModifiedAt.Value).TotalMilliseconds < _stabilizationTimeMs);
                         if (graceIfLeaderChanged || letStatsBecomeStable)
                         {
                             LogMessage($"We give more time for the '{database}' stats to become stable, so we skip analyzing it for now.", database: database);
@@ -243,7 +268,7 @@ namespace Raven.Server.ServerWide.Maintenance
                         {
                             AddToDecisionLog(database, updateReason);
 
-                            var cmd = new UpdateTopologyCommand(database, RaftIdGenerator.NewId()) {Topology = databaseTopology, RaftCommandIndex = etag};
+                            var cmd = new UpdateTopologyCommand(database, now, RaftIdGenerator.NewId()) {Topology = databaseTopology, RaftCommandIndex = etag};
 
                             updateCommands.Add((cmd, updateReason));
                         }
@@ -663,6 +688,9 @@ namespace Raven.Server.ServerWide.Maintenance
                     }
                 }
 
+                if (_server.DatabasesLandlord.ForTestingPurposes?.HoldDocumentDatabaseCreation != null)
+                    _server.DatabasesLandlord.ForTestingPurposes.PreventedRehabOfIdleDatabase = true;
+
                 if (ShouldGiveMoreTimeBeforeMovingToRehab(nodeStats.LastSuccessfulUpdateDateTime, dbStats?.UpTime))
                 {
                     if (ShouldGiveMoreTimeBeforeRotating(nodeStats.LastSuccessfulUpdateDateTime, dbStats?.UpTime) == false)
@@ -681,7 +709,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 }
 
                 if (TryMoveToRehab(dbName, databaseTopology, current, member))
-                    return $"Node {member} is currently not responding (with status: {status}) and moved to rehab";
+                    return $"Node {member} is currently not responding (with status: {status}) and moved to rehab ({DateTime.UtcNow - nodeStats.LastSuccessfulUpdateDateTime})";
 
                 // database distribution is off and the node is down
                 if (databaseTopology.DynamicNodesDistribution == false && (
@@ -967,40 +995,46 @@ namespace Raven.Server.ServerWide.Maintenance
 
         private bool ShouldGiveMoreTimeBeforeMovingToRehab(DateTime lastSuccessfulUpdate, TimeSpan? databaseUpTime)
         {
-            var grace = DateTime.UtcNow.AddMilliseconds(-_moveToRehabTime);
+            if (databaseUpTime.HasValue)
+            {
+                if (databaseUpTime.Value.TotalMilliseconds < _moveToRehabTimeMs)
+                {
+                    return true;
+                }
+            }
 
-            return ShouldGiveMoreGrace(lastSuccessfulUpdate, databaseUpTime, grace);
+            return ShouldGiveMoreGrace(lastSuccessfulUpdate, databaseUpTime, _moveToRehabTimeMs);
         }
 
         private bool ShouldGiveMoreTimeBeforeRotating(DateTime lastSuccessfulUpdate, TimeSpan? databaseUpTime)
         {
-            var grace = DateTime.UtcNow.AddMilliseconds(-_rotateGraceTime);
+            if (databaseUpTime.HasValue)
+            {
+                if (databaseUpTime.Value.TotalMilliseconds > _rotateGraceTimeMs)
+                {
+                    return false;
+                }
+            }
 
-            return ShouldGiveMoreGrace(lastSuccessfulUpdate, databaseUpTime, grace);
+            return ShouldGiveMoreGrace(lastSuccessfulUpdate, databaseUpTime, _rotateGraceTimeMs);
         }
 
-        private bool ShouldGiveMoreGrace(DateTime lastSuccessfulUpdate, TimeSpan? databaseUpTime, DateTime grace)
+        private bool ShouldGiveMoreGrace(DateTime lastSuccessfulUpdate, TimeSpan? databaseUpTime, long graceMs)
         {
+            var grace = DateTime.UtcNow.AddMilliseconds(-graceMs);
+
             if (lastSuccessfulUpdate == default) // the node hasn't send a single (good) report
             {
                 if (grace < StartTime)
                     return true;
             }
 
-            if (databaseUpTime == null) // database isn't loaded
+            if (databaseUpTime.HasValue == false) // database isn't loaded
             {
                 return grace < StartTime;
             }
-
-            if (databaseUpTime == TimeSpan.MinValue)  // idle database loading
-            {
-                if (_server.DatabasesLandlord.ForTestingPurposes?.HoldDocumentDatabaseCreation != null)
-                    _server.DatabasesLandlord.ForTestingPurposes.PreventedRehabOfIdleDatabase = true;
-
-                return true;
-            }
-
-            return grace < lastSuccessfulUpdate;
+            
+            return grace < lastSuccessfulUpdate && graceMs > databaseUpTime.Value.TotalMilliseconds;
         }
 
         private int GetNumberOfRespondingNodes(DatabaseObservationState state)
