@@ -37,7 +37,7 @@ class databaseTrafficWidget extends abstractDatabaseAndNodeAwareTableWidget<Rave
         const grid = this.gridController();
         return [
             new textColumn<trafficWatchItem>(grid, x => x.hideDatabaseName ? "" : x.database, "Database", "35%"),
-            new nodeTagColumn<trafficWatchItem>(grid, item => this.prepareUrl(item), "Traffic Watch"),
+            new nodeTagColumn<trafficWatchItem>(grid, item => this.prepareUrl(item, "Traffic Watch")),
             new textColumn<trafficWatchItem>(grid, x => widget.formatNumber(x.requestsPerSecond), "Requests/s", "15%"),
             new textColumn<trafficWatchItem>(grid, x => widget.formatNumber(x.writesPerSecond), "Writes/s", "15%"),
             new textColumn<trafficWatchItem>(grid, x => x.noData ? "-" : generalUtils.formatBytesToSize(x.dataWritesPerSecond), "Data written/s", "15%"),

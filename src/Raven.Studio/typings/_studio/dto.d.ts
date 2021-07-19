@@ -835,6 +835,6 @@ type accessLevel = databaseAccessLevel | securityClearance;
 interface iconPlusText {
     iconClass: string;
     text: string;
-    textClass: string
+    textClass: string;
     title: string;
 }

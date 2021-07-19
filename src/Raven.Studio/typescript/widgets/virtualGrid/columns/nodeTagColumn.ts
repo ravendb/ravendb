@@ -3,27 +3,30 @@
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 import hyperlinkColumn = require("widgets/virtualGrid/columns/hyperlinkColumn");
 
-class nodeTagColumn<T extends { nodeTag: string, database: string, noData: boolean, isCommonItem: boolean }> extends hyperlinkColumn<T> {
+class nodeTagColumn<T extends { nodeTag: string, database: string, noData: boolean }> extends hyperlinkColumn<T> {
 
-    hrefDestination: string;
+    hrefProvider: (item: T) => { url: string; openInNewTab: boolean; targetDescription?: string };
     
-    constructor(gridController: virtualGridController<any>, hrefProvider: (item: T) => { url: string; openInNewTab: boolean }, hrefDestination: string) {
+    constructor(gridController: virtualGridController<any>, 
+                hrefProvider: (item: T) => { url: string; openInNewTab: boolean; noData: boolean; targetDescription?: string }) {
         super(gridController, item => this.valueProvider(item), item => hrefProvider(item).url, "Node", "70px", {
             useRawValue: () => true,
             openInNewTab: item => hrefProvider(item).openInNewTab
         });
         
-        this.hrefDestination = hrefDestination;
+        this.hrefProvider = hrefProvider;
     }
     
     private valueProvider(item: T) {
         const nodeTag = item.nodeTag;
         const extraClass = item.noData ? "no-data" : `node-${nodeTag}`;
         
-        if (item.isCommonItem) {
-            return "";
+        if (item.nodeTag) {
+            const description = this.hrefProvider(item).targetDescription;
+            const titleText = description ? `Go to ${description} view` : "";
+            return `<span class="node-label ${extraClass}" title="${titleText}">${nodeTag}</span>`;
         } else {
-            return `<span class="node-label ${extraClass}" title="Go to ${this.hrefDestination} view">${nodeTag}</span>`;
+            return "";
         }
     }
 
