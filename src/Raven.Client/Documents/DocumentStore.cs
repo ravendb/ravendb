@@ -360,6 +360,7 @@ namespace Raven.Client.Documents
                     () => new EvictItemsFromCacheBasedOnChanges(this, database)));
             }
             GC.KeepAlive(lazy.Value); // here we force it to be evaluated
+            lazy.Value.EnsureConnected();
         }
 
         private AsyncDocumentSession OpenAsyncSessionInternal(SessionOptions options)
