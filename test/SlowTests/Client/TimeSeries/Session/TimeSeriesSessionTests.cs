@@ -161,7 +161,7 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
+        /*[Fact]
         public async Task ThrowIfAppendIsLessThen1Ms()
         {
             using (var store = GetDocumentStore())
@@ -189,7 +189,7 @@ namespace SlowTests.Client.TimeSeries.Session
                     Assert.Contains("must be sorted by their timestamps, and cannot contain duplicate timestamps.", e.Message);
                 }
             }
-        }
+        }*/
 
         [Fact]
         public void CanDeleteTimestamp2()

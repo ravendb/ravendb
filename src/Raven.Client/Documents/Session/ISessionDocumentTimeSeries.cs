@@ -16,7 +16,8 @@ namespace Raven.Client.Documents.Session
     public interface ISessionDocumentTimeSeries : 
         ITimeSeriesStreamingBase<TimeSeriesEntry>, 
         ISessionDocumentAppendTimeSeriesBase, 
-        ISessionDocumentDeleteTimeSeriesBase
+        ISessionDocumentDeleteTimeSeriesBase,
+        ISessionDocumentIncrementTimeSeriesBase
     {
         /// <summary>
         /// Return the time series values for the provided range
@@ -37,7 +38,8 @@ namespace Raven.Client.Documents.Session
     public interface ISessionDocumentTypedTimeSeries<TValues> : 
         ISessionDocumentTypedAppendTimeSeriesBase<TValues>, 
         ITimeSeriesStreamingBase<TimeSeriesEntry<TValues>>, 
-        ISessionDocumentDeleteTimeSeriesBase 
+        ISessionDocumentDeleteTimeSeriesBase,
+        ISessionDocumentIncrementTimeSeriesBase
         where TValues : new()
     {
         /// <summary>
@@ -52,7 +54,8 @@ namespace Raven.Client.Documents.Session
     public interface ISessionDocumentRollupTypedTimeSeries<TValues> : 
         ITimeSeriesStreamingBase<TimeSeriesRollupEntry<TValues>>, 
         ISessionDocumentRollupTypedAppendTimeSeriesBase<TValues>, 
-        ISessionDocumentDeleteTimeSeriesBase 
+        ISessionDocumentDeleteTimeSeriesBase,
+        ISessionDocumentIncrementTimeSeriesBase
         where TValues : new()
     {
         /// <summary>

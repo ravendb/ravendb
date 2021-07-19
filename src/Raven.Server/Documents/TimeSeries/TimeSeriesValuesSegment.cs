@@ -64,7 +64,7 @@ namespace Raven.Server.Documents.TimeSeries
             _buffer = buffer;
             _capacity = capacity;
 
-            if (_capacity <= 0 || _capacity > 2048)
+            if (_capacity <= 0 || _capacity > TimeSeriesStorage.MaxSegmentSize)
                 InvalidCapacity();
         }
 
@@ -93,7 +93,7 @@ namespace Raven.Server.Documents.TimeSeries
 
         private void InvalidCapacity()
         {
-            throw new ArgumentOutOfRangeException("Maximum capacity for segment is 2KB, but was: " + _capacity);
+            throw new ArgumentOutOfRangeException($"Maximum capacity for segment is {new Size(TimeSeriesStorage.MaxSegmentSize, SizeUnit.Bytes).GetValue(SizeUnit.Kilobytes)}, but was: " + _capacity);
         }
 
         private static int GetDataStart(SegmentHeader* header) => sizeof(SegmentHeader) + sizeof(StatefulTimestampValue) * header->NumberOfValues + header->SizeOfTags;
@@ -144,7 +144,7 @@ namespace Raven.Server.Documents.TimeSeries
                 ThrowInvalidDelta();
 
             if (Header->NumberOfEntries == ushort.MaxValue)
-                return false;
+                return false; // TODO check last time-stamp with current and throw if equal
 
             var maximumSize =
                     sizeof(BitsBufferHeader) +
@@ -345,7 +345,7 @@ namespace Raven.Server.Documents.TimeSeries
             }
 
             int delta = deltaFromStart - tempHeader->PreviousTimestamp;
-            if (delta <= 0)
+            if (delta < 0)
                 ThrowInvalidNewDelta();
 
             int deltaOfDelta = delta - tempHeader->PreviousDelta;
@@ -613,8 +613,7 @@ namespace Raven.Server.Documents.TimeSeries
                     if (MoveNextInternal(out timestamp, values, state, ref tag, out status) == false)
                         return false;
 
-                    if (_parent.Version == SegmentVersion.V50000 && // fix legacy issue RavenDB-15617
-                        previousTimestamp == timestamp)
+                    if (_parent.Version == SegmentVersion.V50000) // fix legacy issue RavenDB-15617
                         continue;
 
                     return true;

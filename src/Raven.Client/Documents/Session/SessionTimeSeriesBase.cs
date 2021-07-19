@@ -124,6 +124,29 @@ namespace Raven.Client.Documents.Session
             }
         }
 
+        public void Increment(DateTime timestamp, long delta)
+        {
+            if (Session.DocumentsById.TryGetValue(DocId, out DocumentInfo documentInfo) &&
+                Session.DeletedEntities.Contains(documentInfo.Entity))
+                ThrowDocumentAlreadyDeletedInSession(DocId, Name);
+
+            var op = new TimeSeriesOperation.IncrementOperation()
+            {
+                Timestamp = timestamp.EnsureUtc(),
+                Delta = delta
+            };
+
+            if (Session.DeferredCommandsDictionary.TryGetValue((DocId, CommandType.TimeSeries, Name), out var command))
+            {
+                var tsCmd = (TimeSeriesBatchCommandData)command;
+                tsCmd.TimeSeries.Increment(op);
+            }
+            else
+            {
+                Session.Defer(new TimeSeriesBatchCommandData(DocId, Name, appends: null, deletes: null, increments: new List<TimeSeriesOperation.IncrementOperation> { op }));
+            }
+        }
+
         private static void ThrowDocumentAlreadyDeletedInSession(string documentId, string timeseries)
         {
             throw new InvalidOperationException($"Can't modify timeseries {timeseries} of document {documentId}, the document was already deleted in this session.");

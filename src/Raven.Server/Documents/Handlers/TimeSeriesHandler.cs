@@ -860,17 +860,30 @@ namespace Raven.Server.Documents.Handlers
                     }
                 }
 
+                if (_operation.Increments?.Count > 0)
+                {
+                    LastChangeVector = tss.IncrementTimestamp(context,
+                        _documentId,
+                        docCollection,
+                        _operation.Name,
+                        _operation.Increments
+                    );
+
+                    changes += _operation.Increments.Count;
+                }
+                
                 if (_operation.Appends?.Count > 0 == false)
                     return changes;
 
-                LastChangeVector = tss.AppendTimestamp(context,
+                (string changeVector, int operationsCount) = tss.AppendTimestamp(context,
                     _documentId,
                     docCollection,
                     _operation.Name,
                     _operation.Appends
                 );
 
-                changes += _operation.Appends.Count;
+                LastChangeVector = changeVector;
+                changes += operationsCount;
 
                 return changes;
             }

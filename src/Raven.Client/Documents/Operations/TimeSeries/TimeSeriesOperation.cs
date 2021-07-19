@@ -10,33 +10,80 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 {
     public class TimeSeriesOperation
     {
+        private bool _appendSorted;
+        private List<AppendOperation> _appends;
+
+        public class AppendOperationEqualityComparer : IEqualityComparer<AppendOperation>
+        {
+            public static AppendOperationEqualityComparer Instance = new AppendOperationEqualityComparer();
+
+            public bool Equals(AppendOperation x, AppendOperation y)
+            {
+                if (ReferenceEquals(x, y))
+                    return true;
+                if (ReferenceEquals(x, null))
+                    return false;
+                if (ReferenceEquals(y, null))
+                    return false;
+                if (x.GetType() != y.GetType())
+                    return false;
+                return x.Timestamp.Equals(y.Timestamp) && x.Tag.Equals(y.Tag, StringComparison.Ordinal);
+            }
+
+            public int GetHashCode(AppendOperation obj)
+            {
+                return HashCode.Combine(obj.Timestamp, obj.Tag);
+            }
+        }
+        private class AppendOperationComparer : IComparer<AppendOperation>
+        {
+            public static AppendOperationComparer Instance = new AppendOperationComparer();
+
+            public int Compare(AppendOperation x, AppendOperation y)
+            {
+                if (ReferenceEquals(x, y)) return 0;
+                if (ReferenceEquals(null, y)) return 1;
+                if (ReferenceEquals(null, x)) return -1;
+                int timestampComparison = x.Timestamp.CompareTo(y.Timestamp);
+                if (timestampComparison != 0) return timestampComparison;
+                return string.Compare(x.Tag, y.Tag, StringComparison.Ordinal);
+            }
+        }
+
         internal IList<AppendOperation> Appends
         {
             get
             {
-                return _appends?.Values;
+                EnsureSorted();
+                return _appends;
             }
             private set
             {
-                _appends ??= new SortedList<long, AppendOperation>();
-                foreach (var appendOperation in value)
-                {
-                    _appends[appendOperation.Timestamp.Ticks] = appendOperation;
-                }
+                _appends ??= new List<AppendOperation>();
+                _appends.AddRange(value);
             }
+        }
+
+        private void EnsureSorted()
+        {
+            if (_appendSorted || _appends == null) 
+                return;
+
+            _appends.Sort(AppendOperationComparer.Instance);
+            _appendSorted = true;
         }
 
         internal List<DeleteOperation> Deletes;
 
+        internal List<IncrementOperation> Increments;
+
         public string Name;
-        
-        private SortedList<long, AppendOperation> _appends;
 
         public void Append(AppendOperation appendOperation)
         {
-            _appends ??= new SortedList<long, AppendOperation>();
+            _appends ??= new List<AppendOperation>();
             appendOperation.Timestamp = appendOperation.Timestamp.EnsureUtc().EnsureMilliseconds();
-            _appends[appendOperation.Timestamp.Ticks] = appendOperation; // on duplicate values the last one overrides
+            _appends.Add(appendOperation);
         }
 
         public void Delete(DeleteOperation deleteOperation)
@@ -47,6 +94,13 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             Deletes.Add(deleteOperation);
         }
 
+        public void Increment(IncrementOperation incrementOperation)
+        {
+            Increments ??= new List<IncrementOperation>();
+            incrementOperation.Timestamp = incrementOperation.Timestamp.EnsureUtc().EnsureMilliseconds();
+            Increments.Add(incrementOperation);
+        }
+
         internal static TimeSeriesOperation Parse(BlittableJsonReaderObject input)
         {
             if (input.TryGet(nameof(Name), out string name) == false || name == null)
@@ -54,13 +108,12 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
             var result = new TimeSeriesOperation
             {
-                Name = name
+                Name = name,
+                _appends = new List<AppendOperation>()
             };
 
             if (input.TryGet(nameof(Appends), out BlittableJsonReaderArray operations) && operations != null)
             {
-                var sorted = new SortedList<long, AppendOperation>();
-
                 foreach (var op in operations)
                 {
                     if (!(op is BlittableJsonReaderObject bjro))
@@ -71,10 +124,10 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
                     var append = AppendOperation.Parse(bjro);
 
-                    sorted[append.Timestamp.Ticks] = append;
+                    result._appends.Add(append);
                 }
 
-                result._appends = sorted;
+                result.EnsureSorted();
             }
 
             if (input.TryGet(nameof(Deletes), out operations) && operations != null)
@@ -90,6 +143,22 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                     }
 
                     result.Deletes.Add(DeleteOperation.Parse(bjro));
+                }
+            }
+
+            if (input.TryGet(nameof(Increments), out operations) && operations != null)
+            {
+                result.Increments = new List<IncrementOperation>();
+
+                foreach (var op in operations)
+                {
+                    if (!(op is BlittableJsonReaderObject bjro))
+                    {
+                        ThrowNotBlittableJsonReaderObjectOperation(op);
+                        return null; //never hit
+                    }
+
+                    result.Increments.Add(IncrementOperation.Parse(bjro));
                 }
             }
 
@@ -125,13 +194,13 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
             var result = new TimeSeriesOperation
             {
-                Name = name
+                Name = name,
+                _appends = new List<AppendOperation>()
             };
 
             if (input.TryGet(nameof(Appends), out BlittableJsonReaderArray operations) == false || operations == null)
                 ThrowMissingProperty(nameof(Appends));
 
-            var sorted = new SortedList<long, AppendOperation>();
 
             foreach (var op in operations)
             {
@@ -197,10 +266,10 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                     append.Tag = tagAsString;
                 }
 
-                sorted[append.Timestamp.Ticks] = append;
+                result._appends.Add(append);
             }
 
-            result._appends = sorted;
+            result.EnsureSorted();
 
             return result;
 
@@ -241,11 +310,12 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             {
                 [nameof(Name)] = Name,
                 [nameof(Appends)] = Appends?.Select(x => x.ToJson()),
-                [nameof(Deletes)] = Deletes?.Select(x => x.ToJson())
+                [nameof(Deletes)] = Deletes?.Select(x => x.ToJson()),
+                [nameof(Increments)] = Increments?.Select(x => x.ToJson())
             };
         }
 
-        public class AppendOperation
+        public class AppendOperation 
         {
             public DateTime Timestamp;
             public double[] Values;
@@ -314,6 +384,39 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                 {
                     [nameof(From)] = From,
                     [nameof(To)] = To
+                };
+            }
+        }
+
+        public class IncrementOperation
+        {
+            public DateTime Timestamp;
+            public long  Delta;
+
+            internal static IncrementOperation Parse(BlittableJsonReaderObject input)
+            {
+                if (input.TryGet(nameof(Timestamp), out DateTime ts) == false)
+                    throw new InvalidDataException($"Missing '{nameof(Timestamp)}' property");
+
+                if(input.TryGet(nameof(Delta), out long delta) == false)
+                    throw new InvalidDataException($"Missing '{nameof(Delta)}' property");
+
+
+                var op = new IncrementOperation
+                {
+                    Timestamp = ts,
+                    Delta = delta
+                };
+
+                return op;
+            }
+
+            public DynamicJsonValue ToJson()
+            {
+                return new DynamicJsonValue
+                {
+                    [nameof(Timestamp)] = Timestamp,
+                    [nameof(Delta)] = Delta
                 };
             }
         }
