@@ -100,7 +100,6 @@ namespace Raven.Server.Documents.Handlers
                 try
                 {
                     await Database.TxMerger.Enqueue(command);
-                    command.ExceptionDispatchInfo?.Throw();
                 }
                 catch (ConcurrencyException)
                 {
@@ -698,7 +697,6 @@ namespace Raven.Server.Documents.Handlers
 
             private Dictionary<string, List<(DynamicJsonValue Reply, string FieldName)>> _documentsToUpdateAfterAttachmentChange;
             private readonly List<IDisposable> _disposables = new List<IDisposable>();
-            public ExceptionDispatchInfo ExceptionDispatchInfo;
 
             public bool IsClusterTransaction;
 
@@ -733,20 +731,6 @@ namespace Raven.Server.Documents.Handlers
                     ParsedCommands = ParsedCommands.ToArray(),
                     AttachmentStreams = AttachmentStreams
                 };
-            }
-
-            private bool CanAvoidThrowingToMerger(Exception e, int commandOffset)
-            {
-                // if a concurrency exception has been thrown, because the user passed a change vector,
-                // we need to check if we are on the very first command and can abort immediately without
-                // having the transaction merger try to run the transactions again
-                if (commandOffset == ParsedCommands.Offset)
-                {
-                    ExceptionDispatchInfo = ExceptionDispatchInfo.Capture(e);
-                    return true;
-                }
-
-                return false;
             }
 
             protected override long ExecuteCmd(DocumentsOperationContext context)
@@ -817,11 +801,7 @@ namespace Raven.Server.Documents.Handlers
                                 }
                                 throw;
                             }
-                            catch (ConcurrencyException e) when (CanAvoidThrowingToMerger(e, i))
-                            {
-                                return 0;
-                            }
-
+                            
                             context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(cmd.Id, cmd.Document.Size);
                             AddPutResult(putResult);
                             lastPutResult = putResult;
@@ -829,14 +809,7 @@ namespace Raven.Server.Documents.Handlers
 
                         case CommandType.PATCH:
                         case CommandType.BatchPATCH:
-                            try
-                            {
-                                cmd.PatchCommand.ExecuteDirectly(context);
-                            }
-                            catch (ConcurrencyException e) when (CanAvoidThrowingToMerger(e, i))
-                            {
-                                return 0;
-                            }
+                            cmd.PatchCommand.ExecuteDirectly(context);
 
                             var lastChangeVector = cmd.PatchCommand.HandleReply(Reply, ModifiedCollections);
 
@@ -848,15 +821,7 @@ namespace Raven.Server.Documents.Handlers
                         case CommandType.DELETE:
                             if (cmd.IdPrefixed == false)
                             {
-                                DocumentsStorage.DeleteOperationResult? deleted;
-                                try
-                                {
-                                    deleted = Database.DocumentsStorage.Delete(context, cmd.Id, cmd.ChangeVector);
-                                }
-                                catch (ConcurrencyException e) when (CanAvoidThrowingToMerger(e, i))
-                                {
-                                    return 0;
-                                }
+                                var deleted = Database.DocumentsStorage.Delete(context, cmd.Id, cmd.ChangeVector);
                                 AddDeleteResult(deleted, cmd.Id);
                             }
                             else
@@ -1043,14 +1008,7 @@ namespace Raven.Server.Documents.Handlers
                                 Documents = new List<DocumentCountersOperation> { cmd.Counters },
                                 FromEtl = cmd.FromEtl
                             });
-                            try
-                            {
-                                counterBatchCmd.ExecuteDirectly(context);
-                            }
-                            catch (DocumentDoesNotExistException e) when (CanAvoidThrowingToMerger(e, i))
-                            {
-                                return 0;
-                            }
+                            counterBatchCmd.ExecuteDirectly(context);
 
                             LastChangeVector = counterBatchCmd.LastChangeVector;
 
