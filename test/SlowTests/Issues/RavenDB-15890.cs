@@ -537,16 +537,22 @@ namespace SlowTests.Issues
 
                 documentDatabase = await Servers[0].ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
                 var index0 = documentDatabase.IndexStore.GetIndex(indexName);
-                index0.SetState(IndexState.Idle);
 
+                index0.SetState(IndexState.Idle);
                 var count = 0;
 
-                foreach (var server in Servers)
+                await WaitForValueAsync(async () =>
                 {
-                    documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
-                    if (documentDatabase.IndexStore.GetIndex(indexName).State == IndexState.Idle)
-                        count++;
-                }
+                    count = 0;
+                    foreach (var server in Servers)
+                    {
+                        documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
+                        if (documentDatabase.IndexStore.GetIndex(indexName).State == IndexState.Idle)
+                            count++;
+                    }
+
+                    return count;
+                }, 1);
 
                 Assert.Equal(1, count);
 
