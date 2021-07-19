@@ -23,6 +23,7 @@ using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
+using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -95,6 +96,7 @@ namespace FastTests
             Lucene.Net.Util.UnmanagedStringArray.Segment.AllocateMemory = NativeMemory.AllocateMemory;
             Lucene.Net.Util.UnmanagedStringArray.Segment.FreeMemory = NativeMemory.Free;
 
+            BackupTask.DateTimeFormat = "yyyy-MM-dd-HH-mm-ss-fffffff";
 #if DEBUG2
             TaskScheduler.UnobservedTaskException += (sender, args) =>
             {
