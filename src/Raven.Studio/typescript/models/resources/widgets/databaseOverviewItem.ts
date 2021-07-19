@@ -2,6 +2,7 @@
 class databaseOverviewItem implements databaseAndNodeAwareStats {
     database: string;
     nodeTag: string;
+    relevant: boolean;
 
     documents: number;
     alerts: number;
@@ -16,7 +17,6 @@ class databaseOverviewItem implements databaseAndNodeAwareStats {
     
     hideDatabaseName: boolean;
     even: boolean = false;
-    isCommonItem: boolean = false;
     
     constructor(nodeTag: string, data: Raven.Server.Dashboard.DatabaseInfoItem) {
         this.nodeTag = nodeTag;
@@ -25,6 +25,7 @@ class databaseOverviewItem implements databaseAndNodeAwareStats {
         if (data) {
             this.noData = false;
             this.database = data.Database;
+            this.relevant = !data.Irrelevant;
             this.documents = data.DocumentsCount;
             this.alerts = data.AlertsCount;
             this.performanceHints = data.PerformanceHintsCount;
@@ -44,22 +45,22 @@ class databaseOverviewItem implements databaseAndNodeAwareStats {
         return item;
     }
 
-    static commonData(nodeTag: string, database: string, documents: number, indexes: number, ongoingTasks: number, backupInfo: Raven.Client.ServerWide.Operations.BackupInfo) {
-        const commonItem = new databaseOverviewItem(nodeTag, null);
-        commonItem.isCommonItem = true;
-
-        commonItem.database = database;
-        commonItem.documents = documents;
-        commonItem.indexes = indexes;
-        commonItem.ongoingTasks = ongoingTasks;
-        commonItem.backupInfo = backupInfo;
+    static commonData(item: databaseOverviewItem) {
+        const commonItem = new databaseOverviewItem(null, null);
+        commonItem.relevant = true; 
+        
+        commonItem.database = item.database;
+        commonItem.documents = item.documents;
+        commonItem.indexes = item.indexes;
+        commonItem.ongoingTasks = item.ongoingTasks;
+        commonItem.backupInfo = item.backupInfo;
         
         return commonItem;
     }
 
-    erroredIndexesDataForHtml(): iconPlusText[] | "" {
+    erroredIndexesDataForHtml(): iconPlusText[] {
         if (!this.erroredIndexes) {
-            return "";
+            return [];
         }
 
         const textValue = this.erroredIndexes.toLocaleString();
@@ -72,9 +73,9 @@ class databaseOverviewItem implements databaseAndNodeAwareStats {
         }];
     }
     
-    indexingErrorsDataForHtml(): iconPlusText[] | "" {
+    indexingErrorsDataForHtml(): iconPlusText[] {
         if (!this.indexingErrors) {
-            return "";
+            return [];
         }
         
         const textValue = this.indexingErrors.toLocaleString();
@@ -87,9 +88,9 @@ class databaseOverviewItem implements databaseAndNodeAwareStats {
         }];
     }
 
-    alertsDataForHtml(): iconPlusText[] | "" {
+    alertsDataForHtml(): iconPlusText[] {
         if (!this.alerts && !this.performanceHints) {
-            return "";
+            return [];
         }
         
         let alertsData: iconPlusText[] = [];

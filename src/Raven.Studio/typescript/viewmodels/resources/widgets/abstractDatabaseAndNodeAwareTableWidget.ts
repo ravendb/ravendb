@@ -102,6 +102,8 @@ abstract class abstractDatabaseAndNodeAwareTableWidget<TRaw, TStats extends stat
     }
 
     protected applyPerDatabaseStripes(items: databaseAndNodeAwareStats[]) {
+        // TODO: RavenDB-17013 - stripes not working correctly after scroll
+        
         // leave only first database name in group - we don't want to repeat db name
         let currentDbName = "";
         let even = true;
@@ -118,24 +120,36 @@ abstract class abstractDatabaseAndNodeAwareTableWidget<TRaw, TStats extends stat
         }
     }
 
-    protected prepareUrl(item: databaseAndNodeAwareStats): { url: string; openInNewTab: boolean, noData: boolean } {
-        const database = item.database;
+    protected prepareUrl(item: databaseAndNodeAwareStats, targetDescription: string): { url: string; openInNewTab: boolean, noData: boolean, targetDescription?: string } {
         const nodeTag = item.nodeTag;
+        if (!nodeTag) {
+            return {
+                url: null,
+                noData: item.noData,
+                openInNewTab: false,
+                targetDescription: null
+            }
+        } 
+        
         const currentNodeTag = this.clusterManager.localNodeTag();
-        const targetNode = this.clusterManager.getClusterNodeByTag(nodeTag)
+        const targetNode = this.clusterManager.getClusterNodeByTag(nodeTag);
 
+        const database = item.database;
         const link = this.generateLocalLink(database);
+        
         if (currentNodeTag === nodeTag) {
             return {
                 url: link,
                 noData: item.noData,
-                openInNewTab: false
+                openInNewTab: false,
+                targetDescription: targetDescription
             };
         } else {
             return {
                 url: appUrl.toExternalUrl(targetNode.serverUrl(), link),
                 noData: item.noData,
-                openInNewTab: true
+                openInNewTab: true,
+                targetDescription: targetDescription
             }
         }
     }
@@ -173,7 +187,7 @@ abstract class abstractDatabaseAndNodeAwareTableWidget<TRaw, TStats extends stat
 
         this.sortGridData(items);
         
-        this.manageItems(items);
+        items = this.manageItems(items);
         
         this.applyPerDatabaseStripes(items);
 
@@ -183,8 +197,9 @@ abstract class abstractDatabaseAndNodeAwareTableWidget<TRaw, TStats extends stat
         });
     }
 
-    protected manageItems(items: TTableItem[]): void {
-         // optional - implement in child class
+    protected manageItems(items: TTableItem[]): TTableItem[] {
+        // optional - override in child class
+        return items;
     }
     
     protected abstract generateLocalLink(database: string): string;

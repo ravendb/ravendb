@@ -34,7 +34,7 @@ class databaseStorageWidget extends abstractDatabaseAndNodeAwareTableWidget<Rave
         const grid = this.gridController();
         return [
             new textColumn<databaseDiskUsage>(grid, x => x.hideDatabaseName ? "" : x.database, "Database", "35%"),
-            new nodeTagColumn<databaseDiskUsage>(grid, item => this.prepareUrl(item), "Storage Report"),
+            new nodeTagColumn<databaseDiskUsage>(grid, item => this.prepareUrl(item, "Storage Report")),
             new textColumn<databaseDiskUsage>(grid, x => x.noData ? "-" : x.size, "Data", "15%"),
             new textColumn<databaseDiskUsage>(grid, x => x.noData ? "-" : x.tempBuffersSize, "Temp", "15%"),
             new textColumn<databaseDiskUsage>(grid, x => x.noData ? "-" : x.total, "Total", "15%"),
