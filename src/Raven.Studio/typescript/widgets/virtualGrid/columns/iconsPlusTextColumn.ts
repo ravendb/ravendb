@@ -2,12 +2,13 @@
 
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
+import genUtils = require("common/generalUtils");
 
 class iconsPlusTextColumn<T> implements virtualColumn {
     width: string;
     header: string;
 
-    private readonly dataForHtml: (obj: T) => iconPlusText[] | string ;
+    private readonly dataForHtml: (obj: T) => iconPlusText[] | string;
     
     constructor(protected gridController: virtualGridController<any>, dataForHtml: (obj: T) => iconPlusText[] | string, header: string, width: string) {
         this.width = width;
@@ -28,18 +29,18 @@ class iconsPlusTextColumn<T> implements virtualColumn {
     }
 
     renderCell(item: T, isSelected: boolean, isSorted: boolean): string {
-        const iconsAndText = this.dataForHtml(item);
+        const data = this.dataForHtml(item);
         let innerHtml = "";
         
-        if (_.isArray(iconsAndText)) {
-            for (let i = 0; i < iconsAndText.length; i++) {
-                const iconAndText = iconsAndText[i];
-                innerHtml += `<span title="${iconAndText.title}" class="${iconAndText.textClass} margin-right margin-right-sm">
-                                  <i class="${iconAndText.iconClass} margin-right margin-right-xs"></i>${iconAndText.text}
+        if (_.isArray(data)) {
+            for (let i = 0; i < data.length; i++) {
+                const iconAndText = data[i];
+                innerHtml += `<span title="${genUtils.escapeHtml(iconAndText.title)}" class="${genUtils.escapeHtml(iconAndText.textClass)} margin-right margin-right-sm">
+                                  <i class="${genUtils.escapeHtml(iconAndText.iconClass)} margin-right margin-right-xs"></i>${genUtils.escapeHtml(iconAndText.text)}
                               </span>`;
             }
         } else {
-            innerHtml = iconsAndText;
+            innerHtml = data;
         }
         
         return `<div class="cell text-cell" style="width: ${this.width}">${innerHtml}</div>`;
