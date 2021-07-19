@@ -238,7 +238,7 @@ namespace Voron
             return this.Content.ToString(Encodings.Utf8);
         }
 
-        public Span<byte> AsSpan()
+        public readonly Span<byte> AsSpan()
         {
             return new Span<byte>(Content.Ptr, Size);
         }

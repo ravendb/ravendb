@@ -13,7 +13,8 @@ using Raven.Client.Util;
 
 namespace Raven.Client.Documents.Session
 {
-    public class SessionDocumentTimeSeries<TValues> : ISessionDocumentTimeSeries, ISessionDocumentRollupTypedTimeSeries<TValues>, ISessionDocumentTypedTimeSeries<TValues> where TValues : new()
+    public class SessionDocumentTimeSeries<TValues> : ISessionDocumentTimeSeries, ISessionDocumentRollupTypedTimeSeries<TValues>,
+        ISessionDocumentTypedTimeSeries<TValues>, ISessionDocumentIncrementTimeSeriesBase where TValues : new()
     {
         private readonly AsyncSessionDocumentTimeSeries<TimeSeriesEntry> _asyncSessionTimeSeries;
 
@@ -64,7 +65,7 @@ namespace Raven.Client.Documents.Session
                 if (_asyncSessionTimeSeries.NotInCache(from, to))
                 {
                     return _asyncSessionTimeSeries.GetTimeSeriesAndIncludes<TimeSeriesEntry<TValues>>(from, to, includes: null, start, pageSize);
-                }
+        }
 
                 return _asyncSessionTimeSeries.GetTypedFromCache<TValues>(from, to, null, start, pageSize);
             });
@@ -75,7 +76,7 @@ namespace Raven.Client.Documents.Session
             if (_asyncSessionTimeSeries.NotInCache(from, to))
             {
                 return AsyncHelpers.RunSync(() => _asyncSessionTimeSeries.GetTimeSeriesAndIncludes<TimeSeriesRollupEntry<TValues>>(from, to, includes: null, start, pageSize));
-            }
+        }
 
             var result = _asyncSessionTimeSeries.GetTypedFromCache<TValues>(from, to, includes: null, start, pageSize);
             return result.Result?.Select(r => r.AsRollupEntry()).ToArray();
@@ -97,7 +98,26 @@ namespace Raven.Client.Documents.Session
             _asyncSessionTimeSeries.Delete(at);
         }
 
-        IEnumerator<TimeSeriesEntry> ITimeSeriesStreamingBase<TimeSeriesEntry>.Stream(DateTime? from, DateTime? to, TimeSpan? offset)
+        public void Increment(DateTime timestamp, IEnumerable<double> values)
+        {
+            _asyncSessionTimeSeries.Increment(timestamp, values);
+        }
+
+        public void Increment(IEnumerable<double> values)
+        {
+            Increment(DateTime.UtcNow, values);
+        }
+
+        public void Increment(DateTime timestamp, double value)
+        {
+            Increment(timestamp, new []{value});
+        }
+        public void Increment(double value)
+        {
+            Increment(DateTime.UtcNow, new [] { value });
+        }
+
+        IEnumerator<TimeSeriesEntry> ITimeSeriesStreamingBase<TimeSeriesEntry>.Stream(DateTime? @from, DateTime? to, TimeSpan? offset)
         {
             return AsyncHelpers.RunSync(() => _asyncSessionTimeSeries.GetStream<TimeSeriesEntry>(from, to, offset));
         }

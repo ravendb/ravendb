@@ -944,6 +944,19 @@ namespace Sparrow.Json
             return Memory.Compare(Buffer, value.Buffer, value.Size) == 0;
         }
 
+        public bool StartsWith(ReadOnlySpan<byte> value)
+        {
+            if (IsDisposed)
+                ThrowAlreadyDisposed();
+
+            if (value.Length > Size)
+                return false;
+
+
+            return AsSpan().StartsWith(value);
+        }
+
+
         public bool StartsWith(string value, StringComparison comparisionType)
         {
             if (IsDisposed)
