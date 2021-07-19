@@ -1281,48 +1281,55 @@ namespace Raven.Server.Rachis
 
         public unsafe bool RemoveEntryFromRaftLog(long index)
         {
-            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (var tx = context.OpenWriteTransaction())
+            try
             {
-                Table table = context.Transaction.InnerTransaction.OpenTable(LogsTable, EntriesSlice);
-                long reversedIndex = Bits.SwapBytes(index);
-
-                long id;
-                long term;
-                using (Slice.External(context.Allocator, (byte*)&reversedIndex, sizeof(long), out Slice key))
+                using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (var tx = context.OpenWriteTransaction())
                 {
-                    if (table.ReadByKey(key, out TableValueReader reader))
+                    Table table = context.Transaction.InnerTransaction.OpenTable(LogsTable, EntriesSlice);
+                    long reversedIndex = Bits.SwapBytes(index);
+
+                    long id;
+                    long term;
+                    using (Slice.External(context.Allocator, (byte*)&reversedIndex, sizeof(long), out Slice key))
                     {
-                        term = *(long*)reader.Read(1, out int size);
-                        id = reader.Id;
+                        if (table.ReadByKey(key, out TableValueReader reader))
+                        {
+                            term = *(long*)reader.Read(1, out int size);
+                            id = reader.Id;
+                        }
+                        else
+                        {
+                            return false;
+                        }
                     }
-                    else
+
+                    var noopCmd = new DynamicJsonValue
                     {
-                        return false;
+                        ["Type"] = $"Noop for {Tag} in term {term}",
+                        ["Command"] = "noop",
+                        [nameof(CommandBase.UniqueRequestId)] = Guid.NewGuid().ToString()
+                    };
+                    var cmd = context.ReadObject(noopCmd, "noop-cmd");
+
+                    using (table.Allocate(out TableValueBuilder tvb))
+                    {
+                        tvb.Add(reversedIndex);
+                        tvb.Add(term);
+                        tvb.Add(cmd.BasePointer, cmd.Size);
+                        tvb.Add((int)RachisEntryFlags.Noop);
+                        table.Update(id, tvb, true);
                     }
+
+                    tx.Commit();
                 }
 
-                var noopCmd = new DynamicJsonValue
-                {
-                    ["Type"] = $"Noop for {Tag} in term {term}",
-                    ["Command"] = "noop",
-                    [nameof(CommandBase.UniqueRequestId)] = Guid.NewGuid().ToString()
-                };
-                var cmd = context.ReadObject(noopCmd, "noop-cmd");
-
-                using (table.Allocate(out TableValueBuilder tvb))
-                {
-                    tvb.Add(reversedIndex);
-                    tvb.Add(term);
-                    tvb.Add(cmd.BasePointer, cmd.Size);
-                    tvb.Add((int)RachisEntryFlags.Noop);
-                    table.Update(id, tvb, true);
-                }
-
-                tx.Commit();
+                return true;
             }
-
-            return true;
+            catch (Exception e)
+            {
+                throw new RavenException($"failed to remove entry number {index} from raft log", e);
+            }
         }
 
         public unsafe long InsertToLeaderLog(TransactionOperationContext context, long term, BlittableJsonReaderObject cmd,
