@@ -181,12 +181,13 @@ namespace SlowTests.Issues
 
                 foreach (var server in Servers)
                 {
-                    Assert.False(leader.ServerStore.DatabasesLandlord.IsDatabaseLoaded("Toli"));
+                    Assert.False(server.ServerStore.DatabasesLandlord.IsDatabaseLoaded("Toli"));
                 }
 
+                long index = 0;
                 foreach (var server in Servers)
                 {
-                    long index = 0;
+                    index = 0;
                     documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
                     using (documentDatabase.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                     using (var tx = context.OpenReadTransaction())
@@ -196,6 +197,23 @@ namespace SlowTests.Issues
 
                     server.ServerStore.Engine.RemoveEntryFromRaftLog(index + 1);
                 }
+                long index2 = 0;
+                foreach (var server in Servers)
+                {
+                    await WaitForValueAsync(async () =>
+                    {
+                        index2 = 0;
+                        documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
+                        using (documentDatabase.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                        using (var tx = context.OpenReadTransaction())
+                        {
+                            server.ServerStore.Engine.GetLastCommitIndex(context, out index2, out long term);
+                        }
+
+                        return index2 > index;
+                    }, true);
+                }
+                Assert.True(index2 > index);
                 foreach (var server in Servers)
                 {
                     var val = WaitForValueAsync(() => server.ServerStore.DatabasesLandlord.IsDatabaseLoaded("Toli"), true);
