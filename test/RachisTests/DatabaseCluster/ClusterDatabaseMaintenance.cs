@@ -348,7 +348,7 @@ namespace RachisTests.DatabaseCluster
             {
                 [RavenConfiguration.GetKey(x => x.Cluster.ElectionTimeout)] = 300.ToString(),
                 [RavenConfiguration.GetKey(x => x.Cluster.StabilizationTime)] = "1",
-                [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "10",
+                [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "5",
                 [RavenConfiguration.GetKey(x => x.Cluster.RotatePreferredNodeGraceTime)] = "1",
                 [RavenConfiguration.GetKey(x => x.Replication.ReplicationMinimalHeartbeat)] = "15",
             };
@@ -412,7 +412,7 @@ namespace RachisTests.DatabaseCluster
             {
                 [RavenConfiguration.GetKey(x => x.Cluster.ElectionTimeout)] = 300.ToString(),
                 [RavenConfiguration.GetKey(x => x.Cluster.StabilizationTime)] = "1",
-                [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "10",
+                [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "5",
                 [RavenConfiguration.GetKey(x => x.Cluster.RotatePreferredNodeGraceTime)] = "1",
                 [RavenConfiguration.GetKey(x => x.Replication.ReplicationMinimalHeartbeat)] = "15",
             };
@@ -750,7 +750,7 @@ namespace RachisTests.DatabaseCluster
                 doc.Topology.Members.Add("B");
                 doc.Topology.Members.Add("C");
                 var databaseResult = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc, dbGroupSize));
-                Assert.Equal(dbGroupSize, databaseResult.Topology.Members.Count);
+                Assert.True(dbGroupSize == databaseResult.Topology.Members.Count, databaseResult.Topology.ToString());
                 await WaitForRaftIndexToBeAppliedInCluster(databaseResult.RaftCommandIndex, TimeSpan.FromSeconds(10));
                 using (var session = store.OpenAsyncSession())
                 {
@@ -758,8 +758,8 @@ namespace RachisTests.DatabaseCluster
                     await session.SaveChangesAsync();
                 }
                 Assert.True(await WaitForDocumentInClusterAsync<User>(doc.Topology, databaseName, "users/1", u => u.Name == "Karmel", TimeSpan.FromSeconds(5)));
-                DisposeServerAndWaitForFinishOfDisposal(Servers[1]);
-                DisposeServerAndWaitForFinishOfDisposal(Servers[2]);
+                await DisposeServerAndWaitForFinishOfDisposalAsync(Servers[1]);
+                await DisposeServerAndWaitForFinishOfDisposalAsync(Servers[2]);
 
                 // the db should move to D & E
                 var newTopology = new DatabaseTopology();

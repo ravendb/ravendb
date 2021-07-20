@@ -235,19 +235,30 @@ namespace Raven.Server.Documents.Replication
                 PullReplicationDefinitionName = initialRequest.PullReplicationDefinitionName
             };
 
+            if (_outgoing.TryAdd(outgoingReplication) == false)
+            {
+                outgoingReplication.Dispose();
+                tcpConnectionOptions.Dispose();
+                return;
+            }
+
             outgoingReplication.Failed += OnOutgoingSendingFailed;
             outgoingReplication.SuccessfulTwoWaysCommunication += OnOutgoingSendingSucceeded;
             outgoingReplication.SuccessfulReplication += ResetReplicationFailuresInfo;
-            _outgoing.TryAdd(outgoingReplication); // can't fail, this is a brand new instance
 
             outgoingReplication.StartPullReplicationAsHub(tcpConnectionOptions.Stream, supportedVersions);
             OutgoingReplicationAdded?.Invoke(outgoingReplication);
         }
 
-        public void RunPullReplicationAsSink(TcpConnectionOptions tcpConnectionOptions, JsonOperationContext.ManagedPinnedBuffer buffer, PullReplicationAsSink destination)
+        public void RunPullReplicationAsSink(
+            TcpConnectionOptions tcpConnectionOptions, 
+            JsonOperationContext.ManagedPinnedBuffer buffer, 
+            PullReplicationAsSink destination, 
+            OutgoingReplicationHandler source)
         {
             var newIncoming = CreateIncomingReplicationHandler(tcpConnectionOptions, buffer, destination.HubDefinitionName);
             newIncoming.Failed += RetryPullReplication;
+            _outgoing.TryRemove(source);
 
             PoolOfThreads.PooledThread.ResetCurrentThreadName();
             Thread.CurrentThread.Name = $"Pull Replication as Sink from {destination.Database} at {destination.Url}";
@@ -534,20 +545,20 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        public void Initialize(DatabaseRecord record)
+        public void Initialize(DatabaseRecord record, long index)
         {
             if (_isInitialized) //precaution -> probably not necessary, but still...
                 return;
 
             ConflictSolverConfig = record.ConflictSolverConfig;
             ConflictResolver = new ResolveConflictOnReplicationConfigurationChange(this, _log);
-            ConflictResolver.RunConflictResolversOnce();
+            Task.Run(() => ConflictResolver.RunConflictResolversOnce(record.ConflictSolverConfig, index));
             _isInitialized.Raise();
         }
 
-        public void HandleDatabaseRecordChange(DatabaseRecord newRecord)
+        public void HandleDatabaseRecordChange(DatabaseRecord newRecord, long index)
         {
-            HandleConflictResolverChange(newRecord);
+            HandleConflictResolverChange(newRecord, index);
             HandleTopologyChange(newRecord);
             UpdateConnectionStrings(newRecord);
         }
@@ -571,7 +582,7 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private void HandleConflictResolverChange(DatabaseRecord newRecord)
+        private void HandleConflictResolverChange(DatabaseRecord newRecord, long index)
         {
             if (newRecord == null)
             {
@@ -592,7 +603,7 @@ namespace Raven.Server.Documents.Replication
                     _log.Info("Conflict resolution was change.");
                 }
                 ConflictSolverConfig = newRecord.ConflictSolverConfig;
-                ConflictResolver.RunConflictResolversOnce();
+                Task.Run(() => ConflictResolver.RunConflictResolversOnce(newRecord.ConflictSolverConfig, index));
             }
         }
 
@@ -675,7 +686,6 @@ namespace Raven.Server.Documents.Replication
                 {
                     if (_incoming.TryRemove(instance.ConnectionInfo.SourceDatabaseId, out _))
                         IncomingReplicationRemoved?.Invoke(instance);
-
                     instance.ClearEvents();
                     instancesToDispose.Add(instance);
                 }
@@ -976,8 +986,21 @@ namespace Raven.Server.Documents.Replication
                     NodeTag = _clusterTopology.TryGetNodeTagByUrl(r).NodeTag,
                     Url = r,
                     Database = Database.Name
+                }).ToList();
+
+                Task.Run(() =>
+                {
+                    // here we might have blocking calls to fetch the tcp info.
+                    try
+                    {
+                        StartOutgoingConnections(added);
+                    }
+                    catch (Exception e)
+                    {
+                        if (_log.IsOperationsEnabled)
+                            _log.Operations($"Failed to start the outgoing connections to {added.Count} new destinations", e);
+                    }
                 });
-                StartOutgoingConnections(added.ToList());
             }
             _internalDestinations.Clear();
             foreach (var item in newInternalDestinations)
@@ -1062,10 +1085,16 @@ namespace Raven.Server.Documents.Replication
                     return;
 
                 var outgoingReplication = new OutgoingReplicationHandler(null, this, Database, node, external, info);
+
+                if (_outgoing.TryAdd(outgoingReplication) == false)
+                {
+                    outgoingReplication.Dispose();
+                    return;
+                }
+
                 outgoingReplication.Failed += OnOutgoingSendingFailed;
                 outgoingReplication.SuccessfulTwoWaysCommunication += OnOutgoingSendingSucceeded;
                 outgoingReplication.SuccessfulReplication += ResetReplicationFailuresInfo;
-                _outgoing.TryAdd(outgoingReplication); // can't fail, this is a brand new instance
 
                 outgoingReplication.Start();
 
@@ -1418,7 +1447,7 @@ namespace Raven.Server.Documents.Replication
                     }
                 });
 
-                ea.Execute(() => ConflictResolver?.ResolveConflictsTask.Wait());
+                ea.Execute(() => ConflictResolver?.WaitForBackgroundResolveTask());
 
                 ConflictResolver = null;
 

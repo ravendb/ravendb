@@ -5,6 +5,7 @@ using System.Net;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Configuration;
+using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;

@@ -186,7 +186,13 @@ namespace Raven.Server.Web.System
                 }
 
                 databaseRecord.Topology.ReplicationFactor++;
-                var (newIndex, _) = await ServerStore.WriteDatabaseRecordAsync(name, databaseRecord, index, raftRequestId);
+
+                var update = new UpdateTopologyCommand(name, SystemTime.UtcNow, raftRequestId)
+                {
+                    Topology = databaseRecord.Topology
+                };
+
+                var (newIndex, _) = await ServerStore.SendToLeaderAsync(update);
 
                 try
                 {
@@ -459,7 +465,7 @@ namespace Raven.Server.Web.System
                 topology.Rehabs = reorderedTopology.Rehabs;
                 topology.PriorityOrder = parameters.Fixed ? parameters.MembersOrder : null;
 
-                var reorder = new UpdateTopologyCommand(name, GetRaftRequestIdFromQuery())
+                var reorder = new UpdateTopologyCommand(name, SystemTime.UtcNow, GetRaftRequestIdFromQuery())
                 {
                     Topology = topology
                 };

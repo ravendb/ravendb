@@ -7,6 +7,7 @@
 using System;
 using System.Threading;
 using Raven.Client.Http;
+using Raven.Client.Util;
 
 namespace Raven.Client.Documents.Changes
 {
@@ -27,6 +28,11 @@ namespace Raven.Client.Documents.Changes
             _documentsSubscription = docSub.Subscribe(this);
             var indexSub = _changes.ForAllIndexes();
             _indexesSubscription = indexSub.Subscribe(this);
+        }
+
+        public void EnsureConnected()
+        {
+            AsyncHelpers.RunSync(_changes.EnsureConnectedNow);
         }
 
         public void OnNext(DocumentChange change)

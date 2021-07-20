@@ -304,7 +304,7 @@ namespace Raven.Server.Documents
                 _addToInitLog("Initializing IndexStore (async)");
                 _indexStoreTask = IndexStore.InitializeAsync(record, index, _addToInitLog);
                 _addToInitLog("Initializing Replication");
-                ReplicationLoader?.Initialize(record);
+                ReplicationLoader?.Initialize(record, index);
                 _addToInitLog("Initializing ETL");
                 EtlLoader.Initialize(record);
 
@@ -670,7 +670,7 @@ namespace Raven.Server.Documents
 
                 _forTestingPurposes?.DisposeLog?.Invoke(Name, $"Drained all requests. Took: {sp.Elapsed}");
             }
-
+            
             var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(DocumentDatabase)} {Name}");
 
             _forTestingPurposes?.DisposeLog?.Invoke(Name, "Acquiring cluster lock");
@@ -1234,7 +1234,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public void StateChanged(long index)
+        public async Task StateChanged(long index)
         {
             try
             {
@@ -1255,8 +1255,9 @@ namespace Raven.Server.Documents
 
                 StudioConfiguration = record.Studio;
 
-                NotifyFeaturesAboutStateChange(record, index);
-                RachisLogIndexNotifications.NotifyListenersAbout(index, null);
+                var result = NotifyFeaturesAboutStateChange(record, index);
+
+                RachisLogIndexNotifications.NotifyListenersAbout(result.Index, null);
             }
             catch (Exception e)
             {
@@ -1277,12 +1278,25 @@ namespace Raven.Server.Documents
             }
         }
 
-        private void NotifyFeaturesAboutStateChange(DatabaseRecord record, long index)
+        private class StateChangeResult
         {
+            public readonly long Index;
+
+            public StateChangeResult(long index)
+            {
+                Index = index;
+            }
+        }
+
+        private StateChangeResult NotifyFeaturesAboutStateChange(DatabaseRecord record, long index)
+        {
+            var result = new StateChangeResult(index);
             if (CanSkipDatabaseRecordChange(record.DatabaseName, index))
-                return;
+                return result;
 
             var taken = false;
+            Stopwatch sp = default;
+
             while (taken == false)
             {
                 Monitor.TryEnter(_clusterLocker, TimeSpan.FromSeconds(5), ref taken);
@@ -1290,13 +1304,15 @@ namespace Raven.Server.Documents
                 try
                 {
                     if (CanSkipDatabaseRecordChange(record.DatabaseName, index))
-                        return;
+                        return result;
 
                     if (DatabaseShutdown.IsCancellationRequested)
-                        return;
+                        return result;
 
                     if (taken == false)
                         continue;
+
+                    sp = Stopwatch.StartNew();
 
                     Debug.Assert(string.Equals(Name, record.DatabaseName, StringComparison.OrdinalIgnoreCase),
                         $"{Name} != {record.DatabaseName}");
@@ -1311,7 +1327,7 @@ namespace Raven.Server.Documents
                         SetUnusedDatabaseIds(record);
                         InitializeFromDatabaseRecord(record);
                         IndexStore.HandleDatabaseRecordChange(record, index);
-                        ReplicationLoader?.HandleDatabaseRecordChange(record);
+                        ReplicationLoader?.HandleDatabaseRecordChange(record, index);
                         EtlLoader?.HandleDatabaseRecordChange(record);
                         SubscriptionStorage?.HandleDatabaseRecordChange(record);
 
@@ -1332,9 +1348,31 @@ namespace Raven.Server.Documents
                 finally
                 {
                     if (taken)
+                    {
                         Monitor.Exit(_clusterLocker);
+                    }
+
+                    if (taken && _logger.IsInfoEnabled)
+                    {
+                        if (sp?.Elapsed > TimeSpan.FromSeconds(5))
+                        {
+                            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                            using (ctx.OpenReadTransaction())
+                            {
+                                var logs = ServerStore.Engine.LogHistory.GetLogByIndex(ctx, index).Select(djv => ctx.ReadObject(djv, "djv").ToString());
+                                var msg =
+                                    $"Lock held for very long time {sp.Elapsed} in database {Name} for command {index} ({string.Join(", ", logs)})";
+                                _logger.Info(msg);
+#if DEBUG
+                                Console.WriteLine(msg);                       
+#endif
+                            }
+                        }
+                    }
                 }
             }
+
+            return result;
         }
 
         private void SetUnusedDatabaseIds(DatabaseRecord record)

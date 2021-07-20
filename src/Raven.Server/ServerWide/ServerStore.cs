@@ -2353,6 +2353,7 @@ namespace Raven.Server.ServerWide
             record.Topology.Stamp ??= new LeaderStamp();
             record.Topology.Stamp.Term = _engine.CurrentTerm;
             record.Topology.Stamp.LeadersTicks = _engine.CurrentLeader?.LeaderShipDuration ?? 0;
+            record.Topology.NodesModifiedAt = SystemTime.UtcNow;
 
             var addDatabaseCommand = new AddDatabaseCommand(raftRequestId)
             {

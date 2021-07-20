@@ -146,7 +146,7 @@ namespace Raven.Server.Documents
                     switch (changeType)
                     {
                         case ClusterDatabaseChangeType.RecordChanged:
-                            database.StateChanged(index);
+                            await database.StateChanged(index);
                             if (type == ClusterStateMachine.SnapshotInstalled)
                             {
                                 database.NotifyOnPendingClusterTransaction(index, changeType);
@@ -434,6 +434,17 @@ namespace Raven.Server.Documents
             {
                 var exceptionAggregator = new ExceptionAggregator(_logger, "Failure to dispose landlord");
 
+                try
+                {
+                    // prevent creating new databases
+                    _databaseSemaphore.Dispose();
+                }
+                catch (Exception e)
+                {
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info("Failed to dispose resource semaphore", e);
+                }
+
                 // we don't want to wake up database during dispose.
                 var handles = new List<WaitHandle>();
                 foreach (var timer in _wakeupTimers.Values)
@@ -495,15 +506,7 @@ namespace Raven.Server.Documents
                 });
                 DatabasesCache.Clear();
 
-                try
-                {
-                    _databaseSemaphore.Dispose();
-                }
-                catch (Exception e)
-                {
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info("Failed to dispose resource semaphore", e);
-                }
+                
 
                 exceptionAggregator.ThrowIfNeeded();
             }
