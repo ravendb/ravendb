@@ -269,17 +269,16 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                 var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
                 var backupStatus = await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
 
+                var fullBackupPath = $"{s3Settings.RemoteFolderName}/{backupStatus.FolderName}";
                 string lastFileToRestore;
                 using (var client = new RavenAwsS3Client(s3Settings))
                 {
-                    var fullBackupPath = $"{s3Settings.RemoteFolderName}/{backupStatus.FolderName}";
                     lastFileToRestore = (await client.ListObjectsAsync(fullBackupPath, string.Empty, false)).FileInfoDetails.Last().FullPath;
                 }
 
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "user-3" }, "users/3");
-
                     await session.SaveChangesAsync();
                 }
 
@@ -288,7 +287,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
 
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
 
-                s3Settings.RemoteFolderName = $"{s3Settings.RemoteFolderName}/{backupStatus.FolderName}";
+                s3Settings.RemoteFolderName = fullBackupPath;
 
                 using (Backup.RestoreDatabaseFromCloud(store,
                     new RestoreFromS3Configuration
@@ -300,12 +299,24 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                 {
                     using (var session = store.OpenSession(databaseName))
                     {
-                        var users = session.Load<User>("users/1");
-                        Assert.NotNull(users);
-                        users = session.Load<User>("users/2");
-                        Assert.NotNull(users);
-                        users = session.Load<User>("users/3");
-                        Assert.Null(users);
+                        var user = session.Load<User>("users/1");
+                        Assert.NotNull(user);
+                        user = session.Load<User>("users/2");
+
+                        if (user == null)
+                        {
+                            using (var client = new RavenAwsS3Client(s3Settings))
+                            {
+                                var files = (await client.ListObjectsAsync(fullBackupPath, string.Empty, false)).FileInfoDetails;
+                                var fileNames = files.Select(x => x.FullPath).ToList();
+
+                                Assert.True(user != null, $"user == null, count: {fileNames.Count}, files names: {string.Join(", ", fileNames)}");
+                            }
+                        }
+
+                        Assert.NotNull(user);
+                        user = session.Load<User>("users/3");
+                        Assert.Null(user);
                     }
                 }
             }
