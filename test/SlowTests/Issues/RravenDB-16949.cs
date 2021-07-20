@@ -77,7 +77,7 @@ namespace SlowTests.Issues
                     {
                         Disabled = false,
                         MinimumRevisionsToKeep = 10,
-                        MaxRevisionsToDeleteUponDocumentUpdate = 100
+                        MaximumRevisionsToDeleteUponDocumentUpdate = 100
                     },
                     Collections = new Dictionary<string, RevisionsCollectionConfiguration>
                     {
@@ -85,7 +85,7 @@ namespace SlowTests.Issues
                         {
                             Disabled = false,
                             MinimumRevisionsToKeep = 33,
-                            MaxRevisionsToDeleteUponDocumentUpdate = 35
+                            MaximumRevisionsToDeleteUponDocumentUpdate = 35
                         }
                     }
 
@@ -210,7 +210,7 @@ namespace SlowTests.Issues
                     {
                         Disabled = false,
                         MinimumRevisionsToKeep = 10,
-                        MaxRevisionsToDeleteUponDocumentUpdate = 100
+                        MaximumRevisionsToDeleteUponDocumentUpdate = 100
                     },
                     Collections = new Dictionary<string, RevisionsCollectionConfiguration>
                     {
@@ -218,7 +218,7 @@ namespace SlowTests.Issues
                         {
                             Disabled = false,
                             MinimumRevisionsToKeep = 33,
-                            MaxRevisionsToDeleteUponDocumentUpdate = 35
+                            MaximumRevisionsToDeleteUponDocumentUpdate = 35
                         }
                     }
 
