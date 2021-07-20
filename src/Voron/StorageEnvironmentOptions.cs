@@ -1233,7 +1233,7 @@ namespace Voron
         public bool SkipChecksumValidationOnDatabaseLoading { get; set; }
 
         public int MaxNumberOfRecyclableJournals { get; set; } = 32;
-        public bool DiscardVirtualMemory { get; set; }
+        public bool DiscardVirtualMemory { get; set; } = true;
         
         private readonly Logger _log;
 
