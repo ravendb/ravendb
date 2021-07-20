@@ -218,7 +218,7 @@ namespace Raven.Server.Smuggler.Documents
             }
 
             public async ValueTask WriteDatabaseRecordAsync(DatabaseRecord databaseRecord, SmugglerProgressBase.DatabaseRecordProgress progress,
-                AuthorizationStatus authorizationStatus, DatabaseRecordItemType databaseRecordItemType)
+                AuthorizationStatus authorizationStatus, DatabaseRecordItemType databaseRecordItemType, string guid)
             {
                 _writer.WritePropertyName(nameof(databaseRecord.DatabaseName));
                 _writer.WriteString(databaseRecord.DatabaseName);

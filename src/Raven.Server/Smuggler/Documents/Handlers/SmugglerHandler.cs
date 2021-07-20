@@ -571,7 +571,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                                     {
                                         TransformScript = transformScript
                                     };
-                                    await DoImportInternalAsync(migrateContext, process.StandardOutput.BaseStream, options, result, onProgress, token);
+                                    await DoImportInternalAsync(migrateContext, process.StandardOutput.BaseStream, options, null, result, onProgress, token);
                                 }
                             }
                             catch (OperationCanceledException)
@@ -653,6 +653,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 }
 
                 var operationId = GetLongQueryString("operationId", false) ?? Database.Operations.GetNextOperationId();
+                var guid = GetStringQueryString("Guid", false);
                 var token = CreateOperationToken();
 
                 var result = new SmugglerResult();
@@ -709,7 +710,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
 
                                     var inputStream = GetInputStream(section.Body, options);
                                     var stream = new GZipStream(inputStream, CompressionMode.Decompress);
-                                    await DoImportInternalAsync(context, stream, options, result, onProgress, token);
+                                    await DoImportInternalAsync(context, stream, options, guid, result, onProgress, token);
                                 }
                             }
                             catch (Exception e)
@@ -867,7 +868,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             }
         }
 
-        private async Task DoImportInternalAsync(DocumentsOperationContext context, Stream stream, DatabaseSmugglerOptionsServerSide options, SmugglerResult result, Action<IOperationProgress> onProgress, OperationCancelToken token)
+        private async Task DoImportInternalAsync(DocumentsOperationContext context, Stream stream, DatabaseSmugglerOptionsServerSide options, string guid, SmugglerResult result, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
             await using (stream)
             using (token)
@@ -876,7 +877,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 var destination = new DatabaseDestination(Database, token.Token);
                 var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, context, options, result, onProgress, token.Token);
 
-                await smuggler.ExecuteAsync();
+                await smuggler.ExecuteAsync(guid: guid);
             }
         }
 

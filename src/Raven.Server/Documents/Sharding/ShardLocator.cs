@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using Microsoft.Extensions.Primitives;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.Sharding
 {
@@ -16,7 +17,7 @@ namespace Raven.Server.Documents.Sharding
             for (var i = 0; i < ids.Count; i++)
             {
                 var id = ids[i];
-                var shardId = shardedContext.GetShardId(context, id);
+                var shardId = ShardHelper.GetShardId(context, id);
                 var index = shardedContext.GetShardIndex(shardId);
 
                 if (result.TryGetValue(index, out var shardIds) == false)

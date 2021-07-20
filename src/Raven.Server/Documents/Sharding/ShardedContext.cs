@@ -6,6 +6,7 @@ using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow;
 
 namespace Raven.Server.Documents.Sharding
@@ -46,42 +47,6 @@ namespace Raven.Server.Documents.Sharding
 
         public int ShardCount => _record.Shards.Length;
 
-        /// <summary>
-        /// The shard id is a hash of the document id, lower case, reduced to
-        /// 20 bits. This gives us 0 .. 1M range of shard ids and means that assuming
-        /// perfect distribution of data, each shard is going to have about 1MB of data
-        /// per TB of overall db size. That means that even for *very* large databases, the
-        /// size of the shard is still going to be manageable.
-        /// </summary>
-        public int GetShardId(TransactionOperationContext context, string key)
-        {
-            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, key, out var lowerId, out _))
-            {
-                byte* buffer = lowerId.Content.Ptr;
-                int size = lowerId.Size;
-
-                AdjustAfterSeparator((byte)'$', ref buffer, ref size);
-
-                if (size == 0)
-                    throw new ArgumentException("Key '" + key + "', has a shard id length of 0");
-
-                var hash = Hashing.XXHash64.Calculate(buffer, (ulong)size);
-                return (int)(hash % NumberOfShards);
-            }
-        }
-
-        private static void AdjustAfterSeparator(byte expected, ref byte* ptr, ref int len)
-        {
-            for (int i = len - 1; i > 0; i--)
-            {
-                if (ptr[i] != expected)
-                    continue;
-                ptr += i + 1;
-                len -= i - 1;
-                break;
-            }
-        }
-
         public int GetShardIndex(int shardId)
         {
             for (int i = 0; i < _record.ShardAllocations.Count - 1; i++)
@@ -95,7 +60,7 @@ namespace Raven.Server.Documents.Sharding
 
         public int GetShardIndex(TransactionOperationContext context, string key)
         {
-            var shardId = GetShardId(context, key);
+            var shardId =ShardHelper.GetShardId(context, key);
             for (int i = 0; i < _record.ShardAllocations.Count - 1; i++)
             {
                 if (shardId < _record.ShardAllocations[i + 1].RangeStart)

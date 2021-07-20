@@ -816,7 +816,7 @@ namespace Raven.Server.Smuggler.Documents
                 _log = log;
             }
 
-            public async ValueTask WriteDatabaseRecordAsync(DatabaseRecord databaseRecord, SmugglerProgressBase.DatabaseRecordProgress progress, AuthorizationStatus authorizationStatus, DatabaseRecordItemType databaseRecordItemType)
+            public async ValueTask WriteDatabaseRecordAsync(DatabaseRecord databaseRecord, SmugglerProgressBase.DatabaseRecordProgress progress, AuthorizationStatus authorizationStatus, DatabaseRecordItemType databaseRecordItemType, string guid)
             {
                 var currentDatabaseRecord = _database.ReadDatabaseRecord();
                 var tasks = new List<Task<(long Index, object Result)>>();
@@ -839,7 +839,8 @@ namespace Raven.Server.Smuggler.Documents
 
                     if (_log.IsInfoEnabled)
                         _log.Info("Configuring conflict solver config from smuggler");
-                    tasks.Add(_database.ServerStore.SendToLeaderAsync(new ModifyConflictSolverCommand(_database.Name, RaftIdGenerator.DontCareId)
+                    tasks.Add(_database.ServerStore.SendToLeaderAsync(new ModifyConflictSolverCommand(_database.Name, 
+                        guid == null ? RaftIdGenerator.DontCareId : $"ModifyConflictResolverCommand/{guid}")
                     {
                         Solver = databaseRecord.ConflictSolverConfig
                     }));
@@ -862,7 +863,8 @@ namespace Raven.Server.Smuggler.Documents
 
                         backupConfig.TaskId = 0;
                         backupConfig.Disabled = true;
-                        tasks.Add(_database.ServerStore.SendToLeaderAsync(new UpdatePeriodicBackupCommand(backupConfig, _database.Name, RaftIdGenerator.DontCareId)));
+                        tasks.Add(_database.ServerStore.SendToLeaderAsync(new UpdatePeriodicBackupCommand(backupConfig, _database.Name, 
+                            guid == null ? RaftIdGenerator.DontCareId : $"UpdatePeriodicBackupCommand/{guid}")));
                     }
                     progress.PeriodicBackupsUpdated = true;
                 }
@@ -882,7 +884,8 @@ namespace Raven.Server.Smuggler.Documents
                         });
                         pullReplication.TaskId = 0;
                         pullReplication.Disabled = true;
-                        tasks.Add(_database.ServerStore.SendToLeaderAsync(new UpdatePullReplicationAsSinkCommand(_database.Name, RaftIdGenerator.DontCareId)
+                        tasks.Add(_database.ServerStore.SendToLeaderAsync(new UpdatePullReplicationAsSinkCommand(_database.Name, 
+                            guid == null ? RaftIdGenerator.DontCareId : $"UpdatePullReplicationAsSinkCommand/{guid}")
                         {
                             PullReplicationAsSink = pullReplication
                         }));
@@ -905,7 +908,8 @@ namespace Raven.Server.Smuggler.Documents
                         });
                         pullReplication.TaskId = 0;
                         pullReplication.Disabled = true;
-                        tasks.Add(_database.ServerStore.SendToLeaderAsync(new UpdatePullReplicationAsHubCommand(_database.Name, RaftIdGenerator.DontCareId)
+                        tasks.Add(_database.ServerStore.SendToLeaderAsync(new UpdatePullReplicationAsHubCommand(_database.Name,
+                                guid == null ? RaftIdGenerator.DontCareId : $"UpdatePullReplicationAsHubCommand/{guid}")
                         {
                             Definition = pullReplication
                         }
@@ -919,7 +923,8 @@ namespace Raven.Server.Smuggler.Documents
                     if (_log.IsInfoEnabled)
                         _log.Info("Configuring sorters configuration from smuggler");
 
-                    tasks.Add(_database.ServerStore.SendToLeaderAsync(new PutSortersCommand(_database.Name, RaftIdGenerator.DontCareId)
+                    tasks.Add(_database.ServerStore.SendToLeaderAsync(new PutSortersCommand(_database.Name, 
+                        guid == null ? RaftIdGenerator.DontCareId : $"PutSortersCommand/{guid}")
                     {
                         Sorters = databaseRecord.Sorters.Values.ToList()
                     }));
@@ -932,7 +937,8 @@ namespace Raven.Server.Smuggler.Documents
                     if (_log.IsInfoEnabled)
                         _log.Info("Configuring analyzers configuration from smuggler");
 
-                    tasks.Add(_database.ServerStore.SendToLeaderAsync(new PutAnalyzersCommand(_database.Name, RaftIdGenerator.DontCareId)
+                    tasks.Add(_database.ServerStore.SendToLeaderAsync(new PutAnalyzersCommand(_database.Name, 
+                        guid == null ? RaftIdGenerator.DontCareId : $"PutAnalyzersCommand/{guid}")
                     {
                         Analyzers = databaseRecord.Analyzers.Values.ToList()
                     }));
@@ -955,7 +961,8 @@ namespace Raven.Server.Smuggler.Documents
                         });
                         replication.TaskId = 0;
                         replication.Disabled = true;
-                        tasks.Add(_database.ServerStore.SendToLeaderAsync(new UpdateExternalReplicationCommand(_database.Name, RaftIdGenerator.DontCareId)
+                        tasks.Add(_database.ServerStore.SendToLeaderAsync(new UpdateExternalReplicationCommand(_database.Name, 
+                            guid == null ? RaftIdGenerator.DontCareId : $"UpdateExternalReplicationCommand/{guid}")
                         {
                             Watcher = replication
                         }));
@@ -978,7 +985,8 @@ namespace Raven.Server.Smuggler.Documents
                         });
                         etl.TaskId = 0;
                         etl.Disabled = true;
-                        tasks.Add(_database.ServerStore.SendToLeaderAsync(new AddRavenEtlCommand(etl, _database.Name, RaftIdGenerator.DontCareId)));
+                        tasks.Add(_database.ServerStore.SendToLeaderAsync(new AddRavenEtlCommand(etl, _database.Name, 
+                            guid == null ? RaftIdGenerator.DontCareId : $"AddRavenEtlCommand/{guid}")));
                     }
                     progress.RavenEtlsUpdated = true;
                 }
@@ -998,7 +1006,8 @@ namespace Raven.Server.Smuggler.Documents
                         });
                         etl.TaskId = 0;
                         etl.Disabled = true;
-                        tasks.Add(_database.ServerStore.SendToLeaderAsync(new AddSqlEtlCommand(etl, _database.Name, RaftIdGenerator.DontCareId)));
+                        tasks.Add(_database.ServerStore.SendToLeaderAsync(new AddSqlEtlCommand(etl, _database.Name, 
+                            guid == null ? RaftIdGenerator.DontCareId : $"AddSqlEtlCommand/{guid}")));
                     }
                     progress.SqlEtlsUpdated = true;
                 }
@@ -1017,7 +1026,8 @@ namespace Raven.Server.Smuggler.Documents
                     }
                     if (_log.IsInfoEnabled)
                         _log.Info("Configuring time-series from smuggler");
-                    tasks.Add(_database.ServerStore.SendToLeaderAsync(new EditTimeSeriesConfigurationCommand(databaseRecord.TimeSeries, _database.Name, RaftIdGenerator.DontCareId)));
+                    tasks.Add(_database.ServerStore.SendToLeaderAsync(new EditTimeSeriesConfigurationCommand(databaseRecord.TimeSeries, _database.Name, 
+                        guid == null ? RaftIdGenerator.DontCareId : $"EditTimeSeriesConfigurationCommand/{guid}")));
                     progress.TimeSeriesConfigurationUpdated = true;
                 }
 
@@ -1043,7 +1053,8 @@ namespace Raven.Server.Smuggler.Documents
 
                     if (_log.IsInfoEnabled)
                         _log.Info("Configuring documents compression from smuggler");
-                    tasks.Add(_database.ServerStore.SendToLeaderAsync(new EditDocumentsCompressionCommand(databaseRecord.DocumentsCompression, _database.Name, RaftIdGenerator.DontCareId)));
+                    tasks.Add(_database.ServerStore.SendToLeaderAsync(new EditDocumentsCompressionCommand(databaseRecord.DocumentsCompression, _database.Name, 
+                        guid == null ? RaftIdGenerator.DontCareId : $"EditDocumentsCompressionCommand/{guid}")));
                     progress.DocumentsCompressionConfigurationUpdated = true;
                 }
 
@@ -1061,7 +1072,8 @@ namespace Raven.Server.Smuggler.Documents
                     }
                     if (_log.IsInfoEnabled)
                         _log.Info("Configuring revisions from smuggler");
-                    tasks.Add(_database.ServerStore.SendToLeaderAsync(new EditRevisionsConfigurationCommand(databaseRecord.Revisions, _database.Name, RaftIdGenerator.DontCareId)));
+                    tasks.Add(_database.ServerStore.SendToLeaderAsync(new EditRevisionsConfigurationCommand(databaseRecord.Revisions, _database.Name, 
+                        guid == null ? RaftIdGenerator.DontCareId : $"EditRevisionsConfigurationCommand/{guid}")));
                     progress.RevisionsConfigurationUpdated = true;
                 }
 
@@ -1069,14 +1081,16 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     if (_log.IsInfoEnabled)
                         _log.Info("Configuring revisions for conflicts from smuggler");
-                    tasks.Add(_database.ServerStore.SendToLeaderAsync(new EditRevisionsForConflictsConfigurationCommand(databaseRecord.RevisionsForConflicts, _database.Name, RaftIdGenerator.DontCareId)));
+                    tasks.Add(_database.ServerStore.SendToLeaderAsync(new EditRevisionsForConflictsConfigurationCommand(databaseRecord.RevisionsForConflicts, _database.Name, 
+                        guid == null ? RaftIdGenerator.DontCareId : $"EditRevisionsForConflictsConfigurationCommand/{guid}")));
                 }
 
                 if (databaseRecord.Expiration != null && databaseRecordItemType.HasFlag(DatabaseRecordItemType.Expiration))
                 {
                     if (_log.IsInfoEnabled)
                         _log.Info("Configuring expiration from smuggler");
-                    tasks.Add(_database.ServerStore.SendToLeaderAsync(new EditExpirationCommand(databaseRecord.Expiration, _database.Name, RaftIdGenerator.DontCareId)));
+                    tasks.Add(_database.ServerStore.SendToLeaderAsync(new EditExpirationCommand(databaseRecord.Expiration, _database.Name, 
+                        guid == null ? RaftIdGenerator.DontCareId : $"EditExpirationCommand/{guid}")));
                     progress.ExpirationConfigurationUpdated = true;
                 }
 
@@ -1084,7 +1098,8 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     if (_log.IsInfoEnabled)
                         _log.Info("Configuring refresh from smuggler");
-                    tasks.Add(_database.ServerStore.SendToLeaderAsync(new EditRefreshCommand(databaseRecord.Refresh, _database.Name, RaftIdGenerator.DontCareId)));
+                    tasks.Add(_database.ServerStore.SendToLeaderAsync(new EditRefreshCommand(databaseRecord.Refresh, _database.Name, 
+                        guid == null ? RaftIdGenerator.DontCareId : $"EditRefreshCommand/{guid}")));
                     progress.RefreshConfigurationUpdated = true;
                 }
 
@@ -1094,7 +1109,8 @@ namespace Raven.Server.Smuggler.Documents
                         _log.Info("Configuring Raven connection strings configuration from smuggler");
                     foreach (var connectionString in databaseRecord.RavenConnectionStrings)
                     {
-                        tasks.Add(_database.ServerStore.SendToLeaderAsync(new PutRavenConnectionStringCommand(connectionString.Value, _database.Name, RaftIdGenerator.DontCareId)));
+                        tasks.Add(_database.ServerStore.SendToLeaderAsync(new PutRavenConnectionStringCommand(connectionString.Value, _database.Name, 
+                            guid == null ? RaftIdGenerator.DontCareId : $"PutRavenConnectionStringCommand/{guid}")));
                     }
                     progress.RavenConnectionStringsUpdated = true;
                 }
@@ -1105,7 +1121,8 @@ namespace Raven.Server.Smuggler.Documents
                         _log.Info("Configuring SQL connection strings from smuggler");
                     foreach (var connectionString in databaseRecord.SqlConnectionStrings)
                     {
-                        tasks.Add(_database.ServerStore.SendToLeaderAsync(new PutSqlConnectionStringCommand(connectionString.Value, _database.Name, RaftIdGenerator.DontCareId)));
+                        tasks.Add(_database.ServerStore.SendToLeaderAsync(new PutSqlConnectionStringCommand(connectionString.Value, _database.Name, 
+                            guid == null ? RaftIdGenerator.DontCareId : $"PutSqlConnectionStringCommand/{guid}")));
                     }
                     progress.SqlConnectionStringsUpdated = true;
                 }
@@ -1115,7 +1132,8 @@ namespace Raven.Server.Smuggler.Documents
                     if (_log.IsInfoEnabled)
                         _log.Info("Configuring client configuration from smuggler");
 
-                    tasks.Add(_database.ServerStore.SendToLeaderAsync(new EditDatabaseClientConfigurationCommand(databaseRecord.Client, _database.Name, RaftIdGenerator.DontCareId)));
+                    tasks.Add(_database.ServerStore.SendToLeaderAsync(new EditDatabaseClientConfigurationCommand(databaseRecord.Client, _database.Name, 
+                        guid == null ? RaftIdGenerator.DontCareId : $"EditDatabaseClientConfigurationCommand/{guid}")));
                     progress.ClientConfigurationUpdated = true;
                 }
 
@@ -1124,7 +1142,8 @@ namespace Raven.Server.Smuggler.Documents
                     if (_log.IsInfoEnabled)
                         _log.Info("Set unused database Ids from smuggler");
 
-                    tasks.Add(_database.ServerStore.SendToLeaderAsync(new UpdateUnusedDatabaseIdsCommand(_database.Name, databaseRecord.UnusedDatabaseIds, RaftIdGenerator.DontCareId)));
+                    tasks.Add(_database.ServerStore.SendToLeaderAsync(new UpdateUnusedDatabaseIdsCommand(_database.Name, databaseRecord.UnusedDatabaseIds, 
+                        guid == null ? RaftIdGenerator.DontCareId : $"UpdateUnusedDatabaseIdsCommand/{guid}")));
 
                     progress.UnusedDatabaseIdsUpdated = true;
                 }
@@ -1134,7 +1153,8 @@ namespace Raven.Server.Smuggler.Documents
                     if (_log.IsInfoEnabled)
                         _log.Info("Configuring database lock mode from smuggler");
 
-                    tasks.Add(_database.ServerStore.SendToLeaderAsync(new EditLockModeCommand(_database.Name, databaseRecord.LockMode, RaftIdGenerator.DontCareId)));
+                    tasks.Add(_database.ServerStore.SendToLeaderAsync(new EditLockModeCommand(_database.Name, databaseRecord.LockMode, 
+                        guid == null ? RaftIdGenerator.DontCareId : $"EditLockModeCommand/{guid}")));
 
                     progress.LockModeUpdated = true;
                 }
@@ -1154,7 +1174,8 @@ namespace Raven.Server.Smuggler.Documents
                         });
                         etl.TaskId = 0;
                         etl.Disabled = true;
-                        tasks.Add(_database.ServerStore.SendToLeaderAsync(new AddOlapEtlCommand(etl, _database.Name, RaftIdGenerator.DontCareId)));
+                        tasks.Add(_database.ServerStore.SendToLeaderAsync(new AddOlapEtlCommand(etl, _database.Name, 
+                            guid == null ? RaftIdGenerator.DontCareId : $"AddOlapEtlCommand/{guid}")));
                     }
                     progress.OlapEtlsUpdated = true;
                 }
@@ -1165,7 +1186,8 @@ namespace Raven.Server.Smuggler.Documents
                         _log.Info("Configuring OLAP connection strings from smuggler");
                     foreach (var connectionString in databaseRecord.OlapConnectionStrings)
                     {
-                        tasks.Add(_database.ServerStore.SendToLeaderAsync(new PutOlapConnectionStringCommand(connectionString.Value, _database.Name, RaftIdGenerator.DontCareId)));
+                        tasks.Add(_database.ServerStore.SendToLeaderAsync(new PutOlapConnectionStringCommand(connectionString.Value, _database.Name, 
+                            guid == null ? RaftIdGenerator.DontCareId : $"PutOlapConnectionStringCommand/{guid}")));
                     }
                     progress.OlapConnectionStringsUpdated = true;
                 }

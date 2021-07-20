@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Net.Http.Headers;
 using Nito.AsyncEx;
 using Raven.Client;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Json;
@@ -283,6 +284,7 @@ namespace Raven.Server.Documents.ShardedHandlers
                                         }
 
                                         options = JsonDeserializationServer.DatabaseSmugglerOptions(blittableJson);
+                                        
                                         continue;
                                     }
 
@@ -310,7 +312,7 @@ namespace Raven.Server.Documents.ShardedHandlers
             }
         }
 
-        private async Task DoImportInternalAsync(JsonOperationContext context, Stream stream, BlittableJsonReaderObject options, SmugglerResult result, object onProgress,
+        private async Task DoImportInternalAsync(JsonOperationContext context, Stream stream, BlittableJsonReaderObject options,SmugglerResult result, object onProgress,
             OperationCancelToken token)
         {
             var tempFileName = $"{Server.Configuration.Backup.ShardTempPath}\\{Guid.NewGuid()}";
@@ -336,6 +338,7 @@ namespace Raven.Server.Documents.ShardedHandlers
                     await stream.CopyToAsync(fileStream, 8192, new CancellationToken());
                 }
 
+                var guid = Guid.NewGuid().ToString();
                 for (int i = 0; i < ShardedContext.ShardCount; i++)
                 {
                     var file = fileInfo.OpenRead();
@@ -348,7 +351,10 @@ namespace Raven.Server.Documents.ShardedHandlers
                             },
                             {new Client.Documents.Smuggler.DatabaseSmuggler.StreamContentWithConfirmation(file, tcs), "file", "name"}
                         };
-                        var cmd = new ShardedImportCommand(this, Headers.None, multi);
+                        var cmd = new ShardedImportCommand(this, Headers.None, multi)
+                        {
+                            guid = guid
+                        };
                         var task = ShardedContext.RequestExecutors[i].ExecuteAsync(cmd, contextList[i]);
                         tasks.Add(task);
                     }
