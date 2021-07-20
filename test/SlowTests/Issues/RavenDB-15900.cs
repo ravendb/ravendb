@@ -99,7 +99,7 @@ namespace SlowTests.Issues
                         return index2 > index;
                     }, true);
                 }
-                Assert.True(index2 > index);
+                Assert.True(index2 > index, $"State machine is stuck. raft index was {index}, after remove raft entry index is {index2} ");
 
                 foreach (var server in Servers)
                 {
@@ -231,7 +231,7 @@ namespace SlowTests.Issues
                         return index2 > index;
                     }, true);
                 }
-                Assert.True(index2 > index);
+                Assert.True(index2 > index,$"State machine is stuck. raft index was {index}, after remove raft entry index is {index2} ");
 
                 foreach (var server in Servers)
                 {
