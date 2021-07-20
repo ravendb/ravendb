@@ -55,8 +55,7 @@ namespace Raven.Server.Documents.Includes
             if (_includes == null || _includes.Length == 0)
                 return;
 
-            if (_includedIds == null)
-                _includedIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            _includedIds ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             AddToIgnore(document.Id);
 

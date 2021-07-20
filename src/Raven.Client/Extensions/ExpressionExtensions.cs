@@ -81,6 +81,7 @@ namespace Raven.Client.Extensions
 
             return expression.ToPropertyPath(propertySeparator, collectionSeparator);
         }
+        
 
         public static string ToPropertyPath(this Expression expression, char propertySeparator = '.', string collectionSeparator = "[].")
         {

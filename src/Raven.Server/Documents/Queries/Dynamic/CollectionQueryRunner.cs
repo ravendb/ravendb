@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Raven.Client;
+using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Server.Documents.Includes;
@@ -133,7 +134,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 resultToFill.IncludedPaths = query.Metadata.Includes;
 
                 var fieldsToFetch = new FieldsToFetch(query, null);
-                var includeDocumentsCommand = new IncludeDocumentsCommand(Database.DocumentsStorage, context.Documents, query.Metadata.Includes, fieldsToFetch.IsProjection);
+                var includeDocumentsCommand  = new IncludeDocumentsCommand(Database.DocumentsStorage, context.Documents, query.Metadata.Includes, fieldsToFetch.IsProjection);
+                var includeRevisionsCommand  = new IncludeRevisionsCommand(Database, context.Documents, query.Metadata.RevisionIncludes);
+                
                 var includeCompareExchangeValuesCommand = IncludeCompareExchangeValuesCommand.ExternalScope(context, query.Metadata.CompareExchangeValueIncludes);
 
                 var totalResults = new Reference<int>();
@@ -142,7 +145,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                 if (pulseReadingTransaction == false)
                 {
-                    var documents = new CollectionQueryEnumerable(Database, Database.DocumentsStorage, fieldsToFetch, collection, query, queryScope, context.Documents, includeDocumentsCommand, includeCompareExchangeValuesCommand, totalResults);
+                    var documents = new CollectionQueryEnumerable(Database, Database.DocumentsStorage, fieldsToFetch, collection, query, queryScope, context.Documents, includeDocumentsCommand, includeRevisionsCommand: includeRevisionsCommand, includeCompareExchangeValuesCommand, totalResults);
 
                     enumerator = documents.GetEnumerator();
                 }
@@ -154,7 +157,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                             query.Start = state.Start;
                             query.PageSize = state.Take;
 
-                            var documents = new CollectionQueryEnumerable(Database, Database.DocumentsStorage, fieldsToFetch, collection, query, queryScope, context.Documents, includeDocumentsCommand, includeCompareExchangeValuesCommand, totalResults);
+                            var documents = new CollectionQueryEnumerable(Database, Database.DocumentsStorage, fieldsToFetch, collection, query, queryScope, context.Documents, includeDocumentsCommand, includeRevisionsCommand, includeCompareExchangeValuesCommand, totalResults);
 
                             return documents;
                         },
@@ -167,7 +170,15 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                 IncludeCountersCommand includeCountersCommand = null;
                 IncludeTimeSeriesCommand includeTimeSeriesCommand = null;
-
+                
+                if (query.Metadata.RevisionIncludes != null)
+                {
+                    includeRevisionsCommand = new IncludeRevisionsCommand(
+                        Database,
+                        context.Documents,
+                        query.Metadata.RevisionIncludes);
+                }
+                
                 if (query.Metadata.CounterIncludes != null)
                 {
                     includeCountersCommand = new IncludeCountersCommand(
@@ -204,6 +215,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
                             includeCountersCommand?.Fill(document);
 
                             includeTimeSeriesCommand?.Fill(document);
+                            
+                            includeRevisionsCommand?.Fill(document);
+                            
                         }
                     }
                 }
@@ -230,6 +244,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                 if (includeTimeSeriesCommand != null)
                     resultToFill.AddTimeSeriesIncludes(includeTimeSeriesCommand);
+                
+                if (includeRevisionsCommand != null)
+                    resultToFill.AddRevisionIncludes(includeRevisionsCommand);
 
                 resultToFill.RegisterTimeSeriesFields(query, fieldsToFetch);
 

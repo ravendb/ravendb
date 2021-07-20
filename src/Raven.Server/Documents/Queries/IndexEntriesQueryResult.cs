@@ -69,6 +69,20 @@ namespace Raven.Server.Documents.Queries
             throw new NotSupportedException();
         }
 
+        public override Dictionary<string, Document>  GetRevisionIncludesByChangeVector()
+        {
+            throw new NotSupportedException();
+        }
+        
+        public override void AddRevisionIncludes(IncludeRevisionsCommand command)
+        {
+            if (command.RevisionsChangeVectorResults is null)
+                return;
+            
+            throw new NotSupportedException();
+        }
+
+
         public override bool SupportsExceptionHandling => false;
         public override bool SupportsInclude => false;
         public override bool SupportsHighlighting => false;

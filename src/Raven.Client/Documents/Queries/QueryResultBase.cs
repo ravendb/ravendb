@@ -22,7 +22,12 @@ namespace Raven.Client.Documents.Queries
         /// Gets or sets the Counters included in the result.
         /// </summary>
         public BlittableJsonReaderObject CounterIncludes { get; set; }
-
+        
+        /// <summary>
+        /// Gets or sets the Revisions included in the result.
+        /// </summary>
+        public BlittableJsonReaderArray RevisionIncludes { get; set; }
+        
         /// <summary>
         /// The names of all the counters that the server
         /// was asked to include in the result, by document id.

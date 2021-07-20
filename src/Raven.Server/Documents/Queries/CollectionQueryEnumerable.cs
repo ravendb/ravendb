@@ -26,6 +26,7 @@ namespace Raven.Server.Documents.Queries
         private readonly FieldsToFetch _fieldsToFetch;
         private readonly DocumentsOperationContext _context;
         private readonly IncludeDocumentsCommand _includeDocumentsCommand;
+        private readonly IncludeRevisionsCommand _includeRevisionsCommand;
         private readonly IncludeCompareExchangeValuesCommand _includeCompareExchangeValuesCommand;
         private readonly Reference<int> _totalResults;
         private readonly string _collection;
@@ -34,7 +35,7 @@ namespace Raven.Server.Documents.Queries
         private readonly bool _isAllDocsCollection;
 
         public CollectionQueryEnumerable(DocumentDatabase database, DocumentsStorage documents, FieldsToFetch fieldsToFetch, string collection,
-            IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsOperationContext context, IncludeDocumentsCommand includeDocumentsCommand, IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand, Reference<int> totalResults)
+            IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsOperationContext context, IncludeDocumentsCommand includeDocumentsCommand, IncludeRevisionsCommand includeRevisionsCommand, IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand, Reference<int> totalResults)
         {
             _database = database;
             _documents = documents;
@@ -45,6 +46,7 @@ namespace Raven.Server.Documents.Queries
             _queryTimings = queryTimings;
             _context = context;
             _includeDocumentsCommand = includeDocumentsCommand;
+            _includeRevisionsCommand = includeRevisionsCommand;
             _includeCompareExchangeValuesCommand = includeCompareExchangeValuesCommand;
             _totalResults = totalResults;
         }
@@ -57,7 +59,7 @@ namespace Raven.Server.Documents.Queries
 
         public IEnumerator<Document> GetEnumerator()
         {
-            return new Enumerator(_database, _documents, _fieldsToFetch, _collection, _isAllDocsCollection, _query, _queryTimings, _context, _includeDocumentsCommand, _includeCompareExchangeValuesCommand, _totalResults, StartAfterId, AlreadySeenIdsCount, Fields);
+            return new Enumerator(_database, _documents, _fieldsToFetch, _collection, _isAllDocsCollection, _query, _queryTimings, _context, _includeDocumentsCommand, _includeRevisionsCommand, _includeCompareExchangeValuesCommand, _totalResults, StartAfterId, AlreadySeenIdsCount, Fields);
         }
 
         IEnumerator IEnumerable.GetEnumerator()
@@ -91,7 +93,7 @@ namespace Raven.Server.Documents.Queries
             private readonly string _startsWith;
 
             public Enumerator(DocumentDatabase database, DocumentsStorage documents, FieldsToFetch fieldsToFetch, string collection, bool isAllDocsCollection,
-                IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsOperationContext context, IncludeDocumentsCommand includeDocumentsCommand,
+                IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsOperationContext context, IncludeDocumentsCommand includeDocumentsCommand,IncludeRevisionsCommand includeRevisionsCommand,
                 IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand, Reference<int> totalResults, 
                 string startAfterId, Reference<long> alreadySeenIdsCount, DocumentFields fields)
             {
@@ -110,7 +112,7 @@ namespace Raven.Server.Documents.Queries
                 if (_fieldsToFetch.IsDistinct)
                     _alreadySeenProjections = new HashSet<ulong>();
 
-                _resultsRetriever = new MapQueryResultRetriever(database, query, queryTimings, documents, context, fieldsToFetch, includeDocumentsCommand, includeCompareExchangeValuesCommand);
+                _resultsRetriever = new MapQueryResultRetriever(database, query, queryTimings, documents, context, fieldsToFetch, includeDocumentsCommand, includeCompareExchangeValuesCommand, includeRevisionsCommand);
 
                 (_ids, _startsWith) = ExtractIdsFromQuery(query, context);
             }

@@ -119,7 +119,25 @@ namespace Raven.Server.Documents.Queries
                 }
             }
         }
-
+        
+        public static void ValidateRevisions(List<QueryExpression> arguments, string queryText, BlittableJsonReaderObject parameters)
+        {
+            if (arguments.Count == 0)
+                return;
+            
+            for (var i = 0; i < arguments.Count; i++)
+            {
+                switch (arguments[i])
+                {
+                    case FieldExpression :
+                    case ValueExpression :
+                        break;
+                    default:
+                        throw new InvalidQueryException($"Method 'revisions()' expects value token as an argument at index {i}, got {arguments[0]} type", queryText, parameters);
+                }
+            }
+        }
+        
         public static void ValidateIncludeTimeseries(List<QueryExpression> arguments, string queryText, BlittableJsonReaderObject parameters)
         {
             if (arguments.Count == 0)

@@ -39,4 +39,5 @@ namespace Raven.Tests.Core.Utils.Entities
         public string LastName { get; set; }
         public string ReportsTo { get; set; }
     }
+    
 }
