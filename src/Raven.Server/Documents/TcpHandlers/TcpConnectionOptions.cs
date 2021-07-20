@@ -73,7 +73,13 @@ namespace Raven.Server.Documents.TcpHandlers
             GC.SuppressFinalize(this);
 #endif
 
-            _running.Wait();
+            if (_running.Wait(TimeSpan.FromSeconds(15)) == false)
+            {
+                Console.WriteLine($"{this} waited too long for the semaphore, continue waiting...");
+                _running.Wait();
+                Console.WriteLine("semaphore was released");
+            }
+
             try
             {
                 if (_isDisposed)
