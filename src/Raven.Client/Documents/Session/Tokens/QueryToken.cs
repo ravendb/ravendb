@@ -8,7 +8,7 @@ namespace Raven.Client.Documents.Session.Tokens
     {
         public abstract void WriteTo(StringBuilder writer);
 
-        public static void WriteField(StringBuilder writer, string field)
+        internal static void WriteField(StringBuilder writer, string field)
         {
             var keyWord = IsKeyword(field);
 
@@ -21,7 +21,7 @@ namespace Raven.Client.Documents.Session.Tokens
                 writer.Append("'");
         }
 
-        public static bool IsKeyword(string field)
+        internal static bool IsKeyword(string field)
         {
             return RqlKeywords.Contains(field);
         }
