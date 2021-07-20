@@ -13,7 +13,6 @@ namespace Raven.Client.Documents.Identity
     /// </summary>   
     public class HiLoResult
     {
-
         public string Prefix { get; set; }
 
         public long Low { get; set; }
@@ -28,8 +27,6 @@ namespace Raven.Client.Documents.Identity
         public string ServerTag { get; set; }
 
         public DateTime LastRangeAt { get; set; }
-
-        public int? ShardIndex { get; set; }
 
     }
 
