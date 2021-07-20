@@ -25,6 +25,11 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Backup.TempPath", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public PathSetting TempPath { get; set; }
 
+        [Description("You can use this setting to specify a different path to the temporary export files (used for shard Database).")]
+        [DefaultValue("ShardTemp")]
+        [ConfigurationEntry("Backup.ShardTempPath", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public PathSetting ShardTempPath { get; set; }
+
         [Description("Semicolon seperated list of allowed backup destinations. If not specified, all destinations are allowed. Possible values: None, Local, Azure, AmazonGlacier, AmazonS3,GoogleCloud , FTP. Example list: \"Local;AmazonGlacier;AmazonS3\".")]
         [DefaultValue(null)]
         [ConfigurationEntry("Backup.AllowedDestinations", ConfigurationEntryScope.ServerWideOnly)]

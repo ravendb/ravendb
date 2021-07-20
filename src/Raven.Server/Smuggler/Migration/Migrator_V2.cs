@@ -73,7 +73,7 @@ namespace Raven.Server.Smuggler.Migration
 
             await using (var responseStream = await response.Content.ReadAsStreamAsync())
             using (Parameters.Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (var source = new StreamSource(responseStream, context, Parameters.Database))
+            using (var source = new StreamSource(responseStream, context, Parameters.Database.Name))
             {
                 var destination = new DatabaseDestination(Parameters.Database);
                 var options = new DatabaseSmugglerOptionsServerSide
@@ -84,7 +84,7 @@ namespace Raven.Server.Smuggler.Migration
                     TransformScript = Options.TransformScript,
                     OperateOnTypes = Options.OperateOnTypes
                 };
-                var smuggler = new DatabaseSmuggler(Parameters.Database, source, destination, Parameters.Database.Time, options, Parameters.Result, Parameters.OnProgress, Parameters.CancelToken.Token);
+                var smuggler = new DatabaseSmuggler(Parameters.Database, source, destination, Parameters.Database.Time, context, options, Parameters.Result, Parameters.OnProgress, Parameters.CancelToken.Token);
 
                 // since we will be migrating indexes as separate task don't ensureStepsProcessed at this point
                 await smuggler.ExecuteAsync(ensureStepsProcessed: false);
@@ -246,14 +246,14 @@ namespace Raven.Server.Smuggler.Migration
             await using (var responseStream = await response.Content.ReadAsStreamAsync())
             await using (var indexesStream = new ArrayStream(responseStream, "Indexes")) // indexes endpoint returns an array
             using (Parameters.Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (var source = new StreamSource(indexesStream, context, Parameters.Database))
+            using (var source = new StreamSource(indexesStream, context, Parameters.Database.Name))
             {
                 var destination = new DatabaseDestination(Parameters.Database);
                 var options = new DatabaseSmugglerOptionsServerSide
                 {
                     RemoveAnalyzers = Options.RemoveAnalyzers,
                 };
-                var smuggler = new DatabaseSmuggler(Parameters.Database, source, destination, Parameters.Database.Time, options, Parameters.Result, Parameters.OnProgress, Parameters.CancelToken.Token);
+                var smuggler = new DatabaseSmuggler(Parameters.Database, source, destination, Parameters.Database.Time, context, options, Parameters.Result, Parameters.OnProgress, Parameters.CancelToken.Token);
 
                 await smuggler.ExecuteAsync();
             }

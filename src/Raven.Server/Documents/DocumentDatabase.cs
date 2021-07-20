@@ -998,10 +998,12 @@ namespace Raven.Server.Documents
                                 AuthorizationStatus = AuthorizationStatus.DatabaseAdmin,
                                 OperateOnTypes = DatabaseItemType.CompareExchange | DatabaseItemType.Identities
                             };
+
                             var smuggler = new DatabaseSmuggler(this,
                                 smugglerSource,
                                 smugglerDestination,
                                 Time,
+                                documentsContext,
                                 options: databaseSmugglerOptionsServerSide,
                                 token: cancellationToken);
 

@@ -197,7 +197,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 await using (var outputStream = GetOutputStream(ResponseBodyStream(), options))
                 {
                     var destination = new StreamDestination(outputStream, context, source);
-                    var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, options, onProgress: onProgress, token: token.Token);
+                    var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, context, options, onProgress: onProgress, token: token.Token);
                     return await smuggler.ExecuteAsync();
                 }
             }
@@ -236,14 +236,11 @@ namespace Raven.Server.Smuggler.Documents.Handlers
 
                 await using (var stream = new GZipStream(new BufferedStream(await GetImportStream(), 128 * Voron.Global.Constants.Size.Kilobyte), CompressionMode.Decompress))
                 using (var token = CreateOperationToken())
-                using (var source = new StreamSource(stream, context, Database))
+                using (var source = new StreamSource(stream, context, Database.Name))
                 {
                     var destination = new DatabaseDestination(Database);
-
-                    var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, options, token: token.Token);
-
+                    var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, context, options, token: token.Token);
                     var result = await smuggler.ExecuteAsync();
-
                     await WriteImportResultAsync(context, result, ResponseBodyStream());
                 }
             }
@@ -312,11 +309,11 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                         using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                         await using (var file = await getFile())
                         await using (var stream = new GZipStream(new BufferedStream(file, 128 * Voron.Global.Constants.Size.Kilobyte), CompressionMode.Decompress))
-                        using (var source = new StreamSource(stream, context, Database))
+                        using (var source = new StreamSource(stream, context, Database.Name))
                         {
                             var destination = new DatabaseDestination(Database);
 
-                            var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time);
+                            var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, context);
 
                             var result = await smuggler.ExecuteAsync();
                             results.Enqueue(result);
@@ -574,7 +571,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                                     {
                                         TransformScript = transformScript
                                     };
-                                    await DoImportInternalAsync(migrateContext, process.StandardOutput.BaseStream, options, result, onProgress, token);
+                                    await DoImportInternalAsync(migrateContext, process.StandardOutput.BaseStream, options, null, result, onProgress, token);
                                 }
                             }
                             catch (OperationCanceledException)
@@ -656,6 +653,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 }
 
                 var operationId = GetLongQueryString("operationId", false) ?? Database.Operations.GetNextOperationId();
+                var guid = GetStringQueryString("Guid", false);
                 var token = CreateOperationToken();
 
                 var result = new SmugglerResult();
@@ -712,7 +710,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
 
                                     var inputStream = GetInputStream(section.Body, options);
                                     var stream = new GZipStream(inputStream, CompressionMode.Decompress);
-                                    await DoImportInternalAsync(context, stream, options, result, onProgress, token);
+                                    await DoImportInternalAsync(context, stream, options, guid, result, onProgress, token);
                                 }
                             }
                             catch (Exception e)
@@ -863,23 +861,23 @@ namespace Raven.Server.Smuggler.Documents.Handlers
 
             using (var source = new CsvStreamSource(Database, stream, context, entity, csvConfig))
             {
-                var destination = new DatabaseDestination(Database);
-                var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, options, result, onProgress, token.Token);
+                ISmugglerDestination destination = new DatabaseDestination(Database);
+                var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, context, options, result, onProgress, token.Token);
 
                 await smuggler.ExecuteAsync();
             }
         }
 
-        private async Task DoImportInternalAsync(DocumentsOperationContext context, Stream stream, DatabaseSmugglerOptionsServerSide options, SmugglerResult result, Action<IOperationProgress> onProgress, OperationCancelToken token)
+        private async Task DoImportInternalAsync(DocumentsOperationContext context, Stream stream, DatabaseSmugglerOptionsServerSide options, string guid, SmugglerResult result, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
             await using (stream)
             using (token)
-            using (var source = new StreamSource(stream, context, Database))
+            using (var source = new StreamSource(stream, context, Database.Name))
             {
                 var destination = new DatabaseDestination(Database, token.Token);
-                var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, options, result, onProgress, token.Token);
+                var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, context, options, result, onProgress, token.Token);
 
-                await smuggler.ExecuteAsync();
+                await smuggler.ExecuteAsync(guid: guid);
             }
         }
 

@@ -11,7 +11,6 @@ using Raven.Client.ServerWide;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Routing;
-using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
 namespace Raven.Server.Smuggler.Documents.Data
@@ -45,6 +44,8 @@ namespace Raven.Server.Smuggler.Documents.Data
         IReplicationHubCertificateActions ReplicationHubCertificates();
 
         ITimeSeriesActions TimeSeries();
+
+        bool SkipItem(string docId);
     }
 
     public interface IDocumentActions : INewDocumentActions, IAsyncDisposable
@@ -66,7 +67,7 @@ namespace Raven.Server.Smuggler.Documents.Data
 
     public interface INewDocumentActions
     {
-        DocumentsOperationContext GetContextForNewDocument();
+        JsonOperationContext GetContextForNewDocument();
 
         Stream GetTempStream();
     }
@@ -111,7 +112,7 @@ namespace Raven.Server.Smuggler.Documents.Data
 
     public interface IDatabaseRecordActions : IAsyncDisposable
     {
-        ValueTask WriteDatabaseRecordAsync(DatabaseRecord databaseRecord, SmugglerProgressBase.DatabaseRecordProgress progress, AuthorizationStatus authorizationStatus, DatabaseRecordItemType databaseRecordItemType);
+        ValueTask WriteDatabaseRecordAsync(DatabaseRecord databaseRecord, SmugglerProgressBase.DatabaseRecordProgress progress, AuthorizationStatus authorizationStatus, DatabaseRecordItemType databaseRecordItemType, string guid);
     }
 
     public interface ITimeSeriesActions : IAsyncDisposable

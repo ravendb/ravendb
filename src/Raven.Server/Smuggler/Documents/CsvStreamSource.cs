@@ -238,7 +238,7 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        private DocumentItem ConvertRecordToDocumentItem(DocumentsOperationContext context, string[] csvReaderCurrentRecord, string[] csvReaderFieldHeaders, string collection)
+        private DocumentItem ConvertRecordToDocumentItem(JsonOperationContext context, string[] csvReaderCurrentRecord, string[] csvReaderFieldHeaders, string collection)
         {
             try
             {
@@ -442,6 +442,11 @@ namespace Raven.Server.Smuggler.Documents
         public SmugglerSourceType GetSourceType()
         {
             return SmugglerSourceType.Import;
+        }
+
+        public Stream GetAttachmentStream(LazyStringValue hash, out string tag)
+        {
+            throw new NotImplementedException();
         }
 
         public void Dispose()

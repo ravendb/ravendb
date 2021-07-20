@@ -30,7 +30,7 @@ namespace SlowTests.Issues
             {
                 using (var database = CreateDocumentDatabase())
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                using (var source = new StreamSource(stream, context, database))
+                using (var source = new StreamSource(stream, context, database.Name))
                 {
                     var editRevisions = new EditRevisionsConfigurationCommand(new RevisionsConfiguration
                     {
@@ -48,7 +48,7 @@ namespace SlowTests.Issues
 
                     var destination = new DatabaseDestination(database);
 
-                    var smuggler = await (new DatabaseSmuggler(database, source, destination, database.Time, new DatabaseSmugglerOptionsServerSide
+                    var smuggler = await (new DatabaseSmuggler(database, source, destination, database.Time, context, new DatabaseSmugglerOptionsServerSide
                     {
                         OperateOnTypes = DatabaseItemType.Documents | DatabaseItemType.RevisionDocuments | DatabaseItemType.Attachments |
                                          DatabaseItemType.Indexes,
