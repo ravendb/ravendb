@@ -222,7 +222,7 @@ namespace Voron.Benchmark.Corax
             }
         }
 
-        private long[] _ids = new long[128];
+        private long[] _ids = new long[16];
 
         [Benchmark]
         public void RuntimeQuery()
@@ -232,13 +232,15 @@ namespace Voron.Benchmark.Corax
             var familyTerm = indexSearcher.TermQuery("Age", "15");
             var query = indexSearcher.And(typeTerm, familyTerm);
 
-            int i = 0;
-            //var ids = _ids;
-            while (query.MoveNext(out long v))
+            int read = 0;
+            Span<long> ids = _ids;
+            do
             {
-                //ids[i++] = v;
-                indexSearcher.GetEntryById(v);
+                read = query.Fill(ids);
+                for (int i = 0; i < read; i++)
+                    indexSearcher.GetIdentityFor(ids[i]);
             }
+            while (read != 0);
         }
 
         [Benchmark]
@@ -249,8 +251,8 @@ namespace Voron.Benchmark.Corax
             var familyTerm = indexSearcher.TermQuery("Age", "15");
             var query = indexSearcher.And(typeTerm, familyTerm);
 
-            while (query.MoveNext(out long v))
-            { }
+            Span<long> ids = _ids;
+            while (query.Fill(ids) != 0);
         }
 
         [Benchmark]
@@ -259,11 +261,15 @@ namespace Voron.Benchmark.Corax
             using var indexSearcher = new IndexSearcher(Env);
             var query = indexSearcher.Search(_queryDefinition.Query.Where);
 
-            int i = 0;
-            while (query.MoveNext(out long v))
+            int read = 0;
+            Span<long> ids = _ids;
+            do
             {
-                indexSearcher.GetEntryById(v);
+                read = query.Fill(ids);
+                for (int i = 0; i < read; i++)
+                    indexSearcher.GetIdentityFor(ids[i]);
             }
+            while (read != 0);
         }
 
         [Benchmark]
@@ -272,8 +278,8 @@ namespace Voron.Benchmark.Corax
             using var indexSearcher = new IndexSearcher(Env);
             var query = indexSearcher.Search(_queryDefinition.Query.Where);
 
-            while (query.MoveNext(out long v))
-            { }
+            Span<long> ids = _ids;
+            while (query.Fill(ids) != 0);
         }
     }
 }

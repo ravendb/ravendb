@@ -2,31 +2,37 @@
 using Sparrow.Server.Compression;
 using Voron.Data.Sets;
 using Voron.Data.Containers;
+using System;
+using System.Diagnostics;
 
 namespace Corax.Queries
 {
     public unsafe struct TermMatch : IQueryMatch
     {
-        private readonly delegate*<ref TermMatch, long, bool> _seekToFunc;
-        private readonly delegate*<ref TermMatch, out long, bool> _moveNext;
+        private readonly delegate*<ref TermMatch, Span<long>, int> _fillFunc;
+        private readonly delegate*<ref TermMatch, Span<long>, int> _andWithFunc;
 
-        private long _totalResults;
+        private readonly long _totalResults;
         private long _currentIdx;
+        private long _baselineIdx;
         private long _current;
 
         private Container.Item _container;
         private Set.Iterator _set;
 
         public long Count => _totalResults;
-        public long Current => _currentIdx <= QueryMatch.Start ? _currentIdx : _current;
 
-        private TermMatch(delegate*<ref TermMatch, long, bool> seekFunc, delegate*<ref TermMatch, out long, bool> moveNext, long totalResults)
+        private TermMatch(
+            delegate*<ref TermMatch, Span<long>, int> fillFunc,
+            delegate*<ref TermMatch, Span<long>, int> andWithFunc,
+            long totalResults)
         {
             _totalResults = totalResults;
             _current = QueryMatch.Start;
             _currentIdx = QueryMatch.Start;
-            _seekToFunc = seekFunc;
-            _moveNext = moveNext;
+            _baselineIdx = QueryMatch.Start;
+            _fillFunc = fillFunc;
+            _andWithFunc = andWithFunc;
 
             _container = default;
             _set = default;
@@ -34,46 +40,48 @@ namespace Corax.Queries
 
         public static TermMatch CreateEmpty()
         {
-            static bool SeekFunc(ref TermMatch term, long next)
-            {
-                term._current = next == QueryMatch.Start ? QueryMatch.Start : QueryMatch.Invalid;
-                return false;
-            }
-
-            static bool MoveNextFunc(ref TermMatch term, out long v)
+            static int FillFunc(ref TermMatch term, Span<long> matches)
             {
                 term._currentIdx = QueryMatch.Invalid;
                 term._current = QueryMatch.Invalid;
-                v = QueryMatch.Invalid;
-                return false;
+                return 0;
             }
 
-            return new TermMatch(&SeekFunc, &MoveNextFunc, 0);
+            return new TermMatch(&FillFunc, &FillFunc, 0);
         }
 
         public static TermMatch YieldOnce(long value)
         {
-            static bool SeekFunc(ref TermMatch term, long next)
-            {
-                term._currentIdx = next > term._current ? QueryMatch.Invalid : QueryMatch.Start;
-                return term._currentIdx == QueryMatch.Start;
-            }
-
-            static bool MoveNextFunc(ref TermMatch term, out long v)
+            static int FillFunc(ref TermMatch term, Span<long> matches)
             {
                 if (term._currentIdx == QueryMatch.Start)
                 {
                     term._currentIdx = term._current;
-                    v = term._current;
-                    return true;
+                    matches[0] = term._current;
+                    return 1;
                 }
 
-                v = QueryMatch.Invalid;
                 term._currentIdx = QueryMatch.Invalid;
-                return false;
+                return 0;
             }
 
-            return new TermMatch(&SeekFunc, &MoveNextFunc, 1)
+            static int AndWithFunc(ref TermMatch term, Span<long> matches)
+            {
+                // TODO: If matches is too big, we should use quicksort
+                long current = term._current;
+                for (int i = 0; i < matches.Length; i++)
+                {
+                    if (matches[i] == current)
+                    {
+                        matches[0] = current;
+                        return 1;
+                    }
+                }
+                return 0;
+            }
+
+
+            return new TermMatch(&FillFunc, &AndWithFunc, 1)
             {
                 _current = value,
                 _currentIdx = QueryMatch.Start
@@ -83,97 +91,157 @@ namespace Corax.Queries
         public static TermMatch YieldSmall(Container.Item containerItem)
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            static bool SeekFunc(ref TermMatch term, long next)
+            static int FillFunc(ref TermMatch term, Span<long> matches)
             {
-                var stream = term._container.ToSpan();
+                // Fill needs to store resume capability.
 
-                while (term._currentIdx < stream.Length)
-                {
-                    var current = ZigZagEncoding.Decode<long>(stream, out var len, (int)term._currentIdx);
-                    term._currentIdx += len;
-                    if (current <= next)
-                        continue;
-
-                    // We found values bigger than next.
-                    term._current = current;
-                    return true;
-                }
-
-                term._currentIdx = QueryMatch.Invalid;
-
-                return false;
-            }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            static bool MoveNextFunc(ref TermMatch term, out long v)
-            {
                 var stream = term._container.ToSpan();
                 if (term._currentIdx == QueryMatch.Invalid || term._currentIdx >= stream.Length)
                 {
                     term._currentIdx = QueryMatch.Invalid;
-                    v = QueryMatch.Invalid;
-                    return false;
+                    return 0;
                 }
 
-                term._current += ZigZagEncoding.Decode<long>(stream, out var len, (int)term._currentIdx);
-                v = term._current;
-                term._currentIdx += len;
+                int i = 0;
+                for (; i < matches.Length; i++)
+                {
+                    term._current += ZigZagEncoding.Decode<long>(stream, out var len, (int)term._currentIdx);
+                    term._currentIdx += len;
+                    matches[i] = term._current;
 
-                return true;
+                    if (term._currentIdx >= stream.Length)
+                    {
+                        i++;
+                        break;
+                    }                        
+                }
+
+                return i;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            static int AndWithFunc(ref TermMatch term, Span<long> matches)
+            {
+                // AndWith has to start from the start.
+                // TODO: Support Seek for the small set in order to have better behavior.
+
+                var stream = term._container.ToSpan();
+
+                // need to seek from start
+                long current = 0;
+                int currentIdx = (int)term._baselineIdx;
+
+                int i = 0;
+                int matchedIdx = 0;
+                while (currentIdx < stream.Length && i < matches.Length)
+                {
+                    current += ZigZagEncoding.Decode<long>(stream, out var len, currentIdx);
+                    currentIdx += len;
+
+                    while (matches[i] < current)
+                    {                        
+                        i++;
+                        if (i >= matches.Length)
+                            goto End;
+                    }                    
+
+                    // If there is a match we advance. 
+                    if (matches[i] == current)
+                    {
+                        matches[matchedIdx++] = current;
+                        i++;
+                    }
+                }
+
+                End:  return matchedIdx;
             }
 
             var itemsCount = ZigZagEncoding.Decode<int>(containerItem.ToSpan(), out var len);
-            return new TermMatch(&SeekFunc, &MoveNextFunc, itemsCount)
+            return new TermMatch(&FillFunc, &AndWithFunc, itemsCount)
             {
                 _container = containerItem,
                 _currentIdx = len,
+                _baselineIdx = len,
+                _current = 0
             };
         }
 
         public static TermMatch YieldSet(Set set)
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            static bool SeekFunc(ref TermMatch term, long next)
+            static int AndWithFunc(ref TermMatch term, Span<long> matches)
             {
-                if (next == QueryMatch.Start)
-                {
-                    term._current = QueryMatch.Start;
-                    term._currentIdx = QueryMatch.Start;
+                int matchedIdx = 0;
 
-                    // We change it in order for the Set Seek operation to seek to the start. 
-                    next = long.MinValue;
+                term._set.Seek(matches[0] - 1);
+
+                // We update the current value we want to work with.
+                var current = term._set.Current;
+
+                // Check if there are matches left to process or is any posibility of a match to be available in this block.
+                int i = 0;                
+                while (i < matches.Length && current <= matches[^1])
+                {
+                    // While the current match is smaller we advance.
+                    while (matches[i] < current)
+                    {
+                        i++;
+                        if (i >= matches.Length)
+                            goto End;
+                    }
+
+                    // We are guaranteed that matches[i] is at least equal if not higher than current.
+                    Debug.Assert(matches[i] >= current);
+
+                    // We have a match, we include it into the matches and go on. 
+                    if (current == matches[i])
+                    {
+                        matches[matchedIdx++] = current;
+                        i++;
+                    }
+
+                    // We look into the next.
+                    if (term._set.MoveNext() == false)
+                        goto End;
+
+                    current = term._set.Current;                    
                 }
 
-                return term._set.Seek(next);
+                End:
+                term._current = current;
+                return matchedIdx;
             }
+
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            static bool MoveNextFunc(ref TermMatch term, out long v)
+            static int FillFunc(ref TermMatch term, Span<long> matches)
             {
-                bool hasMove = term._set.MoveNext();
-                v = term._set.Current;
-                term._currentIdx = hasMove ? v : QueryMatch.Invalid;
-                term._current = v;
-
-                return hasMove;
+                int i = 0;
+                while (i < matches.Length && term._set.MoveNext())
+                {
+                    matches[i++] = term._set.Current;
+                }
+                return i;
             }
 
-            return new TermMatch(&SeekFunc, &MoveNextFunc, set.State.NumberOfEntries)
+
+            return new TermMatch(&FillFunc, &AndWithFunc, set.State.NumberOfEntries)
             {
                 _set = set.Iterate(),
+                _current = long.MinValue
             };
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool SeekTo(long next = QueryMatch.Start)
+        public int Fill(Span<long> matches)
         {
-            return _seekToFunc(ref this, next);
+            return _fillFunc(ref this, matches);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool MoveNext(out long v)
+        public int AndWith(Span<long> matches)
         {
-            return _moveNext(ref this, out v);
+            return _andWithFunc(ref this, matches);
         }
     }
 }

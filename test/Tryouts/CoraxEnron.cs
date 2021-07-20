@@ -6,6 +6,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using Corax;
+using Corax.Queries;
 using MimeKit;
 using MimeKit.Text;
 using Sparrow;
@@ -62,52 +63,52 @@ namespace Tryouts
 
         private static void ReportStats(StorageEnvironment env)
         {
-            using var rtx = env.ReadTransaction();
-            var reports = env.GenerateReport(rtx);
+            //using var rtx = env.ReadTransaction();
+            //var reports = env.GenerateReport(rtx);
 
-            long  big = 0L;
-            var tree = rtx.ReadTree("Fields");
-            long treeSize = tree.State.BranchPages * Constants.Storage.PageSize + tree.State.LeafPages * Constants.Storage.PageSize;
+            //long  big = 0L;
+            //var tree = rtx.ReadTree("Fields");
+            //long treeSize = tree.State.BranchPages * Constants.Storage.PageSize + tree.State.LeafPages * Constants.Storage.PageSize;
 
-            long numberOfTerms = 0, numberOfTermValues = 0;
-            using var it = tree.Iterate(false);
-            if(it.Seek(Slices.BeforeAllKeys))
-            {
-                do
-                {
-                    var fieldTree = tree.CompactTreeFor(it.CurrentKey);
-                    treeSize += fieldTree.State.BranchPages * Constants.Storage.PageSize + fieldTree.State.LeafPages * Constants.Storage.PageSize;
-                    fieldTree.Seek("\0");
-                    while (fieldTree.Next(out _, out var l))
-                    {
-                        if ((l & (long)TermIdMask.Set) != 0)
-                        {
-                            numberOfTerms++;
-                            var setSpace = Container.Get(rtx.LowLevelTransaction, (l & ~0b11));
-                            ref var setState = ref MemoryMarshal.GetReference<SetState>(MemoryMarshal.Cast<byte,SetState>(setSpace.ToSpan()));
-                            Set set = new Set(rtx.LowLevelTransaction, Slices.Empty, setState);
-                            using var sit = set.Iterate();
-                            if (sit.Seek(0))
-                            {
-                                do
-                                {
-                                    numberOfTermValues++;
-                                } while (sit.MoveNext());
-                            }
-                            big +=  setState.BranchPages * Constants.Storage.PageSize + setState.LeafPages * Constants.Storage.PageSize;
-                        }
-                    }
-                } while (it.MoveNext());
-            }
+            //long numberOfTerms = 0, numberOfTermValues = 0;
+            //using var it = tree.Iterate(false);
+            //if(it.Seek(Slices.BeforeAllKeys))
+            //{
+            //    do
+            //    {
+            //        var fieldTree = tree.CompactTreeFor(it.CurrentKey);
+            //        treeSize += fieldTree.State.BranchPages * Constants.Storage.PageSize + fieldTree.State.LeafPages * Constants.Storage.PageSize;
+            //        fieldTree.Seek("\0");
+            //        while (fieldTree.Next(out _, out var l))
+            //        {
+            //            if ((l & (long)IndexWriter.TermIdMask.Set) != 0)
+            //            {
+            //                numberOfTerms++;
+            //                var setSpace = Container.Get(rtx.LowLevelTransaction, (l & ~0b11));
+            //                ref var setState = ref MemoryMarshal.GetReference<SetState>(MemoryMarshal.Cast<byte,SetState>(setSpace));
+            //                Set set = new Set(rtx.LowLevelTransaction, Slices.Empty, setState);
+            //                using var sit = set.Iterate();
+            //                if (sit.Seek(0))
+            //                {
+            //                    do
+            //                    {
+            //                        numberOfTermValues++;
+            //                    } while (sit.MoveNext());
+            //                }
+            //                big +=  setState.BranchPages * Constants.Storage.PageSize + setState.LeafPages * Constants.Storage.PageSize;
+            //            }
+            //        }
+            //    } while (it.MoveNext());
+            //}
          
 
-            Console.WriteLine($"Total Tree Size: {treeSize:##,###}");
-            Console.WriteLine($"Number of terms: {numberOfTerms:##,###} - values {numberOfTermValues:##,###}");
-            Console.WriteLine($"Big: {big:##,###}");
-            Console.WriteLine("PostingLists:");
-            OutputContainerStats(rtx, IndexWriter.PostingListsSlice);
-            Console.WriteLine("Entries:");
-            OutputContainerStats(rtx, IndexWriter.EntriesContainerSlice);
+            //Console.WriteLine($"Total Tree Size: {treeSize:##,###}");
+            //Console.WriteLine($"Number of terms: {numberOfTerms:##,###} - values {numberOfTermValues:##,###}");
+            //Console.WriteLine($"Big: {big:##,###}");
+            //Console.WriteLine("PostingLists:");
+            //OutputContainerStats(rtx, IndexWriter.PostingListsSlice);
+            //Console.WriteLine("Entries:");
+            //OutputContainerStats(rtx, IndexWriter.EntriesContainerSlice);
         }
 
         private static void OutputContainerStats(Transaction rtx, Slice key)
@@ -120,7 +121,8 @@ namespace Tryouts
             long size = 0;
             foreach (long id in ids)
             {
-                var span = Container.Get(rtx.LowLevelTransaction, id);
+                var item = Container.Get(rtx.LowLevelTransaction, id);
+                var span = item.ToSpan();
                 size += span.Length;
                 dic.TryGetValue(span.Length, out var counts);
                 dic[span.Length] = (counts.Item1 + span.Length, counts.Item2 + 1);
@@ -262,19 +264,23 @@ namespace Tryouts
 
         public static void Search(string field, string term)
         {
-
             var options = StorageEnvironmentOptions.ForPath(DirectoryEnron);
             var env = new StorageEnvironment(options);
 
             using (var searcher = new IndexSearcher(env))
             {
-                var q = searcher.TermQuery(field, term);
-                while (q.MoveNext(out var id))
-                {
-                    Console.WriteLine(searcher.GetEntryById(id));
-                }
-            }
+                Span<long> ids = stackalloc long[128];
 
+                var q = searcher.TermQuery(field, term);
+                int read;
+                do
+                {
+                    read = q.Fill(ids);
+                    for (int i = 0; i < read; i++)
+                        Console.WriteLine(searcher.GetIdentityFor(ids[i]));
+                }
+                while (read != 0);
+            }
         }
         
         private readonly struct StringArrayIterator : IReadOnlySpanEnumerator
