@@ -222,6 +222,7 @@ namespace Raven.Client.Documents.BulkInsert
                 }
             });
 
+            CompressionLevel = bulkInsertOptions?.CompressionLevel ?? CompressionLevel.NoCompression;
             _bulkInsertOptions = bulkInsertOptions ?? new BulkInsertOptions();
             _token = token;
             _conventions = store.Conventions;
