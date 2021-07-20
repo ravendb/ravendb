@@ -312,9 +312,8 @@ namespace Raven.Server.Documents.Handlers
             {
                 var changeVector = context.GetLazyString(GetStringFromHeaders("If-Match"));
 
-                var cmd = new DeleteDocumentCommand(id, changeVector, Database, catchConcurrencyErrors: true);
+                var cmd = new DeleteDocumentCommand(id, changeVector, Database);
                 await Database.TxMerger.Enqueue(cmd);
-                cmd.ExceptionDispatchInfo?.Throw();
             }
 
             NoContentStatus();
@@ -343,8 +342,6 @@ namespace Raven.Server.Documents.Handlers
                 using (var cmd = new MergedPutCommand(doc, id, changeVector, Database, shouldValidateAttachments:true))
                 {
                     await Database.TxMerger.Enqueue(cmd);
-
-                    cmd.ExceptionDispatchInfo?.Throw();
 
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
@@ -557,7 +554,6 @@ namespace Raven.Server.Documents.Handlers
         private readonly BlittableJsonReaderObject _document;
         private readonly DocumentDatabase _database;
         private readonly bool _shouldValidateAttachments;
-        public ExceptionDispatchInfo ExceptionDispatchInfo;
         public DocumentsStorage.PutOperationResults PutResult;
 
         public static string GenerateNonConflictingId(DocumentDatabase database, string prefix)
@@ -602,10 +598,6 @@ namespace Raven.Server.Documents.Handlers
                     RetryOnError = true;
                 }
                 throw;
-            }
-            catch (ConcurrencyException e)
-            {
-                ExceptionDispatchInfo = ExceptionDispatchInfo.Capture(e);
             }
             return 1;
         }
