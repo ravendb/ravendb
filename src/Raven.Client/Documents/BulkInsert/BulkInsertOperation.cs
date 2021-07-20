@@ -94,19 +94,21 @@ namespace Raven.Client.Documents.BulkInsert
         {
             public override bool IsReadRequest => false;
             private readonly StreamExposerContent _stream;
+            private readonly bool _skipOverwriteIfUnchanged;
             private readonly long _id;
 
-            public BulkInsertCommand(long id, StreamExposerContent stream, string nodeTag)
+            public BulkInsertCommand(long id, StreamExposerContent stream, string nodeTag, bool skipOverwriteIfUnchanged)
             {
-                _stream = stream;
                 _id = id;
+                _stream = stream;
                 SelectedNodeTag = nodeTag;
+                _skipOverwriteIfUnchanged = skipOverwriteIfUnchanged;
                 Timeout = TimeSpan.FromHours(12); // global max timeout
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/bulk_insert?id={_id}";
+                url = $"{node.Url}/databases/{node.Database}/bulk_insert?id={_id}&skipOverwriteIfUnchanged={_skipOverwriteIfUnchanged}";
                 var message = new HttpRequestMessage
                 {
                     Method = HttpMethod.Post,
@@ -154,11 +156,17 @@ namespace Raven.Client.Documents.BulkInsert
         private long _operationId = -1;
         private string _nodeTag;
 
-        public CompressionLevel CompressionLevel = CompressionLevel.NoCompression;
         private readonly IJsonSerializer _defaultSerializer;
         private readonly Func<object, IMetadataDictionary, StreamWriter, bool> _customEntitySerializer;
         private readonly int _timeSeriesBatchSize;
         private long _concurrentCheck;
+
+        public CompressionLevel CompressionLevel = CompressionLevel.NoCompression;
+
+        /// <summary>
+        /// Determines whether we should skip overwriting a document when it is updated by exactly the same document (by comparing the content and the metadata)
+        /// </summary>
+        public bool SkipOverwriteIfUnchanged;
 
         public BulkInsertOperation(string database, IDocumentStore store, CancellationToken token = default)
         {
@@ -486,7 +494,8 @@ namespace Raven.Client.Documents.BulkInsert
             var bulkCommand = new BulkInsertCommand(
                 _operationId,
                 _streamExposerContent,
-                _nodeTag);
+                _nodeTag,
+                SkipOverwriteIfUnchanged);
 
             _bulkInsertExecuteTask = ExecuteAsync(bulkCommand);
 
