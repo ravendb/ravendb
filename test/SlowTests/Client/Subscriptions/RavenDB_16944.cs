@@ -11,7 +11,7 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Client.Subscriptions
 {
-    public class RavenDB_16944:RavenTestBase
+    public class RavenDB_16944 : RavenTestBase
     {
         public RavenDB_16944(ITestOutputHelper output) : base(output) { }
 
@@ -30,19 +30,13 @@ namespace SlowTests.Client.Subscriptions
                     session.SaveChanges();
                 }
 
-                using (store.GetRequestExecutor().ContextPool.AllocateOperationContext(out var context))
-                {
-                    store.GetRequestExecutor()
-                        .Execute(
-                            new CreateSubscriptionCommand(store.Conventions,
-                                new SubscriptionCreationOptions() { Name = "10", Query = "From Users" }, true, "10"), context);
-                }
+                store.Subscriptions.Create(new SubscriptionCreationOptions() { Name = "10", Query = "From Users", Disabled = true }, store.Database);
 
                 using (var session = store.OpenSession())
                 {
                     var subs = store.Subscriptions.GetSubscriptions(0, 10);
-                    var item = subs.FirstOrDefault(x => x.SubscriptionName == "10" && x.Disabled);
-                    Assert.NotNull(item);
+                    var item = subs.First(x => x.SubscriptionName == "10");
+                    Assert.True(item.Disabled);
                 }
             }
         }
@@ -62,19 +56,13 @@ namespace SlowTests.Client.Subscriptions
                     session.SaveChanges();
                 }
 
-                using (store.GetRequestExecutor().ContextPool.AllocateOperationContext(out var context))
-                {
-                    store.GetRequestExecutor()
-                        .Execute(
-                            new CreateSubscriptionCommand(store.Conventions,
-                                new SubscriptionCreationOptions() { Name = "10", Query = "From Users" },"10"), context);
-                }
+                store.Subscriptions.Create(new SubscriptionCreationOptions() { Name = "10", Query = "From Users"}, store.Database);
 
                 using (var session = store.OpenSession())
                 {
                     var subs = store.Subscriptions.GetSubscriptions(0, 10);
-                    var item = subs.FirstOrDefault(x => x.SubscriptionName == "10" && !x.Disabled);
-                    Assert.NotNull(item);
+                    var item = subs.First(x => x.SubscriptionName == "10");
+                    Assert.False(item.Disabled);
                 }
             }
         }

@@ -15,29 +15,19 @@ namespace Raven.Client.Documents.Commands
     {
         private readonly SubscriptionCreationOptions _options;
         private readonly string _id;
-        private readonly bool _disabled;
 
         public CreateSubscriptionCommand(DocumentConventions conventions, SubscriptionCreationOptions options, string id = null)
         {
             _options = options ?? throw new ArgumentNullException(nameof(options));
             _id = id;
-            _disabled = false;
         }
-        public CreateSubscriptionCommand(DocumentConventions conventions, SubscriptionCreationOptions options, bool disabled, string id = null)
-        {
-            _options = options ?? throw new ArgumentNullException(nameof(options));
-            _id = id;
-            _disabled = disabled;
-        }
-       
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
             url = $"{node.Url}/databases/{node.Database}/subscriptions";
-            url += "?disabled=" + Uri.EscapeDataString(_disabled.ToString());
             if (_id != null)
-                url += "&id=" + Uri.EscapeDataString(_id);
-            
+                url += "?id=" + Uri.EscapeDataString(_id);
+
             var request = new HttpRequestMessage
             {
                 Method = HttpMethod.Put,

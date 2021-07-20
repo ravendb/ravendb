@@ -17,11 +17,13 @@ namespace Raven.Client.Documents.Subscriptions
         public string Query { get; set; }
         public string ChangeVector { get; set; }
         public string MentorNode { get; set; }
+        public bool Disabled { get; set; }
     }
 
     public class SubscriptionCreationOptions<T>
     {
         public string Name { get; set; }
+        public bool Disabled { get; set; }
         public Expression<Func<T, bool>> Filter { get; set; }
         public Expression<Func<T, object>> Projection { get; set; }
         public Action<ISubscriptionIncludeBuilder<T>> Includes { get; set; }
@@ -34,7 +36,8 @@ namespace Raven.Client.Documents.Subscriptions
             {
                 Name = Name,
                 ChangeVector = ChangeVector,
-                MentorNode = MentorNode
+                MentorNode = MentorNode,
+                Disabled = Disabled
             };
             return DocumentSubscriptions.CreateSubscriptionOptionsFromGeneric(conventions, 
                 subscriptionCreationOptions, Filter, Projection, Includes);
