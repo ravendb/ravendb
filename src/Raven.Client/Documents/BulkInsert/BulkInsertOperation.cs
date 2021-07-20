@@ -31,6 +31,7 @@ namespace Raven.Client.Documents.BulkInsert
 {
     public class BulkInsertOperation : IDisposable, IAsyncDisposable
     {
+        private readonly BulkInsertOptions _bulkInsertOptions;
         private readonly CancellationToken _token;
         private readonly GenerateEntityIdOnTheClient _generateEntityIdOnTheClient;
 
@@ -163,12 +164,7 @@ namespace Raven.Client.Documents.BulkInsert
 
         public CompressionLevel CompressionLevel = CompressionLevel.NoCompression;
 
-        /// <summary>
-        /// Determines whether we should skip overwriting a document when it is updated by exactly the same document (by comparing the content and the metadata)
-        /// </summary>
-        public bool SkipOverwriteIfUnchanged;
-
-        public BulkInsertOperation(string database, IDocumentStore store, CancellationToken token = default)
+        public BulkInsertOperation(string database, IDocumentStore store, BulkInsertOptions bulkInsertOptions, CancellationToken token = default)
         {
             _disposeOnce = new DisposeOnceAsync<SingleAttempt>(async () =>
             {
@@ -226,6 +222,7 @@ namespace Raven.Client.Documents.BulkInsert
                 }
             });
 
+            _bulkInsertOptions = bulkInsertOptions ?? new BulkInsertOptions();
             _token = token;
             _conventions = store.Conventions;
             if (string.IsNullOrWhiteSpace(database))
@@ -244,6 +241,11 @@ namespace Raven.Client.Documents.BulkInsert
 
             _generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(_requestExecutor.Conventions,
                 entity => AsyncHelpers.RunSync(() => _requestExecutor.Conventions.GenerateDocumentIdAsync(database, entity)));
+        }
+
+        public BulkInsertOperation(string database, IDocumentStore store, CancellationToken token = default) : this(database, store, null, token)
+        {
+            
         }
 
         private async Task ThrowBulkInsertAborted(Exception e, Exception flushEx = null)
@@ -495,7 +497,7 @@ namespace Raven.Client.Documents.BulkInsert
                 _operationId,
                 _streamExposerContent,
                 _nodeTag,
-                SkipOverwriteIfUnchanged);
+                _bulkInsertOptions.SkipOverwriteIfUnchanged);
 
             _bulkInsertExecuteTask = ExecuteAsync(bulkCommand);
 
