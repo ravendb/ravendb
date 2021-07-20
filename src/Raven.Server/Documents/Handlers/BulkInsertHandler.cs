@@ -21,21 +21,23 @@ namespace Raven.Server.Documents.Handlers
         {
             var operationCancelToken = CreateOperationToken();
             var id = GetLongQueryString("id");
+            var skipOverwriteIfUnchanged = GetBoolValueQueryString("skipOverwriteIfUnchanged", required: false) ?? false;
 
             await Database.Operations.AddOperation(Database, "Bulk Insert", Operations.Operations.OperationType.BulkInsert,
-                progress => DoBulkInsert(progress, operationCancelToken.Token),
+                progress => DoBulkInsert(progress, skipOverwriteIfUnchanged, operationCancelToken.Token),
                 id,
                 token: operationCancelToken
             );
         }
 
-        private async Task<IOperationResult> DoBulkInsert(Action<IOperationProgress> onProgress, CancellationToken token)
+        private async Task<IOperationResult> DoBulkInsert(Action<IOperationProgress> onProgress, bool skipOverwriteIfUnchanged, CancellationToken token)
         {
             var progress = new BulkInsertProgress();
             try
             {
                 var logger = LoggingSource.Instance.GetLogger<MergedInsertBulkCommand>(Database.Name);
                 IDisposable currentCtxReset = null, previousCtxReset = null;
+
                 try
                 {
                     using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
@@ -74,7 +76,8 @@ namespace Raven.Server.Documents.Handlers
                                                 NumberOfCommands = numberOfCommands,
                                                 Database = Database,
                                                 Logger = logger,
-                                                TotalSize = totalSize
+                                                TotalSize = totalSize,
+                                                SkipOverwriteIfUnchanged = skipOverwriteIfUnchanged
                                             });
                                         }
 
@@ -111,7 +114,8 @@ namespace Raven.Server.Documents.Handlers
                                     NumberOfCommands = numberOfCommands,
                                     Database = Database,
                                     Logger = logger,
-                                    TotalSize = totalSize
+                                    TotalSize = totalSize,
+                                    SkipOverwriteIfUnchanged = skipOverwriteIfUnchanged
                                 });
 
                                 progress.BatchCount++;
@@ -173,6 +177,8 @@ namespace Raven.Server.Documents.Handlers
             public BatchRequestParser.CommandData[] Commands;
             public int NumberOfCommands;
             public long TotalSize;
+            public bool SkipOverwriteIfUnchanged;
+
             protected override long ExecuteCmd(DocumentsOperationContext context)
             {
                 for (int i = 0; i < NumberOfCommands; i++)
@@ -181,6 +187,13 @@ namespace Raven.Server.Documents.Handlers
                     Debug.Assert(cmd.Type == CommandType.PUT);
                     try
                     {
+                        if (SkipOverwriteIfUnchanged)
+                        {
+                            var existingDoc = Database.DocumentsStorage.Get(context, cmd.Id, DocumentFields.Data, throwOnConflict: false);
+                            if (existingDoc != null && existingDoc.Data.Equals(cmd.Document))
+                                continue;
+                        }
+
                         Database.DocumentsStorage.Put(context, cmd.Id, null, cmd.Document);
                     }
                     catch (Voron.Exceptions.VoronConcurrencyErrorException)
