@@ -274,7 +274,6 @@ namespace SlowTests.Tests.Indexes
                         case var i12 when i12 == typeof(SingleOrDefaultOnDictionary_Index):
                             Assert.Contains("Sequence contains more than one element", errorsString);
                             break;
-                        
                     }
                 }
             }

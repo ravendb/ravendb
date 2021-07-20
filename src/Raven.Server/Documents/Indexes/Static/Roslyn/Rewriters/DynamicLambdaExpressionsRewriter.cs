@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Linq;
-
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -162,11 +161,42 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             if (currentInvocation.ArgumentList.Arguments.Count == 0)
                 return node;
 
+            var parentInvocation = GetInvocationParent(node);
+
             if (currentInvocation.ArgumentList.Arguments.Count > 0 && currentInvocation.ArgumentList.Arguments[0].Expression == node)
-                return Visit(SyntaxFactory.ParseExpression($"(Func<dynamic, IEnumerable<dynamic>>)({node})"));
+            {
+                if (node is SimpleLambdaExpressionSyntax)
+                {
+                    switch (parentInvocation)
+                    {
+                        case "ToDictionary":
+                            return Visit(SyntaxFactory.ParseExpression($"(Func<KeyValuePair<dynamic, dynamic>, IEnumerable<KeyValuePair<dynamic, dynamic>>>)({node})"));
+                        default:
+                            return Visit(SyntaxFactory.ParseExpression($"(Func<dynamic, IEnumerable<dynamic>>)({node})"));
+                    }
+                }
+                else
+                {
+                    switch (parentInvocation)
+                    {
+                        case "ToDictionary":
+                            return Visit(SyntaxFactory.ParseExpression($"(Func<KeyValuePair<dynamic, dynamic>, int, IEnumerable<KeyValuePair<dynamic, dynamic>>>)({node})"));
+                        default:
+                            return Visit(SyntaxFactory.ParseExpression($"(Func<dynamic, int, IEnumerable<KeyValuePair<dynamic, dynamic>>>)({node})"));
+                    }
+                }
+            }
 
             if (currentInvocation.ArgumentList.Arguments.Count > 1 && currentInvocation.ArgumentList.Arguments[1].Expression == node)
-                return Visit(SyntaxFactory.ParseExpression($"(Func<dynamic, dynamic, dynamic>)({node})"));
+            {
+                switch (parentInvocation)
+                {
+                    case "ToDictionary":
+                        return Visit(SyntaxFactory.ParseExpression($"(Func<KeyValuePair<dynamic, dynamic>, KeyValuePair<dynamic, dynamic>, KeyValuePair<dynamic, dynamic>>)({node})"));
+                    default:
+                        return Visit(SyntaxFactory.ParseExpression($"(Func<dynamic, dynamic, dynamic>)({node})"));
+                }
+            }
 
             return node;
         }
@@ -174,12 +204,19 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
         private static SyntaxNode ModifyLambdaForSelect(LambdaExpressionSyntax node, InvocationExpressionSyntax currentInvocation)
         {
             var parentMethod = GetParentMethod(currentInvocation);
+
             switch (parentMethod)
             {
                 case "GroupBy":
                     return SyntaxFactory.ParseExpression($"(Func<IGrouping<dynamic, dynamic>, dynamic>)({node})");
                 default:
-                    return SyntaxFactory.ParseExpression($"(Func<dynamic, dynamic>)({node})");
+                {
+                    if (node is SimpleLambdaExpressionSyntax)
+                        return SyntaxFactory.ParseExpression($"(Func<dynamic, dynamic>)({node})");
+                    else
+                        return SyntaxFactory.ParseExpression($"(Func<dynamic, int, dynamic>)({node})");
+
+                }
             }
         }
 

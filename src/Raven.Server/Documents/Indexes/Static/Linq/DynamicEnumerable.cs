@@ -180,7 +180,6 @@ namespace Raven.Server.Documents.Indexes.Static.Linq
             return new DynamicArray(((IEnumerable<object>)source).Intersect((IEnumerable<object>)other));
         }
 
-
         public static IOrderedEnumerable<dynamic> OrderBy(IEnumerable source, Func<dynamic, dynamic> keySelector)
         {
             return new DynamicArray(Enumerable.OrderBy(source.Cast<dynamic>(), keySelector));
