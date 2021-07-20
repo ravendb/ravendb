@@ -185,7 +185,7 @@ namespace Raven.Server.Documents.Handlers
                     }
                 }
                 var id = GetLongQueryString("id", required: false);
-                var disabled = GetBoolValueQueryString("disabled", required: false);
+                var disabled = options.Disabled;
                 var mentor = options.MentorNode;
                 var subscriptionId = await Database.SubscriptionStorage.PutSubscription(options, GetRaftRequestIdFromQuery(), id, disabled, mentor: mentor);
 
