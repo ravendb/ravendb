@@ -1328,7 +1328,7 @@ namespace Raven.Server.Rachis
             }
             catch (Exception e)
             {
-                throw new RavenException($"failed to remove entry number {index} from raft log", e);
+                throw new RachisApplyException($"Failed to remove entry number {index} from raft log", e);
             }
         }
 
