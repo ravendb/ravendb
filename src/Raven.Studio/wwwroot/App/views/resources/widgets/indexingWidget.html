@@ -1,14 +1,14 @@
 <div>
     <div class="cluster-dashboard-item-header">
         <h3> <i class="icon-indexing"></i> <span>Indexing</span></h3>
-        <button class="btn btn-warning btn-sm" data-bind="click: remove">
+        <button class="btn btn-warning btn-sm" data-bind="click: remove" title="Remove widget from board">
             <i class="icon-trash"></i>
         </button>
         <button class="btn btn-default btn-sm" data-bind="click: toggleFullscreen">
-            <i data-bind="css: { 'icon-fullscreen': !fullscreen(), 'icon-exit-fullscreen': fullscreen }"></i>
+            <i data-bind="css: { 'icon-fullscreen': !fullscreen(), 'icon-exit-fullscreen': fullscreen },
+                          attr: { title: fullscreen() ? 'Minimize widget' : 'Maximize widget' }"></i>
         </button>
     </div>
-
     <div class="property-container">
         <h4>Map Indexes</h4>
         <div class="property">
@@ -29,7 +29,6 @@
             </div>
         </div>
     </div>
-
     <div class="property-container">
         <h4>Map-Reduce Indexes</h4>
         <div class="property">
@@ -46,7 +45,6 @@
                     </div>
                 </div>
             </div>
-
             <div class="graph-container mapped-per-second-chart">
             </div>
         </div>
@@ -64,7 +62,6 @@
                     </div>
                 </div>
             </div>
-
             <div class="graph-container reduced-per-second-chart">
             </div>
         </div>

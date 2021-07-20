@@ -53,7 +53,6 @@ abstract class websocketBasedWidget<TData, TConfig = unknown, TState = unknown> 
             } as Raven.Server.Dashboard.Cluster.WidgetRequest);
         }
     }
-
 }
 
 export = websocketBasedWidget;

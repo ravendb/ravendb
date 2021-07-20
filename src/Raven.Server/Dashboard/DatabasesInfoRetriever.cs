@@ -141,9 +141,14 @@ namespace Raven.Server.Dashboard
                             TimeSeriesWriteBytesPerSecond = database.Metrics.TimeSeries.BytesPutsPerSec.GetRate(rate)
                         };
                         trafficWatch.Items.Add(trafficWatchItem);
-
-                        var currentEnvironmentsHash = database.GetEnvironmentsHash();
-                        if (CachedDatabaseInfo.TryGetValue(database.Name, out var item) && item.Hash == currentEnvironmentsHash)
+                        
+                        // TODO: RavenDB-17004 - hash should report on all relevant info 
+                        var currentEnvironmentsHash = database.GetEnvironmentsHash(); 
+                        var ongoingTasksCount = GetOngoingTasksCount(database);
+                        
+                        if (CachedDatabaseInfo.TryGetValue(database.Name, out var item) &&
+                            item.Hash == currentEnvironmentsHash &&
+                            item.Item.OngoingTasksCount == ongoingTasksCount)
                         {
                             databasesInfo.Items.Add(item.Item);
 
@@ -176,6 +181,7 @@ namespace Raven.Server.Dashboard
                                     ErroredIndexesCount = indexStorage.GetIndexes().Count(index => index.State == IndexState.Error),
                                     IndexingErrorsCount = indexStorage.GetIndexes().Sum(index => index.GetErrorCount()),
                                     BackupInfo = database.PeriodicBackupRunner?.GetBackupInfo(context),
+                                    OngoingTasksCount = ongoingTasksCount,
                                     Online = true
                                 };
                                 databasesInfo.Items.Add(databaseInfoItem);
@@ -240,6 +246,24 @@ namespace Raven.Server.Dashboard
             yield return drivesUsage;
         }
 
+        private static long GetOngoingTasksCount(DocumentDatabase database)
+        {
+            // TODO - RavenDB-17004
+            var dbRecord = database.ReadDatabaseRecord();
+            
+            var subscriptionCount = database.SubscriptionStorage.GetAllSubscriptionsCount();
+            var periodicBackupCount = database.PeriodicBackupRunner.PeriodicBackups.Count;
+            var olapEtlCount = database.EtlLoader.OlapDestinations.Count;
+            var sqlEtlCount = database.EtlLoader.SqlDestinations.Count;
+            var ravenEtlCount = database.EtlLoader.RavenDestinations.Count;
+            var hubCount = database.ReplicationLoader.OutgoingHandlers.Count(x => x.IsPullReplicationAsHub);
+            var sinkCount = dbRecord.SinkPullReplications.Count;
+            var extRepCount = dbRecord.ExternalReplications.Count;
+            
+            var total = subscriptionCount + periodicBackupCount + olapEtlCount + sqlEtlCount + ravenEtlCount + hubCount + sinkCount + extRepCount;
+            return total;
+        }
+
         private static readonly ConcurrentDictionary<string, DatabaseInfoCache> CachedDatabaseInfo =
             new ConcurrentDictionary<string, DatabaseInfoCache>(StringComparer.OrdinalIgnoreCase);
 
@@ -259,8 +283,6 @@ namespace Raven.Server.Dashboard
             public List<Client.ServerWide.Operations.MountPointUsage> MountPoints = new List<Client.ServerWide.Operations.MountPointUsage>();
             public DateTime NextDiskSpaceCheck;
         }
-
-
 
         private static void DiskUsageCheck(DatabaseInfoCache item, DocumentDatabase database, DrivesUsage drivesUsage, CancellationToken token)
         {
