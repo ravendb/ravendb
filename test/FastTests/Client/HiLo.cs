@@ -118,7 +118,7 @@ namespace FastTests.Client
                     session.SaveChanges();
 
                     for (var i = 0; i < 32; i++)
-                        hiLoKeyGenerator.GenerateDocumentIdAsync(null).GetAwaiter().GetResult();
+                        hiLoKeyGenerator.GenerateDocumentIdAsync(new User()).GetAwaiter().GetResult();
                 }
 
                 using (var session = store.OpenSession())
