@@ -10,11 +10,11 @@ using Voron.Impl;
 using Voron.Data.Sets;
 using Voron.Data.Containers;
 using Corax.Queries;
-
+using System.Collections.Generic;
 
 namespace Corax
 {
-    public class IndexSearcher : IDisposable
+    public sealed unsafe class IndexSearcher : IDisposable
     {
         private readonly StorageEnvironment _environment;
         private readonly Transaction _transaction;
@@ -28,7 +28,14 @@ namespace Corax
             _transaction = environment.ReadTransaction();
         }
 
-        public string GetEntryById(long id)
+        public IndexEntryReader GetReaderFor(long id)
+        {
+            var data = Container.Get(_transaction.LowLevelTransaction, id).ToSpan();
+            int size = ZigZagEncoding.Decode<int>(data, out var len);
+            return new IndexEntryReader(data.Slice(size + len));
+        }
+
+        public string GetIdentityFor(long id)
         {
             var data = Container.Get(_transaction.LowLevelTransaction, id).ToSpan();
             int size = ZigZagEncoding.Decode<int>(data, out var len);
@@ -55,6 +62,12 @@ namespace Corax
                 case TrueExpression _:
                 case null:
                     return null; // all docs here
+                case InExpression ie:
+                    return (ie.Source, ie.Values) switch
+                    {
+                        (FieldExpression f, List<QueryExpression> list) => EvaluateInExpression(f, list),
+                        _ => throw new NotSupportedException()
+                    };
                 case BinaryExpression be:
                     return (be.Operator, be.Left, be.Right) switch
                     {
@@ -66,6 +79,15 @@ namespace Corax
                 default:
                     return null;
             }
+        }
+
+        private IQueryMatch EvaluateInExpression(FieldExpression f, List<QueryExpression> list)
+        {
+            var values = new List<string>();
+            foreach (ValueExpression v in list)
+                values.Add(v.Token.Value); 
+
+            return InQuery(f.FieldValue, values);
         }
 
         // foreach term in 2010 .. 2020
@@ -103,6 +125,17 @@ namespace Corax
             }
 
             return matches;
+        }
+
+        public MultiTermMatch InQuery(string field, List<string> inTerms)
+        {
+            // TODO: The IEnumerable<string> will die eventually, this is for prototyping only. 
+            var fields = _transaction.ReadTree(IndexWriter.FieldsSlice);
+            var terms = fields.CompactTreeFor(field);
+            if (terms == null)
+                return MultiTermMatch.CreateEmpty();
+
+            return MultiTermMatch.Create(new MultiTermMatch<InTermProvider>(new InTermProvider(this, field, 0, inTerms)));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -1,4 +1,5 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System;
+using System.Runtime.CompilerServices;
 
 
 namespace Corax.Queries
@@ -16,38 +17,32 @@ namespace Corax.Queries
 
         public long Count => _functionTable.CountFunc(ref this);
 
-        public long Current => _functionTable.CurrentFunc(ref this);
-
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool SeekTo(long next = 0)
+        public int Fill(Span<long> buffer)
         {
-            return _functionTable.SeekToFunc(ref this, next);
+            return _functionTable.FillFunc(ref this, buffer);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool MoveNext(out long v)
+        public int AndWith(Span<long> buffer)
         {
-            return _functionTable.MoveNextFunc(ref this, out v);
+            return _functionTable.AndWithFunc(ref this, buffer);
         }
 
         internal class FunctionTable
         {
-            public readonly delegate*<ref BinaryMatch, long, bool> SeekToFunc;
-            public readonly delegate*<ref BinaryMatch, out long, bool> MoveNextFunc;
+            public readonly delegate*<ref BinaryMatch, Span<long>, int> FillFunc;
+            public readonly delegate*<ref BinaryMatch, Span<long>, int> AndWithFunc;
             public readonly delegate*<ref BinaryMatch, long> CountFunc;
-            public readonly delegate*<ref BinaryMatch, long> CurrentFunc;
 
             public FunctionTable(
-                delegate*<ref BinaryMatch, long, bool> seekToFunc,
-                delegate*<ref BinaryMatch, out long, bool> moveNextFunc,
-                delegate*<ref BinaryMatch, long> countFunc,
-                delegate*<ref BinaryMatch, long> currentFunc)
+                delegate*<ref BinaryMatch, Span<long>, int> fillFunc,
+                delegate*<ref BinaryMatch, Span<long>, int> andWithFunc,
+                delegate*<ref BinaryMatch, long> countFunc)
             {
-                SeekToFunc = seekToFunc;
-                MoveNextFunc = moveNextFunc;
+                FillFunc = fillFunc;
+                AndWithFunc = andWithFunc;
                 CountFunc = countFunc;
-                CurrentFunc = currentFunc;
             }
         }
 
@@ -63,33 +58,30 @@ namespace Corax.Queries
                 {
                     return ((BinaryMatch<TInner, TOuter>)match._inner).Count;
                 }
-                static long CurrentFunc(ref BinaryMatch match)
-                {
-                    return ((BinaryMatch<TInner, TOuter>)match._inner).Current;
-                }
-                static bool SeekToFunc(ref BinaryMatch match, long v)
+           
+                static int FillFunc(ref BinaryMatch match, Span<long> matches)
                 {
                     if (match._inner is BinaryMatch<TInner, TOuter> inner)
                     {
-                        var result = inner.SeekTo(v);
+                        var result = inner.Fill(matches);
                         match._inner = inner;
                         return result;
                     }
-                    return false;
-                }
-                static bool MoveNextFunc(ref BinaryMatch match, out long v)
-                {
-                    if (match._inner is BinaryMatch<TInner, TOuter> inner)
-                    {
-                        var result = inner.MoveNext(out v);
-                        match._inner = inner;
-                        return result;
-                    }
-                    Unsafe.SkipInit(out v);
-                    return false;
+                    return 0;
                 }
 
-                FunctionTable = new FunctionTable(&SeekToFunc, &MoveNextFunc, &CountFunc, &CurrentFunc);
+                static int AndWithFunc(ref BinaryMatch match, Span<long> matches)
+                {
+                    if (match._inner is BinaryMatch<TInner, TOuter> inner)
+                    {
+                        var result = inner.AndWith(matches);
+                        match._inner = inner;
+                        return result;
+                    }
+                    return 0;
+                }
+
+                FunctionTable = new FunctionTable(&FillFunc, &AndWithFunc, &CountFunc);
             }
         }
 

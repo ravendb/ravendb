@@ -139,30 +139,34 @@ namespace Tryouts
 
         public static void Main()
         {
+
+            //new IndexSearcherTest(new ConsoleTestOutputHelper()).AndInStatement(1000, 128);
+
+
             var parser = new QueryParser();
-            parser.Init("from Dogs where Type = 'Dog' and Age = '15'");
+            parser.Init("from Dogs where Type = 'Dog' and Age in ('15', '16')");
             QueryDefinition queryDefinition = new QueryDefinition("Name", parser.Parse());
 
             using var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly());
 
             GenerateData(env);
-            
-            using var indexSearcher = new IndexSearcher(env);
 
-            
-            var query = indexSearcher.Search(queryDefinition.Query.Where);
+            using var searcher = new IndexSearcher(env);
 
-            int i = 0;
-            //Span<long> ids = stackalloc long[128];
-            while (query.MoveNext(out long v))
+
+            var query = searcher.Search(queryDefinition.Query.Where);
+
+            Span<long> ids = stackalloc long[2048];
+            int read;
+            do
             {
-                //ids[i++] = v;
-                Console.WriteLine(indexSearcher.GetEntryById(v));
+                read = query.Fill(ids);
+                for (int i = 0; i < read; i++)
+                    Console.WriteLine(searcher.GetIdentityFor(ids[i]));
             }
+            while (read != 0);
 
             //new IndexSearcherTest(new ConsoleTestOutputHelper()).SimpleAndOr();
-
-
 
             //using (var writer = new IndexWriter(env))
             //{
@@ -283,13 +287,19 @@ namespace Tryouts
             }
         }
 
-        private static void PrintIds(IIndexMatch termMatch, IndexSearcher searcher)
+        private static void PrintIds(IQueryMatch termMatch, IndexSearcher searcher)
         {
-            var list = new List<string>();
-            while (termMatch.MoveNext(out var id))
+            Span<long> ids = stackalloc long[128];
+
+            var list = new List<string>();            
+            int read;
+            do
             {
-                list.Add(searcher.GetEntryById(id));
+                read = termMatch.Fill(ids);
+                for (int i = 0; i < read; i++)
+                    list.Add(searcher.GetIdentityFor(ids[i]));
             }
+            while (read != 0);
 
             Console.WriteLine(list.Count + " results");
             Console.WriteLine(string.Join(", ", list.Take(16)));

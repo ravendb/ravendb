@@ -112,18 +112,16 @@ namespace FastTests.Corax
             IndexEntries(new[] { entry });
 
             {
+                Span<long> ids = stackalloc long[16];
+
                 using var searcher = new IndexSearcher(Env);
                 var match = searcher.TermQuery("Unknown", "1");
-                Assert.Equal(QueryMatch.Start, match.Current);
-                Assert.Equal(0, match.Count);                
-                Assert.False(match.MoveNext(out var _));
-                Assert.Equal(QueryMatch.Invalid, match.Current);
+                Assert.Equal(0, match.Count);
+                Assert.Equal(0, match.Fill(ids));
 
                 match = searcher.TermQuery("Id", "1");
-                Assert.Equal(QueryMatch.Start, match.Current);
                 Assert.Equal(0, match.Count);
-                Assert.False(match.MoveNext(out var _));
-                Assert.Equal(QueryMatch.Invalid, match.Current);
+                Assert.Equal(0, match.Fill(ids));
             }
         }
 
@@ -138,14 +136,13 @@ namespace FastTests.Corax
             IndexEntries(new[] { entry });
 
             {
+                Span<long> ids = stackalloc long[16];
+
                 using var searcher = new IndexSearcher(Env);
                 var match = searcher.TermQuery("Id", "entry/1");
-                Assert.Equal(QueryMatch.Start, match.Current);
                 Assert.Equal(1, match.Count);
-                Assert.True(match.MoveNext(out var _));
-                Assert.NotEqual(QueryMatch.Invalid, match.Current);
-                Assert.False(match.MoveNext(out var _));
-                Assert.Equal(QueryMatch.Invalid, match.Current);
+                Assert.Equal(1, match.Fill(ids));
+                Assert.Equal(0, match.Fill(ids));
             }
         }
 
@@ -164,26 +161,22 @@ namespace FastTests.Corax
             IndexEntries(entries);
 
             {
+                Span<long> ids = stackalloc long[12];
+                ids.Fill(-1);
+
                 using var searcher = new IndexSearcher(Env);
                 var match = searcher.TermQuery("Content", "road");
 
                 Assert.Equal(16, match.Count);
 
-                // TODO: For consistency this should be true. 
-                // Assert.Equal(QueryMatch.Start, match.Current);
+                Assert.Equal(12, match.Fill(ids));
+                Assert.False(ids.Contains(-1));
 
-                int i = 0;
-                while (match.MoveNext(out var v))
-                {
-                    i++;
+                ids.Fill(-1);
+                Assert.Equal(4, match.Fill(ids));
+                Assert.True(ids.Contains(-1));
 
-                    Assert.Equal(v, match.Current);
-                    Assert.NotEqual(QueryMatch.Invalid, match.Current);
-                    Assert.NotEqual(QueryMatch.Start, match.Current);
-                }
-
-                Assert.Equal(i, match.Count);
-                Assert.Equal(QueryMatch.Invalid, match.Current);
+                Assert.Equal(0, match.Fill(ids));
             }
         }
 
@@ -208,34 +201,26 @@ namespace FastTests.Corax
                 var match = searcher.TermQuery("Content", "road");
 
                 Assert.Equal(100000, match.Count);
-                Assert.Equal(QueryMatch.Start, match.Current);
 
-                int i = 0;
-                while (match.MoveNext(out var v))
+                Span<long> ids = stackalloc long[1000];
+                ids.Fill(-1);
+
+                int read;
+                do
                 {
-                    i++;
+                    read = match.Fill(ids);
 
-                    Assert.Equal(v, match.Current);
-                    Assert.NotEqual(QueryMatch.Invalid, match.Current);
-                    Assert.NotEqual(QueryMatch.Start, match.Current);
+                    if (read != 0)
+                    {
+                        Assert.Equal(1000, read);
+                        Assert.False(ids.Contains(-1));
+
+                        ids.Fill(-1);
+                    }
                 }
+                while (read != 0);
 
-                Assert.Equal(i, match.Count);
-                Assert.Equal(QueryMatch.Invalid, match.Current);
-
-                Assert.True(match.SeekTo(QueryMatch.Start));
-                
-                int j = 0;
-                while (match.MoveNext(out var v))
-                {
-                    j++;
-
-                    Assert.Equal(v, match.Current);
-                    Assert.NotEqual(QueryMatch.Invalid, match.Current);
-                    Assert.NotEqual(QueryMatch.Start, match.Current);
-                }
-
-                Assert.Equal(j, i);
+                Assert.Equal(0, match.Fill(ids));
             }
         }
 
@@ -262,14 +247,8 @@ namespace FastTests.Corax
                 var match2 = searcher.TermQuery("Content", "mountain");
                 var andMatch = searcher.And(in match1, in match2);
 
-                Assert.Equal(QueryMatch.Start, andMatch.Current);
-
-                int i = 0;
-                while(andMatch.MoveNext(out var _))
-                    i++;
-
-                Assert.Equal(QueryMatch.Invalid, andMatch.Current);
-                Assert.Equal(0, i);
+                Span<long> ids = stackalloc long[16];
+                Assert.Equal(0, andMatch.Fill(ids));
             }
         }
 
@@ -295,14 +274,9 @@ namespace FastTests.Corax
                 var match2 = searcher.TermQuery("Content", "mountain");
                 var andMatch = searcher.And(in match1, in match2);
 
-                Assert.Equal(QueryMatch.Start, andMatch.Current);
-
-                int i = 0;
-                while (andMatch.MoveNext(out var _))
-                    i++;
-
-                Assert.Equal(QueryMatch.Invalid, andMatch.Current);
-                Assert.Equal(1, i);
+                Span<long> ids = stackalloc long[16];
+                Assert.Equal(1, andMatch.Fill(ids));
+                Assert.Equal(0, andMatch.Fill(ids));
             }
         }
 
@@ -328,14 +302,9 @@ namespace FastTests.Corax
                 var match2 = searcher.TermQuery("Content", "mountain");
                 var andMatch = searcher.And(in match1, in match2);
 
-                Assert.Equal(QueryMatch.Start, andMatch.Current);
-
-                int i = 0;
-                while (andMatch.MoveNext(out var _))
-                    i++;
-
-                Assert.Equal(QueryMatch.Invalid, andMatch.Current);
-                Assert.Equal(2, i);
+                Span<long> ids = stackalloc long[16];
+                Assert.Equal(2, andMatch.Fill(ids));
+                Assert.Equal(0, andMatch.Fill(ids));
             }
         }
 
@@ -359,16 +328,11 @@ namespace FastTests.Corax
                 using var searcher = new IndexSearcher(Env);
                 var match1 = searcher.TermQuery("Id", "entry/3");
                 var match2 = searcher.TermQuery("Content", "highway");
-                var andMatch = searcher.Or(in match1, in match2);
+                var orMatch = searcher.Or(in match1, in match2);
 
-                Assert.Equal(QueryMatch.Start, andMatch.Current);
-
-                int i = 0;
-                while (andMatch.MoveNext(out var _))
-                    i++;
-
-                Assert.Equal(QueryMatch.Invalid, andMatch.Current);
-                Assert.Equal(0, i);
+                Span<long> ids = stackalloc long[16];
+                Assert.Equal(0, orMatch.Fill(ids));
+                Assert.Equal(0, orMatch.Fill(ids));
             }
         }
 
@@ -389,35 +353,24 @@ namespace FastTests.Corax
             IndexEntries(new[] { entry1, entry2 });
 
             {
+                Span<long> ids = stackalloc long[16];
+
                 using var searcher = new IndexSearcher(Env);
                 var match1 = searcher.TermQuery("Id", "entry/1");
                 var match2 = searcher.TermQuery("Content", "highway");
-                var andMatch = searcher.Or(in match1, in match2);
+                var orMatch = searcher.Or(in match1, in match2);
 
-                Assert.Equal(QueryMatch.Start, andMatch.Current);
-
-                int i = 0;
-                while (andMatch.MoveNext(out var _))
-                    i++;
-
-                Assert.Equal(QueryMatch.Invalid, andMatch.Current);
-                Assert.Equal(1, i);
+                Assert.Equal(1, orMatch.Fill(ids));
+                Assert.Equal(0, orMatch.Fill(ids));
 
                 match1 = searcher.TermQuery("Id", "entry/3");
                 match2 = searcher.TermQuery("Content", "mountain");
-                andMatch = searcher.Or(in match1, in match2);
+                orMatch = searcher.Or(in match1, in match2);
 
-                Assert.Equal(QueryMatch.Start, andMatch.Current);
-
-                i = 0;
-                while (andMatch.MoveNext(out var _))
-                    i++;
-
-                Assert.Equal(QueryMatch.Invalid, andMatch.Current);
-                Assert.Equal(1, i);
+                Assert.Equal(1, orMatch.Fill(ids));
+                Assert.Equal(0, orMatch.Fill(ids));
             }
         }
-
 
         [Fact]
         public void AllOr()
@@ -439,16 +392,46 @@ namespace FastTests.Corax
                 using var searcher = new IndexSearcher(Env);
                 var match1 = searcher.TermQuery("Id", "entry/1");
                 var match2 = searcher.TermQuery("Content", "mountain");
-                var andMatch = searcher.Or(in match1, in match2);
+                var orMatch = searcher.Or(in match1, in match2);
 
-                Assert.Equal(QueryMatch.Start, andMatch.Current);
+                Span<long> ids = stackalloc long[16];
 
-                int i = 0;
-                while (andMatch.MoveNext(out var _))
-                    i++;
+                Assert.Equal(2, orMatch.Fill(ids));
+                Assert.Equal(0, orMatch.Fill(ids));
+            }
+        }
 
-                Assert.Equal(QueryMatch.Invalid, andMatch.Current);
-                Assert.Equal(2, i);
+        [Fact]
+        public void AllOrInBatches()
+        {
+            var entry1 = new IndexEntry
+            {
+                Id = "entry/1",
+                Content = new string[] { "road", "lake" },
+            };
+            var entry2 = new IndexEntry
+            {
+                Id = "entry/2",
+                Content = new string[] { "road", "mountain" },
+            };
+            var entry3 = new IndexEntry
+            {
+                Id = "entry/3",
+                Content = new string[] { "trail", "mountain" },
+            };
+
+            IndexEntries(new[] { entry1, entry2, entry3 });
+
+            {
+                using var searcher = new IndexSearcher(Env);
+                var match1 = searcher.TermQuery("Id", "entry/1");
+                var match2 = searcher.TermQuery("Content", "mountain");
+                var orMatch = searcher.Or(in match1, in match2);
+
+                Span<long> ids = stackalloc long[2];
+                Assert.Equal(2, orMatch.Fill(ids));
+                Assert.Equal(1, orMatch.Fill(ids));
+                Assert.Equal(0, orMatch.Fill(ids));
             }
         }
 
@@ -481,14 +464,10 @@ namespace FastTests.Corax
                 var match3 = searcher.TermQuery("Id", "entry/3");
                 var orMatch = searcher.Or(in andMatch, in match3);
 
-                Assert.Equal(QueryMatch.Start, orMatch.Current);
 
-                int i = 0;
-                while (orMatch.MoveNext(out var _))
-                    i++;
-
-                Assert.Equal(QueryMatch.Invalid, orMatch.Current);
-                Assert.Equal(2, i);
+                Span<long> ids = stackalloc long[2];
+                Assert.Equal(2, orMatch.Fill(ids));
+                Assert.Equal(0, orMatch.Fill(ids));
             }
 
             {
@@ -499,15 +478,179 @@ namespace FastTests.Corax
                 var match3 = searcher.TermQuery("Id", "entry/3");
                 var orMatch = searcher.Or(in match3, in andMatch);
 
-                Assert.Equal(QueryMatch.Start, orMatch.Current);
-
-                int i = 0;
-                while (orMatch.MoveNext(out var _))
-                    i++;
-
-                Assert.Equal(QueryMatch.Invalid, orMatch.Current);
-                Assert.Equal(2, i);
+                Span<long> ids = stackalloc long[2];
+                Assert.Equal(2, orMatch.Fill(ids));
+                Assert.Equal(0, orMatch.Fill(ids));
             }
         }
+
+
+        [Theory]
+        [InlineData(new object[] { 100000, 128 })]
+        [InlineData(new object[] { 100000, 18 })]
+        [InlineData(new object[] { 1000, 8 })]
+        public void SimpleAndOrForBiggerSet(int setSize, int stackSize)
+        {
+            setSize = setSize - (setSize % 3);
+
+            var entriesToIndex = new IndexEntry[setSize];
+            for (int i = 0; i < setSize; i++)
+            {
+                var entry = new IndexEntry
+                {
+                    Id = $"entry/{i}",
+                    Content = (i % 3) switch
+                    {
+                        0 => new string[] { "road", "lake", "mountain" },
+                        1 => new string[] { "road", "mountain" },
+                        2 => new string[] { "sky", "space", "lake" },
+                    }
+                };
+
+                entriesToIndex[i] = entry;
+            }
+
+            IndexEntries(entriesToIndex);
+
+            {
+                using var searcher = new IndexSearcher(Env);
+                var match1 = searcher.TermQuery("Content", "lake");
+                var match2 = searcher.TermQuery("Content", "mountain");
+                var andMatch = searcher.And(in match1, in match2);
+                var match3 = searcher.TermQuery("Content", "space");
+                var orMatch = searcher.Or(in andMatch, in match3);
+
+                Span<long> ids = stackalloc long[stackSize];
+                int read;
+                int count = 0;
+                do
+                {
+                    read = orMatch.Fill(ids);
+                    count += read;                        
+                }
+                while (read != 0);
+                Assert.Equal((setSize  / 3) * 2, count);
+            }
+        }
+
+        [Fact]
+        public void SimpleInStatement()
+        {
+            var entry1 = new IndexEntry
+            {
+                Id = "entry/1",
+                Content = new string[] { "road", "lake", "mountain" },
+            };
+            var entry2 = new IndexEntry
+            {
+                Id = "entry/2",
+                Content = new string[] { "road", "mountain" },
+            };
+            var entry3 = new IndexEntry
+            {
+                Id = "entry/3",
+                Content = new string[] { "sky", "space" },
+            };
+
+            IndexEntries(new[] { entry1, entry2, entry3 });
+
+            using var searcher = new IndexSearcher(Env);
+            {
+                var match = searcher.InQuery("Content", new() { "road", "space" });
+
+                Span<long> ids = stackalloc long[2];
+                Assert.Equal(2, match.Fill(ids));
+                Assert.Equal(1, match.Fill(ids));
+                Assert.Equal(0, match.Fill(ids));
+            }
+
+            {
+                var match = searcher.InQuery("Content", new() { "road", "space" });
+
+                Span<long> ids = stackalloc long[16];
+                Assert.Equal(3, match.Fill(ids));
+                Assert.Equal(0, match.Fill(ids));
+            }
+
+            {
+                var match = searcher.InQuery("Content", new() { "sky", "space" });
+
+                Span<long> ids = stackalloc long[16];
+                Assert.Equal(1, match.Fill(ids));
+                Assert.Equal(0, match.Fill(ids));
+            }
+
+            {
+                var match = searcher.InQuery("Content", new() { "road", "mountain", "space" });
+
+                Span<long> ids = stackalloc long[16];
+                Assert.Equal(3, match.Fill(ids));
+                Assert.Equal(0, match.Fill(ids));
+            }
+        }
+
+        [Theory]
+        [InlineData(new object[] { 100000, 128 })]
+        [InlineData(new object[] { 100000, 18 })]
+        [InlineData(new object[] { 1000, 8 })]
+        public void AndInStatement(int setSize, int stackSize)
+        {
+            setSize = setSize - (setSize % 3);
+
+            var entriesToIndex = new IndexEntry[setSize];
+            for (int i = 0; i < setSize; i++)
+            {
+                var entry = new IndexEntry
+                {
+                    Id = $"entry/{i}",
+                    Content = (i % 3) switch
+                    {
+                        0 => new string[] { "road", "lake", "mountain" },
+                        1 => new string[] { "road", "mountain" },
+                        2 => new string[] { "sky", "space", "lake" },
+                    }
+                };
+
+                entriesToIndex[i] = entry;
+            }
+
+            IndexEntries(entriesToIndex);
+
+            using var searcher = new IndexSearcher(Env);
+            {
+                var match1 = searcher.InQuery("Content", new() { "lake", "mountain" });
+                var match2 = searcher.TermQuery("Content", "sky");
+                var andMatch = searcher.And(in match1, in match2);
+
+                Span<long> ids = stackalloc long[stackSize];
+                int read;
+                int count = 0;
+                do
+                {
+                    read = andMatch.Fill(ids);
+                    count += read;
+                }
+                while (read != 0);
+                Assert.Equal((setSize / 3), count);
+            }
+
+            {
+                var match1 = searcher.TermQuery("Content", "sky");
+                var match2 = searcher.InQuery("Content", new() { "lake", "mountain" });                
+                var andMatch = searcher.And(in match1, in match2);
+
+                Span<long> ids = stackalloc long[stackSize];
+                int read;
+                int count = 0;
+                do
+                {
+                    read = andMatch.Fill(ids);
+                    count += read;
+                }
+                while (read != 0);
+                Assert.Equal((setSize / 3), count);
+            }
+        }
+
     }
 }
