@@ -9,7 +9,6 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
-using Raven.Client.Extensions;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Identity
@@ -19,15 +18,17 @@ namespace Raven.Client.Documents.Identity
     /// </summary>
     public class AsyncHiLoIdGenerator
     {
+        protected string Prefix;
+        protected string ServerTag;
+
         private readonly DocumentStore _store;
         private readonly string _tag;
-        protected string Prefix;
         private long _lastBatchSize;
         private DateTime _lastRangeDate;
         private readonly string _dbName;
         private readonly char _identityPartsSeparator;
         private volatile RangeValue _range;
-
+        private Lazy<Task> _nextRangeTask = new Lazy<Task>(() => Task.CompletedTask);
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AsyncHiLoIdGenerator"/> class.
@@ -66,9 +67,6 @@ namespace Raven.Client.Documents.Identity
                 Current = min - 1;
             }
         }
-
-        private Lazy<Task> _nextRangeTask = new Lazy<Task>(() => Task.CompletedTask);
-        protected string ServerTag;
 
         /// <summary>
         /// Generates the document ID.
@@ -131,8 +129,7 @@ namespace Raven.Client.Documents.Identity
             var hiloCommand = new NextHiLoCommand(_tag, _lastBatchSize, _lastRangeDate, _identityPartsSeparator, Range.Max);
 
             var re = _store.GetRequestExecutor(_dbName);
-            JsonOperationContext context;
-            using (re.ContextPool.AllocateOperationContext(out context))
+            using (re.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
                 await re.ExecuteAsync(hiloCommand, context, sessionInfo: null, token: CancellationToken.None).ConfigureAwait(false);
             }
@@ -149,8 +146,7 @@ namespace Raven.Client.Documents.Identity
             var returnCommand = new HiLoReturnCommand(_tag, Range.Current, Range.Max);
 
             var re = _store.GetRequestExecutor(_dbName);
-            JsonOperationContext context;
-            using (re.ContextPool.AllocateOperationContext(out context))
+            using (re.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
                 await re.ExecuteAsync(returnCommand, context, sessionInfo: null, token: CancellationToken.None).ConfigureAwait(false);
             }

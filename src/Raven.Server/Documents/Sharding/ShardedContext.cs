@@ -16,7 +16,7 @@ namespace Raven.Server.Documents.Sharding
 
         private readonly DatabaseRecord _record;
         public RequestExecutor[] RequestExecutors;
-        private long _lastClientConfigurationIndex;
+        private readonly long _lastClientConfigurationIndex;
 
         public ShardedContext(ServerStore server, DatabaseRecord record)
         {
@@ -88,7 +88,7 @@ namespace Raven.Server.Documents.Sharding
                     return _record.ShardAllocations[i].Shard;
             }
 
-            return _record.ShardAllocations[_record.ShardAllocations.Count - 1].Shard;
+            return _record.ShardAllocations[^1].Shard;
         }
 
         public int GetShardIndex(TransactionOperationContext context, string key)
@@ -100,7 +100,7 @@ namespace Raven.Server.Documents.Sharding
                     return _record.ShardAllocations[i].Shard;
             }
 
-            return _record.ShardAllocations[_record.ShardAllocations.Count - 1].Shard;
+            return _record.ShardAllocations[^1].Shard;
         }
 
         public bool HasTopologyChanged(long etag)

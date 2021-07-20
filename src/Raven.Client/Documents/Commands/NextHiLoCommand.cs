@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Net.Http;
+using System.Text;
 using Raven.Client.Documents.Identity;
 using Raven.Client.Http;
 using Raven.Client.Json.Serialization;
+using Sparrow.Extensions;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
@@ -26,15 +28,28 @@ namespace Raven.Client.Documents.Commands
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
-            var path = $"hilo/next?tag={Uri.EscapeDataString(_tag)}&lastBatchSize={_lastBatchSize}&lastRangeAt={_lastRangeAt:o}&identityPartsSeparator={Uri.EscapeDataString(_identityPartsSeparator.ToString())}&lastMax={_lastRangeMax}";
+            var pathBuilder = new StringBuilder();
 
-            var request = new HttpRequestMessage
+            pathBuilder.Append(node.Url)
+                    .Append("/databases/")
+                    .Append(node.Database)
+                    .Append("/hilo/next?tag=")
+                    .Append(Uri.EscapeDataString(_tag))
+                    .Append("&lastBatchSize=")
+                    .Append(_lastBatchSize)
+                    .Append("&lastRangeAt=")
+                    .Append(_lastRangeAt.GetDefaultRavenFormat())
+                    .Append("&identityPartsSeparator=")
+                    .Append(Uri.EscapeDataString(_identityPartsSeparator.ToString()))
+                    .Append("&lastMax=")
+                    .Append(_lastRangeMax);
+
+            url = pathBuilder.ToString();
+
+            return new HttpRequestMessage
             {
                 Method = HttpMethod.Get
             };
-
-            url = $"{node.Url}/databases/{node.Database}/" + path;
-            return request;
         }
 
         public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)

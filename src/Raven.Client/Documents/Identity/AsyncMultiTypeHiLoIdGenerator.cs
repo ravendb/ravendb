@@ -110,7 +110,7 @@ namespace Raven.Client.Documents.Identity
             await ReturnUnusedRange(_idGeneratorsByTag.Values).ConfigureAwait(false);
         }
 
-        private async static Task ReturnUnusedRange(IEnumerable<AsyncHiLoIdGenerator> generators)
+        private static async Task ReturnUnusedRange(IEnumerable<AsyncHiLoIdGenerator> generators)
         {
             foreach (var generator in generators)
                 await generator.ReturnUnusedRangeAsync().ConfigureAwait(false);

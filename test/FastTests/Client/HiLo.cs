@@ -27,7 +27,6 @@ namespace FastTests.Client
 
         private class Product
         {
-            public string ProductName { get; set; }
         }
 
         [Fact]
@@ -129,7 +128,7 @@ namespace FastTests.Client
                     Assert.Equal(max, 96);
 
                     //we should be receiving a range of 64 now
-                    hiLoKeyGenerator.GenerateDocumentIdAsync(new User()).GetAwaiter().GetResult();
+                    hiLoKeyGenerator.GenerateDocumentIdAsync(null).GetAwaiter().GetResult();
                 }
 
                 using (var session = store.OpenSession())

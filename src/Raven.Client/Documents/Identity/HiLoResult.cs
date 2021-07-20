@@ -13,7 +13,6 @@ namespace Raven.Client.Documents.Identity
     /// </summary>   
     public class HiLoResult
     {
-
         public string Prefix { get; set; }
 
         public long Low { get; set; }
@@ -29,5 +28,10 @@ namespace Raven.Client.Documents.Identity
 
         public DateTime LastRangeAt { get; set; }
 
+    }
+
+    public class HiloDocument
+    {
+        public long Max { get; set; }
     }
 }
