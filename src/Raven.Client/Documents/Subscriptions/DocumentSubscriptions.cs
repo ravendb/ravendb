@@ -50,7 +50,6 @@ namespace Raven.Client.Documents.Subscriptions
                 MentorNode = options.MentorNode,
                 Disabled = options.Disabled
             }, options.Filter, options.Projection, options.Includes), database);
-
         }
 
 
