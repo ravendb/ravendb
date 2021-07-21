@@ -1,7 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Text;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client.Documents;
 using Raven.Client.Documents.BulkInsert;
 using Raven.Client.Documents.Operations;
 using Raven.Tests.Core.Utils.Entities;
@@ -96,6 +98,135 @@ namespace SlowTests.Issues
 
                 stats = store.Maintenance.Send(new GetStatisticsOperation());
                 Assert.Equal(lastEtag + docsCount / 2, stats.LastDocEtag);
+            }
+        }
+
+        [Fact]
+        public async Task Can_SkipOverwriteIfUnchanged_With_Attachment()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var docId = Guid.NewGuid().ToString();
+                var attachmentName = Guid.NewGuid().ToString();
+
+                using (var bulk = store.BulkInsert())
+                {
+                    var user = new User { Name = docId };
+                    await bulk.StoreAsync(user, docId);
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.Advanced.Attachments.Store(docId, attachmentName, new MemoryStream(Encoding.UTF8.GetBytes("hello")));
+                    await session.SaveChangesAsync();
+                }
+
+                var stats = store.Maintenance.Send(new GetStatisticsOperation());
+                var lastEtag = stats.LastDocEtag;
+
+                using (var bulk = store.BulkInsert(new BulkInsertOptions
+                {
+                    SkipOverwriteIfUnchanged = true
+                }))
+                {
+                    var user = new User { Name = docId };
+                    await bulk.StoreAsync(user, docId);
+                }
+
+                stats = store.Maintenance.Send(new GetStatisticsOperation());
+                Assert.Equal(lastEtag, stats.LastDocEtag);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var attachment = await session.Advanced.Attachments.GetAsync(docId, attachmentName);
+                    Assert.NotNull(attachment);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task Can_SkipOverwriteIfUnchanged_With_Counter()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var docId = Guid.NewGuid().ToString();
+                var counterName = Guid.NewGuid().ToString();
+
+                using (var bulk = store.BulkInsert())
+                {
+                    var user = new User { Name = docId };
+                    await bulk.StoreAsync(user, docId);
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.CountersFor(docId).Increment(counterName, 1);
+                    await session.SaveChangesAsync();
+                }
+
+                var stats = store.Maintenance.Send(new GetStatisticsOperation());
+                var lastEtag = stats.LastDocEtag;
+
+                using (var bulk = store.BulkInsert(new BulkInsertOptions
+                {
+                    SkipOverwriteIfUnchanged = true
+                }))
+                {
+                    var user = new User { Name = docId };
+                    await bulk.StoreAsync(user, docId);
+                }
+
+                stats = store.Maintenance.Send(new GetStatisticsOperation());
+                Assert.Equal(lastEtag, stats.LastDocEtag);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var counter = await session.CountersFor(docId).GetAsync(counterName);
+                    Assert.Equal(1, counter);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task Can_SkipOverwriteIfUnchanged_With_TimeSeries()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var docId = Guid.NewGuid().ToString();
+                var timeSeriesName = Guid.NewGuid().ToString();
+
+                using (var bulk = store.BulkInsert())
+                {
+                    var user = new User { Name = docId };
+                    await bulk.StoreAsync(user, docId);
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.TimeSeriesFor(docId, timeSeriesName).Append(DateTime.Now, 1);
+                    await session.SaveChangesAsync();
+                }
+
+                var stats = store.Maintenance.Send(new GetStatisticsOperation());
+                var lastEtag = stats.LastDocEtag;
+
+                using (var bulk = store.BulkInsert(new BulkInsertOptions
+                {
+                    SkipOverwriteIfUnchanged = true
+                }))
+                {
+                    var user = new User { Name = docId };
+                    await bulk.StoreAsync(user, docId);
+                }
+
+                stats = store.Maintenance.Send(new GetStatisticsOperation());
+                Assert.Equal(lastEtag, stats.LastDocEtag);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var entries = await session.TimeSeriesFor(docId, timeSeriesName).GetAsync();
+                    Assert.Equal(1, entries.Length);
+                }
             }
         }
     }
