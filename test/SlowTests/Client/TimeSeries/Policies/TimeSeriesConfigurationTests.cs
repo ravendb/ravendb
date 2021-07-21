@@ -1866,7 +1866,8 @@ namespace SlowTests.Client.TimeSeries.Policies
                 {
                     var doc = session.Load<User>("users/karmel");
                     var tsNames = session.Advanced.GetTimeSeriesFor(doc);
-                    Assert.Equal(4, tsNames.Count);
+                    Assert.True(tsNames.Count == 4, 
+                        $"Wrong number of timeseries, expected 4 but got {tsNames.Count} : {string.Join(',', tsNames)}");
 
                     Assert.Equal(rawName, tsNames[0]);
                     Assert.Equal($"{rawName}@{p1.Name}", tsNames[1]);

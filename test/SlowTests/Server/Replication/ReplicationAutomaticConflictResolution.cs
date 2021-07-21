@@ -397,6 +397,82 @@ return out;
                 }
             }
         }
+        [Fact]
+        public async Task ResolveConflictToTombstone()
+        {
+            using (var first = GetDocumentStore())
+            using (var second = GetDocumentStore())
+            using (var third = GetDocumentStore())
+            using (var fourth = GetDocumentStore())
+            {
+                using (var session = first.OpenSession())
+                {
+                    session.Store(new User
+                    {
+                        Name = "1st"
+                    }, "users/1");
+
+                    session.SaveChanges();
+                }
+
+                using (var session = second.OpenSession())
+                {
+                    session.Store(new User
+                    {
+                        Name = "2nd"
+                    }, "users/1");
+
+                    session.SaveChanges();
+                }
+
+                using (var session = second.OpenSession())
+                {
+                    session.Delete("users/1");
+                    session.SaveChanges();
+                }
+
+                using (var session = first.OpenSession())
+                {
+                    session.Store(new
+                    {
+                        Foo = "marker"
+                    }, "marker");
+
+                    session.SaveChanges();
+                }
+               
+                await SetupReplicationAsync(first, second);
+                await SetupReplicationAsync(second, third);
+                await SetupReplicationAsync(third, fourth);
+                await SetupReplicationAsync(fourth, first);
+
+                Assert.True(WaitForDocument(fourth, "marker"));
+
+                using (var session = fourth.OpenSession())
+                {
+                    var user = session.Load<User>("users/1");
+                    Assert.Null(user);
+                }
+
+                using (var session = fourth.OpenSession())
+                {
+                    session.Store(new
+                    {
+                        Foo = "marker"
+                    }, "marker2");
+
+                    session.SaveChanges();
+                }
+
+                Assert.True(WaitForDocument(first, "marker2"));
+
+
+                await EnsureNoReplicationLoop(Server, first.Database);
+                await EnsureNoReplicationLoop(Server, second.Database);
+                await EnsureNoReplicationLoop(Server, third.Database);
+                await EnsureNoReplicationLoop(Server, fourth.Database);
+            }
+        }
 
         private static void VerifyRevisionsAfterConflictResolving(IDocumentSession session)
         {
