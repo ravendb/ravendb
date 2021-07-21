@@ -10,7 +10,6 @@ using Jint.Runtime;
 using Lucene.Net.Store;
 using Raven.Client;
 using Raven.Client.Documents.Operations.Attachments;
-using Raven.Client.Documents.Queries;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Static.JavaScript;
@@ -64,10 +63,14 @@ namespace Raven.Server.Documents.Patch
             if (boi.Distance != null)
                 metadata.Modifications[Constants.Documents.Metadata.SpatialResult] = boi.Distance.Value.ToJson();
 
-            metadata = Context.ReadObject(metadata, boi.DocumentId);
-            JsValue metadataJs = TranslateToJs(_scriptEngine, Context, metadata);
-            boi.Set(new JsString(Constants.Documents.Metadata.Key), metadataJs);
-            return metadataJs;
+            using (var old = metadata)
+            {
+                metadata = Context.ReadObject(metadata, boi.DocumentId);
+                JsValue metadataJs = TranslateToJs(_scriptEngine, Context, metadata);
+                boi.Set(new JsString(Constants.Documents.Metadata.Key), metadataJs);
+
+                return metadataJs;
+            }
         }
 
         internal JsValue AttachmentsFor(JsValue self, JsValue[] args)
