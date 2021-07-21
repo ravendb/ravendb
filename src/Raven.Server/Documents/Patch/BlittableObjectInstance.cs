@@ -488,5 +488,17 @@ namespace Raven.Server.Documents.Patch
             OriginalPropertiesTypes ??= new Dictionary<string, BlittableJsonToken>();
             OriginalPropertiesTypes[key] = type;
         }
+
+        public void Reset()
+        {
+            if (OwnValues == null)
+                return;
+
+            foreach (var val in OwnValues)
+            {
+                if (val.Value.Value is BlittableObjectInstance boi)
+                    boi.Blittable.Dispose();
+            }
+        }
     }
 }
