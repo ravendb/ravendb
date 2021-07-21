@@ -207,7 +207,7 @@ namespace Raven.Client.Documents.Subscriptions
                                 .Append("'");
                         }
                         else
-                            queryBuilder.Append(include);
+                            queryBuilder.Append(QueryToken.IsKeyword(include) ? $"'{include}'" : include);
 
                         numberOfIncludesAdded++;
                     }

@@ -1286,7 +1286,9 @@ namespace Raven.Server.Rachis
 
         public unsafe bool RemoveEntryFromRaftLog(long index)
         {
-            using (ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+            try
+            {
+                using (ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (var tx = context.OpenWriteTransaction())
             {
                 Table table = context.Transaction.InnerTransaction.OpenTable(LogsTable, EntriesSlice);
@@ -1328,6 +1330,11 @@ namespace Raven.Server.Rachis
             }
 
             return true;
+        }
+            catch (Exception e)
+            {
+                throw new RachisApplyException($"Failed to remove entry number {index} from raft log", e);
+            }
         }
 
         public unsafe long InsertToLeaderLog(ClusterOperationContext context, long term, BlittableJsonReaderObject cmd,

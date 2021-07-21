@@ -1185,7 +1185,7 @@ more responsive application.
                     }
                 }
 
-                return DeletedEntities.Count > 0;
+                return DeletedEntities.Count > 0 || DeferredCommandsCount > 0;
             }
         }
 
