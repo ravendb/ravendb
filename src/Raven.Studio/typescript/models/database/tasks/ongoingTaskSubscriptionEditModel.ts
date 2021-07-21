@@ -114,7 +114,7 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
             Query: query,
             MentorNode: this.manualChooseMentor() ? this.mentorNode() : undefined,
             ChangeVector: this.serializeChangeVector(),
-            Disabled: false
+            Disabled: this.taskState() === "Disabled"
         }
     }
 
