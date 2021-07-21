@@ -30,14 +30,12 @@ namespace Raven.Server.Documents.Handlers
             var skipOverwriteIfUnchanged = GetBoolValueQueryString("skipOverwriteIfUnchanged", required: false) ?? false;
 
             await Database.Operations.AddOperation(Database, "Bulk Insert", Operations.Operations.OperationType.BulkInsert,
-                progress => DoBulkInsert(progress, operationCancelToken.Token),
                 progress => DoBulkInsert(progress, skipOverwriteIfUnchanged, operationCancelToken.Token),
                 id,
                 token: operationCancelToken
             );
         }
 
-        private async Task<IOperationResult> DoBulkInsert(Action<IOperationProgress> onProgress, CancellationToken token)
         private async Task<IOperationResult> DoBulkInsert(Action<IOperationProgress> onProgress, bool skipOverwriteIfUnchanged, CancellationToken token)
         {
             var progress = new BulkInsertProgress();
@@ -86,7 +84,6 @@ namespace Raven.Server.Documents.Handlers
                                                 NumberOfCommands = numberOfCommands,
                                                 Database = Database,
                                                 Logger = logger,
-                                                TotalSize = totalSize
                                                 TotalSize = totalSize,
                                                 SkipOverwriteIfUnchanged = skipOverwriteIfUnchanged
                                             });
@@ -154,7 +151,6 @@ namespace Raven.Server.Documents.Handlers
                                     NumberOfCommands = numberOfCommands,
                                     Database = Database,
                                     Logger = logger,
-                                    TotalSize = totalSize
                                     TotalSize = totalSize,
                                     SkipOverwriteIfUnchanged = skipOverwriteIfUnchanged
                                 });

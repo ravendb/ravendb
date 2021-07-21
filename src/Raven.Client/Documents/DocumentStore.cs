@@ -438,16 +438,21 @@ namespace Raven.Client.Documents
 
         public override BulkInsertOperation BulkInsert(string database = null, CancellationToken token = default)
         {
-            return BulkInsert(null, database, token);
+            return BulkInsert(database, null, token);
         }
 
-        public override BulkInsertOperation BulkInsert(BulkInsertOptions bulkInsertOptions, string database = null, CancellationToken token = default)
+        public override BulkInsertOperation BulkInsert(string database, BulkInsertOptions options, CancellationToken token = default)
         {
             AssertInitialized();
 
             database = this.GetDatabase(database);
 
-            return new BulkInsertOperation(database, this, bulkInsertOptions, token);
+            return new BulkInsertOperation(database, this, options, token);
+        }
+
+        public override BulkInsertOperation BulkInsert(BulkInsertOptions options, CancellationToken token = default)
+        {
+            return BulkInsert(null, options, token);
         }
     }
 }
