@@ -4,9 +4,7 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Extensions;
-using Sparrow;
 using Sparrow.Json;
-using Sparrow.LowMemory;
 
 namespace Raven.Server.Smuggler.Documents
 {
@@ -24,8 +22,9 @@ namespace Raven.Server.Smuggler.Documents
             _database = database;
         }
 
-        public Document Transform(Document document, JsonOperationContext context)
+        public Document Transform(Document document)
         {
+            var ctx = document.Data._context;
             object translatedResult;
             using (document)
             {
@@ -33,9 +32,9 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     try
                     {
-                        using (ScriptRunnerResult result = _run.Run(context, null, "execute", new object[] { document }))
+                        using (ScriptRunnerResult result = _run.Run(ctx, null, "execute", new object[] { document }))
                         {
-                            translatedResult = _run.Translate(result, context, usageMode: BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                            translatedResult = _run.Translate(result, ctx, usageMode: BlittableJsonDocumentBuilder.UsageMode.ToDisk);
                         }
                     }
                     catch (Client.Exceptions.Documents.Patching.JavaScriptException e)
@@ -50,7 +49,7 @@ namespace Raven.Server.Smuggler.Documents
                 if (!(translatedResult is BlittableJsonReaderObject bjro))
                     return null;
 
-                var cloned = document.Clone(context);
+                var cloned = document.Clone(ctx);
                 using (cloned.Data)
                 {
                     cloned.Data = bjro;

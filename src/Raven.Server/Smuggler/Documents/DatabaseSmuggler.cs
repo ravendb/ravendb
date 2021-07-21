@@ -733,7 +733,7 @@ namespace Raven.Server.Smuggler.Documents
 
                     if (_patcher != null)
                     {
-                        item.Document = _patcher.Transform(item.Document, actions.GetContextForNewDocument());
+                        item.Document = _patcher.Transform(item.Document);
                         if (item.Document == null)
                         {
                             result.Documents.SkippedCount++;
