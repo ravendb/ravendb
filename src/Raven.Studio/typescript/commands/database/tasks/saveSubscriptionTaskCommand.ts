@@ -4,7 +4,7 @@ import endpoints = require("endpoints");
 
 class saveSubscriptionTaskCommand extends commandBase {
 
-    constructor(private db: database, private payload: Raven.Client.Documents.Subscriptions.SubscriptionCreationOptions, private taskId?: number, private disabled?: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskState) {
+    constructor(private db: database, private payload: Raven.Client.Documents.Subscriptions.SubscriptionCreationOptions, private taskId?: number) {
         super();
     }
 
@@ -21,8 +21,8 @@ class saveSubscriptionTaskCommand extends commandBase {
     private updateSubscription(): JQueryPromise<Raven.Client.Documents.Operations.OngoingTasks.ModifyOngoingTaskResult> {
         let args: any;
 
-        if (this.taskId) { 
-            args = { name: this.db.name, id: this.taskId, disabled: this.disabled === "Disabled" };
+        if (this.taskId) {
+            args = { name: this.db.name, id: this.taskId };
         } else {
             // New task
             args = { name: this.db.name };
