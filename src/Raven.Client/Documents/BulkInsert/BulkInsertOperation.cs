@@ -31,7 +31,7 @@ namespace Raven.Client.Documents.BulkInsert
 {
     public class BulkInsertOperation : IDisposable, IAsyncDisposable
     {
-        private readonly BulkInsertOptions _bulkInsertOptions;
+        private readonly BulkInsertOptions _options;
         private readonly CancellationToken _token;
         private readonly GenerateEntityIdOnTheClient _generateEntityIdOnTheClient;
 
@@ -164,7 +164,7 @@ namespace Raven.Client.Documents.BulkInsert
 
         public CompressionLevel CompressionLevel = CompressionLevel.NoCompression;
 
-        public BulkInsertOperation(string database, IDocumentStore store, BulkInsertOptions bulkInsertOptions, CancellationToken token = default)
+        public BulkInsertOperation(string database, IDocumentStore store, BulkInsertOptions options, CancellationToken token = default)
         {
             _disposeOnce = new DisposeOnceAsync<SingleAttempt>(async () =>
             {
@@ -222,8 +222,8 @@ namespace Raven.Client.Documents.BulkInsert
                 }
             });
 
-            CompressionLevel = bulkInsertOptions?.CompressionLevel ?? CompressionLevel.NoCompression;
-            _bulkInsertOptions = bulkInsertOptions ?? new BulkInsertOptions();
+            CompressionLevel = options?.CompressionLevel ?? CompressionLevel.NoCompression;
+            _options = options ?? new BulkInsertOptions();
             _token = token;
             _conventions = store.Conventions;
             if (string.IsNullOrWhiteSpace(database))
@@ -498,7 +498,7 @@ namespace Raven.Client.Documents.BulkInsert
                 _operationId,
                 _streamExposerContent,
                 _nodeTag,
-                _bulkInsertOptions.SkipOverwriteIfUnchanged);
+                _options.SkipOverwriteIfUnchanged);
 
             _bulkInsertExecuteTask = ExecuteAsync(bulkCommand);
 
