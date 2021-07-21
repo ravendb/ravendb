@@ -439,7 +439,7 @@ namespace Raven.Server.Documents.Patch
             }
             if (obj.Blittable != null)
             {
-                var propertiesByInsertionOrder = obj.Blittable.GetPropertiesByInsertionOrder();
+                using var propertiesByInsertionOrder = obj.Blittable.GetPropertiesByInsertionOrder();
                 for (int i = 0; i < propertiesByInsertionOrder.Size; i++)
                 {
                     var prop = new BlittableJsonReaderObject.PropertyDetails();
