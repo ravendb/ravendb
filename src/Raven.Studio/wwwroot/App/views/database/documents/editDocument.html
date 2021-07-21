@@ -55,11 +55,13 @@
                         <i class="icon-save"></i>
                         <span>Save</span>
                     </button>
-                    <button type="button" class="clone-btn btn btn-default" data-bind="click: tryCreateClone, enable: !isCreatingNewDocument(), visible: !isDeleteRevision() && !inDiffMode()">
+                    <button type="button" class="clone-btn btn btn-default"
+                            data-bind="click: tryCreateClone, enable: !isCreatingNewDocument(), visible: !isDeleteRevision() && !inDiffMode() && !isClone() && !isCreatingNewDocument()">
                         <i class="icon-clone"></i>
                         <span>Clone</span>
                     </button>
-                    <button type="button" data-bind="click: deleteDocument, enable: !isCreatingNewDocument(), visible: !inReadOnlyMode() && !inDiffMode()" class="delete-btn btn btn-danger">
+                    <button type="button" class="delete-btn btn btn-danger"
+                            data-bind="click: deleteDocument, enable: !isCreatingNewDocument(), visible: !inReadOnlyMode() && !inDiffMode() && !isClone() && !isCreatingNewDocument()">
                         <i class="icon-trash"></i>
                         <span>Delete</span>
                     </button>
