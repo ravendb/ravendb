@@ -72,7 +72,7 @@ namespace SlowTests.Issues
 
                 foreach (var server in Servers)
                 {
-                    Assert.False(leader.ServerStore.DatabasesLandlord.IsDatabaseLoaded("Toli"));
+                    Assert.False(server.ServerStore.DatabasesLandlord.IsDatabaseLoaded("Toli"));
                 }
 
                 long index;
@@ -82,13 +82,30 @@ namespace SlowTests.Issues
                     leader.ServerStore.Engine.GetLastCommitIndex(context, out index, out long term);
                 }
 
-                var operation = await store.Maintenance.SendAsync(new RemoveEntryFromRaftLogOperation(index + 1));
+                var nodelist = await store.Maintenance.SendAsync(new RemoveEntryFromRaftLogOperation(index+1));
+
+                long index2 = 0;
+                foreach (var server in Servers)
+                {
+                    await WaitForValueAsync(async () =>
+                    {
+                        documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
+                        using (documentDatabase.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+                        using (var tx = context.OpenReadTransaction())
+                        {
+                            server.ServerStore.Engine.GetLastCommitIndex(context, out index2, out long term);
+                        }
+
+                        return index2 > index;
+                    }, true);
+                }
+                Assert.True(index2 > index, $"State machine is stuck. raft index was {index}, after remove raft entry index is {index2} ");
 
                 foreach (var server in Servers)
                 {
-                    Assert.Contains(server.ServerStore.NodeTag, operation);
                     var val = WaitForValueAsync(() => server.ServerStore.DatabasesLandlord.IsDatabaseLoaded("Toli"), true);
                     Assert.True(val.Result);
+                    Assert.Contains(server.ServerStore.NodeTag, nodelist);
                 }
             }
         }
@@ -178,12 +195,13 @@ namespace SlowTests.Issues
 
                 foreach (var server in Servers)
                 {
-                    Assert.False(leader.ServerStore.DatabasesLandlord.IsDatabaseLoaded("Toli"));
+                    Assert.False(server.ServerStore.DatabasesLandlord.IsDatabaseLoaded("Toli"));
                 }
 
+                long index = 0;
                 foreach (var server in Servers)
                 {
-                    long index = 0;
+                    index = 0;
                     documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
                     using (documentDatabase.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                     using (var tx = context.OpenReadTransaction())
@@ -193,6 +211,25 @@ namespace SlowTests.Issues
 
                     server.ServerStore.Engine.RemoveEntryFromRaftLog(index + 1);
                 }
+
+                long index2 = 0;
+                foreach (var server in Servers)
+                {
+                    await WaitForValueAsync(async () =>
+                    {
+                        index2 = 0;
+                        documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
+                        using (documentDatabase.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+                        using (var tx = context.OpenReadTransaction())
+                        {
+                            server.ServerStore.Engine.GetLastCommitIndex(context, out index2, out long term);
+                        }
+
+                        return index2 > index;
+                    }, true);
+                }
+                Assert.True(index2 > index,$"State machine is stuck. raft index was {index}, after remove raft entry index is {index2} ");
+
                 foreach (var server in Servers)
                 {
                     var val = WaitForValueAsync(() => server.ServerStore.DatabasesLandlord.IsDatabaseLoaded("Toli"), true);

@@ -1266,7 +1266,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                 if (IncludesUtil.RequiresQuotes(include, out var escapedInclude))
                     queryText.Append("'").Append(escapedInclude).Append("'");
                 else
-                    queryText.Append(include);
+                    QueryToken.WriteField(queryText, include);
             }
 
             WriteIncludeTokens(CounterIncludesTokens);

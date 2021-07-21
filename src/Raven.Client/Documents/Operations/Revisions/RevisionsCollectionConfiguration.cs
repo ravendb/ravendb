@@ -13,12 +13,15 @@ namespace Raven.Client.Documents.Operations.Revisions
 
         public bool PurgeOnDelete { get; set; }
 
+        public long? MaximumRevisionsToDeleteUponDocumentUpdate { get; set; }
+
         protected bool Equals(RevisionsCollectionConfiguration other)
         {
             return MinimumRevisionsToKeep == other.MinimumRevisionsToKeep &&
                    MinimumRevisionAgeToKeep == other.MinimumRevisionAgeToKeep &&
                    Disabled == other.Disabled &&
-                   PurgeOnDelete == other.PurgeOnDelete;
+                   PurgeOnDelete == other.PurgeOnDelete &&
+                   MaximumRevisionsToDeleteUponDocumentUpdate == other.MaximumRevisionsToDeleteUponDocumentUpdate;
         }
 
         public override bool Equals(object obj)
@@ -48,7 +51,8 @@ namespace Raven.Client.Documents.Operations.Revisions
                 [nameof(Disabled)] = Disabled,
                 [nameof(MinimumRevisionsToKeep)] = MinimumRevisionsToKeep,
                 [nameof(MinimumRevisionAgeToKeep)] = MinimumRevisionAgeToKeep,
-                [nameof(PurgeOnDelete)] = PurgeOnDelete
+                [nameof(PurgeOnDelete)] = PurgeOnDelete,
+                [nameof(MaximumRevisionsToDeleteUponDocumentUpdate)] = MaximumRevisionsToDeleteUponDocumentUpdate
             };
         }
     }

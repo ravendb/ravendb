@@ -314,15 +314,7 @@ namespace Voron.Impl.Journal
                 }
                 else
                 {
-                    if (RuntimeInformation.OSArchitecture == Architecture.Arm || RuntimeInformation.OSArchitecture == Architecture.Arm64)
-                    {
-                        addToInitLog?.Invoke($"SkipChecksumValidationOnDbLoading set to true. Skipping checksum validation of {modifiedPages.Count} pages.");
-                    }
-                    else
-                    {
-                        throw new InvalidDataException( // RavenDB-13017
-                            $"{nameof(_env.Options.SkipChecksumValidationOnDatabaseLoading)} set to true is not allowed on non ARM architecture. This instance running on {RuntimeInformation.OSArchitecture}");
-                    }
+                    addToInitLog?.Invoke($"SkipChecksumValidationOnDbLoading set to true. Skipping checksum validation of {modifiedPages.Count} pages.");
                 }
             }
 
@@ -1835,10 +1827,10 @@ namespace Voron.Impl.Journal
         /// <returns></returns>
         private static int AdjustPagesRequiredFor32Bits(int pagesRequired)
         {
-            var bytes = pagesRequired * Constants.Storage.PageSize;
+            var bytes = (long)pagesRequired * Constants.Storage.PageSize;
             if (bytes < Constants.Size.Megabyte / 2)
             {
-                pagesRequired = Bits.PowerOf2(bytes) / Constants.Storage.PageSize;
+                pagesRequired = (int)Bits.PowerOf2(bytes) / Constants.Storage.PageSize;
             }
             else
             {

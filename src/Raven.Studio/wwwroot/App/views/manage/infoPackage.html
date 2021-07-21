@@ -34,23 +34,26 @@
                 <hr />
                 <div class="row row-sm">
                     <div class="col-sm-6">
-                        <button class="btn btn-block btn-primary" 
+                        <button class="btn btn-block btn-primary"
                                 data-bind="click: downloadServerWidePackage, disable: spinners.anyInProgress, css: { 'btn-spinner': spinners.serverWide }">
                             <i class="icon-server"></i> <span>For current server only</span>
                         </button>
                     </div>
                     <div class="col-sm-6">
-                        <button class="btn btn-block btn-primary" 
+                        <button class="btn btn-block btn-primary"
                                 data-bind="click: downloadClusterWidePackage, disable: spinners.anyInProgress, css: { 'btn-spinner': spinners.clusterWide }">
                             <i class="icon-cluster"></i> <span>For the entire cluster</span>
                         </button>
                     </div>
-
+                </div>
+                <div class="row text-center margin-top" data-bind="visible: spinners.anyInProgress, click: abortCreatePackage">
+                    <button class="btn btn-default" data-bind="css: { 'btn-spinner': spinners.abort }">
+                        <i class="icon-cancel"></i><span>Abort</span>
+                    </button>
                 </div>
             </div>
         </div>
     </div>
-
     <div class="hidden">
         <form method="get" download target="hidden-form" id="downloadInfoPackageForm">
             <input type="hidden" name="operationId" />
