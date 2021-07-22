@@ -646,6 +646,7 @@ interface textColumnOpts<T> {
     sortable?: "number" | "string" | valueProvider<T>;
     defaultSortOrder?: sortMode;
     customComparator?: (a: any, b: any) => number;
+    transformValue?: (a: any) => any;
 }
 
 interface hypertextColumnOpts<T> extends textColumnOpts<T> {
