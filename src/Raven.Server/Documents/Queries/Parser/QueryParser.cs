@@ -1858,7 +1858,7 @@ Grouping by 'Tag' or Field is supported only as a second grouping-argument.";
                 return false;
             }
 
-            if (Scanner.Identifier(false) == false)
+            if (Scanner.Identifier(false, true, true) == false)
                 ThrowParseException("Expected parameter name");
 
             p = Scanner.Token;
