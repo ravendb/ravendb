@@ -165,8 +165,9 @@
                                 <div class="padding flex-horizontal">
                                     <div class="title">Side by side</div>
                                     <div class="flex-separator"></div>
-                                    <button class="btn btn-sm btn-warning" 
-                                            data-bind="click: _.partial($root.forceSideBySide, $data.parent), css: { 'btn-spinner': _.includes($root.spinners.swapNow(), parent.name) }, disable: _.includes($root.spinners.swapNow(), parent.name)">
+                                    <button class="btn btn-sm btn-warning" title="Click to replace the current index definition with the replacement index"
+                                            data-bind="click: _.partial($root.swapSideBySide, $data.parent), css: { 'btn-spinner': _.includes($root.spinners.swapNow(), parent.name) },
+                                                       disable: _.includes($root.spinners.swapNow(), parent.name)">
                                         <i class="icon-force"></i> <span>Swap now</span>
                                     </button>
                                 </div>
@@ -440,7 +441,8 @@
                     <div class="padding flex-horizontal">
                         <div class="title">Rolling deployment</div>
                         <div class="flex-separator"></div>
-                        <button class="btn btn-sm btn-warning" data-bind="visible: canSwitchToParallelMode, click: _.bind($root.forceParallelDeployment, $parent)">
+                        <button class="btn btn-sm btn-warning" title="Click to force parallel indexing on all nodes or on current node only"
+                                data-bind="visible: canSwitchToParallelMode, click: _.bind($root.forceParallelDeployment, $parent)">
                             <i class="icon-force"></i> <span>Force parallel</span>
                         </button>
                     </div>

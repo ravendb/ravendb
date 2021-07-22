@@ -77,7 +77,7 @@ class indexes extends viewModelBase {
         this.bindToCurrentInstance(
             "lowPriority", "highPriority", "normalPriority",
             "openFaultyIndex", "resetIndex", "deleteIndex",
-            "forceSideBySide",
+            "swapSideBySide",
             "forceParallelDeployment",
             "showStaleReasons",
             "unlockIndex", "lockIndex", "lockErrorIndex",
@@ -691,14 +691,21 @@ class indexes extends viewModelBase {
         this.addNotification(changesApi.watchAllIndexes(e => this.processIndexEvent(e)));
     }
 
-    forceSideBySide(idx: index) {
-        this.confirmationMessage("Are you sure?", `Do you want to <strong>force swapping</strong> the side-by-side index: ${generalUtils.escapeHtml(idx.name)}?`, {
-            html: true
-        })
+    swapSideBySide(idx: index) {
+        const margin = `class="margin-bottom"`;
+        let text = `<li ${margin}>Index: <strong>${generalUtils.escapeHtml(idx.name)}</strong></li>`;
+        text += `<li ${margin}>Clicking <strong>Swap Now</strong> will immediately replace the current index definition with the replacement index.</li>`;
+
+        const replacementIndex = idx.replacement();
+        if (replacementIndex.progress() && replacementIndex.progress().rollingProgress().length) {
+            text += `<li ${margin}>Actual indexing will occur once the node reaches its turn in the rolling deployment process.</li>`;
+        }
+
+        this.confirmationMessage("Are you sure?", `<ul>${text}</ul>`, { buttons: ["Cancel", "Swap Now"], html: true })
             .done((result: canActivateResultDto) => {
                 if (result.can) {
                     this.spinners.swapNow.push(idx.name);
-                    eventsCollector.default.reportEvent("index", "force-side-by-side");
+                    eventsCollector.default.reportEvent("index", "swap-side-by-side");
                     new forceIndexReplace(idx.name, this.activeDatabase())
                         .execute()
                         .always(() => this.spinners.swapNow.remove(idx.name));
