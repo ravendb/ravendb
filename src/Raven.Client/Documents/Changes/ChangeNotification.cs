@@ -394,6 +394,7 @@ namespace Raven.Client.Documents.Changes
         public int ResponseStatusCode { get; set; }
         public string RequestUri { get; set; }
         public string AbsoluteUri { get; set; }
+        public long ResponseSizeInBytes { get; set; }
         public TrafficWatchChangeType Type { get; set; }
 
         public override DynamicJsonValue ToJson()
@@ -405,6 +406,7 @@ namespace Raven.Client.Documents.Changes
             json[nameof(ResponseStatusCode)] = ResponseStatusCode;
             json[nameof(RequestUri)] = RequestUri;
             json[nameof(AbsoluteUri)] = AbsoluteUri;
+            json[nameof(ResponseSizeInBytes)] = ResponseSizeInBytes;
             json[nameof(Type)] = Type;
             return json;
         }
