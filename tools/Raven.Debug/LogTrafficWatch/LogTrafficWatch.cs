@@ -102,7 +102,7 @@ namespace Raven.Debug.LogTrafficWatch
 
                     if (_errorCount++ <= 100)
                     {
-                        Console.WriteLine($"Lost the connection to the server... trying again attempt {_errorCount}");
+                        Console.WriteLine($"Lost connection to the server... trying again - attempt No. {_errorCount}");
                         await Task.Delay(1000);
                         continue;
                     }
@@ -118,9 +118,8 @@ namespace Raven.Debug.LogTrafficWatch
             {
                 var urlBuilder = new StringBuilder(_url).Append("/admin/traffic-watch");
 
-                //TODO Should fix server side
-                // if (string.IsNullOrWhiteSpace(_database) == false)
-                    // urlBuilder.Append("?resourceName=").Append(_database);
+                if (string.IsNullOrWhiteSpace(_database) == false)
+                    urlBuilder.Append("?resourceName=").Append(_database);
 
                 var stringUrl = ToWebSocketPath(urlBuilder.ToString().ToLower());
                 var url = new Uri(stringUrl, UriKind.Absolute);
