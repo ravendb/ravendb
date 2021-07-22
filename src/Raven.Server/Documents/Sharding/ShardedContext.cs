@@ -1,9 +1,11 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Raven.Client;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
+using Raven.Server.Documents.Sharding.Documents;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
@@ -13,6 +15,7 @@ namespace Raven.Server.Documents.Sharding
     public unsafe class ShardedContext
     {
         public const int NumberOfShards = 1024 * 1024;
+        public ShardedSubscriptionContext ShardedSubscriptionStorage { get; }
 
         private readonly DatabaseRecord _record;
         public RequestExecutor[] RequestExecutors;
@@ -23,6 +26,7 @@ namespace Raven.Server.Documents.Sharding
             //TODO: reduce the record to the needed fields
             _record = record;
             _lastClientConfigurationIndex = server.LastClientConfigurationIndex;
+            ShardedSubscriptionStorage = new ShardedSubscriptionContext(this, server);
 
             RequestExecutors = new RequestExecutor[record.Shards.Length];
             for (int i = 0; i < record.Shards.Length; i++)
@@ -32,7 +36,7 @@ namespace Raven.Server.Documents.Sharding
                 // TODO: pool request executors?
                 RequestExecutors[i] = RequestExecutor.Create(
                     urls,
-                    record.DatabaseName + "$" + i,
+                    GetShardedDatabaseName(i),
                     server.Server.Certificate.Certificate,
                     new DocumentConventions());
             }
@@ -43,6 +47,8 @@ namespace Raven.Server.Documents.Sharding
         public char IdentitySeparator => _record.Client?.IdentityPartsSeparator ?? Constants.Identities.DefaultSeparator;
 
         public bool Encrypted => _record.Encrypted;
+
+        public int Count => _record.Shards.Length;
 
         /// <summary>
         /// The shard id is a hash of the document id, lower case, reduced to
@@ -113,6 +119,24 @@ namespace Raven.Server.Documents.Sharding
             var lastClientConfigurationIndex = _record.Client?.Etag ?? 0;
             var actual = Hashing.Combine(lastClientConfigurationIndex, _lastClientConfigurationIndex);
             return actual > clientConfigurationEtag;
+        }
+
+        public string GetShardedDatabaseName(int index = 0)
+        {
+            if (index >= _record.Shards.Length)
+                throw new InvalidOperationException($"Requested shard '{index}' of database '{DatabaseName}' but shards length '{_record.Shards.Length}'.");
+
+            return _record.DatabaseName + "$" + index;
+        }
+
+        public List<string> GetShardedDatabaseNames()
+        {
+            var list = new List<string>();
+            for (int i = 0; i < Count; i++)
+            {
+                list.Add(GetShardedDatabaseName(i));
+            }
+            return list;
         }
     }
 }

@@ -32,7 +32,7 @@ namespace Raven.Server.Documents.Handlers
                 BlittableJsonReaderObject json = await context.ReadForMemoryAsync(RequestBodyStream(), null);
                 SubscriptionTryout tryout = JsonDeserializationServer.SubscriptionTryout(json);
 
-                SubscriptionConnection.ParsedSubscription sub = SubscriptionConnection.ParseSubscriptionQuery(tryout.Query);
+                SubscriptionConnectionBase.ParsedSubscription sub = SubscriptionConnectionBase.ParseSubscriptionQuery(tryout.Query);
                 SubscriptionPatchDocument patch = null;
                 if (string.IsNullOrEmpty(sub.Script) == false)
                 {
@@ -283,36 +283,7 @@ namespace Raven.Server.Documents.Handlers
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
-
-                    var subscriptionsAsBlittable = subscriptions.Select(x => new DynamicJsonValue()
-                    {
-                        [nameof(SubscriptionState.SubscriptionId)] = x.SubscriptionId,
-                        [nameof(SubscriptionState.SubscriptionName)] = x.SubscriptionName,
-                        [nameof(SubscriptionState.ChangeVectorForNextBatchStartingPoint)] = x.ChangeVectorForNextBatchStartingPoint,
-                        [nameof(SubscriptionState.Query)] = x.Query,
-                        [nameof(SubscriptionState.Disabled)] = x.Disabled,
-                        [nameof(SubscriptionState.LastClientConnectionTime)] = x.LastClientConnectionTime,
-                        [nameof(SubscriptionState.LastBatchAckTime)] = x.LastBatchAckTime,
-                        ["Connection"] = GetSubscriptionConnectionJson(x.Connection),
-                        ["RecentConnections"] = x.RecentConnections?.Select(r => new DynamicJsonValue()
-                        {
-                            ["State"] = new DynamicJsonValue()
-                            {
-                                ["LatestChangeVectorClientACKnowledged"] = r.SubscriptionState.ChangeVectorForNextBatchStartingPoint,
-                                ["Query"] = r.SubscriptionState.Query
-                            },
-                            ["Connection"] = GetSubscriptionConnectionJson(r)
-                        }),
-                        ["FailedConnections"] = x.RecentRejectedConnections?.Select(r => new DynamicJsonValue()
-                        {
-                            ["State"] = new DynamicJsonValue()
-                            {
-                                ["LatestChangeVectorClientACKnowledged"] = r.SubscriptionState.ChangeVectorForNextBatchStartingPoint,
-                                ["Query"] = r.SubscriptionState.Query
-                            },
-                            ["Connection"] = GetSubscriptionConnectionJson(r)
-                        }).ToList()
-                    });
+                    IEnumerable<DynamicJsonValue> subscriptionsAsBlittable = GetSubscriptionStateBlittable(subscriptions);
 
                     writer.WriteArray(context, "Results", subscriptionsAsBlittable, (w, c, subscription) => c.Write(w, subscription));
 
@@ -320,7 +291,48 @@ namespace Raven.Server.Documents.Handlers
                 }
             }
         }
-        
+
+        internal static IEnumerable<DynamicJsonValue> GetSubscriptionStateBlittable(IEnumerable<SubscriptionState> subscriptions)
+        {
+            var subscriptionsAsBlittable = subscriptions.Select(x =>
+            {
+                var res = new DynamicJsonValue()
+                {
+                    [nameof(SubscriptionState.SubscriptionId)] = x.SubscriptionId,
+                    [nameof(SubscriptionState.SubscriptionName)] = x.SubscriptionName,
+                    [nameof(SubscriptionState.ChangeVectorForNextBatchStartingPoint)] = x.ChangeVectorForNextBatchStartingPoint,
+                    [nameof(SubscriptionState.Query)] = x.Query,
+                    [nameof(SubscriptionState.Disabled)] = x.Disabled,
+                    [nameof(SubscriptionState.LastClientConnectionTime)] = x.LastClientConnectionTime,
+                    [nameof(SubscriptionState.LastBatchAckTime)] = x.LastBatchAckTime
+                };
+                if (x is SubscriptionStorage.SubscriptionGeneralDataAndStats superX)
+                {
+                    res["Connection"] = GetSubscriptionConnectionJson(superX.Connection);
+                    res["RecentConnections"] = superX.RecentConnections?.Select(r => new DynamicJsonValue()
+                    {
+                        ["State"] = new DynamicJsonValue()
+                        {
+                            ["LatestChangeVectorClientACKnowledged"] = r.SubscriptionState.ChangeVectorForNextBatchStartingPoint,
+                            ["Query"] = r.SubscriptionState.Query
+                        },
+                        ["Connection"] = GetSubscriptionConnectionJson(r)
+                    });
+                    res["FailedConnections"] = superX.RecentRejectedConnections?.Select(r => new DynamicJsonValue()
+                    {
+                        ["State"] = new DynamicJsonValue()
+                        {
+                            ["LatestChangeVectorClientACKnowledged"] = r.SubscriptionState.ChangeVectorForNextBatchStartingPoint,
+                            ["Query"] = r.SubscriptionState.Query
+                        },
+                        ["Connection"] = GetSubscriptionConnectionJson(r)
+                    }).ToList();
+                }
+                return res;
+            });
+            return subscriptionsAsBlittable;
+        }
+
         [RavenAction("/databases/*/subscriptions/performance/live", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, SkipUsagesCount = true)]
         public async Task PerformanceLive()
         {
@@ -347,7 +359,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private static DynamicJsonValue GetSubscriptionConnectionJson(SubscriptionConnection x)
+        private static DynamicJsonValue GetSubscriptionConnectionJson(SubscriptionConnectionBase x)
         {
             if (x == null)
                 return new DynamicJsonValue();
@@ -488,7 +500,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private static bool SubscriptionHasChanges(SubscriptionCreationOptions options, SubscriptionState state)
+        internal static bool SubscriptionHasChanges(SubscriptionCreationOptions options, SubscriptionState state)
         {
             bool gotChanges = options.Name != state.SubscriptionName
                               || options.ChangeVector != state.ChangeVectorForNextBatchStartingPoint
@@ -521,7 +533,7 @@ namespace Raven.Server.Documents.Handlers
             }
 
             var mentor = options.MentorNode;
-            var subscriptionId = await Database.SubscriptionStorage.PutSubscription(options, GetRaftRequestIdFromQuery(), id, disabled, mentor);
+            (long subscriptionId, long index) = await Database.SubscriptionStorage.PutSubscription(options, GetRaftRequestIdFromQuery(), id, disabled, mentor);
 
             var name = options.Name ?? subscriptionId.ToString();
 
@@ -532,7 +544,7 @@ namespace Raven.Server.Documents.Handlers
                 var node = Database.SubscriptionStorage.GetResponsibleNode(serverContext, name);
                 if (node != null && node != ServerStore.NodeTag)
                 {
-                    await WaitForExecutionOnSpecificNode(serverContext, ServerStore.GetClusterTopology(serverContext), node, subscriptionId);
+                    await WaitForExecutionOnSpecificNode(serverContext, ServerStore.GetClusterTopology(serverContext), node, index);
                 }
             }
 
@@ -542,7 +554,8 @@ namespace Raven.Server.Documents.Handlers
             {
                 context.Write(writer, new DynamicJsonValue
                 {
-                    [nameof(CreateSubscriptionResult.Name)] = name
+                    [nameof(CreateSubscriptionResult.Name)] = name,
+                    [nameof(CreateSubscriptionResult.RaftIndex)] = index
                 });
             }
         }

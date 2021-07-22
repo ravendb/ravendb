@@ -79,7 +79,7 @@ namespace Raven.Server.Routing
 
         public string Method { get; }
 
-        public RavenShardedActionAttribute(string path, string method)
+        public RavenShardedActionAttribute(string path, string method, AuthorizationStatus requireAuth, EndpointType endpointType)
         {
             Path = path;
             Method = method;

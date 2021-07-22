@@ -21,7 +21,7 @@ namespace Raven.Server.Documents.ShardedHandlers
 {
     public class ShardedDocumentHandler : ShardedRequestHandler
     {
-        [RavenShardedAction("/databases/*/docs", "HEAD")]
+        [RavenShardedAction("/databases/*/docs", "HEAD", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task Head()
         {
             var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
@@ -38,7 +38,7 @@ namespace Raven.Server.Documents.ShardedHandlers
             }
         }
 
-        [RavenShardedAction("/databases/*/docs/size", "GET")]
+        [RavenShardedAction("/databases/*/docs/size", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetDocSize()
         {
             var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
@@ -56,7 +56,7 @@ namespace Raven.Server.Documents.ShardedHandlers
             }
         }
 
-        [RavenShardedAction("/databases/*/docs", "PUT")]
+        [RavenShardedAction("/databases/*/docs", "PUT", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public async Task Put()
         {
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -82,7 +82,7 @@ namespace Raven.Server.Documents.ShardedHandlers
             }
         }
 
-        [RavenShardedAction("/databases/*/docs", "PATCH")]
+        [RavenShardedAction("/databases/*/docs", "PATCH", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public async Task Patch()
         {
             var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
@@ -104,7 +104,7 @@ namespace Raven.Server.Documents.ShardedHandlers
             }
         }
 
-        [RavenShardedAction("/databases/*/docs", "GET")]
+        [RavenShardedAction("/databases/*/docs", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task Get()
         {
             var ids = GetStringValuesQueryString("id", required: false);
@@ -121,7 +121,7 @@ namespace Raven.Server.Documents.ShardedHandlers
             }
         }
 
-        [RavenShardedAction("/databases/*/docs", "POST")]
+        [RavenShardedAction("/databases/*/docs", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task PostGet()
         {
             var metadataOnly = GetBoolValueQueryString("metadataOnly", required: false) ?? false;
@@ -149,7 +149,7 @@ namespace Raven.Server.Documents.ShardedHandlers
             }
         }
 
-        [RavenShardedAction("/databases/*/docs", "DELETE")]
+        [RavenShardedAction("/databases/*/docs", "DELETE", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public async Task Delete()
         {
             var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
@@ -165,7 +165,7 @@ namespace Raven.Server.Documents.ShardedHandlers
             NoContentStatus();
         }
 
-        [RavenShardedAction("/databases/*/docs/class", "GET")]
+        [RavenShardedAction("/databases/*/docs/class", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GenerateClassFromDocument()
         {
             var id = GetStringQueryString("id");

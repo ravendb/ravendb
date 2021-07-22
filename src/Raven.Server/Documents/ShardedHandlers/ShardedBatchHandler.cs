@@ -27,7 +27,7 @@ namespace Raven.Server.Documents.ShardedHandlers
 {
     public class ShardedBatchHandler : ShardedRequestHandler
     {
-        [RavenShardedAction("/databases/*/bulk_docs", "POST")]
+        [RavenShardedAction("/databases/*/bulk_docs", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public async Task BulkDocs()
         {
             var commandBuilder = new ShardedBatchCommandBuilder(this);

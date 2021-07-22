@@ -5,7 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
-using Raven.Server.Documents.TcpHandlers;
+using Raven.Server.Documents.Sharding.Documents;
 using Sparrow.Collections;
 using Sparrow.Server;
 using Sparrow.Threading;
@@ -18,6 +18,9 @@ namespace Raven.Server.Documents.Subscriptions
         private readonly SubscriptionStorage _storage;
         internal readonly AsyncManualResetEvent ConnectionInUse = new AsyncManualResetEvent();
 
+        private readonly ShardedSubscriptionContext _shardedContext;
+        private readonly bool _isSharded;
+
         public SubscriptionConnectionState(long subscriptionId, string subscriptionName, SubscriptionStorage storage)
         {
             _subscriptionId = subscriptionId;
@@ -26,23 +29,32 @@ namespace Raven.Server.Documents.Subscriptions
             ConnectionInUse.Set();
         }
 
+        public SubscriptionConnectionState(long subscriptionId, string subscriptionName, ShardedSubscriptionContext context)
+        {
+            _subscriptionId = subscriptionId;
+            SubscriptionName = subscriptionName ?? subscriptionId.ToString();
+            _shardedContext = context;
+            _isSharded = true;
+            ConnectionInUse.Set();
+        }
+
         public override string ToString()
         {
             return $"{nameof(_subscriptionId)}: {_subscriptionId}";
         }
 
-        private SubscriptionConnection _currentConnection;
+        private SubscriptionConnectionBase _currentConnection;
 
-        private readonly ConcurrentSet<SubscriptionConnection> _pendingConnections = new ConcurrentSet<SubscriptionConnection>();
-        private readonly ConcurrentQueue<SubscriptionConnection> _recentConnections = new ConcurrentQueue<SubscriptionConnection>();
-        private readonly ConcurrentQueue<SubscriptionConnection> _rejectedConnections = new ConcurrentQueue<SubscriptionConnection>();
+        private readonly ConcurrentSet<SubscriptionConnectionBase> _pendingConnections = new ConcurrentSet<SubscriptionConnectionBase>();
+        private readonly ConcurrentQueue<SubscriptionConnectionBase> _recentConnections = new ConcurrentQueue<SubscriptionConnectionBase>();
+        private readonly ConcurrentQueue<SubscriptionConnectionBase> _rejectedConnections = new ConcurrentQueue<SubscriptionConnectionBase>();
 
-        public SubscriptionConnection Connection => _currentConnection;
+        public SubscriptionConnectionBase Connection => _currentConnection;
 
         // we should have two locks: one lock for a connection and one lock for operations
         // remember to catch ArgumentOutOfRangeException for timeout problems
         public async Task<DisposeOnce<SingleAttempt>> RegisterSubscriptionConnection(
-            SubscriptionConnection incomingConnection,
+            SubscriptionConnectionBase incomingConnection,
             TimeSpan timeToWait)
         {
             try
@@ -66,8 +78,16 @@ namespace Raven.Server.Documents.Subscriptions
                                     $"Subscription {incomingConnection.Options.SubscriptionName} is already occupied by a TakeOver connection, connection cannot be opened");
 
                             if (_currentConnection != null)
-                                _storage.DropSubscriptionConnection(_currentConnection.SubscriptionId,
-                                    new SubscriptionInUseException("Closed by TakeOver"));
+                            {
+                                if (_isSharded)
+                                {
+                                   await _shardedContext.DropSubscriptionConnection(_currentConnection.SubscriptionId, new SubscriptionInUseException("Closed by TakeOver"));
+                                }
+                                else
+                                {
+                                    _storage.DropSubscriptionConnection(_currentConnection.SubscriptionId, new SubscriptionInUseException("Closed by TakeOver"));
+                                }
+                            }
 
                             throw new TimeoutException();
 
@@ -96,7 +116,7 @@ namespace Raven.Server.Documents.Subscriptions
             {
                 while (_recentConnections.Count > 10)
                 {
-                    _recentConnections.TryDequeue(out SubscriptionConnection _);
+                    _recentConnections.TryDequeue(out SubscriptionConnectionBase _);
                 }
                 _recentConnections.Enqueue(incomingConnection);
                 Interlocked.CompareExchange(ref _currentConnection, null, incomingConnection);
@@ -104,25 +124,25 @@ namespace Raven.Server.Documents.Subscriptions
             });
         }
 
-        public void RegisterRejectedConnection(SubscriptionConnection connection, SubscriptionException exception = null)
+        public void RegisterRejectedConnection(SubscriptionConnectionBase connection, SubscriptionException exception = null)
         {
             if (exception != null && connection.ConnectionException == null)
                 connection.ConnectionException = exception;
 
             while (_rejectedConnections.Count > 10)
             {
-                _rejectedConnections.TryDequeue(out SubscriptionConnection _);
+                _rejectedConnections.TryDequeue(out SubscriptionConnectionBase _);
             }
             _rejectedConnections.Enqueue(connection);
         }
 
-        public IEnumerable<SubscriptionConnection> RecentConnections => _recentConnections;
-        public IEnumerable<SubscriptionConnection> RecentRejectedConnections => _rejectedConnections;
-        public ConcurrentSet<SubscriptionConnection> PendingConnections => _pendingConnections;
+        public IEnumerable<SubscriptionConnectionBase> RecentConnections => _recentConnections;
+        public IEnumerable<SubscriptionConnectionBase> RecentRejectedConnections => _rejectedConnections;
+        public ConcurrentSet<SubscriptionConnectionBase> PendingConnections => _pendingConnections;
 
         public string SubscriptionName { get; }
 
-        public SubscriptionConnection MostRecentEndedConnection()
+        public SubscriptionConnectionBase MostRecentEndedConnection()
         {
             if (_recentConnections.TryPeek(out var recentConnection))
                 return recentConnection;
