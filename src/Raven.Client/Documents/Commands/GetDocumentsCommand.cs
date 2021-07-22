@@ -169,7 +169,7 @@ namespace Raven.Client.Documents.Commands
                 }
             }
 
-            if (_revisionsIncludeByChangeVector != null && _revisionsIncludeByChangeVector.Any())
+            if (_revisionsIncludeByChangeVector != null)
             {
                 foreach (var changeVector in _revisionsIncludeByChangeVector)
                 {
@@ -179,7 +179,7 @@ namespace Raven.Client.Documents.Commands
             
             if (_revisionsIncludeByDateTime != null)
             {
-                pathBuilder.Append("&revisionBeforeDateTime=").Append(Uri.EscapeDataString(_revisionsIncludeByDateTime.Value.GetDefaultRavenFormat()));
+                pathBuilder.Append("&revisionsBefore=").Append(Uri.EscapeDataString(_revisionsIncludeByDateTime.Value.GetDefaultRavenFormat()));
             }
 
             if (_compareExchangeValueIncludes != null)

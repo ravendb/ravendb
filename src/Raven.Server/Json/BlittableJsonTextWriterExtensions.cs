@@ -1509,7 +1509,8 @@ namespace Raven.Server.Json
                     
                         writer.WritePropertyName(nameof(RevisionIncludeResult.Revision));
                         WriteDocument(writer, context, metadataOnly: false, document: doc);
-                    
+                        await writer.MaybeFlushAsync(token);
+                        
                         writer.WriteEndObject();
                     }
                 }
