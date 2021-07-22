@@ -395,7 +395,7 @@ class trafficWatch extends viewModelBase {
                 }),
                 new textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>(grid,
                     x => trafficWatch.usingHttps ? `<span class="icon-certificate text-info margin-right margin-right-xs"></span>${x.ClientIP}` : x.ClientIP,
-                    "Src", "8%", {
+                    "Src", "6%", {
                     extraClass: rowHighlightRules,
                     useRawValue: () => true
                 }),
@@ -406,15 +406,22 @@ class trafficWatch extends viewModelBase {
                         sortable: "number"
                 }),
                 new textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>(grid,
+                    x => trafficWatch.isHttpItem(x) ? x.ResponseSizeInBytes : "n/a",
+                    "Response Size", "9%", {
+                        extraClass: rowHighlightRules,
+                        sortable: "number",
+                        transformValue: generalUtils.formatBytesToSize
+                    }),
+                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>(grid,
                     x => x.DatabaseName,
-                    "Database Name", "8%", {
+                    "Database Name", "10%", {
                         extraClass: rowHighlightRules,
                         sortable: "string",
                         customComparator: generalUtils.sortAlphaNumeric
                 }),
                 new textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>(grid,
                     x => trafficWatch.isHttpItem(x) ? x.ElapsedMilliseconds : "N/A",
-                    "Duration", "6%", {
+                    "Duration", "7%", {
                         extraClass: rowHighlightRules,
                         sortable: "number"
                 }),
@@ -438,7 +445,7 @@ class trafficWatch extends viewModelBase {
                 }),
                 new textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>(grid,
                     x => trafficWatch.formatDetails(x),
-                    "Details", "35%", {
+                    "Details", "28%", {
                         extraClass: rowHighlightRules,
                         sortable: "string"
                 })
