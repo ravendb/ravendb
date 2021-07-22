@@ -449,7 +449,7 @@ namespace Raven.Client.Documents.Subscriptions
                     using (contextPool.AllocateOperationContext(out JsonOperationContext handshakeContext))
                     {
                         var connectionStatus = await ReadNextObject(handshakeContext, tcpStream, buffer).ConfigureAwait(false);
-                        if (_processingCts.IsCancellationRequested)
+                        if (connectionStatus == null || _processingCts.IsCancellationRequested)
                             return;
 
                         if (connectionStatus.Type != SubscriptionConnectionServerMessage.MessageType.ConnectionStatus ||

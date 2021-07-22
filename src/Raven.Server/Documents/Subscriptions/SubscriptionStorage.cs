@@ -67,7 +67,7 @@ namespace Raven.Server.Documents.Subscriptions
 
         }
 
-        public async Task<long> PutSubscription(SubscriptionCreationOptions options, string raftRequestId, long? subscriptionId = null, bool? disabled = false, string mentor = null)
+        public async Task<(long, long)> PutSubscription(SubscriptionCreationOptions options, string raftRequestId, long? subscriptionId = null, bool? disabled = false, string mentor = null)
         {
             var command = new PutSubscriptionCommand(_db.Name, options.Query, mentor, raftRequestId)
             {
@@ -87,15 +87,15 @@ namespace Raven.Server.Documents.Subscriptions
             if (subscriptionId != null)
             {
                 // updated existing subscription
-                return subscriptionId.Value;
+                return (subscriptionId.Value, etag);
             }
             
             _db.SubscriptionStorage.RaiseNotificationForTaskAdded(options.Name);
 
-            return etag;
+            return (etag, etag);
         }
 
-        public SubscriptionConnectionState OpenSubscription(SubscriptionConnection connection)
+        public SubscriptionConnectionState OpenSubscription(SubscriptionConnectionBase connection)
         {
             var subscriptionState = _subscriptionConnectionStates.GetOrAdd(connection.SubscriptionId,
                 subscriptionId => new SubscriptionConnectionState(subscriptionId, connection.Options.SubscriptionName, this));
@@ -145,14 +145,19 @@ namespace Raven.Server.Documents.Subscriptions
 
         public SubscriptionState GetSubscriptionFromServerStoreById(long id)
         {
-            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverStoreContext))
+            return GetSubscriptionFromServerStoreById(_serverStore, _db.Name, id);
+        }
+
+        public static SubscriptionState GetSubscriptionFromServerStoreById(ServerStore serverStore, string databaseName, long id)
+        {
+            using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverStoreContext))
             using (serverStoreContext.OpenReadTransaction())
             {
-                var name = GetSubscriptionNameById(serverStoreContext, id);
+                var name = GetSubscriptionNameById(serverStoreContext, databaseName, id);
                 if (string.IsNullOrEmpty(name))
                     throw new SubscriptionDoesNotExistException($"Subscription with id '{id}' was not found in server store");
 
-                return GetSubscriptionFromServerStore(serverStoreContext, name);
+                return GetSubscriptionFromServerStore(serverStore, serverStoreContext, databaseName, name);
             }
         }
 
@@ -318,8 +323,13 @@ namespace Raven.Server.Documents.Subscriptions
 
         public string GetSubscriptionNameById(TransactionOperationContext serverStoreContext, long id)
         {
+            return GetSubscriptionNameById(serverStoreContext, _db.Name, id);
+        }
+
+        public static string GetSubscriptionNameById(TransactionOperationContext serverStoreContext, string databaseName, long id)
+        {
             foreach (var keyValue in ClusterStateMachine.ReadValuesStartingWith(serverStoreContext,
-                SubscriptionState.SubscriptionPrefix(_db.Name)))
+                SubscriptionState.SubscriptionPrefix(databaseName)))
             {
                 if (keyValue.Value.TryGet(nameof(SubscriptionState.SubscriptionId), out long _id) == false)
                     continue;
@@ -385,7 +395,12 @@ namespace Raven.Server.Documents.Subscriptions
 
         public SubscriptionGeneralDataAndStats GetSubscriptionFromServerStore(TransactionOperationContext context, string name)
         {
-            var subscriptionBlittable = _serverStore.Cluster.Read(context, SubscriptionState.GenerateSubscriptionItemKeyName(_db.Name, name));
+            return GetSubscriptionFromServerStore(_serverStore, context, _db.Name, name);
+        }
+
+        public static SubscriptionGeneralDataAndStats GetSubscriptionFromServerStore(ServerStore serverStore, TransactionOperationContext context, string databaseName, string name)
+        {
+            var subscriptionBlittable = serverStore.Cluster.Read(context, SubscriptionState.GenerateSubscriptionItemKeyName(databaseName, name));
 
             if (subscriptionBlittable == null)
                 throw new SubscriptionDoesNotExistException($"Subscription with name '{name}' was not found in server store");
@@ -422,7 +437,7 @@ namespace Raven.Server.Documents.Subscriptions
             return subscription;
         }
 
-        public bool TryGetRunningSubscriptionConnection(long subscriptionId, out SubscriptionConnection connection)
+        public bool TryGetRunningSubscriptionConnection(long subscriptionId, out SubscriptionConnectionBase connection)
         {
             connection = null;
 
@@ -454,9 +469,9 @@ namespace Raven.Server.Documents.Subscriptions
 
         public class SubscriptionGeneralDataAndStats : SubscriptionState
         {
-            public SubscriptionConnection Connection;
-            public IEnumerable<SubscriptionConnection> RecentConnections;
-            public IEnumerable<SubscriptionConnection> RecentRejectedConnections;
+            public SubscriptionConnectionBase Connection;
+            public IEnumerable<SubscriptionConnectionBase> RecentConnections;
+            public IEnumerable<SubscriptionConnectionBase> RecentRejectedConnections;
 
             public SubscriptionGeneralDataAndStats() { }
 
@@ -495,7 +510,7 @@ namespace Raven.Server.Documents.Subscriptions
             subscriptionData.RecentRejectedConnections = subscriptionConnectionState.RecentRejectedConnections;
         }
 
-        private static void GetRunningSubscriptionInternal(bool history, SubscriptionGeneralDataAndStats subscriptionData, SubscriptionConnectionState subscriptionConnectionState)
+        internal static void GetRunningSubscriptionInternal(bool history, SubscriptionGeneralDataAndStats subscriptionData, SubscriptionConnectionState subscriptionConnectionState)
         {
             subscriptionData.Connection = subscriptionConnectionState.Connection;
             if (history) // Only valid for this node
@@ -538,7 +553,7 @@ namespace Raven.Server.Documents.Subscriptions
                         continue;
                     }
 
-                    SubscriptionConnection connection = subscriptionStateKvp.Value.Connection;
+                    SubscriptionConnectionBase connection = subscriptionStateKvp.Value.Connection;
                     if (connection != null && subscriptionState.Query != connection.SubscriptionState.Query)
                     {
                         DropSubscriptionConnection(subscriptionStateKvp.Key, new SubscriptionClosedException($"The subscription {subscriptionName} query has been modified, connection must be restarted", canReconnect: true));

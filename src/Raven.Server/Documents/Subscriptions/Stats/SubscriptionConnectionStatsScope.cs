@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.Subscriptions.Stats
             _stats.Strategy = strategy;
         }
         
-        public void RecordException(SubscriptionError errorType, string exception)
+        public void RecordException(SubscriptionConnectionBase.SubscriptionError errorType, string exception)
         {
             _stats.ErrorType = errorType;
             _stats.Exception = exception;

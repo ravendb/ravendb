@@ -5,67 +5,40 @@
 // ----------------------------------------------------------------------
 
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Esprima;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Subscriptions;
-using Raven.Client.Exceptions;
-using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Subscriptions;
-using Raven.Client.Http;
-using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
 using Raven.Server.Documents.Includes;
-using Raven.Server.Documents.Queries;
-using Raven.Server.Documents.Queries.AST;
-using Raven.Server.Documents.Queries.TimeSeries;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.Subscriptions.Stats;
 using Raven.Server.Json;
-using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Sparrow.Logging;
 using Sparrow.Server;
-using Sparrow.Threading;
 using Sparrow.Utils;
 using Constants = Voron.Global.Constants;
 using Exception = System.Exception;
-using QueryParser = Raven.Server.Documents.Queries.Parser.QueryParser;
 
 namespace Raven.Server.Documents.TcpHandlers
 {
-    public enum SubscriptionError
-    {
-        ConnectionRejected,
-        Error
-    }
-
-    public class SubscriptionOperationScope
-    {
-        public const string ConnectionPending = "ConnectionPending";
-        public const string ConnectionActive = "ConnectionActive";
-        public const string BatchSendDocuments = "BatchSendDocuments";
-        public const string BatchWaitForAcknowledge = "BatchWaitForAcknowledge";
-    }
-
-    public class SubscriptionConnection : IDisposable
+    public class SubscriptionConnection : SubscriptionConnectionBase, IDisposable
     {
         private const int WaitForChangedDocumentsTimeoutInMs = 3000;
+        private static int _batchStatsId;
         private static readonly StringSegment DataSegment = new StringSegment("Data");
         private static readonly StringSegment IncludesSegment = new StringSegment(nameof(QueryResult.Includes));
         private static readonly StringSegment CounterIncludesSegment = new StringSegment(nameof(QueryResult.CounterIncludes));
@@ -73,121 +46,35 @@ namespace Raven.Server.Documents.TcpHandlers
         private static readonly StringSegment IncludedCounterNamesSegment = new StringSegment(nameof(QueryResult.IncludedCounterNames));
         private static readonly StringSegment ExceptionSegment = new StringSegment("Exception");
         private static readonly StringSegment TypeSegment = new StringSegment("Type");
-        private static readonly TimeSpan InitialConnectionTimeout = TimeSpan.FromMilliseconds(16);
 
-        public readonly TcpConnectionOptions TcpConnection;
-        public readonly string ClientUri;
         private readonly MemoryStream _buffer = new MemoryStream();
-        private readonly Logger _logger;
-        public readonly SubscriptionConnectionStats Stats;
-
-        private SubscriptionConnectionStatsScope _connectionScope;
-        private SubscriptionConnectionStatsScope _pendingConnectionScope;
-        private SubscriptionConnectionStatsScope _activeConnectionScope;
-
-        private static int _connectionStatsId;
-        private int _connectionStatsIdForConnection;
-        private static int _batchStatsId;
-
-        private SubscriptionConnectionStatsAggregator _lastConnectionStats; // inProgress connection data
-        public SubscriptionConnectionStatsAggregator GetPerformanceStats()
-        {
-            return _lastConnectionStats;
-        }
-
-        private SubscriptionBatchStatsAggregator _lastBatchStats; // inProgress batch data
-        public SubscriptionBatchStatsAggregator GetBatchPerformanceStats()
-        {
-            return _lastBatchStats;
-        }
-
-        private readonly ConcurrentQueue<SubscriptionBatchStatsAggregator> _lastBatchesStats = new ConcurrentQueue<SubscriptionBatchStatsAggregator>(); // batches history
-        public List<SubscriptionBatchStatsAggregator> GetBatchesPerformanceStats()
-        {
-            return _lastBatchesStats.ToList();
-        }
-
-        public readonly CancellationTokenSource CancellationTokenSource;
         private readonly AsyncManualResetEvent _waitForMoreDocuments;
+        private readonly TcpConnectionHeaderMessage.SupportedFeatures _supportedFeatures;
 
-        private SubscriptionWorkerOptions _options;
-
-        public SubscriptionWorkerOptions Options => _options;
-
-        public DisposeOnce<SingleAttempt> DisposeOnDisconnect;
-
-        public SubscriptionException ConnectionException;
-
-        private static readonly byte[] Heartbeat = Encoding.UTF8.GetBytes("\r\n");
-
-        private SubscriptionConnectionState _connectionState;
+        private string _lastChangeVector;
+        private long _startEtag;
+        private SubscriptionPatchDocument _filterAndProjectionScript;
+        private SubscriptionDocumentsFetcher _documentsFetcher;
         private bool _isDisposed;
-        public SubscriptionState SubscriptionState;
-
+        
         public ParsedSubscription Subscription;
 
-        public long SubscriptionId { get; set; }
-        public SubscriptionOpeningStrategy Strategy => _options.Strategy;
-
-        public readonly ConcurrentQueue<string> RecentSubscriptionStatuses = new ConcurrentQueue<string>();
-
-        public void AddToStatusDescription(string message)
+        public SubscriptionConnection(ServerStore serverStore, TcpConnectionOptions connectionOptions, IDisposable tcpConnectionDisposable,
+            JsonOperationContext.MemoryBuffer bufferToCopy) : base(connectionOptions, serverStore, bufferToCopy, tcpConnectionDisposable)
         {
-            while (RecentSubscriptionStatuses.Count > 50)
-            {
-                RecentSubscriptionStatuses.TryDequeue(out _);
-            }
-            RecentSubscriptionStatuses.Enqueue(message);
-        }
-
-        public SubscriptionConnection(TcpConnectionOptions connectionOptions, IDisposable tcpConnectionDisposable, JsonOperationContext.MemoryBuffer bufferToCopy)
-        {
-            TcpConnection = connectionOptions;
-            _tcpConnectionDisposable = tcpConnectionDisposable;
-            ClientUri = connectionOptions.TcpClient.Client.RemoteEndPoint.ToString();
-            _logger = LoggingSource.Instance.GetLogger<SubscriptionConnection>(connectionOptions.DocumentDatabase.Name);
-            CancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(TcpConnection.DocumentDatabase.DatabaseShutdown);
             _supportedFeatures = TcpConnectionHeaderMessage.GetSupportedFeaturesFor(TcpConnectionHeaderMessage.OperationTypes.Subscription, connectionOptions.ProtocolVersion);
             _waitForMoreDocuments = new AsyncManualResetEvent(CancellationTokenSource.Token);
-            Stats = new SubscriptionConnectionStats();
-
-            _copiedBuffer = bufferToCopy.Clone(connectionOptions.ContextPool);
-
-            _connectionStatsIdForConnection = Interlocked.Increment(ref _connectionStatsId);
-        }
-
-        private async Task ParseSubscriptionOptionsAsync()
-        {
-            using (TcpConnection.DocumentDatabase.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (BlittableJsonReaderObject subscriptionCommandOptions = await context.ParseToMemoryAsync(
-                TcpConnection.Stream,
-                "subscription options",
-                BlittableJsonDocumentBuilder.UsageMode.None,
-                _copiedBuffer.Buffer,
-                token: CancellationTokenSource.Token))
-            {
-                _options = JsonDeserializationServer.SubscriptionConnectionOptions(subscriptionCommandOptions);
-
-                if (string.IsNullOrEmpty(_options.SubscriptionName))
-                    return;
-
-                context.OpenReadTransaction();
-
-                var subscriptionItemKey = SubscriptionState.GenerateSubscriptionItemKeyName(TcpConnection.DocumentDatabase.Name, _options.SubscriptionName);
-                var translation = TcpConnection.DocumentDatabase.ServerStore.Cluster.Read(context, subscriptionItemKey);
-                if (translation == null)
-                    throw new SubscriptionDoesNotExistException("Cannot find any Subscription Task with name: " + _options.SubscriptionName);
-
-                if (translation.TryGet(nameof(Client.Documents.Subscriptions.SubscriptionState.SubscriptionId), out long id) == false)
-                    throw new SubscriptionClosedException("Could not figure out the Subscription Task ID for subscription named: " + _options.SubscriptionName);
-
-                SubscriptionId = id;
-            }
         }
 
         private async Task InitAsync()
         {
-            await ParseSubscriptionOptionsAsync();
+            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                (SubscriptionWorkerOptions subscriptionWorkerOptions, long? id) = await ParseSubscriptionOptionsAsync(context, _serverStore, TcpConnection, _copiedBuffer.Buffer, TcpConnection.DocumentDatabase.Name, CancellationTokenSource.TokenCancellationTokenSource.Token);
+                _options = subscriptionWorkerOptions;
+                if (id.HasValue)
+                    SubscriptionId = id.Value;
+            }
 
             var message = $"A connection for subscription ID {SubscriptionId} was received from remote IP {TcpConnection.TcpClient.Client.RemoteEndPoint}";
             AddToStatusDescription(message);
@@ -218,52 +105,7 @@ namespace Raven.Server.Documents.TcpHandlers
                     throw new SubscriptionInvalidStateException($"A connection to Subscription Task with ID '{SubscriptionId}' cannot be opened because it requires the protocol to support TimeSeries Includes.");
             }
 
-            _connectionState = TcpConnection.DocumentDatabase.SubscriptionStorage.OpenSubscription(this);
-            var timeout = InitialConnectionTimeout;
-
-            bool shouldRetry;
-
-            var random = new Random();
-
-            _connectionScope.RecordConnectionInfo(SubscriptionState, ClientUri, _options.Strategy);
-
-            _connectionState.PendingConnections.Add(this);
-
-            try
-            {
-                do
-                {
-                    CancellationTokenSource.Token.ThrowIfCancellationRequested();
-
-                    try
-                    {
-
-                        DisposeOnDisconnect = await _connectionState.RegisterSubscriptionConnection(this, timeout);
-                        shouldRetry = false;
-                    }
-                    catch (TimeoutException)
-                    {
-                        if (timeout == InitialConnectionTimeout && _logger.IsInfoEnabled)
-                        {
-                            _logger.Info(
-                                $"A connection from IP {TcpConnection.TcpClient.Client.RemoteEndPoint} is starting to wait until previous connection from " +
-                                $"{_connectionState.Connection?.TcpConnection.TcpClient.Client.RemoteEndPoint} is released");
-                        }
-
-                        timeout = TimeSpan.FromMilliseconds(Math.Max(250, (long)_options.TimeToWaitBeforeConnectionRetry.TotalMilliseconds / 2) + random.Next(15, 50));
-                        await SendHeartBeat(
-                            $"A connection from IP {TcpConnection.TcpClient.Client.RemoteEndPoint} is waiting for Subscription Task that is serving a connection from IP " +
-                            $"{_connectionState.Connection?.TcpConnection.TcpClient.Client.RemoteEndPoint} to be released");
-                        shouldRetry = true;
-                    }
-
-                } while (shouldRetry);
-            }
-            finally
-            {
-                _connectionState.PendingConnections.TryRemove(this);
-            }
-
+            await TryConnectSubscription();
             _pendingConnectionScope.Dispose();
 
             try
@@ -275,12 +117,12 @@ namespace Raven.Server.Documents.TcpHandlers
 
                 Subscription = ParseSubscriptionQuery(SubscriptionState.Query);
 
-                await SendNoopAck();
+                await SendNoopAck(TcpConnection, SubscriptionId, Options.SubscriptionName);
                 await WriteJsonAsync(new DynamicJsonValue
                 {
                     [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.ConnectionStatus),
                     [nameof(SubscriptionConnectionServerMessage.Status)] = nameof(SubscriptionConnectionServerMessage.ConnectionStatus.Accepted)
-                });
+                }, TcpConnection);
 
                 await TcpConnection.DocumentDatabase.SubscriptionStorage.UpdateClientConnectionTime(SubscriptionState.SubscriptionId,
                     SubscriptionState.SubscriptionName, SubscriptionState.MentorNode);
@@ -290,20 +132,6 @@ namespace Raven.Server.Documents.TcpHandlers
                 DisposeOnDisconnect.Dispose();
                 throw;
             }
-        }
-
-        private async Task WriteJsonAsync(DynamicJsonValue value)
-        {
-            int writtenBytes;
-            using (TcpConnection.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, TcpConnection.Stream))
-            {
-                context.Write(writer, value);
-                writtenBytes = writer.Position;
-            }
-
-            await TcpConnection.Stream.FlushAsync();
-            TcpConnection.RegisterBytesSent(writtenBytes);
         }
 
         private async Task FlushBufferToNetwork()
@@ -322,7 +150,7 @@ namespace Raven.Server.Documents.TcpHandlers
             var tcpConnectionDisposable = tcpConnectionOptions.ConnectionProcessingInProgress("Subscription");
             try
             {
-                var connection = new SubscriptionConnection(tcpConnectionOptions, tcpConnectionDisposable, buffer);
+                var connection = new SubscriptionConnection(server, tcpConnectionOptions, tcpConnectionDisposable, buffer);
                 try
                 {
                     Task.Run(async () =>
@@ -379,7 +207,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
                                 try
                                 {
-                                    await ReportExceptionToClient(server, connection, connection.ConnectionException ?? e);
+                                    await ReportExceptionToClient(server, tcpConnectionOptions, connection, connection.ConnectionException ?? e, connection._logger);
                                 }
                                 catch (Exception)
                                 {
@@ -409,145 +237,6 @@ namespace Raven.Server.Documents.TcpHandlers
                 tcpConnectionDisposable?.Dispose();
 
                 throw;
-            }
-        }
-
-        private static async Task ReportExceptionToClient(ServerStore server, SubscriptionConnection connection, Exception ex, int recursionDepth = 0)
-        {
-            if (recursionDepth == 2)
-                return;
-            try
-            {
-                if (ex is SubscriptionDoesNotExistException || ex is DatabaseDoesNotExistException)
-                {
-                    await connection.WriteJsonAsync(new DynamicJsonValue
-                    {
-                        [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.ConnectionStatus),
-                        [nameof(SubscriptionConnectionServerMessage.Status)] = nameof(SubscriptionConnectionServerMessage.ConnectionStatus.NotFound),
-                        [nameof(SubscriptionConnectionServerMessage.Message)] = ex.Message,
-                        [nameof(SubscriptionConnectionServerMessage.Exception)] = ex.ToString()
-                    });
-                }
-                else if (ex is SubscriptionClosedException sce)
-                {
-                    await connection.WriteJsonAsync(new DynamicJsonValue
-                    {
-                        [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.ConnectionStatus),
-                        [nameof(SubscriptionConnectionServerMessage.Status)] = nameof(SubscriptionConnectionServerMessage.ConnectionStatus.Closed),
-                        [nameof(SubscriptionConnectionServerMessage.Message)] = ex.Message,
-                        [nameof(SubscriptionConnectionServerMessage.Exception)] = ex.ToString(),
-                        [nameof(SubscriptionConnectionServerMessage.Data)] = new DynamicJsonValue
-                        {
-                            [nameof(SubscriptionClosedException.CanReconnect)] = sce.CanReconnect
-                        }
-                    });
-                }
-                else if (ex is SubscriptionInvalidStateException)
-                {
-                    await connection.WriteJsonAsync(new DynamicJsonValue
-                    {
-                        [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.ConnectionStatus),
-                        [nameof(SubscriptionConnectionServerMessage.Status)] = nameof(SubscriptionConnectionServerMessage.ConnectionStatus.Invalid),
-                        [nameof(SubscriptionConnectionServerMessage.Message)] = ex.Message,
-                        [nameof(SubscriptionConnectionServerMessage.Exception)] = ex.ToString()
-                    });
-                }
-                else if (ex is SubscriptionInUseException)
-                {
-                    await connection.WriteJsonAsync(new DynamicJsonValue
-                    {
-                        [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.ConnectionStatus),
-                        [nameof(SubscriptionConnectionServerMessage.Status)] = nameof(SubscriptionConnectionServerMessage.ConnectionStatus.InUse),
-                        [nameof(SubscriptionConnectionServerMessage.Message)] = ex.Message,
-                        [nameof(SubscriptionConnectionServerMessage.Exception)] = ex.ToString()
-                    });
-                }
-                else if (ex is SubscriptionDoesNotBelongToNodeException subscriptionDoesNotBelongException)
-                {
-                    if (string.IsNullOrEmpty(subscriptionDoesNotBelongException.AppropriateNode) == false)
-                    {
-                        try
-                        {
-                            using (server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-                            using (ctx.OpenReadTransaction())
-                            {
-                                // check that the subscription exists on AppropriateNode
-                                var clusterTopology = server.GetClusterTopology(ctx);
-                                using (var requester = ClusterRequestExecutor.CreateForSingleNode(
-                                    clusterTopology.GetUrlFromTag(subscriptionDoesNotBelongException.AppropriateNode), server.Server.Certificate.Certificate))
-                                {
-                                    await requester.ExecuteAsync(new WaitForRaftIndexCommand(subscriptionDoesNotBelongException.Index), ctx);
-                                }
-                            }
-                        }
-                        catch
-                        {
-                            // we let the client try to connect to AppropriateNode
-                        }
-                    }
-
-                    connection.AddToStatusDescription("Redirecting subscription client to different server");
-                    if (connection._logger.IsInfoEnabled)
-                    {
-                        connection._logger.Info("Subscription does not belong to current node", ex);
-                    }
-                    await connection.WriteJsonAsync(new DynamicJsonValue
-                    {
-                        [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.ConnectionStatus),
-                        [nameof(SubscriptionConnectionServerMessage.Status)] = nameof(SubscriptionConnectionServerMessage.ConnectionStatus.Redirect),
-                        [nameof(SubscriptionConnectionServerMessage.Message)] = ex.Message,
-                        [nameof(SubscriptionConnectionServerMessage.Exception)] = ex.ToString(),
-                        [nameof(SubscriptionConnectionServerMessage.Data)] = new DynamicJsonValue
-                        {
-                            [nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.RedirectedTag)] = subscriptionDoesNotBelongException.AppropriateNode,
-                            [nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.CurrentTag)] = connection.TcpConnection.DocumentDatabase.ServerStore.NodeTag,
-                            [nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.Reasons)] =
-                                new DynamicJsonArray(subscriptionDoesNotBelongException.Reasons.Select(item => new DynamicJsonValue
-                                {
-                                    [item.Key] = item.Value
-                                }))
-                        }
-                    });
-                }
-                else if (ex is SubscriptionChangeVectorUpdateConcurrencyException subscriptionConcurrency)
-                {
-                    connection.AddToStatusDescription("Subscription change vector update concurrency error");
-                    if (connection._logger.IsInfoEnabled)
-                    {
-                        connection._logger.Info("Subscription change vector update concurrency error", ex);
-                    }
-                    await connection.WriteJsonAsync(new DynamicJsonValue
-                    {
-                        [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.ConnectionStatus),
-                        [nameof(SubscriptionConnectionServerMessage.Status)] = nameof(SubscriptionConnectionServerMessage.ConnectionStatus.ConcurrencyReconnect),
-                        [nameof(SubscriptionConnectionServerMessage.Message)] = ex.Message,
-                        [nameof(SubscriptionConnectionServerMessage.Exception)] = ex.ToString()
-                    });
-                }
-                else if (ex is RachisApplyException commandExecution && commandExecution.InnerException is SubscriptionException)
-                {
-                    await ReportExceptionToClient(server, connection, commandExecution.InnerException, recursionDepth - 1);
-                }
-                else
-                {
-                    connection.AddToStatusDescription("Subscription error");
-
-                    if (connection._logger.IsInfoEnabled)
-                    {
-                        connection._logger.Info("Subscription error", ex);
-                    }
-                    await connection.WriteJsonAsync(new DynamicJsonValue
-                    {
-                        [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.Error),
-                        [nameof(SubscriptionConnectionServerMessage.Status)] = nameof(SubscriptionConnectionServerMessage.ConnectionStatus.None),
-                        [nameof(SubscriptionConnectionServerMessage.Message)] = ex.Message,
-                        [nameof(SubscriptionConnectionServerMessage.Exception)] = ex.ToString()
-                    });
-                }
-            }
-            catch
-            {
-                // ignored
             }
         }
 
@@ -586,55 +275,6 @@ namespace Raven.Server.Documents.TcpHandlers
                     });
         }
 
-        private async Task<SubscriptionConnectionClientMessage> GetReplyFromClientAsync()
-        {
-            try
-            {
-                using (TcpConnection.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-                using (var blittable = await context.ParseToMemoryAsync(
-                    TcpConnection.Stream,
-                    "Reply from subscription client",
-                    BlittableJsonDocumentBuilder.UsageMode.None,
-                    _copiedBuffer.Buffer))
-                {
-                    TcpConnection._lastEtagReceived = -1;
-                    TcpConnection.RegisterBytesReceived(blittable.Size);
-                    return JsonDeserializationServer.SubscriptionConnectionClientMessage(blittable);
-                }
-            }
-            catch (EndOfStreamException e)
-            {
-                throw new SubscriptionConnectionDownException("No reply from the subscription client.", e);
-            }
-            catch (IOException)
-            {
-                if (_isDisposed == false)
-                    throw;
-
-                return new SubscriptionConnectionClientMessage
-                {
-                    ChangeVector = null,
-                    Type = SubscriptionConnectionClientMessage.MessageType.DisposedNotification
-                };
-            }
-            catch (ObjectDisposedException)
-            {
-                return new SubscriptionConnectionClientMessage
-                {
-                    ChangeVector = null,
-                    Type = SubscriptionConnectionClientMessage.MessageType.DisposedNotification
-                };
-            }
-        }
-
-        private string _lastChangeVector;
-        private long _startEtag;
-        private SubscriptionPatchDocument _filterAndProjectionScript;
-        private SubscriptionDocumentsFetcher _documentsFetcher;
-        private readonly IDisposable _tcpConnectionDisposable;
-        private readonly (IDisposable ReleaseBuffer, JsonOperationContext.MemoryBuffer Buffer) _copiedBuffer;
-        private readonly TcpConnectionHeaderMessage.SupportedFeatures _supportedFeatures;
-
         private async Task ProcessSubscriptionAsync()
         {
             AddToStatusDescription("Starting to process subscription");
@@ -646,7 +286,7 @@ namespace Raven.Server.Documents.TcpHandlers
             using (DisposeOnDisconnect)
             using (RegisterForNotificationOnNewDocuments())
             {
-                var replyFromClientTask = GetReplyFromClientAsync();
+                var replyFromClientTask = GetReplyFromClientAsync(TcpConnection, _copiedBuffer.Buffer, _isDisposed);
 
                 string subscriptionChangeVectorBeforeCurrentBatch = SubscriptionState.ChangeVectorForNextBatchStartingPoint;
 
@@ -732,20 +372,6 @@ namespace Raven.Server.Documents.TcpHandlers
             }
         }
 
-        private void UpdateBatchPerformanceStats(long batchSize, bool anyDocumentsSent = true)
-        {
-            _lastBatchStats.Complete();
-
-            if (anyDocumentsSent)
-            {
-                _connectionScope.RecordBatchCompleted(batchSize);
-
-                AddBatchPerformanceStatsToBatchesHistory(_lastBatchStats);
-                TcpConnection.DocumentDatabase.SubscriptionStorage.RaiseNotificationForBatchEnded(_options.SubscriptionName, _lastBatchStats);
-            }
-
-            _lastBatchStats = null;
-        }
 
         private void AssertCloseWhenNoDocsLeft()
         {
@@ -779,12 +405,12 @@ namespace Raven.Server.Documents.TcpHandlers
                         break;
                     }
 
-                    replyFromClientTask = GetReplyFromClientAsync();
+                    replyFromClientTask = GetReplyFromClientAsync(TcpConnection, _copiedBuffer.Buffer, _isDisposed);
                     break;
                 }
                 
                 await SendHeartBeat("Waiting for client ACK");
-                await SendNoopAck();
+                await SendNoopAck(TcpConnection, SubscriptionId, Options.SubscriptionName);
             }
 
             CancellationTokenSource.Token.ThrowIfCancellationRequested();
@@ -803,7 +429,7 @@ namespace Raven.Server.Documents.TcpHandlers
                     await WriteJsonAsync(new DynamicJsonValue
                     {
                         [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.Confirm)
-                    });
+                    }, TcpConnection);
 
                     break;
 
@@ -845,7 +471,8 @@ namespace Raven.Server.Documents.TcpHandlers
                         IncludeDocumentsCommand includeDocumentsCommand = null;
                         IncludeCountersCommand includeCountersCommand = null;
                         IncludeTimeSeriesCommand includeTimeSeriesCommand = null;
-                        if (_supportedFeatures.Subscription.Includes)
+
+                        if (_supportedFeatures.Subscription.Includes && Subscription.Includes != null)
                             includeDocumentsCommand = new IncludeDocumentsCommand(TcpConnection.DocumentDatabase.DocumentsStorage, docsContext, Subscription.Includes, isProjection: _filterAndProjectionScript != null);
                         if (_supportedFeatures.Subscription.CounterIncludes && Subscription.CounterIncludes != null)
                             includeCountersCommand = new IncludeCountersCommand(TcpConnection.DocumentDatabase, docsContext, Subscription.CounterIncludes);
@@ -1010,35 +637,39 @@ namespace Raven.Server.Documents.TcpHandlers
                 if (string.IsNullOrEmpty(subscription.ChangeVectorForNextBatchStartingPoint))
                     return startEtag;
 
+                long etag;
                 var changeVector = subscription.ChangeVectorForNextBatchStartingPoint.ToChangeVector();
+                if (ShardHelper.IsShardedName(TcpConnection.DocumentDatabase.Name))
+                {
+                    // check if cv is part of the shards
+                    var dbName = ShardHelper.ToDatabaseName(TcpConnection.DocumentDatabase.Name);
+                    var result = TcpConnection.DocumentDatabase.ServerStore.DatabasesLandlord.TryGetOrCreateDatabase(dbName);
+                    if (result.DatabaseStatus == DatabasesLandlord.DatabaseSearchResult.Status.Sharded)
+                    {
+                        for (int i = 0; i < result.ShardedContext.Count; i++)
+                        {
+                            var db = TcpConnection.DocumentDatabase.ServerStore.DatabasesLandlord.TryGetOrCreateDatabase(result.ShardedContext.GetShardedDatabaseName(i)).DatabaseTask.Result;
+                            foreach (var part in changeVector)
+                            {
+                                if (part.DbId == db.DbBase64Id && part.Etag != 0)
+                                {
+                                    return part.Etag;
+                                }
+                            }
+                        }
+                    }
+                }
 
                 var cv = changeVector.FirstOrDefault(x => x.DbId == TcpConnection.DocumentDatabase.DbBase64Id);
-
+                etag = cv.Etag;
                 if (cv.DbId == "" && cv.Etag == 0 && cv.NodeTag == 0)
                     return startEtag;
 
-                return cv.Etag;
+                return etag;
             }
         }
 
-        private async Task SendHeartBeat(string reason)
-        {
-            try
-            {
-                await TcpConnection.Stream.WriteAsync(Heartbeat, 0, Heartbeat.Length, CancellationTokenSource.Token);
 
-                if (_logger.IsInfoEnabled)
-                {
-                    _logger.Info($"Subscription {Options.SubscriptionName} is sending a Heartbeat message to the client. Reason: {reason}");
-                }
-            }
-            catch (Exception ex)
-            {
-                throw new SubscriptionClosedException($"Cannot contact client anymore, closing subscription ({Options?.SubscriptionName})", ex);
-            }
-
-            TcpConnection.RegisterBytesSent(Heartbeat.Length);
-        }
 
         private async Task FlushDocsToClient(AsyncBlittableJsonTextWriter writer, int flushedDocs, bool endOfBatch = false)
         {
@@ -1079,16 +710,16 @@ namespace Raven.Server.Documents.TcpHandlers
                 }
 
                 await SendHeartBeat("Waiting for changed documents");
-                await SendNoopAck();
+                await SendNoopAck(TcpConnection, SubscriptionId, Options.SubscriptionName);
             } while (CancellationTokenSource.IsCancellationRequested == false);
             return false;
         }
 
-        private async Task SendNoopAck()
+        internal static async Task SendNoopAck(TcpConnectionOptions tcpConnection, long subscriptionId, string subscriptionName)
         {
-            await TcpConnection.DocumentDatabase.SubscriptionStorage.AcknowledgeBatchProcessed(
-                SubscriptionId,
-                Options.SubscriptionName,
+            await tcpConnection.DocumentDatabase.SubscriptionStorage.AcknowledgeBatchProcessed(
+                subscriptionId,
+                subscriptionName,
                 nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange),
                 nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange));
         }
@@ -1104,357 +735,28 @@ namespace Raven.Server.Documents.TcpHandlers
             return patch;
         }
 
-        public void Dispose()
+        public new void Dispose()
         {
             if (_isDisposed)
                 return;
+
             _isDisposed = true;
 
-            _lastConnectionStats.Complete();
-            TcpConnection.DocumentDatabase.SubscriptionStorage.RaiseNotificationForConnectionEnded(this);
+            base.Dispose();
 
-            using (_copiedBuffer.ReleaseBuffer)
-            {
-                try
-                {
-                    _tcpConnectionDisposable?.Dispose();
-                }
-                catch (Exception)
-                {
-                    // ignored
-                }
-
-                try
-                {
-                    TcpConnection.Dispose();
-                }
-                catch (Exception)
-                {
-                    // ignored
-                }
-
-                try
-                {
-                    CancellationTokenSource.Cancel();
-                }
-                catch (Exception)
-                {
-                    // ignored
-                }
-
-                try
-                {
-                    _waitForMoreDocuments.Dispose();
-                }
-                catch (Exception)
-                {
-                    // ignored
-                }
-
-                try
-                {
-                    CancellationTokenSource.Dispose();
-                }
-                catch (Exception)
-                {
-                    // ignored
-                }
-
-                Stats.Dispose();
-
-                RecentSubscriptionStatuses?.Clear();
-
-                _activeConnectionScope?.Dispose();
-                _connectionScope.Dispose();
-            }
-        }
-
-        public struct ParsedSubscription
-        {
-            public string Collection;
-            public string Script;
-            public string[] Functions;
-            public bool Revisions;
-            public string[] Includes;
-            public string[] CounterIncludes;
-            internal TimeSeriesIncludesField TimeSeriesIncludes;
-        }
-
-        public static ParsedSubscription ParseSubscriptionQuery(string query)
-        {
-            var queryParser = new QueryParser();
-            queryParser.Init(query);
-            var q = queryParser.Parse();
-
-            if (q.IsDistinct)
-                throw new NotSupportedException("Subscription does not support distinct queries");
-            if (q.From.Index)
-                throw new NotSupportedException("Subscription must specify a collection to use");
-            if (q.GroupBy != null)
-                throw new NotSupportedException("Subscription cannot specify a group by clause");
-            if (q.OrderBy != null)
-                throw new NotSupportedException("Subscription cannot specify an order by clause");
-            if (q.UpdateBody != null)
-                throw new NotSupportedException("Subscription cannot specify an update clause");
-
-            bool revisions = false;
-            if (q.From.Filter is Queries.AST.BinaryExpression filter)
-            {
-                switch (filter.Operator)
-                {
-                    case OperatorType.Equal:
-                    case OperatorType.NotEqual:
-                        if (!(filter.Left is FieldExpression fe) || fe.Compound.Count != 1)
-                            throw new NotSupportedException("Subscription collection filter can only specify 'Revisions = true'");
-                        if (string.Equals(fe.Compound[0].Value, "Revisions", StringComparison.OrdinalIgnoreCase) == false)
-                            throw new NotSupportedException("Subscription collection filter can only specify 'Revisions = true'");
-                        if (filter.Right is ValueExpression ve)
-                        {
-                            revisions = filter.Operator == OperatorType.Equal && ve.Value == ValueTokenType.True;
-                            if (ve.Value != ValueTokenType.True && ve.Value != ValueTokenType.False)
-                                throw new NotSupportedException("Subscription collection filter can only specify 'Revisions = true'");
-                        }
-                        else
-                        {
-                            throw new NotSupportedException("Subscription collection filter can only specify 'Revisions = true'");
-                        }
-                        break;
-
-                    default:
-                        throw new NotSupportedException("Subscription must not specify a collection filter (move it to the where clause)");
-                }
-            }
-            else if (q.From.Filter != null)
-            {
-                throw new NotSupportedException("Subscription must not specify a collection filter (move it to the where clause)");
-            }
-
-            List<string> includes = null;
-            List<string> counterIncludes = null;
-            TimeSeriesIncludesField timeSeriesIncludes = null;
-            if (q.Include != null)
-            {
-                foreach (var include in q.Include)
-                {
-                    switch (include)
-                    {
-                        case MethodExpression me:
-                            var includeType = QueryMethod.GetMethodType(me.Name.Value);
-                            switch (includeType)
-                            {
-                                case MethodType.Counters:
-                                    QueryValidator.ValidateIncludeCounter(me.Arguments, q.QueryText, null);
-
-                                    if (counterIncludes == null)
-                                        counterIncludes = new List<string>();
-
-                                    if (me.Arguments.Count > 0)
-                                    {
-                                        var argument = me.Arguments[0];
-
-                                        counterIncludes.Add(ExtractPathFromExpression(argument, q));
-                                    }
-                                    break;
-                                case MethodType.TimeSeries:
-                                    QueryValidator.ValidateIncludeTimeseries(me.Arguments, q.QueryText, null);
-
-                                    if (timeSeriesIncludes == null)
-                                        timeSeriesIncludes = new TimeSeriesIncludesField();
-
-                                    switch (me.Arguments.Count)
-                                    {
-                                        case 1:
-                                            {
-                                                if (!(me.Arguments[0] is MethodExpression methodExpression))
-                                                    throw new InvalidQueryException($"Expected to get include '{nameof(MethodType.TimeSeries)}' clause expression, but got: '{me.Arguments[0]}'.", q.QueryText);
-
-                                                switch (methodExpression.Arguments.Count)
-                                                {
-                                                    case 1:
-                                                        {
-                                                            // include timeseries(last(11))
-                                                            var (type, count) = TimeseriesIncludesHelper.ParseCount(methodExpression, q.QueryText);
-                                                            timeSeriesIncludes.AddTimeSeries(Client.Constants.TimeSeries.All, type, count);
-                                                            break;
-                                                        }
-                                                    case 2:
-                                                        {
-                                                            // include timeseries(last(600, 'seconds'))
-                                                            var (type, time) = TimeseriesIncludesHelper.ParseTime(methodExpression, q.QueryText);
-                                                            timeSeriesIncludes.AddTimeSeries(Client.Constants.TimeSeries.All, type, time);
-
-                                                            break;
-                                                        }
-                                                    default:
-                                                        throw new InvalidQueryException($"Got invalid arguments count '{methodExpression.Arguments.Count}' in '{methodExpression.Name}' method.", q.QueryText);
-                                                }
-                                            }
-                                            break;
-                                        case 2: // include timeseries('Name', last(7, 'months'));
-                                            {
-                                                if (!(me.Arguments[1] is MethodExpression methodExpression))
-                                                    throw new InvalidQueryException($"Expected to get include {nameof(MethodType.TimeSeries)} clause expression, but got: {me.Arguments[1]}.", q.QueryText);
-
-                                                string name = TimeseriesIncludesHelper.ExtractValueFromExpression(me.Arguments[0]);
-
-                                                switch (methodExpression.Arguments.Count)
-                                                {
-                                                    case 1:
-                                                        {
-                                                            // last count query
-                                                            var (type, count) = TimeseriesIncludesHelper.ParseCount(methodExpression, q.QueryText);
-                                                            timeSeriesIncludes.AddTimeSeries(name, type, count);
-                                                            break;
-                                                        }
-                                                    case 2:
-                                                        {
-                                                            // last time query
-                                                            var (type, time) = TimeseriesIncludesHelper.ParseTime(methodExpression, q.QueryText);
-                                                            timeSeriesIncludes.AddTimeSeries(name, type, time);
-                                                            break;
-                                                        }
-                                                    default:
-                                                        throw new InvalidQueryException($"Got invalid arguments count '{methodExpression.Arguments.Count}' in '{methodExpression.Name}' method.", q.QueryText);
-                                                }
-                                            }
-                                            break;
-                                        default:
-                                            throw new NotSupportedException($"Invalid number of arguments '{me.Arguments.Count}' in include {nameof(MethodType.TimeSeries)} clause expression.");
-                                    }
-                                    break;
-                                default:
-                                    throw new NotSupportedException($"Subscription include expected to get {MethodType.Counters} or {nameof(MethodType.TimeSeries)} but got {includeType}");
-                            }
-                            break;
-                        default:
-                            if (includes == null)
-                                includes = new List<string>();
-
-                            includes.Add(ExtractPathFromExpression(include, q));
-                            break;
-                    }
-                }
-
-                static string ExtractPathFromExpression(QueryExpression expression, Query q)
-                {
-                    switch (expression)
-                    {
-                        case FieldExpression fe:
-                            (string fieldPath, string _) = QueryMetadata.ParseExpressionPath(expression, fe.FieldValue, q.From.Alias);
-                            return fieldPath;
-
-                        case ValueExpression ve:
-                            (string memberPath, string _) = QueryMetadata.ParseExpressionPath(expression, ve.Token.Value, q.From.Alias);
-                            return memberPath;
-
-                        default:
-                            throw new InvalidOperationException("Subscription only support include of fields, but got: " + expression);
-                    }
-                }
-            }
-
-            var collectionName = q.From.From.FieldValue;
-            if (q.Where == null && q.Select == null && q.SelectFunctionBody.FunctionText == null)
-            {
-                return new ParsedSubscription
-                {
-                    Collection = collectionName,
-                    Revisions = revisions,
-                    Includes = includes?.ToArray(),
-                    CounterIncludes = counterIncludes?.ToArray(),
-                    TimeSeriesIncludes = timeSeriesIncludes
-                };
-            }
-
-            var writer = new StringWriter();
-
-            if (q.From.Alias != null)
-            {
-                writer.Write("var ");
-                writer.Write(q.From.Alias);
-                writer.WriteLine(" = this;");
-            }
-            else if (q.Select != null || q.SelectFunctionBody.FunctionText != null || q.Load != null)
-            {
-                throw new InvalidOperationException("Cannot specify a select or load clauses without an alias on the query");
-            }
-            if (q.Load != null)
-            {
-                Debug.Assert(q.From.Alias != null);
-
-                var fromAlias = q.From.Alias.Value;
-                foreach (var tuple in q.Load)
-                {
-                    writer.Write("var ");
-                    writer.Write(tuple.Alias);
-                    writer.Write(" = loadPath(this,'");
-                    var fieldExpression = ((FieldExpression)tuple.Expression);
-                    if (fieldExpression.Compound[0] != fromAlias)
-                        throw new InvalidOperationException("Load clause can only load paths starting from the from alias: " + fromAlias);
-                    writer.Write(fieldExpression.FieldValueWithoutAlias);
-                    writer.WriteLine("');");
-                }
-            }
-            if (q.Where != null)
-            {
-                writer.Write("if (");
-                new JavascriptCodeQueryVisitor(writer.GetStringBuilder(), q).VisitExpression(q.Where);
-                writer.WriteLine(" )");
-                writer.WriteLine("{");
-            }
-
-            if (q.SelectFunctionBody.FunctionText != null)
-            {
-                writer.Write(" return ");
-                writer.Write(q.SelectFunctionBody.FunctionText);
-                writer.WriteLine(";");
-            }
-            else if (q.Select != null)
-            {
-                if (q.Select.Count != 1 || q.Select[0].Expression is MethodExpression == false)
-                    throw new NotSupportedException("Subscription select clause must specify an object literal");
-                writer.WriteLine();
-                writer.Write(" return ");
-                new JavascriptCodeQueryVisitor(writer.GetStringBuilder(), q).VisitExpression(q.Select[0].Expression);
-                writer.WriteLine(";");
-            }
-            else
-            {
-                writer.WriteLine(" return true;");
-            }
-            writer.WriteLine();
-
-            if (q.Where != null)
-                writer.WriteLine("}");
-
-            var script = writer.GetStringBuilder().ToString();
-
-            // verify that the JS code parses
             try
             {
-                new JavaScriptParser(script).ParseScript();
+                _waitForMoreDocuments.Dispose();
             }
-            catch (Exception e)
+            catch (Exception)
             {
-                throw new InvalidDataException("Unable to parse: " + script, e);
+                // ignored
             }
-            return new ParsedSubscription
-            {
-                Collection = collectionName,
-                Revisions = revisions,
-                Script = script,
-                Functions = q.DeclaredFunctions?.Values?.Select(x => x.FunctionText).ToArray() ?? Array.Empty<string>(),
-                Includes = includes?.ToArray(),
-                CounterIncludes = counterIncludes?.ToArray()
-            };
-        }
 
-        private void AddBatchPerformanceStatsToBatchesHistory(SubscriptionBatchStatsAggregator batchStats)
-        {
-            _lastBatchesStats.Enqueue(batchStats); // add to batches history
+            TcpConnection.DocumentDatabase.SubscriptionStorage.RaiseNotificationForConnectionEnded(this);
 
-            while (_lastBatchesStats.Count > 25)
-                _lastBatchesStats.TryDequeue(out batchStats);
+            //TODO: egor
+           // GC.SuppressFinalize(this);
         }
     }
 

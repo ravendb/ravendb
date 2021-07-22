@@ -5,6 +5,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using Raven.Client.ServerWide.Tcp;
+using Raven.Server.Documents.Sharding;
 using Raven.Server.Utils;
 using Raven.Server.Utils.Metrics;
 using Sparrow.Json;
@@ -24,17 +25,14 @@ namespace Raven.Server.Documents.TcpHandlers
         private readonly DateTime _connectedAt;
         public long _lastEtagSent;
         public long _lastEtagReceived;
-
         private bool _isDisposed;
 
         public DocumentDatabase DocumentDatabase;
-
+        public ShardedContext ShardedContext;
+        public bool IsSharded => ShardedContext != null;
         public TcpConnectionHeaderMessage.OperationTypes Operation;
-
         public Stream Stream;
-
         public TcpClient TcpClient;
-
         public int ProtocolVersion;
 
         public TcpConnectionOptions()
