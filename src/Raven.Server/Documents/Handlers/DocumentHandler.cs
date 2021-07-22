@@ -305,7 +305,7 @@ namespace Raven.Server.Documents.Handlers
             
             var rif = new RevisionIncludeField();
             var revisionsByChangeVectors = GetStringValuesQueryString("revisions", required: false);
-            var revisionByDateTimeBefore = GetStringValuesQueryString("revisionBeforeDateTime", required: false);
+            var revisionByDateTimeBefore = GetStringValuesQueryString("revisionsBefore", required: false);
             
             if (revisionsByChangeVectors.Count == 0 && revisionByDateTimeBefore.Count == 0)
                 return;

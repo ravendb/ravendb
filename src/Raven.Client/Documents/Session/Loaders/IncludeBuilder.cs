@@ -57,7 +57,7 @@ namespace Raven.Client.Documents.Session.Loaders
     {
         TBuilder IncludeRevisions(Expression<Func<T, string>> path);
         TBuilder IncludeRevisions(Expression<Func<T, IEnumerable<string>>> path);
-        TBuilder IncludeRevisions(DateTime dateTime);
+        TBuilder IncludeRevisions(DateTime before);
 
     }
     
@@ -786,15 +786,15 @@ namespace Raven.Client.Documents.Session.Loaders
             return this;
         }
         
-        IQueryIncludeBuilder<T> IRevisionIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeRevisions(DateTime dateTime)
+        IQueryIncludeBuilder<T> IRevisionIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeRevisions(DateTime before)
         {
-            IncludeRevisionsBefore(dateTime);
+            IncludeRevisionsBefore(before);
             return this;
         }     
         
-        IIncludeBuilder<T> IRevisionIncludeBuilder<T, IIncludeBuilder<T>>.IncludeRevisions(DateTime dateTime)
+        IIncludeBuilder<T> IRevisionIncludeBuilder<T, IIncludeBuilder<T>>.IncludeRevisions(DateTime before)
         {
-            IncludeRevisionsBefore(dateTime);
+            IncludeRevisionsBefore(before);
             return this;
             
         }       

@@ -600,7 +600,7 @@ namespace Raven.Server.Documents.Queries
                     case ValueExpression ve:
                         foreach ((object value, _)  in QueryBuilder.GetValues(Query, this, parameters, ve))
                         {
-                            string? path = value.ToString();
+                            string path = value.ToString();
                             if (string.IsNullOrEmpty(path))
                                 return;
                               
