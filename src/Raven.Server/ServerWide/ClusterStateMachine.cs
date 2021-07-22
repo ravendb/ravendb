@@ -36,6 +36,7 @@ using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Sharding;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -1172,7 +1173,7 @@ namespace Raven.Server.ServerWide
                             var deleteNow = record.DeletionInProgress.Remove(removed) && _parent.Tag == removed;
                             if (record.DeletionInProgress.Count == 0 && record.Topology.Count == 0 || deleteNow)
                             {
-                                DeleteDatabaseRecord(context, index, items, lowerKey, record.DatabaseName, serverStore);
+                                DeleteDatabaseRecord(context, index, items, lowerKey, record, serverStore);
                                 tasks.Add(() => Changes.OnDatabaseChanges(record.DatabaseName, index, nameof(RemoveNodeFromCluster),
                                     DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged, null));
 
@@ -1187,7 +1188,7 @@ namespace Raven.Server.ServerWide
                             record.Topology.ReplicationFactor = record.Topology.Count;
                             if (record.Topology.Count == 0)
                             {
-                                DeleteDatabaseRecord(context, index, items, lowerKey, record.DatabaseName, serverStore);
+                                DeleteDatabaseRecord(context, index, items, lowerKey, record, serverStore);
                                 continue;
                             }
                         }
@@ -1402,7 +1403,7 @@ namespace Raven.Server.ServerWide
 
                     if (databaseRecord.DeletionInProgress.Count == 0 && databaseRecord.Topology.Count == 0)
                     {
-                        DeleteDatabaseRecord(context, index, items, lowerKey, databaseName, serverStore);
+                        DeleteDatabaseRecord(context, index, items, lowerKey, databaseRecord, serverStore);
                         NotifyDatabaseAboutChanged(context, databaseName, index, nameof(RemoveNodeFromDatabaseCommand),
                             DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged, null);
                         return;
@@ -1427,19 +1428,19 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private static void DeleteDatabaseRecord(ClusterOperationContext context, long index, Table items, Slice lowerKey, string databaseName, ServerStore serverStore)
+        private static void DeleteDatabaseRecord(ClusterOperationContext context, long index, Table items, Slice lowerKey, DatabaseRecord record, ServerStore serverStore)
         {
             // delete database record
             items.DeleteByKey(lowerKey);
 
             // delete all values linked to database record - for subscription, etl etc.
-            CleanupDatabaseRelatedValues(context, items, databaseName, serverStore);
-            CleanupDatabaseReplicationCertificate(context, databaseName);
+            CleanupDatabaseRelatedValues(context, items, record, serverStore);
+            CleanupDatabaseReplicationCertificate(context, record.DatabaseName);
 
             var transactionsCommands = context.Transaction.InnerTransaction.OpenTable(TransactionCommandsSchema, TransactionCommands);
             var commandsCountPerDatabase = context.Transaction.InnerTransaction.ReadTree(TransactionCommandsCountPerDatabase);
 
-            using (ClusterTransactionCommand.GetPrefix(context, databaseName, out var prefixSlice))
+            using (ClusterTransactionCommand.GetPrefix(context, record.DatabaseName, out var prefixSlice))
             {
                 commandsCountPerDatabase.Delete(prefixSlice);
                 transactionsCommands.DeleteByPrimaryKeyPrefix(prefixSlice);
@@ -1456,24 +1457,42 @@ namespace Raven.Server.ServerWide
             certs.DeleteByPrimaryKeyPrefix(prefix);
         }
 
-        private static void CleanupDatabaseRelatedValues(ClusterOperationContext context, Table items, string databaseName, ServerStore serverStore)
+        private static void CleanupDatabaseRelatedValues(ClusterOperationContext context, Table items, DatabaseRecord record, ServerStore serverStore)
         {
-            var dbValuesPrefix = Helpers.ClusterStateMachineValuesPrefix(databaseName).ToLowerInvariant();
+            var dbValuesPrefix = Helpers.ClusterStateMachineValuesPrefix(record.DatabaseName).ToLowerInvariant();
             using (Slice.From(context.Allocator, dbValuesPrefix, out var loweredKey))
             {
                 items.DeleteByPrimaryKeyPrefix(loweredKey);
             }
 
-            var databaseLowered = $"{databaseName.ToLowerInvariant()}/";
+            if (record.IsSharded)
+            {
+                for (int i = 0; i < record.Shards.Length; i++)
+                {
+                    var shard = record.DatabaseName + "$" + i;
+                    var shardValuesPrefix = Helpers.ClusterStateMachineValuesPrefix(shard).ToLowerInvariant();
+                    using (Slice.From(context.Allocator, shardValuesPrefix, out var loweredKey))
+                    {
+                        items.DeleteByPrimaryKeyPrefix(loweredKey);
+                    }
+
+                    // shard can be idle when we are deleting it
+                    serverStore?.IdleDatabases.TryRemove(shard, out _);
+                }
+            }
+            else
+            {
+                // db can be idle when we are deleting it
+                serverStore?.IdleDatabases.TryRemove(record.DatabaseName, out _);
+            }
+
+            var databaseLowered = $"{record.DatabaseName.ToLowerInvariant()}/";
             using (Slice.From(context.Allocator, databaseLowered, out var databaseSlice))
             {
                 context.Transaction.InnerTransaction.OpenTable(CompareExchangeSchema, CompareExchange).DeleteByPrimaryKeyPrefix(databaseSlice);
                 context.Transaction.InnerTransaction.OpenTable(CompareExchangeTombstoneSchema, CompareExchangeTombstones).DeleteByPrimaryKeyPrefix(databaseSlice);
                 context.Transaction.InnerTransaction.OpenTable(IdentitiesSchema, Identities).DeleteByPrimaryKeyPrefix(databaseSlice);
             }
-
-            // db can be idle when we are deleting it
-            serverStore?.IdleDatabases.TryRemove(databaseName, out _);
         }
 
         internal static unsafe void UpdateValue(long index, Table items, Slice lowerKey, Slice key, BlittableJsonReaderObject updated)
@@ -2340,7 +2359,7 @@ namespace Raven.Server.ServerWide
 
                     if (databaseRecord.Topology?.Count == 0 && databaseRecord.DeletionInProgress.Count == 0)
                     {
-                        DeleteDatabaseRecord(context, index, items, valueNameLowered, databaseName, serverStore);
+                        DeleteDatabaseRecord(context, index, items, valueNameLowered, databaseRecord, serverStore);
                         return;
                     }
 
@@ -2556,7 +2575,7 @@ namespace Raven.Server.ServerWide
 
         private void SqueezeDatabasesToSingleNodeCluster(ClusterOperationContext context, string oldTag, string newTag)
         {
-            var toDelete = new List<string>();
+            var toDelete = new List<DatabaseRecord>();
             var toShrink = new List<DatabaseRecord>();
 
             foreach (var name in GetDatabaseNames(context))
@@ -2566,7 +2585,8 @@ namespace Raven.Server.ServerWide
                     var topology = rawRecord.Topology;
                     if (topology.RelevantFor(oldTag) == false)
                     {
-                        toDelete.Add(name);
+                        var record = rawRecord.MaterializedRecord;
+                        toDelete.Add(record);
                     }
                     else
                     {
@@ -2603,12 +2623,12 @@ namespace Raven.Server.ServerWide
 
             var index = _parent.InsertToLeaderLog(context, _parent.CurrentTerm, context.ReadObject(cmd, "single-leader"), RachisEntryFlags.Noop);
 
-            foreach (var databaseName in toDelete)
+            foreach (var record in toDelete)
             {
-                var dbKey = "db/" + databaseName;
+                var dbKey = "db/" + record.DatabaseName;
                 using (Slice.From(context.Allocator, dbKey.ToLowerInvariant(), out Slice valueNameLowered))
                 {
-                    DeleteDatabaseRecord(context, index, items, valueNameLowered, databaseName, null);
+                    DeleteDatabaseRecord(context, index, items, valueNameLowered, record, null);
                 }
             }
 
