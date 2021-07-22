@@ -229,12 +229,12 @@ namespace Raven.Debug
                 cmd.HelpOption(HelpOptionString);
 
                 var urlArg = cmd.Option("--url", "Server URL.", CommandOptionType.SingleValue);
-                var pathArg = cmd.Option("--path", "Directory path to save the traffic watch log.", CommandOptionType.SingleValue);
+                var pathArg = cmd.Option("--output-path", "Directory path to save the traffic watch log.", CommandOptionType.SingleValue);
                 var databaseArg = cmd.Option("--database", "The database name.", CommandOptionType.SingleOrNoValue);
-                var typesArg = cmd.Option("--types", "Path to save the traffic watch logs.", CommandOptionType.MultipleValue); //TODO
-                var certArg = cmd.Option("--cert", "Path to pfx certificate file.", CommandOptionType.SingleOrNoValue);
-                var certPassArg = cmd.Option("--certpass", "Certificate password.", CommandOptionType.SingleOrNoValue);
-                var verboseArg = cmd.Option("-v", "Verbose to console.", CommandOptionType.NoValue);
+                var typesArg = cmd.Option("--types", "Path to save the traffic watch logs.", CommandOptionType.MultipleValue);
+                var certArg = cmd.Option("--certificate-path", "Path to pfx certificate file.", CommandOptionType.SingleOrNoValue);
+                var certPassArg = cmd.Option("--certificate-password", "Certificate password.", CommandOptionType.SingleOrNoValue);
+                var verboseArg = cmd.Option("--verbose", "Verbose to console.", CommandOptionType.NoValue);
 
                 cmd.OnExecute(() =>
                 {
