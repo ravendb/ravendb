@@ -7,7 +7,7 @@ import queryUtil = require("common/queryUtil");
 
 class queryCommand extends commandBase {
 
-    private static readonly missingEndOfQuery = "Expected end of query"; 
+    private static readonly missingEndOfQuery = "Expected end of query";
     
     constructor(private db: database, private skip: number, private take: number, private criteria: queryCriteria, private disableCache?: boolean) {
         super();
@@ -25,7 +25,7 @@ class queryCommand extends commandBase {
                 timings: results.Timings,
                 includes: results.Includes }) as pagedResultExtended<document>;
         
-        return this.query(this.getUrl(), null, this.db, selector)
+        return this.post<pagedResultExtended<document>>(this.getUrl(), this.getPayload(), this.db, null, 9000, null, selector)
             .fail((response: JQueryXHR) => {
                 if (response.status === 404) {
                     this.reportError("Error querying index", "Index was not found", response.statusText)
@@ -52,13 +52,18 @@ class queryCommand extends commandBase {
 
         if (this.criteria.showFields()) {
             rql = queryUtil.replaceSelectAndIncludeWithFetchAllStoredFields(rql);
-        } 
+        }
         
         return [parameters, rql];
     }
 
     static extractQueryParameters(queryText: string) {
         const arrayOfLines = queryText.match(/[^\r\n]+/g);
+
+        // Check for this params format:
+        // from 'Orders' where (search(Freight, $p0))
+        // { "p0" : "8.53" }
+
         if (arrayOfLines.length > 0) {
             let index = arrayOfLines.length - 1;
             let line = arrayOfLines[index].trim();
@@ -81,6 +86,10 @@ class queryCommand extends commandBase {
             }
         }
 
+        // Check for this params format: 
+        // $p0 = "8.53"
+        // from 'Orders' where (search(Freight, $p0))
+        
         const parametersEndRegex = /^\s*(with|match|from|declare)/mi;
         const match = parametersEndRegex.exec(queryText);
         if (!match) {
@@ -98,22 +107,29 @@ f();
 `;
         let parameters = eval(parametersJs);
         const rql = queryText.substring(match.index);
-        return [parameters, rql];
+        return [JSON.parse(parameters), rql];
+    }
+
+    getPayload() {
+        const [parameters, rql] = this.getQueryText();
+        const payload = {
+            Query: rql,
+            Start: this.skip,
+            PageSize: this.take,
+            DisableCaching: this.disableCache ? Date.now() : undefined,
+            QueryParameters: parameters
+        }
+
+        return JSON.stringify(payload);
     }
     
     getUrl() {
         const criteria = this.criteria;
         const url = endpoints.databases.queries.queries;
-        const [parameters, rql] = this.getQueryText();
         
         const urlArgs = this.urlEncodeArgs({
-            query: rql,
-            parameters: parameters,
-            start: this.skip,
-            pageSize: this.take,
             diagnostics: this.criteria.diagnostics() ? "true" : undefined,
             debug: criteria.indexEntries() ? "entries" : undefined,
-            disableCache: this.disableCache ? Date.now() : undefined,
             addTimeSeriesNames: true,
             addSpatialProperties: true,
             metadataOnly: typeof(criteria.metadataOnly()) !== 'undefined' ? criteria.metadataOnly() : undefined,

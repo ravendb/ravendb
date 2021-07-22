@@ -41,6 +41,23 @@ class commandBase {
         }
     }
 
+    protected post<T>(relativeUrl: string, args: any, db?: database, options?: JQueryAjaxSettings, timeToAlert: number = 9000, baseUrl?: string, resultsSelector?: (results: any, xhr: JQueryXHR) => T ): JQueryPromise<any> {
+        const ajax = this.ajax<T>(relativeUrl, args, "POST", db, options, timeToAlert, baseUrl);
+        if (resultsSelector) {
+            const task = $.Deferred<T>();
+            ajax.done((results, status, xhr) => {
+                var transformedResults = resultsSelector(results, xhr);
+                task.resolve(transformedResults, status, xhr);
+            });
+            ajax.fail((request, status, error) => {
+                task.reject(request, status, error);
+            });
+            return task;
+        } else {
+            return ajax;
+        }
+    }
+
     protected head<T>(relativeUrl: string, args: any, db?: database, resultsSelector?: (results: any, xhr: JQueryXHR) => T): JQueryPromise<T> {
         const ajax = this.ajax<T>(relativeUrl, args, "HEAD", db);
         if (resultsSelector) {
@@ -79,10 +96,6 @@ class commandBase {
 
     protected del<T>(relativeUrl: string, args: any, db?: database, options?: JQueryAjaxSettings, timeToAlert: number = 9000): JQueryPromise<T> {
         return this.ajax<T>(relativeUrl, args, "DELETE", db, options, timeToAlert);
-    }
-
-    protected post<T>(relativeUrl: string, args: any, db?: database, options?: JQueryAjaxSettings, timeToAlert: number = 9000, baseUrl?: string): JQueryPromise<any> {
-        return this.ajax<T>(relativeUrl, args, "POST", db, options, timeToAlert, baseUrl);
     }
 
     protected patch<T>(relativeUrl: string, args: any, db?: database, options?: JQueryAjaxSettings): JQueryPromise<T> {
