@@ -1,8 +1,11 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.ServerWide;
+using Raven.Server.Documents;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -35,6 +38,17 @@ namespace FastTests.Sharding
         {
             var db = database ?? $"{documentStore.Database}$0";
             RavenTestBase.WaitForUserToContinueTheTest(documentStore, debug, db, clientCert);
+        }
+
+        protected async Task<IEnumerable<DocumentDatabase>> GetShardsDocumentDatabaseInstancesFor(IDocumentStore store, string database = null)
+        {
+            var dbs = new List<DocumentDatabase>();
+            foreach (var task in Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(database ?? store.Database))
+            {
+                dbs.Add(await task);
+            }
+
+            return dbs;
         }
     }
 }
