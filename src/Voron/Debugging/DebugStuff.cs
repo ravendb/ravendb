@@ -309,7 +309,7 @@ namespace Voron.Debugging
             var entries = new Span<ushort>(page.Pointer + PageHeader.SizeOf, header->NumberOfEntries);
             for (int i = 0; i < header->NumberOfEntries; i++)
             {
-                tree.GetEntry(page, entries[i], out var key, out var val);
+                CompactTree.GetEntry(tree, page, entries[i], out var key, out var val);
                 string keyText = Encoding.UTF8.GetString(key);
 
                 if (header->PageFlags.HasFlag(CompactPageFlags.Leaf))
