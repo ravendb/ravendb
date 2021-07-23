@@ -12,7 +12,7 @@ namespace Voron.Benchmark
     {
         public static void Main()
         {
-            BenchmarkRunner.Run<Corax.QueriesBenchmark>();
+            BenchmarkRunner.Run<Corax.InBenchmark>();
             //BenchmarkRunner.Run<BTree.BTreeFillRandom>();
             //BenchmarkRunner.Run<BTree.BTreeFillSequential>();
             //BenchmarkRunner.Run<BTree.BTreeReadAndIterate>();

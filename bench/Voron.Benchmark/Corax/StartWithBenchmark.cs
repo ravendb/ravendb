@@ -22,35 +22,25 @@ using Sparrow.Threading;
 
 namespace Voron.Benchmark.Corax
 {
-    [DisassemblyDiagnoser]
-    [InliningDiagnoser(logFailuresOnly: true, filterByNamespace: true)]
-    public class QueriesBenchmark
+
+    //[DisassemblyDiagnoser]
+    //[InliningDiagnoser(logFailuresOnly: true, filterByNamespace: true)]
+    public class StartWithBenchmark
     {
         protected StorageEnvironment Env;
         public virtual bool DeleteBeforeSuite { get; protected set; } = true;
         public virtual bool DeleteAfterSuite { get; protected set; } = true;
         public virtual bool DeleteBeforeEachBenchmark { get; protected set; } = false;
 
+
+        [Params(1024, 2048, 4096, 16 * 1024)]
+        //[Params(1024)]
+        public int BufferSize { get; set; }
+
         /// <summary>
         /// Path to store the benchmark database into.
         /// </summary>
         public const string Path = Configuration.Path;
-
-        /// <summary>
-        /// Number of Transactions to use per test. The default uses the global
-        /// configuration, but this may be changed on a per-test basis by doing
-        /// the same as below.
-        /// </summary>
-        [Params(Configuration.Transactions)]
-        public int NumberOfTransactions { get; set; } = Configuration.Transactions;
-
-        /// <summary>
-        /// Number of Records per Transaction to use per test. The default uses
-        /// the global configuration, but this may be changed on a per-test
-        /// basis by doing the same as below.
-        /// </summary>
-        [Params(Configuration.RecordsPerTransaction)]
-        public int NumberOfRecordsPerTransaction { get; set; } = Configuration.RecordsPerTransaction;
 
         /// <summary>
         /// This is the job configuration for storage benchmarks. Changing this
@@ -93,7 +83,7 @@ namespace Voron.Benchmark.Corax
             }
         }
 
-        public QueriesBenchmark()
+        public StartWithBenchmark()
         {
             if (DeleteBeforeSuite)
             {
@@ -107,7 +97,7 @@ namespace Voron.Benchmark.Corax
             }
         }
 
-        ~QueriesBenchmark()
+        ~StartWithBenchmark()
         {
             if (!DeleteBeforeEachBenchmark)
             {
@@ -160,7 +150,7 @@ namespace Voron.Benchmark.Corax
                     var entryWriter = new IndexEntryWriter(buffer, fields);
                     entryWriter.Write(0, Encoding.UTF8.GetBytes("Dog #" + i));
                     entryWriter.Write(1, Encoding.UTF8.GetBytes("families/" + (i % 1024)));
-                    var age = i % 17;
+                    var age = i % 15;
                     entryWriter.Write(2, Encoding.UTF8.GetBytes(age.ToString()), age, age);
                     entryWriter.Write(3, Encoding.UTF8.GetBytes("Dog"));
                     entryWriter.Finish(out var entry);
@@ -182,13 +172,24 @@ namespace Voron.Benchmark.Corax
                 GenerateData(Env);
             }
 
-
             var parser = new QueryParser();
-            parser.Init("from Dogs where Type = 'Dog' and Age = '15'");
-            _queryDefinition = new QueryDefinition("Name", parser.Parse());
+            parser.Init("from Dogs where Type = 'Dog' and (Age = '1' or Age = '10' or Age = '11' or Age = '12' or Age = '13' or Age = '14' or Age = '15' or Age = '16' or Age = '17')");
+            _queryOr = new QueryDefinition("Name", parser.Parse());
+
+            parser = new QueryParser();
+            parser.Init("from Dogs where Type = 'Dog' and Age in ('1', '10', '11', '12', '13', '14', '15', '16', '17')");
+            _queryIn = new QueryDefinition("Name", parser.Parse());
+
+            parser = new QueryParser();
+            parser.Init("from Dogs where Type = 'Dog' and startsWith(Age, '1')");
+            //_queryStartWith = new QueryDefinition("Name", parser.Parse());
+
+            _ids = new long[BufferSize];
         }
 
-        protected QueryDefinition _queryDefinition;
+        protected QueryDefinition _queryOr;
+        protected QueryDefinition _queryIn;
+        protected QueryDefinition _queryStartWith;
 
         [GlobalCleanup]
         public virtual void Cleanup()
@@ -222,64 +223,52 @@ namespace Voron.Benchmark.Corax
             }
         }
 
-        private long[] _ids = new long[16];
+        private long[] _ids;
 
         [Benchmark]
-        public void RuntimeQuery()
+        public void StartsWithRuntimeQuery()
         {
             using var indexSearcher = new IndexSearcher(Env);
             var typeTerm = indexSearcher.TermQuery("Type", "Dog");
-            var familyTerm = indexSearcher.TermQuery("Age", "15");
-            var query = indexSearcher.And(typeTerm, familyTerm);
+            var ageTerm = indexSearcher.StartWithQuery("Age", "1");
+            var query = indexSearcher.And(typeTerm, ageTerm);
 
-            int read = 0;
             Span<long> ids = _ids;
-            do
-            {
-                read = query.Fill(ids);
-                for (int i = 0; i < read; i++)
-                    indexSearcher.GetIdentityFor(ids[i]);
-            }
-            while (read != 0);
+            while (query.Fill(ids) != 0)
+                ;
         }
 
         [Benchmark]
-        public void RuntimeQueryOnlyIteration()
+        public void InParserQuery()
         {
             using var indexSearcher = new IndexSearcher(Env);
-            var typeTerm = indexSearcher.TermQuery("Type", "Dog");
-            var familyTerm = indexSearcher.TermQuery("Age", "15");
-            var query = indexSearcher.And(typeTerm, familyTerm);
+            var query = indexSearcher.Search(_queryIn.Query.Where);
 
             Span<long> ids = _ids;
-            while (query.Fill(ids) != 0);
+            while (query.Fill(ids) != 0)
+                ;
         }
 
         [Benchmark]
-        public void ParserQuery()
+        public void OrParserQuery()
         {
             using var indexSearcher = new IndexSearcher(Env);
-            var query = indexSearcher.Search(_queryDefinition.Query.Where);
-
-            int read = 0;
-            Span<long> ids = _ids;
-            do
-            {
-                read = query.Fill(ids);
-                for (int i = 0; i < read; i++)
-                    indexSearcher.GetIdentityFor(ids[i]);
-            }
-            while (read != 0);
-        }
-
-        [Benchmark]
-        public void ParserQueryOnlyIteration()
-        {
-            using var indexSearcher = new IndexSearcher(Env);
-            var query = indexSearcher.Search(_queryDefinition.Query.Where);
+            var query = indexSearcher.Search(_queryOr.Query.Where);
 
             Span<long> ids = _ids;
-            while (query.Fill(ids) != 0);
+            while (query.Fill(ids) != 0)
+                ;
         }
+
+        //[Benchmark]
+        //public void StartsWithParserQuery()
+        //{
+        //    using var indexSearcher = new IndexSearcher(Env);
+        //    var query = indexSearcher.Search(_queryStartWith.Query.Where);
+
+        //    Span<long> ids = _ids;
+        //    while (query.Fill(ids) != 0)
+        //        ;
+        //}
     }
 }
