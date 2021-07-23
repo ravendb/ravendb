@@ -11,6 +11,7 @@ using Voron.Data.Sets;
 using Voron.Data.Containers;
 using Corax.Queries;
 using System.Collections.Generic;
+using Voron.Data.CompactTrees;
 
 namespace Corax
 {
@@ -101,7 +102,15 @@ namespace Corax
         {
             var fields = _transaction.ReadTree(IndexWriter.FieldsSlice);
             var terms = fields.CompactTreeFor(field);
-            if (terms == null || terms.TryGetValue(term, out var value) == false)
+            if (terms == null)
+                return TermMatch.CreateEmpty();
+
+            return TermQuery(terms, term);
+        }
+
+        private TermMatch TermQuery(CompactTree tree, string term)
+        {
+            if (tree.TryGetValue(term, out var value) == false)
                 return TermMatch.CreateEmpty();
 
             TermMatch matches;
@@ -135,6 +144,35 @@ namespace Corax
             if (terms == null)
                 return MultiTermMatch.CreateEmpty();
 
+            if (inTerms.Count > 1 && inTerms.Count <= 16)
+            {
+                var stack = new BinaryMatch[inTerms.Count / 2];
+                for (int i = 0; i < inTerms.Count / 2; i++)
+                    stack[i] = Or(TermQuery(terms, inTerms[i * 2]), TermQuery(terms, inTerms[i * 2 + 1]));
+
+                if (inTerms.Count % 2 == 1)
+                {
+                    // We need even values to make the last work. 
+                    stack[^1] = Or(stack[^1], TermQuery(terms, inTerms[^1]));
+                }
+
+                int currentTerms = stack.Length;
+                while (currentTerms > 1)
+                {
+                    int termsToProcess = currentTerms / 2;
+                    int excessTerms = currentTerms % 2;
+
+                    for (int i = 0; i < termsToProcess; i++)
+                        stack[i] = Or(stack[i * 2], stack[i * 2 + 1]);
+                    
+                    if (excessTerms != 0)
+                        stack[termsToProcess - 1] = Or(stack[termsToProcess - 1], stack[currentTerms - 1]);
+
+                    currentTerms = termsToProcess;
+                }
+                return MultiTermMatch.Create(stack[0]);
+            }
+
             return MultiTermMatch.Create(new MultiTermMatch<InTermProvider>(new InTermProvider(this, field, 0, inTerms)));
         }
 
@@ -156,8 +194,17 @@ namespace Corax
         {
             // TODO: We need to create this code using a template or using typed delegates (which either way would need templating for boilerplate code generation)
 
+            // When faced with a MultiTermMatch and something else, lets first calculate the something else.
+            if (set2.GetType() == typeof(MultiTermMatch) && set1.GetType() != typeof(MultiTermMatch))
+                return And(set2, set1);
+
+            // We don't want a multiterm match to be subject to this optimization. When faced with 2 MultiTermMatch just execute as
+            // it was written in the query.
+            if (set1.Count > set2.Count && set1.GetType() != typeof(MultiTermMatch))
+                    return And(set2, set1);
+
             // If any of the generic types is not known to be a struct (calling from interface) the code executed will
-            // do all the work to figure out what to emit. The cost is in instantiation not on execution.             
+            // do all the work to figure out what to emit. The cost is in instantiation not on execution.                         
             if (set1.GetType() == typeof(TermMatch) && set2.GetType() == typeof(TermMatch))
             {
                 return BinaryMatch.Create(BinaryMatch<TermMatch, TermMatch>.YieldAnd((TermMatch)(object)set1, (TermMatch)(object)set2));
@@ -183,6 +230,10 @@ namespace Corax
             where TInner : IQueryMatch
             where TOuter : IQueryMatch
         {
+            // When faced with a MultiTermMatch and something else, lets first calculate the something else.
+            if (set2.GetType() == typeof(MultiTermMatch) && set1.GetType() != typeof(MultiTermMatch))
+                return And(set2, set1);
+
             // If any of the generic types is not known to be a struct (calling from interface) the code executed will
             // do all the work to figure out what to emit. The cost is in instantiation not on execution. 
             if (set1.GetType() == typeof(TermMatch) && set2.GetType() == typeof(TermMatch))
