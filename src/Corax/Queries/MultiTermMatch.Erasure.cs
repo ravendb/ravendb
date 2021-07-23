@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -91,6 +91,43 @@ namespace Corax.Queries
              where TInner : ITermProvider
         {
             return new MultiTermMatch(query, StaticFunctionCache<TInner>.FunctionTable);
+        }
+
+        private static FunctionTable _binaryFunctions;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static MultiTermMatch Create(in BinaryMatch query)
+        {
+            static long CountFunc(ref MultiTermMatch match)
+            {
+                return ((BinaryMatch)match._inner).Count;
+            }
+            static int FillFunc(ref MultiTermMatch match, Span<long> matches)
+            {
+                if (match._inner is BinaryMatch inner)
+                {
+                    var result = inner.Fill(matches);
+                    match._inner = inner;
+                    return result;
+                }
+                return 0;
+            }
+
+            static int AndWithFunc(ref MultiTermMatch match, Span<long> matches)
+            {
+                if (match._inner is BinaryMatch inner)
+                {
+                    var result = inner.AndWith(matches);
+                    match._inner = inner;
+                    return result;
+                }
+                return 0;
+            }
+
+            if (_binaryFunctions == null)
+                _binaryFunctions = new FunctionTable(&FillFunc, &AndWithFunc, &CountFunc);
+
+            return new MultiTermMatch(query, _binaryFunctions);
         }
 
         private struct EmptyTermProvider : ITermProvider
