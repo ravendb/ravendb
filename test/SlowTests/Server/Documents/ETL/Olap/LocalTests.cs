@@ -1579,7 +1579,7 @@ loadToUsers(noPartition(), {
                                 expected = (sbyte)8;
                                 break;
                             case nameof(User.UInt16):
-                                Assert.Equal(DataType.UnsignedInt16, dataField.DataType);
+                                Assert.Equal(DataType.UnsignedShort, dataField.DataType);
                                 expected = (ushort)9;
                                 break;
                             case nameof(User.UInt32):
