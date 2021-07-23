@@ -652,5 +652,62 @@ namespace FastTests.Corax
             }
         }
 
+        [Fact]
+        public void SimpleStartWithStatement()
+        {
+            var entry1 = new IndexEntry
+            {
+                Id = "entry/1",
+                Content = new string[] { "a road", "a lake", "the mountain" },
+            };
+            var entry2 = new IndexEntry
+            {
+                Id = "entry/2",
+                Content = new string[] { "a road", "the mountain" },
+            };
+            var entry3 = new IndexEntry
+            {
+                Id = "entry/3",
+                Content = new string[] { "the sky", "the space", "an animal" },
+            };
+
+            IndexEntries(new[] { entry1, entry2, entry3 });
+
+            using var searcher = new IndexSearcher(Env);
+            {
+                var match = searcher.StartWithQuery("Content", "a");
+
+                Span<long> ids = stackalloc long[16];
+                Assert.Equal(3, match.Fill(ids));
+                Assert.Equal(0, match.Fill(ids));
+            }
+
+            {
+                var match = searcher.StartWithQuery("Content", "the s");
+
+                Span<long> ids = stackalloc long[16];
+                Assert.Equal(1, match.Fill(ids));
+                Assert.Equal(0, match.Fill(ids));
+            }
+
+            {
+                var match = searcher.StartWithQuery("Content", "an");
+
+                Span<long> ids = stackalloc long[16];
+                Assert.Equal(1, match.Fill(ids));
+                Assert.Equal(0, match.Fill(ids));
+            }
+
+            {
+                var match = searcher.StartWithQuery("Content", "a");
+
+                Span<long> ids = stackalloc long[2];
+                Assert.Equal(1, match.Fill(ids));
+                Assert.Equal(2, match.Fill(ids));
+                Assert.Equal(0, match.Fill(ids));
+            }
+
+        }
+
     }
 }

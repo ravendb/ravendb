@@ -138,6 +138,17 @@ namespace Corax
             return MultiTermMatch.Create(new MultiTermMatch<InTermProvider>(new InTermProvider(this, field, 0, inTerms)));
         }
 
+        public MultiTermMatch StartWithQuery(string field, string startWith)
+        {
+            // TODO: The IEnumerable<string> will die eventually, this is for prototyping only. 
+            var fields = _transaction.ReadTree(IndexWriter.FieldsSlice);
+            var terms = fields.CompactTreeFor(field);
+            if (terms == null)
+                return MultiTermMatch.CreateEmpty();
+
+            return MultiTermMatch.Create(new MultiTermMatch<StartWithTermProvider>(new StartWithTermProvider(this, _transaction.Allocator, terms, field, 0, startWith)));
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public BinaryMatch And<TInner, TOuter>(in TInner set1, in TOuter set2)
             where TInner : IQueryMatch
