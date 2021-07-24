@@ -17,6 +17,8 @@ namespace Corax.Queries
 
         public long Count => _functionTable.CountFunc(ref this);
 
+        public QueryCountConfidence Confidence => _inner.Confidence;
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int Fill(Span<long> buffer)
         {

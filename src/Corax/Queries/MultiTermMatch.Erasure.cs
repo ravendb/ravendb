@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -19,6 +19,8 @@ namespace Corax.Queries
         }
 
         public long Count => _functionTable.CountFunc(ref this);
+
+        public QueryCountConfidence Confidence => _inner.Confidence;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int Fill(Span<long> buffer)

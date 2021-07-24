@@ -11,18 +11,23 @@ namespace Corax.Queries
         internal long _totalResults;
         internal long _current;
         internal long _currentIdx;
+        private QueryCountConfidence _confidence;
+        
         internal TTermProvider _inner;
-        private TermMatch _currentTerm;
+        private TermMatch _currentTerm;        
 
         public long Count => _totalResults;
         public long Current => _currentIdx <= QueryMatch.Start ? _currentIdx : _current;
-       
-        public MultiTermMatch(TTermProvider inner)
+
+        public QueryCountConfidence Confidence => throw new NotImplementedException();
+
+        public MultiTermMatch(TTermProvider inner, long totalResults = 0, QueryCountConfidence confidence = QueryCountConfidence.Low)
         {
-            _inner = inner;
-            _totalResults = 0;
+            _inner = inner;            
             _current = QueryMatch.Start;
             _currentIdx = QueryMatch.Start;
+            _totalResults = totalResults;
+            _confidence = confidence;
 
             _inner.Next(out _currentTerm);
         }

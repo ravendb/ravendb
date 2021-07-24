@@ -194,14 +194,10 @@ namespace Corax
         {
             // TODO: We need to create this code using a template or using typed delegates (which either way would need templating for boilerplate code generation)
 
-            // When faced with a MultiTermMatch and something else, lets first calculate the something else.
-            if (set2.GetType() == typeof(MultiTermMatch) && set1.GetType() != typeof(MultiTermMatch))
+            // We don't want an unknown size multiterm match to be subject to this optimization. When faced with one that is unknown just execute as
+            // it was written in the query. If we don't have statistics the confidence will be Low, so the optimization wont happen.
+            if (set1.Count < set2.Count && set1.Confidence >= QueryCountConfidence.Normal)
                 return And(set2, set1);
-
-            // We don't want a multiterm match to be subject to this optimization. When faced with 2 MultiTermMatch just execute as
-            // it was written in the query.
-            if (set1.Count > set2.Count && set1.GetType() != typeof(MultiTermMatch))
-                    return And(set2, set1);
 
             // If any of the generic types is not known to be a struct (calling from interface) the code executed will
             // do all the work to figure out what to emit. The cost is in instantiation not on execution.                         
@@ -232,7 +228,7 @@ namespace Corax
         {
             // When faced with a MultiTermMatch and something else, lets first calculate the something else.
             if (set2.GetType() == typeof(MultiTermMatch) && set1.GetType() != typeof(MultiTermMatch))
-                return And(set2, set1);
+                return Or(set2, set1);
 
             // If any of the generic types is not known to be a struct (calling from interface) the code executed will
             // do all the work to figure out what to emit. The cost is in instantiation not on execution. 

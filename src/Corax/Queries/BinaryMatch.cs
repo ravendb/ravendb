@@ -15,14 +15,18 @@ namespace Corax.Queries
 
         private long _totalResults;
         private long _current;
+        private QueryCountConfidence _confidence;
 
         public long Count => _totalResults;
         public long Current => _current;
 
+        public QueryCountConfidence Confidence => _confidence;
+
         private BinaryMatch(in TInner inner, in TOuter outer,
             delegate*<ref BinaryMatch<TInner, TOuter>, Span<long>, int> fillFunc,
             delegate*<ref BinaryMatch<TInner, TOuter>, Span<long>, int> andWith,
-            long totalResults)
+            long totalResults,
+            QueryCountConfidence confidence)
         {
             _totalResults = totalResults;
             _current = QueryMatch.Start;
@@ -30,6 +34,7 @@ namespace Corax.Queries
             _andWith = andWith;
             _inner = inner;
             _outer = outer;
+            _confidence = confidence;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -74,7 +79,16 @@ namespace Corax.Queries
                 return outer.AndWith(matches.Slice(0, results));
             }
 
-            return new BinaryMatch<TInner, TOuter>(in inner, in outer, &FillFunc, &AndWith, Math.Min(inner.Count, outer.Count));
+            // Estimate Confidence values.
+            QueryCountConfidence confidence;
+            if (inner.Count < outer.Count / 2)
+                confidence = inner.Confidence;
+            else if (outer.Count < inner.Count / 2)
+                confidence = outer.Confidence;
+            else
+                confidence = inner.Confidence.Min(outer.Confidence);
+
+            return new BinaryMatch<TInner, TOuter>(in inner, in outer, &FillFunc, &AndWith, Math.Min(inner.Count, outer.Count), confidence);
         }
 
         public static BinaryMatch<TInner, TOuter> YieldOr(in TInner inner, in TOuter outer)
@@ -140,7 +154,16 @@ namespace Corax.Queries
                 return matchesIdx;
             }
 
-            return new BinaryMatch<TInner, TOuter>(in inner, in outer, &FillFunc, &AndWith, inner.Count + outer.Count);
+            // Estimate Confidence values.
+            QueryCountConfidence confidence;
+            if (inner.Count / 10 > outer.Count)
+                confidence = inner.Confidence;
+            else if (outer.Count / 10 > inner.Count)
+                confidence = outer.Confidence;
+            else
+                confidence = inner.Confidence.Min(outer.Confidence);
+
+            return new BinaryMatch<TInner, TOuter>(in inner, in outer, &FillFunc, &AndWith, inner.Count + outer.Count, confidence);
         }
     }
 }
