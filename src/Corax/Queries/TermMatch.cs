@@ -22,6 +22,8 @@ namespace Corax.Queries
 
         public long Count => _totalResults;
 
+        public QueryCountConfidence Confidence => QueryCountConfidence.High;
+
         private TermMatch(
             delegate*<ref TermMatch, Span<long>, int> fillFunc,
             delegate*<ref TermMatch, Span<long>, int> andWithFunc,
