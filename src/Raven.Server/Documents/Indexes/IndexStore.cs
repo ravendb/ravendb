@@ -993,12 +993,19 @@ namespace Raven.Server.Documents.Indexes
 
         private void ValidateAutoIndex(IndexDefinitionBase definition)
         {
-            ValidateIndexName(definition.Name, isStatic: false);
+            if (IsValidIndexName(definition.Name, false, out var errorMessage) == false)
+            {
+                throw new ArgumentException(errorMessage);
+            }
         }
 
         private void ValidateStaticIndex(IndexDefinition definition)
         {
-            ValidateIndexName(definition.Name, isStatic: true);
+            if (IsValidIndexName(definition.Name, true, out var errorMessage) == false)
+            {
+                throw new ArgumentException((errorMessage));
+            }
+            
             _serverStore.LicenseManager.AssertCanAddAdditionalAssembliesFromNuGet(definition);
 
             var safeFileSystemIndexName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(definition.Name);
@@ -1031,7 +1038,10 @@ namespace Raven.Server.Documents.Indexes
             if (definition == null)
                 throw new ArgumentNullException(nameof(definition));
 
-            ValidateIndexName(definition.Name, isStatic: true);
+            if (IsValidIndexName(definition.Name, true, out var errorMessage) == false)
+            {
+                throw new ArgumentException(errorMessage);
+            }
 
             var existingIndex = GetIndex(definition.Name);
             if (existingIndex == null)
@@ -1233,47 +1243,40 @@ namespace Raven.Server.Documents.Indexes
 
         public static bool IsValidIndexName(string name, bool isStatic, out string errorMessage)
         {
-            errorMessage = null;
-
-            try
+            if (string.IsNullOrWhiteSpace(name))
             {
-                ValidateIndexName(name, isStatic);
-            }
-            catch (Exception e)
-            {
-                errorMessage = e.Message.Split('\n')[0];
+                errorMessage = "Index name cannot be empty!";
                 return false;
             }
-
-            return true;
-        }
-
-        public static void ValidateIndexName(string name, bool isStatic)
-        {
-            if (string.IsNullOrWhiteSpace(name))
-                throw new ArgumentException("Index name cannot be empty!");
-
             if (name.Contains("//"))
-                throw new ArgumentException($"Index name '{name.Replace("//", "__")}' not permitted. Index name cannot contain // (double slashes)", nameof(name));
-
+            {
+                errorMessage = $"Index name '{name}' is not permitted. Index name cannot contain // (double slashes)";
+                return false;
+            }
             if (isStatic && name.StartsWith("Auto/", StringComparison.OrdinalIgnoreCase))
-                throw new ArgumentException($"Index name '{name}' not permitted. Static index name cannot start with 'Auto/'", nameof(name));
-
+            {
+                errorMessage = $"Index name '{name}' is not permitted. Static index name cannot start with 'Auto/'";
+                return false;
+            }
             if (isStatic && ResourceNameValidator.IsValidIndexName(name) == false)
             {
                 var allowedCharacters = $"('{string.Join("', '", ResourceNameValidator.AllowedIndexNameCharacters.Select(Regex.Unescape))}')";
-                throw new ArgumentException($"Index name '{name}' is not permitted. Only letters, digits and characters {allowedCharacters} are allowed.", nameof(name));
+                errorMessage = $"Index name '{name}' is not permitted. Only letters, digits and characters {allowedCharacters} are allowed.";
+                return false;
             }
-
             if (isStatic && name.Contains(".") && ResourceNameValidator.IsDotCharSurroundedByOtherChars(name) == false)
-                throw new ArgumentException(
-                    $"Index name '{name}' is not permitted. If a name contains '.' character then it must be surrounded by other allowed characters.", nameof(name));
-
+            {
+                errorMessage = $"Index name '{name}' is not permitted. If a name contains '.' character then it must be surrounded by other allowed characters.";
+                return false;
+            }
             if (isStatic && name.Length > MaxIndexNameLength)
             {
-                throw new ArgumentException(
-                    $"Index name '{name}' is not permitted. Index name cannot exceed {MaxIndexNameLength} characters.", nameof(name));
+                errorMessage = $"Index name '{name}' is not permitted. Index name cannot exceed {MaxIndexNameLength} characters.";
+                return false;
             }
+
+            errorMessage = null;
+            return true;
         }
 
         public Index ResetIndex(string name)
