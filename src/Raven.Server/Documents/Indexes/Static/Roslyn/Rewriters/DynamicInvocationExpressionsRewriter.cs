@@ -32,9 +32,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
         {
             if (node.ArgumentList.Arguments.Count != 1)
                 return node;
-            var n = node.WithArgumentList(
-                SyntaxFactory.ParseArgumentList($"((IEnumerable<dynamic>){node.ArgumentList})")
-            );
+            var n = node.WithArgumentList(SyntaxFactory.ParseArgumentList($"((IEnumerable<dynamic>){node.ArgumentList})"));
             return n;
         }
 
