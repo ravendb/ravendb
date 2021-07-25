@@ -5,11 +5,10 @@ using System.Text;
 using System.Threading.Tasks;
 using Corax;
 using Corax.Tokenizers;
-using Lucene.Net.Analysis;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace FastTests.Corax
+namespace CoraxTests
 {
 
     public class StringTextSourceTests : NoDisposalNeeded

@@ -1,14 +1,6 @@
 using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
-using FastTests.Blittable;
-using FastTests.Client;
-using SlowTests.Issues;
-using SlowTests.MailingList;
-using SlowTests.Rolling;
-using SlowTests.Server.Documents.ETL.Raven;
-using StressTests.Issues;
-using Tests.Infrastructure;
 
 namespace Tryouts
 {
@@ -16,7 +8,7 @@ namespace Tryouts
     {
         static Program()
         {
-            XunitLogging.RedirectStreams = false;
+            //XunitLogging.RedirectStreams = false;
         }
 
         public static async Task Main(string[] args)
@@ -27,11 +19,11 @@ namespace Tryouts
                  Console.WriteLine($"Starting to run {i}");
                 try
                 {
-                    using (var testOutputHelper = new ConsoleTestOutputHelper())
-                    using (var test = new RollingIndexesClusterTests(testOutputHelper))
-                    {
-                         await test.RemoveNodeFromDatabaseGroupWhileRollingDeployment();
-                    }
+                    //using (var testOutputHelper = new ConsoleTestOutputHelper())
+                    //using (var test = new FirstClassPatch(testOutputHelper))
+                    //{
+                    //     test.PatchNullField_ExpectFieldSetToNull();
+                    //}
                 }
                 catch (Exception e)
                 {

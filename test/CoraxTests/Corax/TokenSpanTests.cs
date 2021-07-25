@@ -1,17 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Corax;
-using NetTopologySuite.Algorithm;
-using Sparrow.Json;
-using Sparrow.Server.Json.Sync;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace FastTests.Corax
+namespace CoraxTests
 {
     public class TokenSpanTests : NoDisposalNeeded
     {
