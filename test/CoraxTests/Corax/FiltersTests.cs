@@ -7,7 +7,7 @@ using Corax.Tokenizers;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace FastTests.Corax
+namespace CoraxTests
 {
     public class FiltersTests : NoDisposalNeeded
     {

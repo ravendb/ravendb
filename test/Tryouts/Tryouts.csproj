@@ -19,15 +19,7 @@
     <Compile Include="..\..\src\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Raven.Client\Raven.Client.csproj" />
-    <ProjectReference Include="..\..\src\Raven.Embedded\Raven.Embedded.csproj" />
     <ProjectReference Include="..\..\src\Voron\Voron.csproj" />
-    <ProjectReference Include="..\BenchmarkTests\BenchmarkTests.csproj" />
-    <ProjectReference Include="..\InterversionTests\InterversionTests.csproj" />
-    <ProjectReference Include="..\RachisTests\RachisTests.csproj" />
-    <ProjectReference Include="..\SlowTests\SlowTests.csproj" />
-    <ProjectReference Include="..\FastTests\FastTests.csproj" />
-    <ProjectReference Include="..\StressTests\StressTests.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="BenchmarkDotNet" Version="0.13.0" />
