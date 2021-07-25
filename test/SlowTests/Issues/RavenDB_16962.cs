@@ -24,7 +24,14 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Response { Items = new[] { new Item { Value = "FirstItem" }, new Item { Value = "SecondItem" } } });
+                    session.Store(new Response
+                    {
+                        Items = new[]
+                        {
+                            new Item { Value = "FirstItem" }, 
+                            new Item { Value = "SecondItem" }
+                        }
+                    });
                     session.SaveChanges();
                 }
 
@@ -39,7 +46,9 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var query = session.Query<SelectWithComplexPredicateIndex.Result, SelectWithComplexPredicateIndex>().ProjectInto<SelectWithComplexPredicateIndex.Result>().ToList();
+                    var query = session.Query<SelectWithComplexPredicateIndex.Result, SelectWithComplexPredicateIndex>()
+                        .ProjectInto<SelectWithComplexPredicateIndex.Result>()
+                        .ToList();
                     Assert.Equal(2, query.Count);
                     Assert.Equal("FirstItem", query[(query[0].Index)].Value);
                     Assert.Equal("SecondItem", query[(query[1].Index)].Value);
@@ -57,7 +66,14 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Response { Items = new[] { new Item { Value = "FirstItem" }, new Item { Value = "SecondItem" } } });
+                    session.Store(new Response
+                    {
+                        Items = new[]
+                        {
+                            new Item { Value = "FirstItem" }, 
+                            new Item { Value = "SecondItem" }
+                        }
+                    });
                     session.SaveChanges();
                 }
 
@@ -72,7 +88,9 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var query = session.Query<SelectWithSimplePredicateIndex.Result, SelectWithSimplePredicateIndex>().ProjectInto<SelectWithSimplePredicateIndex.Result>().ToList();
+                    var query = session.Query<SelectWithSimplePredicateIndex.Result, SelectWithSimplePredicateIndex>()
+                        .ProjectInto<SelectWithSimplePredicateIndex.Result>()
+                        .ToList();
                     Assert.Equal(2, query.Count);
                     Assert.Equal("FirstItem", query[0].Value);
                     Assert.Equal("SecondItem", query[1].Value);
@@ -80,7 +98,7 @@ namespace SlowTests.Issues
             }
         }
 
-        class SelectWithComplexPredicateIndex : AbstractIndexCreationTask<Response, SelectWithComplexPredicateIndex.Result>
+        private class SelectWithComplexPredicateIndex : AbstractIndexCreationTask<Response, SelectWithComplexPredicateIndex.Result>
         {
             public class Result
             {
@@ -101,7 +119,7 @@ namespace SlowTests.Issues
             }
         }
 
-        class SelectWithSimplePredicateIndex : AbstractIndexCreationTask<Response, SelectWithSimplePredicateIndex.Result>
+        private class SelectWithSimplePredicateIndex : AbstractIndexCreationTask<Response, SelectWithSimplePredicateIndex.Result>
         {
             public class Result
             {
@@ -119,11 +137,11 @@ namespace SlowTests.Issues
             }
         }
 
-        class Item
+        private class Item
         {
             public string Value { get; set; }
         }
-        class Response
+        private class Response
         {
             public Item[] Items { get; set; }
         }

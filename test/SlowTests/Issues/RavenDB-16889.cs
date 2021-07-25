@@ -20,7 +20,7 @@ namespace SlowTests.Issues
         {
             TestCase<SelectManySimplePredicateIndex>();
         }
-        public class SelectManySimplePredicateIndex : AbstractIndexCreationTask<TestObj>
+        private class SelectManySimplePredicateIndex : AbstractIndexCreationTask<TestObj>
         {
             public SelectManySimplePredicateIndex()
             {
@@ -40,7 +40,7 @@ namespace SlowTests.Issues
         {
             TestCase<SelectManyComplexPredicateIndex>();
         }
-        public class SelectManyComplexPredicateIndex : AbstractIndexCreationTask<TestObj>
+        private class SelectManyComplexPredicateIndex : AbstractIndexCreationTask<TestObj>
         {
             public SelectManyComplexPredicateIndex()
             {
@@ -48,7 +48,8 @@ namespace SlowTests.Issues
                     from taggable in taggables
                     select new
                     {
-                        TagsResult = taggable.Tags.SelectMany((v,i) => v.Value)
+                        TagsResult = taggable.Tags
+                            .SelectMany((v,i) => v.Value)
                     };
                 Store("TagsResult", FieldStorage.Yes);
             }
@@ -59,7 +60,7 @@ namespace SlowTests.Issues
         {
             TestCase<SelectManyComplexPredicate2ArgsIndex>();
         }
-        public class SelectManyComplexPredicate2ArgsIndex : AbstractIndexCreationTask<TestObj>
+        private class SelectManyComplexPredicate2ArgsIndex : AbstractIndexCreationTask<TestObj>
         {
             public SelectManyComplexPredicate2ArgsIndex()
             {
@@ -80,7 +81,7 @@ namespace SlowTests.Issues
             TestCase<SelectManySimplePredicate2ArgsIndex>();
         }
 
-        public class SelectManySimplePredicate2ArgsIndex : AbstractIndexCreationTask<TestObj>
+        private class SelectManySimplePredicate2ArgsIndex : AbstractIndexCreationTask<TestObj>
         {
             public SelectManySimplePredicate2ArgsIndex()
             {
@@ -94,8 +95,8 @@ namespace SlowTests.Issues
                 Store("TagsResult", FieldStorage.Yes);
             }
         }
-        
-        public void TestCase<T>() where T : AbstractIndexCreationTask<TestObj>, new()
+
+        private void TestCase<T>() where T : AbstractIndexCreationTask<TestObj>, new()
         {
             using var store = GetDocumentStore();
             var index = new T();
@@ -146,23 +147,23 @@ namespace SlowTests.Issues
             }
         }
 
-        public class TestObj
+        private class TestObj
         {
             public Dictionary<string, Dictionary<string, string>> Tags;
         }
 
-        public class Result
+        private class Result
         {
             public IDictionary TagsResult;
         }
 
         [Fact]
-        public void UserTest()
+        private void UserTest()
         {
             TestCase<TestIndex>();
         }
 
-        public class TestIndex : AbstractIndexCreationTask<TestObj>
+        private class TestIndex : AbstractIndexCreationTask<TestObj>
         {
             public TestIndex()
             {
@@ -178,7 +179,7 @@ namespace SlowTests.Issues
             }
         }
 
-        public class UserTestResult
+        private class UserTestResult
         {
             public int Count;
         }
