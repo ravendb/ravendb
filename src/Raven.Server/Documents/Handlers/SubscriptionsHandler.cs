@@ -165,7 +165,7 @@ namespace Raven.Server.Documents.Handlers
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), null);
                 var options = JsonDeserializationServer.SubscriptionCreationParams(json);
                 var id = GetLongQueryString("id", required: false);
-                var disabled = GetBoolValueQueryString("disabled", required: false);
+                var disabled = options.Disabled;
 
                 await CreateInternal(json, options, context, id, disabled);
             }

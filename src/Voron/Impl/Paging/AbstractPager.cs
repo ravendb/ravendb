@@ -3,9 +3,7 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Threading;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Logging;
@@ -17,7 +15,6 @@ using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron.Data;
 using Voron.Exceptions;
-using Voron.Platform;
 using Voron.Util.Settings;
 using Constants = Voron.Global.Constants;
 
@@ -623,6 +620,9 @@ namespace Voron.Impl.Paging
 
         public virtual void DiscardPages(long pageNumber, int numberOfPages)
         {
+            if (_options.DiscardVirtualMemory == false)
+                return;
+            
             var pagerState = PagerState;
             Debug.Assert(pagerState.AllocationInfos.Length == 1);
 
@@ -636,6 +636,9 @@ namespace Voron.Impl.Paging
 
         public virtual void DiscardWholeFile()
         {
+            if (_options.DiscardVirtualMemory == false)
+                return;
+
             long size = 0;
             void* baseAddress = null;
             var pagerState = PagerState;
