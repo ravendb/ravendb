@@ -393,6 +393,12 @@ namespace Tests.Infrastructure
             return await WaitForDocumentInClusterAsyncInternal(docId, predicate, timeout, stores);
         }
 
+        protected async Task<bool> WaitForDocumentInClusterAsync<T>(List<RavenServer> nodes, string database, string docId, Func<T, bool> predicate, TimeSpan timeout, X509Certificate2 certificate = null)
+        {
+            var stores = GetDocumentStores(nodes, database, disableTopologyUpdates: true, certificate: certificate);
+            return await WaitForDocumentInClusterAsyncInternal(docId, predicate, timeout, stores);
+        }
+
         private async Task<bool> WaitForDocumentInClusterAsyncInternal<T>(string docId, Func<T, bool> predicate, TimeSpan timeout, List<DocumentStore> stores)
         {
             var tasks = new List<Task<bool>>();
@@ -414,6 +420,29 @@ namespace Tests.Infrastructure
                 {
                     Urls = new[] { node.Url },
                     Database = node.Database,
+                    Certificate = certificate,
+                    Conventions =
+                    {
+                        DisableTopologyUpdates = disableTopologyUpdates
+                    }
+                };
+                store.Initialize();
+                stores.Add(store);
+                _toDispose.Add(store);
+            }
+
+            return stores;
+        }
+
+        private List<DocumentStore> GetDocumentStores(List<RavenServer> nodes, string database, bool disableTopologyUpdates, X509Certificate2 certificate = null)
+        {
+            var stores = new List<DocumentStore>();
+            foreach (var node in nodes)
+            {
+                var store = new DocumentStore
+                {
+                    Urls = new[] { node.WebUrl },
+                    Database = database,
                     Certificate = certificate,
                     Conventions =
                     {

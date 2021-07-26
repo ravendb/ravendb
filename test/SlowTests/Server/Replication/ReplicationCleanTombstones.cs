@@ -14,7 +14,6 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.Replication;
-using Raven.Client.Documents.Session;
 using Raven.Client.Json.Converters;
 using Raven.Server;
 using Raven.Server.Documents.ETL;
@@ -111,7 +110,7 @@ namespace SlowTests.Server.Replication
                     session.Store(new User { Name = "Karmel" }, "marker");
                     session.SaveChanges();
 
-                    Assert.True(await WaitForDocumentInClusterAsync<User>((DocumentSession)session, "marker", (u) => u.Id == "marker", TimeSpan.FromSeconds(15)));
+                    Assert.True(await WaitForDocumentInClusterAsync<User>(cluster.Nodes, database, "marker", (u) => u.Id == "marker", TimeSpan.FromSeconds(15)));
                 }
 
                 // wait for CV to merge after replication
@@ -191,7 +190,7 @@ namespace SlowTests.Server.Replication
                     session.Store(new User { Name = "Karmel" }, "marker");
                     session.SaveChanges();
 
-                    Assert.True(await WaitForDocumentInClusterAsync<User>((DocumentSession)session, "marker", (u) => u.Id == "marker", TimeSpan.FromSeconds(15)));
+                    Assert.True(await WaitForDocumentInClusterAsync<User>(cluster.Nodes, database, "marker", (u) => u.Id == "marker", TimeSpan.FromSeconds(15)));
                 }
 
                 // wait for CV to merge after replication
@@ -253,7 +252,7 @@ namespace SlowTests.Server.Replication
                     session.Store(new User { Name = "Karmel" }, "marker");
                     session.SaveChanges();
 
-                    await WaitForDocumentInClusterAsync<User>((DocumentSession)session, "marker", (u) => u.Id == "marker", TimeSpan.FromSeconds(15));
+                    await WaitForDocumentInClusterAsync<User>(cluster.Nodes, database, "marker", (u) => u.Id == "marker", TimeSpan.FromSeconds(15));
                 }
 
                 // wait for CV to merge after replication
@@ -283,7 +282,7 @@ namespace SlowTests.Server.Replication
 
                 using (var externalSession = store.OpenSession(external))
                 {
-                    Assert.True(await WaitForDocumentInClusterAsync<User>((DocumentSession)externalSession, "marker2", (m) => m.Id == "marker2", TimeSpan.FromSeconds(15)));
+                    Assert.True(await WaitForDocumentInClusterAsync<User>(cluster.Nodes, external, "marker2", (m) => m.Id == "marker2", TimeSpan.FromSeconds(15)));
                 }
 
                 await ActionWithLeader(async x => await WaitForRaftCommandToBeAppliedInCluster(x, nameof(UpdateExternalReplicationStateCommand)), cluster.Nodes);
@@ -376,7 +375,7 @@ namespace SlowTests.Server.Replication
                     session.Store(new User { Name = "Karmel" }, "marker");
                     session.SaveChanges();
 
-                    Assert.True(await WaitForDocumentInClusterAsync<User>((DocumentSession)session, "marker", (u) => u.Id == "marker", TimeSpan.FromSeconds(15)));
+                    Assert.True(await WaitForDocumentInClusterAsync<User>(cluster.Nodes, store.Database, "marker", (u) => u.Id == "marker", TimeSpan.FromSeconds(15)));
                 }
 
                 var total = 0L;
