@@ -645,8 +645,8 @@ namespace Sparrow.LowMemory
                 if (maxSize != long.MaxValue)
                 {
                     long workingSet64 = Process.GetCurrentProcess().WorkingSet64;
-                    availableMemoryForProcessingInBytes = maxSize - workingSet64;
-                    availPageFile = maxSize - workingSet64;
+                    availableMemoryForProcessingInBytes = Math.Max(maxSize - workingSet64, 0);
+                    availPageFile = Math.Max(maxSize - workingSet64, 0);
                     totalPageFile = maxSize;
                     memoryStatusUllAvailPhys = Math.Min(availableMemoryForProcessingInBytes, memoryStatusUllAvailPhys);
                     remarks = "Memory limited by Job Object limits";
