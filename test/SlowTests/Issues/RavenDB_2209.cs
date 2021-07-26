@@ -63,7 +63,7 @@ namespace SlowTests.Issues
                         });
                         session.SaveChanges();
                     }
-                    await WaitAndAssertForGreaterThanAsync(async () => requestExecutor.Cache.Generation, before);
+                    await WaitAndAssertForGreaterThanAsync(() => Task.FromResult(requestExecutor.Cache.Generation), before);
 
                     using (var session = store.OpenSession())
                     {
@@ -74,6 +74,6 @@ namespace SlowTests.Issues
                     }
                 }
             }
-        } 
+        }
     }
 }

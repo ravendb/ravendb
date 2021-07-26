@@ -84,18 +84,18 @@ namespace SlowTests.Issues
                     await database.TimeSeriesPolicyRunner.RunRollups();
 
                     var name = config.Collections["Users"].Policies[0].GetTimeSeriesName("Heartrate");
-                        WaitForValue(() =>
-                        {
-                            using (var session = store.OpenSession())
-                            {
-                                var val = session.TimeSeriesFor("users/karmel/0", name)
-                                    .Get(DateTime.MinValue, DateTime.MaxValue);
-                                return val != null;
-                            }
-                        }, true);
-
+                    WaitForValue(() =>
+                    {
                         using (var session = store.OpenSession())
                         {
+                            var val = session.TimeSeriesFor("users/karmel/0", name)
+                                .Get(DateTime.MinValue, DateTime.MaxValue);
+                            return val != null;
+                        }
+                    }, true);
+
+                    using (var session = store.OpenSession())
+                    {
                         var val = session.TimeSeriesFor("users/karmel/0", name)
                             .Get(DateTime.MinValue, DateTime.MaxValue).Length;
                         res.Add(server.ServerStore.NodeTag, val);
@@ -160,7 +160,6 @@ namespace SlowTests.Issues
             var cluster = await CreateRaftCluster(3, watcherCluster: true);
             using (var store = GetDocumentStore(new Options { Server = cluster.Leader, ReplicationFactor = 3, RunInMemory = false }))
             {
-                DateTime start = default;
                 var retention = TimeSpan.FromSeconds(180);
                 var raw = new RawTimeSeriesPolicy(retention);
                 var config = new TimeSeriesConfiguration
@@ -215,7 +214,7 @@ namespace SlowTests.Issues
                 var check = true;
                 while (check)
                 {
-                    Assert.True(sp.Elapsed < retention.Add(TimeSpan.FromMinutes(-2)),  $"too long has passed {sp.Elapsed}, retention is {retention}");
+                    Assert.True(sp.Elapsed < retention.Add(TimeSpan.FromMinutes(-2)), $"too long has passed {sp.Elapsed}, retention is {retention}");
                     await Task.Delay(200);
                     check = false;
                     foreach (var server in Servers)
