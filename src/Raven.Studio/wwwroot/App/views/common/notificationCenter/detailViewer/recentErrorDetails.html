@@ -1,21 +1,17 @@
 <div class="modal-dialog modal-lg" role="document">
-    <div class="modal-content" tabindex="-1">
+    <div class="modal-content force-text-wrap-word" tabindex="-1">
         <div class="modal-header">
-            <div class="flex-horizontal">
-                <div class="flex-grow">
-                    <h3 class="modal-title" id="myModalLabel" data-bind="text: recentError.title"></h3>
-                </div>
-                <div>
-                    <button type="button" class="close" data-bind="click: $root.close" aria-hidden="true">
-                        <i class="icon-cancel"></i>
-                    </button>
-                </div>
+            <button type="button" class="close" data-bind="click: close" aria-hidden="true">
+                <i class="icon-cancel"></i>
+            </button>
+            <div data-bind="with: recentError">
+                <h3 class="modal-title" id="myModalLabel" data-bind="text: title, attr: { class: headerClass }"></h3>
+                <div class="notification-time" data-bind="text: displayDate().format('LLL')"></div>
             </div>
         </div>
         <div class="modal-body" data-bind="with: recentError">
-            <div data-bind="html: longerMessage" class="force-text-wrap-word"></div>
-            <pre class="margin-top error-messages" data-bind="visible: details"><code data-bind="text: details">
-</code></pre>
+            <div class="text-center" data-bind="html: longerMessage"></div>
+            <pre class="margin-top error-messages" data-bind="visible: details"><code data-bind="text: details"></code></pre>
         </div>
         <div class="modal-footer">
             <div class="flex-horizontal">
@@ -26,14 +22,14 @@
                 </div>
                 <div class="flex-separator"></div>
                 <div>
-                    <button type="button" class="btn btn-default" data-bind="click: $root.close">Close</button>
-                    <button type="button" class="btn btn-default" data-bind="click: $root.dismiss">
-                        <i class="icon-cancel"></i> <span>Dismiss</span>
+                    <button type="button" class="btn btn-default" data-bind="click: close" title="Close this dialog">
+                        <i class="icon-cancel"></i><span>Close</span>
+                    </button>
+                    <button type="button" class="btn btn-primary" data-bind="click: dismiss" title="Dismiss this alert">
+                        <i class="icon-dismiss-all"></i><span>Dismiss alert</span>
                     </button>
                 </div>
             </div>
-            
-            
         </div>
     </div>
 </div>
