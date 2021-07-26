@@ -285,7 +285,8 @@ class indexPerformance extends viewModelBase {
             "Lucene/RecreateSearcher": undefined as string,
             "SaveOutputDocuments": undefined as string,
             "DeleteOutputDocuments": undefined as string,
-            "LoadCompareExchangeValue": undefined as string
+            "LoadCompareExchangeValue": undefined as string,
+            "UnknownOperation": undefined as string
         }
     };
     
@@ -1020,8 +1021,9 @@ class indexPerformance extends viewModelBase {
         if (operationName.startsWith("Collection_")) {
             return tracks.Collection;
         }
-
-        throw new Error("Unable to find color for: " + operationName);
+        
+        console.warn(`Operation "${operationName}" is not supported. Using unknown-operation color in performance graph.`);
+        return tracks.UnknownOperation;
     }
 
     

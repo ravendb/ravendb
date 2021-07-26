@@ -417,7 +417,8 @@ class ongoingTasksStats extends viewModelBase {
             "BatchWaitForAcknowledge": undefined as string,
             "ConnectionAborted": undefined as string,
             "ConnectionRejected": undefined as string,
-            "AggregatedBatchesInfo": undefined as string
+            "AggregatedBatchesInfo": undefined as string,
+            "UnknownOperation": undefined as string
         }
     };
     
@@ -1529,7 +1530,8 @@ class ongoingTasksStats extends viewModelBase {
             return (tracks as dictionary<string>)[operationName];
         }
 
-        throw new Error("Unable to find color for: " + operationName);
+        console.warn(`Operation "${operationName}" is not supported. Using unknown-operation color in ongoing tasks graph.`);
+        return tracks.UnknownOperation;
     }
 
     private getTaskType(taskName: string): ongoingTaskStatType {
