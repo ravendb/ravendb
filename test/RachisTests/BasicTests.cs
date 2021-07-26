@@ -31,7 +31,11 @@ namespace RachisTests
             {
                 for (var i = 0; i < 5; i++)
                 {
-                    var (index, _) = await leader.PutAsync(new TestCommand { Name = "test", Value = i });
+                    long index = 0;
+                    await ActionWithLeader( async l =>
+                    {
+                       (index, _)  = await l.PutAsync(new TestCommand {Name = "test", Value = i});
+                    });
                     lastIndex = index;
                 }
             }
