@@ -24,7 +24,7 @@ namespace SlowTests.Issues
         public async Task Can_failover_after_consecutive_failures(int nodes)
         {
             const string databaseName = "test";
-            var (_, leader) = await CreateRaftCluster(nodes);
+            var (servers, leader) = await CreateRaftCluster(nodes);
             using (var store = new DocumentStore
             {
                 Urls = new[] { leader.WebUrl },
@@ -41,7 +41,8 @@ namespace SlowTests.Issues
                     session.SaveChanges();
 
                     Assert.True(await WaitForDocumentInClusterAsync<Order>(
-                        session,
+                        servers,
+                        databaseName,
                         "orders/1",
                         u => u.Company.Equals("Hibernating Rhinos"),
                         TimeSpan.FromSeconds(10)));
@@ -79,7 +80,7 @@ namespace SlowTests.Issues
         public async Task Will_throw_when_all_nodes_are_down(int nodes)
         {
             const string databaseName = "test";
-            var (_, leader) = await CreateRaftCluster(nodes);
+            var (servers, leader) = await CreateRaftCluster(nodes);
             using (var store = new DocumentStore
             {
                 Urls = new []{ leader .WebUrl },
@@ -97,7 +98,8 @@ namespace SlowTests.Issues
                     session.SaveChanges();
 
                     Assert.True(await WaitForDocumentInClusterAsync<Order>(
-                        session,
+                        servers,
+                        databaseName,
                         "orders/1",
                         u => u.Company.Equals("Hibernating Rhinos"),
                         TimeSpan.FromSeconds(10)));

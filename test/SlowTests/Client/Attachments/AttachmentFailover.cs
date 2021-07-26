@@ -27,7 +27,7 @@ namespace SlowTests.Client.Attachments
             const int size = 512 * 1024;
             const string hash = "BfKA8g/BJuHOTHYJ+A6sOt9jmFSVEDzCM3EcLLKCRMU=";
             UseNewLocalServer();
-            var (_, leader) = await CreateRaftCluster(3);
+            var (nodes, leader) = await CreateRaftCluster(3);
             using (var store = GetDocumentStore(new Options
             {
                 Server = leader,
@@ -54,7 +54,8 @@ namespace SlowTests.Client.Attachments
                     session.SaveChanges();
 
                     Assert.True(await WaitForDocumentInClusterAsync<User>(
-                        session,
+                        nodes,
+                        store.Database,
                         "users/1",
                         u => u.Name.Equals("Fitzchak"),
                         TimeSpan.FromSeconds(10)));
@@ -108,7 +109,7 @@ namespace SlowTests.Client.Attachments
             const string hash = "BfKA8g/BJuHOTHYJ+A6sOt9jmFSVEDzCM3EcLLKCRMU=";
             const int size = 512 * 1024;
             UseNewLocalServer();
-            var (_, leader) = await CreateRaftCluster(3);
+            var (nodes, leader) = await CreateRaftCluster(3);
             using (var store = GetDocumentStore(new Options
             {
                 Server = leader,
@@ -135,7 +136,8 @@ namespace SlowTests.Client.Attachments
                     session.SaveChanges();
 
                     Assert.True(await WaitForDocumentInClusterAsync<User>(
-                        session,
+                        nodes,
+                        store.Database,
                         "users/1",
                         u => u.Name.Equals("Fitzchak"),
                         TimeSpan.FromSeconds(10)));
