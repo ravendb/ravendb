@@ -26,6 +26,7 @@ namespace Raven.Client.Documents.Commands
             url = $"{node.Url}/databases/{node.Database}/subscriptions";
             if (_id != null)
                 url += "?id=" + Uri.EscapeDataString(_id);
+
             var request = new HttpRequestMessage
             {
                 Method = HttpMethod.Put,
