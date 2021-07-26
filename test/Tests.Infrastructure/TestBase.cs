@@ -15,6 +15,7 @@ using Newtonsoft.Json.Linq;
 using Raven.Client;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
+using Raven.Client.Properties;
 using Raven.Client.Util;
 using Raven.Debug.StackTrace;
 using Raven.Server;
@@ -207,7 +208,7 @@ namespace FastTests
                 var log = new StringBuilder();
                 byte[] certBytes;
                 string serverCertificatePath = null;
-                serverCertificatePath = Path.Combine(Path.GetTempPath(), "Server-" + DateTime.Today.ToString("yyyy-MM-dd") + ".pfx");
+                serverCertificatePath = Path.Combine(Path.GetTempPath(), $"Server-{RavenVersionAttribute.Instance.Build}-{DateTime.Today:yyyy-MM-dd}.pfx");
                 if (File.Exists(serverCertificatePath) == false)
                 {
                     try
@@ -249,6 +250,7 @@ namespace FastTests
                 }
 
                 SecretProtection.ValidatePrivateKey(serverCertificatePath, null, certBytes, out var pk);
+                SecretProtection.ValidateKeyUsages(serverCertificatePath, serverCertificate);
 
                 var clientCertificate1Path = GenerateClientCertificate(1, serverCertificate, pk);
                 var clientCertificate2Path = GenerateClientCertificate(2, serverCertificate, pk);
@@ -259,7 +261,7 @@ namespace FastTests
 
             string GenerateClientCertificate(int index, X509Certificate2 serverCertificate, Org.BouncyCastle.Pkcs.AsymmetricKeyEntry pk)
             {
-                string name = $"{Environment.MachineName}_CC_{index}_{DateTime.Today:yyyy-MM-dd}";
+                string name = $"{Environment.MachineName}_CC_{RavenVersionAttribute.Instance.Build}_{index}_{DateTime.Today:yyyy-MM-dd}";
                 string clientCertificatePath = Path.Combine(Path.GetTempPath(), name + ".pfx");
 
                 if (File.Exists(clientCertificatePath) == false)
