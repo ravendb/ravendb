@@ -68,46 +68,9 @@ namespace Raven.Server.Web.System
         public async Task Get()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            {
-                var dbId = Constants.Documents.Prefix + name;
-                using (context.OpenReadTransaction())
-                using (var dbDoc = ServerStore.Cluster.Read(context, dbId, out long etag))
-                {
-                    if (dbDoc == null)
-                    {
-                        HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                        HttpContext.Response.Headers["Database-Missing"] = name;
-                        await using (var writer = new AsyncBlittableJsonTextWriter(context, HttpContext.Response.Body))
-                        {
-                            context.Write(writer,
-                                new DynamicJsonValue
-                                {
-                                    ["Type"] = "Error",
-                                    ["Message"] = "Database " + name + " wasn't found"
-                                });
-                        }
-
-                        return;
-                    }
-
-                    await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                    {
-                        writer.WriteStartObject();
-                        writer.WriteDocumentPropertiesWithoutMetadata(context, new Document
-                        {
-                            Data = dbDoc
-                        });
-                        writer.WriteComma();
-                        writer.WritePropertyName("Etag");
-                        writer.WriteInteger(etag);
-                        writer.WriteEndObject();
-                    }
-                }
-            }
+            await Documents.Handlers.Admin.AdminConfigurationHandler.SendDatabaseRecord(name, ServerStore, HttpContext, ResponseBodyStream());
         }
-
+        
         // add database to already existing database group
         [RavenAction("/admin/databases/node", "PUT", AuthorizationStatus.Operator)]
         public async Task AddDatabaseNode()
