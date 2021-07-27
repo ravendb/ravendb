@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Jint.Native;
-using Jint.Native.Object;
-using Jint.Runtime;
+using V8.Net;
 using Lucene.Net.Documents;
 using Lucene.Net.Store;
 using Raven.Client;
@@ -82,7 +80,7 @@ namespace Raven.Server.Documents.Queries.Results
             _blittableTraverser = reduceResults ? BlittableJsonTraverser.FlatMapReduceResults : BlittableJsonTraverser.Default;
         }
 
-    
+       
 
         protected virtual void ValidateFieldsToFetch(FieldsToFetch fieldsToFetch)
         {
@@ -953,19 +951,20 @@ namespace Raven.Server.Documents.Queries.Results
             {
             }
 
-            public void Modify(ObjectInstance json)
+            public void Modify(V8NativeObject json)
             {
-                ObjectInstance metadata;
-                var value = json.Get(Constants.Documents.Metadata.Key);
-                if (value.Type == Types.Object)
-                    metadata = value.AsObject();
-                else
-                {
-                    metadata = json.Engine.Object.Construct(Array.Empty<JsValue>());
-                    json.Set(Constants.Documents.Metadata.Key, metadata, false);
-                }
+                var engine = json.Engine;
 
-                metadata.Set(Constants.Documents.Metadata.Projection, JsBoolean.True, false);
+                using (var jsMetadata = json.GetProperty(Constants.Documents.Metadata.Key))
+                {
+                    if (!jsMetadata.IsObject)
+                    {
+                        jsMetadata.Set(engine.CreateObject());
+                        json.SetProperty(Constants.Documents.Metadata.Key, jsMetadata);
+                    }
+
+                    jsMetadata.SetProperty(Constants.Documents.Metadata.Projection, engine.CreateValue(true));
+                }
             }
         }
     }

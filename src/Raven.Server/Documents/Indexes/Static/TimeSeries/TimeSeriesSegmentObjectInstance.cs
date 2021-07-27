@@ -1,163 +1,159 @@
 ﻿using System;
 using System.Collections.Generic;
-using Jint;
-using Jint.Native;
-using Jint.Native.Array;
-using Jint.Native.Object;
-using Jint.Runtime;
-using Jint.Runtime.Descriptors;
+using V8.Net;
 using Raven.Client.Documents.Indexes.TimeSeries;
 
 namespace Raven.Server.Documents.Indexes.Static.TimeSeries
 {
-    public class TimeSeriesSegmentObjectInstance : ObjectInstance
+    public class TimeSeriesSegmentObjectInstance : PropertiesObjectInstance
     {
         private readonly DynamicTimeSeriesSegment _segment;
 
-        private Dictionary<JsValue, PropertyDescriptor> _properties = new Dictionary<JsValue, PropertyDescriptor>();
-
-        public TimeSeriesSegmentObjectInstance(Engine engine, DynamicTimeSeriesSegment segment) : base(engine)
+        public TimeSeriesSegmentObjectInstance(DynamicTimeSeriesSegment segment) : base()
         {
             _segment = segment ?? throw new ArgumentNullException(nameof(segment));
-
-            SetPrototypeOf(engine.Object.PrototypeObject);
         }
 
-        public override bool Delete(JsValue property)
+        public TimeSeriesSegmentObjectInstance() : base()
         {
-            throw new NotSupportedException();
+            assert(false);
         }
-
-        public override PropertyDescriptor GetOwnProperty(JsValue property)
+        
+        public InternalHandle NamedPropertyGetter(V8Engine engine, ref string propertyName)
         {
-            if (_properties.TryGetValue(property, out var value) == false)
-                _properties[property] = value = GetPropertyValue(property);
+            if (_properties.TryGetValue(propertyName, out InternalHandle value) == false)
+            {
+                value = GetPropertyValue(engine, propertyName);
+                _properties[propertyName].Set(value);
+            }
 
             return value;
         }
 
-        private PropertyDescriptor GetPropertyValue(JsValue property)
+        private InternalHandle GetPropertyValue(V8Engine engine, ref string propertyName)
         {
-            if (property == nameof(DynamicTimeSeriesSegment.Entries))
-                return new TimeSeriesSegmentEntriesPropertyDescriptor(Engine, _segment);
+            InternalHandle jsRes;
+            if (propertyName == nameof(DynamicTimeSeriesSegment.Entries))
+                return jsRes.Set((V8EngineEx)engine.CreateObjectBinder(_segment.Entries, (V8EngineEx)engine.TypeBinderDynamicTimeSeriesEntries)._);
 
-            if (property == nameof(TimeSeriesSegment.DocumentId))
-                return new PropertyDescriptor(_segment._segmentEntry.DocId.ToString(), writable: false, enumerable: false, configurable: false);
+            if (propertyName == nameof(TimeSeriesSegment.DocumentId))
+                return engine.CreateValue(_segment._segmentEntry.DocId.ToString());
 
-            if (property == nameof(DynamicTimeSeriesSegment.Name))
-                return new PropertyDescriptor(_segment._segmentEntry.Name.ToString(), writable: false, enumerable: false, configurable: false);
+            if (propertyName == nameof(DynamicTimeSeriesSegment.Name))
+                return engine.CreateValue(_segment._segmentEntry.Name.ToString());
 
-            if (property == nameof(DynamicTimeSeriesSegment.Count))
-                return new PropertyDescriptor(_segment.Count, writable: false, enumerable: false, configurable: false);
+            if (propertyName == nameof(DynamicTimeSeriesSegment.Count))
+                return engine.CreateValue(_segment.Count);
 
-            if (property == nameof(DynamicTimeSeriesSegment.End))
-                return new PropertyDescriptor(_engine.Date.Construct(_segment.End), writable: false, enumerable: false, configurable: false);
+            if (propertyName == nameof(DynamicTimeSeriesSegment.End))
+                return engine.CreateValue(_engine.Date.Construct(_segment.End));
 
-            if (property == nameof(DynamicTimeSeriesSegment.Start))
-                return new PropertyDescriptor(_engine.Date.Construct(_segment.Start), writable: false, enumerable: false, configurable: false);
+            if (propertyName == nameof(DynamicTimeSeriesSegment.Start))
+                return engine.CreateValue(_engine.Date.Construct(_segment.Start));
 
-            return PropertyDescriptor.Undefined;
+            return InternalHandle.Empty;
         }
 
-        public override bool Set(JsValue property, JsValue value, JsValue receiver)
+        public class CustomBinder : PropertiesObjectInstance.CustomBinder<TimeSeriesSegmentObjectInstance>
         {
-            throw new NotSupportedException();
-        }
-
-        public override IEnumerable<KeyValuePair<JsValue, PropertyDescriptor>> GetOwnProperties()
-        {
-            throw new NotSupportedException();
-        }
-
-        public override List<JsValue> GetOwnPropertyKeys(Types types = Types.String | Types.Symbol)
-        {
-            throw new NotSupportedException();
-        }
-
-        private class TimeSeriesSegmentEntriesPropertyDescriptor : PropertyDescriptor
-        {
-            private readonly ArrayInstance _value;
-
-            public TimeSeriesSegmentEntriesPropertyDescriptor(Engine engine, DynamicTimeSeriesSegment segment)
-                : base(PropertyFlag.CustomJsValue | PropertyFlag.Writable | PropertyFlag.WritableSet | PropertyFlag.Enumerable | PropertyFlag.EnumerableSet)
+            public override InternalHandle NamedPropertyGetter(ref string propertyName)
             {
-                _value = CreateValue(engine, segment);
+                return _Handle.NamedPropertyGetter(Engine, propertyName);
             }
 
-            public override JsValue Get => CustomValue;
-
-            public override JsValue Set => throw new NotSupportedException();
-
-            protected override JsValue CustomValue
+            public override V8PropertyAttributes? NamedPropertyQuery(ref string propertyName)
             {
-                get => _value;
-                set
+                string[] propertyNames = { nameof(DynamicTimeSeriesSegment.Entries), nameof(TimeSeriesSegment.DocumentId), nameof(DynamicTimeSeriesSegment.Name), nameof(DynamicTimeSeriesSegment.Count), nameof(DynamicTimeSeriesSegment.End), nameof(DynamicTimeSeriesSegment.Start) };
+                if (propertyNames.IndexOf(propertyName) > -1)
                 {
-                    throw new NotSupportedException();
+                    return V8PropertyAttributes.Locked | V8PropertyAttributes.DontEnum;
                 }
+                return null;
             }
 
-            private static ArrayInstance CreateValue(Engine engine, DynamicTimeSeriesSegment segment)
+            public override InternalHandle NamedPropertyEnumerator()
             {
-                var items = new PropertyDescriptor[segment._segmentEntry.Segment.NumberOfLiveEntries];
-                var i = 0;
-                foreach (DynamicTimeSeriesSegment.DynamicTimeSeriesEntry entry in segment.Entries)
-                {
-                    items[i] = new TimeSeriesSegmentEntryPropertyDescriptor(engine, entry);
-                    i++;
-                }
+                string[] propertyNames = { nameof(_Handle.Tag), nameof(_Handle.Timestamp), nameof(_Handle.Value), nameof(_Handle.Values) };
 
-                var jsArray = new ArrayInstance(engine, items);
-                jsArray.SetPrototypeOf(engine.Array.PrototypeObject);
-
-                return jsArray;
+                int arrayLength =  propertyNames.Length;
+                var jsItems = propertyNames.Select(x => Engine.CreateValue(x)).ToArray();
+                return (V8EngineEx)Engine.CreateArrayWithDisposal(jsItems);
             }
         }
+    }
 
-        private class TimeSeriesSegmentEntryPropertyDescriptor : PropertyDescriptor
+    public class DynamicTimeSeriesEntriesCustomBinder : ObjectBinder<DynamicArray>
+    {
+
+        public override InternalHandle IndexedPropertyGetter(int index)
         {
-            private readonly ObjectInstance _value;
+            InternalHandle jsRes;
+            if (index < _Handle.Length)
+                return jsRes.Set((V8EngineEx)Engine.CreateObjectBinder((DynamicTimeSeriesSegment.DynamicTimeSeriesEntry)_Handle[index])._);
 
-            public TimeSeriesSegmentEntryPropertyDescriptor(Engine engine, DynamicTimeSeriesSegment.DynamicTimeSeriesEntry entry)
-                : base(PropertyFlag.CustomJsValue | PropertyFlag.Writable | PropertyFlag.WritableSet | PropertyFlag.Enumerable | PropertyFlag.EnumerableSet)
+            return InternalHandle.Empty;
+        }
+
+        public override V8PropertyAttributes? IndexedPropertyQuery(int index)
+        {
+            if (index < _Handle.Length)
+                return ScriptMemberSecurity.Locked;
+
+            return null;
+        }
+        public override InternalHandle IndexedPropertyEnumerator()
+        {
+            int arrayLength =  _Handle.Length;
+            var jsItems = Enumerable.Range(0, arrayLength).Select(x => Engine.CreateValue(x)).ToArray();
+
+            return (V8EngineEx)Engine.CreateArrayWithDisposal(jsItems);
+        }
+    }
+
+    public class DynamicTimeSeriesEntryCustomBinder : ObjectBinder<DynamicTimeSeriesSegment.DynamicTimeSeriesEntry>
+    {
+        public override InternalHandle NamedPropertyGetter(ref string propertyName)
+        {
+            if (propertyName == nameof(_Handle.Tag))
+                return Engine.CreateValue(_Handle._entry.Tag?.ToString());
+            if (propertyName == nameof(_Handle.Timestamp))
+                return Engine.CreateValue(_Handle._entry.Timestamp);
+            if (propertyName == nameof(_Handle.Value))
+                return Engine.CreateValue(_Handle._entry.Values.Span[0]);
+
+
+            if (propertyName == nameof(_Handle.Values))
             {
-                _value = CreateValue(engine, entry);
-            }
-
-            public override JsValue Get => CustomValue;
-
-            public override JsValue Set => throw new NotSupportedException();
-
-            protected override JsValue CustomValue
-            {
-                get => _value;
-                set
+                int arrayLength =  _Handle._entry.Values.Length;
+                var jsItems = new InternalHandle[arrayLength];
+                for (int i = 0; i < arrayLength; ++i)
                 {
-                    throw new NotSupportedException();
+                    jsItems[i] = Engine.CreateValue(_Handle._entry.Values.Span[i]);
                 }
+
+                return (V8EngineEx)Engine.CreateArrayWithDisposal(jsItems);
             }
 
-            private static ObjectInstance CreateValue(Engine engine, DynamicTimeSeriesSegment.DynamicTimeSeriesEntry entry)
+            return InternalHandle.Empty;
+        }
+
+        public override V8PropertyAttributes? NamedPropertyQuery(ref string propertyName)
+        {
+            string[] propertyNames = { nameof(_Handle.Tag), nameof(_Handle.Timestamp), nameof(_Handle.Value), nameof(_Handle.Values) };
+            if (propertyNames.IndexOf(propertyName) > -1)
             {
-                var value = new ObjectInstance(engine);
-
-                value.Set(nameof(entry.Tag), entry._entry.Tag?.ToString());
-                value.Set(nameof(entry.Timestamp), engine.Date.Construct(entry._entry.Timestamp));
-
-                var values = new JsValue[entry._entry.Values.Length];
-                for (var i = 0; i < values.Length; i++)
-                    values[i] = entry._entry.Values.Span[i];
-
-                var array = engine.Array.Construct(Arguments.Empty);
-                engine.Array.PrototypeObject.Push(array, values);
-
-                value.Set(nameof(entry.Value), values[0]);
-                value.Set(nameof(entry.Values), array);
-
-                value.SetPrototypeOf(engine.Object.PrototypeObject);
-
-                return value;
+                return V8PropertyAttributes.Locked;
             }
+            return null;
+        }
+
+        public override InternalHandle NamedPropertyEnumerator()
+        {
+            string[] propertyNames = { nameof(_Handle.Tag), nameof(_Handle.Timestamp), nameof(_Handle.Value), nameof(_Handle.Values) };
+
+            int arrayLength =  propertyNames.Length;
+            var jsItems = propertyNames.Select(x => Engine.CreateValue(x)).ToArray();
+            return (V8EngineEx)Engine.CreateArrayWithDisposal(jsItems);
         }
     }
 }

@@ -2,9 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
-using Jint.Native;
-using Jint.Runtime;
-using Jint.Runtime.Interop;
+using V8.Net;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Server.Documents.ETL.Stats;
@@ -13,12 +11,14 @@ using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
+
+
 namespace Raven.Server.Documents.ETL.Providers.SQL
 {
     internal class SqlDocumentTransformer : EtlTransformer<ToSqlItem, SqlTableWithRecords, EtlStatsScope, EtlPerformanceOperation>
     {
-        private static readonly JsValue DefaultVarCharSize = 50;
-        
+        private readonly int DefaultVarCharSize = 50;
+
         private readonly Transformation _transformation;
         private readonly SqlEtlConfiguration _config;
         private readonly Dictionary<string, SqlTableWithRecords> _tables;
@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
         private readonly List<SqlEtlTable> _tablesForScript;
 
         private EtlStatsScope _stats;
-
+        
         public SqlDocumentTransformer(Transformation transformation, DocumentDatabase database, DocumentsOperationContext context, SqlEtlConfiguration config)
             : base(database, context, new PatchRequest(transformation.Script, PatchRequestType.SqlEtl), null)
         {
@@ -55,13 +55,14 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
 
         public override void Initialize(bool debugMode)
         {
+            var engine = DocumentScript.ScriptEngine;
             base.Initialize(debugMode);
             
-            DocumentScript.ScriptEngine.SetValue("varchar",
-                new ClrFunctionInstance(DocumentScript.ScriptEngine, "varchar", (value, values) => ToVarcharTranslator(VarcharFunctionCall.AnsiStringType, values)));
+            DocumentScript.ScriptEngine.GlobalObject.SetProperty("varchar",
+                new ClrFunctionInstance(DocumentScript.ScriptEngine, "varchar", (value, values) => ToVarcharTranslator(engine.CreateValue(VarcharFunctionCall.AnsiStringType), values)));
 
-            DocumentScript.ScriptEngine.SetValue("nvarchar",
-                new ClrFunctionInstance(DocumentScript.ScriptEngine, "nvarchar", (value, values) => ToVarcharTranslator(VarcharFunctionCall.StringType, values)));
+            DocumentScript.ScriptEngine.GlobalObject.SetProperty("nvarchar",
+                new ClrFunctionInstance(DocumentScript.ScriptEngine, "nvarchar", (value, values) => ToVarcharTranslator(engine.CreateValue(VarcharFunctionCall.StringType), values)));
         }
 
         protected override string[] LoadToDestinations { get; }
@@ -129,7 +130,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             return true;
         }
 
-        protected override void AddLoadedAttachment(JsValue reference, string name, Attachment attachment)
+        protected override void AddLoadedAttachment(InternalHandle reference, string name, Attachment attachment)
         {
             var strReference = reference.ToString();
             if (_loadedAttachments.TryGetValue(strReference, out var loadedAttachments) == false)
@@ -141,12 +142,12 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             loadedAttachments.Enqueue(attachment);
         }
 
-        protected override void AddLoadedCounter(JsValue reference, string name, long value)
+        protected override void AddLoadedCounter(InternalHandle reference, string name, long value)
         {
             throw new NotSupportedException("Counters aren't supported by SQL ETL");
         }
 
-        protected override void AddLoadedTimeSeries(JsValue reference, string name, IEnumerable<SingleResult> entries)
+        protected override void AddLoadedTimeSeries(InternalHandle reference, string name, IEnumerable<SingleResult> entries)
         {
             throw new NotSupportedException("Time series aren't supported by SQL ETL");
         }
@@ -202,38 +203,43 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             }
         }
 
-        private JsValue ToVarcharTranslator(JsValue type, JsValue[] args)
+        private InternalHandle ToVarcharTranslator(InternalHandle type, InternalHandle[] args)
         {
-            if (args[0].IsString() == false)
-                throw new InvalidOperationException("varchar() / nvarchar(): first argument must be a string");
+            var engine = DocumentScript.ScriptEngine;
 
-            var sizeSpecified = args.Length > 1;
+            using (type)
+            {
+                if (args[0].IsString == false)
+                    throw new InvalidOperationException("varchar() / nvarchar(): first argument must be a string");
 
-            if (sizeSpecified && args[1].IsNumber() == false)
-                throw new InvalidOperationException("varchar() / nvarchar(): second argument must be a number");
+                var sizeSpecified = args.Length > 1;
 
-            var item = DocumentScript.ScriptEngine.Object.Construct(Arguments.Empty);
+                if (sizeSpecified && args[1].IsNumber == false)
+                    throw new InvalidOperationException("varchar() / nvarchar(): second argument must be a number");
 
-            item.Set(nameof(VarcharFunctionCall.Type), type, true);
-            item.Set(nameof(VarcharFunctionCall.Value), args[0], true);
-            item.Set(nameof(VarcharFunctionCall.Size), sizeSpecified ? args[1] : DefaultVarCharSize, true);
-
-            return item;
+                InternalHandle item = engine.CreateObject();
+                {
+                    if (item.SetProperty(nameof(VarcharFunctionCall.Type), type) == false)
+                        throw new InvalidOperationException($"Failed to set {nameof(VarcharFunctionCall.Type)} on item");
+                    if (item.SetProperty(nameof(VarcharFunctionCall.Value), args[0]) == false)
+                        throw new InvalidOperationException($"Failed to set {nameof(VarcharFunctionCall.Value)} on item");
+                    using (var jsDefaultVarCharSize = engine.CreateValue(DefaultVarCharSize))
+                        if (item.SetProperty(nameof(VarcharFunctionCall.Size), sizeSpecified ? args[1] : jsDefaultVarCharSize) == false)
+                            throw new InvalidOperationException($"Failed to set {nameof(VarcharFunctionCall.Size)} on item");
+                }
+                return item;
+            }
         }
 
-        public class VarcharFunctionCall
+        public class VarcharFunctionCall : SqlDocumentTransformerBase<ScriptRunnerResult, ScriptRunner.SingleRun, JsBlittableBridge.IResultModifier>.VarcharFunctionCall
         {
-            public static JsValue AnsiStringType = DbType.AnsiString.ToString();
-            public static JsValue StringType = DbType.String.ToString();
-
-            public DbType Type { get; set; }
-            public object Value { get; set; }
-            public int Size { get; set; }
+            public static string AnsiStringType = DbType.AnsiString.ToString();
+            public static string StringType = DbType.String.ToString();
 
             private VarcharFunctionCall()
             {
-
             }
         }
+
     }
 }

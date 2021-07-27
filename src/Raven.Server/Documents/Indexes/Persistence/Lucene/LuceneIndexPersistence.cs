@@ -118,18 +118,18 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     switch (_index.SourceType)
                     {
                         case IndexSourceType.Documents:
-                            _converter = new JintLuceneDocumentConverter((MapIndex)index);
+                            _converter = new JsLuceneDocumentConverter((MapIndex)index);
                             break;
                         case IndexSourceType.TimeSeries:
-                            _converter = new CountersAndTimeSeriesJintLuceneDocumentConverter((MapTimeSeriesIndex)index);
+                            _converter = new CountersAndTimeSeriesJsLuceneDocumentConverter((MapTimeSeriesIndex)index);
                             break;
                         case IndexSourceType.Counters:
-                            _converter = new CountersAndTimeSeriesJintLuceneDocumentConverter((MapCountersIndex)index);
+                            _converter = new CountersAndTimeSeriesJsLuceneDocumentConverter((MapCountersIndex)index);
                             break;
                     }
                     break;
                 case IndexType.JavaScriptMapReduce:
-                    _converter = new JintLuceneDocumentConverter((MapReduceIndex)index, storeValue: true);
+                    _converter = new JsLuceneDocumentConverter((MapReduceIndex)index, storeValue: true);
                     break;
                 case IndexType.Faulty:
                     _converter = null;

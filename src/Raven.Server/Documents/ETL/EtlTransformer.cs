@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Jint;
-using Jint.Native;
-using Jint.Runtime.Interop;
+using V8.Net;
 using Raven.Client;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Attachments;
@@ -33,8 +31,10 @@ namespace Raven.Server.Documents.ETL
         private ScriptRunner.ReturnRun _returnMainRun;
         private ScriptRunner.ReturnRun _behaviorFunctionsRun;
 
+        public V8EngineEx Engine;
+
         protected EtlTransformer(DocumentDatabase database, DocumentsOperationContext context,
-            PatchRequest mainScript, PatchRequest behaviorFunctions)
+            PatchRequest mainScript, PatchRequest behaviorFunctions) 
         {
             Database = database;
             Context = context;
@@ -59,141 +59,148 @@ namespace Raven.Server.Documents.ETL
             if (debugMode)
                 DocumentScript.DebugMode = true;
 
-            DocumentScript.ScriptEngine.SetValue(Transformation.LoadTo, new ClrFunctionInstance(DocumentScript.ScriptEngine, Transformation.LoadTo, LoadToFunctionTranslator));
+            Engine = DocumentScript.ScriptEngine;
+            Engine.GlobalObject.SetProperty(Transformation.LoadTo, new ClrFunctionInstance(Engine, Transformation.LoadTo, LoadToFunctionTranslator));
 
             foreach (var collection in LoadToDestinations)
             {
                 var name = Transformation.LoadTo + collection;
-                DocumentScript.ScriptEngine.SetValue(name, new ClrFunctionInstance(DocumentScript.ScriptEngine, name, 
-                    (value, values) => LoadToFunctionTranslator(collection, value, values)));
+                Engine.GlobalObject.SetProperty(name, new ClrFunctionInstance(Engine, name, 
+                    (engine, isConstructCall, value, values) => LoadToFunctionTranslator(collection, value, values)));
             }
 
-            DocumentScript.ScriptEngine.SetValue(Transformation.LoadAttachment, new ClrFunctionInstance(DocumentScript.ScriptEngine, Transformation.LoadAttachment, LoadAttachment));
+            Engine.GlobalObject.SetProperty(Transformation.LoadAttachment, new ClrFunctionInstance(Engine, Transformation.LoadAttachment, LoadAttachment));
 
             const string loadCounter = Transformation.CountersTransformation.Load;
-            DocumentScript.ScriptEngine.SetValue(loadCounter, new ClrFunctionInstance(DocumentScript.ScriptEngine, loadCounter, LoadCounter));
+            Engine.GlobalObject.SetProperty(loadCounter, new ClrFunctionInstance(Engine, loadCounter, LoadCounter));
 
             const string loadTimeSeries = Transformation.TimeSeriesTransformation.LoadTimeSeries.Name;
-            DocumentScript.ScriptEngine.SetValue(loadTimeSeries, new ClrFunctionInstance(DocumentScript.ScriptEngine, loadTimeSeries, LoadTimeSeries));
+            Engine.GlobalObject.SetProperty(loadTimeSeries, new ClrFunctionInstance(Engine, loadTimeSeries, LoadTimeSeries));
 
-            DocumentScript.ScriptEngine.SetValue("getAttachments", new ClrFunctionInstance(DocumentScript.ScriptEngine, "getAttachments", GetAttachments));
+            Engine.GlobalObject.SetProperty("getAttachments", new ClrFunctionInstance(Engine, "getAttachments", GetAttachments));
 
-            DocumentScript.ScriptEngine.SetValue("hasAttachment", new ClrFunctionInstance(DocumentScript.ScriptEngine, "hasAttachment", HasAttachment));
+            Engine.GlobalObject.SetProperty("hasAttachment", new ClrFunctionInstance(Engine, "hasAttachment", HasAttachment));
 
-            DocumentScript.ScriptEngine.SetValue("getCounters", new ClrFunctionInstance(DocumentScript.ScriptEngine, "getCounters", GetCounters));
+            Engine.GlobalObject.SetProperty("getCounters", new ClrFunctionInstance(Engine, "getCounters", GetCounters));
 
-            DocumentScript.ScriptEngine.SetValue("hasCounter", new ClrFunctionInstance(DocumentScript.ScriptEngine, "hasCounter", HasCounter));
+            Engine.GlobalObject.SetProperty("hasCounter", new ClrFunctionInstance(Engine, "hasCounter", HasCounter));
             
             const string hasTimeSeries = Transformation.TimeSeriesTransformation.HasTimeSeries.Name;
-            DocumentScript.ScriptEngine.SetValue(hasTimeSeries, new ClrFunctionInstance(DocumentScript.ScriptEngine, hasTimeSeries, HasTimeSeries));
+            Engine.GlobalObject.SetProperty(hasTimeSeries, new ClrFunctionInstance(Engine, hasTimeSeries, HasTimeSeries));
             
             const string getTimeSeries = Transformation.TimeSeriesTransformation.GetTimeSeries.Name;
-            DocumentScript.ScriptEngine.SetValue(getTimeSeries, new ClrFunctionInstance(DocumentScript.ScriptEngine, getTimeSeries, GetTimeSeries));
+            Engine.GlobalObject.SetProperty(getTimeSeries, new ClrFunctionInstance(Engine, getTimeSeries, GetTimeSeries));
         }
 
-        private JsValue LoadToFunctionTranslator(JsValue self, JsValue[] args)
+        private InternalHandle LoadToFunctionTranslator(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
             if (args.Length != 2)
                 ThrowInvalidScriptMethodCall("loadTo(name, obj) must be called with exactly 2 parameters");
-            if (args[0].IsString() == false)
+            if (args[0].IsString == false)
                 ThrowInvalidScriptMethodCall("loadTo(name, obj) first argument must be a string");
-            if (args[1].IsObject() == false)
+            if (args[1].IsObject == false)
                 ThrowInvalidScriptMethodCall("loadTo(name, obj) second argument must be an object");
 
             // explicitly not disposing here, this will clear the context from the JavaScriptUtils, but this is 
             // called _midway_ through the script, so that is not something that we want to do. The caller will
             // already be calling that.
-            var result = new ScriptRunnerResult(DocumentScript, args[1].AsObject());
-            LoadToFunction(args[0].AsString(), result);
+            var result = new ScriptRunnerResult(DocumentScript, args[1]);
+            LoadToFunction(args[0].AsString, result);
             return result.Instance;
         }
 
-        private JsValue LoadToFunctionTranslator(string name, JsValue self, JsValue[] args)
+        private InternalHandle LoadToFunctionTranslator(string name, InternalHandle self, params InternalHandle[] args)
         {
             if (args.Length != 1)
                 ThrowInvalidScriptMethodCall($"loadTo{name}(obj) must be called with exactly 1 parameter");
 
-            if (args[0].IsObject() == false)
+            if (args[0].IsObject == false)
                 ThrowInvalidScriptMethodCall($"loadTo{name}(obj) argument must be an object");
 
             // explicitly not disposing here, this will clear the context from the JavaScriptUtils, but this is 
             // called _midway_ through the script, so that is not something that we want to do. The caller will
             // already be calling that.
-            var result = new ScriptRunnerResult(DocumentScript, args[0].AsObject());
+            var result = new ScriptRunnerResult(DocumentScript, args[0]);
             LoadToFunction(name, result);
             return result.Instance;
         }
 
-        protected abstract void AddLoadedAttachment(JsValue reference, string name, Attachment attachment);
+        protected abstract void AddLoadedAttachment(InternalHandle reference, string name, Attachment attachment);
 
-        protected abstract void AddLoadedCounter(JsValue reference, string name, long value);
+        protected abstract void AddLoadedCounter(InternalHandle reference, string name, long value);
         
-        protected abstract void AddLoadedTimeSeries(JsValue reference, string name, IEnumerable<SingleResult> entries);
+        protected abstract void AddLoadedTimeSeries(InternalHandle reference, string name, IEnumerable<SingleResult> entries);
 
-        private JsValue LoadAttachment(JsValue self, JsValue[] args)
+        private InternalHandle LoadAttachment(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args)
         {
-            if (args.Length != 1 || args[0].IsString() == false)
+            if (args.Length != 1 || args[0].IsString == false)
                 ThrowInvalidScriptMethodCall($"{Transformation.LoadAttachment}(name) must have a single string argument");
 
-            var attachmentName = args[0].AsString();
-            var loadAttachmentReference = CreateLoadAttachmentReference(attachmentName);
+            var attachmentName = args[0].AsString;
+            var loadAttachmentReference = CreateLoadAttachmentReference(engine, attachmentName);
 
             if ((Current.Document.Flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
             {
                 var attachment = Database.DocumentsStorage.AttachmentsStorage.GetAttachment(Context, Current.DocumentId, attachmentName, AttachmentType.Document, null);
 
-                if (attachment == null)
-                    return JsValue.Null;
+                if (attachment == null) {
+                    loadAttachmentReference.Dispose();
+                    return engine.CreateNullValue();
+                }
 
                 AddLoadedAttachment(loadAttachmentReference, attachmentName, attachment);
             }
             else
             {
-                return JsValue.Null;
+                loadAttachmentReference.Dispose();
+                return engine.CreateNullValue();
             }
 
             return loadAttachmentReference;
         }
 
-        private static JsValue CreateLoadAttachmentReference(string attachmentName)
+        private static InternalHandle CreateLoadAttachmentReference(V8EngineEx engine, string attachmentName)
         {
-            return $"{Transformation.AttachmentMarker}{attachmentName}{Guid.NewGuid():N}";
+            return engine.CreateValue($"{Transformation.AttachmentMarker}{attachmentName}{Guid.NewGuid():N}");
         }
 
-        private JsValue LoadCounter(JsValue self, JsValue[] args)
+        private InternalHandle LoadCounter(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args)
         {
-            if (args.Length != 1 || args[0].IsString() == false)
+            if (args.Length != 1 || args[0].IsString == false)
                 ThrowInvalidScriptMethodCall($"{Transformation.CountersTransformation.Load}(name) must have a single string argument");
 
-            var counterName = args[0].AsString();
-            var loadCounterReference = CreateLoadCounterReference(counterName);
+            var counterName = args[0].AsString;
+            var loadCounterReference = CreateLoadCounterReference(engine, counterName);
 
             if ((Current.Document.Flags & DocumentFlags.HasCounters) == DocumentFlags.HasCounters)
             {
                 var value = Database.DocumentsStorage.CountersStorage.GetCounterValue(Context, Current.DocumentId, counterName);
 
-                if (value == null)
-                    return JsValue.Null;
+                if (value == null) {
+                    loadCounterReference.Dispose();
+                    return engine.CreateNullValue();
+                }
 
                 AddLoadedCounter(loadCounterReference, counterName, value.Value.Value);
             }
             else
             {
-                return JsValue.Null;
+                loadCounterReference.Dispose();
+                return engine.CreateNullValue();
             }
 
             return loadCounterReference;
         }
 
-        private static JsValue CreateLoadCounterReference(string counterName)
+        private static InternalHandle CreateLoadCounterReference(V8EngineEx engine, string counterName)
         {
-            return Transformation.CountersTransformation.Marker + counterName;
+            return engine.CreateValue(Transformation.CountersTransformation.Marker + counterName);
         }
 
-        private JsValue LoadTimeSeries(JsValue self, JsValue[] args)
+        private InternalHandle LoadTimeSeries(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args)
         {
             if ((Current.Document.Flags & DocumentFlags.HasTimeSeries) == DocumentFlags.HasTimeSeries == false)
-                return JsValue.Null;
+                return engine.CreateNullValue();
 
             const int minParamsCount = Transformation.TimeSeriesTransformation.LoadTimeSeries.MinParamsCount;
             const int maxParamsCount = Transformation.TimeSeriesTransformation.LoadTimeSeries.MaxParamsCount;
@@ -202,30 +209,32 @@ namespace Raven.Server.Documents.ETL
             if (args.Length < minParamsCount || args.Length > maxParamsCount)
                 ThrowInvalidScriptMethodCall($"{signature} must have between {minParamsCount} to {maxParamsCount} arguments");
                 
-            if(args[0].IsString() == false)
+            if(args[0].IsString == false)
                 ThrowInvalidScriptMethodCall($"{signature}. The argument timeSeriesName must be a string");
-            var timeSeriesName = args[0].AsString();
+            var timeSeriesName = args[0].AsString;
 
             var from = args.Length < 2 ? DateTime.MinValue : ScriptRunner.GetDateArg(args[1], signature, "from"); 
             var to = args.Length < 3 ? DateTime.MaxValue : ScriptRunner.GetDateArg(args[2], signature, "to"); 
                 
-            var loadTimeSeriesReference = CreateLoadTimeSeriesReference(timeSeriesName, @from, to);
+            var loadTimeSeriesReference = CreateLoadTimeSeriesReference(engine, timeSeriesName, @from, to);
 
             var reader = Database.DocumentsStorage.TimeSeriesStorage.GetReader(Context, Current.DocumentId, timeSeriesName, from, to);
-            if(reader.AllValues().Any() == false)
-                return JsValue.Null;
+            if(reader.AllValues().Any() == false) {
+                loadTimeSeriesReference.Dispose();
+                return engine.CreateNullValue();
+            }
 
             AddLoadedTimeSeries(loadTimeSeriesReference, timeSeriesName, reader.AllValues());
 
             return loadTimeSeriesReference;
         }
 
-        private static JsValue CreateLoadTimeSeriesReference(string timeSeriesName, DateTime from, DateTime to)
+        private static InternalHandle CreateLoadTimeSeriesReference(V8EngineEx engine, string timeSeriesName, DateTime from, DateTime to)
         {
-            return Transformation.TimeSeriesTransformation.Marker + timeSeriesName + from.Ticks + ':' + to.Ticks;
+            return engine.CreateValue(Transformation.TimeSeriesTransformation.Marker + timeSeriesName + from.Ticks + ':' + to.Ticks);
         }
 
-        private JsValue GetAttachments(JsValue self, JsValue[] args)
+        private InternalHandle GetAttachments(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args)
         {
             if (args.Length != 0)
                 ThrowInvalidScriptMethodCall("getAttachments() must be called without any argument");
@@ -233,34 +242,34 @@ namespace Raven.Server.Documents.ETL
             if (Current.Document.TryGetMetadata(out var metadata) == false ||
                 metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachmentsBlittableArray) == false)
             {
-                return DocumentScript.ScriptEngine.Array.Construct(Array.Empty<JsValue>());
+                return Engine.CreateArray(Array.Empty<InternalHandle>());
             }
 
-            var attachments = new JsValue[attachmentsBlittableArray.Length];
-
-            for (int i = 0; i < attachmentsBlittableArray.Length; i++)
+            int arrayLength = attachmentsBlittableArray.Length;
+            var jsItems = new InternalHandle[arrayLength];
+            for (int i = 0; i < arrayLength; ++i)
             {
-                attachments[i] = (JsValue)DocumentScript.Translate(Context, attachmentsBlittableArray[i]);
+                jsItems[i] = (InternalHandle)DocumentScript.Translate(Context, attachmentsBlittableArray[i]);
             }
 
-            return DocumentScript.ScriptEngine.Array.Construct(attachments);
+            return Engine.CreateArrayWithDisposal(jsItems);
         }
 
-        private JsValue HasAttachment(JsValue self, JsValue[] args)
+        private InternalHandle HasAttachment(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args)
         {
-            if (args.Length != 1 || args[0].IsString() == false)
+            if (args.Length != 1 || args[0].IsString == false)
                 ThrowInvalidScriptMethodCall("hasAttachment(name) must be called with one argument (string)");
 
             if ((Current.Document.Flags & DocumentFlags.HasAttachments) != DocumentFlags.HasAttachments)
-                return false;
+                return Engine.CreateValue(false);
 
             if (Current.Document.TryGetMetadata(out var metadata) == false ||
                 metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false)
             {
-                return false;
+                return Engine.CreateValue(false);
             }
 
-            var checkedName = args[0].AsString();
+            var checkedName = args[0].AsString;
 
             foreach (var attachment in attachments)
             {
@@ -268,14 +277,14 @@ namespace Raven.Server.Documents.ETL
                 
                 if (attachmentInfo.TryGet(nameof(AttachmentName.Name), out string name) && checkedName.Equals(name, StringComparison.OrdinalIgnoreCase))
                 {
-                    return true;
+                    return Engine.CreateValue(true);
                 }
             }
 
-            return false;
+            return Engine.CreateValue(false);
         }
 
-        private JsValue GetCounters(JsValue self, JsValue[] args)
+        private InternalHandle GetCounters(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args)
         {
             if (args.Length != 0)
                 ThrowInvalidScriptMethodCall("getCounters() must be called without any argument");
@@ -283,47 +292,47 @@ namespace Raven.Server.Documents.ETL
             if (Current.Document.TryGetMetadata(out var metadata) == false ||
                 metadata.TryGet(Constants.Documents.Metadata.Counters, out BlittableJsonReaderArray countersArray) == false)
             {
-                return DocumentScript.ScriptEngine.Array.Construct(Array.Empty<JsValue>());
+                return Engine.CreateArray();
             }
 
-            var counters = new JsValue[countersArray.Length];
-
-            for (int i = 0; i < countersArray.Length; i++)
+            int arrayLength = countersArray.Length;
+            var jsItems = new InternalHandle[arrayLength];
+            for (int i = 0; i < arrayLength; ++i)
             {
-                counters[i] = (JsValue)DocumentScript.Translate(Context, countersArray[i]);
+                jsItems[i] = (InternalHandle)DocumentScript.Translate(Context, countersArray[i]);
             }
 
-            return DocumentScript.ScriptEngine.Array.Construct(counters);
+            return Engine.CreateArrayWithDisposal(jsItems);
         }
 
-        private JsValue HasCounter(JsValue self, JsValue[] args)
+        private InternalHandle HasCounter(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args)
         {
-            if (args.Length != 1 || args[0].IsString() == false)
+            if (args.Length != 1 || args[0].IsString == false)
                 ThrowInvalidScriptMethodCall("hasCounter(name) must be called with one argument (string)");
 
             if ((Current.Document.Flags & DocumentFlags.HasCounters) != DocumentFlags.HasCounters)
-                return false;
+                return engine.CreateValue(false);
 
             if (Current.Document.TryGetMetadata(out var metadata) == false ||
                 metadata.TryGet(Constants.Documents.Metadata.Counters, out BlittableJsonReaderArray counters) == false)
             {
-                return false;
+                return engine.CreateValue(false);
             }
 
-            var checkedName = args[0].AsString();
+            var checkedName = args[0].AsString;
 
             foreach (var counter in counters)
             {
                 var counterName = (LazyStringValue)counter;
 
                 if (checkedName.Equals(counterName, StringComparison.OrdinalIgnoreCase))
-                    return true;
+                    return engine.CreateValue(true);
             }
 
-            return false;
+            return engine.CreateValue(false);
         }
 
-        private JsValue GetTimeSeries(JsValue self, JsValue[] args)
+        private InternalHandle GetTimeSeries(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args)
         {
             const int paramsCount = Transformation.TimeSeriesTransformation.GetTimeSeries.ParamsCount;
             const string signature = Transformation.TimeSeriesTransformation.GetTimeSeries.Signature;
@@ -332,50 +341,50 @@ namespace Raven.Server.Documents.ETL
                 ThrowInvalidScriptMethodCall($"{signature} must be called without any argument");
 
             if ((Current.Document.Flags & DocumentFlags.HasTimeSeries) != DocumentFlags.HasTimeSeries)
-                return false;
+                return engine.CreateValue(false);
             
             if (Current.Document.TryGetMetadata(out var metadata) == false ||
                 metadata.TryGet(Constants.Documents.Metadata.TimeSeries, out BlittableJsonReaderArray timeSeriesArray) == false)
             {
-                return DocumentScript.ScriptEngine.Array.Construct(Array.Empty<JsValue>());
+                return Engine.CreateArray(Array.Empty<InternalHandle>());
             }
 
-            var timeSeriesNames = new JsValue[timeSeriesArray.Length];
+            var jsItems = new InternalHandle[timeSeriesArray.Length];
             for (int i = 0; i < timeSeriesArray.Length; i++)
             {
-                timeSeriesNames[i] = (JsValue)DocumentScript.Translate(Context, timeSeriesArray[i]);
+                jsItems[i] = (InternalHandle)DocumentScript.Translate(Context, timeSeriesArray[i]);
             }
-            return DocumentScript.ScriptEngine.Array.Construct(timeSeriesNames);
+            return Engine.CreateArrayWithDisposal(jsItems);
         }
 
-        private JsValue HasTimeSeries(JsValue self, JsValue[] args)
+        private InternalHandle HasTimeSeries(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args)
         {
             const int paramsCount = Transformation.TimeSeriesTransformation.HasTimeSeries.ParamsCount;
             const string signature = Transformation.TimeSeriesTransformation.HasTimeSeries.Signature;
 
-            if (args.Length != paramsCount || args[0].IsString() == false)
+            if (args.Length != paramsCount || args[0].IsString == false)
                 ThrowInvalidScriptMethodCall($"{signature} must be called with one argument (string)");
 
             if ((Current.Document.Flags & DocumentFlags.HasTimeSeries) != DocumentFlags.HasTimeSeries)
-                return false;
+                return engine.CreateValue(false);
 
             if (Current.Document.TryGetMetadata(out var metadata) == false ||
                 metadata.TryGet(Constants.Documents.Metadata.TimeSeries, out BlittableJsonReaderArray timeSeriesNames) == false)
             {
-                return false;
+                return engine.CreateValue(false);
             }
 
-            var checkedName = args[0].AsString();
+            var checkedName = args[0].AsString;
 
             foreach (var timeSeries in timeSeriesNames)
             {
                 var counterName = (LazyStringValue)timeSeries;
                 if (checkedName.Equals(counterName, StringComparison.OrdinalIgnoreCase))
-                    return true;
+                    return engine.CreateValue(true);
             }
 
-            return false;
-        }
+            return engine.CreateValue(false);
+        }        
         
         protected abstract string[] LoadToDestinations { get; }
 

@@ -8,6 +8,9 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.LowMemory;
 
+using Client.Exceptions.Documents.Patching;
+using V8.Net;
+
 namespace Raven.Server.Smuggler.Documents
 {
     public class SmugglerPatcher
@@ -38,9 +41,9 @@ namespace Raven.Server.Smuggler.Documents
                             translatedResult = _run.Translate(result, context, usageMode: BlittableJsonDocumentBuilder.UsageMode.ToDisk);
                         }
                     }
-                    catch (Client.Exceptions.Documents.Patching.JavaScriptException e)
+                    catch (JavaScriptException e)
                     {
-                        if (e.InnerException is Jint.Runtime.JavaScriptException innerException && string.Equals(innerException.Message, "skip", StringComparison.OrdinalIgnoreCase))
+                        if (e.InnerException is V8Exception innerException && string.Equals(innerException.Message, "skip", StringComparison.OrdinalIgnoreCase))
                             return null;
 
                         throw;

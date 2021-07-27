@@ -3,10 +3,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
-using Jint;
-using Jint.Native;
-using Jint.Native.Object;
-using Jint.Runtime.Interop;
+using V8.Net;
 using Microsoft.CSharp.RuntimeBinder;
 using Raven.Server.Extensions;
 using Sparrow.Json;
@@ -32,8 +29,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         public static IPropertyAccessor Create(Type type, object instance)
         {
-            if (type == typeof(ObjectInstance))
-                return new JintPropertyAccessor(null);
+            if (type == typeof(V8NativeObject))
+                return new JsPropertyAccessor(null);
 
             if (instance is Dictionary<string, object> dict)
                 return DictionaryAccessor.Create(dict);
@@ -151,8 +148,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         internal static IPropertyAccessor CreateMapReduceOutputAccessor(Type type, object instance, Dictionary<string, CompiledIndexField> groupByFields, bool isObjectInstance = false)
         {
-            if (isObjectInstance || type == typeof(ObjectInstance) || type.IsSubclassOf(typeof(ObjectInstance)))
-                return new JintPropertyAccessor(groupByFields);
+            if (isObjectInstance || type == typeof(V8NativeObject) || type.IsSubclassOf(typeof(V8NativeObject)))
+                return new JsPropertyAccessor(groupByFields);
 
             if (instance is Dictionary<string, object> dict)
                 return DictionaryAccessor.Create(dict, groupByFields);
@@ -161,84 +158,89 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         }
     }
 
-    internal class JintPropertyAccessor : IPropertyAccessor
+    internal class JsPropertyAccessor : IPropertyAccessor
     {
         private readonly Dictionary<string, CompiledIndexField> _groupByFields;
 
-        public JintPropertyAccessor(Dictionary<string, CompiledIndexField> groupByFields)
+        public JsPropertyAccessor(Dictionary<string, CompiledIndexField> groupByFields) : base(groupByFields)
         {
-            _groupByFields = groupByFields;
         }
 
-        public IEnumerable<(string Key, object Value, CompiledIndexField GroupByField, bool IsGroupByField)> GetPropertiesInOrder(object target)
+        public override IEnumerable<(string Key, object Value, CompiledIndexField GroupByField, bool IsGroupByField)> GetPropertiesInOrder(object target)
         {
-            if (!(target is ObjectInstance oi))
-                throw new ArgumentException($"JintPropertyAccessor.GetPropertiesInOrder is expecting a target of type ObjectInstance but got one of type {target.GetType().Name}.");
-            foreach (var property in oi.GetOwnProperties())
+            if (!(target is V8NativeObject oi))
+                throw new ArgumentException($"JsPropertyAccessor.GetPropertiesInOrder is expecting a target of type V8NativeObject but got one of type {target.GetType().Name}.");
+            foreach (var (propertyName, jsPropertyValue) in oi.GetOwnProperties())
             {
-                var propertyAsString = property.Key.AsString();
+                using (jsPropertyValue)
+                {
+                    CompiledIndexField field = null;
+                    var isGroupByField = _groupByFields?.TryGetValue(propertyName, out field) ?? false;
 
-                CompiledIndexField field = null;
-                var isGroupByField = _groupByFields?.TryGetValue(propertyAsString, out field) ?? false;
-
-                yield return (propertyAsString, GetValue(property.Value.Value), field, isGroupByField);
+                    yield return (propertyAsString, GetValue(jsPropertyValue), field, isGroupByField);
+                }
             }
         }
 
-        public object GetValue(string name, object target)
+        public override object GetValue(string name, object target)
         {
-            if (!(target is ObjectInstance oi))
-                throw new ArgumentException($"JintPropertyAccessor.GetValue is expecting a target of type ObjectInstance but got one of type {target.GetType().Name}.");
-            if (oi.HasOwnProperty(name) == false)
-                throw new MissingFieldException($"The target for 'JintPropertyAccessor.GetValue' doesn't contain the property {name}.");
-            return GetValue(oi.GetProperty(name).Value);
+            if (!(target is V8NativeObject oi))
+                throw new ArgumentException($"JsPropertyAccessor.GetValue is expecting a target of type V8NativeObject but got one of type {target.GetType().Name}.");
+            if (oi.HasOwnProperty(name))
+                throw new MissingFieldException($"The target for 'JsPropertyAccessor.GetValue' doesn't contain the property {name}.");
+            using (var jsValue = oi.GetProperty(name))
+                return GetValue(jsValue);
         }
 
-        private static object GetValue(JsValue jsValue)
+        private static object GetValue(InternalHandle jsValue)
         {
-            if (jsValue.IsNull())
+            if (jsValue.IsNull) {
+                jsValue.Dispose();
                 return null;
-            if (jsValue.IsString())
-                return jsValue.AsString();
-            if (jsValue.IsBoolean())
-                return jsValue.AsBoolean();
-            if (jsValue.IsNumber())
-                return jsValue.AsNumber();
-            if (jsValue.IsDate())
-                return jsValue.AsDate();
-            if (jsValue is ObjectWrapper ow)
-            {
-                var target = ow.Target;
-                switch (target)
-                {
-                    case LazyStringValue lsv:
-                        return lsv;
-
-                    case LazyCompressedStringValue lcsv:
-                        return lcsv;
-
-                    case LazyNumberValue lnv:
-                        return lnv; //should be already blittable supported type.
-                }
-                ThrowInvalidObject(jsValue);
             }
-            else if (jsValue.IsArray())
-            {
-                var arr = jsValue.AsArray();
-                var array = new object[arr.Length];
-                var i = 0;
-                foreach ((var key, var val) in arr.GetOwnPropertiesWithoutLength())
-                {
-                    array[i++] = GetValue(val.Value);
-                }
+            if (jsValue.IsString)
+                return jsValue.AsString;
+            if (jsValue.IsBoolean)
+                return jsValue.AsBoolean;
+            if (jsValue.IsNumber)
+                return jsValue.AsNumber;
+            if (jsValue.IsDate)
+                return jsValue.AsDate;
 
+            if (jsValue.IsArray)
+            {
+                int arrayLength =  jsValue.ArrayLength;
+                var array = new object[arrayLength];
+                for (int i = 0; i < arrayLength; i++)
+                {
+                    using (var value = jsValue.GetProperty(i))
+                        array[i++] = GetValue(value);
+                }
                 return array;
             }
-            else if (jsValue.IsObject())
+
+            if (jsValue.IsObject)
             {
-                return jsValue.AsObject();
+                var boundObject = jsValue.BoundObject;
+                if (boundObject != null)
+                {
+                    switch (boundObject)
+                    {
+                        case LazyStringValue lsv:
+                            return lsv;
+
+                        case LazyCompressedStringValue lcsv:
+                            return lcsv;
+
+                        case LazyNumberValue lnv:
+                            return lnv; //should be already blittable supported type.
+                    }
+                    ThrowInvalidObject(jsValue);
+                }
+                return jsValue.Object; // no need to KeepTrack() as we store Handle
             }
-            if (jsValue.IsUndefined())
+
+            if (jsValue.IsUndefined)
             {
                 return null;
             }
@@ -247,9 +249,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             return null;
         }
 
-        private static void ThrowInvalidObject(JsValue jsValue)
+        private static void ThrowInvalidObject(InternalHandle jsValue)
         {
-            throw new NotSupportedException($"Was requested to extract the value out of a JsValue object but could not figure its type, value={jsValue}");
+            throw new NotSupportedException($"Was requested to extract the value out of a InternalHandle object but could not figure its type, value={jsValue}");
         }
     }
 }

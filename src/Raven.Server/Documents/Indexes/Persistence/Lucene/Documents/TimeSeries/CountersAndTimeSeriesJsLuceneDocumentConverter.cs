@@ -4,24 +4,24 @@ using Raven.Server.Documents.Indexes.Static.TimeSeries;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.TimeSeries
 {
-    public sealed class CountersAndTimeSeriesJintLuceneDocumentConverter : JintLuceneDocumentConverterBase
+    public sealed class CountersAndTimeSeriesJsLuceneDocumentConverter : JsLuceneDocumentConverterBase
     {
-        public CountersAndTimeSeriesJintLuceneDocumentConverter(MapTimeSeriesIndex index)
+        public CountersAndTimeSeriesJsLuceneDocumentConverter(MapTimeSeriesIndex index)
             : base(index, index.Definition.IndexDefinition, numberOfBaseFields: 3, keyFieldName: Constants.Documents.Indexing.Fields.DocumentIdFieldName, storeValue: true, storeValueFieldName: Constants.Documents.Indexing.Fields.ValueFieldName)
         {
         }
 
-        public CountersAndTimeSeriesJintLuceneDocumentConverter(MapCountersIndex index)
+        public CountersAndTimeSeriesJsLuceneDocumentConverter(MapCountersIndex index)
             : base(index, index.Definition.IndexDefinition, numberOfBaseFields: 3, keyFieldName: Constants.Documents.Indexing.Fields.DocumentIdFieldName, storeValue: true, storeValueFieldName: Constants.Documents.Indexing.Fields.ValueFieldName)
         {
         }
 
-        public CountersAndTimeSeriesJintLuceneDocumentConverter(MapReduceTimeSeriesIndex index)
+        public CountersAndTimeSeriesJsLuceneDocumentConverter(MapReduceTimeSeriesIndex index)
             : base(index, index.Definition.IndexDefinition, numberOfBaseFields: 3, keyFieldName: Constants.Documents.Indexing.Fields.DocumentIdFieldName, storeValue: true, storeValueFieldName: Constants.Documents.Indexing.Fields.ValueFieldName)
         {
         }
 
-        public CountersAndTimeSeriesJintLuceneDocumentConverter(MapReduceCountersIndex index)
+        public CountersAndTimeSeriesJsLuceneDocumentConverter(MapReduceCountersIndex index)
             : base(index, index.Definition.IndexDefinition, numberOfBaseFields: 3, keyFieldName: Constants.Documents.Indexing.Fields.DocumentIdFieldName, storeValue: true, storeValueFieldName: Constants.Documents.Indexing.Fields.ValueFieldName)
         {
         }

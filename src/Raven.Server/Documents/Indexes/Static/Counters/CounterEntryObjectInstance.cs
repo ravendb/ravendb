@@ -1,67 +1,58 @@
 ﻿using System;
 using System.Collections.Generic;
-using Jint;
-using Jint.Native;
-using Jint.Native.Object;
-using Jint.Runtime;
-using Jint.Runtime.Descriptors;
+using V8.Net;
+
+//using Raven.Server.Documents.Indexes.Static.JavaScript;
 
 namespace Raven.Server.Documents.Indexes.Static.Counters
 {
-    public class CounterEntryObjectInstance : ObjectInstance
+    public class CounterEntryObjectInstance : PropertiesObjectInstance
     {
         private readonly DynamicCounterEntry _entry;
 
         private Dictionary<JsValue, PropertyDescriptor> _properties = new Dictionary<JsValue, PropertyDescriptor>();
 
-        public CounterEntryObjectInstance(Engine engine, DynamicCounterEntry entry)
-            : base(engine)
+        public CounterEntryObjectInstance(DynamicCounterEntry entry) : base()
         {
             _entry = entry ?? throw new ArgumentNullException(nameof(entry));
-
-            SetPrototypeOf(engine.Object.PrototypeObject);
         }
 
-        public override bool Delete(JsValue property)
+        public CounterEntryObjectInstance() : base()
         {
-            throw new NotSupportedException();
+            assert(false);
         }
-
-        public override PropertyDescriptor GetOwnProperty(JsValue property)
+        
+        public InternalHandle NamedPropertyGetter(V8Engine engine, ref string propertyName)
         {
-            if (_properties.TryGetValue(property, out var value) == false)
-                _properties[property] = value = GetPropertyValue(property);
+            if (_properties.TryGetValue(propertyName, out InternalHandle value) == false)
+            {
+                value = GetPropertyValue(engine, propertyName);
+                _properties[propertyName].Set(value);
+            }
 
             return value;
         }
 
-        private PropertyDescriptor GetPropertyValue(JsValue property)
+        private InternalHandle GetPropertyValue(V8Engine engine, ref string propertyName)
         {
-            if (property == nameof(DynamicCounterEntry.Value))
-                return new PropertyDescriptor(_entry._value, writable: false, enumerable: false, configurable: false);
+            if (propertyName == nameof(DynamicCounterEntry.Value))
+                return engine.CreateValue(_entry._value);
 
-            if (property == nameof(DynamicCounterEntry.DocumentId))
-                return new PropertyDescriptor(_entry._counterItemMetadata.DocumentId.ToString(), writable: false, enumerable: false, configurable: false);
+            if (propertyName == nameof(DynamicCounterEntry.DocumentId))
+                return engine.CreateValue(_entry._counterItemMetadata.DocumentId.ToString());
 
-            if (property == nameof(DynamicCounterEntry.Name))
-                return new PropertyDescriptor(_entry._counterItemMetadata.CounterName.ToString(), writable: false, enumerable: false, configurable: false);
+            if (propertyName == nameof(DynamicCounterEntry.Name))
+                return engine.CreateValue(_entry._counterItemMetadata.CounterName.ToString());
 
-            return PropertyDescriptor.Undefined;
+            return InternalHandle.Empty;
         }
 
-        public override bool Set(JsValue property, JsValue value, JsValue receiver)
+        public class CustomBinder : PropertiesObjectInstance.CustomBinder<CounterEntryObjectInstance>
         {
-            throw new NotSupportedException();
-        }
-
-        public override IEnumerable<KeyValuePair<JsValue, PropertyDescriptor>> GetOwnProperties()
-        {
-            throw new NotSupportedException();
-        }
-
-        public override List<JsValue> GetOwnPropertyKeys(Types types = Types.String | Types.Symbol)
-        {
-            throw new NotSupportedException();
+            public override InternalHandle NamedPropertyGetter(ref string propertyName)
+            {
+                return _Handle.NamedPropertyGetter(Engine, propertyName);
+            }
         }
     }
 }

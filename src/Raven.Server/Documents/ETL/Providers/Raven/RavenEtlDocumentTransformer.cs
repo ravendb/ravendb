@@ -2,11 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using Jint;
-using Jint.Native;
-using Jint.Native.Object;
-using Jint.Runtime.Descriptors;
-using Jint.Runtime.Interop;
+using V8.Net;
 using Raven.Client;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Commands.Batches;
@@ -31,9 +27,9 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
     {
         private readonly Transformation _transformation;
         private readonly ScriptInput _script;
-        private PropertyDescriptor _addAttachmentMethod;
-        private PropertyDescriptor _addCounterMethod;
-        private PropertyDescriptor _addTimeSeriesMethod;
+        private ClrFunctionInstance _addAttachmentMethod;
+        private ClrFunctionInstance _addCounterMethod;
+        private ClrFunctionInstance _addTimeSeriesMethod;
         private RavenEtlScriptRun _currentRun;
 
         public RavenEtlDocumentTransformer(Transformation transformation, DocumentDatabase database, DocumentsOperationContext context, ScriptInput script)
@@ -53,25 +49,39 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 return;
 
             if (_transformation.IsAddingAttachments)
-                _addAttachmentMethod = new PropertyDescriptor(new ClrFunctionInstance(DocumentScript.ScriptEngine, "addAttachment", AddAttachment), null, null, null);
+                _addAttachmentMethod = new ClrFunctionInstance(DocumentScript.ScriptEngine, "addAttachment", AddAttachment);
 
             if (_transformation.Counters.IsAddingCounters)
             {
                 const string addCounter = Transformation.CountersTransformation.Add;
-                _addCounterMethod = new PropertyDescriptor(new ClrFunctionInstance(DocumentScript.ScriptEngine, addCounter, AddCounter), null, null, null);
+                _addCounterMethod = new ClrFunctionInstance(DocumentScript.ScriptEngine, addCounter, AddCounter);
             }
 
             if (_transformation.TimeSeries.IsAddingTimeSeries)
             {
                 const string addTimeSeries = Transformation.TimeSeriesTransformation.AddTimeSeries.Name;
-                _addTimeSeriesMethod = new PropertyDescriptor(new ClrFunctionInstance(DocumentScript.ScriptEngine, addTimeSeries, AddTimeSeries), null, null, null);
+                _addTimeSeriesMethod = new ClrFunctionInstance(DocumentScript.ScriptEngine, addTimeSeries, AddTimeSeries);
             }
+        }
+
+        public static void SetPropertyOrThrow(InternalHandle jsObj, string propertyName, InternalHandle jsValue)
+        {
+            if (jsObj.SetProperty(propertyName, jsValue) == false)
+                throw new InvalidOperationException($"Failed to set property {propertyName}");
+        }
+
+        public static void DeletePropertyOrThrow(InternalHandle jsObj, string propertyName)
+        {
+            if (jsObj.DeleteProperty(propertyName) == false)
+                throw new InvalidOperationException($"Failed to delete property {propertyName}");
         }
 
         protected override string[] LoadToDestinations { get; }
 
         protected override void LoadToFunction(string collectionName, ScriptRunnerResult document)
         {
+            V8EngineEx engine = DocumentScript.ScriptEngine;
+
             if (collectionName == null)
                 ThrowLoadParameterIsMandatory(nameof(collectionName));
 
@@ -88,16 +98,17 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 loadedToDifferentCollection = true;
             }
 
-            var metadata = document.GetOrCreate(Constants.Documents.Metadata.Key);
+            using (var metadata = document.GetOrCreate(Constants.Documents.Metadata.Key).InternalHandle)
+            {
+                if (loadedToDifferentCollection || metadata.HasProperty(Constants.Documents.Metadata.Collection) == false)
+                    SetPropertyOrThrow(metadata, Constants.Documents.Metadata.Collection, engine.CreateValue(collectionName));
 
-            if (loadedToDifferentCollection || metadata.HasProperty(Constants.Documents.Metadata.Collection) == false)
-                metadata.Set(Constants.Documents.Metadata.Collection, collectionName, throwOnError: true);
+                if (metadata.HasProperty(Constants.Documents.Metadata.Attachments))
+                    DeletePropertyOrThrow(metadata, Constants.Documents.Metadata.Attachments);
 
-            if (metadata.HasProperty(Constants.Documents.Metadata.Attachments))
-                metadata.DeletePropertyOrThrow(Constants.Documents.Metadata.Attachments);
-
-            if (metadata.HasProperty(Constants.Documents.Metadata.Counters))
-                metadata.DeletePropertyOrThrow(Constants.Documents.Metadata.Counters);
+                if (metadata.HasProperty(Constants.Documents.Metadata.Counters))
+                    DeletePropertyOrThrow(metadata, Constants.Documents.Metadata.Counters);
+            }
 
             var transformed = document.TranslateToObject(Context);
 
@@ -107,38 +118,36 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
             if (_transformation.IsAddingAttachments)
             {
-                var docInstance = (ObjectInstance)document.Instance;
-
-                docInstance.DefinePropertyOrThrow(Transformation.AddAttachment, _addAttachmentMethod);
+                using (var docInstance = document.Instance)
+                    docInstance.SetProperty(Transformation.AddAttachment, _addAttachmentMethod, V8PropertyAttributes.ReadOnly); // or Locked
             }
 
             if (_transformation.Counters.IsAddingCounters)
             {
-                var docInstance = (ObjectInstance)document.Instance;
-
-                docInstance.DefinePropertyOrThrow(Transformation.CountersTransformation.Add, _addCounterMethod);
+                using (var docInstance = document.Instance)
+                    docInstance.SetProperty(Transformation.CountersTransformation.Add, _addCounterMethod, V8PropertyAttributes.ReadOnly); // or Locked
             }
             
             if (_transformation.TimeSeries.IsAddingTimeSeries)
             {
-                var docInstance = (ObjectInstance)document.Instance;
-
-                docInstance.DefinePropertyOrThrow(Transformation.TimeSeriesTransformation.AddTimeSeries.Name, _addTimeSeriesMethod);
+                using (var docInstance = document.Instance)
+                    docInstance.SetProperty(Transformation.TimeSeriesTransformation.AddTimeSeries.Name, _addTimeSeriesMethod, V8PropertyAttributes.ReadOnly); // or Locked
             }
         }
 
-        private JsValue AddAttachment(JsValue self, JsValue[] args)
+        private InternalHandle AddAttachment(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
-            JsValue attachmentReference = null;
+            InternalHandle jsRes;
+            InternalHandle attachmentReference;
             string name = null; // will preserve original name
 
             switch (args.Length)
             {
                 case 2:
-                    if (args[0].IsString() == false)
+                    if (args[0].IsString == false)
                         ThrowInvalidScriptMethodCall($"First argument of {Transformation.AddAttachment}(name, attachment) must be string");
 
-                    name = args[0].AsString();
+                    name = args[0].AsString;
                     attachmentReference = args[1];
                     break;
                 case 1:
@@ -149,52 +158,53 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                     break;
             }
 
-            if (attachmentReference.IsNull())
-                return self;
+            if (attachmentReference.IsNull) {
+                return jsRes.Set(self);
+            }
 
-            if (attachmentReference.IsString() == false || attachmentReference.AsString().StartsWith(Transformation.AttachmentMarker) == false)
+            if (attachmentReference.IsString == false || attachmentReference.AsString.StartsWith(Transformation.AttachmentMarker) == false)
             {
                 var message =
-                    $"{Transformation.AddAttachment}() method expects to get the reference to an attachment while it got argument of '{attachmentReference.Type}' type";
+                    $"{Transformation.AddAttachment}() method expects to get the reference to an attachment while it got argument of '{attachmentReference.ValueType}' type";
 
-                if (attachmentReference.IsString())
-                    message += $" (value: '{attachmentReference.AsString()}')";
+                if (attachmentReference.IsString)
+                    message += $" (value: '{attachmentReference.AsString}')";
 
                 ThrowInvalidScriptMethodCall(message);
             }
 
             _currentRun.AddAttachment(self, name, attachmentReference);
-
-            return self;
+            return jsRes.Set(self);
         }
 
-        private JsValue AddCounter(JsValue self, JsValue[] args)
+        private InternalHandle AddCounter(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
             if (args.Length != 1)
                 ThrowInvalidScriptMethodCall($"{Transformation.CountersTransformation.Add} must have one arguments");
 
+            InternalHandle jsRes;
             var counterReference = args[0];
 
-            if (counterReference.IsNull())
-                return self;
+            if (counterReference.IsNull)
+                return jsRes.Set(self);
 
-            if (counterReference.IsString() == false || counterReference.AsString().StartsWith(Transformation.CountersTransformation.Marker) == false)
+            if (counterReference.IsString == false || counterReference.AsString.StartsWith(Transformation.CountersTransformation.Marker) == false)
             {
                 var message =
-                    $"{Transformation.CountersTransformation.Add}() method expects to get the reference to a counter while it got argument of '{counterReference.Type}' type";
+                    $"{Transformation.CountersTransformation.Add}() method expects to get the reference to a counter while it got argument of '{counterReference.ValueType}' type";
 
-                if (counterReference.IsString())
-                    message += $" (value: '{counterReference.AsString()}')";
+                if (counterReference.IsString)
+                    message += $" (value: '{counterReference.AsString}')";
 
                 ThrowInvalidScriptMethodCall(message);
             }
 
             _currentRun.AddCounter(self, counterReference);
 
-            return self;
+            return jsRes.Set(self);
         }
         
-        private JsValue AddTimeSeries(JsValue self, JsValue[] args)
+        private InternalHandle AddTimeSeries(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
             if (args.Length != Transformation.TimeSeriesTransformation.AddTimeSeries.ParamsCount)
             {
@@ -203,18 +213,19 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                     $"Signature `{Transformation.TimeSeriesTransformation.AddTimeSeries.Signature}`");
             }
 
+            InternalHandle jsRes;
             var timeSeriesReference = args[0];
 
-            if (timeSeriesReference.IsNull())
-                return self;
+            if (timeSeriesReference.IsNull)
+                return jsRes.Set(self);
 
-            if (timeSeriesReference.IsString() == false || timeSeriesReference.AsString().StartsWith(Transformation.TimeSeriesTransformation.Marker) == false)
+            if (timeSeriesReference.IsString == false || timeSeriesReference.AsString.StartsWith(Transformation.TimeSeriesTransformation.Marker) == false)
             {
                 var message =
-                    $"{Transformation.TimeSeriesTransformation.AddTimeSeries.Name} method expects to get the reference to a time-series while it got argument of '{timeSeriesReference.Type}' type";
+                    $"{Transformation.TimeSeriesTransformation.AddTimeSeries.Name} method expects to get the reference to a time-series while it got argument of '{timeSeriesReference.ValueType}' type";
 
-                if (timeSeriesReference.IsString())
-                    message += $" (value: '{timeSeriesReference.AsString()}')";
+                if (timeSeriesReference.IsString)
+                    message += $" (value: '{timeSeriesReference.AsString}')";
 
                 message += $". Signature `{Transformation.TimeSeriesTransformation.AddTimeSeries.Signature}`";
                 ThrowInvalidScriptMethodCall(message);
@@ -222,8 +233,9 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
             _currentRun.AddTimeSeries(self, timeSeriesReference);
 
-            return self;
+            return jsRes.Set(self);
         }
+
 
         private string GetPrefixedId(LazyStringValue documentId, string loadCollectionName)
         {
@@ -550,6 +562,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             toLoad = null;
             using (var scriptRunnerResult = BehaviorsScript.Run(Context, Context, function, new object[] {docId, timeSeriesName}))
             {
+                var engine = (V8EngineEx)scriptRunnerResult.Instance.Engine;
                 if (scriptRunnerResult.BooleanValue != null)
                 {
                     if (scriptRunnerResult.BooleanValue == false)
@@ -559,31 +572,33 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 {
                     return true;
                 }
-                else if (scriptRunnerResult.Instance.IsObject() == false)
+                else if (scriptRunnerResult.Instance.IsObject == false)
                 {
                     throw new InvalidOperationException($"Return type of `{function}` function should be a boolean or object. docId({docId}), timeSeriesName({timeSeriesName})");
                 }
                 else
                 {
                     var toLoadLocal = (From: DateTime.MinValue, To: DateTime.MaxValue);
-                    foreach ((JsValue jsValue, PropertyDescriptor propertyDescriptor) in scriptRunnerResult.Instance.AsObject().GetOwnProperties())
+                    foreach (var (propertyName, jsPropertyValue) in scriptRunnerResult.Instance.GetOwnProperties())
                     {
-                        var key = jsValue.AsString();
-                        if (key.Equals("from", StringComparison.OrdinalIgnoreCase))
+                        using (jsPropertyValue)
                         {
-                            if (toLoadLocal.From != DateTime.MinValue)
-                                throw new InvalidOperationException($"Duplicate of property `From`/`from`. docId({docId}), timeSeriesName({timeSeriesName}), function({function})");
-                            toLoadLocal.From = propertyDescriptor.Value.AsDate().ToDateTime();
-                        }
-                        else if (key.Equals("to", StringComparison.OrdinalIgnoreCase))
-                        {
-                            if (toLoadLocal.To != DateTime.MaxValue)
-                                throw new InvalidOperationException($"Duplicate of property `To`/`to`. docId({docId}), timeSeriesName({timeSeriesName}), function({function})");
-                            toLoadLocal.To = propertyDescriptor.Value.AsDate().ToDateTime();
-                        }
-                        else
-                        {
-                            throw new InvalidOperationException($"Returned object should contain only `from` and `to` property but contain `{key}`. docId({docId}), timeSeriesName({timeSeriesName}), function({function})");
+                            if (propertyName.Equals("from", StringComparison.OrdinalIgnoreCase))
+                            {
+                                if (toLoadLocal.From != DateTime.MinValue)
+                                    throw new InvalidOperationException($"Duplicate of property `From`/`from`. docId({docId}), timeSeriesName({timeSeriesName}), function({function})");
+                                toLoadLocal.From = jsPropertyValue.AsDate;
+                            }
+                            else if (propertyName.Equals("to", StringComparison.OrdinalIgnoreCase))
+                            {
+                                if (toLoadLocal.To != DateTime.MaxValue)
+                                    throw new InvalidOperationException($"Duplicate of property `To`/`to`. docId({docId}), timeSeriesName({timeSeriesName}), function({function})");
+                                toLoadLocal.To = jsPropertyValue.AsDate;
+                            }
+                            else
+                            {
+                                throw new InvalidOperationException($"Returned object should contain only `from` and `to` property but contain `{propertyName}`. docId({docId}), timeSeriesName({timeSeriesName}), function({function})");
+                            }
                         }
                     }
 
@@ -737,22 +752,22 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             return Database.DocumentsStorage.CountersStorage.GetCounterValuesForDocument(Context, item.DocumentId);
         }
 
-        protected override void AddLoadedAttachment(JsValue reference, string name, Attachment attachment)
+        protected override void AddLoadedAttachment(InternalHandle reference, string name, Attachment attachment)
         {
             _currentRun.LoadAttachment(reference, attachment);
         }
 
-        protected override void AddLoadedCounter(JsValue reference, string name, long value)
+        protected override void AddLoadedCounter(InternalHandle reference, string name, long value)
         {
             _currentRun.LoadCounter(reference, name, value);
         }
         
-        protected override void AddLoadedTimeSeries(JsValue reference, string name, IEnumerable<SingleResult> entries)
+        protected override void AddLoadedTimeSeries(InternalHandle reference, string name, IEnumerable<SingleResult> entries)
         {
             _currentRun.LoadTimeSeries(reference, name, entries);
         }
 
-        private List<Attachment> GetAttachmentsFor(RavenEtlItem item)
+         private List<Attachment> GetAttachmentsFor(RavenEtlItem item)
         {
             if ((Current.Document.Flags & DocumentFlags.HasAttachments) != DocumentFlags.HasAttachments)
                 return null;
@@ -937,5 +952,5 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             Put,
             Delete
         }
-    }
+   }
 }

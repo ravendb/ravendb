@@ -15,6 +15,7 @@ using Raven.Server.SqlMigration.Schema;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using DbProviderFactories = Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters.DbProviderFactories;
+using V8.Net;
 
 namespace Raven.Server.SqlMigration
 {
@@ -67,7 +68,7 @@ namespace Raven.Server.SqlMigration
                     } 
                     catch (JavaScriptException e)
                     {
-                        if (e.InnerException is Jint.Runtime.JavaScriptException innerException && string.Equals(innerException.Message, "skip", StringComparison.OrdinalIgnoreCase))
+                        if (e.InnerException is V8Exception innerException && string.Equals(innerException.Message, "skip", StringComparison.OrdinalIgnoreCase))
                         {
                             throw new InvalidOperationException("Document was skipped", e);
                         } 
@@ -146,7 +147,7 @@ namespace Raven.Server.SqlMigration
                                 }
                                 catch (JavaScriptException e)
                                 {
-                                    if (e.InnerException is Jint.Runtime.JavaScriptException innerException && string.Equals(innerException.Message, "skip", StringComparison.OrdinalIgnoreCase))
+                                    if (e.InnerException is V8Exception innerException && string.Equals(innerException.Message, "skip", StringComparison.OrdinalIgnoreCase))
                                     {
                                         collectionCount.SkippedCount++;
                                     } 
