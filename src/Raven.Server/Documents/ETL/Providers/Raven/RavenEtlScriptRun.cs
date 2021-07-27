@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using Jint.Native;
+using V8.Net;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.TimeSeries;
@@ -16,27 +16,27 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         private readonly EtlStatsScope _stats;
         private readonly List<ICommandData> _deletes = new List<ICommandData>();
 
-        private Dictionary<JsValue, (string Id, BlittableJsonReaderObject Document)> _putsByJsReference;
+        private Dictionary<Handle, (string Id, BlittableJsonReaderObject Document)> _putsByJsReference;
         
-        private Dictionary<JsValue, List<(string Name, Attachment Attachment)>> _addAttachments;
+        private Dictionary<Handle, List<(string Name, Attachment Attachment)>> _addAttachments;
 
-        private Dictionary<JsValue, Attachment> _loadedAttachments;
+        private Dictionary<Handle, Attachment> _loadedAttachments;
 
-        private Dictionary<JsValue, List<CounterOperation>> _countersByJsReference;
+        private Dictionary<Handle, List<CounterOperation>> _countersByJsReference;
 
         private Dictionary<LazyStringValue, List<CounterOperation>> _countersByDocumentId;
         
-        private Dictionary<JsValue, Dictionary<JsValue, TimeSeriesOperation>> _timeSeriesByJsReference;
+        private Dictionary<Handle, Dictionary<Handle, TimeSeriesOperation>> _timeSeriesByJsReference;
 
         private Dictionary<LazyStringValue, Dictionary<string, TimeSeriesBatchCommandData>> _timeSeriesByDocumentId;
 
-        private Dictionary<JsValue, (string Name, long Value)> _loadedCountersByJsReference;
+        private Dictionary<Handle, (string Name, long Value)> _loadedCountersByJsReference;
         
-        private Dictionary<JsValue, (string Name, IEnumerable<SingleResult> Value)> _loadedTimeSeriesByJsReference;
+        private Dictionary<Handle, (string Name, IEnumerable<SingleResult> Value)> _loadedTimeSeriesByJsReference;
 
         private Dictionary<string, List<ICommandData>> _fullDocuments;
 
-        public RavenEtlScriptRun(EtlStatsScope stats)
+        public RavenEtlScriptRun(EtlStatsScope stats) : base(stats)
         {
             _stats = stats;
         }
@@ -96,39 +96,39 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             }
         }
 
-        public void Put(string id, JsValue instance, BlittableJsonReaderObject doc)
+        public void Put(string id, InternalHandle instance, BlittableJsonReaderObject doc)
         {
             Debug.Assert(instance != null);
 
-            _putsByJsReference ??= new Dictionary<JsValue, (string Id, BlittableJsonReaderObject)>();
+            _putsByJsReference ??= new Dictionary<Handle, (string Id, BlittableJsonReaderObject)>();
 
             _putsByJsReference.Add(instance, (id, doc));
             _stats.IncrementBatchSize(doc.Size);
         }
 
-        public void LoadAttachment(JsValue attachmentReference, Attachment attachment)
+        public void LoadAttachment(InternalHandle attachmentReference, Attachment attachment)
         {
-            _loadedAttachments ??= new Dictionary<JsValue, Attachment>();
+            _loadedAttachments ??= new Dictionary<Handle, Attachment>();
             _loadedAttachments.Add(attachmentReference, attachment);
         }
 
-        public void LoadCounter(JsValue counterReference, string name, long value)
+        public void LoadCounter(InternalHandle counterReference, string name, long value)
         {
-            _loadedCountersByJsReference ??= new Dictionary<JsValue, (string, long)>();
+            _loadedCountersByJsReference ??= new Dictionary<Handle, (string, long)>();
             _loadedCountersByJsReference.TryAdd(counterReference, (name, value));
         }
         
-        public void LoadTimeSeries(JsValue reference, string name, IEnumerable<SingleResult> value)
+        public void LoadTimeSeries(InternalHandle reference, string name, IEnumerable<SingleResult> value)
         {
-            (_loadedTimeSeriesByJsReference ??= new Dictionary<JsValue, (string, IEnumerable<SingleResult>)>())
+            (_loadedTimeSeriesByJsReference ??= new Dictionary<Handle, (string, IEnumerable<SingleResult>)>())
                 .TryAdd(reference, (name, value));
         }
 
-        public void AddAttachment(JsValue instance, string name, JsValue attachmentReference)
+        public void AddAttachment(InternalHandle instance, string name, InternalHandle attachmentReference)
         {
             var attachment = _loadedAttachments[attachmentReference];
 
-            _addAttachments ??= new Dictionary<JsValue, List<(string, Attachment)>>();
+            _addAttachments ??= new Dictionary<Handle, List<(string, Attachment)>>();
 
             if (_addAttachments.TryGetValue(instance, out var attachments) == false)
             {
@@ -145,12 +145,12 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             _deletes.Add(new DeleteAttachmentCommandData(documentId, name, null));
         }
 
-        public void AddCounter(JsValue instance, JsValue counterReference)
+        public void AddCounter(InternalHandle instance, InternalHandle counterReference)
         {
             var counter = _loadedCountersByJsReference[counterReference];
 
             if (_countersByJsReference == null)
-                _countersByJsReference = new Dictionary<JsValue, List<CounterOperation>>();
+                _countersByJsReference = new Dictionary<Handle, List<CounterOperation>>();
 
             if (_countersByJsReference.TryGetValue(instance, out var operations) == false)
             {
@@ -203,14 +203,14 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             });
         }
 
-        public void AddTimeSeries(JsValue instance, JsValue timeSeriesReference)
+        public void AddTimeSeries(InternalHandle instance, InternalHandle timeSeriesReference)
         {
             var (name, entries) = _loadedTimeSeriesByJsReference[timeSeriesReference];
 
-            _timeSeriesByJsReference ??= new Dictionary<JsValue, Dictionary<JsValue, TimeSeriesOperation>>();
+            _timeSeriesByJsReference ??= new Dictionary<Handle, Dictionary<Handle, TimeSeriesOperation>>();
             if (_timeSeriesByJsReference.TryGetValue(instance, out var timeSeriesOperations) == false)
             {
-                timeSeriesOperations = new Dictionary<JsValue, TimeSeriesOperation>();
+                timeSeriesOperations = new Dictionary<Handle, TimeSeriesOperation>();
                 _timeSeriesByJsReference.Add(instance, timeSeriesOperations);
             }
 

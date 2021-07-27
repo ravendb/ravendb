@@ -1,7 +1,5 @@
 using System;
-using Jint;
-using Jint.Native;
-using Jint.Native.Object;
+using V8.Net;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Patch
@@ -10,41 +8,50 @@ namespace Raven.Server.Documents.Patch
     {
         private readonly ScriptRunner.SingleRun _parent;
 
-        public ScriptRunnerResult(ScriptRunner.SingleRun parent, JsValue instance)
+        public ScriptRunnerResult(ScriptRunner.SingleRun parent, InternalHandle instance) : base(parent)
         {
             _parent = parent;
-            Instance = instance;
+            Instance.Set(instance);
         }
 
-        public readonly JsValue Instance;
+        public readonly InternalHandle Instance;
 
-        public ObjectInstance GetOrCreate(JsValue property)
+        ~ScriptRunnerResult()
         {
-            if (Instance.AsObject() is BlittableObjectInstance b)
-                return b.GetOrCreate(property);
-            var parent = Instance.AsObject();
-            var o = parent.Get(property);
-            if (o == null || o.IsUndefined() || o.IsNull())
-            {
-                o = _parent.ScriptEngine.Object.Construct(Array.Empty<JsValue>());
-                parent.Set(property, o, false);
-            }
-            return o.AsObject();
+            Instance.Dispose();
         }
 
-        public bool? BooleanValue => Instance.IsBoolean() ? Instance.AsBoolean() : (bool?)null;
+        public V8NativeObject GetOrCreate(string propertyName)
+        {
+            using (propertyName);
+            
+            if (Instance.IsObject && Instance.BoundObject is BlittableObjectInstance b)
+                return b.GetOrCreate(propertyName);
+            var parent = Instance.Object;
 
-        public bool IsNull => Instance == null || Instance.IsNull() || Instance.IsUndefined();
-        public string StringValue => Instance.IsString() ? Instance.AsString() : null;
-        public JsValue RawJsValue => Instance;
+            using (var o = parent.GetProperty(propertyName))
+            {
+                if (o.IsUndefined || o.IsNull)
+                {
+                    o.Set(_parent.ScriptEngine.CreateObject());
+                    parent.SetProperty(propertyName, o);
+                }
+                return o.Object; // no need to KeepTrack() as we return Handle
+            }
+        }
+
+        public bool? BooleanValue => Instance.IsBoolean ? Instance.AsBoolean : (bool?)null;
+
+        public bool IsNull => Instance == null || Instance.IsNull || Instance.IsUndefined;
+        public string StringValue => Instance.IsString ? Instance.AsString : null;
+        public InternalHandle RawJsValue => Instance;
 
         public BlittableJsonReaderObject TranslateToObject(JsonOperationContext context, JsBlittableBridge.IResultModifier modifier = null, BlittableJsonDocumentBuilder.UsageMode usageMode = BlittableJsonDocumentBuilder.UsageMode.None)
         {
             if (IsNull)
                 return null;
 
-            var obj = Instance.AsObject();
-            return JsBlittableBridge.Translate(context, _parent.ScriptEngine, obj, modifier, usageMode);
+            return JsBlittableBridge.Translate(context, _parent.ScriptEngine, Instance.Object, modifier, usageMode);
         }
 
         public void Dispose()

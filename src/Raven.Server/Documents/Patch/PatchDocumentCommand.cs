@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using Jint.Native;
+using V8.Net;
 using Raven.Client;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
@@ -43,7 +43,7 @@ namespace Raven.Server.Documents.Patch
             bool isTest,
             bool debugMode,
             bool collectResultsNeeded,
-            bool returnDocument)
+            bool returnDocument) 
         {
             _externalContext = collectResultsNeeded ? context : null;
             _patchIfMissing = patchIfMissing;
@@ -251,14 +251,21 @@ namespace Raven.Server.Documents.Patch
 
                     if (originalDocument != null)
                     {
-                        var translated = (BlittableObjectInstance)((JsValue)run.Translate(context, originalDocument)).AsObject();
-                        // here we need to use the _cloned_ version of the document, since the patch may
-                        // change it
-                        originalDoc = translated.Blittable;
-                        originalDocument.Dispose();
-                        originalDocument.Data = null; // prevent access to this by accident
-                        
-                        return translated;
+                        try
+                        {
+                            using (var jsDoc = (InternalHandle)run.Translate(context, originalDocument))
+                            {
+                                var translated = (BlittableObjectInstance)(jsDoc.BoundObject);
+                                // here we need to use the _cloned_ version of the document, since the patch may
+                                // change it
+                                originalDoc = translated.Blittable;
+                                return translated;
+                            }
+                        }
+                        finally {
+                            originalDocument.Dispose();
+                            originalDocument.Data = null; // prevent access to this by accident
+                        }
                     }
 
                     return null;
@@ -317,7 +324,7 @@ namespace Raven.Server.Documents.Patch
             return nonPersistentFlags;
         }
 
-        protected string HandleReply(string id, PatchResult patchResult, DynamicJsonArray reply, HashSet<string> modifiedCollections)
+       protected string HandleReply(string id, PatchResult patchResult, DynamicJsonArray reply, HashSet<string> modifiedCollections)
         {
             if (patchResult.ModifiedDocument != null)
                 _database.HugeDocuments.AddIfDocIsHuge(id, patchResult.ModifiedDocument.Size);
@@ -404,7 +411,7 @@ namespace Raven.Server.Documents.Patch
 
             return _ids.Length;
         }
-
+ 
         public override string HandleReply(DynamicJsonArray reply, HashSet<string> modifiedCollections)
         {
             reply.Add(new DynamicJsonValue

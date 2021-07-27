@@ -4,16 +4,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
-using Jint;
-using Jint.Native;
-using Jint.Native.Array;
-using Jint.Native.Date;
-using Jint.Native.Function;
-using Jint.Native.Object;
-using Jint.Native.RegExp;
-using Jint.Runtime;
-using Jint.Runtime.Descriptors;
-using Jint.Runtime.Interop;
+using V8.Net;
 using Raven.Client;
 using Raven.Server.Extensions;
 using Sparrow;
@@ -25,9 +16,12 @@ namespace Raven.Server.Documents.Patch
 {
     public struct JsBlittableBridge
     {
+        private readonly JavaScriptUtils _javaScriptUtils;
+
+        private readonly V8EngineEx _engine;
+
         private readonly ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer> _writer;
         private readonly BlittableJsonDocumentBuilder.UsageMode _usageMode;
-        private readonly Engine _scriptEngine;
 
         [ThreadStatic]
         private static HashSet<object> _recursive;
@@ -40,20 +34,21 @@ namespace Raven.Server.Documents.Patch
             ThreadLocalCleanup.ReleaseThreadLocalState += () => _recursive = null;
         }
 
-        public JsBlittableBridge(ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer> writer, BlittableJsonDocumentBuilder.UsageMode usageMode, Engine scriptEngine)
+        public JsBlittableBridge(ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer> writer, BlittableJsonDocumentBuilder.UsageMode usageMode, V8EngineEx engine) 
         {
             _writer = writer;
             _usageMode = usageMode;
-            _scriptEngine = scriptEngine;
+            _engine = engine;
         }
 
-        private void WriteInstance(ObjectInstance jsObject, IResultModifier modifier, bool isRoot, bool filterProperties)
+        private void WriteInstance(V8NativeObject jsObject, IResultModifier modifier, bool isRoot, bool filterProperties)
         {
             _writer.StartWriteObject();
 
             modifier?.Modify(jsObject);
 
-            if (jsObject is BlittableObjectInstance blittableJsObject)
+            object boundObject = jsObject._.BoundObject;
+            if (boundObject != null && boundObject is BlittableObjectInstance blittableJsObject)
                 WriteBlittableInstance(blittableJsObject, isRoot, filterProperties);
             else
                 WriteJsInstance(jsObject, isRoot, filterProperties);
@@ -63,82 +58,95 @@ namespace Raven.Server.Documents.Patch
 
         private void WriteJsonValue(object parent, bool isRoot, string propertyName, object value)
         {
-            if (value is JsValue js)
+            if (value is InternalHandle jsValue)
             {
-                if (js.IsBoolean())
-                    _writer.WriteValue(js.AsBoolean());
-                else if (js.IsUndefined() || js.IsNull())
-                    _writer.WriteValueNull();
-                else if (js.IsString())
-                    _writer.WriteValue(js.AsString());
-                else if (js.IsDate())
-                {
-                    var jsDate = js.AsDate();
-                    if (double.IsNaN(jsDate.PrimitiveValue) ||
-                        jsDate.PrimitiveValue > MaxJsDateMs ||
-                        jsDate.PrimitiveValue < MinJsDateMs)
-                        // not a valid Date. 'ToDateTime()' will throw
-                        throw new InvalidOperationException($"Invalid '{nameof(DateInstance)}' on property '{propertyName}'. Date value : '{jsDate.PrimitiveValue}'. " +
-                                                            "Note that JavaScripts 'Date' measures time as the number of milliseconds that have passed since the Unix epoch.");
-
-                    _writer.WriteValue(jsDate.ToDateTime().ToString(DefaultFormat.DateTimeOffsetFormatsToWrite));
+                if (jsValue.IsBoolean) {
+                    using (var res = jsValue.AsBoolean) {
+                        _writer.WriteValue(res);
+                    }
                 }
-                else if (js.IsNumber())
-                    WriteNumber(parent, propertyName, js.AsNumber());
-                else if (js.IsArray())
-                    WriteArray(js.AsArray());
-                else if (js.IsObject())
+                else if (jsValue.IsUndefined || jsValue.IsNull)
+                    _writer.WriteValueNull();
+                else if (jsValue.IsString) {
+                    using (var res = jsValue.AsString) {
+                        _writer.WriteValue(res);
+                    }
+                }
+                else if (jsValue.IsDate)
                 {
-                    var asObject = js.AsObject();
-                    if (asObject is ObjectWrapper wrapper)
+                    using (var date = jsValue.AsDate) {
+                        if (double.IsNaN(date.PrimitiveValue) ||
+                            date.PrimitiveValue > MaxJsDateMs ||
+                            date.PrimitiveValue < MinJsDateMs)
+                            // not a valid Date. 'ToDateTime()' will throw
+                            throw new InvalidOperationException($"Invalid '{nameof(DateInstance)}' on property '{propertyName}'. Date value : '{date.PrimitiveValue}'. " +
+                                                                "Note that JavaScripts 'Date' measures time as the number of milliseconds that have passed since the Unix epoch.");
+                        
+                        _writer.WriteValue(date.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite));
+                    }
+                }
+                else if (jsValue.IsNumber) {
+                    using (var res = jsValue.AsDouble) {
+                        WriteNumber(parent, propertyName, res);
+                    }
+                }
+                else if (jsValue.IsArray) {
+                    WriteArray(jsValue);
+                }
+                else if (jsValue.IsObject)
+                {
+                    V8NativeObject jsObj = jsValue.Object;
+                    if (jsObj is ObjectBinder ob)
                     {
-                        if (wrapper.Target is LazyNumberValue)
+                        var target = ob.Object;                
+                        if (target is LazyNumberValue)
                         {
-                            _writer.WriteValue(BlittableJsonToken.LazyNumber, wrapper.Target);
+                            _writer.WriteValue(BlittableJsonToken.LazyNumber, target);
                         }
-                        else if (wrapper.Target is LazyStringValue)
+                        else if (target is LazyStringValue)
                         {
-                            _writer.WriteValue(BlittableJsonToken.String, wrapper.Target);
+                            _writer.WriteValue(BlittableJsonToken.String, target);
                         }
-                        else if (wrapper.Target is LazyCompressedStringValue)
+                        else if (target is LazyCompressedStringValue)
                         {
-                            _writer.WriteValue(BlittableJsonToken.CompressedString, wrapper.Target);
+                            _writer.WriteValue(BlittableJsonToken.CompressedString, target);
                         }
-                        else if (wrapper.Target is long)
+                        else if (target is long)
                         {
-                            _writer.WriteValue(BlittableJsonToken.Integer, (long)wrapper.Target);
+                            _writer.WriteValue(BlittableJsonToken.Integer, (long)target);
                         }
                         else
                         {
                             var filterProperties = isRoot && string.Equals(propertyName, Constants.Documents.Metadata.Key, StringComparison.Ordinal);
 
-                            WriteNestedObject(js.AsObject(), filterProperties);
+                            WriteNestedObject(jsObj, filterProperties);
                         }
                     }
                     else
                     {
                         var filterProperties = isRoot && string.Equals(propertyName, Constants.Documents.Metadata.Key, StringComparison.Ordinal);
 
-                        WriteNestedObject(js.AsObject(), filterProperties);
+                        WriteNestedObject(jsObj, filterProperties);
                     }
                 }
                 else
                 {
-                    throw new InvalidOperationException("Unknown type: " + js.Type);
+                    throw new InvalidOperationException("Unknown type: " + jsValue.ValueType);
                 }
                 return;
             }
             WriteValue(parent, isRoot, propertyName, value);
         }
 
-        private void WriteArray(ArrayInstance arrayInstance)
+        private void WriteArray(InternalHandle jsArr)
         {
             _writer.StartWriteArray();
-            foreach (var property in arrayInstance.GetOwnPropertiesWithoutLength())
+            for (int i = 0; i < jsArr.ArrayLength; i++)
             {
-                JsValue propertyValue = SafelyGetJsValue(property.Value);
-
-                WriteJsonValue(arrayInstance, false, property.Key.AsString(), propertyValue);
+                using (var value = jsArr.GetProperty(i))
+                {
+                    WriteJsonValue(jsArr, false, i.ToString(), value);
+                }
             }
             _writer.WriteArrayEnd();
         }
@@ -161,26 +169,33 @@ namespace Raven.Server.Documents.Patch
             {
                 WriteNumber(parent, propertyName, d);
             }
-            else if (value == null || ReferenceEquals(value, Null.Instance) || ReferenceEquals(value, Undefined.Instance))
+            else if (value == null || ReferenceEquals(value, InternalHandle.Empty))
                 _writer.WriteValueNull();
-            else if (value is ArrayInstance jsArray)
+            else if (value is InternalHandle jsValue && (jsValue.IsUndefined || jsValue.IsNull))
+                _writer.WriteValueNull();
+            else if (value is V8Array jsArr)
             {
+                //WriteArray(jsArr._); // seems to be simpler, except for it calls WriteJsonValue - but there should be no difference
                 _writer.StartWriteArray();
-                foreach (var property in jsArray.GetOwnPropertiesWithoutLength())
+                for (int i = 0; i < jsArr.ArrayLength; i++)
                 {
-                    WriteValue(jsArray, false, property.Key.AsString(), property.Value);
+                    using (var jsValue = jsArr.GetProperty(i))
+                    {
+                        WriteValue(jsArr, false, i.AsString(), jsValue);
+                    }
                 }
                 _writer.WriteArrayEnd();
             }
-            else if (value is RegExpInstance)
+            else if (value is V8NativeObject jsObj)
             {
-                _writer.WriteValueNull();
-            }
-            else if (value is ObjectInstance obj)
-            {
-                var filterProperties = isRoot && string.Equals(propertyName, Constants.Documents.Metadata.Key, StringComparison.Ordinal);
+                if (jsValue._.IsRegExp)
+                    _writer.WriteValueNull();
+                else
+                {
+                    var filterProperties = isRoot && string.Equals(propertyName, Constants.Documents.Metadata.Key, StringComparison.Ordinal);
 
-                WriteNestedObject(obj, filterProperties);
+                    WriteNestedObject(jsObj, filterProperties);
+                }
             }
             else if (value is LazyStringValue lsv)
             {
@@ -200,14 +215,14 @@ namespace Raven.Server.Documents.Patch
             }
         }
 
-        private void WriteNestedObject(ObjectInstance obj, bool filterProperties)
+        private void WriteNestedObject(V8NativeObject obj, bool filterProperties)
         {
             if (_recursive == null)
                 _recursive = new HashSet<object>();
 
-            if (obj is ObjectWrapper objectWrapper)
+            if (obj is ObjectBinder ob)
             {
-                var target = objectWrapper.Target;
+                var target = ob.Object;
 
                 if (target is IDictionary)
                 {
@@ -215,18 +230,34 @@ namespace Raven.Server.Documents.Patch
                 }
                 else if (target is IEnumerable enumerable)
                 {
-                    var jsArray = (ArrayInstance)_scriptEngine.Array.Construct(Arguments.Empty);
+                    _writer.StartWriteArray();
                     foreach (var item in enumerable)
                     {
-                        var jsItem = JsValue.FromObject(_scriptEngine, item);
-                        _scriptEngine.Array.PrototypeObject.Push(jsArray, Arguments.From(jsItem));
+                        using (var jsItem = _engine.FromObject(item))
+                        {
+                            WriteJsonValue(jsArr, false, i.ToString(), jsItem);
+                        }
                     }
-                    WriteArray(jsArray);
+                    _writer.WriteArrayEnd();
+
+                    // this is less efficient previous implementation
+                    /*
+                    using (var jsArr = _engine.CreateArray(Array.Empty<InternalHandle>()))
+                    {
+                        foreach (var item in enumerable)
+                        {
+                            using (var jsItem = _engine.FromObject(item))
+                            using (var jsResPush = jsArr.Call("push", InternalHandle.Empty, jsItem))
+                                jsResPush.ThrowOnError(); // TODO check if is needed here
+                        }
+                        WriteArray(jsArr);
+
+                    }*/
                 }
                 else
                     WriteObjectType(target);
             }
-            else if (obj is FunctionInstance)
+            else if (obj is V8Function)
                 _writer.WriteValueNull();
             else
                 WriteValueInternal(obj, obj, filterProperties);
@@ -239,7 +270,7 @@ namespace Raven.Server.Documents.Patch
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void WriteValueInternal(object target, ObjectInstance obj, bool filterProperties)
+        private void WriteValueInternal(object target, V8NativeObject obj, bool filterProperties)
         {
             try
             {
@@ -336,47 +367,41 @@ namespace Raven.Server.Documents.Patch
             }
         }
 
-        private void WriteJsInstance(ObjectInstance obj, bool isRoot, bool filterProperties)
+        private void WriteJsInstance(V8NativeObject obj, bool isRoot, bool filterProperties)
         {
-            var properties = obj is ObjectWrapper objectWrapper
-                ? GetObjectProperties(objectWrapper)
-                : obj.GetOwnProperties();
-
-            foreach (var property in properties)
+            var properties = obj is ObjectBinder ob ? GetBoundObjectProperties(ob.Object) : obj.GetOwnProperties(); // TODO GetBoundObjectProperties could be prepaired and written avoiding toJs, fromJs translations
+            foreach (var (propertyName, jsPropertyValue) in properties)
             {
-                var propertyName = property.Key;
-                var propertyNameAsString = propertyName.AsString();
+                using (jsPropertyValue) {
+                    if (ShouldFilterProperty(filterProperties, propertyName))
+                        continue;
 
-                if (ShouldFilterProperty(filterProperties, propertyNameAsString))
-                    continue;
+                    if (jsPropertyValue.IsUndefined | jsPropertyValue.IsNull)
+                        return;
 
-                var value = property.Value;
-                if (value == null)
-                    continue;
-                JsValue safeValue = SafelyGetJsValue(value);
+                    _writer.WritePropertyName(propertyName);
 
-                _writer.WritePropertyName(propertyNameAsString);
-
-                WriteJsonValue(obj, isRoot, propertyNameAsString, safeValue);
+                    WriteJsonValue(obj, isRoot, propertyName, jsPropertyValue);
+                }
             }
         }
 
-        private IEnumerable<KeyValuePair<JsValue, PropertyDescriptor>> GetObjectProperties(ObjectWrapper objectWrapper)
+        private IEnumerable<KeyValuePair<string, InternalHandle>> GetBoundObjectProperties(object obj)
         {
-            var target = objectWrapper.Target;
-            if (target is IDictionary dictionary)
+            if (obj == null)
+                yield break;
+
+            if (obj is IDictionary dictionary)
             {
                 foreach (DictionaryEntry entry in dictionary)
                 {
-                    var jsValue = JsValue.FromObject(_scriptEngine, entry.Value);
-                    var descriptor = new PropertyDescriptor(jsValue, false, false, false);
-                    yield return new KeyValuePair<JsValue, PropertyDescriptor>(entry.Key.ToString(), descriptor);
+                    yield return new KeyValuePair<string, InternalHandle>(entry.Key.ToString(), _engine.FromObject(entry.Value));
                 }
                 yield break;
             }
 
-            var type = target.GetType();
-            if (target is Task task &&
+            var type = obj.GetType();
+            if (obj is Task task &&
                 task.IsCompleted == false)
             {
                 foreach (var property in type.GetProperties(BindingFlags.Instance | BindingFlags.Public))
@@ -386,13 +411,12 @@ namespace Raven.Server.Documents.Patch
 
                     if (property.Name == nameof(Task<int>.Result))
                     {
-                        var taskResultDescriptor = JintPreventResolvingTasksReferenceResolver.GetRunningTaskResult(task);
-                        yield return new KeyValuePair<JsValue, PropertyDescriptor>(property.Name, taskResultDescriptor);
+                        yield return new KeyValuePair<string, InternalHandle>(property.Name, TaskCustomBinder.GetRunningTaskResult(_engine, task));
                         continue;
                     }
 
-                    var descriptor = ObjectWrapper.GetPropertyDescriptor(_scriptEngine, target, property);
-                    yield return new KeyValuePair<JsValue, PropertyDescriptor>(property.Name, descriptor);
+                    InternalHandle jsRes;
+                    yield return new KeyValuePair<string, InternalHandle>(property.Name, jsRes.Set(_engine.GetObjectBinder(obj)._));
                 }
                 yield break;
             }
@@ -402,28 +426,14 @@ namespace Raven.Server.Documents.Patch
             {
                 if (property.CanRead == false)
                     continue;
-
-                var descriptor = ObjectWrapper.GetPropertyDescriptor(_scriptEngine, target, property);
-                yield return new KeyValuePair<JsValue, PropertyDescriptor>(property.Name, descriptor);
+    
+                yield return new KeyValuePair<string, InternalHandle>(property.Name, _engine.GetObjectBinder(obj));
             }
 
             // look for fields
             foreach (var field in type.GetFields(BindingFlags.Instance | BindingFlags.Public))
             {
-                var descriptor = ObjectWrapper.GetPropertyDescriptor(_scriptEngine, target, field);
-                yield return new KeyValuePair<JsValue, PropertyDescriptor>(field.Name, descriptor);
-            }
-        }
-
-        private JsValue SafelyGetJsValue(PropertyDescriptor property)
-        {
-            try
-            {
-                return property.Value;
-            }
-            catch (Exception e)
-            {
-                return e.ToString();
+                yield return new KeyValuePair<string, InternalHandle>(field.Name, _engine.GetObjectBinder(obj));
             }
         }
 
@@ -434,7 +444,7 @@ namespace Raven.Server.Documents.Patch
                 _usageMode == BlittableJsonDocumentBuilder.UsageMode.None)
             {
                 var metadata = obj.GetOrCreate(Constants.Documents.Metadata.Key);
-                metadata.Set(Constants.Documents.Metadata.Id, obj.DocumentId, false);
+                metadata.SetProperty(Constants.Documents.Metadata.Id, obj.DocumentId);
             }
             if (obj.Blittable != null)
             {
@@ -446,7 +456,7 @@ namespace Raven.Server.Documents.Patch
                     obj.Blittable.GetPropertyByIndex(propIndex, ref prop);
 
                     BlittableObjectInstance.BlittableObjectProperty modifiedValue = default;
-                    JsValue key = prop.Name.ToString();
+                    var key = prop.Name;
                     var existInObject = obj.OwnValues?
                         .TryGetValue(key, out modifiedValue) == true;
 
@@ -515,12 +525,13 @@ namespace Raven.Server.Documents.Patch
                    property == Constants.Documents.Metadata.Flags;
         }
 
-        public static BlittableJsonReaderObject Translate(JsonOperationContext context, Engine scriptEngine, ObjectInstance objectInstance, IResultModifier modifier = null, BlittableJsonDocumentBuilder.UsageMode usageMode = BlittableJsonDocumentBuilder.UsageMode.None)
+        public static BlittableJsonReaderObject Translate(JsonOperationContext context, V8Engine engine, V8NativeObject objectInstance, IResultModifier modifier = null, BlittableJsonDocumentBuilder.UsageMode usageMode = BlittableJsonDocumentBuilder.UsageMode.None)
         {
             if (objectInstance == null)
                 return null;
 
-            if (objectInstance is BlittableObjectInstance boi && boi.Changed == false)
+            object boundObject = objectInstance._.BoundObject;
+            if (boundObject != null && boundObject is BlittableObjectInstance boi && boi.Changed == false)
                 return boi.Blittable.Clone(context);
 
             using (var writer = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
@@ -528,7 +539,7 @@ namespace Raven.Server.Documents.Patch
                 writer.Reset(usageMode);
                 writer.StartWriteObjectDocument();
 
-                var blittableBridge = new JsBlittableBridge(writer, usageMode, scriptEngine);
+                var blittableBridge = new JsBlittableBridge(writer, usageMode, (V8EngineEx)engine);
                 blittableBridge.WriteInstance(objectInstance, modifier, isRoot: true, filterProperties: false);
 
                 writer.FinalizeDocument();
@@ -539,7 +550,8 @@ namespace Raven.Server.Documents.Patch
 
         public interface IResultModifier
         {
-            void Modify(ObjectInstance json);
+            void Modify(V8NativeOject json);
         }
+
     }
 }

@@ -8,13 +8,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
-using Jint;
-using Jint.Native;
-using Jint.Native.Array;
-using Jint.Native.Function;
-using Jint.Native.Object;
-using Jint.Runtime;
-using Jint.Runtime.Interop;
+using V8.Net;
 using Raven.Client;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Session;
@@ -39,7 +33,6 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Spatial4n.Core.Distance;
 using ExpressionType = System.Linq.Expressions.ExpressionType;
-using JavaScriptException = Jint.Runtime.JavaScriptException;
 
 namespace Raven.Server.Documents.Patch
 {
@@ -70,7 +63,7 @@ namespace Raven.Server.Documents.Patch
 
         public string ScriptType { get; internal set; }
 
-        public ScriptRunner(DocumentDatabase db, RavenConfiguration configuration, bool enableClr)
+        public ScriptRunner(DocumentDatabase db, RavenConfiguration configuration, bool enableClr) 
         {
             _db = db;
             _configuration = configuration;
@@ -139,11 +132,11 @@ namespace Raven.Server.Documents.Patch
         {
             try
             {
-                var engine = new Engine(options =>
+                var engine = new V8Engine();
+                using (var script = engine.Compile(script, "script", true))
                 {
-                    options.MaxStatements(1).LimitRecursion(1);
-                });
-                engine.Execute(script);
+                    return ExecuteExprWithReset(engine, script, throwExceptionOnError, timeout);
+                }
             }
             catch (Exception e)
             {
@@ -151,15 +144,15 @@ namespace Raven.Server.Documents.Patch
             }
         }
 
-        public static unsafe DateTime GetDateArg(JsValue arg, string signature, string argName)
+        public static unsafe DateTime GetDateArg(InternalHandle arg, string signature, string argName)
         {
-            if (arg.IsDate())
-                return arg.AsDate().ToDateTime();
+            if (arg.IsDate)
+                return arg.AsDate;
 
-            if (arg.IsString() == false)
+            if (arg.IsString == false)
                 ThrowInvalidDateArgument();
 
-            var s = arg.AsString();
+            var s = arg.AsString;
             fixed (char* pValue = s)
             {
                 var result = LazyStringParser.TryParseDateTime(pValue, s.Length, out DateTime dt, out _);
@@ -173,18 +166,18 @@ namespace Raven.Server.Documents.Patch
                 throw new ArgumentException($"{signature} : {argName} must be of type 'DateInstance' or a DateTime string. {GetTypes(arg)}");
         }
 
-        private static DateTime GetTimeSeriesDateArg(JsValue arg, string signature, string argName)
+        private static DateTime GetTimeSeriesDateArg(InternalHandle arg, string signature, string argName)
         {
-            if (arg.IsDate())
+            if (arg.IsDate)
                 return arg.AsDate().ToDateTime();
 
-            if (arg.IsString() == false)
+            if (arg.IsString == false)
                 throw new ArgumentException($"{signature} : {argName} must be of type 'DateInstance' or a DateTime string. {GetTypes(arg)}");
 
-            return TimeSeriesRetriever.ParseDateTime(arg.AsString());
+            return TimeSeriesRetriever.ParseDateTime(arg.AsString);
         }
         
-        private static string GetTypes(JsValue value) => $"JintType({value.Type}) .NETType({value.GetType().Name})";
+        private static string GetTypes(InternalHandle value) => $"JintType({value.ValueType}) .NETType({value.GetType().Name})";
         
         public class SingleRun
         {
@@ -192,7 +185,9 @@ namespace Raven.Server.Documents.Patch
             private readonly RavenConfiguration _configuration;
 
             private readonly ScriptRunner _runner;
-            public readonly Engine ScriptEngine;
+            public readonly V8EngineEx ScriptEngine;
+            public JavaScriptUtils JavaScriptUtils;
+
             private QueryTimingsScope _scope;
             private QueryTimingsScope _loadScope;
             private DocumentsOperationContext _docsCtx;
@@ -218,8 +213,6 @@ namespace Raven.Server.Documents.Patch
             private readonly ConcurrentLruRegexCache _regexCache = new ConcurrentLruRegexCache(1024);
             public HashSet<string> DocumentCountersToUpdate;
             public HashSet<string> DocumentTimeSeriesToUpdate;
-            public JavaScriptUtils JavaScriptUtils;
-
             private const string _timeSeriesSignature = "timeseries(doc, name)";
             public const string GetMetadataMethod = "getMetadata";
 
@@ -228,84 +221,84 @@ namespace Raven.Server.Documents.Patch
                 _database = database;
                 _configuration = configuration;
                 _runner = runner;
-                ScriptEngine = new Engine(options =>
-                {
-                    options.LimitRecursion(64)
-                        .SetReferencesResolver(_refResolver)
-                        .MaxStatements(_configuration.Patching.MaxStepsForScript)
-                        .Strict(_configuration.Patching.StrictMode)
-                        .AddObjectConverter(new JintGuidConverter())
-                        .AddObjectConverter(new JintStringConverter())
-                        .AddObjectConverter(new JintEnumConverter())
-                        .AddObjectConverter(new JintDateTimeConverter())
-                        .AddObjectConverter(new JintTimeSpanConverter())
-                        .LocalTimeZone(TimeZoneInfo.Utc);
-                });
+                ScriptEngine = new V8EngineEx(optionsCmd);
+
+                string optionsCmd = $"use_strict false={configuration.Patching.StrictMode}"; // TODO construct from options
+                ScriptEngine.SetFlagsFromCommandLine(optionsCmd);
+                        //.MaxStatements(indexConfiguration.MaxStepsForScript)
+                        //.LocalTimeZone(TimeZoneInfo.Utc);  // -> harmony_intl_locale_info, harmony_intl_more_timezone
 
                 JavaScriptUtils = new JavaScriptUtils(_runner, ScriptEngine);
-                ScriptEngine.SetValue(GetMetadataMethod, new ClrFunctionInstance(ScriptEngine, GetMetadataMethod, JavaScriptUtils.GetMetadata));
-                ScriptEngine.SetValue("id", new ClrFunctionInstance(ScriptEngine, "id", JavaScriptUtils.GetDocumentId));
 
-                ScriptEngine.SetValue("output", new ClrFunctionInstance(ScriptEngine, "output", OutputDebug));
+                ScriptEngine.GlobalObject.SetProperty(GetMetadataMethod, new ClrFunctionInstance(ScriptEngine, GetMetadataMethod, JavaScriptUtils.GetMetadata));
+                ScriptEngine.GlobalObject.SetProperty("id", new ClrFunctionInstance(ScriptEngine, "id", JavaScriptUtils.GetDocumentId));
+
+                ScriptEngine.GlobalObject.SetProperty("output", new ClrFunctionInstance(ScriptEngine, "output", OutputDebug));
 
                 //console.log
-                ObjectInstance consoleObject = new ObjectInstance(ScriptEngine);
-                consoleObject.FastAddProperty("log", new ClrFunctionInstance(ScriptEngine, "log", OutputDebug), false, false, false);
-                ScriptEngine.SetValue("console", consoleObject);
+                using (var consoleObject = ScriptEngine.CreateObject())
+                {
+                    consoleObject.FastAddProperty("log", new ClrFunctionInstance(ScriptEngine, "log", OutputDebug), false, false, false);
+                    ScriptEngine.GlobalObject.SetProperty("console", consoleObject);
+                }
 
                 //spatial.distance
-                ObjectInstance spatialObject = new ObjectInstance(ScriptEngine);
-                var spatialFunc = new ClrFunctionInstance(ScriptEngine, "distance", Spatial_Distance);
-                spatialObject.FastAddProperty("distance", spatialFunc, false, false, false);
-                ScriptEngine.SetValue("spatial", spatialObject);
-                ScriptEngine.SetValue("spatial.distance", spatialFunc);
+                using (var spatialObject = ScriptEngine.CreateObject())
+                {
+                    var spatialFunc = new ClrFunctionInstance(ScriptEngine, "distance", Spatial_Distance);
+                    spatialObject.FastAddProperty("distance", spatialFunc, false, false, false);
+                    ScriptEngine.GlobalObject.SetProperty("spatial", spatialObject);
+                    ScriptEngine.GlobalObject.SetProperty("spatial.distance", spatialFunc);
+                }
 
                 // includes
-                var includeDocumentFunc = new ClrFunctionInstance(ScriptEngine, "include", IncludeDoc);
-                ObjectInstance includesObject = new ObjectInstance(ScriptEngine);
-                includesObject.FastAddProperty("document", includeDocumentFunc, false, false, false);
-                includesObject.FastAddProperty("cmpxchg", new ClrFunctionInstance(ScriptEngine, "cmpxchg", IncludeCompareExchangeValue), false, false, false);
-                includesObject.FastAddProperty("revisions", new ClrFunctionInstance(ScriptEngine, "revisions", IncludeRevisions), false, false, false);
-                ScriptEngine.SetValue("includes", includesObject);
+                using (var includesObject = ScriptEngine.CreateObject())
+                {
+                    var includeDocumentFunc = new ClrFunctionInstance(ScriptEngine, "include", IncludeDoc);
+                    includesObject.FastAddProperty("document", includeDocumentFunc, false, false, false);
+                    includesObject.FastAddProperty("cmpxchg", new ClrFunctionInstance(ScriptEngine, "cmpxchg", IncludeCompareExchangeValue), false, false, false);
+                    includesObject.FastAddProperty("revisions", new ClrFunctionInstance(ScriptEngine, "revisions", IncludeRevisions), false, false, false);
+                    ScriptEngine.GlobalObject.SetProperty("includes", includesObject);
+                }
 
                 // includes - backward compatibility
-                ScriptEngine.SetValue("include", includeDocumentFunc);
-                
-                ScriptEngine.SetValue("load", new ClrFunctionInstance(ScriptEngine, "load", LoadDocument));
-                ScriptEngine.SetValue("LoadDocument", new ClrFunctionInstance(ScriptEngine, "LoadDocument", ThrowOnLoadDocument));
+                ScriptEngine.GlobalObject.SetProperty("include", includeDocumentFunc);
 
-                ScriptEngine.SetValue("loadPath", new ClrFunctionInstance(ScriptEngine, "loadPath", LoadDocumentByPath));
-                ScriptEngine.SetValue("del", new ClrFunctionInstance(ScriptEngine, "del", DeleteDocument));
-                ScriptEngine.SetValue("DeleteDocument", new ClrFunctionInstance(ScriptEngine, "DeleteDocument", ThrowOnDeleteDocument));
-                ScriptEngine.SetValue("put", new ClrFunctionInstance(ScriptEngine, "put", PutDocument));
-                ScriptEngine.SetValue("PutDocument", new ClrFunctionInstance(ScriptEngine, "PutDocument", ThrowOnPutDocument));
-                ScriptEngine.SetValue("cmpxchg", new ClrFunctionInstance(ScriptEngine, "cmpxchg", CompareExchange));
+                ScriptEngine.GlobalObject.SetProperty("load", new ClrFunctionInstance(ScriptEngine, "load", LoadDocument));
+                ScriptEngine.GlobalObject.SetProperty("LoadDocument", new ClrFunctionInstance(ScriptEngine, "LoadDocument", ThrowOnLoadDocument));
 
-                ScriptEngine.SetValue("counter", new ClrFunctionInstance(ScriptEngine, "counter", GetCounter));
-                ScriptEngine.SetValue("counterRaw", new ClrFunctionInstance(ScriptEngine, "counterRaw", GetCounterRaw));
-                ScriptEngine.SetValue("incrementCounter", new ClrFunctionInstance(ScriptEngine, "incrementCounter", IncrementCounter));
-                ScriptEngine.SetValue("deleteCounter", new ClrFunctionInstance(ScriptEngine, "deleteCounter", DeleteCounter));
+                ScriptEngine.GlobalObject.SetProperty("loadPath", new ClrFunctionInstance(ScriptEngine, "loadPath", LoadDocumentByPath));
+                ScriptEngine.GlobalObject.SetProperty("del", new ClrFunctionInstance(ScriptEngine, "del", DeleteDocument));
+                ScriptEngine.GlobalObject.SetProperty("DeleteDocument", new ClrFunctionInstance(ScriptEngine, "DeleteDocument", ThrowOnDeleteDocument));
+                ScriptEngine.GlobalObject.SetProperty("put", new ClrFunctionInstance(ScriptEngine, "put", PutDocument));
+                ScriptEngine.GlobalObject.SetProperty("PutDocument", new ClrFunctionInstance(ScriptEngine, "PutDocument", ThrowOnPutDocument));
+                ScriptEngine.GlobalObject.SetProperty("cmpxchg", new ClrFunctionInstance(ScriptEngine, "cmpxchg", CompareExchange));
 
-                ScriptEngine.SetValue("lastModified", new ClrFunctionInstance(ScriptEngine, "lastModified", GetLastModified));
+                ScriptEngine.GlobalObject.SetProperty("counter", new ClrFunctionInstance(ScriptEngine, "counter", GetCounter));
+                ScriptEngine.GlobalObject.SetProperty("counterRaw", new ClrFunctionInstance(ScriptEngine, "counterRaw", GetCounterRaw));
+                ScriptEngine.GlobalObject.SetProperty("incrementCounter", new ClrFunctionInstance(ScriptEngine, "incrementCounter", IncrementCounter));
+                ScriptEngine.GlobalObject.SetProperty("deleteCounter", new ClrFunctionInstance(ScriptEngine, "deleteCounter", DeleteCounter));
 
-                ScriptEngine.SetValue("startsWith", new ClrFunctionInstance(ScriptEngine, "startsWith", StartsWith));
-                ScriptEngine.SetValue("endsWith", new ClrFunctionInstance(ScriptEngine, "endsWith", EndsWith));
-                ScriptEngine.SetValue("regex", new ClrFunctionInstance(ScriptEngine, "regex", Regex));
+                ScriptEngine.GlobalObject.SetProperty("lastModified", new ClrFunctionInstance(ScriptEngine, "lastModified", GetLastModified));
 
-                ScriptEngine.SetValue("Raven_ExplodeArgs", new ClrFunctionInstance(ScriptEngine, "Raven_ExplodeArgs", ExplodeArgs));
-                ScriptEngine.SetValue("Raven_Min", new ClrFunctionInstance(ScriptEngine, "Raven_Min", Raven_Min));
-                ScriptEngine.SetValue("Raven_Max", new ClrFunctionInstance(ScriptEngine, "Raven_Max", Raven_Max));
+                ScriptEngine.GlobalObject.SetProperty("startsWith", new ClrFunctionInstance(ScriptEngine, "startsWith", StartsWith));
+                ScriptEngine.GlobalObject.SetProperty("endsWith", new ClrFunctionInstance(ScriptEngine, "endsWith", EndsWith));
+                ScriptEngine.GlobalObject.SetProperty("regex", new ClrFunctionInstance(ScriptEngine, "regex", Regex));
 
-                ScriptEngine.SetValue("convertJsTimeToTimeSpanString", new ClrFunctionInstance(ScriptEngine, "convertJsTimeToTimeSpanString", ConvertJsTimeToTimeSpanString));
-                ScriptEngine.SetValue("convertToTimeSpanString", new ClrFunctionInstance(ScriptEngine, "convertToTimeSpanString", ConvertToTimeSpanString));
-                ScriptEngine.SetValue("compareDates", new ClrFunctionInstance(ScriptEngine, "compareDates", CompareDates));
+                //ScriptEngine.GlobalObject.SetProperty("Raven_ExplodeArgs", new ClrFunctionInstance(ScriptEngine, "Raven_ExplodeArgs", ExplodeArgs));
+                ScriptEngine.GlobalObject.SetProperty("Raven_Min", new ClrFunctionInstance(ScriptEngine, "Raven_Min", Raven_Min));
+                ScriptEngine.GlobalObject.SetProperty("Raven_Max", new ClrFunctionInstance(ScriptEngine, "Raven_Max", Raven_Max));
 
-                ScriptEngine.SetValue("toStringWithFormat", new ClrFunctionInstance(ScriptEngine, "toStringWithFormat", ToStringWithFormat));
+                ScriptEngine.GlobalObject.SetProperty("convertJsTimeToTimeSpanString", new ClrFunctionInstance(ScriptEngine, "convertJsTimeToTimeSpanString", ConvertJsTimeToTimeSpanString));
+                ScriptEngine.GlobalObject.SetProperty("convertToTimeSpanString", new ClrFunctionInstance(ScriptEngine, "convertToTimeSpanString", ConvertToTimeSpanString));
+                ScriptEngine.GlobalObject.SetProperty("compareDates", new ClrFunctionInstance(ScriptEngine, "compareDates", CompareDates));
 
-                ScriptEngine.SetValue("scalarToRawString", new ClrFunctionInstance(ScriptEngine, "scalarToRawString", ScalarToRawString));
+                ScriptEngine.GlobalObject.SetProperty("toStringWithFormat", new ClrFunctionInstance(ScriptEngine, "toStringWithFormat", ToStringWithFormat));
+
+                //ScriptEngine.GlobalObject.SetProperty("scalarToRawString", new ClrFunctionInstance(ScriptEngine, "scalarToRawString", ScalarToRawString));
 
                 //TimeSeries
-                ScriptEngine.SetValue("timeseries", new ClrFunctionInstance(ScriptEngine, "timeseries", TimeSeries));
+                ScriptEngine.GlobalObject.SetProperty("timeseries", new ClrFunctionInstance(ScriptEngine, "timeseries", TimeSeries));
                 ScriptEngine.Execute(ScriptRunnerCache.PolyfillJs);
 
                 foreach (var script in scriptsSource)
@@ -322,18 +315,23 @@ namespace Raven.Server.Documents.Patch
 
                 foreach (var ts in runner.TimeSeriesDeclaration)
                 {
-                    ScriptEngine.SetValue(ts.Key, NamedInvokeTimeSeriesFunction(ts.Key));
+                    ScriptEngine.GlobalObject.SetProperty(ts.Key, NamedInvokeTimeSeriesFunction(ts.Key));
                 }
             }
 
-            private (string Id, BlittableJsonReaderObject Doc) GetIdAndDocFromArg(JsValue docArg, string signature)
+            ~SingleRun()
             {
-                if (docArg.IsObject() && docArg.AsObject() is BlittableObjectInstance doc)
+                DisposeArgs();
+            }
+
+            private (string Id, BlittableJsonReaderObject Doc) GetIdAndDocFromArg(InternalHandle docArg, string signature)
+            {
+                if (docArg.IsObject && docArg.BoundObject is BlittableObjectInstance doc)
                     return (doc.DocumentId, doc.Blittable);
 
-                if (docArg.IsString())
+                if (docArg.IsString)
                 {
-                    var id = docArg.AsString();
+                    var id = docArg.AsString;
                     var document = _database.DocumentsStorage.Get(_docsCtx, id);
                     if (document == null)
                         throw new DocumentDoesNotExistException(id, "Cannot operate on a missing document.");
@@ -344,319 +342,337 @@ namespace Raven.Server.Documents.Patch
                 throw new InvalidOperationException($"{signature}: 'doc' must be a string argument (the document id) or the actual document instance itself. {GetTypes(docArg)}");
             }
 
-            private string GetIdFromArg(JsValue docArg, string signature)
+            private string GetIdFromArg(InternalHandle docArg, string signature)
             {
-                if (docArg.IsObject() && docArg.AsObject() is BlittableObjectInstance doc)
+                if (docArg.IsObject && docArg.AsObject is BlittableObjectInstance doc)
                     return doc.DocumentId;
 
-                if (docArg.IsString())
+                if (docArg.IsString)
                 {
-                    var id = docArg.AsString();
+                    var id = docArg.AsString;
                     return id;
                 }
 
                 throw new InvalidOperationException($"{signature}: 'doc' must be a string argument (the document id) or the actual document instance itself. {GetTypes(docArg)}");
             }
 
-            private static string GetStringArg(JsValue jsArg, string signature, string argName)
+            private static string GetStringArg(InternalHandle jsArg, string signature, string argName)
             {
-                if (jsArg.IsString() == false)
+                if (jsArg.IsString == false)
                     throw new ArgumentException($"{signature}: The '{argName}' argument should be a string, but got {GetTypes(jsArg)}");
-                return jsArg.AsString();
+                return jsArg.AsString;
             }
 
-            private void FillDoubleArrayFromJsArray(double[] array, ArrayInstance jsArray, string signature)
+            private void FillDoubleArrayFromJsArray(double[] array, InternalHandle jsArray, string signature)
             {
-                var i = 0;
-                foreach (var (key, value) in jsArray.GetOwnPropertiesWithoutLength())
+                int arrayLength = jsArray.ArrayLength;
+                for (int i = 0; i < arrayLength; ++i)
                 {
-                    if (value.Value.IsNumber() == false)
-                        throw new ArgumentException($"{signature}: The values argument must be an array of numbers, but got {GetTypes(value.Value)} key({key}) value({value})");
-                    array[i] = value.Value.AsNumber();
-                    ++i;
+                    using (var jsItem = jsArray.GetProperty(i))
+                    {
+                        if (jsItem.IsNumber == false)
+                            throw new ArgumentException($"{signature}: The values argument must be an array of numbers, but got {GetTypes(value.Value)} key({key}) value({value})");
+                        array[i] = jsItem.AsDouble;
+                    }
                 }
             }
 
-            private JsValue TimeSeries(JsValue self, JsValue[] args)
+            private InternalHandle TimeSeries(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
                 AssertValidDatabaseContext(_timeSeriesSignature);
 
                 if (args.Length != 2)
                     throw new ArgumentException($"{_timeSeriesSignature}: This method requires 2 arguments but was called with {args.Length}");
 
-                var append = new ClrFunctionInstance(ScriptEngine, "append", (thisObj, values) =>
-                    AppendTimeSeries(thisObj.Get("doc"), thisObj.Get("name"), values));
+                var append = new ClrFunctionInstance(ScriptEngine, "append", AppendTimeSeries);
 
-                var delete = new ClrFunctionInstance(ScriptEngine, "delete", (thisObj, values) =>
-                    DeleteRangeTimeSeries(thisObj.Get("doc"), thisObj.Get("name"), values));
+                var delete = new ClrFunctionInstance(ScriptEngine, "delete", DeleteRangeTimeSeries);
 
-                var get = new ClrFunctionInstance(ScriptEngine, "get", (thisObj, values) =>
-                    GetRangeTimeSeries(thisObj.Get("doc"), thisObj.Get("name"), values));
+                var get = new ClrFunctionInstance(ScriptEngine, "get", GetRangeTimeSeries);
 
-                var getStats = new ClrFunctionInstance(ScriptEngine, "getStats", (thisObj, values) =>
-                    GetStatsTimeSeries(thisObj.Get("doc"), thisObj.Get("name"), values));
+                var getStats = new ClrFunctionInstance(ScriptEngine, "getStats", GetStatsTimeSeries);
 
-                var obj = new ObjectInstance(ScriptEngine);
-                obj.Set("append", append);
-                obj.Set("delete", delete);
-                obj.Set("get", get);
-                obj.Set("doc", args[0]);
-                obj.Set("name", args[1]);
-                obj.Set("getStats", getStats);
+                var obj = ScriptEngine.CreateObject();
+                obj.SetProperty("append", append);
+                obj.SetProperty("delete", delete);
+                obj.SetProperty("get", get);
+                obj.SetProperty("doc", args[0]);
+                obj.SetProperty("name", args[1]);
+                obj.SetProperty("getStats", getStats);
 
                 return obj;
             }
 
-            private JsValue GetStatsTimeSeries(JsValue document, JsValue name, JsValue[] args)
+            private InternalHandle GetStatsTimeSeries(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args)
             {
-                var (id, doc) = GetIdAndDocFromArg(document, _timeSeriesSignature);
+                using (var document = self.GetProperty("doc"))
+                using (var name = self.GetProperty("name"))
+                {
+                    var (id, doc) = GetIdAndDocFromArg(document, _timeSeriesSignature);
 
-                string timeSeries = GetStringArg(name, _timeSeriesSignature, "name");
-                var stats = _database.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(_docsCtx, id, timeSeries);
+                    string timeSeries = GetStringArg(name, _timeSeriesSignature, "name");
+                    var stats = _database.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(_docsCtx, id, timeSeries);
 
-                var tsStats = new ObjectInstance(ScriptEngine);
-                tsStats.Set(nameof(stats.Start), ScriptEngine.Date.Construct(stats.Start));
-                tsStats.Set(nameof(stats.End), ScriptEngine.Date.Construct(stats.End));
-                tsStats.Set(nameof(stats.Count), stats.Count);
-
-                return tsStats;
+                    var tsStats = ScriptEngine.CreateObject();
+                    tsStats.SetProperty(nameof(stats.Start), ScriptEngine.Date.Construct(stats.Start));
+                    tsStats.SetProperty(nameof(stats.End), ScriptEngine.Date.Construct(stats.End));
+                    tsStats.SetProperty(nameof(stats.Count), stats.Count);
+                    return tsStats;
+                }
             }
 
-            private JsValue AppendTimeSeries(JsValue document, JsValue name, JsValue[] args)
+            private InternalHandle AppendTimeSeries(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args)
             {
-                AssertValidDatabaseContext("timeseries(doc, name).append");
-
-                const string signature2Args = "timeseries(doc, name).append(timestamp, values)";
-                const string signature3Args = "timeseries(doc, name).append(timestamp, values, tag)";
-
-                string signature;
-                LazyStringValue lsTag = null;
-                switch (args.Length)
+                using (var document = self.GetProperty("doc"))
+                using (var name = self.GetProperty("name"))
                 {
-                    case 2:
-                        signature = signature2Args;
-                        break;
-                    case 3:
-                        signature = signature3Args;
-                        var tagArgument = args.Last();
-                        if (tagArgument != null && tagArgument.IsNull() == false && tagArgument.IsUndefined() == false)
+                    AssertValidDatabaseContext("timeseries(doc, name).append");
+
+                    const string signature2Args = "timeseries(doc, name).append(timestamp, values)";
+                    const string signature3Args = "timeseries(doc, name).append(timestamp, values, tag)";
+
+                    string signature;
+                    LazyStringValue lsTag = null;
+                    switch (args.Length)
+                    {
+                        case 2:
+                            signature = signature2Args;
+                            break;
+                        case 3:
+                            signature = signature3Args;
+                            var tagArgument = args.Last();
+                            if (tagArgument != null && tagArgument.IsNull == false && tagArgument.IsUndefined == false)
+                            {
+                                var tag = GetStringArg(tagArgument, signature, "tag");
+                                lsTag = _jsonCtx.GetLazyString(tag);
+                            }
+                            break;
+                        default:
+                            throw new ArgumentException($"There is no overload with {args.Length} arguments for this method should be {signature2Args} or {signature3Args}");
+                    }
+
+                    var (id, doc) = GetIdAndDocFromArg(document, _timeSeriesSignature);
+
+                    string timeSeries = GetStringArg(name, _timeSeriesSignature, "name");
+                    var timestamp = GetTimeSeriesDateArg(args[0], signature, "timestamp");
+
+                    double[] valuesBuffer = null;
+                    try
+                    {
+                        var jsValues = args[1];
+                        Memory<double> values;
+                        if (jsValues.IsArray)
                         {
-                            var tag = GetStringArg(tagArgument, signature, "tag");
-                            lsTag = _jsonCtx.GetLazyString(tag);
+                            valuesBuffer = ArrayPool<double>.Shared.Rent((int)jsValues.ArrayLength);
+                            FillDoubleArrayFromJsArray(valuesBuffer, jsValues, signature);
+                            values = new Memory<double>(valuesBuffer, 0, (int)jsValues.ArrayLength);
                         }
-                        break;
-                    default:
-                        throw new ArgumentException($"There is no overload with {args.Length} arguments for this method should be {signature2Args} or {signature3Args}");
+                        else if (jsValues.IsNumber)
+                        {
+                            valuesBuffer = ArrayPool<double>.Shared.Rent(1);
+                            valuesBuffer[0] = jsValues.AsDouble;
+                            values = new Memory<double>(valuesBuffer, 0, 1);
+                        }
+                        else
+                        {
+                            throw new ArgumentException($"{signature}: The values should be an array but got {GetTypes(jsValues)}");
+                        }
+
+                        var tss = _database.DocumentsStorage.TimeSeriesStorage;
+                        var newSeries = tss.Stats.GetStats(_docsCtx, id, timeSeries).Count == 0;
+
+                        if (newSeries)
+                        {
+                            DocumentTimeSeriesToUpdate ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                            DocumentTimeSeriesToUpdate.Add(id);
+                        }
+
+                        var toAppend = new SingleResult
+                        {
+                            Values = values,
+                            Tag = lsTag,
+                            Timestamp = timestamp,
+                            Status = TimeSeriesValuesSegment.Live
+                        };
+
+                        tss.AppendTimestamp(
+                            _docsCtx,
+                            id,
+                            CollectionName.GetCollectionName(doc),
+                            timeSeries,
+                            new[] { toAppend }, 
+                            addNewNameToMetadata: false);
+
+                        if (DebugMode)
+                        {
+                            DebugActions.AppendTimeSeries.Add(new DynamicJsonValue
+                            {
+                                ["Name"] = timeSeries,
+                                ["Timestamp"] = timestamp,
+                                ["Tag"] = lsTag,
+                                ["Values"] = values.ToArray().Cast<object>(),
+                                ["Created"] = newSeries
+                            });
+                        }
+                    }
+                    finally
+                    {
+                        if (valuesBuffer != null)
+                            ArrayPool<double>.Shared.Return(valuesBuffer);
+                    }
                 }
+                return Undefined.Instance;
+            }
 
-                var (id, doc) = GetIdAndDocFromArg(document, _timeSeriesSignature);
-
-                string timeSeries = GetStringArg(name, _timeSeriesSignature, "name");
-                var timestamp = GetTimeSeriesDateArg(args[0], signature, "timestamp");
-
-                double[] valuesBuffer = null;
-                try
+            private InternalHandle DeleteRangeTimeSeries(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args)
+            {
+                using (var document = self.GetProperty("doc"))
+                using (var name = self.GetProperty("name"))
                 {
-                    var valuesArg = args[1];
-                    Memory<double> values;
-                    if (valuesArg.IsArray())
+                    AssertValidDatabaseContext("timeseries(doc, name).delete");
+
+                    const string deleteAll = "delete()";
+                    const string deleteSignature = "delete(from, to)";
+
+                    DateTime from, to;
+                    switch (args.Length)
                     {
-                        var jsValues = valuesArg.AsArray();
-                        valuesBuffer = ArrayPool<double>.Shared.Rent((int)jsValues.Length);
-                        FillDoubleArrayFromJsArray(valuesBuffer, jsValues, signature);
-                        values = new Memory<double>(valuesBuffer, 0, (int)jsValues.Length);
-                    }
-                    else if (valuesArg.IsNumber())
-                    {
-                        valuesBuffer = ArrayPool<double>.Shared.Rent(1);
-                        valuesBuffer[0] = valuesArg.AsNumber();
-                        values = new Memory<double>(valuesBuffer, 0, 1);
-                    }
-                    else
-                    {
-                        throw new ArgumentException($"{signature}: The values should be an array but got {GetTypes(valuesArg)}");
+                        case 0:
+                            from = DateTime.MinValue;
+                            to = DateTime.MaxValue;
+                            break;
+                        case 2:
+                            from = GetTimeSeriesDateArg(args[0], deleteSignature, "from");
+                            to = GetTimeSeriesDateArg(args[1], deleteSignature, "to");
+                            break;
+                        default:
+                            throw new ArgumentException($"'delete' method has only the overloads: '{deleteSignature}' or '{deleteAll}', but was called with {args.Length} arguments.");
                     }
 
-                    var tss = _database.DocumentsStorage.TimeSeriesStorage;
-                    var newSeries = tss.Stats.GetStats(_docsCtx, id, timeSeries).Count == 0;
+                    var (id, doc) = GetIdAndDocFromArg(document, _timeSeriesSignature);
 
-                    if (newSeries)
+                    string timeSeries = GetStringArg(name, _timeSeriesSignature, "name");
+
+                    var count = _database.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(_docsCtx, id, timeSeries).Count;
+                    if (count == 0)
+                        return InternalHandle.Empty;
+
+                    var deletionRangeRequest = new TimeSeriesStorage.DeletionRangeRequest
+                    {
+                        DocumentId = id,
+                        Collection = CollectionName.GetCollectionName(doc),
+                        Name = timeSeries,
+                        From = from,
+                        To = to,
+                    };
+                    _database.DocumentsStorage.TimeSeriesStorage.DeleteTimestampRange(_docsCtx, deletionRangeRequest, updateMetadata: false);
+
+                    count = _database.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(_docsCtx, id, timeSeries).Count;
+                    if (count == 0)
                     {
                         DocumentTimeSeriesToUpdate ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                         DocumentTimeSeriesToUpdate.Add(id);
                     }
 
-                    var toAppend = new SingleResult
-                    {
-                        Values = values,
-                        Tag = lsTag,
-                        Timestamp = timestamp,
-                        Status = TimeSeriesValuesSegment.Live
-                    };
-
-                    tss.AppendTimestamp(
-                        _docsCtx,
-                        id,
-                        CollectionName.GetCollectionName(doc),
-                        timeSeries,
-                        new[] { toAppend }, 
-                        addNewNameToMetadata: false);
-
                     if (DebugMode)
                     {
-                        DebugActions.AppendTimeSeries.Add(new DynamicJsonValue
+                        DebugActions.DeleteTimeSeries.Add(new DynamicJsonValue
                         {
                             ["Name"] = timeSeries,
-                            ["Timestamp"] = timestamp,
-                            ["Tag"] = lsTag,
-                            ["Values"] = values.ToArray().Cast<object>(),
-                            ["Created"] = newSeries
+                            ["From"] = from,
+                            ["To"] = to
                         });
                     }
                 }
-                finally
-                {
-                    if (valuesBuffer != null)
-                        ArrayPool<double>.Shared.Return(valuesBuffer);
-                }
-
-                return Undefined.Instance;
+                return InternalHandle.Empty;
             }
 
-            private JsValue DeleteRangeTimeSeries(JsValue document, JsValue name, JsValue[] args)
+            private InternalHandle GetRangeTimeSeries(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args)
             {
-                AssertValidDatabaseContext("timeseries(doc, name).delete");
-
-                const string deleteAll = "delete()";
-                const string deleteSignature = "delete(from, to)";
-
-                DateTime from, to;
-                switch (args.Length)
+                using (var document = self.GetProperty("doc"))
+                using (var name = self.GetProperty("name"))
                 {
-                    case 0:
-                        from = DateTime.MinValue;
-                        to = DateTime.MaxValue;
-                        break;
-                    case 2:
-                        from = GetTimeSeriesDateArg(args[0], deleteSignature, "from");
-                        to = GetTimeSeriesDateArg(args[1], deleteSignature, "to");
-                        break;
-                    default:
-                        throw new ArgumentException($"'delete' method has only the overloads: '{deleteSignature}' or '{deleteAll}', but was called with {args.Length} arguments.");
-                }
+                    AssertValidDatabaseContext("get");
 
-                var (id, doc) = GetIdAndDocFromArg(document, _timeSeriesSignature);
+                    const string getRangeSignature = "get(from, to)";
+                    const string getAllSignature = "get()";
 
-                string timeSeries = GetStringArg(name, _timeSeriesSignature, "name");
+                    var id = GetIdFromArg(document, _timeSeriesSignature);
+                    var timeSeries = GetStringArg(name, _timeSeriesSignature, "name");
 
-                var count = _database.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(_docsCtx, id, timeSeries).Count;
-                if (count == 0)
-                    return JsValue.Undefined;
-
-                var deletionRangeRequest = new TimeSeriesStorage.DeletionRangeRequest
-                {
-                    DocumentId = id,
-                    Collection = CollectionName.GetCollectionName(doc),
-                    Name = timeSeries,
-                    From = from,
-                    To = to,
-                };
-                _database.DocumentsStorage.TimeSeriesStorage.DeleteTimestampRange(_docsCtx, deletionRangeRequest, updateMetadata: false);
-
-                count = _database.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(_docsCtx, id, timeSeries).Count;
-                if (count == 0)
-                {
-                    DocumentTimeSeriesToUpdate ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                    DocumentTimeSeriesToUpdate.Add(id);
-                }
-
-                if (DebugMode)
-                {
-                    DebugActions.DeleteTimeSeries.Add(new DynamicJsonValue
+                    DateTime from, to;
+                    switch (args.Length)
                     {
-                        ["Name"] = timeSeries,
-                        ["From"] = from,
-                        ["To"] = to
-                    });
-                }
-
-                return JsValue.Undefined;
-            }
-
-            private JsValue GetRangeTimeSeries(JsValue document, JsValue name, JsValue[] args)
-            {
-                AssertValidDatabaseContext("get");
-
-                const string getRangeSignature = "get(from, to)";
-                const string getAllSignature = "get()";
-
-                var id = GetIdFromArg(document, _timeSeriesSignature);
-                var timeSeries = GetStringArg(name, _timeSeriesSignature, "name");
-
-                DateTime from, to;
-                switch (args.Length)
-                {
-                    case 0:
-                        from = DateTime.MinValue;
-                        to = DateTime.MaxValue;
-                        break;
-                    case 2:
-                        from = GetTimeSeriesDateArg(args[0], getRangeSignature, "from");
-                        to = GetTimeSeriesDateArg(args[1], getRangeSignature, "to");
-                        break;
-                    default:
-                        throw new ArgumentException($"'get' method has only the overloads: '{getRangeSignature}' or '{getAllSignature}', but was called with {args.Length} arguments.");
-                }
-
-                var reader = _database.DocumentsStorage.TimeSeriesStorage.GetReader(_docsCtx, id, timeSeries, from, to);
-
-                var entries = new List<JsValue>();
-                foreach (var singleResult in reader.AllValues())
-                {
-                    Span<double> valuesSpan = singleResult.Values.Span;
-                    var v = new JsValue[valuesSpan.Length];
-                    for (int i = 0; i < valuesSpan.Length; i++)
-                    {
-                        v[i] = valuesSpan[i];
+                        case 0:
+                            from = DateTime.MinValue;
+                            to = DateTime.MaxValue;
+                            break;
+                        case 2:
+                            from = GetTimeSeriesDateArg(args[0], getRangeSignature, "from");
+                            to = GetTimeSeriesDateArg(args[1], getRangeSignature, "to");
+                            break;
+                        default:
+                            throw new ArgumentException($"'get' method has only the overloads: '{getRangeSignature}' or '{getAllSignature}', but was called with {args.Length} arguments.");
                     }
-                    var jsValues = new ArrayInstance(ScriptEngine);
-                    jsValues.FastAddProperty("length", 0, true, false, false);
-                    ScriptEngine.Array.PrototypeObject.Push(jsValues, v);
 
-                    var entry = new ObjectInstance(ScriptEngine);
-                    entry.Set(nameof(TimeSeriesEntry.Timestamp), singleResult.Timestamp.GetDefaultRavenFormat(isUtc: true));
-                    entry.Set(nameof(TimeSeriesEntry.Tag), singleResult.Tag?.ToString());
-                    entry.Set(nameof(TimeSeriesEntry.Values), jsValues);
-                    entry.Set(nameof(TimeSeriesEntry.IsRollup), singleResult.Type == SingleResultType.RolledUp);
-                    entries.Add(entry);
+                    var reader = _database.DocumentsStorage.TimeSeriesStorage.GetReader(_docsCtx, id, timeSeries, from, to);
 
-                    if (DebugMode)
+                    var entries = ScriptEngine.CreateArray(Array.Empty<InternalHandle>());
+                    foreach (var singleResult in reader.AllValues())
+                    {
+                        Span<double> valuesSpan = singleResult.Values.Span;
+                        var jsSpanItems = new InternalHandle[valuesSpan.Length];
+                        for (int i = 0; i < valuesSpan.Length; i++)
+                        {
+                            jsSpanItems[i] = ScriptEngine.CreateValue(valuesSpan[i]);
+                        }
+                        using (var jsValues = ScriptEngine.CreateArray(Array.Empty<InternalHandle>()))
+                        {
+                            jsValues.FastAddProperty("length", 0, true, false, false);
+                            
+                            using (var jsResPush = jsValues.Call("push", InternalHandle.Empty, jsSpanItems)) // KeepAlive to each item has been done earlier (upper)
+                                jsResPush.ThrowOnError(); // TODO check if is needed here
+
+                            using (var entry = ScriptEngine.CreateObject())
+                            {
+                                entry.SetProperty(nameof(TimeSeriesEntry.Timestamp), singleResult.Timestamp.GetDefaultRavenFormat(isUtc: true));
+                                entry.SetProperty(nameof(TimeSeriesEntry.Tag), singleResult.Tag?.ToString());
+                                entry.SetProperty(nameof(TimeSeriesEntry.Values), jsValues);
+                                entry.SetProperty(nameof(TimeSeriesEntry.IsRollup), singleResult.Type == SingleResultType.RolledUp);
+                                
+                                using (var jsResPush = list.Call("push", InternalHandle.Empty, entry))
+                                    jsResPush.ThrowOnError(); // TODO check if is needed here
+                            }
+                        }
+                        ScriptEngine.Dispose(jsSpanItems);
+
+                        if (DebugMode)
+                        {
+                            DebugActions.GetTimeSeries.Add(new DynamicJsonValue
+                            {
+                                ["Name"] = timeSeries,
+                                ["Timestamp"] = singleResult.Timestamp.GetDefaultRavenFormat(isUtc: true),
+                                ["Tag"] = singleResult.Tag?.ToString(),
+                                ["Values"] = singleResult.Values.ToArray().Cast<object>(),
+                                ["Type"] = singleResult.Type,
+                                ["Exists"] = true
+                            });
+                        }
+                    }
+
+                    if (DebugMode && entries.Count == 0)
                     {
                         DebugActions.GetTimeSeries.Add(new DynamicJsonValue
                         {
                             ["Name"] = timeSeries,
-                            ["Timestamp"] = singleResult.Timestamp.GetDefaultRavenFormat(isUtc: true),
-                            ["Tag"] = singleResult.Tag?.ToString(),
-                            ["Values"] = singleResult.Values.ToArray().Cast<object>(),
-                            ["Type"] = singleResult.Type,
-                            ["Exists"] = true
+                            ["Exists"] = false
                         });
                     }
                 }
-
-                if (DebugMode && entries.Count == 0)
-                {
-                    DebugActions.GetTimeSeries.Add(new DynamicJsonValue
-                    {
-                        ["Name"] = timeSeries,
-                        ["Exists"] = false
-                    });
-                }
-
-                return ScriptEngine.Array.Construct(entries.ToArray());
+                return entries;
             }
 
-            private void GenericSortTwoElementArray(JsValue[] args, [CallerMemberName] string caller = null)
+            private void GenericSortTwoElementArray(InternalHandle[] args, [CallerMemberName] string caller = null)
             {
                 void Swap()
                 {
@@ -671,125 +687,135 @@ namespace Raven.Server.Documents.Patch
                 if (args.Length != 2)
                     throw new ArgumentException(caller + "must be called with exactly two arguments");
 
-                switch (args[0].Type)
+                switch (args[0].ValueType)
                 {
-                    case Jint.Runtime.Types.None:
-                    case Jint.Runtime.Types.Undefined:
-                    case Jint.Runtime.Types.Null:
+                    case JSValueType.Uninitialized:
+                    case JSValueType.Undefined:
+                    case JSValueType.Null:
                         // null sorts lowers, so that is fine (either the other one is null or
                         // already higher than us).
                         break;
-                    case Jint.Runtime.Types.Boolean:
-                    case Jint.Runtime.Types.Number:
-                        var a = Jint.Runtime.TypeConverter.ToNumber(args[0]);
-                        var b = Jint.Runtime.TypeConverter.ToNumber(args[1]);
+                    case JSValueType.Bool:
+                    case JSValueType.Number:
+                        var a = V8EngineEx.ToNumber(args[0]);
+                        var b = V8EngineEx.ToNumber(args[1]);
                         if (a > b)
                             Swap();
                         break;
-                    case Jint.Runtime.Types.String:
-                        switch (args[1].Type)
+                    case JSValueType.String:
+                        switch (args[1].ValueType)
                         {
-                            case Jint.Runtime.Types.None:
-                            case Jint.Runtime.Types.Undefined:
-                            case Jint.Runtime.Types.Null:
+                            case JSValueType.None:
+                            case JSValueType.Undefined:
+                            case JSValueType.Null:
                                 Swap();// a value is bigger than no value
                                 break;
-                            case Jint.Runtime.Types.Boolean:
-                            case Jint.Runtime.Types.Number:
+                            case JSValueType.Boolean:
+                            case JSValueType.Number:
                                 // if the string value is a number that is smaller than
                                 // the numeric value, because Math.min(true, "-2") works :-(
-                                if (double.TryParse(args[0].AsString(), out double d) == false ||
-                                    d > Jint.Runtime.TypeConverter.ToNumber(args[1]))
+                                if (double.TryParse(args[0].AsString, out double d) == false ||
+                                    d > V8EngineEx.ToNumber(args[1]))
                                 {
                                     Swap();
                                 }
                                 break;
-                            case Jint.Runtime.Types.String:
-                                if (string.Compare(args[0].AsString(), args[1].AsString()) > 0)
+                            case JSValueType.String:
+                                if (string.Compare(args[0].AsString, args[1].AsString) > 0)
                                     Swap();
                                 break;
                         }
                         break;
-                    case Jint.Runtime.Types.Object:
+                    case JSValueType.Object:
                         throw new ArgumentException(caller + " cannot be called on an object");
                 }
             }
 
-            private JsValue Raven_Max(JsValue self, JsValue[] args)
+            private InternalHandle Raven_Max(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
                 GenericSortTwoElementArray(args);
                 return args[1];
             }
 
-            private JsValue Raven_Min(JsValue self, JsValue[] args)
+            private InternalHandle Raven_Min(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
                 GenericSortTwoElementArray(args);
                 return args[0];
             }
 
-            private JsValue IncludeDoc(JsValue self, JsValue[] args)
+            private InternalHandle IncludeDoc(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
                 if (args.Length != 1)
                     throw new InvalidOperationException("include(id) must be called with a single argument");
 
-                if (args[0].IsNull() || args[0].IsUndefined())
+                if (args[0].IsNull || args[0].IsUndefined)
                     return args[0];
 
-                if (args[0].IsArray())// recursive call ourselves
+                if (args[0].IsArray)// recursive call ourselves
                 {
-                    var array = args[0].AsArray();
-                    foreach (var pair in array.GetOwnPropertiesWithoutLength())
+                    var jsArray = args[0];
+                    int arrayLength = jsArray.ArrayLength;
+                    for (int i = 0; i < arrayLength; ++i)
                     {
-                        args[0] = pair.Value.Value;
-                        if (args[0].IsString())
-                            IncludeDoc(self, args);
+                        using (var jsItem = jsArray.GetProperty(i))
+                        {
+                            args[0].Set(jsItem);
+                            if (args[0].IsString)
+                                IncludeDoc(self, args);
+                        }
                     }
-                    return self;
+                    return;
                 }
 
-                if (args[0].IsString() == false)
+                if (args[0].IsString == false)
                     throw new InvalidOperationException("include(doc) must be called with an string or string array argument");
 
-                var id = args[0].AsString();
+                var id = args[0].AsString;
 
                 if (Includes == null)
                     Includes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 Includes.Add(id);
 
-                return self;
+                InternalHandle jsRes;
+                return jsRes.Set(self);
             }
 
-            private JsValue IncludeCompareExchangeValue(JsValue self, JsValue[] args)
+            private InternalHandle IncludeCompareExchangeValue(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
                 if (args.Length != 1)
                     throw new InvalidOperationException("includes.cmpxchg(key) must be called with a single argument");
 
-                if (args[0].IsNull() || args[0].IsUndefined())
-                    return self;
+                InternalHandle jsRes;
 
-                if (args[0].IsArray())// recursive call ourselves
+                if (args[0].IsNull || args[0].IsUndefined)
+                    return jsRes.Set(self);
+
+                if (args[0].IsArray)// recursive call ourselves
                 {
-                    var array = args[0].AsArray();
-                    foreach (var pair in array.GetOwnPropertiesWithoutLength())
+                    var jsArray = args[0];
+                    int arrayLength = jsArray.ArrayLength;
+                    for (int i = 0; i < arrayLength; ++i)
                     {
-                        args[0] = pair.Value.Value;
-                        if (args[0].IsString())
-                            IncludeCompareExchangeValue(self, args);
+                        using (args[0] = jsArray.GetProperty(i))
+                        {
+                            if (args[0].IsString)
+                                IncludeCompareExchangeValue(self, args);
+                        }
                     }
-                    return self;
+                    return jsRes.Set(self);
                 }
 
-                if (args[0].IsString() == false)
+                if (args[0].IsString == false)
                     throw new InvalidOperationException("includes.cmpxchg(key) must be called with an string or string array argument");
 
-                var key = args[0].AsString();
+                var key = args[0].AsString;
 
                 if (CompareExchangeValueIncludes == null)
                     CompareExchangeValueIncludes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
                 CompareExchangeValueIncludes.Add(key);
 
-                return self;
+                return jsRes.Set(self);
             }
 
             public override string ToString()
@@ -797,54 +823,54 @@ namespace Raven.Server.Documents.Patch
                 return string.Join(Environment.NewLine, _runner.ScriptsSource);
             }
 
-            private static JsValue GetLastModified(JsValue self, JsValue[] args)
+            private static InternalHandle GetLastModified(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
                 if (args.Length != 1)
                     throw new InvalidOperationException("lastModified(doc) must be called with a single argument");
 
-                if (args[0].IsNull() || args[0].IsUndefined())
+                if (args[0].IsNull || args[0].IsUndefined)
                     return args[0];
 
-                if (args[0].IsObject() == false)
+                if (args[0].IsObject == false)
                     throw new InvalidOperationException("lastModified(doc) must be called with an object argument");
 
-                if (args[0].AsObject() is BlittableObjectInstance doc)
+                if (args[0].BoundObject is BlittableObjectInstance doc)
                 {
                     if (doc.LastModified == null)
                         return Undefined.Instance;
 
                     // we use UTC because last modified is in UTC
                     var epoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-                    var jsTime = doc.LastModified.Value.Subtract(epoch)
+                    var time = doc.LastModified.Value.Subtract(epoch)
                         .TotalMilliseconds;
-                    return jsTime;
+                    return ScriptEngine.CreateValue(time);
                 }
-                return Undefined.Instance;
+                return InternalHandle.Empty;
             }
 
-            private JsValue Spatial_Distance(JsValue self, JsValue[] args)
+            private InternalHandle Spatial_Distance(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
                 if (args.Length < 4 && args.Length > 5)
                     throw new ArgumentException("Called with expected number of arguments, expected: spatial.distance(lat1, lng1, lat2, lng2, kilometers | miles | cartesian)");
 
                 for (int i = 0; i < 4; i++)
                 {
-                    if (args[i].IsNumber() == false)
+                    if (args[i].IsNumber == false)
                         return Undefined.Instance;
                 }
 
-                var lat1 = args[0].AsNumber();
-                var lng1 = args[1].AsNumber();
-                var lat2 = args[2].AsNumber();
-                var lng2 = args[3].AsNumber();
+                var lat1 = args[0].AsDouble;
+                var lng1 = args[1].AsDouble;
+                var lat2 = args[2].AsDouble;
+                var lng2 = args[3].AsDouble;
 
                 var units = SpatialUnits.Kilometers;
-                if (args.Length > 4 && args[4].IsString())
+                if (args.Length > 4 && args[4].IsString)
                 {
-                    if (string.Equals("cartesian", args[4].AsString(), StringComparison.OrdinalIgnoreCase))
+                    if (string.Equals("cartesian", args[4].AsString, StringComparison.OrdinalIgnoreCase))
                         return SpatialDistanceFieldComparatorSource.SpatialDistanceFieldComparator.CartesianDistance(lat1, lng1, lat2, lng2);
 
-                    if (Enum.TryParse(args[4].AsString(), ignoreCase: true, out units) == false)
+                    if (Enum.TryParse(args[4].AsString, ignoreCase: true, out units) == false)
                         throw new ArgumentException("Unable to parse units " + args[5] + ", expected: 'kilometers' or 'miles'");
                 }
 
@@ -855,72 +881,57 @@ namespace Raven.Server.Documents.Patch
                 return result;
             }
 
-            private JsValue OutputDebug(JsValue self, JsValue[] args)
+            private InternalHandle OutputDebug(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
+                InternalHandle jsRes;
                 if (DebugMode == false)
-                    return self;
+                    return jsRes.Set(self);
 
-                var obj = args[0];
+                InternalHandle obj = args[0];
 
                 DebugOutput.Add(GetDebugValue(obj, false));
-                return self;
+                return jsRes.Set(self);
             }
 
-            private string GetDebugValue(JsValue obj, bool recursive)
+            private string GetDebugValue(InternalHandle obj, bool recursive)
             {
-                if (obj.IsString())
+                if (obj.IsString)
                 {
                     var debugValue = obj.ToString();
                     return recursive ? '"' + debugValue + '"' : debugValue;
                 }
-                if (obj.IsArray())
+                if (obj.IsArray)
                 {
                     var sb = new StringBuilder("[");
-                    var array = obj.AsArray();
-                    var jsValue = (int)array.Get("length").AsNumber();
-                    for (var i = 0; i < jsValue; i++)
+                    int arrayLength = obj.ArrayLength;
+                    for (int i = 0; i < arrayLength; i++)
                     {
                         if (i != 0)
                             sb.Append(",");
-                        sb.Append(GetDebugValue(array.Get(i.ToString()), true));
+                        using (var jsValue = obj.GetProperty(i))
+                            sb.Append(GetDebugValue(jsValue, true));
                     }
                     sb.Append("]");
                     return sb.ToString();
                 }
-                if (obj.IsObject())
+                if (obj.IsObject)
                 {
                     var result = new ScriptRunnerResult(this, obj);
                     using (var jsonObj = result.TranslateToObject(_jsonCtx))
-                    {
                         return jsonObj.ToString();
-                    }
                 }
-                if (obj.IsBoolean())
-                    return obj.AsBoolean().ToString();
-                if (obj.IsNumber())
-                    return obj.AsNumber().ToString(CultureInfo.InvariantCulture);
-                if (obj.IsNull())
+                if (obj.IsBoolean)
+                    return obj.AsBoolean.ToString();
+                if (obj.IsNumber)
+                    return obj.AsDouble.ToString(CultureInfo.InvariantCulture);
+                if (obj.IsNull)
                     return "null";
-                if (obj.IsUndefined())
+                if (obj.IsUndefined)
                     return "undefined";
                 return obj.ToString();
             }
 
-            public JsValue ExplodeArgs(JsValue self, JsValue[] args)
-            {
-                if (args.Length != 2)
-                    throw new InvalidOperationException("Raven_ExplodeArgs(this, args) - must be called with 2 arguments");
-                if (args[1].IsObject() && args[1].AsObject() is BlittableObjectInstance boi)
-                {
-                    _refResolver.ExplodeArgsOn(args[0], boi);
-                    return self;
-                }
-                if (args[1].IsNull() || args[1].IsUndefined())
-                    return self;// noop
-                throw new InvalidOperationException("Raven_ExplodeArgs(this, args) second argument must be BlittableObjectInstance");
-            }
-
-            public JsValue PutDocument(JsValue self, JsValue[] args)
+            public InternalHandle PutDocument(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
                 string changeVector = null;
 
@@ -928,28 +939,28 @@ namespace Raven.Server.Documents.Patch
                     throw new InvalidOperationException("put(id, doc, changeVector) must be called with called with 2 or 3 arguments only");
                 AssertValidDatabaseContext("put document");
                 AssertNotReadOnly();
-                if (args[0].IsString() == false && args[0].IsNull() == false && args[0].IsUndefined() == false)
+                if (args[0].IsString == false && args[0].IsNull == false && args[0].IsUndefined == false)
                     AssertValidId();
 
-                var id = args[0].IsNull() || args[0].IsUndefined() ? null : args[0].AsString();
+                var id = args[0].IsNull || args[0].IsUndefined ? null : args[0].AsString;
 
-                if (args[1].IsObject() == false)
+                if (args[1].IsObject == false)
                     throw new InvalidOperationException(
                         $"Created document must be a valid object which is not null or empty. Document ID: '{id}'.");
 
                 PutOrDeleteCalled = true;
 
                 if (args.Length == 3)
-                    if (args[2].IsString())
-                        changeVector = args[2].AsString();
-                    else if (args[2].IsNull() == false && args[0].IsUndefined() == false)
+                    if (args[2].IsString)
+                        changeVector = args[2].AsString;
+                    else if (args[2].IsNull == false && args[0].IsUndefined == false)
                         throw new InvalidOperationException(
                             $"The change vector must be a string or null. Document ID: '{id}'.");
 
                 BlittableJsonReaderObject reader = null;
                 try
                 {
-                    reader = JsBlittableBridge.Translate(_jsonCtx, ScriptEngine, args[1].AsObject(), usageMode: BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                    reader = JsBlittableBridge.Translate(_jsonCtx, ScriptEngine, args[1].Object, usageMode: BlittableJsonDocumentBuilder.UsageMode.ToDisk);
 
                     var put = _database.DocumentsStorage.Put(
                         _docsCtx,
@@ -986,19 +997,19 @@ namespace Raven.Server.Documents.Patch
                 throw new InvalidOperationException("The first parameter to put(id, doc, changeVector) must be a string");
             }
 
-            public JsValue DeleteDocument(JsValue self, JsValue[] args)
+            public InternalHandle DeleteDocument(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
                 if (args.Length != 1 && args.Length != 2)
                     throw new InvalidOperationException("delete(id, changeVector) must be called with at least one parameter");
 
-                if (args[0].IsString() == false)
+                if (args[0].IsString == false)
                     throw new InvalidOperationException("delete(id, changeVector) id argument must be a string");
 
-                var id = args[0].AsString();
+                var id = args[0].AsString;
                 string changeVector = null;
 
-                if (args.Length == 2 && args[1].IsString())
-                    changeVector = args[1].AsString();
+                if (args.Length == 2 && args[1].IsString)
+                    changeVector = args[1].AsString;
 
                 PutOrDeleteCalled = true;
                 AssertValidDatabaseContext("delete document");
@@ -1028,19 +1039,19 @@ namespace Raven.Server.Documents.Patch
                 if (_docsCtx == null)
                     throw new InvalidOperationException($"Unable to use `{functionName}` when this instance is not attached to a database operation");
             }
-            
-            private JsValue IncludeRevisions(JsValue self, JsValue[] args)
+
+            private InternalHandle IncludeRevisions(InternalHandle self, InternalHandle[] args)
             {
                 if (args == null)
-                    return JsValue.Null;
+                    return ScriptEngine.CreateNullValue();
 
                 IncludeRevisionsChangeVectors ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 
-                foreach (JsValue arg in args)
+                foreach (InternalHandle arg in args)
                 {
-                    switch (arg.Type)
+                    switch (arg.ValueType)
                     {
-                        case Types.String:
+                        case JSValueType.String:
                             if (DateTime.TryParseExact(arg.ToString(), DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture,DateTimeStyles.AssumeUniversal, out var dateTime))
                             {
                                 IncludeRevisionByDateTimeBefore = dateTime.ToUniversalTime();
@@ -1048,46 +1059,51 @@ namespace Raven.Server.Documents.Patch
                             }
                             IncludeRevisionsChangeVectors.Add(arg.ToString());
                             break;
-                        case Types.Object when arg.IsArray():
-                            foreach (JsValue nested in arg.AsArray())
+                        case JSValueType.Object when arg.IsArray:
+                            InternalHandle jsArray = arg;
+                            int arrayLength = jsArray.ArrayLength;
+                            for (int i = 0; i < arrayLength; ++i)
                             {
-                                if (nested.IsString() == false)
-                                    continue;
-                                IncludeRevisionsChangeVectors.Add(nested.ToString());
+                                using (var jsItem = jsArray.GetProperty(i))
+                                {
+                                    if (jsItem.IsString == false)
+                                        continue;
+                                    IncludeRevisionsChangeVectors.Add(jsItem.ToString());
+                                }
                             }
                             break;
                     }
                 }
                 
-                return JsValue.Null;
+                return ScriptEngine.CreateNullValue();
             }
             
-            private JsValue LoadDocumentByPath(JsValue self, JsValue[] args)
+            private InternalHandle LoadDocumentByPath(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
                 using (_loadScope = _loadScope?.Start() ?? _scope?.For(nameof(QueryTimingsScope.Names.Load)))
                 {
                     AssertValidDatabaseContext("loadPath");
 
                     if (args.Length != 2 ||
-                        (args[0].IsNull() == false && args[0].IsUndefined() == false && args[0].IsObject() == false)
-                        || args[1].IsString() == false)
+                        (args[0].IsNull == false && args[0].IsUndefined == false && args[0].IsObject == false)
+                        || args[1].IsString == false)
                         throw new InvalidOperationException("loadPath(doc, path) must be called with a document and path");
 
-                    if (args[0].IsNull() || args[1].IsUndefined())
+                    if (args[0].IsNull || args[1].IsUndefined)
                         return args[0];
 
-                    if (args[0].AsObject() is BlittableObjectInstance b)
+                    if (args[0].AsObject is BlittableObjectInstance b)
                     {
-                        var path = args[1].AsString();
+                        var path = args[1].AsString;
                         if (_documentIds == null)
                             _documentIds = new HashSet<string>();
 
                         _documentIds.Clear();
                         IncludeUtil.GetDocIdFromInclude(b.Blittable, path, _documentIds, _database.IdentityPartsSeparator);
                         if (path.IndexOf("[]", StringComparison.InvariantCulture) != -1) // array
-                            return JsValue.FromObject(ScriptEngine, _documentIds.Select(LoadDocumentInternal).ToList());
+                            return ScriptEngine.FromObject(_documentIds.Select(LoadDocumentInternal).ToList());
                         if (_documentIds.Count == 0)
-                            return JsValue.Null;
+                            return ScriptEngine.CreateNullValue();
 
                         return LoadDocumentInternal(_documentIds.First());
                     }
@@ -1096,17 +1112,17 @@ namespace Raven.Server.Documents.Patch
                 }
             }
 
-            private JsValue CompareExchange(JsValue self, JsValue[] args)
+            private InternalHandle CompareExchange(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
                 AssertValidDatabaseContext("cmpxchg");
 
-                if (args.Length != 1 && args.Length != 2 || args[0].IsString() == false)
+                if (args.Length != 1 && args.Length != 2 || args[0].IsString == false)
                     throw new InvalidOperationException("cmpxchg(key) must be called with a single string argument");
 
-                return CmpXchangeInternal(CompareExchangeKey.GetStorageKey(_database.Name, args[0].AsString()));
+                return CmpXchangeInternal(CompareExchangeKey.GetStorageKey(_database.Name, args[0].AsString));
             }
 
-            private JsValue LoadDocument(JsValue self, JsValue[] args)
+            private InternalHandle LoadDocument(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
                 using (_loadScope = _loadScope?.Start() ?? _scope?.For(nameof(QueryTimingsScope.Names.Load)))
                 {
@@ -1115,41 +1131,46 @@ namespace Raven.Server.Documents.Patch
                     if (args.Length != 1)
                         throw new InvalidOperationException($"load(id | ids) must be called with a single string argument");
 
-                    if (args[0].IsNull() || args[0].IsUndefined())
+                    if (args[0].IsNull || args[0].IsUndefined)
                         return args[0];
 
-                    if (args[0].IsArray())
+                    if (args[0].IsArray)
                     {
-                        var results = (ArrayInstance)ScriptEngine.Array.Construct(Array.Empty<JsValue>());
-                        var arrayInstance = args[0].AsArray();
-                        foreach (var kvp in arrayInstance.GetOwnPropertiesWithoutLength())
+                        var results = ScriptEngine.CreateArray(Array.Empty<InternalHandle>());
+                        var jsArray = args[0];
+                        int arrayLength = jsArray.ArrayLength;
+                        for (int i = 0; i < arrayLength; ++i)
                         {
-                            if (kvp.Value.Value.IsString() == false)
-                                throw new InvalidOperationException("load(ids) must be called with a array of strings, but got " + kvp.Value.Value.Type + " - " + kvp.Value.Value);
-                            var result = LoadDocumentInternal(kvp.Value.Value.AsString());
-                            ScriptEngine.Array.PrototypeObject.Push(results, new[] { result });
+                            using (var jsItem = jsArray.GetProperty(i))
+                            {
+                                if (jsItem.IsString == false)
+                                    throw new InvalidOperationException("load(ids) must be called with a array of strings, but got " + jsItem.ValueType + " - " + jsItem.ToString);
+                                using (var result = LoadDocumentInternal(jsItem.AsString))
+                                using (var jsResPush = results.Call("push", InternalHandle.Empty, result))
+                                    jsResPush.ThrowOnError(); // TODO check if is needed here
+                            }
                         }
                         return results;
                     }
 
-                    if (args[0].IsString() == false)
+                    if (args[0].IsString == false)
                         throw new InvalidOperationException("load(id | ids) must be called with a single string or array argument");
 
-                    return LoadDocumentInternal(args[0].AsString());
+                    return LoadDocumentInternal(args[0].AsString);
                 }
             }
 
-            private JsValue GetCounter(JsValue self, JsValue[] args)
+            private InternalHandle GetCounter(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
                 return GetCounterInternal(args);
             }
 
-            private JsValue GetCounterRaw(JsValue self, JsValue[] args)
+            private InternalHandle GetCounterRaw(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
                 return GetCounterInternal(args, true);
             }
 
-            private JsValue GetCounterInternal(JsValue[] args, bool raw = false)
+            private InternalHandle GetCounterInternal(InternalHandle[] args, bool raw = false)
             {
                 var signature = raw ? "counterRaw(doc, name)" : "counter(doc, name)";
                 AssertValidDatabaseContext(signature);
@@ -1158,33 +1179,33 @@ namespace Raven.Server.Documents.Patch
                     throw new InvalidOperationException($"{signature} must be called with exactly 2 arguments");
 
                 string id;
-                if (args[0].IsObject() && args[0].AsObject() is BlittableObjectInstance doc)
+                if (args[0].IsObject && args[0].AsObject is BlittableObjectInstance doc)
                 {
                     id = doc.DocumentId;
                 }
-                else if (args[0].IsString())
+                else if (args[0].IsString)
                 {
-                    id = args[0].AsString();
+                    id = args[0].AsString;
                 }
                 else
                 {
                     throw new InvalidOperationException($"{signature}: 'doc' must be a string argument (the document id) or the actual document instance itself");
                 }
 
-                if (args[1].IsString() == false)
+                if (args[1].IsString == false)
                 {
                     throw new InvalidOperationException($"{signature}: 'name' must be a string argument");
                 }
 
-                var name = args[1].AsString();
+                var name = args[1].AsString;
                 if (string.IsNullOrEmpty(id) || string.IsNullOrEmpty(name))
                 {
-                    return JsValue.Undefined;
+                    return InternalHandle.Empty;
                 }
 
                 if (raw == false)
                 {
-                    var counterValue = _database.DocumentsStorage.CountersStorage.GetCounterValue(_docsCtx, id, name)?.Value ?? JsValue.Null;
+                    var counterValue = _database.DocumentsStorage.CountersStorage.GetCounterValue(_docsCtx, id, name)?.Value ?? ScriptEngine.CreateNullValue();
 
                     if (DebugMode)
                     {
@@ -1192,14 +1213,14 @@ namespace Raven.Server.Documents.Patch
                         {
                             ["Name"] = name,
                             ["Value"] = counterValue.ToString(),
-                            ["Exists"] = counterValue != JsValue.Null
+                            ["Exists"] = counterValue.IsNull == false
                         });
                     }
 
                     return counterValue;
                 }
 
-                var rawValues = new ObjectInstance(ScriptEngine);
+                var rawValues = ScriptEngine.CreateObject();
                 foreach (var partialValue in _database.DocumentsStorage.CountersStorage.GetCounterPartialValues(_docsCtx, id, name))
                 {
                     rawValues.FastAddProperty(partialValue.ChangeVector, partialValue.PartialValue, true, false, false);
@@ -1208,7 +1229,7 @@ namespace Raven.Server.Documents.Patch
                 return rawValues;
             }
 
-            private JsValue IncrementCounter(JsValue self, JsValue[] args)
+            private InternalHandle IncrementCounter(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
                 AssertValidDatabaseContext("incrementCounter");
 
@@ -1222,14 +1243,14 @@ namespace Raven.Server.Documents.Patch
                 BlittableJsonReaderObject docBlittable = null;
                 string id = null;
 
-                if (args[0].IsObject() && args[0].AsObject() is BlittableObjectInstance doc)
+                if (args[0].IsObject && args[0].BoundObject is BlittableObjectInstance doc)
                 {
                     id = doc.DocumentId;
                     docBlittable = doc.Blittable;
                 }
-                else if (args[0].IsString())
+                else if (args[0].IsString)
                 {
-                    id = args[0].AsString();
+                    id = args[0].AsString;
                     var document = _database.DocumentsStorage.Get(_docsCtx, id);
                     if (document == null)
                     {
@@ -1246,19 +1267,19 @@ namespace Raven.Server.Documents.Patch
 
                 Debug.Assert(id != null && docBlittable != null);
 
-                if (args[1].IsString() == false)
+                if (args[1].IsString == false)
                     ThrowInvalidCounterName(signature);
 
-                var name = args[1].AsString();
+                var name = args[1].AsString;
                 if (string.IsNullOrWhiteSpace(name))
                     ThrowInvalidCounterName(signature);
 
                 double value = 1;
                 if (args.Length == 3)
                 {
-                    if (args[2].IsNumber() == false)
+                    if (args[2].IsNumber == false)
                         ThrowInvalidCounterValue();
-                    value = args[2].AsNumber();
+                    value = args[2].AsDouble;
                 }
 
                 long? currentValue = null;
@@ -1292,7 +1313,7 @@ namespace Raven.Server.Documents.Patch
                 return JsBoolean.True;
             }
 
-            private JsValue DeleteCounter(JsValue self, JsValue[] args)
+            private InternalHandle DeleteCounter(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
                 AssertValidDatabaseContext("deleteCounter");
 
@@ -1304,14 +1325,14 @@ namespace Raven.Server.Documents.Patch
                 string id = null;
                 BlittableJsonReaderObject docBlittable = null;
 
-                if (args[0].IsObject() && args[0].AsObject() is BlittableObjectInstance doc)
+                if (args[0].IsObject && args[0].BoundObject is BlittableObjectInstance doc)
                 {
                     id = doc.DocumentId;
                     docBlittable = doc.Blittable;
                 }
-                else if (args[0].IsString())
+                else if (args[0].IsString)
                 {
-                    id = args[0].AsString();
+                    id = args[0].AsString;
                     var document = _database.DocumentsStorage.Get(_docsCtx, id);
                     if (document == null)
                     {
@@ -1328,12 +1349,12 @@ namespace Raven.Server.Documents.Patch
 
                 Debug.Assert(id != null && docBlittable != null);
 
-                if (args[1].IsString() == false)
+                if (args[1].IsString == false)
                 {
                     ThrowDeleteCounterNameArg();
                 }
 
-                var name = args[1].AsString();
+                var name = args[1].AsString;
                 _database.DocumentsStorage.CountersStorage.DeleteCounter(_docsCtx, id, CollectionName.GetCollectionName(docBlittable), name);
 
                 DocumentCountersToUpdate ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -1350,10 +1371,10 @@ namespace Raven.Server.Documents.Patch
             private ClrFunctionInstance NamedInvokeTimeSeriesFunction(string name)
             {
                 return new ClrFunctionInstance(ScriptEngine, name,
-                    (self, args) => InvokeTimeSeriesFunction(name, args));
+                    (V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) => InvokeTimeSeriesFunction(name, args));
             }
 
-            private JsValue InvokeTimeSeriesFunction(string name, JsValue[] args)
+            private InternalHandle InvokeTimeSeriesFunction(string name, params InternalHandle[] args)
             {
                 AssertValidDatabaseContext("InvokeTimeSeriesFunction");
 
@@ -1374,10 +1395,10 @@ namespace Raven.Server.Documents.Patch
                     id?.Dispose();
                 }
 
-                return JavaScriptUtils.TranslateToJs(ScriptEngine, _jsonCtx, result);
+                return JavaScriptUtils.TranslateToJs(_jsonCtx, result);
             }
 
-            private object[] GetTimeSeriesFunctionArgs(string name, JsValue[] args, out string docId, out List<IDisposable> lazyIds)
+            private object[] GetTimeSeriesFunctionArgs(string name, InternalHandle[] args, out string docId, out List<IDisposable> lazyIds)
             {
                 var tsFunctionArgs = new object[args.Length + 1];
                 docId = null;
@@ -1386,7 +1407,7 @@ namespace Raven.Server.Documents.Patch
 
                 for (var index = 0; index < args.Length; index++)
                 {
-                    if (args[index].IsObject() && args[index].AsObject() is BlittableObjectInstance boi)
+                    if (args[index].IsObject && args[index].BoundObject is BlittableObjectInstance boi)
                     {
                         var lazyId = _docsCtx.GetLazyString(boi.DocumentId);
                         lazyIds.Add(lazyId);
@@ -1411,15 +1432,15 @@ namespace Raven.Server.Documents.Patch
 
                 if (docId == null)
                 {
-                    if (_args[0].IsObject() == false ||
-                        !(_args[0].AsObject() is BlittableObjectInstance originalDoc))
+                    if (_args[0].IsObject == false ||
+                        !(_args[0].BoundObject is BlittableObjectInstance originalDoc))
                         throw new InvalidOperationException($"Failed to invoke time series function '{name}'. Couldn't find the document ID to operate on. " +
                                                             "A Document instance argument was not provided to the time series function or to the ScriptRunner");
 
                     docId = originalDoc.DocumentId;
                 }
 
-                if (_args[_args.Length - 1].IsObject() == false || !(_args[_args.Length - 1].AsObject() is BlittableObjectInstance queryParams))
+                if (_args[_args.Length - 1].IsObject == false || !(_args[_args.Length - 1].BoundObject is BlittableObjectInstance queryParams))
                     throw new InvalidOperationException($"Failed to invoke time series function '{name}'. ScriptRunner is missing QueryParameters argument");
 
                 tsFunctionArgs[tsFunctionArgs.Length - 1] = new Document
@@ -1430,7 +1451,7 @@ namespace Raven.Server.Documents.Patch
                 return tsFunctionArgs;
             }
 
-            private static void ThrowInvalidIncrementCounterArgs(JsValue[] args)
+            private static void ThrowInvalidIncrementCounterArgs(InternalHandle[] args)
             {
                 throw new InvalidOperationException($"There is no overload of method 'incrementCounter' that takes {args.Length} arguments." +
                                                     "Supported overloads are : 'incrementCounter(doc, name)' , 'incrementCounter(doc, name, value)'");
@@ -1471,53 +1492,53 @@ namespace Raven.Server.Documents.Patch
                 throw new InvalidOperationException("deleteCounter(doc, name) must be called with exactly 2 arguments");
             }
 
-            private static JsValue ThrowOnLoadDocument(JsValue self, JsValue[] args)
+            private static InternalHandle ThrowOnLoadDocument(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
                 throw new MissingMethodException("The method LoadDocument was renamed to 'load'");
             }
 
-            private static JsValue ThrowOnPutDocument(JsValue self, JsValue[] args)
+            private static InternalHandle ThrowOnPutDocument(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
                 throw new MissingMethodException("The method PutDocument was renamed to 'put'");
             }
 
-            private static JsValue ThrowOnDeleteDocument(JsValue self, JsValue[] args)
+            private static InternalHandle ThrowOnDeleteDocument(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
                 throw new MissingMethodException("The method DeleteDocument was renamed to 'del'");
             }
 
-            private static JsValue ConvertJsTimeToTimeSpanString(JsValue self, JsValue[] args)
+            private static InternalHandle ConvertJsTimeToTimeSpanString(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
-                if (args.Length != 1 || args[0].IsNumber() == false)
+                if (args.Length != 1 || args[0].IsNumber == false)
                     throw new InvalidOperationException("convertJsTimeToTimeSpanString(ticks) must be called with a single long argument");
 
-                var ticks = Convert.ToInt64(args[0].AsNumber()) * 10000;
+                var ticks = Convert.ToInt64(args[0].AsDouble) * 10000;
 
                 var asTimeSpan = new TimeSpan(ticks);
 
                 return asTimeSpan.ToString();
             }
 
-            private static JsValue ConvertToTimeSpanString(JsValue self, JsValue[] args)
+            private static InternalHandle ConvertToTimeSpanString(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
                 if (args.Length == 1)
                 {
-                    if (args[0].IsNumber() == false)
+                    if (args[0].IsNumber == false)
                         throw new InvalidOperationException("convertToTimeSpanString(ticks) must be called with a single long argument");
 
-                    var ticks = Convert.ToInt64(args[0].AsNumber());
+                    var ticks = Convert.ToInt64(args[0].AsDouble);
                     var asTimeSpan = new TimeSpan(ticks);
                     return asTimeSpan.ToString();
                 }
 
                 if (args.Length == 3)
                 {
-                    if (args[0].IsNumber() == false || args[1].IsNumber() == false || args[2].IsNumber() == false)
+                    if (args[0].IsNumber == false || args[1].IsNumber == false || args[2].IsNumber == false)
                         throw new InvalidOperationException("convertToTimeSpanString(hours, minutes, seconds) must be called with integer values");
 
-                    var hours = Convert.ToInt32(args[0].AsNumber());
-                    var minutes = Convert.ToInt32(args[1].AsNumber());
-                    var seconds = Convert.ToInt32(args[2].AsNumber());
+                    var hours = Convert.ToInt32(args[0].AsDouble);
+                    var minutes = Convert.ToInt32(args[1].AsDouble);
+                    var seconds = Convert.ToInt32(args[2].AsDouble);
 
                     var asTimeSpan = new TimeSpan(hours, minutes, seconds);
                     return asTimeSpan.ToString();
@@ -1525,13 +1546,13 @@ namespace Raven.Server.Documents.Patch
 
                 if (args.Length == 4)
                 {
-                    if (args[0].IsNumber() == false || args[1].IsNumber() == false || args[2].IsNumber() == false || args[3].IsNumber() == false)
+                    if (args[0].IsNumber == false || args[1].IsNumber == false || args[2].IsNumber == false || args[3].IsNumber == false)
                         throw new InvalidOperationException("convertToTimeSpanString(days, hours, minutes, seconds) must be called with integer values");
 
-                    var days = Convert.ToInt32(args[0].AsNumber());
-                    var hours = Convert.ToInt32(args[1].AsNumber());
-                    var minutes = Convert.ToInt32(args[2].AsNumber());
-                    var seconds = Convert.ToInt32(args[3].AsNumber());
+                    var days = Convert.ToInt32(args[0].AsDouble);
+                    var hours = Convert.ToInt32(args[1].AsDouble);
+                    var minutes = Convert.ToInt32(args[2].AsDouble);
+                    var seconds = Convert.ToInt32(args[3].AsDouble);
 
                     var asTimeSpan = new TimeSpan(days, hours, minutes, seconds);
                     return asTimeSpan.ToString();
@@ -1539,14 +1560,14 @@ namespace Raven.Server.Documents.Patch
 
                 if (args.Length == 5)
                 {
-                    if (args[0].IsNumber() == false || args[1].IsNumber() == false || args[2].IsNumber() == false || args[3].IsNumber() == false || args[4].IsNumber() == false)
+                    if (args[0].IsNumber == false || args[1].IsNumber == false || args[2].IsNumber == false || args[3].IsNumber == false || args[4].IsNumber == false)
                         throw new InvalidOperationException("convertToTimeSpanString(days, hours, minutes, seconds, milliseconds) must be called with integer values");
 
-                    var days = Convert.ToInt32(args[0].AsNumber());
-                    var hours = Convert.ToInt32(args[1].AsNumber());
-                    var minutes = Convert.ToInt32(args[2].AsNumber());
-                    var seconds = Convert.ToInt32(args[3].AsNumber());
-                    var milliseconds = Convert.ToInt32(args[4].AsNumber());
+                    var days = Convert.ToInt32(args[0].AsDouble);
+                    var hours = Convert.ToInt32(args[1].AsDouble);
+                    var minutes = Convert.ToInt32(args[2].AsDouble);
+                    var seconds = Convert.ToInt32(args[3].AsDouble);
+                    var milliseconds = Convert.ToInt32(args[4].AsDouble);
 
                     var asTimeSpan = new TimeSpan(days, hours, minutes, seconds, milliseconds);
                     return asTimeSpan.ToString();
@@ -1559,7 +1580,7 @@ namespace Raven.Server.Documents.Patch
                                                     "convertToTimeSpanString(days, hours, minutes, seconds, milliseconds)");
             }
 
-            private static JsValue CompareDates(JsValue self, JsValue[] args)
+            private static InternalHandle CompareDates(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
                 if (args.Length < 1 || args.Length > 3)
                 {
@@ -1572,8 +1593,8 @@ namespace Raven.Server.Documents.Patch
                 {
                     binaryOperationType = ExpressionType.Subtract;
                 }
-                else if (args[2].IsString() == false ||
-                         Enum.TryParse(args[2].AsString(), out binaryOperationType) == false)
+                else if (args[2].IsString == false ||
+                         Enum.TryParse(args[2].AsString, out binaryOperationType) == false)
                 {
                     throw new InvalidOperationException("compareDates(date1, date2, operationType) : 'operationType' must be a string argument representing a valid 'ExpressionType'");
                 }
@@ -1581,10 +1602,10 @@ namespace Raven.Server.Documents.Patch
                 dynamic date1, date2;
                 if ((binaryOperationType == ExpressionType.Equal ||
                      binaryOperationType == ExpressionType.NotEqual) &&
-                    args[0].IsString() && args[1].IsString())
+                    args[0].IsString && args[1].IsString)
                 {
-                    date1 = args[0].AsString();
-                    date2 = args[1].AsString();
+                    date1 = args[0].AsString;
+                    date2 = args[1].AsString;
                 }
                 else
                 {
@@ -1614,7 +1635,7 @@ namespace Raven.Server.Documents.Patch
                 }
             }
 
-            private static unsafe JsValue ToStringWithFormat(JsValue self, JsValue[] args)
+            private static unsafe InternalHandle ToStringWithFormat(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
                 if (args.Length < 1 || args.Length > 3)
                 {
@@ -1627,12 +1648,12 @@ namespace Raven.Server.Documents.Patch
 
                 for (var i = 1; i < args.Length; i++)
                 {
-                    if (args[i].IsString() == false)
+                    if (args[i].IsString == false)
                     {
                         throw new InvalidOperationException("toStringWithFormat : 'format' and 'culture' must be string arguments");
                     }
 
-                    var arg = args[i].AsString();
+                    var arg = args[i].AsString;
                     if (CultureHelper.Cultures.TryGetValue(arg, out var culture))
                     {
                         cultureInfo = culture;
@@ -1642,25 +1663,25 @@ namespace Raven.Server.Documents.Patch
                     format = arg;
                 }
 
-                if (args[0].IsDate())
+                if (args[0].IsDate)
                 {
-                    var date = args[0].AsDate().ToDateTime();
+                    var date = args[0].AsDate;
                     return format != null ?
                         date.ToString(format, cultureInfo) :
                         date.ToString(cultureInfo);
                 }
 
-                if (args[0].IsNumber())
+                if (args[0].IsNumber)
                 {
-                    var num = args[0].AsNumber();
+                    var num = args[0].AsDouble;
                     return format != null ?
                         num.ToString(format, cultureInfo) :
                         num.ToString(cultureInfo);
                 }
 
-                if (args[0].IsString())
+                if (args[0].IsString)
                 {
-                    var s = args[0].AsString();
+                    var s = args[0].AsString;
                     fixed (char* pValue = s)
                     {
                         var result = LazyStringParser.TryParseDateTime(pValue, s.Length, out DateTime dt, out _);
@@ -1676,51 +1697,51 @@ namespace Raven.Server.Documents.Patch
                     }
                 }
 
-                if (args[0].IsBoolean() == false)
+                if (args[0].IsBoolean == false)
                 {
-                    throw new InvalidOperationException($"toStringWithFormat() is not supported for objects of type {args[0].Type} ");
+                    throw new InvalidOperationException($"toStringWithFormat() is not supported for objects of type {args[0].ValueType} ");
                 }
 
-                var boolean = args[0].AsBoolean();
+                var boolean = args[0].AsBoolean;
                 return boolean.ToString(cultureInfo);
             }
 
-            private static JsValue StartsWith(JsValue self, JsValue[] args)
+            private static InternalHandle StartsWith(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
-                if (args.Length != 2 || args[0].IsString() == false || args[1].IsString() == false)
+                if (args.Length != 2 || args[0].IsString == false || args[1].IsString == false)
                     throw new InvalidOperationException("startsWith(text, contained) must be called with two string parameters");
 
-                return args[0].AsString().StartsWith(args[1].AsString(), StringComparison.OrdinalIgnoreCase);
+                return args[0].AsString.StartsWith(args[1].AsString, StringComparison.OrdinalIgnoreCase);
             }
 
-            private static JsValue EndsWith(JsValue self, JsValue[] args)
+            private static InternalHandle EndsWith(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
-                if (args.Length != 2 || args[0].IsString() == false || args[1].IsString() == false)
+                if (args.Length != 2 || args[0].IsString == false || args[1].IsString == false)
                     throw new InvalidOperationException("endsWith(text, contained) must be called with two string parameters");
 
-                return args[0].AsString().EndsWith(args[1].AsString(), StringComparison.OrdinalIgnoreCase);
+                return args[0].AsString.EndsWith(args[1].AsString, StringComparison.OrdinalIgnoreCase);
             }
 
-            private JsValue Regex(JsValue self, JsValue[] args)
+            private InternalHandle Regex(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
-                if (args.Length != 2 || args[0].IsString() == false || args[1].IsString() == false)
+                if (args.Length != 2 || args[0].IsString == false || args[1].IsString == false)
                     throw new InvalidOperationException("regex(text, regex) must be called with two string parameters");
 
-                var regex = _regexCache.Get(args[1].AsString());
+                var regex = _regexCache.Get(args[1].AsString);
 
-                return regex.IsMatch(args[0].AsString());
+                return regex.IsMatch(args[0].AsString);
             }
 
-            private static JsValue ScalarToRawString(JsValue self2, JsValue[] args)
+            /*private static InternalHandle ScalarToRawString(InternalHandle self2, params InternalHandle[] args)
             {
                 if (args.Length != 2)
                     throw new InvalidOperationException("scalarToRawString(document, lambdaToField) may be called on with two parameters only");
 
-                JsValue firstParam = args[0];
-                if (firstParam.IsObject() && args[0].AsObject() is BlittableObjectInstance selfInstance)
+                var firstParam = args[0];
+                if (firstParam.IsObject && args[0].BoundObject is BlittableObjectInstance selfInstance)
                 {
-                    JsValue secondParam = args[1];
-                    if (secondParam.IsObject() && secondParam.AsObject() is ScriptFunctionInstance lambda)
+                    var secondParam = args[1];
+                    if (secondParam.IsObject && secondParam.Object is V8Function lambda) // Jint: is ScriptFunctionInstance lambda)
                     {
                         var functionAst = lambda.FunctionDeclaration;
                         var propName = functionAst.TryGetFieldFromSimpleLambdaExpression();
@@ -1739,7 +1760,7 @@ namespace Raven.Server.Documents.Patch
 
                         if (propertyIndex == -1)
                         {
-                            return new ObjectInstance(selfInstance.Engine);
+                            return new selfInstance.ScriptEngine.CreateObject();
                         }
 
                         BlittableJsonReaderObject.PropertyDetails propDetails = new BlittableJsonReaderObject.PropertyDetails();
@@ -1749,17 +1770,17 @@ namespace Raven.Server.Documents.Patch
                         switch (propDetails.Token & BlittableJsonReaderBase.TypesMask)
                         {
                             case BlittableJsonToken.Null:
-                                return JsValue.Null;
+                                return selfInstance.ScriptEngine.CreateNullValue();
                             case BlittableJsonToken.Boolean:
-                                return (bool)propDetails.Value;
+                                return selfInstance.ScriptEngine.CreateValue((bool)value);
                             case BlittableJsonToken.Integer:
-                                return new ObjectWrapper(selfInstance.Engine, value);
+                                return selfInstance.ScriptEngine.FromObject(value); // or ObjectBinder? instead of ObjectWrapper
                             case BlittableJsonToken.LazyNumber:
-                                return new ObjectWrapper(selfInstance.Engine, value);
+                                return selfInstance.ScriptEngine.FromObject(value);  // or ObjectBinder? instead of ObjectWrapper // potentially could be BlittableObjectInstance.BlittableObjectProperty.GetJsValueForLazyNumber(selfInstance.JavaScriptUtils, (LazyNumberValue)value);
                             case BlittableJsonToken.String:
-                                return new ObjectWrapper(selfInstance.Engine, value);
+                                return selfInstance.ScriptEngine.CreateValue(value.ToString());
                             case BlittableJsonToken.CompressedString:
-                                return new ObjectWrapper(selfInstance.Engine, value);
+                                return selfInstance.ScriptEngine.CreateValue(value.ToString());
                             default:
                                 throw new InvalidOperationException("scalarToRawString(document, lambdaToField) lambda to field must return either raw numeric or raw string types");
                         }
@@ -1773,29 +1794,29 @@ namespace Raven.Server.Documents.Patch
                 {
                     throw new InvalidOperationException("scalarToRawString(document, lambdaToField) may be called with a document first parameter only");
                 }
-            }
+            }*/
 
-            private JsValue CmpXchangeInternal(string key)
+            private InternalHandle CmpXchangeInternal(string key)
             {
                 if (string.IsNullOrEmpty(key))
-                    return JsValue.Undefined;
+                    return InternalHandle.Empty;
 
                 using (_database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                 using (ctx.OpenReadTransaction())
                 {
                     var value = _database.ServerStore.Cluster.GetCompareExchangeValue(ctx, key).Value;
                     if (value == null)
-                        return JsValue.Null;
+                        return ScriptEngine.CreateNullValue();
 
-                    var jsValue = JavaScriptUtils.TranslateToJs(ScriptEngine, _jsonCtx, value.Clone(_jsonCtx));
-                    return jsValue.AsObject().Get(Constants.CompareExchange.ObjectFieldName);
+                    using (var jsValue = JavaScriptUtils.TranslateToJs(_jsonCtx, value.Clone(_jsonCtx)))
+                        return jsValue.GetProperty(Constants.CompareExchange.ObjectFieldName);
                 }
             }
-            
-            private JsValue LoadDocumentInternal(string id)
+
+            private InternalHandle LoadDocumentInternal(string id)
             {
                 if (string.IsNullOrEmpty(id))
-                    return JsValue.Undefined;
+                    return InternalHandle.Empty;
 
                 var document = _database.DocumentsStorage.Get(_docsCtx, id);
 
@@ -1808,11 +1829,10 @@ namespace Raven.Server.Documents.Patch
                     });
                 }
 
-                return JavaScriptUtils.TranslateToJs(ScriptEngine, _jsonCtx, document);
+                return JavaScriptUtils.TranslateToJs(_jsonCtx, document);
             }
 
-            private JsValue[] _args = Array.Empty<JsValue>();
-            private readonly JintPreventResolvingTasksReferenceResolver _refResolver = new JintPreventResolvingTasksReferenceResolver();
+            private InternalHandle[] _args = Array.Empty<InternalHandle>();
 
             public ScriptRunnerResult Run(JsonOperationContext jsonCtx, DocumentsOperationContext docCtx, string method, object[] args, QueryTimingsScope scope = null)
             {
@@ -1834,11 +1854,18 @@ namespace Raven.Server.Documents.Patch
 
                 try
                 {
-                    var call = ScriptEngine.GetValue(method).TryCast<ICallable>();
-                    var result = call.Call(Undefined.Instance, _args);
-                    return new ScriptRunnerResult(this, result);
+                    using (var jsMethod = ScriptEngine.GlobalObject.GetProperty(method))
+                    {
+                        if (jsMethod.IsFunction) {
+                            using (var jsRes = jsMethod.Call(ScriptEngine.CreateNulValue(), _args))
+                            {
+                                jsRes.ThrowOnError(); // TODO check if is needed here
+                                return new ScriptRunnerResult(this, jsRes);
+                            }
+                        }
+                    }
                 }
-                catch (JavaScriptException e)
+                catch (V8Exception e)
                 {
                     //ScriptRunnerResult is in charge of disposing of the disposable but it is not created (the clones did)
                     JavaScriptUtils.Clear();
@@ -1851,29 +1878,31 @@ namespace Raven.Server.Documents.Patch
                 }
                 finally
                 {
-                    _refResolver.ExplodeArgsOn(null, null);
                     _scope = null;
                     _loadScope = null;
                     _docsCtx = null;
                     _jsonCtx = null;
-                    Array.Clear(_args, 0, _args.Length);
+                    DisposeArgs();
                 }
             }
 
             private void SetArgs(JsonOperationContext jsonCtx, string method, object[] args)
             {
                 if (_args.Length != args.Length)
-                    _args = new JsValue[args.Length];
+                {
+                    DisposeArgs();
+                    _args = new InternalHandle[args.Length];
+                }
                 for (var i = 0; i < args.Length; i++)
-                    _args[i] = JavaScriptUtils.TranslateToJs(ScriptEngine, jsonCtx, args[i]);
+                    _args[i] = JavaScriptUtils.TranslateToJs(jsonCtx, args[i]);
 
-                if (method != QueryMetadata.SelectOutput &&
+                /*if (method != QueryMetadata.SelectOutput &&
                     _args.Length == 2 &&
-                    _args[1].IsObject() &&
-                    _args[1].AsObject() is BlittableObjectInstance boi)
+                    _args[1].IsObject &&
+                    _args[1].BoundObject is BlittableObjectInstance boi)
                 {
                     _refResolver.ExplodeArgsOn(null, boi);
-                }
+                }*/
             }
 
             private static JsonOperationContext ThrowArgumentNull()
@@ -1881,18 +1910,20 @@ namespace Raven.Server.Documents.Patch
                 throw new ArgumentNullException("jsonCtx");
             }
 
-            private Client.Exceptions.Documents.Patching.JavaScriptException CreateFullError(JavaScriptException e)
+            private JavaScriptException CreateFullError(V8Exception e)
             {
-                string msg;
-                if (e.Error.IsString())
-                    msg = e.Error.AsString();
-                else if (e.Error.IsObject())
-                    msg = JsBlittableBridge.Translate(_jsonCtx, ScriptEngine, e.Error.AsObject()).ToString();
+                /*string msg;
+                if (e.Handle.IsString)
+                    msg = e.Handle.AsString;
+                else if (e.Handle.IsObject)
+                    msg = JsBlittableBridge.Translate(_jsonCtx, ScriptEngine, e.Handle.Object).ToString();
                 else
-                    msg = e.Error.ToString();
+                    msg = e.Handle.ToString();
 
                 msg = "At " + e.Column + ":" + e.LineNumber + " " + msg;
-                var javaScriptException = new Client.Exceptions.Documents.Patching.JavaScriptException(msg, e);
+                var javaScriptException = new JavaScriptException(msg, e);*/
+
+                var javaScriptException = new JavaScriptException(e.Message, e);
                 return javaScriptException;
             }
 
@@ -1921,38 +1952,47 @@ namespace Raven.Server.Documents.Patch
 
             public object Translate(JsonOperationContext context, object o)
             {
-                return JavaScriptUtils.TranslateToJs(ScriptEngine, context, o);
+                return JavaScriptUtils.TranslateToJs(context, o);
             }
 
             public object CreateEmptyObject()
             {
-                return ScriptEngine.Object.Construct(Array.Empty<JsValue>());
+                return ScriptEngine.CreateObject();
             }
 
-            public object Translate(ScriptRunnerResult result, JsonOperationContext context, JsBlittableBridge.IResultModifier modifier = null, BlittableJsonDocumentBuilder.UsageMode usageMode = BlittableJsonDocumentBuilder.UsageMode.None)
+            public object Translate(ScriptRunnerResult result, JsonOperationContext context, JsBlittableBridgeBase.IResultModifier<V8NativeObject> modifier = null, BlittableJsonDocumentBuilder.UsageMode usageMode = BlittableJsonDocumentBuilder.UsageMode.None)
             {
                 return Translate(result.RawJsValue, context, modifier, usageMode);
             }
 
-            internal object Translate(JsValue val, JsonOperationContext context, JsBlittableBridge.IResultModifier modifier = null, BlittableJsonDocumentBuilder.UsageMode usageMode = BlittableJsonDocumentBuilder.UsageMode.None)
+            internal object Translate(InternalHandle jsValue, JsonOperationContext context, JsBlittableBridgeBase.IResultModifier<V8NativeObject> modifier = null, BlittableJsonDocumentBuilder.UsageMode usageMode = BlittableJsonDocumentBuilder.UsageMode.None)
             {
-                if (val.IsString())
-                    return val.AsString();
-                if (val.IsBoolean())
-                    return val.AsBoolean();
-                if (val.IsObject())
+                if (jsValue.IsString)
+                    return jsValue.AsString;
+                if (jsValue.IsBoolean)
+                    return jsValue.AsBoolean;
+                if (jsValue.IsObject)
                 {
-                    if (val.IsNull())
+                    if (jsValue.IsNull)
                         return null;
-                    return JsBlittableBridge.Translate(context, ScriptEngine, val.AsObject(), modifier, usageMode);
+                    return JsBlittableBridge.Translate(context, ScriptEngine, jsValue.Object, modifier, usageMode);
                 }
-                if (val.IsNumber())
-                    return val.AsNumber();
-                if (val.IsNull() || val.IsUndefined())
+                if (jsValue.IsNumber)
+                    return jsValue.AsDouble;
+                if (jsValue.IsNull || jsValue.IsUndefined)
                     return null;
-                if (val.IsArray())
+                if (jsValue.IsArray)
                     throw new InvalidOperationException("Returning arrays from scripts is not supported, only objects or primitives");
-                throw new NotSupportedException("Unable to translate " + val.Type);
+                throw new NotSupportedException("Unable to translate " + jsValue.ValueType);
+             }
+
+            private void DisposeArgs(JsonOperationContext jsonCtx, string method, object[] args)
+            {
+                for (int i = 0; i < _args.Length; ++i)
+                {
+                    _args[i].Dispose();
+                    Array.Clear(_args, 0, _args.Length);
+                }
             }
         }
 

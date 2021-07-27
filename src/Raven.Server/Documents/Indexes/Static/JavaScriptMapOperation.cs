@@ -2,16 +2,13 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using Esprima.Ast;
-using Jint;
-using Jint.Native;
-using Jint.Native.Array;
-using Jint.Native.Function;
-using Jint.Runtime;
-using Jint.Runtime.Environments;
+using V8.Net;
 using Raven.Client.Documents.Indexes;
+
+
 using Raven.Server.Documents.Patch;
 using Raven.Server.Extensions;
+//using Raven.Server.Documents.Indexes.Static.Utils;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
@@ -25,68 +22,71 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public HashSet<string> Fields = new HashSet<string>();
         public Dictionary<string, IndexFieldOptions> FieldOptions = new Dictionary<string, IndexFieldOptions>();
-        private readonly Engine _engine;
-        private readonly JintPreventResolvingTasksReferenceResolver _resolver;
-        private readonly JsValue[] _oneItemArray = new JsValue[1];
-
+        private readonly JavaScriptIndexUtils _javaScriptIndexUtils;
+        private readonly V8Engine _engine;
         public string IndexName { get; set; }
+        public string MapString { get; internal set; }
+        public V8Function MapFuncV8;
 
-        public JavaScriptMapOperation(Engine engine, JintPreventResolvingTasksReferenceResolver resolver)
+        public JavaScriptMapOperation(JavaScriptIndexUtils javaScriptIndexUtils) : base ()
         {
-            _engine = engine;
-            _resolver = resolver;
+            _javaScriptIndexUtils = javaScriptIndexUtils;
+            _engine = _javaScriptIndexUtils.Engine;
         }
 
-        public IEnumerable IndexingFunction(IEnumerable<object> items)
+        public IEnumerable<V8NativeObject> IndexingFunction(IEnumerable<object> items)
         {
-            try
+            foreach (var item in items)
             {
-                foreach (var item in items)
-                {
-                    _engine.ResetCallStack();
-                    _engine.ResetConstraints();
+                _engine.ResetCallStack();
+                _engine.ResetConstraints();
 
-                    if (JavaScriptIndexUtils.GetValue(_engine, item, out JsValue jsItem) == false)
-                        continue;
+                if (_javaScriptIndexUtils.GetValue(item, out InternalHandle jsItem) == false) {
+                    continue;
+                }
+
+                InternalHandle jsResult;
+                try
+                {
+                    using (jsItem)
+                        jsResult = MapFuncV8.StaticCall(jsItem);
+                    jsResult.ThrowOnError();
+                }
+                catch (V8Exception jse)
+                {
+                    jsResult.Dispose();
+                    var (message, success) = JavaScriptIndexFuncException.PrepareErrorMessageForJavaScriptIndexFuncException(MapString, jse);
+                    if (success == false)
+                        throw new JavaScriptIndexFuncException($"Failed to execute {MapString}", jse);
+                    throw new JavaScriptIndexFuncException($"Failed to execute map script, {message}", jse);
+                }
+                catch (Exception e)
+                {
+                    jsResult.Dispose();
+                    throw new JavaScriptIndexFuncException($"Failed to execute {MapString}", e);
+                }
+
+                using (jsResult)
+                {
+                    if (jsResult.IsArray)
                     {
-                        _oneItemArray[0] = jsItem;
-                        try
+                        var length = (uint)jsResult.ArrayLength;
+                        for (int i = 0; i < length; i++)
                         {
-                            jsItem = MapFunc.Call(JsValue.Null, _oneItemArray);
-                        }
-                        catch (JavaScriptException jse)
-                        {
-                            var (message, success) = JavaScriptIndexFuncException.PrepareErrorMessageForJavaScriptIndexFuncException(MapString, jse);
-                            if (success == false)
-                                throw new JavaScriptIndexFuncException($"Failed to execute {MapString}", jse);
-                            throw new JavaScriptIndexFuncException($"Failed to execute map script, {message}", jse);
-                        }
-                        catch (Exception e)
-                        {
-                            throw new JavaScriptIndexFuncException($"Failed to execute {MapString}", e);
-                        }
-                        if (jsItem.IsArray())
-                        {
-                            var array = jsItem.AsArray();
-                            foreach (var (prop, val) in array.GetOwnPropertiesWithoutLength())
+                            using (var arrItem = jsResult.GetProperty(i))
                             {
-                                yield return val.Value;
+                                if (arrItem.IsObject)
+                                    yield return arrItem.Object; // no need to KeepTrack() as we return Handle
                             }
                         }
-                        else if (jsItem.IsObject())
-                        {
-                            yield return jsItem.AsObject();
-                        }
-                        // we ignore everything else by design, we support only
-                        // objects and arrays, anything else is discarded
                     }
-
-                    _resolver.ExplodeArgsOn(null, null);
+                    else if (jsResult.IsObject)
+                    {
+                        yield return jsResult.Object; // no need to KeepTrack() as we store Handle
+                    }
                 }
-            }
-            finally
-            {
-                _oneItemArray[0] = null;
+                // we ignore everything else by design, we support only
+                // objects and arrays, anything else is discarded
             }
         }
 
