@@ -1,39 +1,40 @@
 ﻿using System;
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
 using Raven.Client.Json.Serialization;
 using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations.Configuration
 {
-    public class GetDatabaseConfigurationSettingsOperation : IServerOperation<DatabaseConfigurationSettings>
+    public class GetDatabaseSettingsOperation : IMaintenanceOperation<DatabaseSettings>
     {
         private readonly string _databaseName;
 
-        public GetDatabaseConfigurationSettingsOperation(string databaseName)
+        public GetDatabaseSettingsOperation(string databaseName)
         {
             _databaseName = databaseName ?? throw new ArgumentNullException(nameof(databaseName));
         }
 
-        public RavenCommand<DatabaseConfigurationSettings> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        public RavenCommand<DatabaseSettings> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new GetDatabaseConfigurationSettingsCommand(_databaseName);
+            return new GetDatabaseSettingsCommand(_databaseName);
         }
 
-        private class GetDatabaseConfigurationSettingsCommand : RavenCommand<DatabaseConfigurationSettings>
+        private class GetDatabaseSettingsCommand : RavenCommand<DatabaseSettings>
         {
             public override bool IsReadRequest => false;
             private readonly string _databaseName;
 
-            public GetDatabaseConfigurationSettingsCommand(string databaseName)
+            public GetDatabaseSettingsCommand(string databaseName)
             {
                 _databaseName = databaseName ?? throw new ArgumentNullException(nameof(databaseName));
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{_databaseName}/admin/configuration/settings2";
+                url = $"{node.Url}/databases/{_databaseName}/admin/record";
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Get
@@ -45,7 +46,7 @@ namespace Raven.Client.ServerWide.Operations.Configuration
             {
                 if (response == null)
                     return;
-                Result = JsonDeserializationClient.DatabaseConfigurationSettings(response);
+                Result = JsonDeserializationClient.DatabaseSettings(response);
             }
         }
     }

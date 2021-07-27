@@ -1,5 +1,4 @@
 ﻿using System.Collections.Generic;
-using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.ServerWide.Operations;
@@ -7,12 +6,11 @@ using Xunit;
 using Xunit.Abstractions;
 using Raven.Client.ServerWide.Operations.Configuration;
 
-
 namespace SlowTests.Client
 {
-    public class DatabaseConfigurationSettingsOperationTests : RavenTestBase
+    public class DatabaseSettingsOperationTests : RavenTestBase
     {
-        public DatabaseConfigurationSettingsOperationTests(ITestOutputHelper output) : base(output)
+        public DatabaseSettingsOperationTests(ITestOutputHelper output) : base(output)
         {
         }
 
@@ -56,14 +54,14 @@ namespace SlowTests.Client
         
         private void PutConfigurationSettings(DocumentStore store, Dictionary<string, string> settings)
         {
-            store.Maintenance.Server.Send(new PutDatabaseConfigurationSettingsOperation(store.Database, settings));
+            store.Maintenance.Send(new PutDatabaseSettingsOperation(store.Database, settings));
             store.Maintenance.Server.Send(new ToggleDatabasesStateOperation(store.Database, true));
             store.Maintenance.Server.Send(new ToggleDatabasesStateOperation(store.Database, false));
         }
         
-        private DatabaseConfigurationSettings GetConfigurationSettings(DocumentStore store)
+        private DatabaseSettings GetConfigurationSettings(DocumentStore store)
         {
-            var settings = store.Maintenance.Server.Send(new GetDatabaseConfigurationSettingsOperation(store.Database));
+            var settings = store.Maintenance.Send(new GetDatabaseSettingsOperation(store.Database));
             Assert.NotNull(settings);
             return settings;
         }
@@ -73,7 +71,7 @@ namespace SlowTests.Client
             var settings = GetConfigurationSettings(store);
             foreach (var item in data)
             {
-                var configurationValue = settings?.Values[item.Key];
+                var configurationValue = settings?.Settings[item.Key];
                 Assert.NotNull(configurationValue);
                 Assert.Equal(item.Value, configurationValue);
             }

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Util;
@@ -9,12 +10,12 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations.Configuration
 {
-    class PutDatabaseConfigurationSettingsOperation : IServerOperation
+    public class PutDatabaseSettingsOperation : IMaintenanceOperation
     {
         private readonly string _databaseName;
         private readonly Dictionary<string, string> _configurationSettings;
 
-        public PutDatabaseConfigurationSettingsOperation(string databaseName, Dictionary<string, string> configurationSettings)
+        public PutDatabaseSettingsOperation(string databaseName, Dictionary<string, string> configurationSettings)
         {
             _databaseName = databaseName ?? throw new ArgumentNullException(nameof(configurationSettings));
             _configurationSettings = configurationSettings ?? throw new ArgumentNullException(nameof(configurationSettings));
