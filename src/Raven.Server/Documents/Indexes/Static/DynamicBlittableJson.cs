@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.Indexes.Static
         }
     }
 
-    public class DynamicBlittableJson : AbstractDynamicObject, IEnumerable<object>, IBlittableJsonContainer
+    public class DynamicBlittableJson : AbstractDynamicObject, IEnumerable<object>, IEnumerable<KeyValuePair<object, object>>, IBlittableJsonContainer
     {
         private const int DocumentIdFieldNameIndex = 0;
         private const int MetadataIdPropertyIndex = 1;
@@ -213,79 +213,87 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
+        IEnumerator<KeyValuePair<object, object>> IEnumerable<KeyValuePair<object, object>>.GetEnumerator()
+        {
+            foreach (var propertyName in BlittableJson.GetPropertyNames())
+            {
+                yield return new KeyValuePair<object, object>(TypeConverter.ToDynamicType(propertyName), TypeConverter.ToDynamicType(BlittableJson[propertyName]));
+            }
+        }
+
         public IDictionary<object, object> ToDictionary(Func<object, object> keySelector)
         {
-            return new DynamicDictionary(Enumerable.ToDictionary(this, keySelector));
+            return new DynamicDictionary(Enumerable.ToDictionary((IEnumerable<object>)this, keySelector));
         }
 
         public IDictionary<object, object> ToDictionary(Func<object, object> keySelector, IEqualityComparer<object> comparer)
         {
-            return new DynamicDictionary(Enumerable.ToDictionary(this, keySelector, comparer));
+            return new DynamicDictionary(Enumerable.ToDictionary((IEnumerable<object>)this, keySelector, comparer));
         }
 
         public IDictionary<object, object> ToDictionary(Func<object, object> keySelector, Func<object, object> elementSelector)
         {
-            return new DynamicDictionary(Enumerable.ToDictionary(this, keySelector, elementSelector));
+            return new DynamicDictionary(Enumerable.ToDictionary((IEnumerable<object>)this, keySelector, elementSelector));
         }
 
         public IDictionary<object, object> ToDictionary(Func<object, object> keySelector, Func<object, object> elementSelector, IEqualityComparer<object> comparer)
         {
-            return new DynamicDictionary(Enumerable.ToDictionary(this, keySelector, elementSelector, comparer));
+            return new DynamicDictionary(Enumerable.ToDictionary((IEnumerable<object>)this, keySelector, elementSelector, comparer));
         }
 
         public IEnumerable<object> SelectMany(Func<object, IEnumerable<object>> func)
         {
-            return new DynamicArray(Enumerable.SelectMany(this, func));
+            return new DynamicArray(Enumerable.SelectMany((IEnumerable<object>)this, func));
         }
 
         public IEnumerable<object> Select(Func<object, object> func)
         {
-            return new DynamicArray(Enumerable.Select(this, func));
+            return new DynamicArray(Enumerable.Select((IEnumerable<object>)this, func));
         }
 
         public IEnumerable<object> Where(Func<object, bool> predicate)
         {
-            return new DynamicArray(Enumerable.Where(this, predicate));
+            return new DynamicArray(Enumerable.Where((IEnumerable<object>)this, predicate));
         }
 
         public IEnumerable<object> OrderBy(Func<object, object> func)
         {
-            return new DynamicArray(Enumerable.OrderBy(this, func));
+            return new DynamicArray(Enumerable.OrderBy((IEnumerable<object>)this, func));
         }
 
         public IEnumerable<object> OrderByDescending(Func<object, object> func)
         {
-            return new DynamicArray(Enumerable.OrderByDescending(this, func));
+            return new DynamicArray(Enumerable.OrderByDescending((IEnumerable<object>)this, func));
         }
 
         public IEnumerable<object> Take(int count)
         {
-            return new DynamicArray(Enumerable.Take(this, count));
+            return new DynamicArray(Enumerable.Take((IEnumerable<object>)this, count));
         }
 
         public IEnumerable<object> Skip(int count)
         {
-            return new DynamicArray(Enumerable.Skip(this, count));
+            return new DynamicArray(Enumerable.Skip((IEnumerable<object>)this, count));
         }
 
         public IEnumerable<object> Reverse()
         {
-            return new DynamicArray(Enumerable.Reverse(this));
+            return new DynamicArray(Enumerable.Reverse((IEnumerable<object>)this));
         }
 
         public dynamic DefaultIfEmpty(object defaultValue = null)
         {
-            return Enumerable.DefaultIfEmpty(this, defaultValue ?? DynamicNullObject.Null);
+            return Enumerable.DefaultIfEmpty((IEnumerable<object>)this, defaultValue ?? DynamicNullObject.Null);
         }
 
         public dynamic GroupBy(Func<dynamic, dynamic> keySelector)
         {
-            return new DynamicArray(Enumerable.GroupBy(this, keySelector).Select(x => new DynamicArray.DynamicGrouping(x)));
+            return new DynamicArray(Enumerable.GroupBy((IEnumerable<object>)this, keySelector).Select(x => new DynamicArray.DynamicGrouping(x)));
         }
 
         public dynamic GroupBy(Func<dynamic, dynamic> keySelector, Func<dynamic, dynamic> selector)
         {
-            return new DynamicArray(Enumerable.GroupBy(this, keySelector, selector).Select(x => new DynamicArray.DynamicGrouping(x)));
+            return new DynamicArray(Enumerable.GroupBy((IEnumerable<object>)this, keySelector, selector).Select(x => new DynamicArray.DynamicGrouping(x)));
         }
 
         public IEnumerable<object> OfType<T>()

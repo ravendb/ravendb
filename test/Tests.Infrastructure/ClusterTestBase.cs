@@ -216,21 +216,21 @@ namespace Tests.Infrastructure
             var storage = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
             using (var collector = new LiveReplicationPulsesCollector(storage))
             {
-            var etag1 = storage.DocumentsStorage.GenerateNextEtag();
+                var etag1 = storage.DocumentsStorage.GenerateNextEtag();
 
-            await Task.Delay(3000);
+                await Task.Delay(3000);
 
-            var etag2 = storage.DocumentsStorage.GenerateNextEtag();
+                var etag2 = storage.DocumentsStorage.GenerateNextEtag();
 
-            Assert.True(etag1 + 1 == etag2, "Replication loop found :(");
+                Assert.True(etag1 + 1 == etag2, "Replication loop found :(");
 
                 var groups = collector.Pulses.GetAll().GroupBy(p => p.Direction);
                 foreach (var group in groups)
                 {
                     var key = group.Key;
                     var count = group.Count();
-                    Assert.True(count < 50,$"{key} seems to be excessive ({count})");
-        }
+                    Assert.True(count < 50, $"{key} seems to be excessive ({count})");
+                }
             }
         }
 
@@ -279,7 +279,7 @@ namespace Tests.Infrastructure
                 return timeoutTask.IsCompleted == false;
             }
         }
-        
+
         protected Task<RavenServer> ActionWithLeader(Action<RavenServer> act, List<RavenServer> servers = null)
         {
             return ActionWithLeader(l =>
@@ -392,12 +392,6 @@ namespace Tests.Infrastructure
             }, true, timeout: timeout, interval: 333);
         }
 
-        protected async Task<bool> WaitForDocumentInClusterAsync<T>(List<RavenServer> nodes, string database, string docId, Func<T, bool> predicate, TimeSpan timeout, X509Certificate2 certificate = null)
-        {
-            var stores = GetDocumentStores(nodes, database, disableTopologyUpdates: true, certificate: certificate);
-            return await WaitForDocumentInClusterAsyncInternal(docId, predicate, timeout, stores);
-        }
-
         protected async Task<bool> WaitForDocumentInClusterAsync<T>(DocumentSession session, string docId, Func<T, bool> predicate, TimeSpan timeout, X509Certificate2 certificate = null)
         {
             var nodes = session.RequestExecutor.TopologyNodes;
@@ -421,6 +415,12 @@ namespace Tests.Infrastructure
         protected async Task<bool> WaitForDocumentInClusterAsync<T>(IReadOnlyList<ServerNode> topology, string docId, Func<T, bool> predicate, TimeSpan timeout)
         {
             var stores = GetDocumentStores(topology, disableTopologyUpdates: true);
+            return await WaitForDocumentInClusterAsyncInternal(docId, predicate, timeout, stores);
+        }
+
+        protected async Task<bool> WaitForDocumentInClusterAsync<T>(List<RavenServer> nodes, string database, string docId, Func<T, bool> predicate, TimeSpan timeout, X509Certificate2 certificate = null)
+        {
+            var stores = GetDocumentStores(nodes, database, disableTopologyUpdates: true, certificate: certificate);
             return await WaitForDocumentInClusterAsyncInternal(docId, predicate, timeout, stores);
         }
 
