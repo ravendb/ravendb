@@ -113,6 +113,12 @@
                     </div>
                     <div class="toggle-margin" data-bind="collapse: limitRevisions, validationElement: minimumRevisionsToKeep">
                         <input type="number" min="0" class="form-control" placeholder="Enter number of revisions to keep" data-bind="numericInput: minimumRevisionsToKeep" />
+                        <div class="text-warning bg-warning padding padding-xs" data-bind="collapse: showLimitRevisionsWarning">
+                            <div class="flex-horizontal">
+                                <small class="flex-start"><i class="icon-warning"></i></small>
+                                <small class="margin-left margin-left-sm" data-bind="html: limitWarningHtml()"></small>
+                            </div>
+                        </div>
                     </div>
                     <div class="toggle toggle-primary margin-top">
                         <input id="limitRevisionsByAge" class="styled" type="checkbox" data-bind="checked: limitRevisionsByAge">
@@ -123,6 +129,12 @@
                     <div id="limitRevisionsParametersByAge" class="toggle-margin collapse" data-bind="collapse: limitRevisionsByAge, validationElement: minimumRevisionAgeToKeep">
                         <small>Retention time</small>
                         <input type="text" class="form-control" data-bind="durationPicker: minimumRevisionAgeToKeep, durationPickerOptions: { showDays: true, showSeconds: true }" />
+                        <div class="text-warning bg-warning padding padding-xs" data-bind="collapse: showLimitRevisionsByAgeWarning">
+                            <div class="flex-horizontal">
+                                <small class="flex-start"><i class="icon-warning"></i></small>
+                                <small class="margin-left margin-left-sm" data-bind="html: limitWarningHtml(true)"></small>
+                            </div>
+                        </div>
                     </div>
                     <div class="margin-top" data-bind="collapse: limitRevisions() || limitRevisionsByAge()">
                         <div class="toggle toggle-primary" data-bind="disable: true">

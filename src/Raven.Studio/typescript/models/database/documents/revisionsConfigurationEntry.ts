@@ -11,9 +11,11 @@ class revisionsConfigurationEntry {
 
     limitRevisions = ko.observable<boolean>();
     minimumRevisionsToKeep = ko.observable<number>();
+    minimumRevisionsToKeepCurrent = ko.observable<number>();
 
     limitRevisionsByAge = ko.observable<boolean>(false);
     minimumRevisionAgeToKeep = ko.observable<number>();
+    minimumRevisionAgeToKeepCurrent = ko.observable<number>();
 
     setMaxRevisionsToDelete = ko.observable<boolean>(false);
     maxRevisionsToDeleteUponUpdate = ko.observable<number>();
@@ -22,6 +24,16 @@ class revisionsConfigurationEntry {
     deleteDescription: KnockoutComputed<string>;
     humaneRetentionDescription: KnockoutComputed<string>;
 
+    showLimitRevisionsWarning: KnockoutComputed<boolean>;
+    showLimitRevisionsByAgeWarning: KnockoutComputed<boolean>;
+    
+    private static readonly revisionsDelta = 100;
+    private static readonly revisionsByAgeDelta = 604800; // 7 days
+    
+    limitWarningHtml = (byAge: boolean = false) => `The new limit is much lower than the current value (delta > 
+                        ${byAge ? generalUtils.formatTimeSpan(revisionsConfigurationEntry.revisionsByAgeDelta * 1000, true) : revisionsConfigurationEntry.revisionsDelta}).<br>
+                        It is advised to set the # of revisions to delete upon document update.`
+    
     validationGroup: KnockoutValidationGroup = ko.validatedObservable({
         collection: this.collection,
         minimumRevisionsToKeep: this.minimumRevisionsToKeep,
@@ -34,9 +46,11 @@ class revisionsConfigurationEntry {
 
         this.limitRevisions(dto.MinimumRevisionsToKeep != null);
         this.minimumRevisionsToKeep(dto.MinimumRevisionsToKeep);
+        this.minimumRevisionsToKeepCurrent(dto.MinimumRevisionsToKeep);
 
         this.limitRevisionsByAge(dto.MinimumRevisionAgeToKeep != null);
         this.minimumRevisionAgeToKeep(dto.MinimumRevisionAgeToKeep ? generalUtils.timeSpanToSeconds(dto.MinimumRevisionAgeToKeep) : null);
+        this.minimumRevisionAgeToKeepCurrent(this.minimumRevisionAgeToKeep());
 
         this.setMaxRevisionsToDelete(dto.MaximumRevisionsToDeleteUponDocumentUpdate != null);
         this.maxRevisionsToDeleteUponUpdate(dto.MaximumRevisionsToDeleteUponDocumentUpdate);
@@ -50,6 +64,22 @@ class revisionsConfigurationEntry {
     }
     
     private initObservables() {
+        this.showLimitRevisionsWarning = ko.pureComputed(() => {
+            return this.minimumRevisionsToKeepCurrent() &&
+                this.limitRevisions() &&
+                this.minimumRevisionsToKeep() &&
+                !this.setMaxRevisionsToDelete() &&
+                (this.minimumRevisionsToKeepCurrent() - this.minimumRevisionsToKeep() > revisionsConfigurationEntry.revisionsDelta);
+        });
+        
+        this.showLimitRevisionsByAgeWarning = ko.pureComputed(() => {
+            return this.minimumRevisionAgeToKeepCurrent() &&
+                this.limitRevisionsByAge() &&
+                this.minimumRevisionAgeToKeep() &&
+                !this.setMaxRevisionsToDelete() &&
+                (this.minimumRevisionAgeToKeepCurrent() - this.minimumRevisionAgeToKeep() > revisionsConfigurationEntry.revisionsByAgeDelta);
+        });
+        
         this.deleteDescription = ko.pureComputed(() => {
             const purgeOffText = `<li>A revision will be created anytime a document is modified or deleted.</li>
                                   <li>Revisions of a deleted document can be accessed in the Revisions Bin view.</li>`;
@@ -140,9 +170,11 @@ class revisionsConfigurationEntry {
 
         this.limitRevisions(incoming.limitRevisions());
         this.minimumRevisionsToKeep(incoming.minimumRevisionsToKeep());
+        this.minimumRevisionsToKeepCurrent(incoming.minimumRevisionsToKeepCurrent());
 
         this.limitRevisionsByAge(incoming.limitRevisionsByAge());
         this.minimumRevisionAgeToKeep(incoming.minimumRevisionAgeToKeep());
+        this.minimumRevisionAgeToKeepCurrent(incoming.minimumRevisionAgeToKeepCurrent());
 
         this.setMaxRevisionsToDelete(incoming.setMaxRevisionsToDelete());
         this.maxRevisionsToDeleteUponUpdate(incoming.maxRevisionsToDeleteUponUpdate());

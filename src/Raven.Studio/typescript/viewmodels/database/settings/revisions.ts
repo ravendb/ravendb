@@ -163,6 +163,9 @@ class revisions extends viewModelBase {
         if (!this.isValid(itemToSave.validationGroup)) {
             return;
         }
+        
+        itemToSave.minimumRevisionsToKeepCurrent(itemToSave.minimumRevisionsToKeep());
+        itemToSave.minimumRevisionAgeToKeepCurrent(itemToSave.minimumRevisionAgeToKeep());
 
         if (itemToSave.isDefault()) {
             this.defaultConfiguration(itemToSave);
