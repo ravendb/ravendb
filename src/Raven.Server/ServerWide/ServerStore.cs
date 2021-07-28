@@ -79,7 +79,6 @@ using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron;
 using Constants = Raven.Client.Constants;
-using Index = Raven.Server.Documents.Indexes.Index;
 
 namespace Raven.Server.ServerWide
 {

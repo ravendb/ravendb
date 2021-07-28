@@ -49,7 +49,6 @@ using Sparrow.Platform;
 using Sparrow.Server;
 using Sparrow.Server.Json.Sync;
 using Sparrow.Server.Meters;
-using Sparrow.Server.Utils;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron;
@@ -97,7 +96,7 @@ namespace Raven.Server.Documents
         {
             _lastIdleTicks = DateTime.MinValue.Ticks;
         }
-
+        
         public DocumentDatabase(string name, RavenConfiguration configuration, ServerStore serverStore, Action<string> addToInitLog)
         {
             Name = name;
@@ -136,8 +135,18 @@ namespace Raven.Server.Documents
                         {
                             var isEncrypted = rawRecord.IsEncrypted;
                             // can happen when we are in the process of restoring a database
+
                             if (isEncrypted && MasterKey == null)
-                                throw new InvalidOperationException($"Attempt to create encrypted db {Name} without supplying the secret key");
+                            {
+                                // check if sharded 
+                                string originalName = Name;
+                                var index = ShardHelper.TryGetShardIndexAndDatabaseName(ref originalName);
+                                if (index != -1)
+                                    MasterKey = serverStore.GetSecretKey(ctx, originalName);
+
+                                if (MasterKey == null)
+                                    throw new InvalidOperationException($"Attempt to create encrypted db {Name} without supplying the secret key");
+                            }
                             if (isEncrypted == false && MasterKey != null)
                                 throw new InvalidOperationException($"Attempt to create a non-encrypted db {Name}, but a secret key exists for this db.");
                         }
