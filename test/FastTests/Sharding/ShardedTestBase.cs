@@ -16,7 +16,7 @@ namespace FastTests.Sharding
         protected IDocumentStore GetShardedDocumentStore(Options options = null, [CallerMemberName] string caller = null)
         {
             var shardedOptions = options ?? new Options();
-            shardedOptions.ModifyDatabaseRecord = r =>
+            shardedOptions.ModifyDatabaseRecord += r =>
             {
                 r.Shards = new[]
                 {
@@ -24,7 +24,6 @@ namespace FastTests.Sharding
                     new DatabaseTopology(), 
                     new DatabaseTopology(),
                 };
-                options?.ModifyDatabaseRecord?.Invoke(r);
             };
             //shardedOptions.RunInMemory = false;
             return GetDocumentStore(shardedOptions, caller);
