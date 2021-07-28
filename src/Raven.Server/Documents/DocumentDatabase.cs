@@ -1234,7 +1234,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public async Task StateChanged(long index)
+        public void StateChanged(long index)
         {
             try
             {
@@ -1255,9 +1255,9 @@ namespace Raven.Server.Documents
 
                 StudioConfiguration = record.Studio;
 
-                var result = NotifyFeaturesAboutStateChange(record, index);
+                NotifyFeaturesAboutStateChange(record, index);
 
-                RachisLogIndexNotifications.NotifyListenersAbout(result.Index, null);
+                RachisLogIndexNotifications.NotifyListenersAbout(index, null);
             }
             catch (Exception e)
             {
@@ -1278,21 +1278,10 @@ namespace Raven.Server.Documents
             }
         }
 
-        private class StateChangeResult
+        private void NotifyFeaturesAboutStateChange(DatabaseRecord record, long index)
         {
-            public readonly long Index;
-
-            public StateChangeResult(long index)
-            {
-                Index = index;
-            }
-        }
-
-        private StateChangeResult NotifyFeaturesAboutStateChange(DatabaseRecord record, long index)
-        {
-            var result = new StateChangeResult(index);
             if (CanSkipDatabaseRecordChange(record.DatabaseName, index))
-                return result;
+                return;
 
             var taken = false;
             Stopwatch sp = default;
@@ -1304,10 +1293,10 @@ namespace Raven.Server.Documents
                 try
                 {
                     if (CanSkipDatabaseRecordChange(record.DatabaseName, index))
-                        return result;
+                        return;
 
                     if (DatabaseShutdown.IsCancellationRequested)
-                        return result;
+                        return;
 
                     if (taken == false)
                         continue;
@@ -1350,29 +1339,28 @@ namespace Raven.Server.Documents
                     if (taken)
                     {
                         Monitor.Exit(_clusterLocker);
-                    }
 
-                    if (taken && _logger.IsInfoEnabled)
-                    {
-                        if (sp?.Elapsed > TimeSpan.FromSeconds(5))
+                        if (sp?.Elapsed > TimeSpan.FromSeconds(10))
                         {
-                            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-                            using (ctx.OpenReadTransaction())
+                            if (_logger.IsOperationsEnabled)
                             {
-                                var logs = ServerStore.Engine.LogHistory.GetLogByIndex(ctx, index).Select(djv => ctx.ReadObject(djv, "djv").ToString());
-                                var msg =
-                                    $"Lock held for very long time {sp.Elapsed} in database {Name} for command {index} ({string.Join(", ", logs)})";
-                                _logger.Info(msg);
-#if DEBUG
-                                Console.WriteLine(msg);                       
+                                using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                                using (ctx.OpenReadTransaction())
+                                {
+                                    var logs = ServerStore.Engine.LogHistory.GetLogByIndex(ctx, index).Select(djv => ctx.ReadObject(djv, "djv").ToString());
+                                    var msg =
+                                        $"Lock held for a very long time {sp.Elapsed} in database {Name} for index {index} ({string.Join(", ", logs)})";
+                                    _logger.Operations(msg);
+
+#if !RELEASE
+                                    Console.WriteLine(msg);   
 #endif
+                                }
                             }
                         }
                     }
                 }
             }
-
-            return result;
         }
 
         private void SetUnusedDatabaseIds(DatabaseRecord record)
