@@ -37,7 +37,7 @@ class databaseOverviewWidget extends abstractDatabaseAndNodeAwareTableWidget<Rav
             let commonItem;
             let prevDbName = "";
 
-            for (let i = 0; i < items.length - 1; i++) {
+            for (let i = 0; i < items.length; i++) {
                 const item = items[i];
                 let currentDbName = item.database;
 
@@ -72,7 +72,7 @@ class databaseOverviewWidget extends abstractDatabaseAndNodeAwareTableWidget<Rav
         return [
             new textColumn<databaseOverviewItem>(grid, x => x.hideDatabaseName ? "" : x.database, "Database", "20%"),
 
-            new nodeTagColumn<databaseOverviewItem>(grid, item => this.prepareUrl(item, "Documents")),
+            new nodeTagColumn<databaseOverviewItem>(grid, item => this.prepareUrl(item, "Documents View")),
 
             new textColumn<databaseOverviewItem>(grid, x => x.nodeTag ? "" : x.documents, "Documents", "10%"),
 
