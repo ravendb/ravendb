@@ -158,7 +158,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        private void UserTest()
+        public void UserTest()
         {
             TestCase<TestIndex>();
         }
