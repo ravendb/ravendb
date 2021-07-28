@@ -270,6 +270,7 @@ namespace Raven.Database.Config
 
             TimeToWaitBeforeMarkingIdleIndexAsAbandoned = ravenSettings.TimeToWaitBeforeMarkingIdleIndexAsAbandoned.Value;
             TimeToWaitBeforeRunningAbandonedIndexes = ravenSettings.TimeToWaitBeforeRunningAbandonedIndexes.Value;
+            CheckReferenceBecauseOfDocumentUpdateTimeout = ravenSettings.CheckReferenceBecauseOfDocumentUpdateTimeout.Value;
 
             ResetIndexOnUncleanShutdown = ravenSettings.ResetIndexOnUncleanShutdown.Value;
             DisableInMemoryIndexing = ravenSettings.DisableInMemoryIndexing.Value;
