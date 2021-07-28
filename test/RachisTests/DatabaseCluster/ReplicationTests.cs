@@ -884,7 +884,7 @@ namespace RachisTests.DatabaseCluster
         {
             var clusterSize = 3;
             var (_, srcLeader) = await CreateRaftCluster(clusterSize);
-            var (_, dstLeader) = await CreateRaftCluster(clusterSize);
+            var (dstNodes, dstLeader) = await CreateRaftCluster(clusterSize);
 
             var dstDB = GetDatabaseName();
             var srcDB = GetDatabaseName();
@@ -925,7 +925,8 @@ namespace RachisTests.DatabaseCluster
                     {
                         dstSession.Load<User>("Karmel");
                         Assert.True(await WaitForDocumentInClusterAsync<User>(
-                            dstSession as DocumentSession,
+                            dstNodes,
+                            dstDB,
                             "users/1",
                             u => u.Name.Equals("Karmel"),
                             TimeSpan.FromSeconds(60)));

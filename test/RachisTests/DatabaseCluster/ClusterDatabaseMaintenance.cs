@@ -12,7 +12,6 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Revisions;
-using Raven.Client.Documents.Session;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
@@ -1352,7 +1351,7 @@ namespace RachisTests.DatabaseCluster
 
                 using (var session = toBeDeletedStore.OpenSession())
                 {
-                    var t = WaitForDocumentInClusterAsync<User>((DocumentSession)session, "foo/bar", u => u.Name == "Karmel", TimeSpan.FromSeconds(15));
+                var t = WaitForDocumentInClusterAsync<User>(cluster.Nodes, database, "foo/bar", u => u.Name == "Karmel", TimeSpan.FromSeconds(15));
 
                     while (t.IsCompleted == false)
                     {
@@ -1452,7 +1451,7 @@ namespace RachisTests.DatabaseCluster
 
             using (var session = toBeDeletedStore.OpenSession())
             {
-                var t = await WaitForDocumentInClusterAsync<User>((DocumentSession)session, "foo/bar", u => u.Name == "Karmel2", TimeSpan.FromSeconds(15));
+                var t = await WaitForDocumentInClusterAsync<User>(cluster.Nodes, database, "foo/bar", u => u.Name == "Karmel2", TimeSpan.FromSeconds(15));
                 Assert.True(t);
             }
 
@@ -1476,7 +1475,7 @@ namespace RachisTests.DatabaseCluster
 
             using (var session = toBeDeletedStore.OpenSession())
             {
-                var t = await WaitForDocumentInClusterAsync<User>((DocumentSession)session, "foo/bar", u => u.Name == "Karmel3", TimeSpan.FromSeconds(15));
+                var t = await WaitForDocumentInClusterAsync<User>(cluster.Nodes, database, "foo/bar", u => u.Name == "Karmel3", TimeSpan.FromSeconds(15));
                 Assert.True(t);
             }
 
