@@ -15,6 +15,9 @@ class revisionsConfigurationEntry {
     limitRevisionsByAge = ko.observable<boolean>(false);
     minimumRevisionAgeToKeep = ko.observable<number>();
 
+    setMaxRevisionsToDelete = ko.observable<boolean>(false);
+    maxRevisionsToDeleteUponUpdate = ko.observable<number>();
+
     isDefault: KnockoutComputed<boolean>;
     deleteDescription: KnockoutComputed<string>;
     humaneRetentionDescription: KnockoutComputed<string>;
@@ -22,7 +25,8 @@ class revisionsConfigurationEntry {
     validationGroup: KnockoutValidationGroup = ko.validatedObservable({
         collection: this.collection,
         minimumRevisionsToKeep: this.minimumRevisionsToKeep,
-        minimumRevisionAgeToKeep: this.minimumRevisionAgeToKeep
+        minimumRevisionAgeToKeep: this.minimumRevisionAgeToKeep,
+        maxRevisionsToDeleteUponUpdate: this.maxRevisionsToDeleteUponUpdate
     });
 
     constructor(collection: string, dto: Raven.Client.Documents.Operations.Revisions.RevisionsCollectionConfiguration) {
@@ -33,6 +37,9 @@ class revisionsConfigurationEntry {
 
         this.limitRevisionsByAge(dto.MinimumRevisionAgeToKeep != null);
         this.minimumRevisionAgeToKeep(dto.MinimumRevisionAgeToKeep ? generalUtils.timeSpanToSeconds(dto.MinimumRevisionAgeToKeep) : null);
+
+        this.setMaxRevisionsToDelete(dto.MaximumRevisionsToDeleteUponDocumentUpdate != null);
+        this.maxRevisionsToDeleteUponUpdate(dto.MaximumRevisionsToDeleteUponDocumentUpdate);
 
         this.disabled(dto.Disabled);
         this.purgeOnDelete(dto.PurgeOnDelete);
@@ -59,8 +66,9 @@ class revisionsConfigurationEntry {
             
             const limitByNumber = this.limitRevisions() && this.minimumRevisionsToKeep.isValid();
             const limitByAge = this.limitRevisionsByAge() && this.minimumRevisionAgeToKeep.isValid();
+            const maxRevisionsToDelete = this.setMaxRevisionsToDelete() && this.maxRevisionsToDeleteUponUpdate.isValid();
             
-            let description;
+            let description = "";
             
             if (limitByNumber && !limitByAge) {
                 description = `<li>Only the latest <strong>${this.minimumRevisionsToKeep()}</strong> revisions will be kept.</li>
@@ -75,6 +83,12 @@ class revisionsConfigurationEntry {
                 description =  `<li>At least <strong>${this.minimumRevisionsToKeep()}</strong> of the latest revisions will be kept.</li>
                                 <li>Older revisions will be removed if they exceed <strong>${retentionTimeHumane}</strong> on next revision creation.</li>`;
             }
+            
+            if (maxRevisionsToDelete && (limitByNumber || limitByAge)) {
+                description += `<li>A maximum of <strong>${this.maxRevisionsToDeleteUponUpdate()}</strong> revisions will be deleted each time a document is updated,
+                                    until the defined '# of revisions to keep' limit is reached.
+                                </li>`
+            }
                 
             return description ? `<ul class="margin-top">${description}</ul>` : "";
         });
@@ -85,6 +99,10 @@ class revisionsConfigurationEntry {
 
         this.limitRevisionsByAge.subscribe(() => {
             this.minimumRevisionAgeToKeep.clearError();
+        });
+
+        this.setMaxRevisionsToDelete.subscribe(() => {
+            this.maxRevisionsToDeleteUponUpdate.clearError();
         });
     }
 
@@ -106,6 +124,13 @@ class revisionsConfigurationEntry {
             },
             min: 0
         });
+
+        this.maxRevisionsToDeleteUponUpdate.extend({
+            required: {
+                onlyIf: () => this.setMaxRevisionsToDelete()
+            },
+            digit: true
+        });
     }
 
     copyFrom(incoming: revisionsConfigurationEntry): this {
@@ -118,15 +143,23 @@ class revisionsConfigurationEntry {
 
         this.limitRevisionsByAge(incoming.limitRevisionsByAge());
         this.minimumRevisionAgeToKeep(incoming.minimumRevisionAgeToKeep());
+
+        this.setMaxRevisionsToDelete(incoming.setMaxRevisionsToDelete());
+        this.maxRevisionsToDeleteUponUpdate(incoming.maxRevisionsToDeleteUponUpdate());
         
         return this;
     }
 
     toDto(): Raven.Client.Documents.Operations.Revisions.RevisionsCollectionConfiguration {
+        const minimumRevisionsToKeep = this.limitRevisions() ? this.minimumRevisionsToKeep() : null;
+        const minimumRevisionsAgeToKeep = this.limitRevisionsByAge() ? generalUtils.formatAsTimeSpan(this.minimumRevisionAgeToKeep() * 1000) : null;
+        const maxRevisionsToDelete = this.setMaxRevisionsToDelete() ? this.maxRevisionsToDeleteUponUpdate() : null; 
+        
         return {
             Disabled: this.disabled(),
-            MinimumRevisionsToKeep: this.limitRevisions() ? this.minimumRevisionsToKeep() : null,
-            MinimumRevisionAgeToKeep: this.limitRevisionsByAge() ? generalUtils.formatAsTimeSpan(this.minimumRevisionAgeToKeep() * 1000) : null,
+            MinimumRevisionsToKeep: minimumRevisionsToKeep,
+            MinimumRevisionAgeToKeep: minimumRevisionsAgeToKeep,
+            MaximumRevisionsToDeleteUponDocumentUpdate: minimumRevisionsToKeep || minimumRevisionsAgeToKeep ? maxRevisionsToDelete : null,
             PurgeOnDelete: this.purgeOnDelete()
         };
     }
@@ -137,6 +170,7 @@ class revisionsConfigurationEntry {
             Disabled: false,
             MinimumRevisionsToKeep: null,
             MinimumRevisionAgeToKeep: null,
+            MaximumRevisionsToDeleteUponDocumentUpdate: null,
             PurgeOnDelete: false
         });
     }
