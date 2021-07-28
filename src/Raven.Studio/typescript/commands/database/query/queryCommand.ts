@@ -25,7 +25,8 @@ class queryCommand extends commandBase {
                 timings: results.Timings,
                 includes: results.Includes }) as pagedResultExtended<document>;
         
-        return this.post<pagedResultExtended<document>>(this.getUrl(), this.getPayload(), this.db, null, 9000, null, selector)
+        return this.post<pagedResultExtended<document>>(this.getUrl(), this.getPayload(), this.db)
+            .then((results) => selector(results))
             .fail((response: JQueryXHR) => {
                 if (response.status === 404) {
                     this.reportError("Error querying index", "Index was not found", response.statusText)
