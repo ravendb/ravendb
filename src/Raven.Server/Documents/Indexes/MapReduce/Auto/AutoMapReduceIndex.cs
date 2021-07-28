@@ -105,7 +105,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             Definition.State = State;
         }
 
-        public override int HandleMap(LazyStringValue lowerId, LazyStringValue id, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        public override int HandleMap(LazyStringValue lowerId, LazyStringValue id, IEnumerable mapResults, Lazy<IndexWriteOperation> writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             EnsureValidStats(stats);
 

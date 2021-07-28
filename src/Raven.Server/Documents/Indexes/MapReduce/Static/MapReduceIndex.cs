@@ -312,7 +312,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             return workers.ToArray();
         }
 
-        public override void HandleDelete(Tombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        public override void HandleDelete(Tombstone tombstone, string collection, Lazy<IndexWriteOperation> writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             if (_referencedCollections.Count > 0)
                 _handleReferences.HandleDelete(tombstone, collection, writer, indexContext, stats);
@@ -334,7 +334,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             }
         }
 
-        public override int HandleMap(LazyStringValue lowerId, LazyStringValue id, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        public override int HandleMap(LazyStringValue lowerId, LazyStringValue id, IEnumerable mapResults, Lazy<IndexWriteOperation> writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             if (_enumerationWrappers.TryGetValue(CurrentIndexingScope.Current.SourceCollection, out AnonymousObjectToBlittableMapResultsEnumerableWrapper wrapper) == false)
             {

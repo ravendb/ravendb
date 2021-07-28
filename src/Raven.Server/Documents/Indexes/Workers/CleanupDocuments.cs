@@ -61,7 +61,6 @@ namespace Raven.Server.Documents.Indexes.Workers
                     var count = 0;
 
                     var sw = new Stopwatch();
-                    IndexWriteOperation indexWriter = null;
                     var keepRunning = true;
                     var lastCollectionEtag = -1L;
                     while (keepRunning)
@@ -83,9 +82,6 @@ namespace Raven.Server.Documents.Indexes.Workers
                             {
                                 token.ThrowIfCancellationRequested();
 
-                                if (indexWriter == null)
-                                    indexWriter = writeOperation.Value;
-
                                 count++;
                                 batchCount++;
                                 lastEtag = tombstone.Etag;
@@ -97,9 +93,9 @@ namespace Raven.Server.Documents.Indexes.Workers
                                 if (tombstone.Type != Tombstone.TombstoneType.Document)
                                     continue; // this can happen when we have '@all_docs'
 
-                                _index.HandleDelete(tombstone, collection, indexWriter, indexContext, collectionStats);
+                                _index.HandleDelete(tombstone, collection, writeOperation, indexContext, collectionStats);
 
-                                if (CanContinueBatch(databaseContext, indexContext, collectionStats, indexWriter, lastEtag, lastCollectionEtag, batchCount) == false)
+                                if (CanContinueBatch(databaseContext, indexContext, collectionStats, writeOperation, lastEtag, lastCollectionEtag, batchCount) == false)
                                 {
                                     keepRunning = false;
                                     break;
@@ -140,7 +136,7 @@ namespace Raven.Server.Documents.Indexes.Workers
             DocumentsOperationContext documentsContext,
             TransactionOperationContext indexingContext,
             IndexingStatsScope stats,
-            IndexWriteOperation indexWriteOperation,
+            Lazy<IndexWriteOperation> indexWriteOperation,
             long currentEtag,
             long maxEtag,
             int count)

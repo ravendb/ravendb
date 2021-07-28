@@ -55,7 +55,7 @@ namespace Raven.Server.Documents.Indexes.Workers
         }
 
         public bool CanContinueBatch(DocumentsOperationContext documentsContext, TransactionOperationContext indexingContext, 
-            IndexingStatsScope stats, IndexWriteOperation indexWriteOperation, long currentEtag, long maxEtag, int count)
+            IndexingStatsScope stats, Lazy<IndexWriteOperation> indexWriteOperation, long currentEtag, long maxEtag, int count)
         {
             if (stats.Duration >= _configuration.MapTimeout.AsTimeSpan)
                 return false;
@@ -120,7 +120,6 @@ namespace Raven.Server.Documents.Indexes.Workers
                         var resultsCount = 0;
 
                         var sw = new Stopwatch();
-                        IndexWriteOperation indexWriter = null;
 
                         var keepRunning = true;
                         var lastCollectionEtag = -1L;
@@ -191,12 +190,9 @@ namespace Raven.Server.Documents.Indexes.Workers
                                             var current = docsEnumerator.Current;
                                             stats.RecordDocumentSize(current.Data.Size);
 
-                                            if (indexWriter == null)
-                                                indexWriter = writeOperation.Value;
-
                                             try
                                             {
-                                                var numberOfResults = _index.HandleMap(current.LowerId, current.Id, mapResults, indexWriter, indexContext, collectionStats);
+                                                var numberOfResults = _index.HandleMap(current.LowerId, current.Id, mapResults, writeOperation, indexContext, collectionStats);
                                                 
                                                 resultsCount += numberOfResults;
                                                 collectionStats.RecordMapReferenceSuccess();
@@ -215,11 +211,11 @@ namespace Raven.Server.Documents.Indexes.Workers
                                                     $"Failed to execute mapping function on {current.Id}. Exception: {e}");
                                             }
 
-                                            _index.UpdateThreadAllocations(indexContext, indexWriter, stats, updateReduceStats: false);
+                                            _index.UpdateThreadAllocations(indexContext, writeOperation, stats, updateReduceStats: false);
                                         }
                                     }
 
-                                    if (CanContinueBatch(databaseContext, indexContext, collectionStats, indexWriter, lastEtag, lastCollectionEtag, totalProcessedCount) == false)
+                                    if (CanContinueBatch(databaseContext, indexContext, collectionStats, writeOperation, lastEtag, lastCollectionEtag, totalProcessedCount) == false)
                                     {
                                         keepRunning = false;
                                         break;
@@ -305,7 +301,7 @@ namespace Raven.Server.Documents.Indexes.Workers
             }
         }
 
-        public unsafe void HandleDelete(Tombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        public unsafe void HandleDelete(Tombstone tombstone, string collection, Lazy<IndexWriteOperation> writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             var tx = indexContext.Transaction.InnerTransaction;
             var loweredKey = tombstone.LowerId;
