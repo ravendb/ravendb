@@ -71,7 +71,7 @@ namespace SlowTests.Server.Documents.TimeSeries
                 var cleaner = storage.TombstoneCleaner;
                 await cleaner.ExecuteCleanup();
 
-                var c = 0l;
+                var c = 0L;
                 using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
@@ -153,7 +153,7 @@ namespace SlowTests.Server.Documents.TimeSeries
                 var cleaner = storage.TombstoneCleaner;
                 await cleaner.ExecuteCleanup();
 
-                var c = 0l;
+                var c = 0L;
                 using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
@@ -235,7 +235,7 @@ namespace SlowTests.Server.Documents.TimeSeries
                 var cleaner = storage.TombstoneCleaner;
                 await cleaner.ExecuteCleanup();
 
-                var c = 0l;
+                var c = 0L;
                 using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {

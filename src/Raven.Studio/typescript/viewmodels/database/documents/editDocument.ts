@@ -677,7 +677,22 @@ class editDocument extends viewModelBase {
         folds.map(f => this.docEditor.getSession().expandFold(f));
     }
 
-    createClone() {
+    tryCreateClone() {
+        if (this.isSaveEnabled()) {
+            this.confirmationMessage("Unsaved changes",
+                                     "Document has unsaved changes. How do you want to proceed?",
+                                     { buttons: ["Cancel", "Clone with changes"] })
+                .done(result => {
+                    if (result.can) {
+                        this.createClone(true);
+                    }
+                })
+        } else {
+            this.createClone();
+        }
+    }
+    
+    createClone(keepChanges: boolean = false) {
         const attachments = this.document().__metadata.attachments()
             ? this.document().__metadata.attachments().map(x => editDocument.mapToAttachmentItem(this.editedDocId(), x))
             : [];
@@ -693,11 +708,11 @@ class editDocument extends viewModelBase {
 
         $.when<any>(fetchCountersTask, fetchTimeseriesTask)
             .done((counters: pagedResult<counterItem>, timeSeries: pagedResult<timeSeriesItem>) => {
-                this.createCloneInternal(attachments, timeSeries.items, counters.items);
+                this.createCloneInternal(attachments, timeSeries.items, counters.items, keepChanges);
             })
     }
     
-    private createCloneInternal(attachments: attachmentItem[], timeseries: timeSeriesItem[], counters: counterItem[]) {
+    private createCloneInternal(attachments: attachmentItem[], timeseries: timeSeriesItem[], counters: counterItem[], keepChanges: boolean = false) {
         // Show current document as a new document...
         this.crudActionsProvider(new clonedDocumentCrudActions(this, this.activeDatabase, attachments, timeseries, counters, () => this.connectedDocuments.reload()));
 
@@ -716,8 +731,11 @@ class editDocument extends viewModelBase {
 
         if (metaDto) {
             documentMetadata.filterMetadata(metaDto, this.metaPropsToRestoreOnSave, true);
-            const docText = genUtils.stringify(docDto);
-            this.documentText(docText);
+            const originalDocText = genUtils.stringify(docDto);
+
+            if (!keepChanges) {
+                this.documentText(originalDocText);
+            }
 
             // Suggest initial document Id 
             docId = this.defaultNameForNewDocument(metaDto["@collection"]);
