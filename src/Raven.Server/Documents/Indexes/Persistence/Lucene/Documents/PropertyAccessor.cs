@@ -166,7 +166,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         {
         }
 
-        public override IEnumerable<(string Key, object Value, CompiledIndexField GroupByField, bool IsGroupByField)> GetPropertiesInOrder(object target)
+        public IEnumerable<(string Key, object Value, CompiledIndexField GroupByField, bool IsGroupByField)> GetPropertiesInOrder(object target)
         {
             if (!(target is V8NativeObject oi))
                 throw new ArgumentException($"JsPropertyAccessor.GetPropertiesInOrder is expecting a target of type V8NativeObject but got one of type {target.GetType().Name}.");
@@ -182,7 +182,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             }
         }
 
-        public override object GetValue(string name, object target)
+        public object GetValue(string name, object target)
         {
             if (!(target is V8NativeObject oi))
                 throw new ArgumentException($"JsPropertyAccessor.GetValue is expecting a target of type V8NativeObject but got one of type {target.GetType().Name}.");

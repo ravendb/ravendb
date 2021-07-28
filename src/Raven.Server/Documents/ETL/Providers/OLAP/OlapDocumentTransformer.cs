@@ -150,7 +150,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             if (args.Length != 3)
                 ThrowInvalidScriptMethodCall($"{methodSignature} must be called with exactly 3 parameters");
 
-            if (args[0].IsString() == false)
+            if (args[0].IsString == false)
                 ThrowInvalidScriptMethodCall($"{methodSignature} first argument must be a string");
 
             if (args[1].IsObject == false)
@@ -159,7 +159,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             if (args[2].IsObject == false)
                 ThrowInvalidScriptMethodCall($"{methodSignature} third argument must be an object");
 
-            return LoadToFunctionTranslatorInternal(args[0].AsString(), args[1], args[2], methodSignature);
+            return LoadToFunctionTranslatorInternal(args[0].AsString, args[1], args[2], methodSignature);
         }
 
         private InternalHandle LoadToFunctionTranslator(string name, InternalHandle[] args)

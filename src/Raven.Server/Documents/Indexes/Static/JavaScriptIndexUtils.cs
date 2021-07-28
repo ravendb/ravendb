@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Esprima.Ast;
+using Jint;
+using Jint.Native;
 using V8.Net;
 using Raven.Client;
 using Raven.Server.Documents.Indexes.Static.Counters;

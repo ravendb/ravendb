@@ -1046,22 +1046,22 @@ namespace Raven.Server.Utils.Cli
                 {
                     writer.WriteNull();
                 }
-                else if (result.RawJsValue.IsBoolean())
+                else if (result.RawJsValue.IsBoolean)
                 {
-                    writer.WriteBool(result.RawJsValue.AsBoolean());
+                    writer.WriteBool(result.RawJsValue.AsBoolean);
                 }
-                else if (result.RawJsValue.IsString())
+                else if (result.RawJsValue.IsString)
                 {
-                    writer.WriteString(result.RawJsValue.AsString());
+                    writer.WriteString(result.RawJsValue.AsString);
                 }
-                else if (result.RawJsValue.IsDate())
+                else if (result.RawJsValue.IsDate)
                 {
-                    var date = result.RawJsValue.AsDate();
+                    var date = result.RawJsValue.AsDate;
                     writer.WriteString(date.ToDateTime().ToString(DefaultFormat.DateTimeOffsetFormatsToWrite));
                 }
-                else if (result.RawJsValue.IsNumber())
+                else if (result.RawJsValue.IsNumber)
                 {
-                    writer.WriteDouble(result.RawJsValue.AsNumber());
+                    writer.WriteDouble(result.RawJsValue.AsDouble);
                 }
                 else
                 {

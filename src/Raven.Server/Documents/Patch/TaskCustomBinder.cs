@@ -10,21 +10,21 @@ using V8.Net;
 namespace Raven.Server.Documents.Patch
 {
 
-    public class TaskCustomBinder : ObjectBinder //<Task>
+    public class TaskCustomBinder : ObjectBinderEx<Task>
     {
-        public static InternalHandle GetRunningTaskResult(V8Engine engine, Task _Handle)
+        public static InternalHandle GetRunningTaskResult(V8Engine engine, Task task)
         {
-            var value = $"{{Ignoring Task.Result as _Handle's status is {_Handle.Status.ToString()}}}.";
-            if (_Handle.IsFaulted)
-                value += Environment.NewLine + "Exception: " + _Handle.Exception;
+            var value = $"{{Ignoring Task.Result as task's status is {task.Status.ToString()}}}.";
+            if (task.IsFaulted)
+                value += Environment.NewLine + "Exception: " + task.Exception;
             return engine.CreateValue(value);
         }
 
         public override InternalHandle NamedPropertyGetter(ref string propertyName)
         {
-            if (_Handle.IsCompleted == false && propertyName == nameof(Task<int>.Result))
+            if (objCLR.IsCompleted == false && propertyName == nameof(Task<int>.Result))
             {
-                return GetRunningTaskResult(Engine, task);
+                return GetRunningTaskResult(Engine, objCLR);
             }
             return base.NamedPropertyGetter(propertyName);
         }

@@ -607,7 +607,19 @@ namespace Raven.Server.Documents.Patch
                 var type = object.GetType();
                 tb = GetTypeBinder(type);
             }
-            return TypeBinder.CreateObjectBinder<ObjectBinder<type>, type>(obj);
+            return TypeBinder.CreateObjectBinder<ObjectBinderEx<type>, type>(obj);
+        }
+
+        public ObjectBinderEx<T> CreateObjectBinder<T>(object obj, TypeBinder tb = null)
+        where T : ObjectBinder, new()
+        {
+            if (obj == null) {
+                return null;
+            }
+            if (tb == null) {
+                tb = GetTypeBinder(T);
+            }
+            return TypeBinder.CreateObjectBinder<ObjectBinderEx<T>, type>(obj);
         }
 
         public InternalHandle FromObject(object value)
@@ -690,7 +702,7 @@ namespace Raven.Server.Documents.Patch
                 return new DelegateWrapper(this, d);
             }
 
-            // if no known type could be guessed, wrap it as an ObjectBinder<object>
+            // if no known type could be guessed, wrap it as an ObjectBinder
             InternalHandle jsRes;
             return jsRes.Set(CreateObjectBinder(value)._);
         }

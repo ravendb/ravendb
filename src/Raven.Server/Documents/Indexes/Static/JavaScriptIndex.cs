@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Diagnostics;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Documents.Indexes;
@@ -12,6 +13,7 @@ using Sparrow.Server;
 
 using Esprima;
 using Jint;
+using Jint.Native;
 using Jint.Native.Object;
 
 using V8.Net;
@@ -46,7 +48,7 @@ function map(name, lambda) {
 }";
         }
 
-        private override void OnInitializeEngine()
+        protected override void OnInitializeEngine()
         {
             base.OnInitializeEngine();
 
@@ -478,7 +480,7 @@ function map(name, lambda) {
             _engine.GlobalObject.SetProperty("recurse", new ClrFunctionInstance(_engine, "recurse", Recurse));
         }
 
-        private override List<MapMetadata> InitializeEngine(IndexDefinition definition, List<string> maps, string mapCode)
+        private List<MapMetadata> InitializeEngine(IndexDefinition definition, List<string> maps, string mapCode)
         {
             OnInitializeEngine();
 
@@ -554,12 +556,12 @@ function map(name, lambda) {
             if (value.IsNull() || value.IsUndefined())
                 return DynamicJsNull.ImplicitNull;
 
-            if (value.IsNumber())
+            if (value.IsNumber)
                 return value;
 
-            if (value.IsString())
+            if (value.IsString)
             {
-                var valueAsString = value.AsString();
+                var valueAsString = value.AsString;
                 if (double.TryParse(valueAsString, out var valueAsDbl))
                     return valueAsDbl;
             }
@@ -579,13 +581,13 @@ function map(name, lambda) {
             if (args[0].IsNull() || args[0].IsUndefined())
                 return DynamicJsNull.ImplicitNull;
 
-            if (args[0].IsString() == false ||
-                args[1].IsString() == false)
+            if (args[0].IsString == false ||
+                args[1].IsString == false)
             {
                 throw new ArgumentException($"The load(id, collection) method expects two string arguments, but got: load({args[0]}, {args[1]})");
             }
 
-            object doc = CurrentIndexingScope.Current.LoadDocument(null, args[0].AsString(), args[1].AsString());
+            object doc = CurrentIndexingScope.Current.LoadDocument(null, args[0].AsString, args[1].AsString);
             if (JavaScriptIndexUtils.GetValue(_engineJint, doc, out var item))
                 return item;
 
@@ -603,9 +605,9 @@ function map(name, lambda) {
             if (keyArgument.IsNull() || keyArgument.IsUndefined())
                 return DynamicJsNull.ImplicitNull;
 
-            if (keyArgument.IsString())
+            if (keyArgument.IsString)
             {
-                object value = CurrentIndexingScope.Current.LoadCompareExchangeValue(null, keyArgument.AsString());
+                object value = CurrentIndexingScope.Current.LoadCompareExchangeValue(null, keyArgument.AsString);
                 return ConvertToJsValue(value);
             }
             else if (keyArgument.IsArray())
@@ -619,10 +621,10 @@ function map(name, lambda) {
                 for (uint i = 0; i < keys.Length; i++)
                 {
                     var key = keys[i];
-                    if (key.IsString() == false)
+                    if (key.IsString == false)
                         ThrowInvalidType(key, Types.String);
 
-                    object value = CurrentIndexingScope.Current.LoadCompareExchangeValue(null, key.AsString());
+                    object value = CurrentIndexingScope.Current.LoadCompareExchangeValue(null, key.AsString);
                     arrayArgs[0] = ConvertToJsValue(value);
 
                     _engineJint.Array.PrototypeObject.Push(values, args);

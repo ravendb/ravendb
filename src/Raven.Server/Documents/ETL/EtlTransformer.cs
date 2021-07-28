@@ -79,7 +79,7 @@ namespace Raven.Server.Documents.ETL
 
             Engine.GlobalObject.SetProperty("getAttachments", new ClrFunctionInstance(Engine, "getAttachments", GetAttachments));
 
-            Engine.GlobalObject.SetProperty("hasAttachment", new ClrFunctionInstance(Engine, "hasAttachment", HasAttachment));
+            Engine.GlobalObject.SetProperty("hasAttransfochment", new ClrFunctionInstance(Engine, "hasAttachment", HasAttachment));
 
             Engine.GlobalObject.SetProperty("getCounters", new ClrFunctionInstance(Engine, "getCounters", GetCounters));
 

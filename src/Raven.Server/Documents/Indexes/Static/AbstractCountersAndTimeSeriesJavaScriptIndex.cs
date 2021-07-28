@@ -67,7 +67,7 @@ function map() {{
             }
         }
 
-        protected override void OnInitializeEngine(Engine engine)
+        protected override void OnInitializeEngine()
         {
         }
 

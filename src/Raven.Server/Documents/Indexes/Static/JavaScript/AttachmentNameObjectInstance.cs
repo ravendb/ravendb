@@ -11,11 +11,6 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
     {
         private readonly BlittableJsonReaderObject _attachmentName;
 
-        public AttachmentNameObjectInstance() : base()
-        {
-            assert(false);
-        }
-        
         public AttachmentNameObjectInstance(BlittableJsonReaderObject attachmentName) : base()
         {
             _attachmentName = attachmentName ?? throw new ArgumentNullException(nameof(attachmentName));
@@ -34,8 +29,8 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
                 else if (propertyName == nameof(AttachmentName.Size) && _attachmentName.TryGet(nameof(AttachmentName.Size), out long size))
                     value = engine.CreateValue(size);
 
-                if (value.IsEmpty() == false)
-                    _properties[propertyName].Set(value);
+                if (value.IsEmpty == false)
+                    _properties.Add(propertyName, value);
             }
 
             if (value.IsEmpty)
@@ -48,7 +43,7 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
         {
             public override InternalHandle NamedPropertyGetter(ref string propertyName)
             {
-                return _Handle.NamedPropertyGetter(Engine, propertyName);
+                return objCLR.NamedPropertyGetter(Engine, propertyName);
             }
         }
     }

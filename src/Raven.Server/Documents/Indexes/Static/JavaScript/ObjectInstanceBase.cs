@@ -1,32 +1,23 @@
 using System;
 using System.Collections.Generic;
 using V8.Net;
+using Raven.Server.Documents.Patch;
 
 namespace Raven.Server.Documents.Indexes.Static.JavaScript
 {
     public abstract class ObjectInstanceBase
     {
-        private Dictionary<string, InternalHandle> _properties = new Dictionary<string, Handle>();
+        private DictionaryDisposeValueIHV8<string> _properties = new DictionaryDisposeValueIHV8<string>();
 
-        public ObjectInstanceBase()
-        {
-        }
-
-        ~ObjectInstanceBase()
-        {
-            foreach (var kvp in _properties)
-                kvp.Value.Dispose();
-        }
-
-        public abstract class CustomBinder<T> : ObjectBinder<T>
-        where T : class, new()
+        public abstract class CustomBinder<T> : ObjectBinderEx<T>
+        where T : class
         {
 
             public abstract InternalHandle NamedPropertyGetter(ref string propertyName);
 
             public override V8PropertyAttributes? NamedPropertyQuery(ref string propertyName)
             {
-                if (_Handle._properties.Keys().Contains(propertyName))
+                if (objCLR._properties.Keys().Contains(propertyName))
                     return V8PropertyAttributes.Locked | V8PropertyAttributes.DontEnum;
 
                 return null;
@@ -35,7 +26,7 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
             /*public override InternalHandle NamedPropertyEnumerator()
             {
                 //throw new NotSupportedException();
-                return Engine.CreateArrayWithDisposal(_Handle._properties.Keys().Select((string propertyName) => Engine.CreateValue(propertyName)));
+                return Engine.CreateArrayWithDisposal(objCLR._properties.Keys().Select((string propertyName) => Engine.CreateValue(propertyName)));
             }*/
 
         }

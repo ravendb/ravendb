@@ -181,7 +181,7 @@ namespace Raven.Server.Documents.Patch
                 {
                     using (var jsValue = jsArr.GetProperty(i))
                     {
-                        WriteValue(jsArr, false, i.AsString(), jsValue);
+                        WriteValue(jsArr, false, i.AsString, jsValue);
                     }
                 }
                 _writer.WriteArrayEnd();
@@ -492,11 +492,11 @@ namespace Raven.Server.Documents.Patch
             foreach (var modificationKvp in obj.OwnValues)
             {
                 //We already iterated through those properties while iterating the original properties set.
-                if (modifiedProperties != null && modifiedProperties.Contains(modificationKvp.Key.AsString()))
+                if (modifiedProperties != null && modifiedProperties.Contains(modificationKvp.Key.AsString))
                     continue;
 
                 var propertyName = modificationKvp.Key;
-                var propertyNameAsString = propertyName.AsString();
+                var propertyNameAsString = propertyName.AsString;
                 if (ShouldFilterProperty(filterProperties, propertyNameAsString))
                     continue;
 

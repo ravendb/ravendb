@@ -15,7 +15,7 @@ namespace Raven.Server.Documents.Patch
 
         public virtual bool TryUnresolvableReference(Engine engine, Reference reference, out JsValue value)
         {
-            var name = reference.GetReferencedName()?.AsString();
+            var name = reference.GetReferencedName()?.AsString;
             if (_args == null || name == null || name.StartsWith('$') == false)
             {
                 value = name == "length" ? 0 : Null.Instance;
@@ -59,7 +59,7 @@ namespace Raven.Server.Documents.Patch
                 if (baseValue.IsUndefined() ||
                     baseValue.IsArray() && baseValue.AsArray().Length == 0)
                 {
-                    var name = reference.GetReferencedName().AsString();
+                    var name = reference.GetReferencedName().AsString;
                     switch (name)
                     {
                         case "reduce":

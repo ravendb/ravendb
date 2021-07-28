@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using V8.Net;
-
-//using Raven.Server.Documents.Indexes.Static.JavaScript;
+using Raven.Server.Documents.Indexes.Static.JavaScript;
 
 namespace Raven.Server.Documents.Indexes.Static.Counters
 {
@@ -10,24 +9,18 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
     {
         private readonly DynamicCounterEntry _entry;
 
-        private Dictionary<InternalHandle, PropertyDescriptor> _properties = new Dictionary<InternalHandle, PropertyDescriptor>();
-
         public CounterEntryObjectInstance(DynamicCounterEntry entry) : base()
         {
             _entry = entry ?? throw new ArgumentNullException(nameof(entry));
         }
 
-        public CounterEntryObjectInstance() : base()
-        {
-            assert(false);
-        }
-        
         public InternalHandle NamedPropertyGetter(V8Engine engine, ref string propertyName)
         {
             if (_properties.TryGetValue(propertyName, out InternalHandle value) == false)
             {
                 value = GetPropertyValue(engine, propertyName);
-                _properties[propertyName].Set(value);
+                if (value.IsEmpty == false)
+                    _properties.Add(propertyName, value);
             }
 
             return value;
@@ -51,7 +44,7 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
         {
             public override InternalHandle NamedPropertyGetter(ref string propertyName)
             {
-                return _Handle.NamedPropertyGetter(Engine, propertyName);
+                return objCLR.NamedPropertyGetter(Engine, propertyName);
             }
         }
     }

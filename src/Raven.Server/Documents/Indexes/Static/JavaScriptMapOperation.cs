@@ -2,9 +2,15 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using Esprima.Ast;
+using Jint;
+using Jint.Native;
+using Jint.Native.Array;
+using Jint.Native.Function;
+using Jint.Runtime;
+using Jint.Runtime.Environments;
 using V8.Net;
 using Raven.Client.Documents.Indexes;
-
 using Raven.Server.Documents.Patch;
 using Raven.Server.Extensions;
 using Raven.Server.Documents.Indexes.Static.Utils;
@@ -24,7 +30,6 @@ namespace Raven.Server.Documents.Indexes.Static
         private readonly JavaScriptIndexUtils _javaScriptIndexUtils;
         private readonly V8Engine _engine;
         public string IndexName { get; set; }
-        public string MapString { get; internal set; }
         public V8Function MapFuncV8;
 
         public JavaScriptMapOperation(JavaScriptIndexUtils javaScriptIndexUtils) : base ()
@@ -130,7 +135,7 @@ namespace Raven.Server.Documents.Indexes.Static
                                 if (prop is Property property)
                                 {
                                     var fieldName = property.GetKey(engine);
-                                    var fieldNameAsString = fieldName.AsString();
+                                    var fieldNameAsString = fieldName.AsString;
                                     if (fieldName == "_")
                                         HasDynamicReturns = true;
 
@@ -229,7 +234,7 @@ namespace Raven.Server.Documents.Indexes.Static
             foreach (var p in oe.Properties)
             {
                 var key = p.GetKey(_engine);
-                var keyAsString = key.AsString();
+                var keyAsString = key.AsString;
                 if (Fields.Contains(keyAsString) == false)
                     return false;
             }

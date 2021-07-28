@@ -59,10 +59,10 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             base.Initialize(debugMode);
             
             DocumentScript.ScriptEngine.GlobalObject.SetProperty("varchar",
-                new ClrFunctionInstance(DocumentScript.ScriptEngine, "varchar", (value, values) => ToVarcharTranslator(engine.CreateValue(VarcharFunctionCall.AnsiStringType), values)));
+                new ClrFunctionInstance(DocumentScript.ScriptEngine, "varchar", (engine, isConstructCall, value, values) => ToVarcharTranslator(engine.CreateValue(VarcharFunctionCall.AnsiStringType), values)));
 
             DocumentScript.ScriptEngine.GlobalObject.SetProperty("nvarchar",
-                new ClrFunctionInstance(DocumentScript.ScriptEngine, "nvarchar", (value, values) => ToVarcharTranslator(engine.CreateValue(VarcharFunctionCall.StringType), values)));
+                new ClrFunctionInstance(DocumentScript.ScriptEngine, "nvarchar", (engine, isConstructCall, value, values) => ToVarcharTranslator(engine.CreateValue(VarcharFunctionCall.StringType), values)));
         }
 
         protected override string[] LoadToDestinations { get; }
@@ -235,6 +235,10 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
         {
             public static string AnsiStringType = DbType.AnsiString.ToString();
             public static string StringType = DbType.String.ToString();
+
+            public DbType Type { get; set; }
+            public object Value { get; set; }
+            public int Size { get; set; }
 
             private VarcharFunctionCall()
             {

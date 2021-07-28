@@ -14,11 +14,6 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
 
         private readonly DynamicAttachment _attachment;
 
-        public AttachmentObjectInstance() : base()
-        {
-            assert(false);
-        }
-        
         public AttachmentObjectInstance(DynamicAttachment attachment) : base()
         {
             _attachment = attachment ?? throw new ArgumentNullException(nameof(attachment));
@@ -93,7 +88,7 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
         {
             public override InternalHandle NamedPropertyGetter(ref string propertyName)
             {
-                return _Handle.NamedPropertyGetter(Engine, propertyName);
+                return objCLR.NamedPropertyGetter(Engine, propertyName);
             }
         }
 

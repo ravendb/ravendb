@@ -8,6 +8,7 @@ using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.TimeSeries;
 using Sparrow.Json;
+using Raven.Server.Documents.Patch;
 
 namespace Raven.Server.Documents.ETL.Providers.Raven
 {
@@ -16,27 +17,27 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         private readonly EtlStatsScope _stats;
         private readonly List<ICommandData> _deletes = new List<ICommandData>();
 
-        private Dictionary<Handle, (string Id, BlittableJsonReaderObject Document)> _putsByJsReference;
+        private DictionaryDisposeKeyIHV8<(string Id, BlittableJsonReaderObject Document)> _putsByJsReference;
         
-        private Dictionary<Handle, List<(string Name, Attachment Attachment)>> _addAttachments;
+        private DictionaryDisposeKeyIHV8<List<(string Name, Attachment Attachment)>> _addAttachments;
 
-        private Dictionary<Handle, Attachment> _loadedAttachments;
+        private DictionaryDisposeKeyIHV8<Attachment> _loadedAttachments;
 
-        private Dictionary<Handle, List<CounterOperation>> _countersByJsReference;
+        private DictionaryDisposeKeyIHV8<List<CounterOperation>> _countersByJsReference;
 
         private Dictionary<LazyStringValue, List<CounterOperation>> _countersByDocumentId;
         
-        private Dictionary<Handle, Dictionary<Handle, TimeSeriesOperation>> _timeSeriesByJsReference;
+        private DictionaryDisposeKeyIHV8<Dictionary<string, TimeSeriesOperation>> _timeSeriesByJsReference;
 
         private Dictionary<LazyStringValue, Dictionary<string, TimeSeriesBatchCommandData>> _timeSeriesByDocumentId;
 
-        private Dictionary<Handle, (string Name, long Value)> _loadedCountersByJsReference;
+        private DictionaryDisposeKeyIHV8<(string Name, long Value)> _loadedCountersByJsReference;
         
-        private Dictionary<Handle, (string Name, IEnumerable<SingleResult> Value)> _loadedTimeSeriesByJsReference;
+        private DictionaryDisposeKeyIHV8<(string Name, IEnumerable<SingleResult> Value)> _loadedTimeSeriesByJsReference;
 
         private Dictionary<string, List<ICommandData>> _fullDocuments;
 
-        public RavenEtlScriptRun(EtlStatsScope stats) : base(stats)
+        public RavenEtlScriptRun(EtlStatsScope stats)
         {
             _stats = stats;
         }
@@ -100,7 +101,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         {
             Debug.Assert(instance != null);
 
-            _putsByJsReference ??= new Dictionary<Handle, (string Id, BlittableJsonReaderObject)>();
+            _putsByJsReference ??= new DictionaryDisposeKeyIHV8<(string Id, BlittableJsonReaderObject)>();
 
             _putsByJsReference.Add(instance, (id, doc));
             _stats.IncrementBatchSize(doc.Size);
@@ -108,19 +109,19 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
         public void LoadAttachment(InternalHandle attachmentReference, Attachment attachment)
         {
-            _loadedAttachments ??= new Dictionary<Handle, Attachment>();
+            _loadedAttachments ??= new DictionaryDisposeKeyIHV8<Attachment>();
             _loadedAttachments.Add(attachmentReference, attachment);
         }
 
         public void LoadCounter(InternalHandle counterReference, string name, long value)
         {
-            _loadedCountersByJsReference ??= new Dictionary<Handle, (string, long)>();
+            _loadedCountersByJsReference ??= new DictionaryDisposeKeyIHV8<(string, long)>();
             _loadedCountersByJsReference.TryAdd(counterReference, (name, value));
         }
         
         public void LoadTimeSeries(InternalHandle reference, string name, IEnumerable<SingleResult> value)
         {
-            (_loadedTimeSeriesByJsReference ??= new Dictionary<Handle, (string, IEnumerable<SingleResult>)>())
+            (_loadedTimeSeriesByJsReference ??= new DictionaryDisposeKeyIHV8<(string, IEnumerable<SingleResult>)>())
                 .TryAdd(reference, (name, value));
         }
 
@@ -128,7 +129,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         {
             var attachment = _loadedAttachments[attachmentReference];
 
-            _addAttachments ??= new Dictionary<Handle, List<(string, Attachment)>>();
+            _addAttachments ??= new DictionaryDisposeKeyIHV8<List<(string, Attachment)>>();
 
             if (_addAttachments.TryGetValue(instance, out var attachments) == false)
             {
@@ -150,7 +151,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             var counter = _loadedCountersByJsReference[counterReference];
 
             if (_countersByJsReference == null)
-                _countersByJsReference = new Dictionary<Handle, List<CounterOperation>>();
+                _countersByJsReference = new DictionaryDisposeKeyIHV8<List<CounterOperation>>();
 
             if (_countersByJsReference.TryGetValue(instance, out var operations) == false)
             {
@@ -205,12 +206,14 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
         public void AddTimeSeries(InternalHandle instance, InternalHandle timeSeriesReference)
         {
+            var engine = instance.Engine;
+
             var (name, entries) = _loadedTimeSeriesByJsReference[timeSeriesReference];
 
-            _timeSeriesByJsReference ??= new Dictionary<Handle, Dictionary<Handle, TimeSeriesOperation>>();
+            _timeSeriesByJsReference ??= new DictionaryDisposeKeyIHV8<Dictionary<string, TimeSeriesOperation>>();
             if (_timeSeriesByJsReference.TryGetValue(instance, out var timeSeriesOperations) == false)
             {
-                timeSeriesOperations = new Dictionary<Handle, TimeSeriesOperation>();
+                timeSeriesOperations = new Dictionary<string, TimeSeriesOperation>();
                 _timeSeriesByJsReference.Add(instance, timeSeriesOperations);
             }
 

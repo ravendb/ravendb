@@ -169,7 +169,7 @@ namespace Raven.Server.Documents.Patch
         private static DateTime GetTimeSeriesDateArg(InternalHandle arg, string signature, string argName)
         {
             if (arg.IsDate)
-                return arg.AsDate().ToDateTime();
+                return arg.AsDate;
 
             if (arg.IsString == false)
                 throw new ArgumentException($"{signature} : {argName} must be of type 'DateInstance' or a DateTime string. {GetTypes(arg)}");
@@ -1961,12 +1961,12 @@ namespace Raven.Server.Documents.Patch
                 return ScriptEngine.CreateObject();
             }
 
-            public object Translate(ScriptRunnerResult result, JsonOperationContext context, JsBlittableBridge.IResultModifier<V8NativeObject> modifier = null, BlittableJsonDocumentBuilder.UsageMode usageMode = BlittableJsonDocumentBuilder.UsageMode.None)
+            public object Translate(ScriptRunnerResult result, JsonOperationContext context, JsBlittableBridge.IResultModifier modifier = null, BlittableJsonDocumentBuilder.UsageMode usageMode = BlittableJsonDocumentBuilder.UsageMode.None)
             {
                 return Translate(result.RawJsValue, context, modifier, usageMode);
             }
 
-            internal object Translate(InternalHandle jsValue, JsonOperationContext context, JsBlittableBridge.IResultModifier<V8NativeObject> modifier = null, BlittableJsonDocumentBuilder.UsageMode usageMode = BlittableJsonDocumentBuilder.UsageMode.None)
+            internal object Translate(InternalHandle jsValue, JsonOperationContext context, JsBlittableBridge.IResultModifier modifier = null, BlittableJsonDocumentBuilder.UsageMode usageMode = BlittableJsonDocumentBuilder.UsageMode.None)
             {
                 if (jsValue.IsString)
                     return jsValue.AsString;

@@ -393,7 +393,7 @@ namespace Raven.Server.Documents.Indexes.Static
                             path = GetPropertyPath(me).ToArray();
 
                         var propertyName = property.GetKey(Engine);
-                        cur.Add(CreateField(propertyName.AsString(), path));
+                        cur.Add(CreateField(propertyName.AsString, path));
                     }
                 }
 

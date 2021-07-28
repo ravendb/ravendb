@@ -3,7 +3,7 @@ using V8.Net;
 
 namespace Raven.Server.Documents.Indexes.Static.JavaScript
 {
-    public sealed class DynamicJsNull : Handle, IEquatable<InternalHandle>, IEquatable<DynamicJsNull>
+    public sealed class DynamicJsNull : Handle, IEquatable<InternalHandle>, IEquatable<Handle>
     {
         public static DynamicJsNull ImplicitNull = new DynamicJsNull(isExplicitNull: false);
 
@@ -27,19 +27,29 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
                 return true;
 
             if (other is InternalHandle jsOther)
-                return jsOther.IsNull;
+                return Equals(jsOther);
 
             if (other is Handle hOther)
-            {
-                if (ReferenceEquals(null, hOther))
-                    return false;
+                return Equals(hOther);
 
-                if (hOther._.IsNull)
-                    return true;
+            return false;
+        }
 
-                if (hOther is DynamicJsNull dynamicJsNull)
-                    return true;
-            }
+        public bool Equals(InternalHandle jsOther)
+        {
+            return jsOther.IsNull;
+        }
+
+        public bool Equals(Handle other)
+        {
+            if (ReferenceEquals(null, other))
+                return false;
+
+            if (other._.IsNull)
+                return true;
+
+            if (other is DynamicJsNull dynamicJsNull)
+                return true;
 
             return false;
         }
