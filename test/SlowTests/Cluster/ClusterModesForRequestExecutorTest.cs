@@ -198,7 +198,7 @@ namespace SlowTests.Cluster
         public async Task Round_robin_load_balancing_should_work()
         {
             var databaseName = GetDatabaseName();
-            var (_, leader) = await CreateRaftCluster(3);
+            var (nodes, leader) = await CreateRaftCluster(3);
             var followers = Servers.Where(x => x.ServerStore.IsLeader() == false).ToArray();
             var conventionsForLoadBalancing = new DocumentConventions
             {
@@ -267,7 +267,7 @@ namespace SlowTests.Cluster
                     session.Store(new User { Name = "FooBar" }, "marker");
                     session.SaveChanges();
 
-                    await WaitForDocumentInClusterAsync<User>(session as DocumentSession, "marker", x => true, leader.ServerStore.Configuration.Cluster.OperationTimeout.AsTimeSpan);
+                    await WaitForDocumentInClusterAsync<User>(nodes, databaseName, "marker", x => true, leader.ServerStore.Configuration.Cluster.OperationTimeout.AsTimeSpan);
                 }
 
                 var usedUrls = new List<string>();
@@ -293,7 +293,7 @@ namespace SlowTests.Cluster
         public async Task Round_robin_load_balancing_with_failing_node_should_work()
         {
             var databaseName = GetDatabaseName();
-            var (_, leader) = await CreateRaftCluster(3);
+            var (nodes, leader) = await CreateRaftCluster(3);
             var followers = Servers.Where(x => x.ServerStore.IsLeader() == false).ToArray();
 
             var conventionsForLoadBalancing = new DocumentConventions
@@ -350,8 +350,10 @@ namespace SlowTests.Cluster
                     session.Store(new User { Name = "FooBar" }, "marker");
                     session.SaveChanges();
 
-                    await WaitForDocumentInClusterAsync<User>(session as DocumentSession,
-                        "marker", x => true,
+                    await WaitForDocumentInClusterAsync<User>(nodes,
+                        databaseName,
+                        "marker", 
+                        x => true,
                         leader.ServerStore.Configuration.Cluster.OperationTimeout.AsTimeSpan);
                 }
 

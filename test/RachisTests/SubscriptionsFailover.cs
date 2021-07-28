@@ -681,6 +681,8 @@ namespace RachisTests
                 DeleteDatabaseOnDispose = false
             }))
             {
+                Servers.ForEach(x => x.ForTestingPurposesOnly().GatherVerboseDatabaseDisposeInformation = true);
+
                 var mre = new AsyncManualResetEvent();
                 using (var subscriptionManager = new DocumentSubscriptions(store))
                 {
