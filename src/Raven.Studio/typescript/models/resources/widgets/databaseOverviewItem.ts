@@ -93,21 +93,21 @@ class databaseOverviewItem implements databaseAndNodeAwareStats {
             return [];
         }
         
-        let alertsData: iconPlusText[] = [];
+        const alertsData: iconPlusText[] = [];
         
         if (this.alerts) {
             const textValue = this.alerts.toLocaleString();
-            alertsData = [{
+            alertsData.push({
                 title: `${textValue} ${this.alerts > 1 ? "alerts" : "alert"}`,
                 text: textValue,
                 iconClass: "icon-warning",
                 textClass: "text-warning"
-            }];
+            });
         }
        
         if (this.performanceHints) {
             const textValue = this.performanceHints.toLocaleString();
-            alertsData.push ({
+            alertsData.push({
                 title: `${textValue} performance ${this.performanceHints > 1 ? "hints" : "hint" }`,
                 text: textValue,
                 iconClass: "icon-info",
