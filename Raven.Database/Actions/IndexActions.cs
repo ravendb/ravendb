@@ -170,9 +170,15 @@ namespace Raven.Database.Actions
                         {
                             if (sp == null)
                                 sp = Stopwatch.StartNew();
+
                             if (sp.Elapsed >= Database.Configuration.CheckReferenceBecauseOfDocumentUpdateTimeout)
                             {
-                                throw new TimeoutException("Early failure when checking references for document '" + key + "', we waited over 30 seconds to touch all of the documents referenced by this document.\r\n" +
+                                sp.Stop();
+
+                                Log.Info("Failed to update references for {0}, count: {1}, took: {2}ms", key, count, sp.ElapsedMilliseconds);
+
+                                throw new TimeoutException("Early failure when checking references for document '" + key + "', we waited over " + sp.Elapsed.TotalSeconds + " seconds to touch all of the documents referenced by this document.\r\n" +
+                                                           "While the limit is " + Database.Configuration.CheckReferenceBecauseOfDocumentUpdateTimeout.TotalSeconds + " seconds\r\n" +
                                                            "The operation (and transaction) has been aborted, since to try longer (we already touched " + count + " documents) risk a thread abort.\r\n" +
                                                            "Consider restructuring your indexes to avoid LoadDocument on such a popular document.");
                             }
@@ -182,7 +188,7 @@ namespace Raven.Database.Actions
             }
 
             if (sp != null)
-                Log.Info("Updated references for {0}, count: {1}, took: {2}", key, count, sp.ElapsedMilliseconds);
+                Log.Info("Updated references for {0}, count: {1}, took: {2}ms", key, count, sp.ElapsedMilliseconds);
 
             return count;
         }
