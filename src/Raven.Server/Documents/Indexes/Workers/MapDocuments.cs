@@ -61,7 +61,6 @@ namespace Raven.Server.Documents.Indexes.Workers
                     var pageSize = int.MaxValue;
 
                     var sw = new Stopwatch();
-                    IndexWriteOperation indexWriter = null;
                     var keepRunning = true;
                     var lastCollectionEtag = -1L;
                     while (keepRunning)
@@ -88,9 +87,6 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                                     token.ThrowIfCancellationRequested();
 
-                                    if (indexWriter == null)
-                                        indexWriter = writeOperation.Value;
-
                                     var current = docsEnumerator.Current;
 
                                     totalProcessedCount++;
@@ -105,7 +101,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                     try
                                     {
                                         var numberOfResults = _index.HandleMap(current.LowerId, current.Id, mapResults,
-                                            indexWriter, indexContext, collectionStats);
+                                            writeOperation, indexContext, collectionStats);
 
                                         resultsCount += numberOfResults;
                                         collectionStats.RecordMapSuccess();
@@ -124,7 +120,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                                                                 $"Exception: {e}");
                                     }
 
-                                    if (CanContinueBatch(databaseContext, indexContext, collectionStats, indexWriter, lastEtag, lastCollectionEtag, totalProcessedCount) == false)
+                                    if (CanContinueBatch(databaseContext, indexContext, collectionStats, writeOperation, lastEtag, lastCollectionEtag, totalProcessedCount) == false)
                                     {
                                         keepRunning = false;
                                         break;
@@ -189,7 +185,7 @@ namespace Raven.Server.Documents.Indexes.Workers
             return false;
         }
 
-        public bool CanContinueBatch(DocumentsOperationContext documentsContext, TransactionOperationContext indexingContext, IndexingStatsScope stats, IndexWriteOperation indexWriter, long currentEtag, long maxEtag, int count)
+        public bool CanContinueBatch(DocumentsOperationContext documentsContext, TransactionOperationContext indexingContext, IndexingStatsScope stats, Lazy<IndexWriteOperation> indexWriter, long currentEtag, long maxEtag, int count)
         {
             if (stats.Duration >= _configuration.MapTimeout.AsTimeSpan)
             {
