@@ -1,37 +1,38 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
-using Jint;
-using Jint.Native;
-using Jint.Runtime;
-using Jint.Runtime.Descriptors;
-using Jint.Runtime.Interop;
+using V8.Net;
 using Raven.Client.Documents.Indexes;
+using Raven.Server.Documents.Patch;
 
 namespace Raven.Server.Documents.Indexes.Static.JavaScript
 {
+    //[ScriptObject("AttachmentObjectInstance", ScriptMemberSecurity.NoAcccess)]
     public class AttachmentObjectInstance : ObjectInstanceBase
     {
         private const string GetContentAsStringMethodName = "getContentAsString";
 
-        private readonly Dictionary<JsValue, PropertyDescriptor> _properties = new Dictionary<JsValue, PropertyDescriptor>();
-
         private readonly DynamicAttachment _attachment;
 
-        public AttachmentObjectInstance(Engine engine, DynamicAttachment attachment) : base(engine)
+        public AttachmentObjectInstance() : base()
+        {
+            assert(false);
+        }
+        
+        public AttachmentObjectInstance(DynamicAttachment attachment) : base()
         {
             _attachment = attachment ?? throw new ArgumentNullException(nameof(attachment));
         }
 
-        private JsValue GetContentAsString(JsValue self, JsValue[] args)
+        private InternalHandle GetContentAsString(V8Engine engine, params InternalHandle[] args)
         {
             var encoding = Encoding.UTF8;
             if (args.Length > 0)
             {
-                if (args[0].IsString() == false)
+                if (args[0].IsString == false)
                     throw new InvalidOperationException($"Encoding parameter must be of type string and convertible to one of the .NET supported encodings, but was '{args[0]}'.");
 
-                var encodingAsString = args[0].AsString();
+                var encodingAsString = args[0].AsString;
                 if (string.Equals(encodingAsString, nameof(Encoding.UTF8), StringComparison.OrdinalIgnoreCase))
                     encoding = Encoding.UTF8;
                 else if (string.Equals(encodingAsString, nameof(Encoding.Default), StringComparison.OrdinalIgnoreCase))
@@ -52,92 +53,49 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
                     throw new InvalidOperationException($"Encoding parameter must be of type string and convertible to one of the .NET supported encodings, but was '{encodingAsString}'.");
             }
 
-            return new JsString(_attachment.GetContentAsString(encoding));
+            return engine.CreateValue(_attachment.GetContentAsString(encoding));
         }
 
-        public override bool DefineOwnProperty(JsValue property, PropertyDescriptor desc)
+        public InternalHandle NamedPropertyGetter(V8Engine engine, ref string propertyName)
         {
-            throw new NotSupportedException();
-        }
-
-        public override bool Delete(JsValue property)
-        {
-            throw new NotSupportedException();
-        }
-
-        public override IEnumerable<KeyValuePair<JsValue, PropertyDescriptor>> GetOwnProperties()
-        {
-            throw new NotSupportedException();
-        }
-
-        public override PropertyDescriptor GetOwnProperty(JsValue property)
-        {
-            if (_properties.TryGetValue(property, out var value) == false)
+            if (_properties.TryGetValue(propertyName, out InternalHandle value) == false)
             {
-                if (property == nameof(IAttachmentObject.Name))
-                    value = new PropertyDescriptor(new JsString(_attachment.Name), writable: false, enumerable: false, configurable: false);
-                else if (property == nameof(IAttachmentObject.ContentType))
-                    value = new PropertyDescriptor(new JsString(_attachment.ContentType), writable: false, enumerable: false, configurable: false);
-                else if (property == nameof(IAttachmentObject.Hash))
-                    value = new PropertyDescriptor(new JsString(_attachment.Hash), writable: false, enumerable: false, configurable: false);
-                else if (property == nameof(IAttachmentObject.Size))
-                    value = new PropertyDescriptor(_attachment.Size, writable: false, enumerable: false, configurable: false);
-                else if (property == GetContentAsStringMethodName)
-                    value = new PropertyDescriptor(new ClrFunctionInstance(Engine, GetContentAsStringMethodName, GetContentAsString), writable: false, enumerable: false, configurable: false);
+                if (propertyName == nameof(IAttachmentObject.Name))
+                    value = engine.CreateValue(_attachment.Name);
+                else if (propertyName == nameof(IAttachmentObject.ContentType))
+                    value = engine.CreateValue(_attachment.ContentType);
+                else if (propertyName == nameof(IAttachmentObject.Hash))
+                    value = engine.CreateValue(_attachment.Hash);
+                else if (propertyName == nameof(IAttachmentObject.Size))
+                    value = engine.CreateValue(_attachment.Size);
+                else if (propertyName == GetContentAsStringMethodName)
+                    value = new ClrFunctionInstance(engine, GetContentAsStringMethodName, GetContentAsString);
 
-                if (value != null)
-                    _properties[property] = value;
+                if (value.IsEmpty() == false)
+                    _properties[propertyName].Set(value);
             }
 
-            if (value == null)
-                value = ImplicitNull;
+            if (value.IsEmpty)
+                value.Set(DynamicJsNull.ImplicitNull._);
 
             return value;
         }
 
-        public override List<JsValue> GetOwnPropertyKeys(Types types = Types.String | Types.Symbol)
+        private InternalHandle GetContentAsString(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
-            throw new NotSupportedException();
+            var attachment = (AttachmentObjectInstance)self.BoundObject;
+            if (bo == null)
+                throw new InvalidOperationException($"GetContentAsString: BoundObject is null.");
+            return attachment.GetContentAsString(engine, args);
         }
 
-        public override bool HasOwnProperty(JsValue property)
+        public class CustomBinder : ObjectInstanceBase.CustomBinder<AttachmentObjectInstance>
         {
-            throw new NotSupportedException();
+            public override InternalHandle NamedPropertyGetter(ref string propertyName)
+            {
+                return _Handle.NamedPropertyGetter(Engine, propertyName);
+            }
         }
 
-        public override bool HasProperty(JsValue property)
-        {
-            throw new NotSupportedException();
-        }
-
-        public override JsValue PreventExtensions()
-        {
-            throw new NotSupportedException();
-        }
-
-        public override void RemoveOwnProperty(JsValue property)
-        {
-            throw new NotSupportedException();
-        }
-
-        public override bool Set(JsValue property, JsValue value, JsValue receiver)
-        {
-            throw new NotSupportedException();
-        }
-
-        protected override void AddProperty(JsValue property, PropertyDescriptor descriptor)
-        {
-            throw new NotSupportedException();
-        }
-
-        protected override void SetOwnProperty(JsValue property, PropertyDescriptor desc)
-        {
-            throw new NotSupportedException();
-        }
-
-        protected override bool TryGetProperty(JsValue property, out PropertyDescriptor descriptor)
-        {
-            throw new NotSupportedException();
-        }
     }
 }

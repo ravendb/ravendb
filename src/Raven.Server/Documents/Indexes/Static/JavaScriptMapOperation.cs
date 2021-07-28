@@ -5,10 +5,9 @@ using System.Linq;
 using V8.Net;
 using Raven.Client.Documents.Indexes;
 
-
 using Raven.Server.Documents.Patch;
 using Raven.Server.Extensions;
-//using Raven.Server.Documents.Indexes.Static.Utils;
+using Raven.Server.Documents.Indexes.Static.Utils;
 
 namespace Raven.Server.Documents.Indexes.Static
 {

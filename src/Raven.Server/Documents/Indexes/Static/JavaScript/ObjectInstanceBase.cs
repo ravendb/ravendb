@@ -1,16 +1,43 @@
-﻿using Jint;
-using Jint.Native.Object;
-using Jint.Runtime.Descriptors;
+using System;
+using System.Collections.Generic;
+using V8.Net;
 
 namespace Raven.Server.Documents.Indexes.Static.JavaScript
 {
-    public abstract class ObjectInstanceBase : ObjectInstance
+    public abstract class ObjectInstanceBase
     {
-        protected static readonly PropertyDescriptor ImplicitNull = new PropertyDescriptor(DynamicJsNull.ImplicitNull, writable: false, enumerable: false, configurable: false);
+        private Dictionary<string, InternalHandle> _properties = new Dictionary<string, Handle>();
 
-        protected ObjectInstanceBase(Engine engine) : base(engine)
+        public ObjectInstanceBase()
         {
-            SetPrototypeOf(engine.Object.PrototypeObject);
+        }
+
+        ~ObjectInstanceBase()
+        {
+            foreach (var kvp in _properties)
+                kvp.Value.Dispose();
+        }
+
+        public abstract class CustomBinder<T> : ObjectBinder<T>
+        where T : class, new()
+        {
+
+            public abstract InternalHandle NamedPropertyGetter(ref string propertyName);
+
+            public override V8PropertyAttributes? NamedPropertyQuery(ref string propertyName)
+            {
+                if (_Handle._properties.Keys().Contains(propertyName))
+                    return V8PropertyAttributes.Locked | V8PropertyAttributes.DontEnum;
+
+                return null;
+            }
+
+            /*public override InternalHandle NamedPropertyEnumerator()
+            {
+                //throw new NotSupportedException();
+                return Engine.CreateArrayWithDisposal(_Handle._properties.Keys().Select((string propertyName) => Engine.CreateValue(propertyName)));
+            }*/
+
         }
     }
 }

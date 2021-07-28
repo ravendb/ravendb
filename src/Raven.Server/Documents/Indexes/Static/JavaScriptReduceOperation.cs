@@ -20,10 +20,7 @@ using Sparrow.Json;
 using Sparrow.Server;
 
 using V8.Net;
-
-//using Raven.Server.Documents.Indexes.Static.Utils;
-
-
+using Raven.Server.Documents.Indexes.Static.Utils;
 
 namespace Raven.Server.Documents.Indexes.Static
 {

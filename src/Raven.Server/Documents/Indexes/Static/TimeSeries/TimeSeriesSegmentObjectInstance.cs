@@ -5,7 +5,7 @@ using Raven.Client.Documents.Indexes.TimeSeries;
 
 namespace Raven.Server.Documents.Indexes.Static.TimeSeries
 {
-    public class TimeSeriesSegmentObjectInstance : PropertiesObjectInstance
+    public class TimeSeriesSegmentObjectInstance : ObjectInstanceBase
     {
         private readonly DynamicTimeSeriesSegment _segment;
 
@@ -54,7 +54,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             return InternalHandle.Empty;
         }
 
-        public class CustomBinder : PropertiesObjectInstance.CustomBinder<TimeSeriesSegmentObjectInstance>
+        public class CustomBinder : ObjectInstanceBase.CustomBinder<TimeSeriesSegmentObjectInstance>
         {
             public override InternalHandle NamedPropertyGetter(ref string propertyName)
             {

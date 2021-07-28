@@ -21,13 +21,10 @@ using V8.Net;
 
 using Raven.Server.Extensions;
 using Raven.Server.Documents.Patch;
-using Raven.Server.Documents.Indexes.Static.Utils;
 using Raven.Server.Documents.Indexes.Static.JavaScript;
 using Raven.Server.Documents.Indexes.Static.Counters;
 using Raven.Server.Documents.Indexes.Static.TimeSeries;
-
-using Raven.Server.Extensions.V8;
-using Raven.Server.Documents.Patch.V8;
+using Raven.Server.Documents.Indexes.Static.Utils;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
@@ -133,7 +130,7 @@ function map(name, lambda) {
                                 var funcInstance = funcObj.Object as V8Function;
                                 if (funcInstance == null)
                                     ThrowIndexCreationException($"map function #{i} {MethodProperty} property isn't a 'V8Function'");
-                                var operation = new JavaScriptMapOperation(_javaScriptIndexUtils)
+                                var operation = new JavaScriptMapOperation(JavaScriptIndexUtils)
                                 {
                                     MapFunc = funcInstanceJint,
                                     MapFuncV8 = funcInstance,
@@ -179,9 +176,9 @@ function map(name, lambda) {
             assert(false); // this code is not to be run
             return JsValue.Null;
             /*var scope = CurrentIndexingScope.Current;
-            scope.RegisterJavaScriptUtils(_javaScriptUtils);
+            scope.RegisterJavaScriptUtils(JavaScriptUtils);
 
-            return _javaScriptUtils.GetDocumentId(self, args);*/
+            return JavaScriptUtils.GetDocumentId(self, args);*/
         }
 
         private JsValue AttachmentsForJint(JsValue self, JsValue[] args)
@@ -189,9 +186,9 @@ function map(name, lambda) {
             assert(false); // this code is not to be run
             return JsValue.Null;
             /*var scope = CurrentIndexingScope.Current;
-            scope.RegisterJavaScriptUtils(_javaScriptUtils);
+            scope.RegisterJavaScriptUtils(JavaScriptUtils);
 
-            return _javaScriptUtils.AttachmentsFor(self, args);*/
+            return JavaScriptUtils.AttachmentsFor(self, args);*/
         }
 
         private JsValue MetadataForJint(JsValue self, JsValue[] args)
@@ -199,9 +196,9 @@ function map(name, lambda) {
             assert(false); // this code is not to be run
             return JsValue.Null;
             /*var scope = CurrentIndexingScope.Current;
-            scope.RegisterJavaScriptUtils(_javaScriptUtils);
+            scope.RegisterJavaScriptUtils(JavaScriptUtils);
 
-            return _javaScriptUtils.GetMetadata(self, args);*/
+            return JavaScriptUtils.GetMetadata(self, args);*/
         }
 
         private JsValue TimeSeriesNamesForJint(JsValue self, JsValue[] args)
@@ -209,9 +206,9 @@ function map(name, lambda) {
             assert(false); // this code is not to be run
             return JsValue.Null;
             /*var scope = CurrentIndexingScope.Current;
-            scope.RegisterJavaScriptUtils(_javaScriptUtils);
+            scope.RegisterJavaScriptUtils(JavaScriptUtils);
 
-            return _javaScriptUtils.GetTimeSeriesNamesFor(self, args);*/
+            return JavaScriptUtils.GetTimeSeriesNamesFor(self, args);*/
         }
 
         private JsValue CounterNamesForJint(JsValue self, JsValue[] args)
@@ -219,9 +216,9 @@ function map(name, lambda) {
             assert(false); // this code is not to be run
             return JsValue.Null;
             /*var scope = CurrentIndexingScope.Current;
-            scope.RegisterJavaScriptUtils(_javaScriptUtils);
+            scope.RegisterJavaScriptUtils(JavaScriptUtils);
 
-            return _javaScriptUtils.GetCounterNamesFor(self, args);*/
+            return JavaScriptUtils.GetCounterNamesFor(self, args);*/
         }
 
         private JsValue LoadAttachmentJint(JsValue self, JsValue[] args)
@@ -229,9 +226,9 @@ function map(name, lambda) {
             assert(false); // this code is not to be run
             return JsValue.Null;
             /*var scope = CurrentIndexingScope.Current;
-            scope.RegisterJavaScriptUtils(_javaScriptUtils);
+            scope.RegisterJavaScriptUtils(JavaScriptUtils);
 
-            return _javaScriptUtils.LoadAttachment(self, args);*/
+            return JavaScriptUtils.LoadAttachment(self, args);*/
         }
 
         private JsValue LoadAttachmentsJint(JsValue self, JsValue[] args)
@@ -239,66 +236,66 @@ function map(name, lambda) {
             assert(false); // this code is not to be run
             return JsValue.Null;
             /*var scope = CurrentIndexingScope.Current;
-            scope.RegisterJavaScriptUtils(_javaScriptUtils);
+            scope.RegisterJavaScriptUtils(JavaScriptUtils);
 
-            return _javaScriptUtils.LoadAttachments(self, args);*/
+            return JavaScriptUtils.LoadAttachments(self, args);*/
         }
 
 
         private InternalHandle GetDocumentId(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
             var scope = CurrentIndexingScope.Current;
-            scope.RegisterJavaScriptUtils(_javaScriptUtils);
+            scope.RegisterJavaScriptUtils(JavaScriptUtils);
 
-            return _javaScriptUtils.GetDocumentId(self, args);
+            return JavaScriptUtils.GetDocumentId(self, args);
         }
 
         private InternalHandle AttachmentsFor(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
             var scope = CurrentIndexingScope.Current;
-            scope.RegisterJavaScriptUtils(_javaScriptUtils);
+            scope.RegisterJavaScriptUtils(JavaScriptUtils);
 
-            return _javaScriptUtils.AttachmentsFor(self, args);
+            return JavaScriptUtils.AttachmentsFor(self, args);
         }
 
         private InternalHandle MetadataFor(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
             var scope = CurrentIndexingScope.Current;
-            scope.RegisterJavaScriptUtils(_javaScriptUtils);
+            scope.RegisterJavaScriptUtils(JavaScriptUtils);
 
-            return _javaScriptUtils.GetMetadata(self, args);
+            return JavaScriptUtils.GetMetadata(self, args);
         }
 
         private InternalHandle TimeSeriesNamesFor(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
             var scope = CurrentIndexingScope.Current;
-            scope.RegisterJavaScriptUtils(_javaScriptUtils);
+            scope.RegisterJavaScriptUtils(JavaScriptUtils);
 
-            return _javaScriptUtils.GetTimeSeriesNamesFor(self, args);
+            return JavaScriptUtils.GetTimeSeriesNamesFor(self, args);
         }
 
         private InternalHandle CounterNamesFor(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
             var scope = CurrentIndexingScope.Current;
-            scope.RegisterJavaScriptUtils(_javaScriptUtils);
+            scope.RegisterJavaScriptUtils(JavaScriptUtils);
 
-            return _javaScriptUtils.GetCounterNamesFor(self, args);
+            return JavaScriptUtils.GetCounterNamesFor(self, args);
         }
 
         private InternalHandle LoadAttachment(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
             var scope = CurrentIndexingScope.Current;
-            scope.RegisterJavaScriptUtils(_javaScriptUtils);
+            scope.RegisterJavaScriptUtils(JavaScriptUtils);
 
-            return _javaScriptUtils.LoadAttachment(self, args);
+            return JavaScriptUtils.LoadAttachment(self, args);
         }
 
         private InternalHandle LoadAttachments(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
             var scope = CurrentIndexingScope.Current;
-            scope.RegisterJavaScriptUtils(_javaScriptUtils);
+            scope.RegisterJavaScriptUtils(JavaScriptUtils);
 
-            return _javaScriptUtils.LoadAttachments(self, args);
+            return JavaScriptUtils.LoadAttachments(self, args);
         }
     }
 
@@ -318,8 +315,8 @@ function map(name, lambda) {
 
         
         protected readonly IndexDefinition Definition;
-        protected readonly JavaScriptUtils _javaScriptUtils;
-        protected readonly JavaScriptIndexUtils _javaScriptIndexUtils;
+        public readonly JavaScriptUtils JavaScriptUtils;
+        public readonly JavaScriptIndexUtils JavaScriptIndexUtils;
 
 
         //private JintPreventResolvingTasksReferenceResolver _resolverJint;
@@ -399,9 +396,9 @@ function map(name, lambda) {
                 ProcessFields(collectionFunctions);
             //}
 
-            _javaScriptUtils = new JavaScriptUtils(null, _engine);
+            JavaScriptUtils = new JavaScriptUtils(null, _engine);
 
-            _javaScriptIndexUtils = new JavaScriptIndexUtils(_javaScriptUtils);
+            JavaScriptIndexUtils = new JavaScriptIndexUtils(JavaScriptUtils);
         }
 
         ~AbstractJavaScriptIndex()
@@ -462,7 +459,7 @@ function map(name, lambda) {
                 {
                     var groupByKey = reduceAsObj.GetProperty(KeyProperty).As<V8Function>();
                     var reduce = reduceAsObj.GetProperty(AggregateByProperty).As<V8Function>();
-                    ReduceOperation = new JavaScriptReduceOperation(reduceJint, groupByKeyJint, _javaScriptIndexUtilsJint, reduce, groupByKey, _javaScriptIndexUtils) { ReduceString = Definition.Reduce };
+                    ReduceOperation = new JavaScriptReduceOperation(reduceJint, groupByKeyJint, _javaScriptIndexUtilsJint, reduce, groupByKey, JavaScriptIndexUtils) { ReduceString = Definition.Reduce };
                     GroupByFields = ReduceOperation.GetReduceFieldsNames();
                     Reduce = ReduceOperation.IndexingFunction;
                 }
@@ -655,7 +652,7 @@ function map(name, lambda) {
                         return new BlittableObjectInstance(_engineJint, null, dbj.BlittableJson, id: null, lastModified: null, changeVector: null);
 
                     default:
-                        return _javaScriptUtils.TranslateToJs(_engineJint, context: null, value);
+                        return JavaScriptUtils.TranslateToJs(_engineJint, context: null, value);
                 }
             }
 
@@ -693,7 +690,7 @@ function map(name, lambda) {
             var value = args[0];
 
             if (value.IsNull || value.IsUndefined)
-                return jsRes.Set((v8EngineEx)engine.CreateObjectBinder(DynamicJsNull.ImplicitNull)._);
+                return jsRes.Set(DynamicJsNull.ImplicitNull._);
 
             if (value.IsNumber)
                 return value;
@@ -705,7 +702,7 @@ function map(name, lambda) {
                     return valueAsDbl;
             }
 
-            return jsRes.Set((v8EngineEx)engine.CreateObjectBinder(DynamicJsNull.ImplicitNull)._);
+            return jsRes.Set(DynamicJsNull.ImplicitNull._);
         }
 
         private InternalHandle LoadDocument(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
@@ -717,7 +714,7 @@ function map(name, lambda) {
 
             InternalHandle jsRes;
             if (args[0].IsNull || args[0].IsUndefined)
-                return jsRes.Set((v8EngineEx)engine.CreateObjectBinder(DynamicJsNull.ImplicitNull)._);
+                return jsRes.Set(DynamicJsNull.ImplicitNull._);
 
             if (args[0].IsString == false ||
                 args[1].IsString == false)
@@ -729,7 +726,7 @@ function map(name, lambda) {
             if (JavaScriptIndexUtils.GetValue(doc, out InternalHandle jsItem))
                 return jsItem;
 
-            return jsRes.Set((v8EngineEx)engine.CreateObjectBinder(DynamicJsNull.ImplicitNull)._);
+            return jsRes.Set(DynamicJsNull.ImplicitNull._);
         }
 
         private InternalHandle LoadCompareExchangeValue(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
@@ -740,7 +737,7 @@ function map(name, lambda) {
             InternalHandle jsRes;
             var keyArgument = args[0];
             if (keyArgument.IsNull || keyArgument.IsUndefined)
-                return jsRes.Set((v8EngineEx)engine.CreateObjectBinder(DynamicJsNull.ImplicitNull)._);
+                return jsRes.Set(DynamicJsNull.ImplicitNull._);
 
             if (keyArgument.IsString)
             {
@@ -752,7 +749,7 @@ function map(name, lambda) {
                 var keys = keyArgument.Object;
                 int arrayLength =  keys.ArrayLength;
                 if (arrayLength == 0)
-                    return jsRes.Set((v8EngineEx)engine.CreateObjectBinder(DynamicJsNull.ImplicitNull)._);
+                    return jsRes.Set(DynamicJsNull.ImplicitNull._);
 
                 var jsItems = new InternalHandle[arrayLength];
                 for (int i = 0; i < arrayLength; i++)
@@ -780,7 +777,7 @@ function map(name, lambda) {
                 switch (value)
                 {
                     case null:
-                        return jsRes.Set((v8EngineEx)engine.CreateObjectBinder(DynamicJsNull.ImplicitNull)._);
+                        return jsRes.Set(DynamicJsNull.ImplicitNull._);
 
                     case DynamicNullObject dno: {
                         var dynamicNull = dno.IsExplicitNull ? DynamicJsNull.ExplicitNull : DynamicJsNull.ImplicitNull;
@@ -788,19 +785,17 @@ function map(name, lambda) {
                     }
 
                     case DynamicBlittableJson dbj: {
-                        BlittableObjectInstance boi = new BlittableObjectInstance(_javaScriptUtils, null, dbj.BlittableJson, id: null, lastModified: null, changeVector: null);
+                        BlittableObjectInstance boi = new BlittableObjectInstance(JavaScriptUtils, null, dbj.BlittableJson, id: null, lastModified: null, changeVector: null);
                         return jsRes.Set(boi.CreateObjectBinder()._);
                     }
 
                     default:
-                        return _javaScriptUtils.TranslateToJs(context: null, value);
+                        return JavaScriptUtils.TranslateToJs(context: null, value);
                 }
             }
 
             static void ThrowInvalidType(InternalHandle jsValue, JSValueType expectedType)
             {
-                using (jsValue);
-            
                 throw new InvalidOperationException($"Argument '{jsValue}' was of type '{jsValue.ValueType}', but '{expectedType}' was expected.");
             }
         }

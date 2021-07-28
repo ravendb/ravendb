@@ -4,8 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using Jint.Native;
-using Jint.Native.Object;
+using V8.Net;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
@@ -18,6 +17,7 @@ using Raven.Server.Documents.Indexes.Debugging;
 using Raven.Server.Documents.Indexes.Errors;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Static;
+using Raven.Server.Documents.Indexes.Static.Utils;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Dynamic;
@@ -1030,7 +1030,7 @@ namespace Raven.Server.Documents.Handlers
                         }
                     }
 
-                    var mapRes = new List<ObjectInstance>();
+                    var mapRes = new List<V8NativeObject>();
                     //all maps
                     foreach (var listOfFunctions in compiledIndex.Maps)
                     {
@@ -1042,9 +1042,9 @@ namespace Raven.Server.Documents.Handlers
                             {
                                 if (docsPerCollection.TryGetValue(listOfFunctions.Key, out var docs))
                                 {
-                                    foreach (var res in mapFunc(docs))
+                                    foreach (V8NativeObject res in mapFunc(docs))
                                     {
-                                        mapRes.Add((ObjectInstance)res);
+                                        mapRes.Add(res);
                                     }
                                 }
                             }
@@ -1058,14 +1058,17 @@ namespace Raven.Server.Documents.Handlers
                         writer.WriteStartArray();
                         foreach (var mapResult in mapRes)
                         {
-                            if (JavaScriptIndexUtils.StringifyObject(mapResult) is JsString jsStr)
+                            using (var jsStr = compiledIndex.JavaScriptIndexUtils.StringifyObject(mapResult.InternalHandle)) 
                             {
-                                if (first == false)
+                                if (jsStr.IsString)
                                 {
-                                    writer.WriteComma();
+                                    if (first == false)
+                                    {
+                                        writer.WriteComma();
+                                    }
+                                    writer.WriteString(jsStr.AsString);
+                                    first = false;
                                 }
-                                writer.WriteString(jsStr.ToString());
-                                first = false;
                             }
                         }
                         writer.WriteEndArray();
@@ -1081,17 +1084,20 @@ namespace Raven.Server.Documents.Handlers
 
                                 var reduceResults = compiledIndex.Reduce(mapRes.Select(mr => new DynamicBlittableJson(JsBlittableBridge.Translate(context, mr.Engine, mr))));
 
-                                foreach (JsValue reduceResult in reduceResults)
+                                foreach (V8NativeObject reduceResult in reduceResults)
                                 {
-                                    if (JavaScriptIndexUtils.StringifyObject(reduceResult) is JsString jsStr)
+                                    using (var jsStr = compiledIndex.JavaScriptIndexUtils.StringifyObject(reduceResult.InternalHandle)) 
                                     {
-                                        if (first == false)
+                                        if (jsStr.IsString)
                                         {
-                                            writer.WriteComma();
-                                        }
+                                            if (first == false)
+                                            {
+                                                writer.WriteComma();
+                                            }
 
-                                        writer.WriteString(jsStr.ToString());
-                                        first = false;
+                                            writer.WriteString(jsStr.AsString);
+                                            first = false;
+                                        }
                                     }
                                 }
                             }

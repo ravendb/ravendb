@@ -94,6 +94,7 @@ namespace Raven.Server.Documents.ETL
 
         private InternalHandle LoadToFunctionTranslator(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
+            InternalHandle jsRes;
             if (args.Length != 2)
                 ThrowInvalidScriptMethodCall("loadTo(name, obj) must be called with exactly 2 parameters");
             if (args[0].IsString == false)
@@ -106,11 +107,12 @@ namespace Raven.Server.Documents.ETL
             // already be calling that.
             var result = new ScriptRunnerResult(DocumentScript, args[1]);
             LoadToFunction(args[0].AsString, result);
-            return result.Instance;
+            return jsRes.Set(result.Instance);
         }
 
         private InternalHandle LoadToFunctionTranslator(string name, InternalHandle self, params InternalHandle[] args)
         {
+            InternalHandle jsRes;
             if (args.Length != 1)
                 ThrowInvalidScriptMethodCall($"loadTo{name}(obj) must be called with exactly 1 parameter");
 
@@ -122,7 +124,7 @@ namespace Raven.Server.Documents.ETL
             // already be calling that.
             var result = new ScriptRunnerResult(DocumentScript, args[0]);
             LoadToFunction(name, result);
-            return result.Instance;
+            return jsRes.Set(result.Instance);
         }
 
         protected abstract void AddLoadedAttachment(InternalHandle reference, string name, Attachment attachment);

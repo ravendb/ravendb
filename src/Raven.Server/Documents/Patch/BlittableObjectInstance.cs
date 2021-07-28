@@ -10,12 +10,9 @@ using Raven.Server.Documents.Indexes.Static.JavaScript;
 using Raven.Server.Documents.Queries.Results;
 using Sparrow.Json;
 using Sparrow.Server.Json.Sync;
-
 using Raven.Server.Utils;
-//using Raven.Server.Documents.Indexes.Static;
-//using Raven.Server.Documents.Indexes.Static.V8;
 
-namespace Raven.Server.Documents.Patch.V8
+namespace Raven.Server.Documents.Patch
 {
     [DebuggerDisplay("Blittable JS object")]
     //[ScriptObject("BlittableObjectInstance", ScriptMemberSecurity.NoAcccess)]

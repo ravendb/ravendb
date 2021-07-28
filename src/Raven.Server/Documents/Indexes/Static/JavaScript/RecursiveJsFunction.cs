@@ -1,85 +1,110 @@
 using System;
 using System.Collections.Generic;
-using Jint;
-using Jint.Native;
-using Jint.Native.Array;
-using Jint.Native.Function;
+using V8.Net;
 
 namespace Raven.Server.Documents.Indexes.Static.JavaScript
 {
     public class RecursiveJsFunction
     {
-        private readonly List<JsValue> _result = new List<JsValue>();
-        private readonly Engine _engine;
-        private readonly JsValue _item;
-        private readonly ScriptFunctionInstance _func;
-        private readonly HashSet<JsValue> _results = new HashSet<JsValue>();
+        private readonly InternalHandle _result;
+        private readonly V8Engine _engine;
+        private readonly InternalHandle _item;
+        private readonly V8Function _func;
+        private readonly HashSet<Handle> _results = new HashSet<Handle>();
         private readonly Queue<object> _queue = new Queue<object>();
 
-        public RecursiveJsFunction(Engine engine, JsValue item, ScriptFunctionInstance func)
+        public RecursiveJsFunction(V8Engine engine, InternalHandle item, V8Function func)
         {
             _engine = engine ?? throw new ArgumentNullException(nameof(engine));
-            _item = item;
+            _item.Set(item);
             _func = func ?? throw new ArgumentNullException(nameof(func));
         }
 
-        public JsValue Execute()
+        ~RecursiveJsFunction()
         {
-            if (_item == null)
-                return _engine.Array.Construct(0);
-
-            var current = NullIfEmptyEnumerable(_func.Invoke(_item));
-            if (current == null)
-            {
-                _result.Add(_item);
-                return _engine.Array.Construct(_result.ToArray());
-            }
-
-            _queue.Enqueue(_item);
-            while (_queue.Count > 0)
-            {
-                current = _queue.Dequeue();
-
-                var list = current as IEnumerable<JsValue>;
-                if (list != null)
-                {
-                    foreach (var o in list)
-                        AddItem(o);
-                }
-                else if (current is JsValue currentJs)
-                    AddItem(currentJs);
-            }
-
-            return _engine.Array.Construct(_result.ToArray());
+            _item.Dispose();
+            _result.Dispose();
         }
 
-        private void AddItem(JsValue current)
+        public InternalHandle Execute()
         {
-            if (_results.Add(current) == false)
+            _result.Dispose();
+            _result = _engine.CreateArray(Array.Empty<InternalHandle>());
+
+            if (_item.IsUndefined)
+                return _result;
+
+            using (var jsRes = _func.Call(InternalHandle.Empty, _item))
+            {
+                jsRes.ThrowOnError(); // TODO check if is needed here
+                var current = NullIfEmptyEnumerable(jsRes);
+                if (current == null)
+                {
+                    using (var jsResPush = _result.Call("push", InternalHandle.Empty, _item))
+                        jsResPush.ThrowOnError(); // TODO check if is needed here
+                    return _result;
+                }
+
+                _queue.Enqueue(_item);
+                while (_queue.Count > 0)
+                {
+                    current = _queue.Dequeue();
+
+                    var list = current as IEnumerable<InternalHandle>;
+                    if (list != null)
+                    {
+                        foreach (InternalHandle o in list)
+                            using (o)
+                                AddItem(o);
+                    }
+                    else if (current is InternalHandle currentJs)
+                        using (currentJs)
+                            AddItem(currentJs);
+                }
+            }
+
+            return _result;
+        }
+
+        private void AddItem(InternalHandle current)
+        {
+            if (_results.Add((Handle)current) == false)
                 return;
 
-            _result.Add(current);
-            var result = NullIfEmptyEnumerable(_func.Invoke(current));
-            if (result != null)
-                _queue.Enqueue(result);
+            using (var jsResPush = _result.Call("push", InternalHandle.Empty, current))
+                jsResPush.ThrowOnError(); // TODO check if is needed here
+
+            using (var jsRes = _func.Call(_engine.CreateNullValue(), current))
+            {
+                jsRes.ThrowOnError(); // TODO check if is needed here
+                var result = NullIfEmptyEnumerable(jsRes);
+                if (result != null)
+                    _queue.Enqueue(result);
+            }
         }
 
-        private static object NullIfEmptyEnumerable(JsValue item)
+        private static object NullIfEmptyEnumerable(InternalHandle item)
         {
-            if (item.IsArray() == false)
-                return item;
+            if (item.IsArray == false) {
+                InternalHandle jsItemCopy;
+                jsItemCopy.Set(item);
+                return jsItemCopy;
+            }
 
-            var itemAsArray = item.AsArray();
-            if (itemAsArray.Length == 0)
-                return null;
+            //using (item)
+            {
+                if (item.ArrayLength == 0)
+                    return null;
 
-            return Yield(itemAsArray);
+                return Yield(item);
+            }
         }
 
-        private static IEnumerable<JsValue> Yield(ArrayInstance array)
+        private static IEnumerable<InternalHandle> Yield(InternalHandle jsArray)
         {
-            foreach (var item in array)
-                yield return item;
+            int arrayLength =  jsArray.ArrayLength;
+            for (int i = 0; i < arrayLength; ++i)
+                yield return array.GetProperty(i);
         }
     }
 }

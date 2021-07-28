@@ -1,10 +1,9 @@
 ﻿using System;
-using Jint.Native;
-using Jint.Runtime;
+using V8.Net;
 
 namespace Raven.Server.Documents.Indexes.Static.JavaScript
 {
-    public sealed class DynamicJsNull : JsValue, IEquatable<JsNull>, IEquatable<DynamicJsNull>
+    public sealed class DynamicJsNull : Handle, IEquatable<InternalHandle>, IEquatable<DynamicJsNull>
     {
         public static DynamicJsNull ImplicitNull = new DynamicJsNull(isExplicitNull: false);
 
@@ -12,14 +11,9 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
 
         public readonly bool IsExplicitNull;
 
-        private DynamicJsNull(bool isExplicitNull) : base(Types.Null)
+        private DynamicJsNull(bool isExplicitNull) : base(InternalHandle.Empty)
         {
             IsExplicitNull = isExplicitNull;
-        }
-
-        public override object ToObject()
-        {
-            return null;
         }
 
         public override string ToString()
@@ -27,40 +21,27 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
             return "null";
         }
 
-        public override bool Equals(JsValue other)
+        public override bool Equals(object other)
         {
             if (ReferenceEquals(this, other))
-            {
                 return true;
+
+            if (other is InternalHandle jsOther)
+                return jsOther.IsNull;
+
+            if (other is Handle hOther)
+            {
+                if (ReferenceEquals(null, hOther))
+                    return false;
+
+                if (hOther._.IsNull)
+                    return true;
+
+                if (hOther is DynamicJsNull dynamicJsNull)
+                    return true;
             }
-
-            if (other is JsNull jsNull)
-                return Equals(jsNull);
-
-            if (other is DynamicJsNull dynamicJsNull)
-                return Equals(dynamicJsNull);
 
             return false;
-        }
-
-        public bool Equals(JsNull other)
-        {
-            if (ReferenceEquals(null, other))
-            {
-                return false;
-            }
-
-            return true;
-        }
-
-        public bool Equals(DynamicJsNull other)
-        {
-            if (ReferenceEquals(null, other))
-            {
-                return false;
-            }
-
-            return true;
         }
     }
 }

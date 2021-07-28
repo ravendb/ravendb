@@ -231,7 +231,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             }
         }
 
-        public class VarcharFunctionCall : SqlDocumentTransformerBase<ScriptRunnerResult, ScriptRunner.SingleRun, JsBlittableBridge.IResultModifier>.VarcharFunctionCall
+        public class VarcharFunctionCall : SqlDocumentTransformer.VarcharFunctionCall
         {
             public static string AnsiStringType = DbType.AnsiString.ToString();
             public static string StringType = DbType.String.ToString();

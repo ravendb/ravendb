@@ -802,6 +802,7 @@ namespace Raven.Server.Documents.Patch
                                 IncludeCompareExchangeValue(self, args);
                         }
                     }
+                    args[0] = jsArray;
                     return jsRes.Set(self);
                 }
 

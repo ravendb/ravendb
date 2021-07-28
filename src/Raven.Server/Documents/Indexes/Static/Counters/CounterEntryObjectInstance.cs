@@ -6,11 +6,11 @@ using V8.Net;
 
 namespace Raven.Server.Documents.Indexes.Static.Counters
 {
-    public class CounterEntryObjectInstance : PropertiesObjectInstance
+    public class CounterEntryObjectInstance : ObjectInstanceBase
     {
         private readonly DynamicCounterEntry _entry;
 
-        private Dictionary<JsValue, PropertyDescriptor> _properties = new Dictionary<JsValue, PropertyDescriptor>();
+        private Dictionary<InternalHandle, PropertyDescriptor> _properties = new Dictionary<InternalHandle, PropertyDescriptor>();
 
         public CounterEntryObjectInstance(DynamicCounterEntry entry) : base()
         {
@@ -47,7 +47,7 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
             return InternalHandle.Empty;
         }
 
-        public class CustomBinder : PropertiesObjectInstance.CustomBinder<CounterEntryObjectInstance>
+        public class CustomBinder : ObjectInstanceBase.CustomBinder<CounterEntryObjectInstance>
         {
             public override InternalHandle NamedPropertyGetter(ref string propertyName)
             {
