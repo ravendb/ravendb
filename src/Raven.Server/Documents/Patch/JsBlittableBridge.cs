@@ -550,7 +550,7 @@ namespace Raven.Server.Documents.Patch
 
         public interface IResultModifier
         {
-            void Modify(V8NativeOject json);
+            void Modify(V8NativeObject json);
         }
 
     }

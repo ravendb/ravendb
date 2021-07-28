@@ -8,7 +8,7 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.LowMemory;
 
-using Client.Exceptions.Documents.Patching;
+using Raven.Client.Exceptions.Documents.Patching;
 using V8.Net;
 
 namespace Raven.Server.Smuggler.Documents

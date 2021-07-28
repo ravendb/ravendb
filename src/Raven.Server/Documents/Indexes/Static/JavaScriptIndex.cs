@@ -14,9 +14,6 @@ using Esprima;
 using Jint;
 using Jint.Native.Object;
 
-using Raven.Server.Documents.Patch.Jint;
-
-
 using V8.Net;
 
 using Raven.Server.Extensions;

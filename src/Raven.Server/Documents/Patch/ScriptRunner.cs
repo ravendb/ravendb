@@ -1961,12 +1961,12 @@ namespace Raven.Server.Documents.Patch
                 return ScriptEngine.CreateObject();
             }
 
-            public object Translate(ScriptRunnerResult result, JsonOperationContext context, JsBlittableBridgeBase.IResultModifier<V8NativeObject> modifier = null, BlittableJsonDocumentBuilder.UsageMode usageMode = BlittableJsonDocumentBuilder.UsageMode.None)
+            public object Translate(ScriptRunnerResult result, JsonOperationContext context, JsBlittableBridge.IResultModifier<V8NativeObject> modifier = null, BlittableJsonDocumentBuilder.UsageMode usageMode = BlittableJsonDocumentBuilder.UsageMode.None)
             {
                 return Translate(result.RawJsValue, context, modifier, usageMode);
             }
 
-            internal object Translate(InternalHandle jsValue, JsonOperationContext context, JsBlittableBridgeBase.IResultModifier<V8NativeObject> modifier = null, BlittableJsonDocumentBuilder.UsageMode usageMode = BlittableJsonDocumentBuilder.UsageMode.None)
+            internal object Translate(InternalHandle jsValue, JsonOperationContext context, JsBlittableBridge.IResultModifier<V8NativeObject> modifier = null, BlittableJsonDocumentBuilder.UsageMode usageMode = BlittableJsonDocumentBuilder.UsageMode.None)
             {
                 if (jsValue.IsString)
                     return jsValue.AsString;
