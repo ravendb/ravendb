@@ -63,7 +63,8 @@ namespace Raven.Server.Documents.Patch
             if (boi.Distance != null)
                 metadata.Modifications[Constants.Documents.Metadata.SpatialResult] = boi.Distance.Value.ToJson();
 
-            using (var old = metadata)
+            // we cannot dispose the metadata here because the BOI is accessing blittable directly using the .Blittable property
+            //using (var old = metadata)
             {
                 metadata = Context.ReadObject(metadata, boi.DocumentId);
                 JsValue metadataJs = TranslateToJs(_scriptEngine, Context, metadata);
