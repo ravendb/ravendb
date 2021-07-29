@@ -2338,7 +2338,7 @@ namespace Raven.Server.ServerWide
 
                     updateCommand.AfterDatabaseRecordUpdate(context, items, _clusterAuditLog);
 
-                    if (databaseRecord.Topology.Count == 0 && databaseRecord.DeletionInProgress.Count == 0)
+                    if (databaseRecord.Topology?.Count == 0 && databaseRecord.DeletionInProgress.Count == 0)
                     {
                         DeleteDatabaseRecord(context, index, items, valueNameLowered, databaseName, serverStore);
                         return;
