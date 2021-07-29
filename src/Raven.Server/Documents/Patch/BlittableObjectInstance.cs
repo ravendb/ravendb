@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.Globalization;
 using V8.Net;
 using Lucene.Net.Store;
-using Raven.Client.Constants;
+using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static.JavaScript;
