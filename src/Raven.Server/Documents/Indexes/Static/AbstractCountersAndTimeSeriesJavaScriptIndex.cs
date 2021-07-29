@@ -5,6 +5,7 @@ using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Config;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Extensions;
 
 namespace Raven.Server.Documents.Indexes.Static
 {

@@ -373,7 +373,7 @@ function map(name, lambda) {
             // because the index is single threaded and long lived
             _engine = new V8EngineEx();
 
-            string optionsCmd = $"use_strict false={configuration.Patching.StrictMode}"; // TODO construct from options
+            string[] optionsCmd = {$"use_strict={configuration.Patching.StrictMode}"}; // TODO construct from options
             _engine.SetFlagsFromCommandLine(optionsCmd);
                     //.LimitRecursion(64)
                     //.MaxStatements(indexConfiguration.MaxStepsForScript)

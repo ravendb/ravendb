@@ -6,7 +6,7 @@ namespace Raven.Server.Documents.Patch
 {
     public class ObjectBinderEx<T> : ObjectBinder where T : class
     {
-        ObjectBinderEx() : base()
+        public ObjectBinderEx() : base()
         {
         }
 

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.Threading.Tasks;
-
 using V8.Net;
 
 
@@ -26,7 +25,7 @@ namespace Raven.Server.Documents.Patch
             {
                 return GetRunningTaskResult(Engine, objCLR);
             }
-            return base.NamedPropertyGetter(propertyName);
+            return base.NamedPropertyGetter(ref propertyName);
         }
 
     }

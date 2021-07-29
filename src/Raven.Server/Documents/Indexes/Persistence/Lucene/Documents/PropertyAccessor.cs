@@ -7,6 +7,7 @@ using V8.Net;
 using Microsoft.CSharp.RuntimeBinder;
 using Raven.Server.Extensions;
 using Sparrow.Json;
+using Raven.Server.Extensions;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 {

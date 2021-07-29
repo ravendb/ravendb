@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Globalization;
 using V8.Net;
 using Lucene.Net.Store;
+using Raven.Client.Constants;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static.JavaScript;
@@ -31,7 +32,7 @@ namespace Raven.Server.Documents.Patch
         public readonly BlittableJsonReaderObject Blittable;
         public readonly string DocumentId;
         public HashSet<string> Deletes;
-        public Dictionary<string, ObjectBinderEx<BlittableObjectProperty>> OwnValues;
+        public Dictionary<string, BlittableObjectProperty> OwnValues;
         public Dictionary<string, BlittableJsonToken> OriginalPropertiesTypes;
         public Lucene.Net.Documents.Document LuceneDocument;
         public IState LuceneState;
@@ -45,11 +46,11 @@ namespace Raven.Server.Documents.Patch
 
 
         public BlittableObjectInstance.CustomBinder CreateObjectBinder() {
-            return BlittableObjectInstance.CreateObjectBinder(this);
+            return BlittableObjectInstance.CreateObjectBinder(Engine, this);
         }
 
-        public static BlittableObjectInstance.CustomBinder CreateObjectBinder(BlittableObjectInstance boi) {
-            return Engine.CreateObjectBinder<BlittableObjectInstance.CustomBinder>(boi, Engine.TypeBinderBlittableObjectInstances);
+        public static BlittableObjectInstance.CustomBinder CreateObjectBinder(V8EngineEx engine, BlittableObjectInstance boi) {
+            return engine.CreateObjectBinder<BlittableObjectInstance.CustomBinder>(boi, JavaScriptUtils.TypeBinderBlittableObjectInstance);
         }
 
         private void MarkChanged()
@@ -66,7 +67,7 @@ namespace Raven.Server.Documents.Patch
             string changeVector) // : base(engine)
         {
             JavaScriptUtils = javaScriptUtils;
-            Engine = JavaScriptUtils.engine;
+            Engine = JavaScriptUtils.Engine;
 
             _parent = parent;
             blittable.NoCache = true;
@@ -127,7 +128,7 @@ namespace Raven.Server.Documents.Patch
                 if (desc != null)
                     return desc.Value;
 
-                return base.NamedPropertyGetter(propertyName);
+                return base.NamedPropertyGetter(ref propertyName);
             }
 
             public override InternalHandle NamedPropertySetter(ref string propertyName, InternalHandle value, V8PropertyAttributes attributes = V8PropertyAttributes.Undefined)
@@ -429,7 +430,7 @@ namespace Raven.Server.Documents.Patch
                     switch (val)
                     {
                         case Client.Constants.Documents.Indexing.Fields.NullValue:
-                            value.Set(Engine.CreateObjectBinder(DynamicJsNull.ExplicitNull)._);
+                            value.Set(DynamicJsNull.ExplicitNull._);
                             return true;
 
                         case Client.Constants.Documents.Indexing.Fields.EmptyString:
@@ -488,7 +489,7 @@ namespace Raven.Server.Documents.Patch
                 switch (type & BlittableJsonReaderBase.TypesMask)
                 {
                     case BlittableJsonToken.Null:
-                        return jsRes.Set(Engine.CreateObjectBinder(DynamicJsNull.ExplicitNull)._);
+                        return jsRes.Set(DynamicJsNull.ExplicitNull._);
 
                     case BlittableJsonToken.Boolean:
                         return Engine.CreateValue((bool)value);
@@ -527,11 +528,11 @@ namespace Raven.Server.Documents.Patch
 
                             default:
                                 blittable.NoCache = true;
-                                return jsRes.Set(BlittableObjectInstance.CreateObjectBinder(
-                                    new BlittableObjectInstance(owner.JavaScriptUtils,
-                                        owner,
-                                        blittable, null, null, null)
-                                    )._);
+                                var boi = new BlittableObjectInstance(owner.JavaScriptUtils,
+                                    owner,
+                                    blittable, null, null, null
+                                );
+                                return jsRes.Set(boi.CreateObjectBinder()._);
                         }
 
                     case BlittableJsonToken.StartArray:

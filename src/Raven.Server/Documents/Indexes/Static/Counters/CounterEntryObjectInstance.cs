@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using V8.Net;
 using Raven.Server.Documents.Indexes.Static.JavaScript;
+using Raven.Server.Documents.Patch;
 
 namespace Raven.Server.Documents.Indexes.Static.Counters
 {
@@ -9,7 +10,7 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
     {
         private readonly DynamicCounterEntry _entry;
 
-        public CounterEntryObjectInstance(DynamicCounterEntry entry) : base()
+        public CounterEntryObjectInstance(DynamicCounterEntry entry, JavaScriptUtils javaScriptUtils = null) : base(javaScriptUtils)
         {
             _entry = entry ?? throw new ArgumentNullException(nameof(entry));
         }
@@ -42,9 +43,12 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
 
         public class CustomBinder : ObjectInstanceBase.CustomBinder<CounterEntryObjectInstance>
         {
+            public CustomBinder() : base()
+            {}
+
             public override InternalHandle NamedPropertyGetter(ref string propertyName)
             {
-                return objCLR.NamedPropertyGetter(Engine, propertyName);
+                return objCLR.NamedPropertyGetter(Engine, ref propertyName);
             }
         }
     }

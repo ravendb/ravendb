@@ -6,7 +6,7 @@ namespace Raven.Server.Documents.Patch
 {
     public class DictionaryDisposeKeyIHV8<TValue> : DictionaryDisposeKey<InternalHandle, TValue>
     {
-        DictionaryDisposeKeyIHV8() : base()
+        public DictionaryDisposeKeyIHV8() : base()
         {
         }
 
@@ -37,9 +37,9 @@ namespace Raven.Server.Documents.Patch
 
     }
 
-    public class DictionaryDisposeValueIHV8<TKey> : DictionaryDisposeValue<InternalHandle, InternalHandle>
+    public class DictionaryDisposeValueIHV8<TKey> : DictionaryDisposeValue<TKey, InternalHandle>
     {
-        DictionaryDisposeValueIHV8() : base()
+        public DictionaryDisposeValueIHV8() : base()
         {
         }
 
@@ -82,7 +82,7 @@ namespace Raven.Server.Documents.Patch
     public class DictionaryDisposeKey<TKey, TValue> : Dictionary<TKey, TValue>
     where TKey : IDisposable
     {
-        DictionaryDisposeKey() : base()
+        public DictionaryDisposeKey() : base()
         {
         }
 
@@ -118,7 +118,7 @@ namespace Raven.Server.Documents.Patch
     public class DictionaryDisposeValue<TKey, TValue> : Dictionary<TKey, TValue>
     where TValue : IDisposable
     {
-        DictionaryDisposeValue() : base()
+        public DictionaryDisposeValue() : base()
         {
         }
 

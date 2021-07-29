@@ -135,13 +135,12 @@ namespace Raven.Server.Documents.Indexes.Static.Utils
                     return true;
 
                 case DynamicTimeSeriesSegment dtss:
-                    var bo = new TimeSeriesSegmentObjectInstance();
-                    bo.Initialize(Engine, dtss);
+                    var bo = new TimeSeriesSegmentObjectInstance(dtss, JavaScriptUtils);
                     jsItem.Set(bo.CreateObjectBinder()._);
                     return true;
 
                 case DynamicCounterEntry dce:
-                    var bo = new CounterEntryObjectInstance(dce);
+                    var bo = new CounterEntryObjectInstance(dce, JavaScriptUtils);
                     jsItem.Set(bo.CreateObjectBinder()._);
                     return true;
 

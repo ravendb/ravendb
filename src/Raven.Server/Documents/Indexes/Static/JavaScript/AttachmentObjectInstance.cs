@@ -86,9 +86,12 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
 
         public class CustomBinder : ObjectInstanceBase.CustomBinder<AttachmentObjectInstance>
         {
+            public CustomBinder() : base()
+            {}
+
             public override InternalHandle NamedPropertyGetter(ref string propertyName)
             {
-                return objCLR.NamedPropertyGetter(Engine, propertyName);
+                return objCLR.NamedPropertyGetter(Engine, ref propertyName);
             }
         }
 

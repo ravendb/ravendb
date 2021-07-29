@@ -7,7 +7,14 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
 {
     public abstract class ObjectInstanceBase
     {
-        private DictionaryDisposeValueIHV8<string> _properties = new DictionaryDisposeValueIHV8<string>();
+        protected DictionaryDisposeValueIHV8<string> _properties = new DictionaryDisposeValueIHV8<string>();
+
+        JavaScriptUtils JavaScriptUtils;
+
+        public ObjectInstanceBase(JavaScriptUtils javaScriptUtils = null)
+        {
+            JavaScriptUtils = javaScriptUtils;
+        }
 
         public abstract class CustomBinder<T> : ObjectBinderEx<T>
         where T : class

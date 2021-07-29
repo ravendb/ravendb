@@ -1057,7 +1057,7 @@ namespace Raven.Server.Utils.Cli
                 else if (result.RawJsValue.IsDate)
                 {
                     var date = result.RawJsValue.AsDate;
-                    writer.WriteString(date.ToDateTime().ToString(DefaultFormat.DateTimeOffsetFormatsToWrite));
+                    writer.WriteString(date.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite));
                 }
                 else if (result.RawJsValue.IsNumber)
                 {

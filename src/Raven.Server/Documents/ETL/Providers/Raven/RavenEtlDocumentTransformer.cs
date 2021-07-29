@@ -18,6 +18,7 @@ using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Raven.Server.Extensions;
 
 // ReSharper disable ForCanBeConvertedToForeach
 

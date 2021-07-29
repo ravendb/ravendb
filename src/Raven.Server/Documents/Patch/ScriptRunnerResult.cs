@@ -8,7 +8,7 @@ namespace Raven.Server.Documents.Patch
     {
         private readonly ScriptRunner.SingleRun _parent;
 
-        public ScriptRunnerResult(ScriptRunner.SingleRun parent, InternalHandle instance) : base(parent)
+        public ScriptRunnerResult(ScriptRunner.SingleRun parent, InternalHandle instance)
         {
             _parent = parent;
             Instance.Set(instance);
@@ -23,9 +23,7 @@ namespace Raven.Server.Documents.Patch
 
         public V8NativeObject GetOrCreate(string propertyName)
         {
-            using (propertyName);
-            
-            if (Instance.IsObject && Instance.BoundObject is BlittableObjectInstance b)
+            if (Instance.BoundObject != null && Instance.BoundObject is BlittableObjectInstance b)
                 return b.GetOrCreate(propertyName);
             var parent = Instance.Object;
 
@@ -56,7 +54,7 @@ namespace Raven.Server.Documents.Patch
 
         public void Dispose()
         {
-            if (Instance is BlittableObjectInstance boi)
+            if (Instance.BoundObject != null && Instance.BoundObject is BlittableObjectInstance boi)
                 boi.Reset();
 
             _parent?.JavaScriptUtils.Clear();

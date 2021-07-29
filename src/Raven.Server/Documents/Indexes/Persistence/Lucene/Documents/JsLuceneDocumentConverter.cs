@@ -10,6 +10,7 @@ using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Utils;
 using Sparrow.Json;
+using Raven.Server.Extensions;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 {

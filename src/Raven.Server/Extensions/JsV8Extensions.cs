@@ -10,6 +10,26 @@ namespace Raven.Server.Extensions
 {
     public static class JsV8Extensions
     {
+        public static InternalHandle GetOwnProperty(this V8NativeObject obj, string name)
+        {
+            return obj._.GetOwnProperty(name);
+        }
+
+        public static InternalHandle GetOwnProperty(this InternalHandle obj, string name)
+        {
+            return obj.GetProperty(name);
+        }
+
+        public static InternalHandle GetOwnProperty(this V8NativeObject obj, Int32 index)
+        {
+            return obj._.GetOwnProperty(index);
+        }
+
+        public static InternalHandle GetOwnProperty(this InternalHandle obj, Int32 index)
+        {
+            return obj.GetProperty(index);
+        }
+
         public static IEnumerable<KeyValuePair<string, InternalHandle>> GetProperties(this V8NativeObject obj)
         {
             return obj._.GetProperties();
@@ -70,7 +90,12 @@ namespace Raven.Server.Extensions
             return obj._.TryGetValue(propertyName, out res);
         }
 
-        public static void FastAddProperty(this V8NativeObject obj, string name, InternalHandle value)
+        public static void FastAddProperty(this V8NativeObject obj, string name, InternalHandle value, bool writable, bool enumerable, bool configurable)
+        {
+            obj._.FastAddProperty(name, value, writable, enumerable, configurable);
+        }
+
+        public static void FastAddProperty(this InternalHandle obj, string name, InternalHandle value, bool writable, bool enumerable, bool configurable)
         {
             if (obj.SetProperty(name, value) == false)
             {

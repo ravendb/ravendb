@@ -133,10 +133,8 @@ namespace Raven.Server.Documents.Patch
             try
             {
                 var engine = new V8Engine();
-                using (var script = engine.Compile(script, "script", true))
-                {
-                    return ExecuteExprWithReset(engine, script, throwExceptionOnError, timeout);
-                }
+                using (var jsComiledScript = engine.Compile(script, "script", true))
+                {}
             }
             catch (Exception e)
             {
@@ -221,9 +219,9 @@ namespace Raven.Server.Documents.Patch
                 _database = database;
                 _configuration = configuration;
                 _runner = runner;
-                ScriptEngine = new V8EngineEx(optionsCmd);
+                ScriptEngine = new V8EngineEx();
 
-                string optionsCmd = $"use_strict false={configuration.Patching.StrictMode}"; // TODO construct from options
+                string[] optionsCmd = {$"use_strict={configuration.Patching.StrictMode}"}; // TODO construct from options
                 ScriptEngine.SetFlagsFromCommandLine(optionsCmd);
                         //.MaxStatements(indexConfiguration.MaxStepsForScript)
                         //.LocalTimeZone(TimeZoneInfo.Utc);  // -> harmony_intl_locale_info, harmony_intl_more_timezone
@@ -259,10 +257,10 @@ namespace Raven.Server.Documents.Patch
                     includesObject.FastAddProperty("cmpxchg", new ClrFunctionInstance(ScriptEngine, "cmpxchg", IncludeCompareExchangeValue), false, false, false);
                     includesObject.FastAddProperty("revisions", new ClrFunctionInstance(ScriptEngine, "revisions", IncludeRevisions), false, false, false);
                     ScriptEngine.GlobalObject.SetProperty("includes", includesObject);
-                }
 
-                // includes - backward compatibility
-                ScriptEngine.GlobalObject.SetProperty("include", includeDocumentFunc);
+                    // includes - backward compatibility
+                    ScriptEngine.GlobalObject.SetProperty("include", includeDocumentFunc);
+                }
 
                 ScriptEngine.GlobalObject.SetProperty("load", new ClrFunctionInstance(ScriptEngine, "load", LoadDocument));
                 ScriptEngine.GlobalObject.SetProperty("LoadDocument", new ClrFunctionInstance(ScriptEngine, "LoadDocument", ThrowOnLoadDocument));
@@ -326,7 +324,7 @@ namespace Raven.Server.Documents.Patch
 
             private (string Id, BlittableJsonReaderObject Doc) GetIdAndDocFromArg(InternalHandle docArg, string signature)
             {
-                if (docArg.IsObject && docArg.BoundObject is BlittableObjectInstance doc)
+                if (docArg.BoundObject != null && docArg.BoundObject is BlittableObjectInstance doc)
                     return (doc.DocumentId, doc.Blittable);
 
                 if (docArg.IsString)
@@ -344,7 +342,7 @@ namespace Raven.Server.Documents.Patch
 
             private string GetIdFromArg(InternalHandle docArg, string signature)
             {
-                if (docArg.IsObject && docArg.AsObject is BlittableObjectInstance doc)
+                if (docArg.BoundObject != null && docArg.BoundObject is BlittableObjectInstance doc)
                     return doc.DocumentId;
 
                 if (docArg.IsString)
@@ -371,7 +369,7 @@ namespace Raven.Server.Documents.Patch
                     using (var jsItem = jsArray.GetProperty(i))
                     {
                         if (jsItem.IsNumber == false)
-                            throw new ArgumentException($"{signature}: The values argument must be an array of numbers, but got {GetTypes(value.Value)} key({key}) value({value})");
+                            throw new ArgumentException($"{signature}: The values argument must be an array of numbers, but got {jsItem.ValueType} key({i}) value({jsItem})");
                         array[i] = jsItem.AsDouble;
                     }
                 }
@@ -1041,7 +1039,7 @@ namespace Raven.Server.Documents.Patch
                     throw new InvalidOperationException($"Unable to use `{functionName}` when this instance is not attached to a database operation");
             }
 
-            private InternalHandle IncludeRevisions(InternalHandle self, InternalHandle[] args)
+            private InternalHandle IncludeRevisions(V8EngineEx engine, bool isConstructCall, InternalHandle self, InternalHandle[] args)
             {
                 if (args == null)
                     return ScriptEngine.CreateNullValue();
@@ -1093,7 +1091,7 @@ namespace Raven.Server.Documents.Patch
                     if (args[0].IsNull || args[1].IsUndefined)
                         return args[0];
 
-                    if (args[0].AsObject is BlittableObjectInstance b)
+                    if (args[0].BoundObject is BlittableObjectInstance b)
                     {
                         var path = args[1].AsString;
                         if (_documentIds == null)
@@ -1180,7 +1178,7 @@ namespace Raven.Server.Documents.Patch
                     throw new InvalidOperationException($"{signature} must be called with exactly 2 arguments");
 
                 string id;
-                if (args[0].IsObject && args[0].AsObject is BlittableObjectInstance doc)
+                if (args[0].BoundObject != null && args[0].BoundObject is BlittableObjectInstance doc)
                 {
                     id = doc.DocumentId;
                 }
@@ -1244,7 +1242,7 @@ namespace Raven.Server.Documents.Patch
                 BlittableJsonReaderObject docBlittable = null;
                 string id = null;
 
-                if (args[0].IsObject && args[0].BoundObject is BlittableObjectInstance doc)
+                if (args[0].BoundObject != null && args[0].BoundObject is BlittableObjectInstance doc)
                 {
                     id = doc.DocumentId;
                     docBlittable = doc.Blittable;
@@ -1326,7 +1324,7 @@ namespace Raven.Server.Documents.Patch
                 string id = null;
                 BlittableJsonReaderObject docBlittable = null;
 
-                if (args[0].IsObject && args[0].BoundObject is BlittableObjectInstance doc)
+                if (args[0].BoundObject != null && args[0].BoundObject is BlittableObjectInstance doc)
                 {
                     id = doc.DocumentId;
                     docBlittable = doc.Blittable;
@@ -1408,7 +1406,7 @@ namespace Raven.Server.Documents.Patch
 
                 for (var index = 0; index < args.Length; index++)
                 {
-                    if (args[index].IsObject && args[index].BoundObject is BlittableObjectInstance boi)
+                    if (args[index].BoundObject != null && args[index].BoundObject is BlittableObjectInstance boi)
                     {
                         var lazyId = _docsCtx.GetLazyString(boi.DocumentId);
                         lazyIds.Add(lazyId);
@@ -1739,7 +1737,7 @@ namespace Raven.Server.Documents.Patch
                     throw new InvalidOperationException("scalarToRawString(document, lambdaToField) may be called on with two parameters only");
 
                 var firstParam = args[0];
-                if (firstParam.IsObject && args[0].BoundObject is BlittableObjectInstance selfInstance)
+                if (firstParam.BoundObject != null && args[0].BoundObject is BlittableObjectInstance selfInstance)
                 {
                     var secondParam = args[1];
                     if (secondParam.IsObject && secondParam.Object is V8Function lambda) // Jint: is ScriptFunctionInstance lambda)
@@ -1899,7 +1897,7 @@ namespace Raven.Server.Documents.Patch
 
                 /*if (method != QueryMetadata.SelectOutput &&
                     _args.Length == 2 &&
-                    _args[1].IsObject &&
+                    _args[1].BoundObject != null &&
                     _args[1].BoundObject is BlittableObjectInstance boi)
                 {
                     _refResolver.ExplodeArgsOn(null, boi);
@@ -1987,7 +1985,7 @@ namespace Raven.Server.Documents.Patch
                 throw new NotSupportedException("Unable to translate " + jsValue.ValueType);
              }
 
-            private void DisposeArgs(JsonOperationContext jsonCtx, string method, object[] args)
+            private void DisposeArgs()
             {
                 for (int i = 0; i < _args.Length; ++i)
                 {

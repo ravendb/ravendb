@@ -12,6 +12,7 @@ using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using Raven.Server.Extensions;
 
 namespace Raven.Server.Documents.ETL.Providers.OLAP
 {
@@ -46,7 +47,6 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             LoadToDestinations = transformation.GetCollectionsFromScript();
         }
 
-
         ~OlapDocumentTransformer()
         {
             _noPartition.Dispose();            
@@ -61,9 +61,12 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
             foreach (var table in LoadToDestinations)
             {
-                var name = Transformation.LoadTo + table;
-                DocumentScript.ScriptEngine.GlobalObject.SetProperty(name, new ClrFunctionInstance(DocumentScript.ScriptEngine, name,
-                    (self, args) => LoadToFunctionTranslator(table, args)));
+                using (var jsTable = engine.CreateValue(table))
+                {
+                    var name = Transformation.LoadTo + table;
+                    DocumentScript.ScriptEngine.GlobalObject.SetProperty(name, new ClrFunctionInstance(DocumentScript.ScriptEngine, name,
+                        (engine, isConstructCall, self, args) => LoadToFunctionTranslator(engine, isConstructCall, jsTable, args)));
+                }
             }
 
             DocumentScript.ScriptEngine.GlobalObject.SetProperty("partitionBy", new ClrFunctionInstance(DocumentScript.ScriptEngine, "partitionBy", PartitionBy));
@@ -143,7 +146,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             return table;
         }
 
-        private InternalHandle LoadToFunctionTranslator(InternalHandle self, InternalHandle[] args)
+        private InternalHandle LoadToFunctionTranslator(V8EngineEx engine, bool isConstructCall, InternalHandle self, InternalHandle[] args)
         {
             var methodSignature = "loadTo(name, key, obj)";
 
@@ -159,71 +162,56 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             if (args[2].IsObject == false)
                 ThrowInvalidScriptMethodCall($"{methodSignature} third argument must be an object");
 
-            return LoadToFunctionTranslatorInternal(args[0].AsString, args[1], args[2], methodSignature);
+            return LoadToFunctionTranslatorInternal(engine, isConstructCall, args[0].AsString, args[1], args[2], methodSignature);
         }
 
-        private InternalHandle LoadToFunctionTranslator(string name, InternalHandle[] args)
-        {
-            var methodSignature = $"loadTo{name}(key, obj)";
-
-            if (args.Length != 2)
-                ThrowInvalidScriptMethodCall($"{methodSignature} must be called with exactly 2 parameters");
-
-            if (args[1].IsObject == false)
-                ThrowInvalidScriptMethodCall($"{methodSignature} argument 'obj' must be an object");
-
-            if (args[0].IsObject == false)
-                ThrowInvalidScriptMethodCall($"{methodSignature} argument 'key' must be an object");
-
-            return LoadToFunctionTranslatorInternal(name, args[0], args[1], methodSignature);
-        }
-
-        private InternalHandle LoadToFunctionTranslatorInternal(string name, InternalHandle key, InternalHandle obj, string methodSignature)
+        private InternalHandle LoadToFunctionTranslatorInternal(V8EngineEx engine, bool isConstructCall, string name, InternalHandle key, InternalHandle obj, string methodSignature)
         {
             InternalHandle jsRes;
-            var objectInstance = key;
-            if (objectInstance.HasOwnProperty(PartitionKeys) == false)
+            if (key.HasOwnProperty(PartitionKeys) == false)
                 ThrowInvalidScriptMethodCall(
                     $"{methodSignature} argument 'key' must have {PartitionKeys} property. Did you forget to use 'partitionBy(p)' / 'noPartition()' ? ");
 
-            var partitionBy = objectInstance.GetOwnProperty(PartitionKeys).Value;
-            var result = new ScriptRunnerResult(DocumentScript, obj);
-
-            if (partitionBy.IsNull)
+            using (var partitionBy = key.GetOwnProperty(PartitionKeys))
             {
-                // no partition
-                LoadToFunction(name, key: name, result);
-                return jsRes.Set(result.Instance);
-            }
+                var result = new ScriptRunnerResult(DocumentScript, obj);
 
-            if (partitionBy.IsArray == false)
-                ThrowInvalidScriptMethodCall($"{methodSignature} property {PartitionKeys} of argument 'key' must be an array instance");
-
-            var sb = new StringBuilder(name);
-            int arrayLength =  partitionBy.ArrayLength;
-            var partitions = new List<string>(arrayLength);
-            for (int i = 0; i < arrayLength; i++)
-            {
-                using (var item = partitionBy.GetProperty(i))
+                if (partitionBy.IsNull)
                 {
-                    if (item.IsArray == false)
-                        ThrowInvalidScriptMethodCall($"{methodSignature} items in array {PartitionKeys} of argument 'key' must be array instances");
+                    // no partition
+                    LoadToFunction(name, key: name, result);
+                    return jsRes.Set(result.Instance);
+                }
 
-                    if (item.ArrayLength != 2)
-                        ThrowInvalidScriptMethodCall(
-                            $"{methodSignature} items in array {PartitionKeys} of argument 'key' must be array instances of size 2, but got '{item.ArrayLength}'");
+                if (partitionBy.IsArray == false)
+                    ThrowInvalidScriptMethodCall($"{methodSignature} property {PartitionKeys} of argument 'key' must be an array instance");
 
-                    sb.Append('/');
-                    using (var tuple1 = item.GetProperty(1))
+                var sb = new StringBuilder(name);
+                int arrayLength =  partitionBy.ArrayLength;
+                var partitions = new List<string>(arrayLength);
+                for (int i = 0; i < arrayLength; i++)
+                {
+                    using (var item = partitionBy.GetProperty(i))
                     {
-                        string val = tuple1.IsDate
-                            ? tuple1.AsDate.ToString(DateFormat) 
-                            : tuple1.ToString();
-                        using (var tuple0 = item.GetProperty(0))
+                        if (item.IsArray == false)
+                            ThrowInvalidScriptMethodCall($"{methodSignature} items in array {PartitionKeys} of argument 'key' must be array instances");
+
+                        if (item.ArrayLength != 2)
+                            ThrowInvalidScriptMethodCall(
+                                $"{methodSignature} items in array {PartitionKeys} of argument 'key' must be array instances of size 2, but got '{item.ArrayLength}'");
+
+                        sb.Append('/');
+                        using (var tuple1 = item.GetProperty(1))
                         {
-                            var partition = $"{tuple0}={val}";
-                            sb.Append(partition);
-                            partitions.Add(partition);
+                            string val = tuple1.IsDate
+                                ? tuple1.AsDate.ToString(DateFormat) 
+                                : tuple1.ToString();
+                            using (var tuple0 = item.GetProperty(0))
+                            {
+                                var partition = $"{tuple0}={val}";
+                                sb.Append(partition);
+                                partitions.Add(partition);
+                            }
                         }
                     }
                 }
@@ -233,7 +221,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             return jsRes.Set(result.Instance);
         }
 
-        private InternalHandle PartitionBy(InternalHandle self, InternalHandle[] args)
+        private InternalHandle PartitionBy(V8EngineEx engine, bool isConstructCall, InternalHandle self, InternalHandle[] args)
         {
             if (args.Length == 0)
                 ThrowInvalidScriptMethodCall("partitionBy(args) cannot be called with 0 arguments");
@@ -252,7 +240,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             }
             else
             {
-                jsArr = InternalHandle.FromObject(DocumentScript.ScriptEngine, args);
+                jsArr = ((V8EngineEx)engine).FromObject(args);
             }
 
             InternalHandle o;
@@ -265,7 +253,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             return o;
         }
 
-        private InternalHandle NoPartition(InternalHandle self, InternalHandle[] args)
+        private InternalHandle NoPartition(V8EngineEx engine, bool isConstructCall, InternalHandle self, InternalHandle[] args)
         {
             if (args.Length != 0)
                 ThrowInvalidScriptMethodCall("noPartition() must be called with 0 parameters");

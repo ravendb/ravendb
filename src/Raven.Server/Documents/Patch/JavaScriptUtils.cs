@@ -448,7 +448,7 @@ namespace Raven.Server.Documents.Patch
         public readonly TypeBinder TypeBinderAttachmentNameObjectInstance;
         public readonly TypeBinder TypeBinderAttachmentObjectInstance;
 
-        V8EngineEx(bool autoCreateGlobalContext = true) : base(autoCreateGlobalContext)
+        public V8EngineEx(bool autoCreateGlobalContext = true) : base(autoCreateGlobalContext)
         {
             this.ExecuteWithReset(ArrayExtensionCode, "arrayExtension");
 
