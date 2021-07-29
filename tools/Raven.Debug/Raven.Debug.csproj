@@ -28,4 +28,14 @@
     <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="5.0.0" />
     <PackageReference Include="System.Security.Cryptography.Cng" Version="5.0.0" />
   </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Properties\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Raven.Client\Raven.Client.csproj" />
+    <ProjectReference Include="..\..\src\Sparrow\Sparrow.csproj" />
+  </ItemGroup>
+
 </Project>

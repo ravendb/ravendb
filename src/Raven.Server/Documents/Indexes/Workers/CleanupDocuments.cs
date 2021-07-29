@@ -60,7 +60,6 @@ namespace Raven.Server.Documents.Indexes.Workers
                     var count = 0;
 
                     var sw = new Stopwatch();
-                    IndexWriteOperation indexWriter = null;
                     var keepRunning = true;
                     var lastCollectionEtag = -1L;
                     while (keepRunning)
@@ -81,9 +80,6 @@ namespace Raven.Server.Documents.Indexes.Workers
                             {
                                 token.ThrowIfCancellationRequested();
 
-                                if (indexWriter == null)
-                                    indexWriter = writeOperation.Value;
-
                                 count++;
                                 totalProcessedCount++;
                                 hasChanges = true;
@@ -96,9 +92,9 @@ namespace Raven.Server.Documents.Indexes.Workers
                                 if (tombstone.Type != Tombstone.TombstoneType.Document)
                                     continue; // this can happen when we have '@all_docs'
 
-                                _index.HandleDelete(tombstone, collection, indexWriter, indexContext, collectionStats);
+                                _index.HandleDelete(tombstone, collection, writeOperation, indexContext, collectionStats);
 
-                                var canContinueBatch = _index.CanContinueBatch(stats, queryContext, indexContext, indexWriter, lastEtag, lastCollectionEtag,
+                                var canContinueBatch = _index.CanContinueBatch(stats, queryContext, indexContext, writeOperation, lastEtag, lastCollectionEtag,
                                     totalProcessedCount, sw, ref maxTimeForDocumentTransactionToRemainOpen);
 
                                 if (canContinueBatch != Index.CanContinueBatchResult.True)

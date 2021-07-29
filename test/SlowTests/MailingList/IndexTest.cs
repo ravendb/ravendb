@@ -1,6 +1,9 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Raven.Server.Documents;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -10,6 +13,116 @@ namespace SlowTests.MailingList
     {
         public IndexTest(ITestOutputHelper output) : base(output)
         {
+        }
+
+        
+        private class User
+        {
+            public string Name;
+
+            public bool Banned;
+        }
+
+
+        private class AllowedUsers : AbstractIndexCreationTask<User>
+        {
+            public override string IndexName => "AllowedUsers";
+
+            public AllowedUsers()
+            {
+                Map = users => from user in users
+                    where user.Banned == false
+                    select new
+                    {
+                        user.Name
+                    };
+            }
+        }
+
+
+        [Fact]
+        public async Task AvoidIndexWriterRecreation()
+        {
+            using (var store = GetDocumentStore())
+            {
+                await store.ExecuteIndexAsync(new AllowedUsers());
+
+                var database = await GetDocumentDatabaseInstanceFor(store);
+                var index = database.IndexStore.GetIndex("AllowedUsers");
+                Assert.NotNull(index);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User
+                    {
+                        Name = "karmel",
+                        Banned = false
+                    },"foo/bar");
+
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+                Assert.True(index.IndexPersistence.HasWriter);
+
+                database.RunIdleOperations(DatabaseCleanupMode.Deep);
+                await WaitAndAssertForValueAsync(() => index.IndexPersistence.HasWriter, false);
+
+                using (var session = store.OpenSession())
+                {
+                    var allowed = session.Query<User, AllowedUsers>().Single();
+                    Assert.Equal("karmel", allowed.Name);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User
+                    {
+                        Name = "karmel",
+                        Banned = true
+                    },"foo/bar");
+
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+                Assert.True(index.IndexPersistence.HasWriter);
+
+                using (var session = store.OpenSession())
+                {
+                    var allowed = session.Query<User, AllowedUsers>().ToList();
+                    Assert.Empty(allowed);
+                }
+
+                database.RunIdleOperations(DatabaseCleanupMode.Deep);
+                await WaitAndAssertForValueAsync(() => index.IndexPersistence.HasWriter, false);
+
+                using (var session = store.OpenSession())
+                {
+                    var person = session.Query<User, AllowedUsers>().ToList();
+                    Assert.Empty(person);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User
+                    {
+                        Name = "karmel",
+                        Banned = true
+                    },"foo/bar/2");
+
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+                Assert.False(index.IndexPersistence.HasWriter);
+
+                using (var session = store.OpenSession())
+                {
+                    var allowed = session.Query<User, AllowedUsers>().ToList();
+                    Assert.Empty(allowed);
+                }
+            }
         }
 
         [Fact]
