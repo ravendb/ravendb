@@ -177,6 +177,13 @@ namespace Raven.Server.Documents.Queries.Results
 
                 if (doc == null)
                 {
+                    if (documentLoaded)
+                    {
+                        // we tried to load it but the document doesn't exist
+                        return null;
+                    }
+
+                    // the fields were projected from the index
                     doc = new Document
                     {
                         Id = _context.GetLazyString(lowerId)
