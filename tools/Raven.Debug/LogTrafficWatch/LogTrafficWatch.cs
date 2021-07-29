@@ -142,14 +142,14 @@ namespace Raven.Debug.LogTrafficWatch
                     using (var context = JsonOperationContext.ShortTermSingleUse())
                     // Read
                     await using (var stream = new WebSocketStream(_client, _cancellationTokenSource.Token))
-                    using (context.GetManagedBuffer(out var buffer))
+                    using (context.GetMemoryBuffer(out var buffer))
                     using (var parser = new UnmanagedJsonParser(context, state, "trafficwatch/receive"))
-                    using (var builder = new BlittableJsonDocumentBuilder(context, BlittableJsonDocumentBuilder.UsageMode.None, "readObject/singleResult", parser, state)) 
+                    using (var builder = new BlittableJsonDocumentBuilder(context, BlittableJsonDocumentBuilder.UsageMode.None, "readObject/singleResult", parser, state))
                     // Write
                     await using (var fileStream = new FileStream(file, FileMode.Append, FileAccess.Write, FileShare.Read, 32 * 1024, false))
                     await using (var gZipStream = new GZipStream(fileStream, CompressionMode.Compress, false))
                     using (var peepingTomStream = new PeepingTomStream(stream, context))
-                    using (var writer = new BlittableJsonTextWriter(context, gZipStream))
+                    await using (var writer = new AsyncBlittableJsonTextWriter(context, gZipStream))
                     {
                         writer.WriteStartArray();
                         var isFirst = true;
@@ -181,12 +181,12 @@ namespace Raven.Debug.LogTrafficWatch
                                             if (json.TryGet("Type", out TrafficWatchChangeType type) == false)
                                                 continue;
                                             if (_changeTypes.Contains(type) == false)
-                                                    continue;
+                                                continue;
                                         }
 
                                         if (_database != null)
                                         {
-                                            if(json.TryGet("DatabaseName", out LazyStringValue databaseName) == false ||
+                                            if (json.TryGet("DatabaseName", out LazyStringValue databaseName) == false ||
                                                _database.Equals(databaseName, StringComparison.OrdinalIgnoreCase) == false)
                                                 continue;
                                         }
@@ -195,13 +195,13 @@ namespace Raven.Debug.LogTrafficWatch
                                             writer.WriteComma();
 
                                         isFirst = false;
-                                        if(_verbose)
+                                        if (_verbose)
                                             Console.WriteLine(json);
 
                                         writer.WriteObject(json);
                                         _errorCount = 0;
                                         if (flushCount++ % 128 == 0)
-                                            writer.Flush();
+                                            await writer.FlushAsync();
                                     }
                                 }
                             }

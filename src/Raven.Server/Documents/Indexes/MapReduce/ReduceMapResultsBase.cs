@@ -97,7 +97,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             foreach (var store in _mapReduceContext.StoreByReduceKeyHash)
             {
                 token.ThrowIfCancellationRequested();
-                
+
                 using (var reduceKeyHash = indexContext.GetLazyString(store.Key.ToString(CultureInfo.InvariantCulture)))
                 using (store.Value)
                 using (_aggregationBatch)
@@ -152,7 +152,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             return false;
         }
 
-        public bool CanContinueBatch(QueryOperationContext queryContext, TransactionOperationContext indexingContext, 
+        public bool CanContinueBatch(QueryOperationContext queryContext, TransactionOperationContext indexingContext,
             IndexingStatsScope stats, IndexWriteOperation indexWriteOperation, long currentEtag, long maxEtag, long count)
         {
             throw new NotSupportedException();
@@ -204,7 +204,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                 foreach (var output in result.GetOutputs())
                 {
-                    writer.IndexDocument(reduceKeyHash, null, output, stats, indexContext);
+                    writer.Value.IndexDocument(reduceKeyHash, null, output, stats, indexContext);
                 }
 
                 _index.ReducesPerSec?.MarkSingleThreaded(numberOfEntriesToReduce);
@@ -213,7 +213,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 stats.RecordReduceSuccesses(numberOfEntriesToReduce);
 
                 _index.UpdateThreadAllocations(indexContext, writer, stats, updateReduceStats: true);
-                
+
             }
             catch (Exception e) when (e.IsIndexError())
             {
@@ -312,7 +312,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                                 foreach (var output in result.GetOutputs())
                                 {
-                                    writer.IndexDocument(reduceKeyHash, null, output, stats, indexContext);
+                                    writer.Value.IndexDocument(reduceKeyHash, null, output, stats, indexContext);
                                 }
                             }
                             else
@@ -371,7 +371,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                                 foreach (var output in result.GetOutputs())
                                 {
-                                    writer.IndexDocument(reduceKeyHash, null, output, stats, indexContext);
+                                    writer.Value.IndexDocument(reduceKeyHash, null, output, stats, indexContext);
                                 }
                             }
                             else
@@ -663,7 +663,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             builder.Append(")");
 
             var message = builder.ToString();
-            
+
             if (_logger.IsInfoEnabled)
                 _logger.Info(message, error);
 
@@ -676,7 +676,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Failed to delete an index result from '${_indexDefinition.Name}' index on reduce error (reduce key hash: ${reduceKeyHash})", e);
             }
-            
+
             if (updateStats)
             {
                 var numberOfEntries = page?.NumberOfEntries ?? numberOfNestedValues;
@@ -686,7 +686,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 // we'll only want to record exceptions on some of these, to give the 
                 // user information about what is going on, otherwise we'll have to wait a lot if we 
                 // are processing a big batch, and this can be a perf killer. See: RavenDB-11038
-                
+
                 stats.RecordReduceErrors(numberOfEntries);
 
                 if (stats.NumberOfKeptReduceErrors < IndexStorage.MaxNumberOfKeptErrors)
@@ -700,7 +700,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     ReduceErrors = stats.ReduceErrors,
                     ReduceAttempts = stats.ReduceAttempts
                 };
-                
+
                 if (failureInfo.IsInvalidIndex(true))
                 {
                     throw new ExcessiveNumberOfReduceErrorsException("Excessive number of errors during the reduce phase for the current batch. Failure info: " +

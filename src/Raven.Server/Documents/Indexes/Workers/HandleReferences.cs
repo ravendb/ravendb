@@ -39,7 +39,7 @@ namespace Raven.Server.Documents.Indexes.Workers
             }
         }
 
-        public override void HandleDelete(Tombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        public override void HandleDelete(Tombstone tombstone, string collection, Lazy<IndexWriteOperation> writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             var tx = indexContext.Transaction.InnerTransaction;
 
@@ -109,7 +109,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 
         protected abstract bool TryGetReferencedCollectionsFor(string collection, out HashSet<CollectionName> referencedCollections);
 
-        private unsafe bool HandleItems(ActionType actionType, QueryOperationContext queryContext, TransactionOperationContext indexContext, Lazy<IndexWriteOperation> writeOperation, IndexingStatsScope stats, long pageSize, TimeSpan maxTimeForDocumentTransactionToRemainOpen, CancellationToken token)
+        private bool HandleItems(ActionType actionType, QueryOperationContext queryContext, TransactionOperationContext indexContext, Lazy<IndexWriteOperation> writeOperation, IndexingStatsScope stats, long pageSize, TimeSpan maxTimeForDocumentTransactionToRemainOpen, CancellationToken token)
         {
             var moreWorkFound = false;
             Dictionary<string, long> lastIndexedEtagsByCollection = null;
@@ -217,7 +217,6 @@ namespace Raven.Server.Documents.Indexes.Workers
                                                 token.ThrowIfCancellationRequested();
 
                                                 var current = itemsEnumerator.Current;
-                                                indexWriter ??= writeOperation.Value;
 
                                                 if (CanContinueReferenceBatch() == false)
                                                 {
@@ -233,7 +232,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                                                 try
                                                 {
-                                                    var numberOfResults = _index.HandleMap(current, mapResults, indexWriter, indexContext, collectionStats);
+                                                    var numberOfResults = _index.HandleMap(current, mapResults, writeOperation, indexContext, collectionStats);
 
                                                     resultsCount += numberOfResults;
                                                     collectionStats.RecordMapReferenceSuccess();
@@ -252,7 +251,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                                         $"Failed to execute mapping function on {current.Id}. Exception: {e}");
                                                 }
 
-                                            _index.UpdateThreadAllocations(indexContext, writeOperation, stats, updateReduceStats: false);
+                                                _index.UpdateThreadAllocations(indexContext, writeOperation, stats, updateReduceStats: false);
                                             }
                                         }
 
@@ -273,7 +272,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                             bool CanContinueReferenceBatch()
                             {
-                                var canContinueBatch = _index.CanContinueBatch(stats, queryContext, indexContext, indexWriter, 
+                                var canContinueBatch = _index.CanContinueBatch(stats, queryContext, indexContext, writeOperation,
                                     lastEtag, lastCollectionEtag, totalProcessedCount, sw, ref maxTimeForDocumentTransactionToRemainOpen);
                                 if (canContinueBatch != Index.CanContinueBatchResult.True)
                                 {
@@ -395,7 +394,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 
         protected abstract IndexItem GetItem(DocumentsOperationContext databaseContext, Slice key);
 
-        public abstract void HandleDelete(Tombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats);
+        public abstract void HandleDelete(Tombstone tombstone, string collection, Lazy<IndexWriteOperation> writer, TransactionOperationContext indexContext, IndexingStatsScope stats);
 
         public class Reference : IDisposable
         {

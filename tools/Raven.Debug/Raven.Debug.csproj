@@ -28,7 +28,6 @@
     <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="5.0.0" />
     <PackageReference Include="System.Security.Cryptography.Cng" Version="5.0.0" />
   </ItemGroup>
-</Project>
 
   <ItemGroup>
     <Folder Include="Properties\" />

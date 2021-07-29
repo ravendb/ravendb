@@ -94,7 +94,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                                 _index.HandleDelete(tombstone, collection, writeOperation, indexContext, collectionStats);
 
-                                var canContinueBatch = _index.CanContinueBatch(stats, queryContext, indexContext, indexWriter, lastEtag, lastCollectionEtag,
+                                var canContinueBatch = _index.CanContinueBatch(stats, queryContext, indexContext, writeOperation, lastEtag, lastCollectionEtag,
                                     totalProcessedCount, sw, ref maxTimeForDocumentTransactionToRemainOpen);
 
                                 if (canContinueBatch != Index.CanContinueBatchResult.True)

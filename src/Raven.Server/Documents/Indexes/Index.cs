@@ -2010,7 +2010,7 @@ namespace Raven.Server.Documents.Indexes
         public abstract void HandleDelete(Tombstone tombstone, string collection, Lazy<IndexWriteOperation> writer,
             TransactionOperationContext indexContext, IndexingStatsScope stats);
 
-        public abstract int HandleMap(IndexItem indexItem, IEnumerable mapResults, IndexWriteOperation writer,
+        public abstract int HandleMap(IndexItem indexItem, IEnumerable mapResults, Lazy<IndexWriteOperation> writer,
             TransactionOperationContext indexContext, IndexingStatsScope stats);
 
         private void HandleIndexChange(IndexChange change)
@@ -3834,7 +3834,7 @@ namespace Raven.Server.Documents.Indexes
         }
 
         public CanContinueBatchResult CanContinueBatch(IndexingStatsScope stats, QueryOperationContext queryContext, TransactionOperationContext indexingContext,
-            IndexWriteOperation indexWriteOperation, long currentEtag, long maxEtag, long count,
+            Lazy<IndexWriteOperation> indexWriteOperation, long currentEtag, long maxEtag, long count,
             Stopwatch sw, ref TimeSpan maxTimeForDocumentTransactionToRemainOpen)
         {
             if (Configuration.MapBatchSize.HasValue && count >= Configuration.MapBatchSize.Value)

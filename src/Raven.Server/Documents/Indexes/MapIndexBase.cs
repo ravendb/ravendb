@@ -48,7 +48,7 @@ namespace Raven.Server.Documents.Indexes
             writer.Value.Delete(tombstone.LowerId, stats);
         }
 
-        public override int HandleMap(IndexItem indexItem, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        public override int HandleMap(IndexItem indexItem, IEnumerable mapResults, Lazy<IndexWriteOperation> writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             EnsureValidStats(stats);
 
@@ -59,12 +59,12 @@ namespace Raven.Server.Documents.Indexes
             }
 
             if (indexItem.SkipLuceneDelete == false && mustDelete)
-                writer.Delete(indexItem.LowerId, stats);
+                writer.Value.Delete(indexItem.LowerId, stats);
 
             var numberOfOutputs = 0;
             foreach (var mapResult in mapResults)
             {
-                writer.IndexDocument(indexItem.LowerId, indexItem.LowerSourceDocumentId, mapResult, stats, indexContext);
+                writer.Value.IndexDocument(indexItem.LowerId, indexItem.LowerSourceDocumentId, mapResult, stats, indexContext);
 
                 numberOfOutputs++;
             }
