@@ -16,7 +16,7 @@ namespace SlowTests.MailingList
         }
 
         
-        public class User
+        private class User
         {
             public string Name;
 
@@ -63,10 +63,10 @@ namespace SlowTests.MailingList
                 }
 
                 WaitForIndexing(store);
-                Assert.True(index.IndexPersistence.LuceneIndexWriterExists);
+                Assert.True(index.IndexPersistence.HasWriter);
 
                 database.RunIdleOperations(DatabaseCleanupMode.Deep);
-                await WaitAndAssertForValueAsync(() => index.IndexPersistence.LuceneIndexWriterExists, false);
+                await WaitAndAssertForValueAsync(() => index.IndexPersistence.HasWriter, false);
 
                 using (var session = store.OpenSession())
                 {
@@ -86,7 +86,7 @@ namespace SlowTests.MailingList
                 }
 
                 WaitForIndexing(store);
-                Assert.True(index.IndexPersistence.LuceneIndexWriterExists);
+                Assert.True(index.IndexPersistence.HasWriter);
 
                 using (var session = store.OpenSession())
                 {
@@ -95,7 +95,7 @@ namespace SlowTests.MailingList
                 }
 
                 database.RunIdleOperations(DatabaseCleanupMode.Deep);
-                await WaitAndAssertForValueAsync(() => index.IndexPersistence.LuceneIndexWriterExists, false);
+                await WaitAndAssertForValueAsync(() => index.IndexPersistence.HasWriter, false);
 
                 using (var session = store.OpenSession())
                 {
@@ -115,7 +115,7 @@ namespace SlowTests.MailingList
                 }
 
                 WaitForIndexing(store);
-                Assert.False(index.IndexPersistence.LuceneIndexWriterExists);
+                Assert.False(index.IndexPersistence.HasWriter);
 
                 using (var session = store.OpenSession())
                 {
