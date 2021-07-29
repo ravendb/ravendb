@@ -90,6 +90,8 @@ namespace Raven.Server.Documents.Queries
                         throw;
 
                     lastException = e;
+                    
+                    await WaitForIndexBeingLikelyReplacedDuringQuery();
                 }
                 catch (OperationCanceledException e)
                 {
@@ -100,6 +102,8 @@ namespace Raven.Server.Documents.Queries
                         throw;
 
                     lastException = e;
+
+                    await WaitForIndexBeingLikelyReplacedDuringQuery();
                 }
             }
 
@@ -122,6 +126,8 @@ namespace Raven.Server.Documents.Queries
                         throw;
 
                     lastException = e;
+
+                    await WaitForIndexBeingLikelyReplacedDuringQuery();
                 }
                 catch (OperationCanceledException e)
                 {
@@ -132,6 +138,8 @@ namespace Raven.Server.Documents.Queries
                         throw;
 
                     lastException = e;
+
+                    await WaitForIndexBeingLikelyReplacedDuringQuery();
                 }
             }
 
@@ -156,6 +164,8 @@ namespace Raven.Server.Documents.Queries
                         throw;
 
                     lastException = e;
+
+                    await WaitForIndexBeingLikelyReplacedDuringQuery();
                 }
                 catch (OperationCanceledException e)
                 {
@@ -166,6 +176,8 @@ namespace Raven.Server.Documents.Queries
                         throw;
 
                     lastException = e;
+
+                    await WaitForIndexBeingLikelyReplacedDuringQuery();
                 }
             }
 
@@ -195,6 +207,8 @@ namespace Raven.Server.Documents.Queries
                         throw;
 
                     lastException = e;
+
+                    await WaitForIndexBeingLikelyReplacedDuringQuery();
                 }
                 catch (OperationCanceledException e)
                 {
@@ -205,6 +219,8 @@ namespace Raven.Server.Documents.Queries
                         throw;
 
                     lastException = e;
+
+                    await WaitForIndexBeingLikelyReplacedDuringQuery();
                 }
             }
 
@@ -233,6 +249,8 @@ namespace Raven.Server.Documents.Queries
                         throw;
 
                     lastException = e;
+
+                    WaitForIndexBeingLikelyReplacedDuringQuery().GetAwaiter().GetResult();
                 }
                 catch (OperationCanceledException e)
                 {
@@ -243,6 +261,8 @@ namespace Raven.Server.Documents.Queries
                         throw;
 
                     lastException = e;
+                    
+                    WaitForIndexBeingLikelyReplacedDuringQuery().GetAwaiter().GetResult();
                 }
             }
 
@@ -277,6 +297,8 @@ namespace Raven.Server.Documents.Queries
                         throw;
 
                     lastException = e;
+
+                    await WaitForIndexBeingLikelyReplacedDuringQuery();
                 }
                 catch (OperationCanceledException e)
                 {
@@ -287,6 +309,8 @@ namespace Raven.Server.Documents.Queries
                         throw;
 
                     lastException = e;
+
+                    await WaitForIndexBeingLikelyReplacedDuringQuery();
                 }
             }
 
@@ -308,6 +332,8 @@ namespace Raven.Server.Documents.Queries
                         throw;
 
                     lastException = e;
+
+                    await WaitForIndexBeingLikelyReplacedDuringQuery();
                 }
                 catch (OperationCanceledException e)
                 {
@@ -318,6 +344,8 @@ namespace Raven.Server.Documents.Queries
                         throw;
 
                     lastException = e;
+
+                    await WaitForIndexBeingLikelyReplacedDuringQuery();
                 }
             }
 
@@ -339,6 +367,8 @@ namespace Raven.Server.Documents.Queries
                         throw;
 
                     lastException = e;
+
+                    await WaitForIndexBeingLikelyReplacedDuringQuery();
                 }
                 catch (OperationCanceledException e)
                 {
@@ -349,6 +379,8 @@ namespace Raven.Server.Documents.Queries
                         throw;
 
                     lastException = e;
+
+                    await WaitForIndexBeingLikelyReplacedDuringQuery();
                 }
             }
 
@@ -370,6 +402,8 @@ namespace Raven.Server.Documents.Queries
                         throw;
 
                     lastException = e;
+
+                    await WaitForIndexBeingLikelyReplacedDuringQuery();
                 }
                 catch (OperationCanceledException e)
                 {
@@ -380,10 +414,20 @@ namespace Raven.Server.Documents.Queries
                         throw;
 
                     lastException = e;
+
+                    await WaitForIndexBeingLikelyReplacedDuringQuery();
                 }
             }
 
             throw CreateRetriesFailedException(lastException);
+        }
+
+        private Task WaitForIndexBeingLikelyReplacedDuringQuery()
+        {
+            // sometimes we might encounter OperationCanceledException or ObjectDisposedException thrown during the query because the index is being replaced
+            // in that case we want to repeat the query but let's give it a moment to properly finish the replacement operation (e.g. removal of old index files)
+
+            return Task.Delay(500);
         }
 
         public List<DynamicQueryToIndexMatcher.Explanation> ExplainDynamicIndexSelection(IndexQueryServerSide query, out string indexName)
