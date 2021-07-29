@@ -18,6 +18,7 @@ type positionAndSizes = {
 class storageReport extends viewModelBase {
 
     static readonly animationLength = 200;
+    static readonly maxChildrenToShow = 100; // todo - make this 1000 ?
 
     basePath: string;
     private rawData = [] as storageReportItemDto[];
@@ -103,7 +104,7 @@ class storageReport extends viewModelBase {
 
         const mappedData = data.map(x => this.mapReport(x));
         const totalSize = mappedData.reduce((p, c) => p + c.size, 0);
-        const item = new storageReportItem("/", "Database", false, totalSize, mappedData);
+        const item = new storageReportItem("/", "Database", false, totalSize, null, mappedData);
 
         this.root = item;
 
@@ -129,6 +130,7 @@ class storageReport extends viewModelBase {
             reportItem.Type.toLowerCase(),
             storageReport.showDisplayReportType(reportItem.Type),
             dataFile.size + journals.size + tempFiles.size,
+            null,
             [dataFile, journals, tempFiles]);
     }
 
@@ -139,7 +141,7 @@ class storageReport extends viewModelBase {
     private mapDataFile(report: Voron.Debugging.StorageReport): storageReportItem {
         const dataFile = report.DataFile;
 
-        const storageItem = new storageReportItem("Datafile", "data", false, dataFile.AllocatedSpaceInBytes);
+        const storageItem = new storageReportItem("Datafile", "data", false, dataFile.AllocatedSpaceInBytes, null);
         storageItem.lazyLoadChildren = true;
 
         return storageItem;
@@ -150,7 +152,7 @@ class storageReport extends viewModelBase {
 
         const tables = this.mapTables(report.Tables);
         const trees = this.mapTrees(report.Trees, "Trees");
-        const freeSpace = new storageReportItem("Free", "free", false, report.DataFile.FreeSpaceInBytes, []);
+        const freeSpace = new storageReportItem("Free", "free", false, report.DataFile.FreeSpaceInBytes, null, []);
         const preallocatedBuffers = this.mapPreAllocatedBuffers(report.PreAllocatedBuffers);
 
         d.internalChildren = [tables, trees, freeSpace, preallocatedBuffers];
@@ -158,10 +160,10 @@ class storageReport extends viewModelBase {
 
     private mapPreAllocatedBuffers(buffersReport: Voron.Debugging.PreAllocatedBuffersReport): storageReportItem {
         const allocationTree = this.mapTree(buffersReport.AllocationTree);
-        const buffersSpace = new storageReportItem("Pre Allocated Buffers Space", "reserved", false, buffersReport.PreAllocatedBuffersSpaceInBytes);
+        const buffersSpace = new storageReportItem("Pre Allocated Buffers Space", "reserved", false, buffersReport.PreAllocatedBuffersSpaceInBytes, null);
         buffersSpace.pageCount = buffersReport.NumberOfPreAllocatedPages;
 
-        const preAllocatedBuffers = new storageReportItem("Pre Allocated Buffers", "reserved", false, buffersReport.AllocatedSpaceInBytes, [allocationTree, buffersSpace]);
+        const preAllocatedBuffers = new storageReportItem("Pre Allocated Buffers", "reserved", false, buffersReport.AllocatedSpaceInBytes, null, [allocationTree, buffersSpace]);
         preAllocatedBuffers.customSizeProvider = (header: boolean) => {
             const allocatedSizeFormatted = generalUtils.formatBytesToSize(buffersReport.AllocatedSpaceInBytes);
             if (header) {
@@ -172,28 +174,74 @@ class storageReport extends viewModelBase {
         };
         return preAllocatedBuffers;
     }
+    
+    private groupChildren(items: storageReportItem[]): storageReportItem[] {
+        
+        if (items.length > storageReport.maxChildrenToShow) {
+            let clonedItems = _.cloneDeep(items);
+            clonedItems.sort((a, b) => b.size - a.size); // desc...
+            
+            const sampleItem = clonedItems[0];
+            
+            const itemsToShow = clonedItems.slice(0, storageReport.maxChildrenToShow);
+            const itemsToGroup = clonedItems.slice(storageReport.maxChildrenToShow);
+            
+            const groupedItem: storageReportItem = itemsToGroup.reduce((a, b) => {
+                    a.size += b.size;
+                    a.length += b.length;
+                    a.pageCount += b.pageCount;
+                    a.numberOfEntries += b.numberOfEntries;
+                    return a;
+                },
+                {
+                    isGrouped: true,
+                    name: "Grouped Data",
+                    size: 0,
+                    length: 0,
+                    pageCount: 0,
+                    numberOfEntries: 0,
+                    internalChildren: [],
+                    hasChildren: () => false,
+                    lazyLoadChildren: false,
+                    type: sampleItem.type,
+                    parent: sampleItem.parent,
+                    showType: sampleItem.showType,
+                    formatSize: sampleItem.formatSize,
+                    formatPercentage: sampleItem.formatPercentage,
+                    recyclableJournal: sampleItem.recyclableJournal,
+                    customSizeProvider: sampleItem.customSizeProvider,
+                    isStorageEnvironment: sampleItem.isStorageEnvironment
+                })
+            
+            itemsToShow.push(groupedItem);
+            return itemsToShow;
+        }
+        
+        return items;
+    }
 
     private mapTables(tables: Voron.Data.Tables.TableReport[]): storageReportItem {
         const mappedTables = tables.map(x => this.mapTable(x));
-
-        return new storageReportItem("Tables", "tables", false, mappedTables.reduce((p, c) => p + c.size, 0), mappedTables);
+        const mappedTablesGrouped = this.groupChildren(mappedTables);
+        
+        return new storageReportItem("Tables", "tables", false, mappedTables.reduce((p, c) => p + c.size, 0), null, mappedTablesGrouped);
     }
 
     private mapTable(table: Voron.Data.Tables.TableReport): storageReportItem {
         const structure = this.mapTrees(table.Structure, "Structure");
 
-        const data = new storageReportItem("Table Data", "table_data", false, table.DataSizeInBytes, []);
+        const data = new storageReportItem("Table Data", "table_data", false, table.DataSizeInBytes, null, []);
         const indexes = this.mapTrees(table.Indexes, "Indexes");
 
-        const preallocatedBuffers = this.mapPreAllocatedBuffers(table.PreAllocatedBuffers);
+        const preAllocatedBuffers = this.mapPreAllocatedBuffers(table.PreAllocatedBuffers);
 
         const totalSize = table.AllocatedSpaceInBytes;
 
-        const tableItem = new storageReportItem(table.Name, "table", true, totalSize, [
+        const tableItem = new storageReportItem(table.Name, "table", true, totalSize, null, [
             structure,
             data,
             indexes,
-            preallocatedBuffers
+            preAllocatedBuffers
         ]);
 
         tableItem.numberOfEntries = table.NumberOfEntries;
@@ -202,30 +250,40 @@ class storageReport extends viewModelBase {
     }
 
     private mapTrees(trees: Voron.Debugging.TreeReport[], name: string): storageReportItem {
-        return new storageReportItem(name, name.toLowerCase(), false, trees.reduce((p, c) => p + c.AllocatedSpaceInBytes, 0), trees.map(x => this.mapTree(x)));
+        const mappedTrees = trees.map(x => this.mapTree(x));
+        const mappedTreesGrouped = this.groupChildren(mappedTrees);
+        
+        return new storageReportItem(name, name.toLowerCase(), false, trees.reduce((p, c) => p + c.AllocatedSpaceInBytes, 0), null, mappedTreesGrouped);
     }
 
     private mapTree(tree: Voron.Debugging.TreeReport): storageReportItem {
-        const children = (tree.Streams && tree.Streams.Streams) ? tree.Streams.Streams.map(x => this.mapStream(x)) : [];
-        const item = new storageReportItem(tree.Name, "tree", true, tree.AllocatedSpaceInBytes, children);
+        const children = (tree.Streams && tree.Streams.Streams) ? this.mapStreams(tree.Streams.Streams) : [];
+        
+        const item = new storageReportItem(tree.Name, "tree", true, tree.AllocatedSpaceInBytes, null, children);
+        
         item.pageCount = tree.PageCount;
         item.numberOfEntries = tree.NumberOfEntries;
         return item;
     }
 
-    private mapStream(stream: Voron.Debugging.StreamDetails): storageReportItem {
-        const item = new storageReportItem(stream.Name, "stream", false, stream.AllocatedSpaceInBytes, []);
-
-        item.customSizeProvider = (header: boolean) => {
-            const allocatedSizeFormatted = generalUtils.formatBytesToSize(stream.AllocatedSpaceInBytes);
+    private mapStreams(treeStreams: Array<Voron.Debugging.StreamDetails>): storageReportItem[] {
+        const mappedTreeStreams = treeStreams.map(x => this.mapStream(x));
+        const mappedTreeStreamsGrouped = this.groupChildren(mappedTreeStreams);
+        
+        mappedTreeStreamsGrouped.forEach(x => x.customSizeProvider = (header: boolean) => {
+            const allocatedSizeFormatted = generalUtils.formatBytesToSize(x.size);
             if (header) {
                 return allocatedSizeFormatted;
             }
-            const length = generalUtils.formatBytesToSize(stream.Length);
+            const length = generalUtils.formatBytesToSize(x.length);
             return `<span title="stream length: ${length} / total allocation: ${allocatedSizeFormatted}">${length} / ${allocatedSizeFormatted}</span>`;
-        }
+        });
+        
+        return mappedTreeStreamsGrouped;
+    }
 
-        return item;
+    private mapStream(stream: Voron.Debugging.StreamDetails): storageReportItem {
+        return new storageReportItem(stream.Name, "stream", false, stream.AllocatedSpaceInBytes, stream.Length, []);
     }
 
     private mapJournals(report: Voron.Debugging.StorageReport): storageReportItem {
@@ -236,11 +294,10 @@ class storageReport extends viewModelBase {
                 "Journal #" + journal.Number,
                 "journal",
                 false,
-                journal.AllocatedSpaceInBytes,
-                []
+                journal.AllocatedSpaceInBytes, null, []
             ));
 
-        return new storageReportItem("Journals", "journals", false, mappedJournals.reduce((p, c) => p + c.size, 0), mappedJournals);
+        return new storageReportItem("Journals", "journals", false, mappedJournals.reduce((p, c) => p + c.size, 0), null, mappedJournals);
     }
     
     private mapTempFiles(report: Voron.Debugging.StorageReport): storageReportItem {
@@ -251,8 +308,7 @@ class storageReport extends viewModelBase {
                 temp.Name,
                 "temp",
                 false,
-                temp.AllocatedSpaceInBytes,
-                []
+                temp.AllocatedSpaceInBytes, null, []
             );
             
             item.recyclableJournal = temp.Type === "RecyclableJournal";
@@ -260,7 +316,7 @@ class storageReport extends viewModelBase {
             return item;
         });
 
-        return new storageReportItem("Temporary Files", "tempFiles", false, mappedTemps.reduce((p, c) => p + c.size, 0), mappedTemps);
+        return new storageReportItem("Temporary Files", "tempFiles", false, mappedTemps.reduce((p, c) => p + c.size, 0), null, mappedTemps);
     }
 
     private initGraph() {
@@ -388,7 +444,7 @@ class storageReport extends viewModelBase {
         const cell = container.selectAll("g.cell-no-such") // we always select non-existing nodes to draw from scratch - we don't update elements here
             .data(nodes)
             .enter().append("svg:g")
-            .attr("class", d => "cell " + d.type)
+            .attr("class", d => "cell " + d.type + (d.isGrouped ? " grouped" : ""))
             .attr("transform", d => "translate(" + d.x + "," + d.y + ")")
             .on("click", d => this.onClick(d, true))
             .on("mouseover", d => this.onMouseOver(d))
@@ -397,7 +453,7 @@ class storageReport extends viewModelBase {
 
         const rectangles = cell.append("svg:rect")
             .attr("width", d => Math.max(0, d.dx - 1))
-            .attr("height", d => Math.max(0, d.dy - 1))          
+            .attr("height", d => Math.max(0, d.dy - 1))
 
         rectangles
             .filter(x => x.hasChildren() || x.lazyLoadChildren)
@@ -542,7 +598,7 @@ class storageReport extends viewModelBase {
     private onMouseOut(d: storageReportItem) {
         this.tooltip.transition()
             .duration(500)
-            .style("opacity", 0);	
+            .style("opacity", 0);
     }
 
     dataSizeFormatted(item: storageReportItem) {
@@ -569,4 +625,4 @@ class storageReport extends viewModelBase {
     }
 }
 
-export = storageReport;    
+export = storageReport;

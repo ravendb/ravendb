@@ -8,6 +8,7 @@ class storageReportItem {
     type: string;
     internalChildren: storageReportItem[];
     size?: number;
+    length?: number;
     x?: number;
     y?: number;
     dx?: number;
@@ -19,15 +20,18 @@ class storageReportItem {
     numberOfEntries: number = null;
     lazyLoadChildren = false;
     customSizeProvider: (header: boolean) => string;
-
+    isGrouped: boolean;
+    
     recyclableJournal = false;
 
-    constructor(name: string, type: string, showType: boolean, size: number, internalChildren: storageReportItem[] = null) {
+    constructor(name: string, type: string, showType: boolean, size: number, length: number, internalChildren: storageReportItem[] = null, isGrouped: boolean = false) {
         this.name = name;
         this.type = type;
         this.showType = showType;
         this.size = size;
+        this.length = length;
         this.internalChildren = internalChildren;
+        this.isGrouped = isGrouped;
     }
 
     formatSize(header: boolean) {
@@ -51,7 +55,6 @@ class storageReportItem {
             && _.includes(childrenTypes, "data")
             && _.includes(childrenTypes, "tempFiles");
     }
-
 }
 
 export = storageReportItem;
