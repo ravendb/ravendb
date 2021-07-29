@@ -4,9 +4,12 @@ using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Text;
+using System.Threading;
 using McMaster.Extensions.CommandLineUtils;
 using Microsoft.Diagnostics.Tools.Dump;
 using Microsoft.Diagnostics.Tools.GCDump;
+using Raven.Client.Documents.Changes;
 using Raven.Debug.StackTrace;
 using Raven.Debug.Utils;
 
@@ -200,6 +203,8 @@ namespace Raven.Debug
                 });
             });
 
+            ConfigureTrafficWatchCommand();
+
             _app.OnExecute(() =>
             {
                 _app.ShowHelp();
@@ -215,5 +220,92 @@ namespace Raven.Debug
                 return _app.ExitWithError(e.Message);
             }
         }
+
+        private static void ConfigureTrafficWatchCommand()
+        {
+            _app.Command("traffic", cmd =>
+            {
+                cmd.ExtendedHelpText = cmd.Description = "Log traffic watch entries.";
+                cmd.HelpOption(HelpOptionString);
+
+                var urlArg = cmd.Option("--url", "Server URL.", CommandOptionType.SingleValue);
+                var pathArg = cmd.Option("--output-path", "Directory path to save the traffic watch log.", CommandOptionType.SingleValue);
+                var databaseArg = cmd.Option("--database", "The database name.", CommandOptionType.SingleOrNoValue);
+                var types = Enum.GetValues(typeof(TrafficWatchChangeType)).Cast<TrafficWatchChangeType>().Select(t => t.ToString());
+                var typesArg = cmd.Option("--types", $"Types to be filtered by - {string.Join(", ",types)}.", CommandOptionType.MultipleValue);
+                var certArg = cmd.Option("--certificate-path", "Path to pfx certificate file.", CommandOptionType.SingleOrNoValue);
+                var certPassArg = cmd.Option("--certificate-password", "Certificate password.", CommandOptionType.SingleOrNoValue);
+                var verboseArg = cmd.Option("--verbose", "Verbose to console.", CommandOptionType.NoValue);
+
+                cmd.OnExecute(() =>
+                {
+                    string path;
+                    string url;
+
+                    if (urlArg.HasValue())
+                    {
+                        url = urlArg.Value();
+                    }
+                    else
+                    {
+                        cmd.ExitWithError("Url argument is invalid.");
+                        return -1;
+                    }
+
+                    if (pathArg.HasValue())
+                    {
+                        path = pathArg.Value();
+                    }
+                    else
+                    {
+                        cmd.ExitWithError("Path argument is invalid.");
+                        return -1;
+                    }
+
+                    List<TrafficWatchChangeType> changeTypes = null;
+                    if (typesArg.HasValue())
+                    {
+                        changeTypes = new List<TrafficWatchChangeType>();
+                        try
+                        {
+                            StringBuilder error = null;
+                            foreach (var type in typesArg.Values)
+                            {
+                                if (Enum.TryParse(type, out TrafficWatchChangeType parsed))
+                                {
+                                    changeTypes.Add(parsed);
+                                }
+                                else
+                                {
+                                    error ??= new StringBuilder();
+                                    error.AppendLine("Types argument is invalid.");
+                                }
+                            }
+
+                            if(error != null)
+                                cmd.ExitWithError(error.ToString());
+                        }
+                        catch
+                        {
+                            cmd.ExitWithError("Types argument is invalid.");
+                        }
+                    }
+
+                    string cert = certArg.HasValue() ? certArg.Value() :null;
+                    string certPass = certPassArg.HasValue() ? certPassArg.Value() :null;
+                    string database = databaseArg.HasValue() ? databaseArg.Value() :null;
+
+                    var  logTrafficWatch = new LogTrafficWatch.LogTrafficWatch(path, url, cert, certPass, database, changeTypes?.ToArray(), verboseArg.HasValue());
+
+                    Console.CancelKeyPress += (sender, args) => logTrafficWatch.Stop();
+
+                    using (logTrafficWatch)
+                        logTrafficWatch.Connect().Wait();
+
+                    return 0;
+                });
+            });
+        }
+
     }
 }

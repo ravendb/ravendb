@@ -1629,7 +1629,7 @@ namespace Raven.Server.Documents.Indexes
                 _allocatedAfterPreviousCleanup = NativeMemory.CurrentThreadStats.TotalAllocated;
                 if (_logger.IsInfoEnabled)
                 {
-                    _logger.Info($"Reduced the memory usage of index '{Name}'. " +
+                    _logger.Info($"Reduced the memory usage of index '{Name}' (mode:{mode}). " +
                                  $"Before: {new Size(allocatedBeforeCleanup, SizeUnit.Bytes)}, " +
                                  $"after: {new Size(_allocatedAfterPreviousCleanup, SizeUnit.Bytes)}");
                 }
@@ -2007,7 +2007,7 @@ namespace Raven.Server.Documents.Indexes
         public abstract IIndexedItemEnumerator GetMapEnumerator(IEnumerable<IndexItem> items, string collection, TransactionOperationContext indexContext,
             IndexingStatsScope stats, IndexType type);
 
-        public abstract void HandleDelete(Tombstone tombstone, string collection, IndexWriteOperation writer,
+        public abstract void HandleDelete(Tombstone tombstone, string collection, Lazy<IndexWriteOperation> writer,
             TransactionOperationContext indexContext, IndexingStatsScope stats);
 
         public abstract int HandleMap(IndexItem indexItem, IEnumerable mapResults, IndexWriteOperation writer,
@@ -4049,7 +4049,7 @@ namespace Raven.Server.Documents.Indexes
 
         public long UpdateThreadAllocations(
             TransactionOperationContext indexingContext,
-            IndexWriteOperation indexWriteOperation,
+            Lazy<IndexWriteOperation> indexWriteOperation,
             IndexingStatsScope stats,
             bool updateReduceStats)
         {
@@ -4062,9 +4062,9 @@ namespace Raven.Server.Documents.Indexes
             long indexWriterAllocations = 0;
             long luceneFilesAllocations = 0;
 
-            if (indexWriteOperation != null)
+            if (indexWriteOperation?.IsValueCreated == true)
             {
-                var allocations = indexWriteOperation.GetAllocations();
+                var allocations = indexWriteOperation.Value.GetAllocations();
                 indexWriterAllocations = allocations.RamSizeInBytes;
                 luceneFilesAllocations = allocations.FilesAllocationsInBytes;
             }

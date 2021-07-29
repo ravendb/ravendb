@@ -43,9 +43,9 @@ namespace Raven.Server.Documents.Indexes
             return _filters;
         }
 
-        public override void HandleDelete(Tombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        public override void HandleDelete(Tombstone tombstone, string collection, Lazy<IndexWriteOperation> writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
-            writer.Delete(tombstone.LowerId, stats);
+            writer.Value.Delete(tombstone.LowerId, stats);
         }
 
         public override int HandleMap(IndexItem indexItem, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)

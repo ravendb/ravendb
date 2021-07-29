@@ -156,7 +156,6 @@ namespace Raven.Server.Documents.Indexes.Workers
                         var resultsCount = 0;
 
                         var sw = new Stopwatch();
-                        IndexWriteOperation indexWriter = null;
 
                         var keepRunning = true;
                         var earlyExit = false;
@@ -253,7 +252,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                                         $"Failed to execute mapping function on {current.Id}. Exception: {e}");
                                                 }
 
-                                                _index.UpdateThreadAllocations(indexContext, indexWriter, stats, updateReduceStats: false);
+                                            _index.UpdateThreadAllocations(indexContext, writeOperation, stats, updateReduceStats: false);
                                             }
                                         }
 

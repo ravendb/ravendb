@@ -91,8 +91,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
             var lowLevelTransaction = indexContext.Transaction.InnerTransaction.LowLevelTransaction;
 
-            var writer = writeOperation.Value;
-
             var treeScopeStats = stats.For(IndexingOperation.Reduce.TreeScope, start: false);
             var nestedValuesScopeStats = stats.For(IndexingOperation.Reduce.NestedValuesScope, start: false);
 
@@ -111,13 +109,13 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                         case MapResultsStorageType.Tree:
                             using (treeScopeStats.Start())
                             {
-                                HandleTreeReduction(indexContext, treeScopeStats, modifiedStore, lowLevelTransaction, writer, reduceKeyHash, table, token);
+                                HandleTreeReduction(indexContext, treeScopeStats, modifiedStore, lowLevelTransaction, writeOperation, reduceKeyHash, table, token);
                             }
                             break;
                         case MapResultsStorageType.Nested:
                             using (nestedValuesScopeStats.Start())
                             {
-                                HandleNestedValuesReduction(indexContext, nestedValuesScopeStats, modifiedStore, writer, reduceKeyHash, token);
+                                HandleNestedValuesReduction(indexContext, nestedValuesScopeStats, modifiedStore, writeOperation, reduceKeyHash, token);
                             }
                             break;
 
@@ -175,7 +173,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         private void HandleNestedValuesReduction(TransactionOperationContext indexContext, IndexingStatsScope stats,
                     MapReduceResultsStore modifiedStore,
-                    IndexWriteOperation writer, LazyStringValue reduceKeyHash, CancellationToken token)
+                    Lazy<IndexWriteOperation> writer, LazyStringValue reduceKeyHash, CancellationToken token)
         {
             EnsureValidNestedValuesReductionStats(stats);
 
@@ -202,7 +200,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 }
 
                 if (section.IsNew == false)
-                    writer.DeleteReduceResult(reduceKeyHash, stats);
+                    writer.Value.DeleteReduceResult(reduceKeyHash, stats);
 
                 foreach (var output in result.GetOutputs())
                 {
@@ -227,7 +225,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         private void HandleTreeReduction(TransactionOperationContext indexContext, IndexingStatsScope stats,
              MapReduceResultsStore modifiedStore, LowLevelTransaction lowLevelTransaction,
-            IndexWriteOperation writer, LazyStringValue reduceKeyHash, Table table, CancellationToken token)
+            Lazy<IndexWriteOperation> writer, LazyStringValue reduceKeyHash, Table table, CancellationToken token)
         {
             if (modifiedStore.ModifiedPages.Count == 0)
                 return;
@@ -275,7 +273,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     {
                         if (leafPage.PageNumber == tree.State.RootPageNumber)
                         {
-                            writer.DeleteReduceResult(reduceKeyHash, stats);
+                            writer.Value.DeleteReduceResult(reduceKeyHash, stats);
 
                             var emptyPageNumber = Bits.SwapBytes(leafPage.PageNumber);
                             using (Slice.External(indexContext.Allocator, (byte*)&emptyPageNumber, sizeof(long), out Slice pageNumSlice))
@@ -310,7 +308,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                         {
                             if (parentPage == -1)
                             {
-                                writer.DeleteReduceResult(reduceKeyHash, stats);
+                                writer.Value.DeleteReduceResult(reduceKeyHash, stats);
 
                                 foreach (var output in result.GetOutputs())
                                 {
@@ -369,7 +367,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                         {
                             if (parentPage == -1)
                             {
-                                writer.DeleteReduceResult(reduceKeyHash, stats);
+                                writer.Value.DeleteReduceResult(reduceKeyHash, stats);
 
                                 foreach (var output in result.GetOutputs())
                                 {
@@ -644,7 +642,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             _nestedValuesReductionStats.NestedValuesAggregation = stats.For(IndexingOperation.Reduce.NestedValuesAggregation, start: false);
         }
 
-        private void HandleReductionError(Exception error, LazyStringValue reduceKeyHash, IndexWriteOperation writer, IndexingStatsScope stats, bool updateStats, TreePage page,
+        private void HandleReductionError(Exception error, LazyStringValue reduceKeyHash, Lazy<IndexWriteOperation> writer, IndexingStatsScope stats, bool updateStats, TreePage page,
             int numberOfNestedValues = -1)
         {
             var builder = new StringBuilder("Failed to execute reduce function on ");
@@ -671,7 +669,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
             try
             {
-                writer.DeleteReduceResult(reduceKeyHash, stats);
+                writer.Value.DeleteReduceResult(reduceKeyHash, stats);
             }
             catch (Exception e)
             {
