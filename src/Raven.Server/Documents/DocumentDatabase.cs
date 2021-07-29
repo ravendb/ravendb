@@ -1024,7 +1024,7 @@ namespace Raven.Server.Documents
                 }
 
                 if (_logger.IsInfoEnabled)
-                    _logger.Info($"Ran idle operations for database '{Name}', took: {sp.ElapsedMilliseconds}ms");
+                    _logger.Info($"Ran idle operations for database '{Name}' in {mode} mode, took: {sp.ElapsedMilliseconds}ms");
             }
             finally
             {

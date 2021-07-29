@@ -39,7 +39,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private static readonly StopAnalyzer StopAnalyzer = new StopAnalyzer(Version.LUCENE_30);
 
         private LuceneIndexWriter _indexWriter;
-        public bool LuceneIndexWriterExists => _indexWriter != null;
+        public bool HasWriter => _indexWriter != null;
 
         private Dictionary<string, LuceneSuggestionIndexWriter> _suggestionsIndexWriters;
 

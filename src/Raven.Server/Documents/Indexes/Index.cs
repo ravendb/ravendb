@@ -1468,7 +1468,7 @@ namespace Raven.Server.Documents.Indexes
                 _allocatedAfterPreviousCleanup = NativeMemory.CurrentThreadStats.TotalAllocated;
                 if (_logger.IsInfoEnabled)
                 {
-                    _logger.Info($"Reduced the memory usage of index '{Name}'. " +
+                    _logger.Info($"Reduced the memory usage of index '{Name}' (mode:{mode}). " +
                                  $"Before: {new Size(allocatedBeforeCleanup, SizeUnit.Bytes)}, " +
                                  $"after: {new Size(_allocatedAfterPreviousCleanup, SizeUnit.Bytes)}");
                 }
