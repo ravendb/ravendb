@@ -15,6 +15,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Sparrow.Json;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Entities;
 using Voron.Util;
 using Xunit;
 using Xunit.Abstractions;
@@ -168,7 +169,7 @@ namespace FastTests.Server.Documents
 
             using (var s = store.OpenSession())
             {
-                s.Query<Query.Order>().ToList();
+                s.Query<Order>().ToList();
             }
 
             // this verifies that all the data is fine
