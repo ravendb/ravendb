@@ -74,7 +74,7 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
             using (var jsResPush = _result.Call("push", InternalHandle.Empty, current))
                 jsResPush.ThrowOnError(); // TODO check if is needed here
 
-            using (var jsRes = _func.Call(_engine.CreateNullValue(), current))
+            using (var jsRes = _func.StaticCall(current))
             {
                 jsRes.ThrowOnError(); // TODO check if is needed here
                 var result = NullIfEmptyEnumerable(jsRes);

@@ -18,8 +18,8 @@ using Raven.Server.ServerWide;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Server;
-
 using V8.Net;
+using Raven.Server.Extensions;
 using Raven.Server.Documents.Indexes.Static.Utils;
 
 namespace Raven.Server.Documents.Indexes.Static
@@ -36,8 +36,8 @@ namespace Raven.Server.Documents.Indexes.Static
 
             _groupedItems = null;
 
-            ReduceV8 = reduce ?? throw new ArgumentNullException(nameof(reduce));
-            KeyV8 = key ?? throw new ArgumentNullException(nameof(key));
+            ReduceV8 = reduceV8 ?? throw new ArgumentNullException(nameof(reduceV8));
+            KeyV8 = keyV8 ?? throw new ArgumentNullException(nameof(keyV8));
 
             JavaScriptIndexUtilsV8 = javaScriptIndexUtilsV8;
             JavaScriptUtilsV8 = JavaScriptIndexUtilsV8.JavaScriptUtils;

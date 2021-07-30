@@ -32,21 +32,26 @@ namespace Raven.Server.Documents.Patch
         private JsonOperationContext _context;
         private readonly ScriptRunner _runner;
         private readonly List<IDisposable> _disposables = new List<IDisposable>();
-        private readonly V8Engine Engine;
+        public readonly V8EngineEx Engine;
 
         public bool ReadOnly;
 
-        public JavaScriptUtils(ScriptRunner runner, V8Engine engine)
+        public JavaScriptUtils(ScriptRunner runner, V8EngineEx engine)
         {
             _runner = runner;
             Engine = engine;
         }
 
-        internal InternalHandle GetMetadata(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+        internal static InternalHandle GetMetadata(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
             if (args.Length != 1 || !(args[0].BoundObject is BlittableObjectInstance boi))
                 throw new InvalidOperationException("metadataFor(doc) must be called with a single entity argument");
 
+            return JavaScriptUtils.GetMetadata(engine, boi);
+        }
+
+        public static InternalHandle GetMetadata(V8EngineEx engine, BlittableObjectInstance boi)
+        {
             if (!(boi.Blittable[Constants.Documents.Metadata.Key] is BlittableJsonReaderObject metadata))
                 return Engine.CreateNullValue();
             metadata.Modifications = new DynamicJsonValue
@@ -72,7 +77,7 @@ namespace Raven.Server.Documents.Patch
             }
         }
 
-        internal InternalHandle AttachmentsFor(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+        internal static InternalHandle AttachmentsFor(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
             if (args.Length != 1 || !(args[0].BoundObject is BlittableObjectInstance boi))
                 throw new InvalidOperationException($"{nameof(AttachmentsFor)} must be called with a single entity argument");
@@ -96,7 +101,7 @@ namespace Raven.Server.Documents.Patch
             }
         }
 
-        internal InternalHandle LoadAttachment(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+        internal static InternalHandle LoadAttachment(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
             if (args.Length != 2)
                 throw new InvalidOperationException($"{nameof(LoadAttachment)} may only be called with two arguments, but '{args.Length}' were passed.");
@@ -137,7 +142,7 @@ namespace Raven.Server.Documents.Patch
             }
         }
 
-        internal InternalHandle LoadAttachments(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+        internal static InternalHandle LoadAttachments(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
             if (args.Length != 1)
                 throw new InvalidOperationException($"{nameof(LoadAttachment)} may only be called with one argument, but '{args.Length}' were passed.");
@@ -200,17 +205,17 @@ namespace Raven.Server.Documents.Patch
             }
         }
 
-        internal InternalHandle GetTimeSeriesNamesFor(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+        internal static InternalHandle GetTimeSeriesNamesFor(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
             return GetNamesFor(self, args, Constants.Documents.Metadata.TimeSeries, "timeSeriesNamesFor");
         }
 
-        internal InternalHandle GetCounterNamesFor(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+        internal static InternalHandle GetCounterNamesFor(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
             return GetNamesFor(self, args, Constants.Documents.Metadata.Counters, "counterNamesFor");
         }
 
-        private InternalHandle GetNamesFor(V8EngineEx engine, bool isConstructCall, InternalHandle self, InternalHandle[] args, string metadataKey, string methodName)
+        private static InternalHandle GetNamesFor(V8EngineEx engine, bool isConstructCall, InternalHandle self, InternalHandle[] args, string metadataKey, string methodName)
         {
             if (args.Length != 1 || !(args[0].BoundObject is BlittableObjectInstance boi))
                 throw new InvalidOperationException($"{methodName}(doc) must be called with a single entity argument");
@@ -228,7 +233,7 @@ namespace Raven.Server.Documents.Patch
             return Engine.CreateArrayWithDisposal(jsItems);
         }
 
-        internal InternalHandle GetDocumentId(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+        internal static InternalHandle GetDocumentId(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
             if (args.Length != 1 && args.Length != 2) //length == 2 takes into account Query Arguments that can be added to args
                 throw new InvalidOperationException("id(doc) must be called with a single argument");
@@ -298,7 +303,7 @@ namespace Raven.Server.Documents.Patch
             }
 
             if (o == null)
-                return Undefined.Instance;
+                return InternalHandle.Empty;
             if (o is long lng)
                 return lng;
             if (o is BlittableJsonReaderArray bjra)
@@ -346,7 +351,7 @@ namespace Raven.Server.Documents.Patch
                 return jsRes.Set(j._);
             }
             if (o is bool b)
-                return Engine.CreateValue(b ? JsBoolean.True : JsBoolean.False);
+                return Engine.CreateValue(b);
             if (o is int integer)
                 return Engine.CreateValue(integer);
             if (o is double dbl)
@@ -410,20 +415,6 @@ namespace Raven.Server.Documents.Patch
 
     public class V8EngineEx : V8Engine
     {
-        public IDisposable ChangeMaxStatements(int value)
-        {
-            void DoNothing()
-            {}
-
-            return new DisposableAction(DoNothing);
-        }
-
-        public IDisposable DisableMaxStatements()
-        {
-            return ChangeMaxStatements(int.MaxValue);
-        }
-
-
         public static void Dispose(InternalHandle[] jsItems)
         {
             for (int i = 0; i < jsItems.Length; ++i)
@@ -610,8 +601,8 @@ namespace Raven.Server.Documents.Patch
             return TypeBinder.CreateObjectBinder<ObjectBinderEx<type>, type>(obj);
         }
 
-        public ObjectBinderEx<T> CreateObjectBinder<T>(object obj, TypeBinder tb = null)
-        where T : ObjectBinder, new()
+        public TObjectBinder CreateObjectBinder<TObjectBinder>(object obj, TypeBinder tb = null)
+        where TObjectBinder : ObjectBinder, new()
         {
             if (obj == null) {
                 return null;
@@ -619,7 +610,7 @@ namespace Raven.Server.Documents.Patch
             if (tb == null) {
                 tb = GetTypeBinder(T);
             }
-            return TypeBinder.CreateObjectBinder<ObjectBinderEx<T>, type>(obj);
+            return TypeBinder.CreateObjectBinder<TObjectBinder, type>(obj);
         }
 
         public InternalHandle FromObject(object value)
@@ -732,7 +723,6 @@ namespace Raven.Server.Documents.Patch
     public class ClrFunctionInstance : V8Function
     {
         public ClrFunctionInstance(
-            V8Engine Engine,
             string name,
             Func<V8EngineEx, bool, InternalHandle, InternalHandle[], InternalHandle> func) : base()
         {
@@ -751,4 +741,29 @@ namespace Raven.Server.Documents.Patch
         }
     }
 
+    /*public class ClrFunctionInstance<T> : V8Function
+    {
+        private T _owner;
+
+        public ClrFunctionInstance(
+            T obj,
+            string name,
+            Func<T, V8EngineEx, bool, InternalHandle, InternalHandle[], InternalHandle> func
+        ) : base()
+        {
+            _owner = obj;
+            _func = func;
+        }
+        public override InternalHandle Initialize(bool isConstructCall, params InternalHandle[] args)
+        {
+            Callback = CallbackMethod;
+
+            return base.Initialize(isConstructCall, args);
+        }
+
+        public InternalHandle CallbackMethod(V8Engine engine, bool isConstructCall, InternalHandle _this, params InternalHandle[] args)
+        {
+            return _func(_owner, (V8EngineEx)engine, isConstructCall, _this, args);
+        }
+    }*/
 }

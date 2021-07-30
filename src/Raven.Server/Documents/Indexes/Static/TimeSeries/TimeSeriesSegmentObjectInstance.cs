@@ -12,7 +12,11 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
     {
         private readonly DynamicTimeSeriesSegment _segment;
 
-        public TimeSeriesSegmentObjectInstance(DynamicTimeSeriesSegment segment, JavaScriptUtils javaScriptUtils = null) : base(javaScriptUtils)
+        public DynamicTimeSeriesSegment Segment {
+            get {return _segment;}
+        }
+
+        public TimeSeriesSegmentObjectInstance(DynamicTimeSeriesSegment segment) : base()
         {
             _segment = segment ?? throw new ArgumentNullException(nameof(segment));
         }
@@ -32,7 +36,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
         private InternalHandle GetPropertyValue(V8Engine engine, ref string propertyName)
         {
             if (propertyName == nameof(DynamicTimeSeriesSegment.Entries))
-                return new InternalHandle(((V8EngineEx)engine).CreateObjectBinder<DynamicTimeSeriesEntriesCustomBinder>(_segment.Entries, JavaScriptUtils?.TypeBinderDynamicTimeSeriesEntries)._);
+                return new InternalHandle(((V8EngineEx)engine).CreateObjectBinder<DynamicTimeSeriesEntriesCustomBinder>(_segment.Entries, ((V8EngineEx)engine).TypeBinderDynamicTimeSeriesEntries)._);
 
             if (propertyName == nameof(TimeSeriesSegment.DocumentId))
                 return engine.CreateValue(_segment._segmentEntry.DocId.ToString());
@@ -57,29 +61,6 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             public CustomBinder() : base()
             {}
 
-            public override InternalHandle NamedPropertyGetter(ref string propertyName)
-            {
-                return objCLR.NamedPropertyGetter(Engine, ref propertyName);
-            }
-
-            public override V8PropertyAttributes? NamedPropertyQuery(ref string propertyName)
-            {
-                string[] propertyNames = { nameof(DynamicTimeSeriesSegment.Entries), nameof(TimeSeriesSegment.DocumentId), nameof(DynamicTimeSeriesSegment.Name), nameof(DynamicTimeSeriesSegment.Count), nameof(DynamicTimeSeriesSegment.End), nameof(DynamicTimeSeriesSegment.Start) };
-                if (propertyNames.IndexOf(propertyName) > -1)
-                {
-                    return V8PropertyAttributes.Locked | V8PropertyAttributes.DontEnum;
-                }
-                return null;
-            }
-
-            public override InternalHandle NamedPropertyEnumerator()
-            {
-                string[] propertyNames = { nameof(objCLR.Tag), nameof(objCLR.Timestamp), nameof(objCLR.Value), nameof(objCLR.Values) };
-
-                int arrayLength =  propertyNames.Length;
-                var jsItems = propertyNames.Select(x => Engine.CreateValue(x)).ToArray();
-                return ((V8EngineEx)Engine).CreateArrayWithDisposal(jsItems);
-            }
         }
     }
 
@@ -92,9 +73,9 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
         public override InternalHandle IndexedPropertyGetter(int index)
         {
             InternalHandle jsRes;
-            if (index < objCLR.Count()) 
+            if (index < ObjCLR.Count()) 
             {
-                object elem = objCLR.Get(index);
+                object elem = ObjCLR.Get(index);
                 return jsRes.Set(((V8EngineEx)Engine).CreateObjectBinder<DynamicTimeSeriesEntryCustomBinder>(elem)._);
             }
 
@@ -103,14 +84,14 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
 
         public override V8PropertyAttributes? IndexedPropertyQuery(int index)
         {
-            if (index < objCLR.Count())
+            if (index < ObjCLR.Count())
                 return V8PropertyAttributes.Locked;
 
             return null;
         }
         public override InternalHandle IndexedPropertyEnumerator()
         {
-            int arrayLength =  objCLR.Count();
+            int arrayLength = ObjCLR.Count();
             var jsItems = Enumerable.Range(0, arrayLength).Select(x => Engine.CreateValue(x)).ToArray();
 
             return ((V8EngineEx)Engine).CreateArrayWithDisposal(jsItems);
@@ -126,21 +107,21 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
         {
             var ObjCLR = Object as DynamicTimeSeriesSegment.DynamicTimeSeriesEntry;
 
-            if (propertyName == nameof(objCLR.Tag))
-                return Engine.CreateValue(objCLR._entry.Tag?.ToString());
-            if (propertyName == nameof(objCLR.Timestamp))
-                return Engine.CreateValue(objCLR._entry.Timestamp);
-            if (propertyName == nameof(objCLR.Value))
-                return Engine.CreateValue(objCLR._entry.Values.Span[0]);
+            if (propertyName == nameof(ObjCLR.Tag))
+                return Engine.CreateValue(ObjCLR._entry.Tag?.ToString());
+            if (propertyName == nameof(ObjCLR.Timestamp))
+                return Engine.CreateValue(ObjCLR._entry.Timestamp);
+            if (propertyName == nameof(ObjCLR.Value))
+                return Engine.CreateValue(ObjCLR._entry.Values.Span[0]);
 
 
-            if (propertyName == nameof(objCLR.Values))
+            if (propertyName == nameof(ObjCLR.Values))
             {
-                int arrayLength =  objCLR._entry.Values.Length;
+                int arrayLength =  ObjCLR._entry.Values.Length;
                 var jsItems = new InternalHandle[arrayLength];
                 for (int i = 0; i < arrayLength; ++i)
                 {
-                    jsItems[i] = Engine.CreateValue(objCLR._entry.Values.Span[i]);
+                    jsItems[i] = Engine.CreateValue(ObjCLR._entry.Values.Span[i]);
                 }
 
                 return ((V8EngineEx)Engine).CreateArrayWithDisposal(jsItems);
@@ -151,7 +132,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
 
         public override V8PropertyAttributes? NamedPropertyQuery(ref string propertyName)
         {
-            string[] propertyNames = { nameof(objCLR.Tag), nameof(objCLR.Timestamp), nameof(objCLR.Value), nameof(objCLR.Values) };
+            string[] propertyNames = { nameof(ObjCLR.Tag), nameof(ObjCLR.Timestamp), nameof(ObjCLR.Value), nameof(ObjCLR.Values) };
             if (Array.IndexOf(propertyNames, propertyName) > -1)
             {
                 return V8PropertyAttributes.Locked;
@@ -161,7 +142,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
 
         public override InternalHandle NamedPropertyEnumerator()
         {
-            string[] propertyNames = { nameof(objCLR.Tag), nameof(objCLR.Timestamp), nameof(objCLR.Value), nameof(objCLR.Values) };
+            string[] propertyNames = { nameof(ObjCLR.Tag), nameof(ObjCLR.Timestamp), nameof(ObjCLR.Value), nameof(ObjCLR.Values) };
 
             int arrayLength =  propertyNames.Length;
             var jsItems = new InternalHandle[arrayLength];

@@ -50,7 +50,7 @@ namespace Raven.Server.Documents.Patch
         }
 
         public static BlittableObjectInstance.CustomBinder CreateObjectBinder(V8EngineEx engine, BlittableObjectInstance boi) {
-            return engine.CreateObjectBinder<BlittableObjectInstance.CustomBinder>(boi, JavaScriptUtils.TypeBinderBlittableObjectInstance);
+            return engine.CreateObjectBinder<BlittableObjectInstance.CustomBinder>(boi, engine.TypeBinderBlittableObjectInstance);
         }
 
         private void MarkChanged()
@@ -67,7 +67,7 @@ namespace Raven.Server.Documents.Patch
             string changeVector) // : base(engine)
         {
             JavaScriptUtils = javaScriptUtils;
-            Engine = JavaScriptUtils.Engine;
+            Engine = (V8EngineEx)JavaScriptUtils.Engine;
 
             _parent = parent;
             blittable.NoCache = true;
@@ -91,33 +91,32 @@ namespace Raven.Server.Documents.Patch
             {
                 if (propertyName == Constants.Documents.Metadata.Key)
                 { 
-                    using (var jsValue = objCLR.Call(ScriptRunner.SingleRun.GetMetadataMethod, InternalHandle.Empty))
+                    using (var jsValue = JavaScriptUtils.GetMetadata((V8EngineEx)Engine, ObjCLR))
                     {
                         jsValue.ThrowOnError(); // TODO check if is needed here
-                        return new BlittableObjectProperty(this, propertyName, jsValue);
+                        return new BlittableObjectProperty(ObjCLR, propertyName, jsValue);
                     }
                 }
 
-
-                BlittableObjectProperty val; // = default;
-                if (objCLR.OwnValues?.TryGetValue(propertyName, out val) == true &&
+                BlittableObjectProperty val = null;
+                if (ObjCLR.OwnValues?.TryGetValue(propertyName, out val) == true &&
                     val != null)
                     return val;
 
-                objCLR.Deletes?.Remove(propertyName);
+                ObjCLR.Deletes?.Remove(propertyName);
 
-                val = new BlittableObjectProperty(this, propertyName);
+                val = new BlittableObjectProperty(ObjCLR, propertyName);
 
                 if (val.Value.IsUndefined &&
-                    DocumentId == null &&
-                    objCLR._set == false)
+                    ObjCLR.DocumentId == null &&
+                    ObjCLR._set == false)
                 {
                     return null;
                 }
 
-                objCLR.OwnValues ??= new Dictionary<string, BlittableObjectProperty>(objCLR.Blittable.Count);
+                ObjCLR.OwnValues ??= new Dictionary<string, BlittableObjectProperty>(ObjCLR.Blittable.Count);
 
-                objCLR.OwnValues[propertyName] = val;
+                ObjCLR.OwnValues[propertyName] = val;
 
                 return val;
             }
@@ -135,23 +134,23 @@ namespace Raven.Server.Documents.Patch
             {
                 if (propertyName == Constants.Documents.Metadata.Key) {
                     return InternalHandle.Empty;
-                    objCLR._set = false;
+                    ObjCLR._set = false;
                 }
                 
-                objCLR._set = true;
+                ObjCLR._set = true;
                 try
                 {
-                    return base.NamedPropertySetter(propertyName, value, attributes);
+                    return base.NamedPropertySetter(ref propertyName, value, attributes);
                 }
                 finally
                 {
-                    objCLR._set = false;
+                    ObjCLR._set = false;
                 }
             }
 
             public override bool? NamedPropertyDeleter(ref string propertyName)
             {
-                bool? res = base.NamedPropertyDeleter(propertyName);
+                bool? res = base.NamedPropertyDeleter(ref propertyName);
                 if (res == true)
                     return res;
 
@@ -159,27 +158,27 @@ namespace Raven.Server.Documents.Patch
                     return false;
                 }
                 
-                if (objCLR.Deletes == null)
-                    objCLR.Deletes = new HashSet<string>();
+                if (ObjCLR.Deletes == null)
+                    ObjCLR.Deletes = new HashSet<string>();
 
                 var desc = GetOwnProperty(propertyName);
 
                 if (desc == null)
                     return InternalHandle.Empty;
 
-                objCLR.MarkChanged();
-                objCLR.Deletes.Add(propertyName);
-                return objCLR.OwnValues?.Remove(propertyName);
+                ObjCLR.MarkChanged();
+                ObjCLR.Deletes.Add(propertyName);
+                return ObjCLR.OwnValues?.Remove(propertyName);
             }
 
             public override V8PropertyAttributes? NamedPropertyQuery(ref string propertyName)
             {
-                V8PropertyAttributes? res = base.NamedPropertyQuery(propertyName);
+                V8PropertyAttributes? res = base.NamedPropertyQuery(ref propertyName);
                 if (res != null)
                     return res;
 
-                if (objCLR.Blittable.GetPropertyNames().Contains(propertyName))
-                    return V8PropertyAttributes.ReadWrite;
+                if (Array.IndexOf(ObjCLR.Blittable.GetPropertyNames(), propertyName) >= 0)
+                    return V8PropertyAttributes.None;
 
                 return null;
             }
@@ -193,20 +192,20 @@ namespace Raven.Server.Documents.Patch
                         jsResPush.ThrowOnError(); // TODO check if is needed here
                 }
 
-                if (objCLR.OwnValues != null)
+                if (ObjCLR.OwnValues != null)
                 {
-                    foreach (var value in objCLR.OwnValues)
+                    foreach (var value in ObjCLR.OwnValues)
                         pushKey(value.Key);
                 }
 
-                if (objCLR.Blittable == null)
+                if (ObjCLR.Blittable == null)
                     return list;
 
-                foreach (var key in objCLR.Blittable.GetPropertyNames())
+                foreach (var key in ObjCLR.Blittable.GetPropertyNames())
                 {
-                    if (objCLR.Deletes?.Contains(key) == true)
+                    if (ObjCLR.Deletes?.Contains(key) == true)
                         continue;
-                    if (objCLR.OwnValues?.ContainsKey(key)) // NOTE: This optimisation for Jint may not work for V8.Net
+                    if (ObjCLR.OwnValues?.ContainsKey(key)) // NOTE: This optimisation for Jint may not work for V8.Net
                         continue;
 
                     pushKey(key);
@@ -218,6 +217,7 @@ namespace Raven.Server.Documents.Patch
             }
 
         }
+
         public V8NativeObject GetOrCreate(InternalHandle key)
         {
             return GetOrCreate(key.AsString);
@@ -225,11 +225,11 @@ namespace Raven.Server.Documents.Patch
 
         public V8NativeObject GetOrCreate(string strKey)
         {
-            BlittableObjectProperty property; // = default;
+            BlittableObjectProperty property = null;
             if (OwnValues?.TryGetValue(strKey, out property) == true &&
                 property != null) 
             {
-                return property.Value.Object; // no need to KeepTrack() as we store objCLR
+                return property.Value.Object; // no need to KeepTrack() as we store Object
             }
 
             property = GenerateProperty(strKey);
@@ -239,7 +239,7 @@ namespace Raven.Server.Documents.Patch
             OwnValues[strKey] = property;
             Deletes?.Remove(strKey);
 
-            return property.Value.Object; // no need to KeepTrack() as we store objCLR
+            return property.Value.Object; // no need to KeepTrack() as we store Object
 
 
             BlittableObjectProperty GenerateProperty(string propertyName)
@@ -249,7 +249,7 @@ namespace Raven.Server.Documents.Patch
                 var prop = new BlittableObjectProperty(this, propertyName);
                 if (propertyIndex == -1)
                 {
-                    using (var jsValue = Engine.CreateOject())
+                    using (var jsValue = Engine.CreateObject())
                         prop.Value = jsValue;
                 }
 
@@ -268,29 +268,29 @@ namespace Raven.Server.Documents.Patch
             if (OwnValues == null)
                 return;
 
-            foreach (var val in OwnValues)
+            foreach (var val in OwnValues.Values)
             {
-                if (val.Value.BoundValue is BlittableObjectInstance boi)
+                if (val.Value.BoundObject is BlittableObjectInstance boi)
                     boi.Blittable.Dispose();
             }
         }
 
         public sealed class BlittableObjectProperty
         {
-            private readonly BlittableObjectInstance _parent;
-            private readonly string _propertyName;
+            private BlittableObjectInstance _parent;
+            private string _propertyName;
 
-            public readonly JavaScriptUtils JavaScriptUtils;
-            public readonly V8EngineEx Engine;
+            public JavaScriptUtils JavaScriptUtils;
+            public V8EngineEx Engine;
             private InternalHandle _value;
             public bool Changed;
 
-            public string Name()
+            public string Name
             {
                 get => _propertyName;
             }
 
-            protected InternalHandle Value
+            public InternalHandle Value
             {
                 get => _value;
                 set
@@ -463,11 +463,11 @@ namespace Raven.Server.Documents.Patch
                 return true;
             }
 
-            private InternalHandle GetArrayInstanceFromBlittableArray(V8Engine e, BlittableJsonReaderArray bjra, BlittableObjectInstance parent)
+            private InternalHandle GetArrayInstanceFromBlittableArray(V8Engine engine, BlittableJsonReaderArray bjra, BlittableObjectInstance parent)
             {
                 bjra.NoCache = true;
 
-                var jsArray = new e.CreateArray(Array.Empty<InternalHandle>());
+                var jsArray = new engine.CreateArray(Array.Empty<InternalHandle>());
                 for (var i = 0; i < bjra.Length; i++)
                 {
                     var json = bjra.GetValueTokenTupleByIndex(i);

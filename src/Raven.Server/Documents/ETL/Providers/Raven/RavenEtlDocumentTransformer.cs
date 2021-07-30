@@ -50,18 +50,18 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 return;
 
             if (_transformation.IsAddingAttachments)
-                _addAttachmentMethod = new ClrFunctionInstance(DocumentScript.ScriptEngine, "addAttachment", AddAttachment);
+                _addAttachmentMethod = new ClrFunctionInstance("addAttachment", AddAttachment);
 
             if (_transformation.Counters.IsAddingCounters)
             {
                 const string addCounter = Transformation.CountersTransformation.Add;
-                _addCounterMethod = new ClrFunctionInstance(DocumentScript.ScriptEngine, addCounter, AddCounter);
+                _addCounterMethod = new ClrFunctionInstance(addCounter, AddCounter);
             }
 
             if (_transformation.TimeSeries.IsAddingTimeSeries)
             {
                 const string addTimeSeries = Transformation.TimeSeriesTransformation.AddTimeSeries.Name;
-                _addTimeSeriesMethod = new ClrFunctionInstance(DocumentScript.ScriptEngine, addTimeSeries, AddTimeSeries);
+                _addTimeSeriesMethod = new ClrFunctionInstance(addTimeSeries, AddTimeSeries);
             }
         }
 

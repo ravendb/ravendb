@@ -21,9 +21,9 @@ namespace Raven.Server.Documents.Patch
 
         public override InternalHandle NamedPropertyGetter(ref string propertyName)
         {
-            if (objCLR.IsCompleted == false && propertyName == nameof(Task<int>.Result))
+            if (ObjCLR.IsCompleted == false && propertyName == nameof(Task<int>.Result))
             {
-                return GetRunningTaskResult(Engine, objCLR);
+                return GetRunningTaskResult(Engine, ObjCLR);
             }
             return base.NamedPropertyGetter(ref propertyName);
         }

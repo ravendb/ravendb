@@ -10,7 +10,7 @@ namespace Raven.Server.Documents.Patch
         {
         }
 
-        public T objCLR
+        public T ObjCLR
         {
             get { return base.Object as T; }
         }

@@ -28,7 +28,7 @@ namespace Raven.Server.Documents.Indexes.Static
         public HashSet<string> Fields = new HashSet<string>();
         public Dictionary<string, IndexFieldOptions> FieldOptions = new Dictionary<string, IndexFieldOptions>();
         private readonly JavaScriptIndexUtils _javaScriptIndexUtils;
-        private readonly V8Engine _engine;
+        private readonly V8EngineEx _engine;
         public string IndexName { get; set; }
         public V8Function MapFuncV8;
 

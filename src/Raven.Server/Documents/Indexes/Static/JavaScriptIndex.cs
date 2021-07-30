@@ -61,14 +61,14 @@ function map(name, lambda) {
             _engineJint.SetValue("loadAttachments", new ClrFunctionInstance(_engineJint, "loadAttachment", LoadAttachmentsJint));
             _engineJint.SetValue("id", new ClrFunctionInstance(_engineJint, "id", GetDocumentIdJint));
 
-            _engine.GlobalObject.SetProperty("getMetadata", new ClrFunctionInstance(_engine, "getMetadata", MetadataFor)); // for backward-compatibility only
-            _engine.GlobalObject.SetProperty("metadataFor", new ClrFunctionInstance(_engine, "metadataFor", MetadataFor));
-            _engine.GlobalObject.SetProperty("attachmentsFor", new ClrFunctionInstance(_engine, "attachmentsFor", AttachmentsFor));
-            _engine.GlobalObject.SetProperty("timeSeriesNamesFor", new ClrFunctionInstance(_engine, "timeSeriesNamesFor", TimeSeriesNamesFor));
-            _engine.GlobalObject.SetProperty("counterNamesFor", new ClrFunctionInstance(_engine, "counterNamesFor", CounterNamesFor));
-            _engine.GlobalObject.SetProperty("loadAttachment", new ClrFunctionInstance(_engine, "loadAttachment", LoadAttachment));
-            _engine.GlobalObject.SetProperty("loadAttachments", new ClrFunctionInstance(_engine, "loadAttachment", LoadAttachments));
-            _engine.GlobalObject.SetProperty("id", new ClrFunctionInstance(_engine, "id", GetDocumentId));
+            _engine.GlobalObject.SetProperty("getMetadata", new ClrFunctionInstance("getMetadata", MetadataFor)); // for backward-compatibility only
+            _engine.GlobalObject.SetProperty("metadataFor", new ClrFunctionInstance("metadataFor", MetadataFor));
+            _engine.GlobalObject.SetProperty("attachmentsFor", new ClrFunctionInstance("attachmentsFor", AttachmentsFor));
+            _engine.GlobalObject.SetProperty("timeSeriesNamesFor", new ClrFunctionInstance("timeSeriesNamesFor", TimeSeriesNamesFor));
+            _engine.GlobalObject.SetProperty("counterNamesFor", new ClrFunctionInstance("counterNamesFor", CounterNamesFor));
+            _engine.GlobalObject.SetProperty("loadAttachment", new ClrFunctionInstance("loadAttachment", LoadAttachment));
+            _engine.GlobalObject.SetProperty("loadAttachments", new ClrFunctionInstance("loadAttachment", LoadAttachments));
+            _engine.GlobalObject.SetProperty("id", new ClrFunctionInstance("id", GetDocumentId));
 
         }
 
@@ -177,7 +177,7 @@ function map(name, lambda) {
             /*var scope = CurrentIndexingScope.Current;
             scope.RegisterJavaScriptUtils(JavaScriptUtils);
 
-            return JavaScriptUtils.GetDocumentId(self, args);*/
+            return JavaScriptUtils.GetDocumentId(engine, isConstructCall, self, args);*/
         }
 
         private JsValue AttachmentsForJint(JsValue self, JsValue[] args)
@@ -187,7 +187,7 @@ function map(name, lambda) {
             /*var scope = CurrentIndexingScope.Current;
             scope.RegisterJavaScriptUtils(JavaScriptUtils);
 
-            return JavaScriptUtils.AttachmentsFor(self, args);*/
+            return JavaScriptUtils.AttachmentsFor(engine, isConstructCall, self, args);*/
         }
 
         private JsValue MetadataForJint(JsValue self, JsValue[] args)
@@ -197,7 +197,7 @@ function map(name, lambda) {
             /*var scope = CurrentIndexingScope.Current;
             scope.RegisterJavaScriptUtils(JavaScriptUtils);
 
-            return JavaScriptUtils.GetMetadata(self, args);*/
+            return JavaScriptUtils.GetMetadata(engine, isConstructCall, self, args);*/
         }
 
         private JsValue TimeSeriesNamesForJint(JsValue self, JsValue[] args)
@@ -207,7 +207,7 @@ function map(name, lambda) {
             /*var scope = CurrentIndexingScope.Current;
             scope.RegisterJavaScriptUtils(JavaScriptUtils);
 
-            return JavaScriptUtils.GetTimeSeriesNamesFor(self, args);*/
+            return JavaScriptUtils.GetTimeSeriesNamesFor(engine, isConstructCall, self, args);*/
         }
 
         private JsValue CounterNamesForJint(JsValue self, JsValue[] args)
@@ -217,7 +217,7 @@ function map(name, lambda) {
             /*var scope = CurrentIndexingScope.Current;
             scope.RegisterJavaScriptUtils(JavaScriptUtils);
 
-            return JavaScriptUtils.GetCounterNamesFor(self, args);*/
+            return JavaScriptUtils.GetCounterNamesFor(engine, isConstructCall, self, args);*/
         }
 
         private JsValue LoadAttachmentJint(JsValue self, JsValue[] args)
@@ -227,7 +227,7 @@ function map(name, lambda) {
             /*var scope = CurrentIndexingScope.Current;
             scope.RegisterJavaScriptUtils(JavaScriptUtils);
 
-            return JavaScriptUtils.LoadAttachment(self, args);*/
+            return JavaScriptUtils.LoadAttachment(engine, isConstructCall, self, args);*/
         }
 
         private JsValue LoadAttachmentsJint(JsValue self, JsValue[] args)
@@ -237,64 +237,64 @@ function map(name, lambda) {
             /*var scope = CurrentIndexingScope.Current;
             scope.RegisterJavaScriptUtils(JavaScriptUtils);
 
-            return JavaScriptUtils.LoadAttachments(self, args);*/
+            return JavaScriptUtils.LoadAttachments(engine, isConstructCall, self, args);*/
         }
 
 
-        private InternalHandle GetDocumentId(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+        private static InternalHandle GetDocumentId(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
             var scope = CurrentIndexingScope.Current;
             scope.RegisterJavaScriptUtils(JavaScriptUtils);
 
-            return JavaScriptUtils.GetDocumentId(self, args);
+            return JavaScriptUtils.GetDocumentId(engine, isConstructCall, self, args);
         }
 
-        private InternalHandle AttachmentsFor(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+        private static InternalHandle AttachmentsFor(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
             var scope = CurrentIndexingScope.Current;
             scope.RegisterJavaScriptUtils(JavaScriptUtils);
 
-            return JavaScriptUtils.AttachmentsFor(self, args);
+            return JavaScriptUtils.AttachmentsFor(engine, isConstructCall, self, args);
         }
 
-        private InternalHandle MetadataFor(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+        private static InternalHandle MetadataFor(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
             var scope = CurrentIndexingScope.Current;
             scope.RegisterJavaScriptUtils(JavaScriptUtils);
 
-            return JavaScriptUtils.GetMetadata(self, args);
+            return JavaScriptUtils.GetMetadata(engine, isConstructCall, self, args);
         }
 
-        private InternalHandle TimeSeriesNamesFor(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+        private static InternalHandle TimeSeriesNamesFor(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
             var scope = CurrentIndexingScope.Current;
             scope.RegisterJavaScriptUtils(JavaScriptUtils);
 
-            return JavaScriptUtils.GetTimeSeriesNamesFor(self, args);
+            return JavaScriptUtils.GetTimeSeriesNamesFor(engine, isConstructCall, self, args);
         }
 
-        private InternalHandle CounterNamesFor(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+        private static InternalHandle CounterNamesFor(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
             var scope = CurrentIndexingScope.Current;
             scope.RegisterJavaScriptUtils(JavaScriptUtils);
 
-            return JavaScriptUtils.GetCounterNamesFor(self, args);
+            return JavaScriptUtils.GetCounterNamesFor(engine, isConstructCall, self, args);
         }
 
-        private InternalHandle LoadAttachment(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+        private static InternalHandle LoadAttachment(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
             var scope = CurrentIndexingScope.Current;
             scope.RegisterJavaScriptUtils(JavaScriptUtils);
 
-            return JavaScriptUtils.LoadAttachment(self, args);
+            return JavaScriptUtils.LoadAttachment(engine, isConstructCall, self, args);
         }
 
-        private InternalHandle LoadAttachments(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+        private static InternalHandle LoadAttachments(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
             var scope = CurrentIndexingScope.Current;
             scope.RegisterJavaScriptUtils(JavaScriptUtils);
 
-            return JavaScriptUtils.LoadAttachments(self, args);
+            return JavaScriptUtils.LoadAttachments(engine, isConstructCall, self, args);
         }
     }
 
@@ -474,10 +474,10 @@ function map(name, lambda) {
             _engineJint.SetValue("tryConvertToNumber", new ClrFunctionInstance(_engineJint, "tryConvertToNumber", TryConvertToNumberJint));
             _engineJint.SetValue("recurse", new ClrFunctionInstance(_engineJint, "recurse", RecurseJint));
 
-            _engine.GlobalObject.SetProperty("load", new ClrFunctionInstance(_engine, "load", LoadDocument));
-            _engine.GlobalObject.SetProperty("cmpxchg", new ClrFunctionInstance(_engine, "cmpxchg", LoadCompareExchangeValue));
-            _engine.GlobalObject.SetProperty("tryConvertToNumber", new ClrFunctionInstance(_engine, "tryConvertToNumber", TryConvertToNumber));
-            _engine.GlobalObject.SetProperty("recurse", new ClrFunctionInstance(_engine, "recurse", Recurse));
+            _engine.GlobalObject.SetProperty("load", new ClrFunctionInstance("load", LoadDocument));
+            _engine.GlobalObject.SetProperty("cmpxchg", new ClrFunctionInstance("cmpxchg", LoadCompareExchangeValue));
+            _engine.GlobalObject.SetProperty("tryConvertToNumber", new ClrFunctionInstance("tryConvertToNumber", TryConvertToNumber));
+            _engine.GlobalObject.SetProperty("recurse", new ClrFunctionInstance("recurse", Recurse));
         }
 
         private List<MapMetadata> InitializeEngine(IndexDefinition definition, List<string> maps, string mapCode)
@@ -662,7 +662,7 @@ function map(name, lambda) {
         }
 
 
-        private InternalHandle Recurse(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+        private static InternalHandle Recurse(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
             if (args.Length != 2)
             {
@@ -678,7 +678,7 @@ function map(name, lambda) {
             return new RecursiveJsFunction(_engine, item, func).Execute();
         }
 
-        private InternalHandle TryConvertToNumber(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+        private static InternalHandle TryConvertToNumber(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
             if (args.Length != 1)
             {
@@ -704,7 +704,7 @@ function map(name, lambda) {
             return jsRes.Set(DynamicJsNull.ImplicitNull._);
         }
 
-        private InternalHandle LoadDocument(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+        private static InternalHandle LoadDocument(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
             if (args.Length != 2)
             {
@@ -728,7 +728,7 @@ function map(name, lambda) {
             return jsRes.Set(DynamicJsNull.ImplicitNull._);
         }
 
-        private InternalHandle LoadCompareExchangeValue(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+        private static InternalHandle LoadCompareExchangeValue(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
             if (args.Length != 1)
                 throw new ArgumentException("The cmpxchg(key) method expects one argument, but got: " + args.Length);
@@ -780,7 +780,7 @@ function map(name, lambda) {
 
                     case DynamicNullObject dno: {
                         var dynamicNull = dno.IsExplicitNull ? DynamicJsNull.ExplicitNull : DynamicJsNull.ImplicitNull;
-                        return jsRes.Set((v8EngineEx)engine.CreateObjectBinder(dynamicNull)._);
+                        return jsRes.Set(dynamicNull._);
                     }
 
                     case DynamicBlittableJson dbj: {

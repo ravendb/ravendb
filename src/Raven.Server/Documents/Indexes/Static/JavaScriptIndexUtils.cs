@@ -162,9 +162,9 @@ namespace Raven.Server.Documents.Indexes.Static.Utils
         }
 
         public readonly JavaScriptUtils JavaScriptUtils;
-        public readonly Engine Engine;
+        public readonly V8EngineEx Engine;
 
-        public JavaScriptIndexUtils(JavaScriptUtils javaScriptUtils) : base(javaScriptUtils)
+        public JavaScriptIndexUtils(JavaScriptUtils javaScriptUtils)
         {
             JavaScriptUtils = javaScriptUtils;
             Engine = JavaScriptUtils.Engine;

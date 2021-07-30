@@ -45,11 +45,6 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
         {
             public CustomBinder() : base()
             {}
-
-            public override InternalHandle NamedPropertyGetter(ref string propertyName)
-            {
-                return objCLR.NamedPropertyGetter(Engine, ref propertyName);
-            }
         }
     }
 }

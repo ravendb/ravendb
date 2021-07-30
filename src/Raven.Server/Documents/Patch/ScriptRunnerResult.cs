@@ -25,14 +25,12 @@ namespace Raven.Server.Documents.Patch
         {
             if (Instance.BoundObject != null && Instance.BoundObject is BlittableObjectInstance b)
                 return b.GetOrCreate(propertyName);
-            var parent = Instance.Object;
-
-            using (var o = parent.GetProperty(propertyName))
+            using (var o = Instance.GetProperty(propertyName))
             {
                 if (o.IsUndefined || o.IsNull)
                 {
                     o.Set(_parent.ScriptEngine.CreateObject());
-                    parent.SetProperty(propertyName, o);
+                    Instance.SetProperty(propertyName, o);
                 }
                 return o.Object; // no need to KeepTrack() as we return Handle
             }

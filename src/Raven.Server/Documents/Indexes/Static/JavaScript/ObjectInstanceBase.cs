@@ -9,32 +9,32 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
     {
         protected DictionaryDisposeValueIHV8<string> _properties = new DictionaryDisposeValueIHV8<string>();
 
-        JavaScriptUtils JavaScriptUtils;
-
-        public ObjectInstanceBase(JavaScriptUtils javaScriptUtils = null)
+        public ObjectInstanceBase()
         {
-            JavaScriptUtils = javaScriptUtils;
         }
 
         public abstract class CustomBinder<T> : ObjectBinderEx<T>
         where T : class
         {
 
-            public abstract InternalHandle NamedPropertyGetter(ref string propertyName);
+            public virtual InternalHandle NamedPropertyGetter(ref string propertyName)
+            {
+                return ObjCLR.NamedPropertyGetter(Engine, ref propertyName);
+            }
 
             public override V8PropertyAttributes? NamedPropertyQuery(ref string propertyName)
             {
-                if (objCLR._properties.Keys().Contains(propertyName))
+                if (ObjCLR._properties.Keys().Contains(propertyName))
                     return V8PropertyAttributes.Locked | V8PropertyAttributes.DontEnum;
 
                 return null;
             }
 
-            /*public override InternalHandle NamedPropertyEnumerator()
+            public override InternalHandle NamedPropertyEnumerator()
             {
                 //throw new NotSupportedException();
-                return Engine.CreateArrayWithDisposal(objCLR._properties.Keys().Select((string propertyName) => Engine.CreateValue(propertyName)));
-            }*/
+                return Engine.CreateArrayWithDisposal(ObjCLR._properties.Keys().Select((string propertyName) => Engine.CreateValue(propertyName)));
+            }
 
         }
     }

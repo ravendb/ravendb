@@ -57,20 +57,17 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             var engine = DocumentScript.ScriptEngine;
             base.Initialize(debugMode);
 
-            DocumentScript.ScriptEngine.GlobalObject.SetProperty(Transformation.LoadTo, new ClrFunctionInstance(DocumentScript.ScriptEngine, Transformation.LoadTo, LoadToFunctionTranslator));
+            DocumentScript.ScriptEngine.GlobalObject.SetProperty(Transformation.LoadTo, new ClrFunctionInstance(Transformation.LoadTo, LoadToFunctionTranslator));
 
             foreach (var table in LoadToDestinations)
             {
-                using (var jsTable = engine.CreateValue(table))
-                {
-                    var name = Transformation.LoadTo + table;
-                    DocumentScript.ScriptEngine.GlobalObject.SetProperty(name, new ClrFunctionInstance(DocumentScript.ScriptEngine, name,
-                        (engine, isConstructCall, self, args) => LoadToFunctionTranslator(engine, isConstructCall, jsTable, args)));
-                }
+                var name = Transformation.LoadTo + table;
+                DocumentScript.ScriptEngine.GlobalObject.SetProperty(name, new ClrFunctionInstance(name,
+                    (engine, isConstructCall, self, args) => LoadToFunctionTranslator(engine, table, args)));
             }
 
-            DocumentScript.ScriptEngine.GlobalObject.SetProperty("partitionBy", new ClrFunctionInstance(DocumentScript.ScriptEngine, "partitionBy", PartitionBy));
-            DocumentScript.ScriptEngine.GlobalObject.SetProperty("noPartition", new ClrFunctionInstance(DocumentScript.ScriptEngine, "noPartition", NoPartition));
+            DocumentScript.ScriptEngine.GlobalObject.SetProperty("partitionBy", new ClrFunctionInstance("partitionBy", PartitionBy));
+            DocumentScript.ScriptEngine.GlobalObject.SetProperty("noPartition", new ClrFunctionInstance("noPartition", NoPartition));
 
             if (_config.CustomPartitionValue != null)
             {
@@ -146,7 +143,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             return table;
         }
 
-        private InternalHandle LoadToFunctionTranslator(V8EngineEx engine, bool isConstructCall, InternalHandle self, InternalHandle[] args)
+        private InternalHandle LoadToFunctionTranslator(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args)
         {
             var methodSignature = "loadTo(name, key, obj)";
 
@@ -162,10 +159,26 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             if (args[2].IsObject == false)
                 ThrowInvalidScriptMethodCall($"{methodSignature} third argument must be an object");
 
-            return LoadToFunctionTranslatorInternal(engine, isConstructCall, args[0].AsString, args[1], args[2], methodSignature);
+            return LoadToFunctionTranslatorInternal(engine, args[0].AsString, args[1], args[2], methodSignature);
         }
 
-        private InternalHandle LoadToFunctionTranslatorInternal(V8EngineEx engine, bool isConstructCall, string name, InternalHandle key, InternalHandle obj, string methodSignature)
+        private InternalHandle LoadToFunctionTranslator(V8EngineEx engine, string name, InternalHandle[] args)
+        {
+            var methodSignature = $"loadTo{name}(key, obj)";
+
+            if (args.Length != 2)
+                ThrowInvalidScriptMethodCall($"{methodSignature} must be called with exactly 2 parameters");
+
+            if (args[1].IsObject == false)
+                ThrowInvalidScriptMethodCall($"{methodSignature} argument 'obj' must be an object");
+
+            if (args[0].IsObject == false)
+                ThrowInvalidScriptMethodCall($"{methodSignature} argument 'key' must be an object");
+
+            return LoadToFunctionTranslatorInternal(engine, name, args[0], args[1], methodSignature);
+        }
+
+        private InternalHandle LoadToFunctionTranslatorInternal(V8EngineEx engine, string name, InternalHandle key, InternalHandle obj, string methodSignature)
         {
             InternalHandle jsRes;
             if (key.HasOwnProperty(PartitionKeys) == false)
@@ -215,18 +228,16 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                         }
                     }
                 }
+                LoadToFunction(name, sb.ToString(), result, partitions);
+                return jsRes.Set(result.Instance);
             }
-
-            LoadToFunction(name, sb.ToString(), result, partitions);
-            return jsRes.Set(result.Instance);
         }
 
-        private InternalHandle PartitionBy(V8EngineEx engine, bool isConstructCall, InternalHandle self, InternalHandle[] args)
+        private static InternalHandle PartitionBy(V8EngineEx engine, bool isConstructCall, InternalHandle self, InternalHandle[] args)
         {
             if (args.Length == 0)
                 ThrowInvalidScriptMethodCall("partitionBy(args) cannot be called with 0 arguments");
 
-            var engine = DocumentScript.ScriptEngine;
             InternalHandle jsArr;
             if (args.Length == 1 && args[0].IsArray == false)
             {
@@ -253,12 +264,16 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             return o;
         }
 
+        private static InternalHandle NoPartition(OlapDocumentTransformer owner, V8EngineEx engine, bool isConstructCall, InternalHandle self, InternalHandle[] args)
+        {
+            return owner.NoPartition(engine, isConstructCall, self, args);
+        }
+
         private InternalHandle NoPartition(V8EngineEx engine, bool isConstructCall, InternalHandle self, InternalHandle[] args)
         {
             if (args.Length != 0)
                 ThrowInvalidScriptMethodCall("noPartition() must be called with 0 parameters");
 
-            var engine = DocumentScript.ScriptEngine;
             if (_noPartition == null)
             {
                 _noPartition = engine.CreateObject();

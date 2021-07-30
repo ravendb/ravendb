@@ -114,7 +114,7 @@ namespace Raven.Server.Extensions
             return new DisposableAction(maxStatements.Change(oldMaxStatements));
         }*/ 
 
-        /*public static IDisposable ChangeMaxStatements(this V8Engine engine, int value)
+        public static IDisposable ChangeMaxStatements(this V8Engine engine, int value)
         {
             void DoNothing()
             {}
@@ -125,7 +125,7 @@ namespace Raven.Server.Extensions
         public static IDisposable DisableMaxStatements(this V8Engine engine)
         {
             return ChangeMaxStatements(engine, int.MaxValue);
-        }*/
+        }
 
         public static void ResetCallStack(this V8Engine engine)
         {

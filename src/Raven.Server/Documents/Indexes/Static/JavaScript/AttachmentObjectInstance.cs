@@ -64,7 +64,7 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
                 else if (propertyName == nameof(IAttachmentObject.Size))
                     value = engine.CreateValue(_attachment.Size);
                 else if (propertyName == GetContentAsStringMethodName)
-                    value = new ClrFunctionInstance(engine, GetContentAsStringMethodName, GetContentAsString);
+                    value = new ClrFunctionInstance(GetContentAsStringMethodName, GetContentAsString);
 
                 if (value.IsEmpty() == false)
                     _properties[propertyName].Set(value);
@@ -76,10 +76,10 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
             return value;
         }
 
-        private InternalHandle GetContentAsString(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+        private static InternalHandle GetContentAsString(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
             var attachment = (AttachmentObjectInstance)self.BoundObject;
-            if (bo == null)
+            if (attachment == null)
                 throw new InvalidOperationException($"GetContentAsString: BoundObject is null.");
             return attachment.GetContentAsString(engine, args);
         }
@@ -88,11 +88,6 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
         {
             public CustomBinder() : base()
             {}
-
-            public override InternalHandle NamedPropertyGetter(ref string propertyName)
-            {
-                return objCLR.NamedPropertyGetter(Engine, ref propertyName);
-            }
         }
 
     }
