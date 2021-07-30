@@ -124,24 +124,47 @@
                     <div class="toggle toggle-primary margin-top">
                         <input id="limitRevisions" class="styled" type="checkbox" data-bind="checked: limitRevisions">
                         <label for="limitRevisions">
-                            Limit # of revisions
+                            Limit # of revisions to keep
                         </label>
                     </div>
                     <div class="toggle-margin" data-bind="collapse: limitRevisions, validationElement: minimumRevisionsToKeep">
-                        <small>Number of revisions to keep</small>
-                        <input type="number" min="0" class="form-control" placeholder="0" data-bind="numericInput: minimumRevisionsToKeep" />
+                        <input type="number" min="0" class="form-control" placeholder="Enter number of revisions to keep" data-bind="numericInput: minimumRevisionsToKeep" />
+                        <div class="text-warning bg-warning padding padding-xs" data-bind="collapse: showLimitRevisionsWarning">
+                            <div class="flex-horizontal">
+                                <small class="flex-start"><i class="icon-warning"></i></small>
+                                <small class="margin-left margin-left-sm" data-bind="html: limitWarningHtml()"></small>
+                    </div>
+                        </div>
                     </div>
                     <div class="toggle toggle-primary margin-top">
                         <input id="limitRevisionsByAge" class="styled" type="checkbox" data-bind="checked: limitRevisionsByAge">
                         <label for="limitRevisionsByAge">
-                            Limit # of revisions by age
+                            Limit # of revisions to keep by age
                         </label>
                     </div>
                     <div id="limitRevisionsParametersByAge" class="toggle-margin collapse" data-bind="collapse: limitRevisionsByAge, validationElement: minimumRevisionAgeToKeep">
                         <small>Retention time</small>
                         <input type="text" class="form-control" data-bind="durationPicker: minimumRevisionAgeToKeep, durationPickerOptions: { showDays: true, showSeconds: true }" />
+                        <div class="text-warning bg-warning padding padding-xs" data-bind="collapse: showLimitRevisionsByAgeWarning">
+                            <div class="flex-horizontal">
+                                <small class="flex-start"><i class="icon-warning"></i></small>
+                                <small class="margin-left margin-left-sm" data-bind="html: limitWarningHtml(true)"></small>
                     </div>
-                    <div class="bg-info padding padding-xs small margin-top" data-bind="visible: deleteDescription">
+                        </div>
+                    </div>
+                    <div class="margin-top" data-bind="collapse: limitRevisions() || limitRevisionsByAge()">
+                        <div class="toggle toggle-primary" data-bind="disable: true">
+                            <input id="numberOfRevisionsToDelete" class="styled" type="checkbox"
+                                   data-bind="checked: setMaxRevisionsToDelete">
+                            <label for="numberOfRevisionsToDelete">
+                                Set # of revisions to delete upon document update 
+                            </label>
+                        </div>
+                        <div class="toggle-margin" data-bind="collapse: setMaxRevisionsToDelete, validationElement: maxRevisionsToDeleteUponUpdate">
+                            <input type="number" min="0" class="form-control" placeholder="Enter max revisions to delete (suggested: 100)" data-bind="numericInput: maxRevisionsToDeleteUponUpdate" />
+                        </div>
+                    </div>
+                    <div class="bg-info padding padding-xs small margin-top margin-top-lg" data-bind="visible: deleteDescription">
                         <div data-bind="html: deleteDescription"></div>
                     </div>
                     <div class="bg-info padding padding-xs margin-top small" data-bind="visible: humaneRetentionDescription">
@@ -175,6 +198,9 @@
                 <li data-bind="visible: purgeOnDelete"><i class="icon-empty-set"></i><span>Purge revisions on document delete</span></li>
                 <li data-bind="visible: limitRevisions"><i class="icon-documents"></i><span>Number of revisions to keep: <span data-bind="text: minimumRevisionsToKeep"></span></span></li>
                 <li data-bind="visible: limitRevisionsByAge"><i class="icon-clock"></i><span>Retention time: <span data-bind="text: $root.formattedDurationObservable(minimumRevisionAgeToKeep)"></span></span></li>
+                <li data-bind="visible: (limitRevisions() || limitRevisionsByAge()) && maxRevisionsToDeleteUponUpdate()">
+                    <i class="icon-trash"></i><span>Revisions to delete on update: <span data-bind="text: maxRevisionsToDeleteUponUpdate"></span></span>
+                </li>
             </ul>
         </div>
         <div class="actions-container">

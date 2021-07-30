@@ -1,5 +1,6 @@
 ﻿using System;
 using System.ComponentModel;
+using Raven.Server.Exceptions;
 using Sparrow.LowMemory;
 using Sparrow.Platform;
 using Sparrow.Server.Exceptions;
@@ -16,6 +17,7 @@ namespace Raven.Server.Utils
         {
             return IsOutOfMemory(e) == false &&
                    e is OperationCanceledException == false &&
+                   e is IndexAnalyzerException == false &&
                    IsRavenDiskFullException(e) == false;
         }
 
