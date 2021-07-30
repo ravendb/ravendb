@@ -8,6 +8,7 @@ using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -220,7 +221,7 @@ loadToOrders(orderData);
         [Fact]
         public void GetSubscriptionTaskInfo()
         {
-            var subscriptionOption = new SubscriptionCreationOptions<Query.Order>
+            var subscriptionOption = new SubscriptionCreationOptions<Order>
             {
                 Name  = "sub",
                 Filter = x => x.Employee.StartsWith("e"),

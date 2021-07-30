@@ -62,18 +62,18 @@ namespace SlowTests.Tests.Queries
             }
         }
 
-        public class Order
+        private class Order
         {
             public Money Value;
         }
 
-        public class Money
+        private class Money
         {
             public string Currency;
             public decimal Amount;
         }
 
-        public class MoneyConverter : JsonConverter
+        private class MoneyConverter : JsonConverter
         {
             public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
             {

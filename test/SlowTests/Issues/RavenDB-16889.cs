@@ -154,7 +154,9 @@ namespace SlowTests.Issues
 
         private class Result
         {
+#pragma warning disable 649
             public IDictionary TagsResult;
+#pragma warning restore 649
         }
 
         [Fact]
@@ -181,7 +183,9 @@ namespace SlowTests.Issues
 
         private class UserTestResult
         {
+#pragma warning disable 649
             public int Count;
+#pragma warning restore 649
         }
     }
 }
