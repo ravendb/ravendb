@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Indexes;
@@ -15,7 +16,7 @@ namespace SlowTests.MailingList
         {
         }
 
-        
+
         private class User
         {
             public string Name;
@@ -31,11 +32,11 @@ namespace SlowTests.MailingList
             public AllowedUsers()
             {
                 Map = users => from user in users
-                    where user.Banned == false
-                    select new
-                    {
-                        user.Name
-                    };
+                               where user.Banned == false
+                               select new
+                               {
+                                   user.Name
+                               };
             }
         }
 
@@ -57,7 +58,7 @@ namespace SlowTests.MailingList
                     {
                         Name = "karmel",
                         Banned = false
-                    },"foo/bar");
+                    }, "foo/bar");
 
                     session.SaveChanges();
                 }
@@ -80,7 +81,7 @@ namespace SlowTests.MailingList
                     {
                         Name = "karmel",
                         Banned = true
-                    },"foo/bar");
+                    }, "foo/bar");
 
                     session.SaveChanges();
                 }
@@ -109,13 +110,13 @@ namespace SlowTests.MailingList
                     {
                         Name = "karmel",
                         Banned = true
-                    },"foo/bar/2");
+                    }, "foo/bar/2");
 
                     session.SaveChanges();
                 }
 
                 WaitForIndexing(store);
-                Assert.False(index.IndexPersistence.HasWriter);
+                Assert.True(SpinWait.SpinUntil(() => index.IndexPersistence.HasWriter == false, TimeSpan.FromSeconds(15)));
 
                 using (var session = store.OpenSession())
                 {
