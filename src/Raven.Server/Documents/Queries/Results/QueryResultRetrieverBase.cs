@@ -82,7 +82,7 @@ namespace Raven.Server.Documents.Queries.Results
             _blittableTraverser = reduceResults ? BlittableJsonTraverser.FlatMapReduceResults : BlittableJsonTraverser.Default;
         }
 
-    
+
 
         protected virtual void ValidateFieldsToFetch(FieldsToFetch fieldsToFetch)
         {
@@ -649,11 +649,17 @@ namespace Raven.Server.Documents.Queries.Results
                 {
                     if (luceneDoc != null)
                     {
-                        var field = luceneDoc.GetField(fieldToFetch.QueryField.SourceAlias);
-                        if (field != null)
+                        var fields = luceneDoc.GetFields(fieldToFetch.QueryField.SourceAlias);
+                        if (fields != null && fields.Length > 0)
                         {
-                            var fieldValue = ConvertType(_context, field, GetFieldType(field.Name, luceneDoc), state);
-                            _loadedDocumentIds.Add(fieldValue.ToString());
+                            foreach (var field in fields)
+                            {
+                                if (field == null)
+                                    continue;
+
+                                var fieldValue = ConvertType(_context, field, GetFieldType(field.Name, luceneDoc), state);
+                                _loadedDocumentIds.Add(fieldValue.ToString());
+                            }
                         }
                     }
                 }
@@ -848,7 +854,7 @@ namespace Raven.Server.Documents.Queries.Results
                 _includeRevisionsCommand?.AddRange(run.IncludeRevisionsChangeVectors);
                 _includeRevisionsCommand?.AddRevisionByDateTimeBefore(run.IncludeRevisionByDateTimeBefore, documentId);
                 _includeCompareExchangeValuesCommand?.AddRange(run.CompareExchangeValueIncludes);
-                
+
 
                 if (result.IsNull)
                     return null;
