@@ -586,6 +586,8 @@ namespace Sparrow.LowMemory
             };
         }
 
+        private static bool _reportedQueryJobObjectFailure = false;
+
         private static unsafe MemoryInfoResult GetMemoryInfoWindows(Process process, bool extended)
         {
             // windows
@@ -621,8 +623,12 @@ namespace Sparrow.LowMemory
                     out int limitsOutputSize) == false || 
                 limitsOutputSize != sizeof(JOBOBJECT_EXTENDED_LIMIT_INFORMATION))
             {
-                if (Logger.IsInfoEnabled)
-                    Logger.Info($"Failure when trying to query job object information info from Windows, error code is: {Marshal.GetLastWin32Error()}. Output size: {limitsOutputSize} instead of {sizeof(JOBOBJECT_EXTENDED_LIMIT_INFORMATION)}!");
+                if (_reportedQueryJobObjectFailure == false && Logger.IsInfoEnabled)
+                {
+                    _reportedQueryJobObjectFailure = true;
+                    Logger.Info(
+                        $"Failure when trying to query job object information info from Windows, error code is: {Marshal.GetLastWin32Error()}. Output size: {limitsOutputSize} instead of {sizeof(JOBOBJECT_EXTENDED_LIMIT_INFORMATION)}!");
+                }
             }
             else
             {
