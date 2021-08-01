@@ -171,6 +171,96 @@ namespace SlowTests.Issues
             }
         }
 
+        [Fact]
+        public async Task Can_project_when_mixed_stored_options_in_index()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var index = new UserIndexPartialStore();
+                await index.ExecuteAsync(store);
+
+                const string name = "Grisha";
+                const string lastName = "Kotler";
+                string userId;
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var user = new User
+                    {
+                        Name = name,
+                        LastName = lastName
+                    };
+                    await session.StoreAsync(user);
+                    await session.SaveChangesAsync();
+
+                    userId = user.Id;
+                }
+
+                WaitForIndexing(store);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var users = await session.Query<User, UserIndexPartialStore>()
+                        .Statistics(out var stats)
+                        .Where(x => x.Name == name)
+                        .Select(user => new
+                        {
+                            user.Name,
+                            user.LastName
+                        })
+                        .ToListAsync();
+
+                    Assert.Equal(1, stats.TotalResults);
+                    Assert.Equal(0, stats.SkippedResults);
+                    Assert.Equal(1, users.Count);
+                    Assert.Equal(name, users[0].Name);
+                    Assert.Equal(lastName, users[0].LastName);
+                }
+
+                await store.Maintenance.SendAsync(new StopIndexOperation(index.IndexName));
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.Delete(userId);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var users = await session.Query<User, UserIndexPartialStore>()
+                        .Statistics(out var stats)
+                        .Where(x => x.Name == name)
+                        .Select(user => new
+                        {
+                            user.Name, // stored field
+                            user.LastName // not stored field
+                        })
+                        .ToListAsync();
+
+                    Assert.Equal(1, stats.TotalResults);
+                    Assert.Equal(1, stats.SkippedResults);
+                    Assert.Equal(0, users.Count);
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var users = await session.Query<User, UserIndexPartialStore>()
+                        .Statistics(out var stats)
+                        .Where(x => x.Name == name)
+                        .Select(user => new
+                        {
+                            user.Name // stored field
+                        })
+                        .ToListAsync();
+
+                    Assert.Equal(1, stats.TotalResults);
+                    Assert.Equal(0, stats.SkippedResults);
+                    Assert.Equal(1, users.Count);
+                    Assert.Equal(name, users[0].Name);
+                }
+            }
+        }
+
         private class UserIndex : AbstractIndexCreationTask<User>
         {
             public UserIndex()
@@ -182,6 +272,21 @@ namespace SlowTests.Issues
                     };
 
                 StoreAllFields(FieldStorage.Yes);
+            }
+        }
+
+        private class UserIndexPartialStore : AbstractIndexCreationTask<User>
+        {
+            public UserIndexPartialStore()
+            {
+                Map = users => from user in users
+                    select new
+                    {
+                        user.Name,
+                        user.LastName
+                    };
+
+                Store(x => x.Name, FieldStorage.Yes);
             }
         }
     }
