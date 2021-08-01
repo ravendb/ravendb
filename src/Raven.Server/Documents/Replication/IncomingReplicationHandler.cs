@@ -1380,7 +1380,7 @@ namespace Raven.Server.Documents.Replication
                                  _replicationInfo.ReplicatedAttachmentStreams.Count == handledAttachmentStreams.Count,
                         "We should handle all attachment streams during WriteAttachment.");
 
-                    Debug.Assert(string.IsNullOrEmpty(context.LastDatabaseChangeVector) == false);
+                    Debug.Assert(string.IsNullOrEmpty(context.LastDatabaseChangeVector) == false, $"database: {context.DocumentDatabase.Name}; context.LastDatabaseChangeVector = {context.LastDatabaseChangeVector ?? "null"};");
 
                     // instead of : SetLastReplicatedEtagFrom -> _incoming.ConnectionInfo.SourceDatabaseId, _lastEtag , we will store in context and write once right before commit (one time instead of repeating on all docs in the same Tx)
                     if (context.LastReplicationEtagFrom == null)
