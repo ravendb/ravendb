@@ -715,15 +715,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 });
                 var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-                var value = WaitForValue(() =>
-                {
-                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
-                    return getPeriodicBackupResult.Status?.LastEtag;
-                }, 1);
-                Assert.Equal(1, value);
-
                 // restore the database with a different name
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
 
