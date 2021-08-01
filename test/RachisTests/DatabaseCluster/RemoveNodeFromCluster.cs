@@ -364,6 +364,9 @@ namespace RachisTests.DatabaseCluster
             }.Initialize())
             {
                 var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(dbName));
+                Assert.True(record != null, $"record is null: {GetRaftHistory(removed)}");
+                Assert.True(record.Topology != null, $"topology is null: {GetRaftHistory(removed)}");
+                
                 Assert.Equal(1, record.Topology.Count);
                 Assert.Equal(1, record.Topology.ReplicationFactor);
 
