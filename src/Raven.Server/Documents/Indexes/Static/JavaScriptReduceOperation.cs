@@ -173,7 +173,7 @@ namespace Raven.Server.Documents.Indexes.Static
                         {
                             jsRes.ThrowOnError(); // TODO check if is needed here
                             if (jsRes.IsObject == false)
-                                throw new JavaScriptIndexFuncException($"Reduce result is not object: {ReduceString}", jsRes);
+                                throw new JavaScriptIndexFuncException($"Failed to execute {ReduceString}", new Exception($"Reduce result is not object: {jsRes.ToString()}"));
                             jsResObj = jsRes.Object; // no need to KeepTrack() as we store Handle
                         }
                     }
@@ -218,7 +218,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         private InternalHandle ConstructGrouping(List<BlittableJsonReaderObject> values)
         {
-            var result = new EngineV8.CreateObject();
+            var result = EngineV8.CreateObject();
             result.SetProperty("values", ConstructValues());
             result.SetProperty("key", ConstructKey());
 
@@ -248,7 +248,7 @@ namespace Raven.Server.Documents.Indexes.Static
                     if (index != -1)
                     {
                         BlittableJsonReaderObject.PropertyDetails prop = default;
-                        values[0].GetPropertyByIndex(index, prop);
+                        values[0].GetPropertyByIndex(index, ref prop);
 
                         var propertyName = groupByField.Name;
                         if (groupByField is JsNestedField jsnf)
@@ -258,14 +258,14 @@ namespace Raven.Server.Documents.Indexes.Static
                         using (var jsValue = value switch 
                             {
                                 BlittableJsonReaderObject bjro => ((Func<BlittableJsonReaderObject, InternalHandle>)((BlittableJsonReaderObject bjro) => {
-                                    var boi = new BlittableObjectInstance(this, null, bjro, null, null, null);
+                                    var boi = new BlittableObjectInstance(JavaScriptUtilsV8, null, bjro, null, null, null);
                                     return jsRes.Set(boi.CreateObjectBinder()._); // maybe better move to FromObject?
-                                }))(),
+                                }))(bjro),
                                 Document doc => ((Func<Document, InternalHandle>)((Document doc) => {
-                                    var boi = new BlittableObjectInstance(this, null, doc.Data, doc);
+                                    var boi = new BlittableObjectInstance(JavaScriptUtilsV8, null, doc.Data, doc);
                                     return jsRes.Set(boi.CreateObjectBinder()._); // maybe better  move to FromObject?
-                                }))(),
-                                LazyNumberValue lnv => this.CreateValue(lnv.ToDouble(CultureInfo.InvariantCulture)), // maybe better  move to FromObject?
+                                }))(doc),
+                                LazyNumberValue lnv => EngineV8.CreateValue(lnv.ToDouble(CultureInfo.InvariantCulture)), // maybe better  move to FromObject?
                             _ =>  EngineV8.FromObject(value)
                             }
                         )
@@ -393,7 +393,7 @@ namespace Raven.Server.Documents.Indexes.Static
                             path = GetPropertyPath(me).ToArray();
 
                         var propertyName = property.GetKey(Engine);
-                        cur.Add(CreateField(propertyName.AsString, path));
+                        cur.Add(CreateField(propertyName.AsString(), path));
                     }
                 }
 

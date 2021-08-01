@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using V8.Net;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Extensions;
 
 namespace Raven.Server.Documents.Indexes.Static.JavaScript
 {
@@ -13,18 +15,20 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
         {
         }
 
+        public abstract InternalHandle NamedPropertyGetter(V8EngineEx engine, ref string propertyName);
+
         public abstract class CustomBinder<T> : ObjectBinderEx<T>
-        where T : class
+        where T : ObjectInstanceBase
         {
 
             public virtual InternalHandle NamedPropertyGetter(ref string propertyName)
             {
-                return ObjCLR.NamedPropertyGetter(Engine, ref propertyName);
+                return ObjCLR.NamedPropertyGetter((V8EngineEx)Engine, ref propertyName);
             }
 
             public override V8PropertyAttributes? NamedPropertyQuery(ref string propertyName)
             {
-                if (ObjCLR._properties.Keys().Contains(propertyName))
+                if (ObjCLR._properties.Contains(propertyName))
                     return V8PropertyAttributes.Locked | V8PropertyAttributes.DontEnum;
 
                 return null;
@@ -33,7 +37,7 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
             public override InternalHandle NamedPropertyEnumerator()
             {
                 //throw new NotSupportedException();
-                return Engine.CreateArrayWithDisposal(ObjCLR._properties.Keys().Select((string propertyName) => Engine.CreateValue(propertyName)));
+                return ((V8EngineEx)Engine).CreateArrayWithDisposal(ObjCLR._properties.Keys.Select((string propertyName) => Engine.CreateValue(propertyName)));
             }
 
         }

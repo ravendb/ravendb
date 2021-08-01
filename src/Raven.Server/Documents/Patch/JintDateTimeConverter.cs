@@ -4,7 +4,7 @@ using Jint.Native;
 using Jint.Runtime.Interop;
 using Sparrow;
 
-namespace Raven.Server.Documents.Patch
+namespace Raven.Server.Documents.Jint.Patch
 {
     public class JintDateTimeConverter : IObjectConverter
     {

@@ -11,7 +11,7 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
 
         public readonly bool IsExplicitNull;
 
-        private DynamicJsNull(bool isExplicitNull) : base(InternalHandle.Empty)
+        private DynamicJsNull(bool isExplicitNull) : base()
         {
             IsExplicitNull = isExplicitNull;
         }

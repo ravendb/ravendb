@@ -60,35 +60,35 @@ namespace Raven.Server.Documents.ETL
                 DocumentScript.DebugMode = true;
 
             Engine = DocumentScript.ScriptEngine;
-            Engine.GlobalObject.SetProperty(Transformation.LoadTo, new ClrFunctionInstance(Transformation.LoadTo, LoadToFunctionTranslator));
+            Engine.GlobalObject.SetProperty(Transformation.LoadTo, new ClrFunctionInstance(LoadToFunctionTranslator));
 
             foreach (var collection in LoadToDestinations)
             {
                 var name = Transformation.LoadTo + collection;
-                Engine.GlobalObject.SetProperty(name, new ClrFunctionInstance(name, LoadToFunctionTranslator));
+                Engine.GlobalObject.SetProperty(name, new ClrFunctionInstance(LoadToFunctionTranslator));
             }
 
-            Engine.GlobalObject.SetProperty(Transformation.LoadAttachment, new ClrFunctionInstance(Transformation.LoadAttachment, LoadAttachment));
+            Engine.GlobalObject.SetProperty(Transformation.LoadAttachment, new ClrFunctionInstance(LoadAttachment));
 
             const string loadCounter = Transformation.CountersTransformation.Load;
-            Engine.GlobalObject.SetProperty(loadCounter, new ClrFunctionInstance(loadCounter, LoadCounter));
+            Engine.GlobalObject.SetProperty(loadCounter, new ClrFunctionInstance(LoadCounter));
 
             const string loadTimeSeries = Transformation.TimeSeriesTransformation.LoadTimeSeries.Name;
-            Engine.GlobalObject.SetProperty(loadTimeSeries, new ClrFunctionInstance(loadTimeSeries, LoadTimeSeries));
+            Engine.GlobalObject.SetProperty(loadTimeSeries, new ClrFunctionInstance(LoadTimeSeries));
 
-            Engine.GlobalObject.SetProperty("getAttachments", new ClrFunctionInstance("getAttachments", GetAttachments));
+            Engine.GlobalObject.SetProperty("getAttachments", new ClrFunctionInstance(GetAttachments));
 
-            Engine.GlobalObject.SetProperty("hasAttransfochment", new ClrFunctionInstance("hasAttachment", HasAttachment));
+            Engine.GlobalObject.SetProperty("hasAttransfochment", new ClrFunctionInstance(HasAttachment));
 
-            Engine.GlobalObject.SetProperty("getCounters", new ClrFunctionInstance("getCounters", GetCounters));
+            Engine.GlobalObject.SetProperty("getCounters", new ClrFunctionInstance(GetCounters));
 
-            Engine.GlobalObject.SetProperty("hasCounter", new ClrFunctionInstance("hasCounter", HasCounter));
+            Engine.GlobalObject.SetProperty("hasCounter", new ClrFunctionInstance(HasCounter));
             
             const string hasTimeSeries = Transformation.TimeSeriesTransformation.HasTimeSeries.Name;
-            Engine.GlobalObject.SetProperty(hasTimeSeries, new ClrFunctionInstance(hasTimeSeries, HasTimeSeries));
+            Engine.GlobalObject.SetProperty(hasTimeSeries, new ClrFunctionInstance(HasTimeSeries));
             
             const string getTimeSeries = Transformation.TimeSeriesTransformation.GetTimeSeries.Name;
-            Engine.GlobalObject.SetProperty(getTimeSeries, new ClrFunctionInstance(getTimeSeries, GetTimeSeries));
+            Engine.GlobalObject.SetProperty(getTimeSeries, new ClrFunctionInstance(GetTimeSeries));
         }
 
         private InternalHandle LoadToFunctionTranslator(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback

@@ -1,5 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
+
+using Esprima;
+using Jint;
+using Jint.Native;
+using Jint.Native.Function;
+using Jint.Native.Object;
+//using Jint.Runtime;
+//using Jint.Runtime.Interop;
+
 using V8.Net;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
@@ -94,9 +103,10 @@ function map() {{
                 collectionFunctions = new Dictionary<string, Dictionary<string, List<JavaScriptMapOperation>>>();
                 for (int i = 0; i < maps.ArrayLength; i++)
                 {
-                    var mapJint = mapsJint.GetProperty(i);
-                    if (mapJint.IsNull() || mapJint.IsUndefined() || mapJint.IsObject == false)
+                    var mapObjJint = mapsJint.Get(i.ToString());
+                    if (mapObjJint.IsNull() || mapObjJint.IsUndefined() || mapObjJint.IsObject() == false)
                         ThrowIndexCreationException($"Jint: map function #{i} is not a valid object");
+                    var mapJint = mapObjJint.AsObject();
                     if (mapJint.HasProperty(MethodProperty) == false)
                         ThrowIndexCreationException($"Jint: map function #{i} is missing its {MethodProperty} property");
                     var funcInstanceJint = mapJint.Get(MethodProperty).As<FunctionInstance>();
@@ -133,12 +143,12 @@ function map() {{
                                     ThrowIndexCreationException($"map function #{i} is missing its {MethodProperty} property");
                                 using (var func = map.GetProperty(MethodProperty))
                                 {
-                                    if (func.IsFunction() == false)
+                                    if (func.IsFunction == false)
                                         ThrowIndexCreationException($"map function #{i} {MethodProperty} property isn't a 'FunctionInstance'");
-                                    var funcInstance = funcObj.Object as V8Function;
+                                    var funcInstance = func.Object as V8Function;
                                     if (funcInstance == null)
                                         ThrowIndexCreationException($"map function #{i} {MethodProperty} property isn't a 'V8Function'");
-                                    var operation = new JavaScriptMapOperation(_javaScriptIndexUtils)
+                                    var operation = new JavaScriptMapOperation(JavaScriptIndexUtils)
                                     {
                                         MapFunc = funcInstanceJint,
                                         MapFuncV8 = funcInstance,
@@ -159,7 +169,7 @@ function map() {{
                                         }
                                     }
 
-                                    operation.Analyze(_engine);
+                                    operation.Analyze(_engineJint);
                                     if (ReferencedCollections.TryGetValue(mapCollection, out var collectionNames) == false)
                                     {
                                         collectionNames = new HashSet<CollectionName>();

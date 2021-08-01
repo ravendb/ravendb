@@ -3,7 +3,7 @@ using Jint;
 using Jint.Native;
 using Jint.Runtime.Interop;
 
-namespace Raven.Server.Documents.Patch
+namespace Raven.Server.Documents.Jint.Patch
 {
     public class JintGuidConverter : IObjectConverter
     {

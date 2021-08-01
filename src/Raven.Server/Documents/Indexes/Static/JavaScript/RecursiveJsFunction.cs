@@ -6,7 +6,7 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
 {
     public class RecursiveJsFunction
     {
-        private readonly InternalHandle _result;
+        private InternalHandle _result;
         private readonly V8Engine _engine;
         private readonly InternalHandle _item;
         private readonly V8Function _func;
@@ -28,8 +28,7 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
 
         public InternalHandle Execute()
         {
-            _result.Dispose();
-            _result = _engine.CreateArray(Array.Empty<InternalHandle>());
+            _result.Set(_engine.CreateArray(Array.Empty<InternalHandle>()));
 
             if (_item.IsUndefined)
                 return _result;
@@ -104,7 +103,7 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
         {
             int arrayLength =  jsArray.ArrayLength;
             for (int i = 0; i < arrayLength; ++i)
-                yield return array.GetProperty(i);
+                yield return jsArray.GetProperty(i);
         }
     }
 }

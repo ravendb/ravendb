@@ -6,9 +6,9 @@ using Jint.Runtime.References;
 using Raven.Server.Documents.Indexes.Static.JavaScript;
 using Raven.Client;
 
-namespace Raven.Server.Documents.Patch
+namespace Raven.Server.Documents.Jint.Patch
 {
-    public abstract class JintNullPropagationReferenceResolver : IReferenceResolver
+    /*public abstract class JintNullPropagationReferenceResolver : IReferenceResolver
     {
         protected JsValue _selfInstance;
         protected BlittableObjectInstance _args;
@@ -63,28 +63,28 @@ namespace Raven.Server.Documents.Patch
                     switch (name)
                     {
                         case "reduce":
-                            value = new ClrFunctionInstance(engine, "reduce", (thisObj, values) => values.Length > 1 ? values[1] : JsValue.Null);
+                            value = new ClrFunctionInstance( (thisObj, values) => values.Length > 1 ? values[1] : JsValue.Null);
                             return true;
                         case "concat":
-                            value = new ClrFunctionInstance(engine, "concat", (thisObj, values) => values[0]);
+                            value = new ClrFunctionInstance( (thisObj, values) => values[0]);
                             return true;
                         case "some":
                         case "includes":
-                            value = new ClrFunctionInstance(engine, "some", (thisObj, values) => false);
+                            value = new ClrFunctionInstance( (thisObj, values) => false);
                             return true;
                         case "every":
-                            value = new ClrFunctionInstance(engine, "every", (thisObj, values) => true);
+                            value = new ClrFunctionInstance( (thisObj, values) => true);
                             return true;
                         case "map":
                         case "filter":
                         case "reverse":
-                            value = new ClrFunctionInstance(engine, "map", (thisObj, values) => engine.Array.Construct(Array.Empty<JsValue>()));
+                            value = new ClrFunctionInstance( (thisObj, values) => engine.Array.Construct(Array.Empty<JsValue>()));
                             return true;
                     }
                 }
             }
 
-            value = new ClrFunctionInstance(engine, "function", (thisObj, values) => thisObj);
+            value = new ClrFunctionInstance( (thisObj, values) => thisObj);
             return true;
         }
 
@@ -92,5 +92,5 @@ namespace Raven.Server.Documents.Patch
         {
             return true;
         }
-    }
+    }*/
 }

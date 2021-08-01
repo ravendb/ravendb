@@ -21,7 +21,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             _segment = segment ?? throw new ArgumentNullException(nameof(segment));
         }
 
-        public InternalHandle NamedPropertyGetter(V8Engine engine, ref string propertyName)
+        public override InternalHandle NamedPropertyGetter(V8EngineEx engine, ref string propertyName)
         {
             if (_properties.TryGetValue(propertyName, out InternalHandle value) == false)
             {
@@ -33,10 +33,10 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             return value;
         }
 
-        private InternalHandle GetPropertyValue(V8Engine engine, ref string propertyName)
+        private InternalHandle GetPropertyValue(V8EngineEx engine, ref string propertyName)
         {
             if (propertyName == nameof(DynamicTimeSeriesSegment.Entries))
-                return new InternalHandle(((V8EngineEx)engine).CreateObjectBinder<DynamicTimeSeriesEntriesCustomBinder>(_segment.Entries, ((V8EngineEx)engine).TypeBinderDynamicTimeSeriesEntries)._);
+                return new InternalHandle(engine.CreateObjectBinder<DynamicTimeSeriesEntriesCustomBinder>(_segment.Entries, engine.TypeBinderDynamicTimeSeriesEntries)._);
 
             if (propertyName == nameof(TimeSeriesSegment.DocumentId))
                 return engine.CreateValue(_segment._segmentEntry.DocId.ToString());

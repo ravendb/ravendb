@@ -84,14 +84,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             foreach (var (propertyName, jsPropertyValue) in documentToProcess.GetOwnProperties())
             {
+                object value;
+                float? propertyBoost = null;
+                int numberOfCreatedFields;
+                if (_fields.TryGetValue(propertyName, out var field) == false)
+                    field = _fields[propertyName] = IndexField.Create(propertyName, new IndexFieldOptions(), _allFields);
+
                 using (jsPropertyValue)
                 {
-                    if (_fields.TryGetValue(propertyAsString, out var field) == false)
-                        field = _fields[propertyAsString] = IndexField.Create(propertyAsString, new IndexFieldOptions(), _allFields);
-
-                    object value;
-                    float? propertyBoost = null;
-                    int numberOfCreatedFields;
                     var isObject = IsObject(jsPropertyValue);
                     if (isObject)
                     {
@@ -108,7 +108,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                         {
                             //In case TryDetectDynamicFieldCreation finds a dynamic field it will populate 'field.Name' with the actual property name
                             //so we must use field.Name and not property from this point on.
-                            InternalHandle val = TryDetectDynamicFieldCreation(propertyAsString, jsPropertyValue.Object, field);
+                            InternalHandle val = TryDetectDynamicFieldCreation(propertyName, jsPropertyValue.Object, field);
                             using (val)
                             {
                                 if (val.IsEmpty == false)
@@ -157,8 +157,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                                                 using (lng)
                                                 {
                                                     spatialField = AbstractStaticIndexBase.GetOrCreateSpatialField(field.Name);
-                                                    spatial = AbstractStaticIndexBase.CreateSpatialField(spatialField, lat.AsNumber, lng.AsNumber);
+                                                    spatial = AbstractStaticIndexBase.CreateSpatialField(spatialField, lat.AsDouble, lng.AsDouble);
                                                 }
+                                            }
+                                            else
+                                            {
+                                                continue; //Ignoring bad spatial field
                                             }
                                         }
                                     }

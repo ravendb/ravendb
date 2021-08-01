@@ -59,10 +59,10 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             base.Initialize(debugMode);
             
             DocumentScript.ScriptEngine.GlobalObject.SetProperty("varchar",
-                new ClrFunctionInstance("varchar", (engine, isConstructCall, self, args) => ToVarcharTranslator(engine.CreateValue(VarcharFunctionCall.AnsiStringType), args)));
+                new ClrFunctionInstance((engine, isConstructCall, self, args) => ToVarcharTranslator(engine.CreateValue(VarcharFunctionCall.AnsiStringType), args)));
 
             DocumentScript.ScriptEngine.GlobalObject.SetProperty("nvarchar",
-                new ClrFunctionInstance("nvarchar", (engine, isConstructCall, self, args) => ToVarcharTranslator(engine.CreateValue(VarcharFunctionCall.StringType), args)));
+                new ClrFunctionInstance((engine, isConstructCall, self, args) => ToVarcharTranslator(engine.CreateValue(VarcharFunctionCall.StringType), args)));
         }
 
         protected override string[] LoadToDestinations { get; }

@@ -51,7 +51,7 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
             return engine.CreateValue(_attachment.GetContentAsString(encoding));
         }
 
-        public InternalHandle NamedPropertyGetter(V8Engine engine, ref string propertyName)
+        public override InternalHandle NamedPropertyGetter(V8EngineEx engine, ref string propertyName)
         {
             if (_properties.TryGetValue(propertyName, out InternalHandle value) == false)
             {
@@ -64,9 +64,9 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
                 else if (propertyName == nameof(IAttachmentObject.Size))
                     value = engine.CreateValue(_attachment.Size);
                 else if (propertyName == GetContentAsStringMethodName)
-                    value = new ClrFunctionInstance(GetContentAsStringMethodName, GetContentAsString);
+                    value = new ClrFunctionInstance(GetContentAsString);
 
-                if (value.IsEmpty() == false)
+                if (value.IsEmpty == false)
                     _properties[propertyName].Set(value);
             }
 

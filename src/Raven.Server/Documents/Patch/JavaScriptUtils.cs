@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Runtime.CompilerServices;
 using V8.Net;
 using Lucene.Net.Store;
@@ -10,11 +12,13 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Static.JavaScript;
 using Raven.Server.Documents.Queries.Results;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
-//using Raven.Server.Documents.Indexes.Static.Counters;
-//using Raven.Server.Documents.Indexes.Static.TimeSeries;
+using Raven.Server.Extensions;
+using Raven.Server.Documents.Indexes.Static.Counters;
+using Raven.Server.Documents.Indexes.Static.TimeSeries;
 
 namespace Raven.Server.Documents.Patch
 {
@@ -42,18 +46,13 @@ namespace Raven.Server.Documents.Patch
             Engine = engine;
         }
 
-        internal static InternalHandle GetMetadata(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+        internal InternalHandle GetMetadata(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
             if (args.Length != 1 || !(args[0].BoundObject is BlittableObjectInstance boi))
                 throw new InvalidOperationException("metadataFor(doc) must be called with a single entity argument");
 
-            return JavaScriptUtils.GetMetadata(engine, boi);
-        }
-
-        public static InternalHandle GetMetadata(V8EngineEx engine, BlittableObjectInstance boi)
-        {
             if (!(boi.Blittable[Constants.Documents.Metadata.Key] is BlittableJsonReaderObject metadata))
-                return Engine.CreateNullValue();
+                return engine.CreateNullValue();
             metadata.Modifications = new DynamicJsonValue
             {
                 [Constants.Documents.Metadata.ChangeVector] = boi.ChangeVector,
@@ -77,23 +76,23 @@ namespace Raven.Server.Documents.Patch
             }
         }
 
-        internal static InternalHandle AttachmentsFor(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+        internal InternalHandle AttachmentsFor(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
             if (args.Length != 1 || !(args[0].BoundObject is BlittableObjectInstance boi))
                 throw new InvalidOperationException($"{nameof(AttachmentsFor)} must be called with a single entity argument");
 
             if (!(boi.Blittable[Constants.Documents.Metadata.Key] is BlittableJsonReaderObject metadata))
-                return EmptyArray(Engine);
+                return EmptyArray(engine);
 
             if (metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false)
-                return EmptyArray(Engine);
+                return EmptyArray(engine);
 
-            int arrayLength =  attachments.Count;
+            int arrayLength =  attachments.Length;
             InternalHandle[] jsItems = new InternalHandle[arrayLength];
             for (int i = 0; i < arrayLength; i++)
-                jsItems[i] = Engine.CreateObjectInstance(new AttachmentNameObjectInstance((BlittableJsonReaderObject)attachments[i]), TypeBinderAttachmentNameObjectInstance);
+                jsItems[i] = engine.CreateObjectBinder(new AttachmentNameObjectInstance((BlittableJsonReaderObject)attachments[i]), engine.TypeBinderAttachmentNameObjectInstance);
 
-            return Engine.CreateArrayWithDisposal(jsItems);
+            return engine.CreateArrayWithDisposal(jsItems);
 
             static InternalHandle EmptyArray(V8Engine engine)
             {
@@ -129,7 +128,7 @@ namespace Raven.Server.Documents.Patch
             if (attachment.BoundObject is DynamicNullObject)
                 return jsRes.Set(DynamicJsNull.ImplicitNull._);
 
-            return new AttachmentObjectInstance(engine, (DynamicAttachment)attachment);
+            return engine.CreateObjectBinder(new AttachmentObjectInstance((DynamicAttachment)attachment), engine.TypeBinderAttachmentObjectInstance);
 
             void ThrowInvalidFirstParameter()
             {
@@ -148,7 +147,7 @@ namespace Raven.Server.Documents.Patch
                 throw new InvalidOperationException($"{nameof(LoadAttachment)} may only be called with one argument, but '{args.Length}' were passed.");
 
             InternalHandle jsRes;
-            if (args[0].IsNull())
+            if (args[0].IsNull)
                 return jsRes.Set(DynamicJsNull.ImplicitNull._);
 
             if (args[0].IsObject == false)
@@ -163,14 +162,14 @@ namespace Raven.Server.Documents.Patch
 
             var attachments = CurrentIndexingScope.Current.LoadAttachments(doc.DocumentId, GetAttachmentNames());
             if (attachments.Count == 0)
-                return Engine.CreateArray(Array.Empty<InternalHandle>());
+                return engine.CreateArray(Array.Empty<InternalHandle>());
 
             int arrayLength =  attachments.Count;
             var jsItems = new InternalHandle[attachments.Count];
             for (int i = 0; i < arrayLength; i++)
-                jsItems.Set(engine.CreateObjectBinder(new AttachmentObjectInstance(attachments[i]), TypeBinderAttachmentObjectInstance)._);
+                jsItems[i].Set(engine.CreateObjectBinder(new AttachmentObjectInstance(attachments[i]), engine.TypeBinderAttachmentObjectInstance)._);
 
-            return this.CreateArrayWithDisposal(jsItems);
+            return engine.CreateArrayWithDisposal(jsItems);
 
 
             void ThrowInvalidParameter()
@@ -180,25 +179,22 @@ namespace Raven.Server.Documents.Patch
 
             IEnumerable<string> GetAttachmentNames()
             {
-                using (var jsMetadata = doc.Call(ScriptRunner.SingleRun.GetMetadataMethod, InternalHandle.Empty))
+                using (var jsMetadata = args[0].GetProperty(Constants.Documents.Metadata.Key))
                 {
-                    jsMetadata.ThrowOnError(); // TODO check if is needed here
-                    if (jsMetadata.IsUndefined || jsMetadata.IsNull)
+                    var metadata = jsMetadata.BoundObject as BlittableObjectInstance;
+                    if (metadata == null)
                         yield break;
 
                     using (var jsAttachments = jsMetadata.GetProperty(Constants.Documents.Metadata.Attachments))
                     {
-                        if (jsAttachments.IsUndefined || jsAttachments.IsNull || jsAttachments.IsArray == false)
+                        if (jsAttachments.IsArray == false)
                             yield break;
 
                         int arrayLength =  jsAttachments.ArrayLength;
-                        for (int i = 0; i < arrayLength; ++i)
+                        for (int i = 0; i < arrayLength; i++)
                         {
                             using (var jsAttachment = jsAttachments.GetProperty(i))
-                            {
-                                using (var jsAttachmentName = jsAttachment.GetProperty(nameof(AttachmentName.Name)))
-                                    yield return jsAttachmentName.AsString;
-                            }
+                                yield return jsAttachment.GetProperty(nameof(AttachmentName.Name)).AsString;
                         }
                     }
                 }
@@ -207,12 +203,12 @@ namespace Raven.Server.Documents.Patch
 
         internal static InternalHandle GetTimeSeriesNamesFor(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
-            return GetNamesFor(self, args, Constants.Documents.Metadata.TimeSeries, "timeSeriesNamesFor");
+            return GetNamesFor(engine, isConstructCall, self, args, Constants.Documents.Metadata.TimeSeries, "timeSeriesNamesFor");
         }
 
         internal static InternalHandle GetCounterNamesFor(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
-            return GetNamesFor(self, args, Constants.Documents.Metadata.Counters, "counterNamesFor");
+            return GetNamesFor(engine, isConstructCall, self, args, Constants.Documents.Metadata.Counters, "counterNamesFor");
         }
 
         private static InternalHandle GetNamesFor(V8EngineEx engine, bool isConstructCall, InternalHandle self, InternalHandle[] args, string metadataKey, string methodName)
@@ -221,16 +217,16 @@ namespace Raven.Server.Documents.Patch
                 throw new InvalidOperationException($"{methodName}(doc) must be called with a single entity argument");
 
             if (!(boi.Blittable[Constants.Documents.Metadata.Key] is BlittableJsonReaderObject metadata))
-                return Engine.CreateArray(Array.Empty<InternalHandle>());
+                return engine.CreateArray(Array.Empty<InternalHandle>());
 
             if (metadata.TryGet(metadataKey, out BlittableJsonReaderArray timeSeries) == false)
-                return Engine.CreateArray(Array.Empty<InternalHandle>());
+                return engine.CreateArray(Array.Empty<InternalHandle>());
 
             InternalHandle[] jsItems = new InternalHandle[timeSeries.Length];
             for (var i = 0; i < timeSeries.Length; i++)
-                jsItems[i] = Engine.CreateValue(timeSeries[i]?.ToString());
+                jsItems[i] = engine.CreateValue(timeSeries[i]?.ToString());
 
-            return Engine.CreateArrayWithDisposal(jsItems);
+            return engine.CreateArrayWithDisposal(jsItems);
         }
 
         internal static InternalHandle GetDocumentId(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
@@ -244,15 +240,13 @@ namespace Raven.Server.Documents.Patch
             if (args[0].IsObject == false)
                 throw new InvalidOperationException("id(doc) must be called with an object argument");
 
-            V8NativeOject objectInstance = args[0].Object;
+            if (args[0].BoundObject != null && args[0].BoundObject is BlittableObjectInstance doc && doc.DocumentId != null)
+                return engine.CreateValue(doc.DocumentId);
 
-            if (objectInstance is BlittableObjectInstance doc && doc.DocumentId != null)
-                return doc.DocumentId;
-
-            using (var jsValue = objectInstance.GetProperty(Constants.Documents.Metadata.Key))
+            using (var jsValue = args[0].GetProperty(Constants.Documents.Metadata.Key))
             {
                 // search either @metadata.@id or @id
-                using (var metadata = jsValue.IsObject == false ? objectInstance : jsValue)
+                using (var metadata = jsValue.IsObject == false ? args[0] : jsValue)
                 {
                     var value = metadata.GetProperty(Constants.Documents.Metadata.Id);
                     if (value.IsString == false)
@@ -262,7 +256,7 @@ namespace Raven.Server.Documents.Patch
                         value = metadata.GetProperty(Constants.Documents.Metadata.IdProperty);
                         if (value.IsString == false)
                             value.Dispose();
-                            return Engine.CreateNullValue();
+                            return engine.CreateNullValue();
                     }
                     return value;
                 }
@@ -275,7 +269,7 @@ namespace Raven.Server.Documents.Patch
             if (o is Tuple<Document, Lucene.Net.Documents.Document, IState, Dictionary<string, IndexField>, bool?, ProjectionOptions> t)
             {
                 var d = t.Item1;
-                BlittableObjectInstance boi = new BlittableObjectInstance(Engine, null, Clone(d.Data, context), d)
+                BlittableObjectInstance boi = new BlittableObjectInstance(this, null, Clone(d.Data, context), d)
                 {
                     LuceneDocument = t.Item2,
                     LuceneState = t.Item3,
@@ -287,25 +281,25 @@ namespace Raven.Server.Documents.Patch
             }
             if (o is Document doc)
             {
-                BlittableObjectInstance boi = new BlittableObjectInstance(Engine, null, Clone(doc.Data, context), doc);
+                BlittableObjectInstance boi = new BlittableObjectInstance(this, null, Clone(doc.Data, context), doc);
                 return jsRes.Set(boi.CreateObjectBinder()._);
             }
             if (o is DocumentConflict dc)
             {
-                BlittableObjectInstance boi = new BlittableObjectInstance(Engine, null, Clone(dc.Doc, context), dc.Id, dc.LastModified, dc.ChangeVector);
+                BlittableObjectInstance boi = new BlittableObjectInstance(this, null, Clone(dc.Doc, context), dc.Id, dc.LastModified, dc.ChangeVector);
                 return jsRes.Set(boi.CreateObjectBinder()._);
             }
 
             if (o is BlittableJsonReaderObject json)
             {
-                BlittableObjectInstance boi = new BlittableObjectInstance(Engine, null, Clone(json, context), null, null, null);
+                BlittableObjectInstance boi = new BlittableObjectInstance(this, null, Clone(json, context), null, null, null);
                 return jsRes.Set(boi.CreateObjectBinder()._);
             }
 
             if (o == null)
                 return InternalHandle.Empty;
             if (o is long lng)
-                return lng;
+                return Engine.CreateValue(lng);
             if (o is BlittableJsonReaderArray bjra)
             {
                 int arrayLength =  bjra.Length;
@@ -334,7 +328,7 @@ namespace Raven.Server.Documents.Patch
                 var jsItems = new InternalHandle[arrayLength];
                 for (int i = 0; i < arrayLength; ++i)
                 {
-                    BlittableObjectInstance boi = new BlittableObjectInstance(Engine, null, Clone(docList[i].Data, context), docList[i]);
+                    BlittableObjectInstance boi = new BlittableObjectInstance(this, null, Clone(docList[i].Data, context), docList[i]);
                     jsItems[i].Set(boi.CreateObjectBinder()._);
                 }
 
@@ -347,7 +341,6 @@ namespace Raven.Server.Documents.Patch
                 return Engine.FromObject(o);
             }
             if (o is V8NativeObject j) {
-                InternalHandle jsRes;
                 return jsRes.Set(j._);
             }
             if (o is bool b)
@@ -425,7 +418,7 @@ namespace Raven.Server.Documents.Patch
 
         public InternalHandle CreateArrayWithDisposal(InternalHandle[] jsItems)
         {
-            var jsArr = this.CreateArray(jsItems);
+            var jsArr = CreateArray(jsItems);
             V8EngineEx.Dispose(jsItems);
             return jsArr;
         }
@@ -441,58 +434,76 @@ namespace Raven.Server.Documents.Patch
 
         public V8EngineEx(bool autoCreateGlobalContext = true) : base(autoCreateGlobalContext)
         {
+            TypeMappers = new Dictionary<Type, Func<object, InternalHandle>>()
+            {
+                {typeof(bool), (v) => CreateValue((bool) v)},
+                {typeof(byte), (v) => CreateValue((byte) v)},
+                {typeof(char), (v) => CreateValue((char) v)},
+                {typeof(TimeSpan), (v) => CreateValue((TimeSpan) v)},
+                {typeof(DateTime), (v) => CreateValue((DateTime) v)},
+                //{typeof(DateTimeOffset), (v) => engine.Realm.Intrinsics.Date.Construct((DateTimeOffset) v)},
+                {typeof(decimal), (v) => CreateValue((double) (decimal) v)},
+                {typeof(double), (v) => CreateValue((double) v)},
+                {typeof(SByte), (v) => CreateValue((Int32) (SByte) v)},
+                {typeof(Int16), (v) => CreateValue((Int32) (Int16) v)}, 
+                {typeof(Int32), (v) => CreateValue((Int32) v)},
+                {typeof(Int64), (v) => CreateIntValue((Int64) v)},
+                {typeof(Single), (v) => CreateValue((double) (Single) v)},
+                {typeof(string), (v) => CreateValue((string) v)},
+                {typeof(UInt16), (v) => CreateUIntValue((UInt16) v)}, 
+                {typeof(UInt32), (v) => CreateUIntValue((UInt32) v)},
+                {typeof(UInt64), (v) => CreateUIntValue((UInt64) v)},
+                {
+                    typeof(System.Text.RegularExpressions.Regex),
+                    (v) => CreateValue((System.Text.RegularExpressions.Regex) v)
+                }
+            };
+
             this.ExecuteWithReset(ArrayExtensionCode, "arrayExtension");
 
-            TypeBinderBlittableObjectInstance = this.RegisterType<BlittableObjectInstance>(null, true);
+            TypeBinderBlittableObjectInstance = RegisterType<BlittableObjectInstance>(null, true);
             TypeBinderBlittableObjectInstance.OnGetObjectBinder = (tb, obj, initializeBinder)
-                => tb.CreateObjectBinder<BlittableObjectInstance.CustomBinder, BlittableObjectInstance>(obj, initializeBinder);
-            this.GlobalObject.SetProperty(typeof(BlittableObjectInstance));
+                => tb.CreateObjectBinder<BlittableObjectInstance.CustomBinder, BlittableObjectInstance>((BlittableObjectInstance)obj, initializeBinder);
+            GlobalObject.SetProperty(typeof(BlittableObjectInstance));
 
-            TypeBinderTask = this.RegisterType<Task>(null, true, ScriptMemberSecurity.ReadWrite);
+            TypeBinderTask = RegisterType<Task>(null, true, ScriptMemberSecurity.ReadWrite);
             TypeBinderTask.OnGetObjectBinder = (tb, obj, initializeBinder)
-                => tb.CreateObjectBinder<TaskCustomBinder, Task>(obj, initializeBinder);
-            this.GlobalObject.SetProperty(typeof(Task));
+                => tb.CreateObjectBinder<TaskCustomBinder, Task>((Task)obj, initializeBinder);
+            GlobalObject.SetProperty(typeof(Task));
 
 
-            TypeBinderTimeSeriesSegmentObjectInstance = this.RegisterType<TimeSeriesSegmentObjectInstance>(null, false, ScriptMemberSecurity.NoAccess);
+            TypeBinderTimeSeriesSegmentObjectInstance = RegisterType<TimeSeriesSegmentObjectInstance>(null, false);
             TypeBinderTimeSeriesSegmentObjectInstance.OnGetObjectBinder = (tb, obj, initializeBinder)
-                => tb.CreateObjectBinder<TimeSeriesSegmentObjectInstance.CustomBinder, TimeSeriesSegmentObjectInstance>(obj, initializeBinder);
-            this.GlobalObject.SetProperty(typeof(TimeSeriesSegmentObjectInstance));
+                => tb.CreateObjectBinder<TimeSeriesSegmentObjectInstance.CustomBinder, TimeSeriesSegmentObjectInstance>((TimeSeriesSegmentObjectInstance)obj, initializeBinder);
+            GlobalObject.SetProperty(typeof(TimeSeriesSegmentObjectInstance));
 
-            TypeBinderDynamicTimeSeriesEntries = this.RegisterType<DynamicArray>(null, false, ScriptMemberSecurity.NoAccess);
+            TypeBinderDynamicTimeSeriesEntries = RegisterType<DynamicArray>(null, false);
             TypeBinderDynamicTimeSeriesEntries.OnGetObjectBinder = (tb, obj, initializeBinder)
-                => tb.CreateObjectBinder<DynamicTimeSeriesEntriesCustomBinder, DynamicArray>(obj, initializeBinder);
-            this.GlobalObject.SetProperty(typeof(DynamicArray));
+                => tb.CreateObjectBinder<DynamicTimeSeriesEntriesCustomBinder, DynamicArray>((DynamicArray)obj, initializeBinder);
+            GlobalObject.SetProperty(typeof(DynamicArray));
 
-            TypeBinderDynamicTimeSeriesEntry = this.RegisterType<DynamicTimeSeriesEntry>(null, false, ScriptMemberSecurity.NoAccess);
+            TypeBinderDynamicTimeSeriesEntry = RegisterType<DynamicTimeSeriesSegment.DynamicTimeSeriesEntry>(null, false);
             TypeBinderDynamicTimeSeriesEntry.OnGetObjectBinder = (tb, obj, initializeBinder)
-                => tb.CreateObjectBinder<DynamicTimeSeriesEntryCustomBinder, DynamicTimeSeriesEntry>(obj, initializeBinder);
-            this.GlobalObject.SetProperty(typeof(DynamicTimeSeriesEntry));
+                => tb.CreateObjectBinder<DynamicTimeSeriesEntryCustomBinder, DynamicTimeSeriesSegment.DynamicTimeSeriesEntry>((DynamicTimeSeriesSegment.DynamicTimeSeriesEntry)obj, initializeBinder);
+            GlobalObject.SetProperty(typeof(DynamicTimeSeriesSegment.DynamicTimeSeriesEntry));
 
 
-            TypeBinderCounterEntryObjectInstance = this.RegisterType<CounterEntryObjectInstance>(null, false, ScriptMemberSecurity.NoAccess);
+            TypeBinderCounterEntryObjectInstance = RegisterType<CounterEntryObjectInstance>(null, false);
             TypeBinderCounterEntryObjectInstance.OnGetObjectBinder = (tb, obj, initializeBinder)
-                => tb.CreateObjectBinder<CounterEntryObjectInstance.CustomBinder, CounterEntryObjectInstance>(obj, initializeBinder);
-            this.GlobalObject.SetProperty(typeof(CounterEntryObjectInstance));
+                => tb.CreateObjectBinder<CounterEntryObjectInstance.CustomBinder, CounterEntryObjectInstance>((CounterEntryObjectInstance)obj, initializeBinder);
+            GlobalObject.SetProperty(typeof(CounterEntryObjectInstance));
 
-            TypeBinderAttachmentNameObjectInstance = this.RegisterType<AttachmentNameObjectInstance>(null, false, ScriptMemberSecurity.NoAccess);
+            TypeBinderAttachmentNameObjectInstance = RegisterType<AttachmentNameObjectInstance>(null, false);
             TypeBinderAttachmentNameObjectInstance.OnGetObjectBinder = (tb, obj, initializeBinder)
-                => tb.CreateObjectBinder<AttachmentNameObjectInstance.CustomBinder, AttachmentNameObjectInstance>(obj, initializeBinder);
-            this.GlobalObject.SetProperty(typeof(AttachmentNameObjectInstance));
+                => tb.CreateObjectBinder<AttachmentNameObjectInstance.CustomBinder, AttachmentNameObjectInstance>((AttachmentNameObjectInstance)obj, initializeBinder);
+            GlobalObject.SetProperty(typeof(AttachmentNameObjectInstance));
 
-            TypeBinderAttachmentObjectInstance = this.RegisterType<AttachmentObjectInstance>(null, false, ScriptMemberSecurity.NoAccess);
+            TypeBinderAttachmentObjectInstance = RegisterType<AttachmentObjectInstance>(null, false);
             TypeBinderAttachmentObjectInstance.OnGetObjectBinder = (tb, obj, initializeBinder)
-                => tb.CreateObjectBinder<AttachmentObjectInstance.CustomBinder, AttachmentObjectInstance>(obj, initializeBinder);
-            this.GlobalObject.SetProperty(typeof(AttachmentObjectInstance));
+                => tb.CreateObjectBinder<AttachmentObjectInstance.CustomBinder, AttachmentObjectInstance>((AttachmentObjectInstance)obj, initializeBinder);
+            GlobalObject.SetProperty(typeof(AttachmentObjectInstance));
 
-
-            var typeDynamicJsNull = this.RegisterType<DynamicJsNull>(null, true, ScriptMemberSecurity.NoAccess);
-            this.GlobalObject.SetProperty(typeof(DynamicJsNull));
-
-            var typeBinderObject = this.RegisterType<object>(null, true, ScriptMemberSecurity.ReadWrite);
-            this.GlobalObject.SetProperty(typeof(object));
-
-            //this.GlobalObject.SetProperty(typeof(Hash<Handle>));
+            //GlobalObject.SetProperty(typeof(Hash<Handle>));
         }
 
         private static string ArrayExtensionCode=  @"
@@ -549,44 +560,21 @@ namespace Raven.Server.Documents.Patch
             }
         ";
         
-        internal Dictionary<Type, Func<V8Engine, object, InternalHandle>> TypeMappers = new Dictionary<Type, Func<V8Engine, object, InternalHandle>>()
-        {
-            {typeof(bool), (v) => this.CreateValue((bool) v)},
-            {typeof(byte), (v) => this.CreateValue((byte) v)},
-            {typeof(char), (v) => JsString.Create((char) v)},
-            {typeof(TimeSpan), (v) => this.CreateValue((TimeSpan) v)},
-            {typeof(DateTime), (v) => this.CreateValue((DateTime) v)},
-            //{typeof(DateTimeOffset), (v) => engine.Realm.Intrinsics.Date.Construct((DateTimeOffset) v)},
-            {typeof(decimal), (v) => this.CreateValue((double) (decimal) v)},
-            {typeof(double), (v) => this.CreateValue((double) v)},
-            {typeof(SByte), (v) => this.CreateValue((Int32) (SByte) v)},
-            {typeof(Int16), (v) => this.CreateValue((Int32) (Int16) v)}, 
-            {typeof(Int32), (v) => this.CreateValue((Int32) v)},
-            {typeof(Int64), (v) => this.CreateIntValue((Int64) v)},
-            {typeof(Single), (v) => this.CreateValue((double) (Single) v)},
-            {typeof(string), (v) => this.CreateValue((string) v)},
-            {typeof(UInt16), (v) => this.CreateUIntValue((UInt16) v)}, 
-            {typeof(UInt32), (v) => this.CreateUIntValue((UInt32) v)},
-            {typeof(UInt64), (v) => this.CreateUIntValue((UInt64) v)},
-            {
-                typeof(System.Text.RegularExpressions.Regex),
-                (v) => engine.Realm.Intrinsics.RegExp.Construct((System.Text.RegularExpressions.Regex) v, "")
-            }
-        };
+        internal Dictionary<Type, Func<object, InternalHandle>> TypeMappers;
 
-        internal static InternalHandle CreateUIntValue(uint value)
+        internal InternalHandle CreateUIntValue(uint v)
         {
-            return value < int.MaxValue ? V8Engine.CreateValue((Int32) v) : V8Engine.CreateValue((double) v);
+            return v < int.MaxValue ? CreateValue((Int32) v) : CreateValue((double) v);
         }
 
-        internal static InternalHandle CreateUIntValue(ulong value)
+        internal InternalHandle CreateUIntValue(ulong v)
         {
-            return value < int.MaxValue ? V8Engine.CreateValue((Int32) v) : V8Engine.CreateValue((double) v);
+            return v < int.MaxValue ? CreateValue((Int32) v) : CreateValue((double) v);
         }
 
-        internal static InternalHandle CreateIntValue(long value)
+        internal InternalHandle CreateIntValue(long v)
         {
-            return value < int.MaxValue && value > int.MinValue ? V8Engine.CreateValue((Int32) v) : V8Engine.CreateValue((double) v);
+            return v < int.MaxValue && v > int.MinValue ? CreateValue((Int32) v) : CreateValue((double) v);
         }
 
         public ObjectBinder CreateObjectBinder(object obj, TypeBinder tb = null)
@@ -595,10 +583,10 @@ namespace Raven.Server.Documents.Patch
                 return null;
             }
             if (tb == null) {
-                var type = object.GetType();
+                var type = obj.GetType();
                 tb = GetTypeBinder(type);
             }
-            return TypeBinder.CreateObjectBinder<ObjectBinderEx<type>, type>(obj);
+            return tb.CreateObjectBinder<ObjectBinder, object>(obj);
         }
 
         public TObjectBinder CreateObjectBinder<TObjectBinder>(object obj, TypeBinder tb = null)
@@ -608,9 +596,10 @@ namespace Raven.Server.Documents.Patch
                 return null;
             }
             if (tb == null) {
-                tb = GetTypeBinder(T);
+                var type = obj.GetType();
+                tb = GetTypeBinder(type);
             }
-            return TypeBinder.CreateObjectBinder<TObjectBinder, type>(obj);
+            return tb.CreateObjectBinder<TObjectBinder, object>(obj);
         }
 
         public InternalHandle FromObject(object value)
@@ -628,42 +617,42 @@ namespace Raven.Server.Documents.Patch
             Type t = value.GetType();
             if (t.IsEnum)
             {
-                return this.CreateValue(value.ToString());
+                return CreateValue(value.ToString());
                 
                 // is overloaded with upper code
                 /*Type ut = Enum.GetUnderlyingType(t);
 
                 if (ut == typeof(ulong))
-                    return this.CreateValue(System.Convert.ToDouble(value));
+                    return CreateValue(System.Convert.ToDouble(value));
 
                 if (ut == typeof(uint) || ut == typeof(long))
-                    return this.CreateValue(System.Convert.ToInt64(value));
+                    return CreateValue(System.Convert.ToInt64(value));
 
-                return this.CreateValue(System.Convert.ToInt32(value));*/
+                return CreateValue(System.Convert.ToInt32(value));*/
             }
 
             jsValue = value switch 
             {
                 //BlittableJsonReaderObject bjro => (new BlittableObjectInstance(this, null, bjro, null, null, null)).CreateObjectBinder(),
                 //Document doc => (new BlittableObjectInstance(this, null, doc.Data, doc)).CreateObjectBinder(),
-                //LazyNumberValue lnv => this.CreateValue(lnv.ToDouble(CultureInfo.InvariantCulture)),
-                StringSegment ss => this.CreateValue(ss.ToString()),
-                LazyStringValue lsv => this.CreateValue(lsv.ToString()),
-                LazyCompressedStringValue lcsv => this.CreateValue(lcsv.ToString()),
-                Guid guid => this.CreateValue(guid.ToString()),
-                TimeSpan timeSpan => this.CreateValue(timeSpan.ToString()),
-                DateTime dateTime => this.CreateValue(dateTime.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite)),
-                DateTimeOffset dateTimeOffset => this.CreateValue(dateTimeOffset.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite)),
+                //LazyNumberValue lnv => CreateValue(lnv.ToDouble(CultureInfo.InvariantCulture)),
+                StringSegment ss => CreateValue(ss.ToString()),
+                LazyStringValue lsv => CreateValue(lsv.ToString()),
+                LazyCompressedStringValue lcsv => CreateValue(lcsv.ToString()),
+                Guid guid => CreateValue(guid.ToString()),
+                TimeSpan timeSpan => CreateValue(timeSpan.ToString()),
+                DateTime dateTime => CreateValue(dateTime.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite)),
+                DateTimeOffset dateTimeOffset => CreateValue(dateTimeOffset.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite)),
                 _ => InternalHandle.Empty
             };
 
-            if (jsValue.IsEmpty() == false) {
+            if (jsValue.IsEmpty == false) {
                 return jsValue;
             }
 
             var valueType = value.GetType();
 
-            var typeMappers = this.TypeMappers;
+            var typeMappers = TypeMappers;
 
             if (typeMappers.TryGetValue(valueType, out var typeMapper))
             {
@@ -680,7 +669,7 @@ namespace Raven.Server.Documents.Patch
             if (value is System.Array a)
             {
                 // racy, we don't care, worst case we'll catch up later
-                Interlocked.CompareExchange(ref this.TypeMappers, new Dictionary<Type, Func<V8Engine, object, InternalHandle>>(typeMappers)
+                Interlocked.CompareExchange(ref TypeMappers, new Dictionary<Type, Func<object, InternalHandle>>(typeMappers)
                 {
                     [valueType] = Convert
                 }, typeMappers);
@@ -688,13 +677,13 @@ namespace Raven.Server.Documents.Patch
                 return Convert(a);
             }
 
-            if (value is Delegate d)
+            InternalHandle jsRes;
+            if (value is JSFunction d)
             {
-                return new DelegateWrapper(this, d);
+                return jsRes.Set((new ClrFunctionInstanceBase(d))._);
             }
 
             // if no known type could be guessed, wrap it as an ObjectBinder
-            InternalHandle jsRes;
             return jsRes.Set(CreateObjectBinder(value)._);
         }
 
@@ -706,10 +695,10 @@ namespace Raven.Server.Documents.Patch
             var jsItems = new InternalHandle[arrayLength];
             for (int i = 0; i < arrayLength; ++i)
             {
-                jsItems[i] = Engine.FromObject(array.GetValue(i));
+                jsItems[i] = FromObject(array.GetValue(i));
             }
 
-            return this.CreateArrayWithDisposal(jsItems);
+            return CreateArrayWithDisposal(jsItems);
         }
 
 
@@ -722,12 +711,14 @@ namespace Raven.Server.Documents.Patch
 
     public class ClrFunctionInstance : V8Function
     {
+        internal Func<V8EngineEx, bool, InternalHandle, InternalHandle[], InternalHandle> _func;
+
         public ClrFunctionInstance(
-            string name,
             Func<V8EngineEx, bool, InternalHandle, InternalHandle[], InternalHandle> func) : base()
         {
             _func = func;
         }
+
         public override InternalHandle Initialize(bool isConstructCall, params InternalHandle[] args)
         {
             Callback = CallbackMethod;
@@ -738,6 +729,28 @@ namespace Raven.Server.Documents.Patch
         public InternalHandle CallbackMethod(V8Engine engine, bool isConstructCall, InternalHandle _this, params InternalHandle[] args)
         {
             return _func((V8EngineEx)engine, isConstructCall, _this, args);
+        }
+    }
+
+    public class ClrFunctionInstanceBase : V8Function
+    {
+        internal JSFunction _func;
+
+        public ClrFunctionInstanceBase(JSFunction func) : base()
+        {
+            _func = func;
+        }
+
+        public override InternalHandle Initialize(bool isConstructCall, params InternalHandle[] args)
+        {
+            Callback = CallbackMethod;
+
+            return base.Initialize(isConstructCall, args);
+        }
+
+        public InternalHandle CallbackMethod(V8Engine engine, bool isConstructCall, InternalHandle _this, params InternalHandle[] args)
+        {
+            return _func(engine, isConstructCall, _this, args);
         }
     }
 

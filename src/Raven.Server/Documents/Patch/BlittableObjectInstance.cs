@@ -91,7 +91,7 @@ namespace Raven.Server.Documents.Patch
             {
                 if (propertyName == Constants.Documents.Metadata.Key)
                 { 
-                    using (var jsValue = JavaScriptUtils.GetMetadata((V8EngineEx)Engine, ObjCLR))
+                    using (var jsValue = ObjCLR.JavaScriptUtils.GetMetadata((V8EngineEx)Engine, false, InternalHandle.Empty, this))
                     {
                         jsValue.ThrowOnError(); // TODO check if is needed here
                         return new BlittableObjectProperty(ObjCLR, propertyName, jsValue);
@@ -186,7 +186,7 @@ namespace Raven.Server.Documents.Patch
             public override InternalHandle NamedPropertyEnumerator()
             {
                 var list = base.NamedPropertyEnumerator();
-                void pushKey(ref string value) {
+                void pushKey(string value) {
                     using (var jsValue = Engine.CreateValue(value))
                     using (var jsResPush = list.Call("push", InternalHandle.Empty, jsValue))
                         jsResPush.ThrowOnError(); // TODO check if is needed here
@@ -205,7 +205,7 @@ namespace Raven.Server.Documents.Patch
                 {
                     if (ObjCLR.Deletes?.Contains(key) == true)
                         continue;
-                    if (ObjCLR.OwnValues?.ContainsKey(key)) // NOTE: This optimisation for Jint may not work for V8.Net
+                    if (ObjCLR.OwnValues?.ContainsKey(key) == true)
                         continue;
 
                     pushKey(key);
@@ -467,7 +467,7 @@ namespace Raven.Server.Documents.Patch
             {
                 bjra.NoCache = true;
 
-                var jsArray = new engine.CreateArray(Array.Empty<InternalHandle>());
+                var jsArray = engine.CreateArray(Array.Empty<InternalHandle>());
                 for (var i = 0; i < bjra.Length; i++)
                 {
                     var json = bjra.GetValueTokenTupleByIndex(i);
@@ -558,7 +558,7 @@ namespace Raven.Server.Documents.Patch
                 }
 
                 // If number is not in double boundaries, we return the LazyNumberValue
-                return engine.GetObjectBinder(value);
+                return engine.CreateObjectBinder(value);
             }
         }
     }

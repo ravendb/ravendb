@@ -6,9 +6,9 @@ using Jint.Runtime.Descriptors;
 using Jint.Runtime.Interop;
 using Jint.Runtime.References;
 
-namespace Raven.Server.Documents.Patch
+namespace Raven.Server.Documents.Jint.Patch
 {
-    public class JintPreventResolvingTasksReferenceResolver : JintNullPropagationReferenceResolver
+    /*public class JintPreventResolvingTasksReferenceResolver : JintNullPropagationReferenceResolver
     {
         public void ExplodeArgsOn(JsValue self, BlittableObjectInstance args)
         {
@@ -41,5 +41,5 @@ namespace Raven.Server.Documents.Patch
             var descriptor = new PropertyDescriptor(jsValue, false, false, false);
             return descriptor;
         }
-    }
+    }*/
 }

@@ -4,7 +4,7 @@ using Jint.Runtime.Interop;
 using Sparrow;
 using Sparrow.Json;
 
-namespace Raven.Server.Documents.Patch
+namespace Raven.Server.Documents.Jint.Patch
 {
     public class JintStringConverter : IObjectConverter
     {

@@ -163,8 +163,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
     {
         private readonly Dictionary<string, CompiledIndexField> _groupByFields;
 
-        public JsPropertyAccessor(Dictionary<string, CompiledIndexField> groupByFields) : base(groupByFields)
+        public JsPropertyAccessor(Dictionary<string, CompiledIndexField> groupByFields)
         {
+            _groupByFields = groupByFields;
         }
 
         public IEnumerable<(string Key, object Value, CompiledIndexField GroupByField, bool IsGroupByField)> GetPropertiesInOrder(object target)
@@ -178,7 +179,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                     CompiledIndexField field = null;
                     var isGroupByField = _groupByFields?.TryGetValue(propertyName, out field) ?? false;
 
-                    yield return (propertyAsString, GetValue(jsPropertyValue), field, isGroupByField);
+                    yield return (propertyName, GetValue(jsPropertyValue), field, isGroupByField);
                 }
             }
         }
@@ -204,7 +205,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             if (jsValue.IsBoolean)
                 return jsValue.AsBoolean;
             if (jsValue.IsNumber)
-                return jsValue.AsNumber;
+                return jsValue.AsDouble;
             if (jsValue.IsDate)
                 return jsValue.AsDate;
 

@@ -1,9 +1,10 @@
 ﻿using FastTests;
-using Jint;
-using Jint.Native;
+using V8.Net;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
+using Xunit.Abstractions;
+using Raven.Server.Documents.Patch;
 
 namespace SlowTests.Issues
 {
@@ -29,18 +30,21 @@ function execute(doc, args)
     }
 }
 ";
-            var engine = new Engine(options =>
-            {
-                options.Strict();
-            });
+            var engine = new V8EngineEx();
+            string[] optionsCmd = {$"use_strict={configuration.Patching.StrictMode}"};
+            engine.SetFlagsFromCommandLine(optionsCmd);
 
-            var args = new JsValue[1];
+            var args = new InternalHandle[1];
             var user = new User();
-            args[0] = JsValue.FromObject(engine, user);
-
-            engine.Execute(script);
-            var call = engine.GetValue("execute").TryCast<ICallable>();
-            call.Call(Undefined.Instance, args);
+            using (args[0] = engine.FromObject(user))
+            {
+                engine.Execute(script);
+                using(var execute = engine.GlobalObject.GetProperty("execute"))
+                {
+                    var call = execute.Object.TryCast<V8Function>();
+                    call.StaticCall(args);
+                }
+            }
 
             Assert.Equal("ayende", user.Name);
         }

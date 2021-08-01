@@ -10,16 +10,15 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
     {
         private readonly DynamicCounterEntry _entry;
 
-        public CounterEntryObjectInstance(DynamicCounterEntry entry, JavaScriptUtils javaScriptUtils = null) : base(javaScriptUtils)
+        public CounterEntryObjectInstance(DynamicCounterEntry entry, JavaScriptUtils javaScriptUtils = null) : base()
         {
             _entry = entry ?? throw new ArgumentNullException(nameof(entry));
         }
-
-        public InternalHandle NamedPropertyGetter(V8Engine engine, ref string propertyName)
+        public override InternalHandle NamedPropertyGetter(V8EngineEx engine, ref string propertyName)
         {
             if (_properties.TryGetValue(propertyName, out InternalHandle value) == false)
             {
-                value = GetPropertyValue(engine, propertyName);
+                value = GetPropertyValue(engine, ref propertyName);
                 if (value.IsEmpty == false)
                     _properties.Add(propertyName, value);
             }
@@ -27,7 +26,7 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
             return value;
         }
 
-        private InternalHandle GetPropertyValue(V8Engine engine, ref string propertyName)
+        private InternalHandle GetPropertyValue(V8EngineEx engine, ref string propertyName)
         {
             if (propertyName == nameof(DynamicCounterEntry.Value))
                 return engine.CreateValue(_entry._value);

@@ -57,17 +57,17 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             var engine = DocumentScript.ScriptEngine;
             base.Initialize(debugMode);
 
-            DocumentScript.ScriptEngine.GlobalObject.SetProperty(Transformation.LoadTo, new ClrFunctionInstance(Transformation.LoadTo, LoadToFunctionTranslator));
+            DocumentScript.ScriptEngine.GlobalObject.SetProperty(Transformation.LoadTo, new ClrFunctionInstance(LoadToFunctionTranslator));
 
             foreach (var table in LoadToDestinations)
             {
                 var name = Transformation.LoadTo + table;
-                DocumentScript.ScriptEngine.GlobalObject.SetProperty(name, new ClrFunctionInstance(name,
+                DocumentScript.ScriptEngine.GlobalObject.SetProperty(name, new ClrFunctionInstance(
                     (engine, isConstructCall, self, args) => LoadToFunctionTranslator(engine, table, args)));
             }
 
-            DocumentScript.ScriptEngine.GlobalObject.SetProperty("partitionBy", new ClrFunctionInstance("partitionBy", PartitionBy));
-            DocumentScript.ScriptEngine.GlobalObject.SetProperty("noPartition", new ClrFunctionInstance("noPartition", NoPartition));
+            DocumentScript.ScriptEngine.GlobalObject.SetProperty("partitionBy", new ClrFunctionInstance(PartitionBy));
+            DocumentScript.ScriptEngine.GlobalObject.SetProperty("noPartition", new ClrFunctionInstance(NoPartition));
 
             if (_config.CustomPartitionValue != null)
             {

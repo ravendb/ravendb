@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using V8.Net;
 using Raven.Client.Documents.Operations.Attachments;
 using Sparrow.Json;
+using Raven.Server.Documents.Patch;
 
 namespace Raven.Server.Documents.Indexes.Static.JavaScript
 {
@@ -16,7 +17,7 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
             _attachmentName = attachmentName ?? throw new ArgumentNullException(nameof(attachmentName));
         }
 
-        public InternalHandle NamedPropertyGetter(V8Engine engine, ref string propertyName)
+        public override InternalHandle NamedPropertyGetter(V8EngineEx engine, ref string propertyName)
         {
             if (_properties.TryGetValue(propertyName, out InternalHandle value) == false)
             {
