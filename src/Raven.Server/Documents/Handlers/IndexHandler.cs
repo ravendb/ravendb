@@ -186,6 +186,48 @@ namespace Raven.Server.Documents.Handlers
 
                     w.WritePropertyName(nameof(IndexHistoryEntry.Source));
                     w.WriteString(entry.Source);
+                    w.WriteComma();
+
+                    var first = true;
+                    w.WritePropertyName(nameof(IndexHistoryEntry.RollingDeployment));
+                    w.WriteStartObject();
+                    foreach (var rollingIndexDeployment in entry.RollingDeployment)
+                    {
+                        if (first)
+                        {
+                            first = false;
+                        }
+                        else
+                        {
+                            w.WriteComma();
+                        }
+                        w.WritePropertyName(rollingIndexDeployment.Key);
+                        w.WriteStartObject();
+
+                        w.WritePropertyName(nameof(rollingIndexDeployment.Value.CreatedAt));
+                        w.WriteDateTime(rollingIndexDeployment.Value.CreatedAt, true);
+                        w.WriteComma();
+
+                        if (rollingIndexDeployment.Value.StartedAt.HasValue)
+                        {
+                            w.WritePropertyName(nameof(rollingIndexDeployment.Value.StartedAt));
+                            w.WriteDateTime((DateTime)rollingIndexDeployment.Value.StartedAt, true);
+                            w.WriteComma();
+                        }
+
+                        if (rollingIndexDeployment.Value.FinishedAt.HasValue)
+                        {
+                            w.WritePropertyName(nameof(rollingIndexDeployment.Value.FinishedAt));
+                            w.WriteDateTime((DateTime)rollingIndexDeployment.Value.FinishedAt, true);
+                            w.WriteComma();
+                        }
+
+                        w.WritePropertyName(nameof(rollingIndexDeployment.Value.State));
+                        w.WriteString(rollingIndexDeployment.Value.State.ToString());
+
+                        w.WriteEndObject();
+                    }
+                    w.WriteEndObject();
                     w.WriteEndObject();
                 });
 
