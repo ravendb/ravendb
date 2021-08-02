@@ -169,36 +169,6 @@ namespace RachisTests
         }
 
         [Fact]
-        public async Task CreateDistributedRevisions()
-        {
-            const int nodesAmount = 5;
-            var (_, leader) = await CreateRaftCluster(nodesAmount).ConfigureAwait(false);
-
-            var defaultDatabase = "DistributedRevisionsSubscription";
-
-            await CreateDatabaseInCluster(defaultDatabase, nodesAmount, leader.WebUrl).ConfigureAwait(false);
-
-            using (var store = new DocumentStore
-            {
-                Urls = new[] { leader.WebUrl },
-                Database = defaultDatabase
-            }.Initialize())
-            {
-                await SetupRevisions(leader, defaultDatabase).ConfigureAwait(false);
-
-                var reachedMaxDocCountMre = new AsyncManualResetEvent();
-                var ackSent = new AsyncManualResetEvent();
-
-                var continueMre = new AsyncManualResetEvent();
-
-                for (int i = 0; i < 17; i++)
-                {
-                    await GenerateDistributedRevisionsDataAsync(defaultDatabase);
-                }
-            }
-        }
-
-        [Fact]
         public async Task SetMentorToSubscriptionWithFailover()
         {
             const int nodesAmount = 5;
