@@ -250,6 +250,8 @@ class indexes extends viewModelBase {
                 return "some_checked";
             return "unchecked";
         });
+        
+        this.searchText.subscribe(() => this.highlightIndex(this.indexNameToHighlight(), false));
     }
 
     activate(args: any) {
@@ -283,10 +285,24 @@ class indexes extends viewModelBase {
 
     private scrollToIndex(): void {
         const indexToHighlight = this.indexNameToHighlight();
-        
+
         if (indexToHighlight) {
-            const indexElement = document.getElementById(`index_${indexToHighlight}`);
+            const indexId = `index_${indexToHighlight}`;
+            
+            const indexElement = document.getElementById(indexId);
             generalUtils.scrollToElement(indexElement);
+            
+            this.highlightIndex(indexToHighlight);
+        }
+    }
+    
+    private highlightIndex(indexName: string, highlight: boolean = true): void {
+        const indexId = "index_" + indexName;
+        
+        if (highlight) {
+            $("#" + indexId).addClass("blink-style-basic");
+        } else {
+            $("#" + indexId).removeClass("blink-style-basic");
         }
     }
     
@@ -957,10 +973,6 @@ class indexes extends viewModelBase {
     forceParallelDeployment(progress: indexProgress) {
         const forceParallelDeploymentDialog = new forceParallelDeploymentConfirm(progress, this.localNodeTag(), this.activeDatabase());
         app.showBootstrapDialog(forceParallelDeploymentDialog);
-    }
-    
-    shouldHighlightIndex(indexName: string) {
-        return this.indexNameToHighlight() === indexName;
     }
 }
 
