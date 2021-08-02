@@ -23,6 +23,7 @@ using Voron.Data.CompactTrees;
 using Voron.Data.Sets;
 using Raven.Server.Documents.Queries.Parser;
 using Corax.Queries;
+using NuGet.Packaging.Signing;
 
 namespace Tryouts
 {
@@ -124,11 +125,11 @@ namespace Tryouts
             reader.Read(0, out double doubleValue);
             reader.Read(0, out double floatValue);
             reader.Read(0, out longValue, out doubleValue, out var sequenceValue);
-            reader.Read(2, out sequenceValue);
-            reader.Read(3, out sequenceValue);
+            reader.Read(2, value: out sequenceValue);
+            reader.Read(3, value: out sequenceValue);
 
-            reader.Read(1, out sequenceValue, elementIdx: 0);
-            reader.Read(1, out sequenceValue, elementIdx: 2);
+            reader.Read(1, value: out sequenceValue, elementIdx: 0);
+            reader.Read(1, value: out sequenceValue, elementIdx: 2);
 
             var iterator = reader.ReadMany(1);
             while (iterator.ReadNext())
@@ -140,12 +141,12 @@ namespace Tryouts
         public static void Main()
         {
 
-            //new IndexSearcherTest(new ConsoleTestOutputHelper()).AndInStatement(1000, 128);
+            //new IndexSearcherTest(new ConsoleTestOutputHelper()).SimpleSortedMatchStatement();
 
 
-            var parser = new QueryParser();
-            parser.Init("from Dogs where Type = 'Dog' and Age in ('15', '16')");
-            QueryDefinition queryDefinition = new QueryDefinition("Name", parser.Parse());
+            //var parser = new QueryParser();
+            //parser.Init("from Dogs where Type = 'Dog' and Age in ('15', '16')");
+            //QueryDefinition queryDefinition = new QueryDefinition("Name", parser.Parse());
 
             using var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly());
 
@@ -154,17 +155,27 @@ namespace Tryouts
             using var searcher = new IndexSearcher(env);
             var coraxQueryEvaluator = new CoraxQueryEvaluator(searcher);
 
-            var query = coraxQueryEvaluator.Search(queryDefinition.Query.Where);
+            var typeTerm = searcher.TermQuery("Type", "Dog");
+            var ageTerm = searcher.StartWithQuery("Age", "1");
+            var andQuery = searcher.And(typeTerm, ageTerm);
+            var query = searcher.OrderBy(andQuery, field: 2, take: 16);
 
             Span<long> ids = stackalloc long[2048];
-            int read;
-            do
-            {
-                read = query.Fill(ids);
-                for (int i = 0; i < read; i++)
-                    Console.WriteLine(searcher.GetIdentityFor(ids[i]));
-            }
-            while (read != 0);
+            while (query.Fill(ids) != 0)
+                ;
+
+
+            //var query = searcher.Search(queryDefinition.Query.Where);
+
+            //Span<long> ids = stackalloc long[2048];
+            //int read;
+            //do
+            //{
+            //    read = query.Fill(ids);
+            //    for (int i = 0; i < read; i++)
+            //        Console.WriteLine(searcher.GetIdentityFor(ids[i]));
+            //}
+            //while (read != 0);
 
             //new IndexSearcherTest(new ConsoleTestOutputHelper()).SimpleAndOr();
 

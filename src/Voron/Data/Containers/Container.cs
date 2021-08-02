@@ -1,7 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Reflection.PortableExecutable;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Sparrow;
 using Sparrow.Server;
 using Voron.Data.Sets;
 using Voron.Global;
@@ -26,11 +29,13 @@ namespace Voron.Data.Containers
             }
         }        
 
-        private readonly Page _page;        
+        private readonly Page _page;
+
         public readonly Span<byte> Span => _page.AsSpan();
 
         public ref ContainerPageHeader Header => ref MemoryMarshal.AsRef<ContainerPageHeader>(Span);
-        public Span<ItemMetadata> Offsets => MemoryMarshal.Cast<byte, ItemMetadata>(_page.AsSpan().Slice(PageHeader.SizeOf)).Slice(0, Header.NumberOfOffsets);
+
+        public Span<ItemMetadata> Offsets => MemoryMarshal.Cast<byte, ItemMetadata>(_page.AsSpan().Slice(PageHeader.SizeOf, Header.NumberOfOffsets * sizeof(ItemMetadata)));
         
 
         [StructLayout(LayoutKind.Explicit, Pack = 1, Size = 4)]
@@ -457,17 +462,16 @@ namespace Voron.Data.Containers
             }
 
             var container = new Container(page);
-            ref var metadata = ref container.Offsets[OffsetToIndex(offset)];
-            Debug.Assert(metadata.Size != 0);
-
-            return new Item(page, metadata.Offset, metadata.Size);
+            ItemMetadata* metadata = (ItemMetadata*)(container._page.Pointer + offset);
+            Debug.Assert(metadata->Size != 0);
+            return new Item(page, metadata->Offset, metadata->Size);
         }
 
         private Span<byte> Get(int offset)
         {
-            ref var metadata = ref Offsets[OffsetToIndex(offset)];
-            Debug.Assert(metadata.Size != 0);
-            return Span.Slice(metadata.Offset, metadata.Size);
+            ItemMetadata* metadata = (ItemMetadata*)(_page.Pointer + offset);
+            Debug.Assert(metadata->Size != 0);
+            return Span.Slice(metadata->Offset, metadata->Size);
         }
 
         private static int OffsetToIndex(int offset)
@@ -489,6 +493,7 @@ namespace Voron.Data.Containers
             }
 
             public Span<byte> ToSpan() => new Span<byte>(Page.Pointer + Offset, Length);
+            public UnmanagedSpan ToUnmanagedSpan() => new UnmanagedSpan(Page.Pointer + Offset, Length);
         }
     }
 }

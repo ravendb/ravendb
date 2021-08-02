@@ -19,7 +19,7 @@ namespace Corax.Queries
         public long Count => _totalResults;
         public long Current => _currentIdx <= QueryMatch.Start ? _currentIdx : _current;
 
-        public QueryCountConfidence Confidence => throw new NotImplementedException();
+        public QueryCountConfidence Confidence => _confidence;
 
         public MultiTermMatch(TTermProvider inner, long totalResults = 0, QueryCountConfidence confidence = QueryCountConfidence.Low)
         {

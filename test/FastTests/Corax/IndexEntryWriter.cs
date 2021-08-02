@@ -84,14 +84,14 @@ namespace FastTests.Corax
             Assert.Equal(1, longValue);
             Assert.True(sequenceValue.SequenceCompareTo(Encoding.UTF8.GetBytes("1.001").AsSpan()) == 0);
 
-            reader.Read(2, out sequenceValue);
+            reader.Read(2, value: out sequenceValue);
             Assert.True(sequenceValue.SequenceCompareTo(Encoding.UTF8.GetBytes("CCCC").AsSpan()) == 0);
-            reader.Read(3, out sequenceValue);
+            reader.Read(3, value: out sequenceValue);
             Assert.True(sequenceValue.SequenceCompareTo(Encoding.UTF8.GetBytes("DDDDDDDDDD").AsSpan()) == 0);
 
-            reader.Read(1, out sequenceValue, elementIdx: 0);
+            reader.Read(1, value: out sequenceValue, elementIdx: 0);
             Assert.True(sequenceValue.SequenceCompareTo(Encoding.UTF8.GetBytes("AAA").AsSpan()) == 0);
-            reader.Read(1, out sequenceValue, elementIdx: 2);
+            reader.Read(1, value: out sequenceValue, elementIdx: 2);
             Assert.True(sequenceValue.SequenceCompareTo(Encoding.UTF8.GetBytes("CE").AsSpan()) == 0);
         }
 
