@@ -70,12 +70,31 @@ namespace Corax.Queries
 
                 // When we don't have any new batch, we are done.
                 if (bTotalMatches == 0)
-                    return totalMatches;                
+                    return totalMatches;
 
-                // PERF: This is actually a very naive way to do this. Why? Because we know the max value in the 'take' statement so
-                //       we can actually get rid of a lot of data if there is inbalance. For that we need a custom sorter that uses
-                //       that information to do early prunning of results. They key of performance is in being able to do that as
-                //       much as possible. 
+                // If we have already a full set usable for the take. 
+                int bIdx, kIdx;                
+                if (totalMatches >= take)
+                {
+                    // PERF: Because we know the max value in the 'take' statement so we can actually get rid of a lot of data if there is inbalance.
+                    //       For that we need a custom sorter that uses that information to do early prunning of results before sorting.
+                    //       They key of performance is in being able to do that as much as possible. 
+
+                    bIdx = 0;
+                    kIdx = 0;
+                    long lastElement = matches[take - 1];
+                    while (bIdx < bTotalMatches)
+                    {
+                        if (_comparer.Compare(lastElement, b[bIdx]) >= 0)
+                            b[kIdx++] = b[bIdx];
+                        bIdx++;
+                    }
+                    bTotalMatches = kIdx;
+                }
+
+                // When we don't have any new potential match here, we are done.
+                if (bTotalMatches == 0)
+                    continue;
 
                 // We sort the new batch
                 sorter.Sort(b.Slice(0, bTotalMatches));
@@ -84,8 +103,8 @@ namespace Corax.Queries
                 int aTotalMatches = Math.Min(totalMatches, take);
 
                 int aIdx = aTotalMatches;
-                int bIdx = 0;
-                int kIdx = 0;
+                bIdx = 0;
+                kIdx = 0;
 
                 while (aIdx > 0 && aIdx >= aTotalMatches / 8)
                 {
@@ -95,7 +114,7 @@ namespace Corax.Queries
 
                     aIdx /= 2;
                 }
-                
+
                 // This is the new start location on the matches. 
                 kIdx = aIdx; 
 
