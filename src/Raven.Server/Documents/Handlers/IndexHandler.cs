@@ -205,20 +205,20 @@ namespace Raven.Server.Documents.Handlers
                         w.WriteStartObject();
 
                         w.WritePropertyName(nameof(rollingIndexDeployment.Value.CreatedAt));
-                        w.WriteDateTime(rollingIndexDeployment.Value.CreatedAt, true);
+                        w.WriteDateTime(rollingIndexDeployment.Value.CreatedAt, isUtc: true);
                         w.WriteComma();
 
                         if (rollingIndexDeployment.Value.StartedAt.HasValue)
                         {
                             w.WritePropertyName(nameof(rollingIndexDeployment.Value.StartedAt));
-                            w.WriteDateTime((DateTime)rollingIndexDeployment.Value.StartedAt, true);
+                            w.WriteDateTime((DateTime)rollingIndexDeployment.Value.StartedAt, isUtc: true);
                             w.WriteComma();
                         }
 
                         if (rollingIndexDeployment.Value.FinishedAt.HasValue)
                         {
                             w.WritePropertyName(nameof(rollingIndexDeployment.Value.FinishedAt));
-                            w.WriteDateTime((DateTime)rollingIndexDeployment.Value.FinishedAt, true);
+                            w.WriteDateTime((DateTime)rollingIndexDeployment.Value.FinishedAt, isUtc: true);
                             w.WriteComma();
                         }
 
