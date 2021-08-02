@@ -14,16 +14,21 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
         {
             _entry = entry ?? throw new ArgumentNullException(nameof(entry));
         }
+
+        public static CounterEntryObjectInstance.CustomBinder CreateObjectBinder(V8EngineEx engine, CounterEntryObjectInstance bo) {
+            return engine.CreateObjectBinder<CounterEntryObjectInstance.CustomBinder>(bo, engine.TypeBinderCounterEntryObjectInstance);
+        }
+
         public override InternalHandle NamedPropertyGetter(V8EngineEx engine, ref string propertyName)
         {
-            if (_properties.TryGetValue(propertyName, out InternalHandle value) == false)
+            if (_properties.TryGetValue(propertyName, out InternalHandle jsValue) == false)
             {
-                value = GetPropertyValue(engine, ref propertyName);
-                if (value.IsEmpty == false)
-                    _properties.Add(propertyName, value);
+                jsValue = GetPropertyValue(engine, ref propertyName);
+                if (jsValue.IsEmpty == false)
+                    _properties.Add(propertyName, jsValue);
             }
 
-            return value;
+            return jsValue;
         }
 
         private InternalHandle GetPropertyValue(V8EngineEx engine, ref string propertyName)

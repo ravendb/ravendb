@@ -108,7 +108,7 @@ namespace Raven.Server.Documents.Indexes.Static.Utils
 
             switch (item)
             {
-                case DynamicBlittableJson dbj:
+                case DynamicBlittableJson dbj: {
                     var id = dbj.GetId();
                     if (isMapReduce == false && id == DynamicNullObject.Null)
                         return false;
@@ -117,7 +117,7 @@ namespace Raven.Server.Documents.Indexes.Static.Utils
 
                     if (dbj.TryGetDocument(out var doc))
                     {
-                        BlittableObjectInstance boi = new BlittableObjectInstance(this, null, dbj.BlittableJson, doc);
+                        BlittableObjectInstance boi = new BlittableObjectInstance(JavaScriptUtils, null, dbj.BlittableJson, doc);
                         jsItem.Set(boi.CreateObjectBinder()._);
                     }
                     else
@@ -128,27 +128,28 @@ namespace Raven.Server.Documents.Indexes.Static.Utils
                         if (dbj[Constants.Documents.Metadata.ChangeVector] is string cv)
                             changeVector = cv;
 
-                        var bo = new BlittableObjectInstance(this, null, dbj.BlittableJson, id, lastModified, changeVector);
-                        jsItem.Set(bo.CreateObjectBinder()._);
+                        var boi = new BlittableObjectInstance(JavaScriptUtils, null, dbj.BlittableJson, id, lastModified, changeVector);
+                        jsItem.Set(boi.CreateObjectBinder()._);
                     }
 
                     return true;
-
-                case DynamicTimeSeriesSegment dtss:
-                    var bo = new TimeSeriesSegmentObjectInstance(dtss, JavaScriptUtils);
-                    jsItem.Set(bo.CreateObjectBinder()._);
+                }
+                case DynamicTimeSeriesSegment dtss: {
+                    var bo = new TimeSeriesSegmentObjectInstance(dtss);
+                    jsItem.Set(TimeSeriesSegmentObjectInstance.CreateObjectBinder(Engine, bo)._);
                     return true;
-
-                case DynamicCounterEntry dce:
-                    var bo = new CounterEntryObjectInstance(dce, JavaScriptUtils);
-                    jsItem.Set(bo.CreateObjectBinder()._);
+                }
+                case DynamicCounterEntry dce: {
+                    var bo = new CounterEntryObjectInstance(dce);
+                    jsItem.Set(CounterEntryObjectInstance.CreateObjectBinder(Engine, bo)._);
                     return true;
-
-                case BlittableJsonReaderObject bjro:
+                }
+                case BlittableJsonReaderObject bjro: {
                     //This is the case for map-reduce
-                    BlittableObjectInstance bo = new BlittableObjectInstance(this, null, bjro, null, null, null);
+                    BlittableObjectInstance bo = new BlittableObjectInstance(JavaScriptUtils, null, bjro, null, null, null);
                     jsItem.Set(bo.CreateObjectBinder()._);
                     return true;
+                }
             }
 
             jsItem.Dispose(); // is not necessary as should be empty
@@ -164,10 +165,13 @@ namespace Raven.Server.Documents.Indexes.Static.Utils
         public readonly JavaScriptUtils JavaScriptUtils;
         public readonly V8EngineEx Engine;
 
-        public JavaScriptIndexUtils(JavaScriptUtils javaScriptUtils)
+        public readonly Engine EngineJint;
+
+        public JavaScriptIndexUtils(JavaScriptUtils javaScriptUtils, Engine engineJint)
         {
             JavaScriptUtils = javaScriptUtils;
             Engine = JavaScriptUtils.Engine;
+            EngineJint = engineJint;
         }
     }
 }

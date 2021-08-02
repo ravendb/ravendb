@@ -105,7 +105,7 @@ namespace Raven.Server.Documents.Patch
             if (args.Length != 2)
                 throw new InvalidOperationException($"{nameof(LoadAttachment)} may only be called with two arguments, but '{args.Length}' were passed.");
 
-            InternalHandle jsRes;
+            InternalHandle jsRes = InternalHandle.Empty;
             if (args[0].IsNull)
                 return jsRes.Set(DynamicJsNull.ImplicitNull._);
 
@@ -146,7 +146,7 @@ namespace Raven.Server.Documents.Patch
             if (args.Length != 1)
                 throw new InvalidOperationException($"{nameof(LoadAttachment)} may only be called with one argument, but '{args.Length}' were passed.");
 
-            InternalHandle jsRes;
+            InternalHandle jsRes = InternalHandle.Empty;
             if (args[0].IsNull)
                 return jsRes.Set(DynamicJsNull.ImplicitNull._);
 
@@ -166,8 +166,10 @@ namespace Raven.Server.Documents.Patch
 
             int arrayLength =  attachments.Count;
             var jsItems = new InternalHandle[attachments.Count];
-            for (int i = 0; i < arrayLength; i++)
+            for (int i = 0; i < arrayLength; i++) {
+                jsItems[i] = InternalHandle.Empty;
                 jsItems[i].Set(engine.CreateObjectBinder(new AttachmentObjectInstance(attachments[i]), engine.TypeBinderAttachmentObjectInstance)._);
+            }
 
             return engine.CreateArrayWithDisposal(jsItems);
 
@@ -265,7 +267,7 @@ namespace Raven.Server.Documents.Patch
 
         internal InternalHandle TranslateToJs(JsonOperationContext context, object o)
         {
-            InternalHandle jsRes;
+            InternalHandle jsRes = InternalHandle.Empty;
             if (o is Tuple<Document, Lucene.Net.Documents.Document, IState, Dictionary<string, IndexField>, bool?, ProjectionOptions> t)
             {
                 var d = t.Item1;
@@ -677,7 +679,7 @@ namespace Raven.Server.Documents.Patch
                 return Convert(a);
             }
 
-            InternalHandle jsRes;
+            InternalHandle jsRes = InternalHandle.Empty;
             if (value is JSFunction d)
             {
                 return jsRes.Set((new ClrFunctionInstanceBase(d))._);

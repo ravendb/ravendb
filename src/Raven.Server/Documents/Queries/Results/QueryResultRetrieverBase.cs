@@ -959,7 +959,8 @@ namespace Raven.Server.Documents.Queries.Results
                 {
                     if (!jsMetadata.IsObject)
                     {
-                        jsMetadata.Set(engine.CreateObject());
+                        using (var jsMetadataNew = engine.CreateObject())
+                            jsMetadata.Set(jsMetadataNew);
                         json.SetProperty(Constants.Documents.Metadata.Key, jsMetadata);
                     }
 

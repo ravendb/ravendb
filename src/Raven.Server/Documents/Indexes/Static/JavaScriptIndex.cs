@@ -402,7 +402,7 @@ function map(name, lambda) {
 
             JavaScriptUtils = new JavaScriptUtils(null, _engine);
 
-            JavaScriptIndexUtils = new JavaScriptIndexUtils(JavaScriptUtils);
+            JavaScriptIndexUtils = new JavaScriptIndexUtils(JavaScriptUtils, _engineJint);
         }
 
         ~AbstractJavaScriptIndex()
@@ -463,7 +463,7 @@ function map(name, lambda) {
                 {
                     var groupByKey = reduceObj.GetProperty(KeyProperty).As<V8Function>();
                     var reduce = reduceObj.GetProperty(AggregateByProperty).As<V8Function>();
-                    ReduceOperation = new JavaScriptReduceOperation(reduceJint, groupByKeyJint, JavaScriptIndexUtils, reduce, groupByKey, JavaScriptIndexUtils) { ReduceString = Definition.Reduce };
+                    ReduceOperation = new JavaScriptReduceOperation(reduceJint, groupByKeyJint, _engineJint, reduce, groupByKey, JavaScriptIndexUtils) { ReduceString = Definition.Reduce };
                     GroupByFields = ReduceOperation.GetReduceFieldsNames();
                     Reduce = ReduceOperation.IndexingFunction;
                 }
@@ -690,7 +690,7 @@ function map(name, lambda) {
                 throw new ArgumentException("The tryConvertToNumber(value) method expects one argument, but got: " + args.Length);
             }
 
-            InternalHandle jsRes;
+            InternalHandle jsRes = InternalHandle.Empty;
             var value = args[0];
 
             if (value.IsNull || value.IsUndefined)
@@ -703,20 +703,20 @@ function map(name, lambda) {
             {
                 var valueAsString = value.AsString;
                 if (Double.TryParse(valueAsString, out var valueAsDbl))
-                    return valueAsDbl;
+                    return engine.CreateValue(valueAsDbl);
             }
 
             return jsRes.Set(DynamicJsNull.ImplicitNull._);
         }
 
-        private static InternalHandle LoadDocument(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+        private InternalHandle LoadDocument(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
             if (args.Length != 2)
             {
                 throw new ArgumentException("The load(id, collection) method expects two arguments, but got: " + args.Length);
             }
 
-            InternalHandle jsRes;
+            InternalHandle jsRes = InternalHandle.Empty;
             if (args[0].IsNull || args[0].IsUndefined)
                 return jsRes.Set(DynamicJsNull.ImplicitNull._);
 
@@ -733,12 +733,12 @@ function map(name, lambda) {
             return jsRes.Set(DynamicJsNull.ImplicitNull._);
         }
 
-        private static InternalHandle LoadCompareExchangeValue(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+        private InternalHandle LoadCompareExchangeValue(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
             if (args.Length != 1)
                 throw new ArgumentException("The cmpxchg(key) method expects one argument, but got: " + args.Length);
 
-            InternalHandle jsRes;
+            InternalHandle jsRes = InternalHandle.Empty;
             var keyArgument = args[0];
             if (keyArgument.IsNull || keyArgument.IsUndefined)
                 return jsRes.Set(DynamicJsNull.ImplicitNull._);
@@ -750,15 +750,14 @@ function map(name, lambda) {
             }
             else if (keyArgument.IsArray)
             {
-                var keys = keyArgument.Object;
-                int arrayLength =  keys.ArrayLength;
+                int arrayLength =  keyArgument.ArrayLength;
                 if (arrayLength == 0)
                     return jsRes.Set(DynamicJsNull.ImplicitNull._);
 
                 var jsItems = new InternalHandle[arrayLength];
                 for (int i = 0; i < arrayLength; i++)
                 {
-                    using (var key = keys.GetProperty(i)) 
+                    using (var key = keyArgument.GetProperty(i)) 
                     {
                         if (key.IsString == false)
                             ThrowInvalidType(key, JSValueType.String);
@@ -777,7 +776,7 @@ function map(name, lambda) {
 
             InternalHandle ConvertToJsValue(object value)
             {
-                InternalHandle jsRes;
+                InternalHandle jsRes = InternalHandle.Empty;
                 switch (value)
                 {
                     case null:

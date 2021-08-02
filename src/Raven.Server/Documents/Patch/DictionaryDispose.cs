@@ -12,7 +12,7 @@ namespace Raven.Server.Documents.Patch
 
         new public void Add(InternalHandle key, TValue value)
         {
-            var keyNew = new InternalHandle(key);
+            var keyNew = new InternalHandle(key, true);
             try
             {
                 base.Add(keyNew, value);
@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Patch
 
         new public bool TryAdd(InternalHandle key, TValue value)
         {
-            var keyNew = new InternalHandle(key);
+            var keyNew = new InternalHandle(key, true);
             var res = base.TryAdd(keyNew, value);
             if (!res)
             {
@@ -45,7 +45,7 @@ namespace Raven.Server.Documents.Patch
 
         new public void Add(TKey key, InternalHandle value)
         {
-            var valueNew = new InternalHandle(value);
+            var valueNew = new InternalHandle(value, true);
             try
             {
                 base.Add(key, valueNew);
@@ -59,7 +59,7 @@ namespace Raven.Server.Documents.Patch
 
         new public bool TryAdd(TKey key, InternalHandle value)
         {
-            var valueNew = new InternalHandle(value);
+            var valueNew = new InternalHandle(value, true);
             var res = base.TryAdd(key, valueNew);
             if (!res)
             {
@@ -68,11 +68,11 @@ namespace Raven.Server.Documents.Patch
             return res;
         }
 
-        new public bool TryGetValue(TKey key, out InternalHandle value)
+        new public bool TryGetValue(TKey key, out InternalHandle jsValue)
         {
-            var res = base.TryGetValue(key, out value);
+            var res = base.TryGetValue(key, out jsValue);
             if (res) {
-                value = new InternalHandle(value);
+                jsValue = new InternalHandle(jsValue, true);
             }
             return res;
         }

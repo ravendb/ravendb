@@ -180,7 +180,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
         private InternalHandle LoadToFunctionTranslatorInternal(V8EngineEx engine, string name, InternalHandle key, InternalHandle obj, string methodSignature)
         {
-            InternalHandle jsRes;
+            InternalHandle jsRes = InternalHandle.Empty;
             if (key.HasOwnProperty(PartitionKeys) == false)
                 ThrowInvalidScriptMethodCall(
                     $"{methodSignature} argument 'key' must have {PartitionKeys} property. Did you forget to use 'partitionBy(p)' / 'noPartition()' ? ");

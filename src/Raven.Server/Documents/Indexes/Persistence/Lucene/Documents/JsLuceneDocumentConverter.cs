@@ -108,18 +108,18 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                         {
                             //In case TryDetectDynamicFieldCreation finds a dynamic field it will populate 'field.Name' with the actual property name
                             //so we must use field.Name and not property from this point on.
-                            InternalHandle val = TryDetectDynamicFieldCreation(propertyName, jsPropertyValue.Object, field);
-                            using (val)
+                            InternalHandle jsValue = TryDetectDynamicFieldCreation(propertyName, jsPropertyValue.Object, field);
+                            using (jsValue)
                             {
-                                if (val.IsEmpty == false)
+                                if (jsValue.IsEmpty == false)
                                 {
-                                    if (val.IsObject && val.Object.TryGetValue(SpatialPropertyName, out _))
+                                    if (jsValue.IsObject && jsValue.Object.TryGetValue(SpatialPropertyName, out _))
                                     {
-                                        jsPropertyValue.Set(val); //Here we populate the dynamic spatial field that will be handled below.
+                                        jsPropertyValue.Set(jsValue); //Here we populate the dynamic spatial field that will be handled below.
                                     }
                                     else
                                     {
-                                        value = TypeConverter.ToBlittableSupportedType(val, flattenArrays: false, forIndexing: true, engine: documentToProcess.Engine, context: indexContext);
+                                        value = TypeConverter.ToBlittableSupportedType(jsValue, flattenArrays: false, forIndexing: true, engine: documentToProcess.Engine, context: indexContext);
                                         numberOfCreatedFields = GetRegularFields(instance, field, CreateValueForIndexing(value, propertyBoost), indexContext, out _);
 
                                         newFields += numberOfCreatedFields;
@@ -238,9 +238,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             }
         }
 
-        private static bool TryGetBoostedValue(V8NativeObject valueToCheck, out InternalHandle value, out float? boost)
+        private static bool TryGetBoostedValue(V8NativeObject valueToCheck, out InternalHandle jsValue, out float? boost)
         {
-            value = InternalHandle.Empty;
+            jsValue = InternalHandle.Empty;
             boost = null;
 
             if (valueToCheck.TryGetValue(BoostPropertyName, out var boostValue) == false)
@@ -255,7 +255,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                     return false;
 
                 boost = (float)boostValue.AsDouble;
-                value = valueValue; // just copying without dispose
+                jsValue = valueValue; // just copying without dispose
             }
             return true;
         }

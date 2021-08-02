@@ -93,7 +93,7 @@ namespace Raven.Server.Documents.ETL
 
         private InternalHandle LoadToFunctionTranslator(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
-            InternalHandle jsRes;
+            InternalHandle jsRes = InternalHandle.Empty;
             if (args.Length != 2)
                 ThrowInvalidScriptMethodCall("loadTo(name, obj) must be called with exactly 2 parameters");
             if (args[0].IsString == false)
@@ -111,7 +111,7 @@ namespace Raven.Server.Documents.ETL
 
         private InternalHandle LoadToFunctionTranslator(string name, InternalHandle self, params InternalHandle[] args)
         {
-            InternalHandle jsRes;
+            InternalHandle jsRes = InternalHandle.Empty;
             if (args.Length != 1)
                 ThrowInvalidScriptMethodCall($"loadTo{name}(obj) must be called with exactly 1 parameter");
 

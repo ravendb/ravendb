@@ -75,19 +75,19 @@ namespace Raven.Server.Extensions
             return value.GetPropertyAttributes(name) != V8PropertyAttributes.None;
         }
 
-        public static bool TryGetValue(this InternalHandle obj, string propertyName, out InternalHandle res)
+        public static bool TryGetValue(this InternalHandle obj, string propertyName, out InternalHandle jsRes)
         {
-            res = obj.GetProperty(propertyName);
-            if (res.IsUndefined) {
-                res.Dispose();
+            jsRes = obj.GetProperty(propertyName);
+            if (jsRes.IsUndefined) {
+                jsRes.Dispose();
                 return false;
             }
             return true;
         }
 
-        public static bool TryGetValue(this V8NativeObject obj, string propertyName, out InternalHandle res)
+        public static bool TryGetValue(this V8NativeObject obj, string propertyName, out InternalHandle jsRes)
         {
-            return obj._.TryGetValue(propertyName, out res);
+            return obj._.TryGetValue(propertyName, out jsRes);
         }
 
         public static void FastAddProperty(this V8NativeObject obj, string name, InternalHandle value, bool writable, bool enumerable, bool configurable)

@@ -160,7 +160,7 @@ namespace Raven.Server.Documents.Patch
             {
                 WriteNumber(parent, propertyName, d);
             }
-            else if (value == null || ReferenceEquals(value, InternalHandle.Empty))
+            else if (value == null)
                 _writer.WriteValueNull();
             else if (value is InternalHandle jsValue) 
             {
@@ -420,7 +420,7 @@ namespace Raven.Server.Documents.Patch
                         continue;
                     }
 
-                    InternalHandle jsRes;
+                    InternalHandle jsRes = InternalHandle.Empty;
                     yield return new KeyValuePair<string, InternalHandle>(property.Name, jsRes.Set(_engine.CreateObjectBinder(obj)._));
                 }
                 yield break;

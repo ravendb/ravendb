@@ -21,14 +21,14 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
         where T : ObjectInstanceBase
         {
 
-            public virtual InternalHandle NamedPropertyGetter(ref string propertyName)
+            public override InternalHandle NamedPropertyGetter(ref string propertyName)
             {
                 return ObjCLR.NamedPropertyGetter((V8EngineEx)Engine, ref propertyName);
             }
 
             public override V8PropertyAttributes? NamedPropertyQuery(ref string propertyName)
             {
-                if (ObjCLR._properties.Contains(propertyName))
+                if (ObjCLR._properties.ContainsKey(propertyName))
                     return V8PropertyAttributes.Locked | V8PropertyAttributes.DontEnum;
 
                 return null;
@@ -37,7 +37,7 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
             public override InternalHandle NamedPropertyEnumerator()
             {
                 //throw new NotSupportedException();
-                return ((V8EngineEx)Engine).CreateArrayWithDisposal(ObjCLR._properties.Keys.Select((string propertyName) => Engine.CreateValue(propertyName)));
+                return ((V8EngineEx)Engine).CreateArrayWithDisposal(ObjCLR._properties.Keys.Select((string propertyName) => Engine.CreateValue(propertyName)).ToArray());
             }
 
         }

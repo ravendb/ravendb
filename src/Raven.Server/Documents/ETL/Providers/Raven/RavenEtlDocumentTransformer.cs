@@ -54,13 +54,11 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
             if (_transformation.Counters.IsAddingCounters)
             {
-                const string addCounter = Transformation.CountersTransformation.Add;
                 _addCounterMethod = new ClrFunctionInstance(AddCounter);
             }
 
             if (_transformation.TimeSeries.IsAddingTimeSeries)
             {
-                const string addTimeSeries = Transformation.TimeSeriesTransformation.AddTimeSeries.Name;
                 _addTimeSeriesMethod = new ClrFunctionInstance(AddTimeSeries);
             }
         }
@@ -138,8 +136,8 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
         private InternalHandle AddAttachment(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
-            InternalHandle jsRes;
-            InternalHandle attachmentReference;
+            InternalHandle jsRes = InternalHandle.Empty;
+            InternalHandle attachmentReference = InternalHandle.Empty;
             string name = null; // will preserve original name
 
             switch (args.Length)
@@ -183,7 +181,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             if (args.Length != 1)
                 ThrowInvalidScriptMethodCall($"{Transformation.CountersTransformation.Add} must have one arguments");
 
-            InternalHandle jsRes;
+            InternalHandle jsRes = InternalHandle.Empty;
             var counterReference = args[0];
 
             if (counterReference.IsNull)
@@ -214,7 +212,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                     $"Signature `{Transformation.TimeSeriesTransformation.AddTimeSeries.Signature}`");
             }
 
-            InternalHandle jsRes;
+            InternalHandle jsRes = InternalHandle.Empty;
             var timeSeriesReference = args[0];
 
             if (timeSeriesReference.IsNull)

@@ -133,8 +133,8 @@ namespace Raven.Server.Documents.Patch
             public override InternalHandle NamedPropertySetter(ref string propertyName, InternalHandle value, V8PropertyAttributes attributes = V8PropertyAttributes.Undefined)
             {
                 if (propertyName == Constants.Documents.Metadata.Key) {
-                    return InternalHandle.Empty;
                     ObjCLR._set = false;
+                    return InternalHandle.Empty;
                 }
                 
                 ObjCLR._set = true;
@@ -351,9 +351,9 @@ namespace Raven.Server.Documents.Patch
                 _value.Dispose();
             }
 
-            private bool TryGetValueFromDocument(BlittableObjectInstance parent, string propertyName, out InternalHandle value)
+            private bool TryGetValueFromDocument(BlittableObjectInstance parent, string propertyName, out InternalHandle jsValue)
             {
-                value = InternalHandle.Empty;
+                jsValue = InternalHandle.Empty;
 
                 var index = parent.Blittable?.GetPropertyIndex(propertyName);
                 if (index == null || index == -1)
@@ -363,12 +363,14 @@ namespace Raven.Server.Documents.Patch
 
                 parent.Blittable.GetPropertyByIndex(index.Value, ref propertyDetails, true);
 
-                value = TranslateToJs(parent, propertyName, propertyDetails.Token, propertyDetails.Value);
+                jsValue = TranslateToJs(parent, propertyName, propertyDetails.Token, propertyDetails.Value);
                 return true;
             }
 
-            private bool TryGetValueFromLucene(BlittableObjectInstance parent, string propertyName, out InternalHandle value)
+            private bool TryGetValueFromLucene(BlittableObjectInstance parent, string propertyName, out InternalHandle jsValue)
             {
+                jsValue = InternalHandle.Empty;
+
                 if (parent.Projection?.MustExtractFromDocument == true)
                     return false;
 
@@ -402,12 +404,12 @@ namespace Raven.Server.Documents.Patch
                             jsItems[i] = TranslateToJs(parent, field.Name, BlittableJsonToken.StartObject, itemAsBlittable);
                         }
 
-                        value = Engine.CreateArrayWithDisposal(jsItems);
+                        jsValue = Engine.CreateArrayWithDisposal(jsItems);
                         return true;
                     }
 
                     var values = parent.LuceneDocument.GetValues(propertyName, parent.LuceneState);
-                    value = parent.Engine.FromObject(values);
+                    jsValue = parent.Engine.FromObject(values);
                     return true;
                 }
 
@@ -419,7 +421,7 @@ namespace Raven.Server.Documents.Patch
                 if (fieldType.IsJson)
                 {
                     BlittableJsonReaderObject valueAsBlittable = parent.Blittable._context.Sync.ReadForMemory(val, propertyName);
-                    value = TranslateToJs(parent, propertyName, BlittableJsonToken.StartObject, valueAsBlittable);
+                    jsValue = TranslateToJs(parent, propertyName, BlittableJsonToken.StartObject, valueAsBlittable);
                     return true;
                 }
 
@@ -430,11 +432,11 @@ namespace Raven.Server.Documents.Patch
                     switch (val)
                     {
                         case Client.Constants.Documents.Indexing.Fields.NullValue:
-                            value.Set(DynamicJsNull.ExplicitNull._);
+                            jsValue.Set(DynamicJsNull.ExplicitNull._);
                             return true;
 
                         case Client.Constants.Documents.Indexing.Fields.EmptyString:
-                            value = Engine.CreateValue(""); // string.Empty;
+                            jsValue = Engine.CreateValue(""); // string.Empty;
                             return true;
                     }
                 }
@@ -443,11 +445,11 @@ namespace Raven.Server.Documents.Patch
                 {
                     if (long.TryParse(val, NumberStyles.Integer, CultureInfo.InvariantCulture, out var valueAsLong))
                     {
-                        value = Engine.CreateValue(valueAsLong);
+                        jsValue = Engine.CreateValue(valueAsLong);
                     }
                     else if (double.TryParse(val, NumberStyles.Any, CultureInfo.InvariantCulture, out var valueAsDouble))
                     {
-                        value = Engine.CreateValue(valueAsDouble);
+                        jsValue = Engine.CreateValue(valueAsDouble);
                     }
                     else
                     {
@@ -457,7 +459,7 @@ namespace Raven.Server.Documents.Patch
                 }
                 else
                 {
-                    value = Engine.CreateValue(val);
+                    jsValue = Engine.CreateValue(val);
                 }
 
                 return true;
@@ -485,7 +487,7 @@ namespace Raven.Server.Documents.Patch
 
             private InternalHandle TranslateToJs(BlittableObjectInstance owner, string key, BlittableJsonToken type, object value)
             {
-                InternalHandle jsRes;
+                InternalHandle jsRes = InternalHandle.Empty;
                 switch (type & BlittableJsonReaderBase.TypesMask)
                 {
                     case BlittableJsonToken.Null:

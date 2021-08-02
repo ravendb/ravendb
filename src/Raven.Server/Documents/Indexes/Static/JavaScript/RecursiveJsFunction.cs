@@ -85,9 +85,7 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
         private static object NullIfEmptyEnumerable(InternalHandle item)
         {
             if (item.IsArray == false) {
-                InternalHandle jsItemCopy;
-                jsItemCopy.Set(item);
-                return jsItemCopy;
+                return new InternalHandle(item, true);
             }
 
             //using (item)

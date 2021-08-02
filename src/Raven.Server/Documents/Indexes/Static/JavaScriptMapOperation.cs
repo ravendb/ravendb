@@ -49,48 +49,50 @@ namespace Raven.Server.Documents.Indexes.Static
                     continue;
                 }
 
-                InternalHandle jsResult;
-                try
+                using (jsItem)
                 {
-                    using (jsItem)
-                        jsResult = MapFuncV8.StaticCall(jsItem);
-                    jsResult.ThrowOnError();
-                }
-                catch (V8Exception jse)
-                {
-                    jsResult.Dispose();
-                    var (message, success) = JavaScriptIndexFuncException.PrepareErrorMessageForJavaScriptIndexFuncException(MapString, jse);
-                    if (success == false)
-                        throw new JavaScriptIndexFuncException($"Failed to execute {MapString}", jse);
-                    throw new JavaScriptIndexFuncException($"Failed to execute map script, {message}", jse);
-                }
-                catch (Exception e)
-                {
-                    jsResult.Dispose();
-                    throw new JavaScriptIndexFuncException($"Failed to execute {MapString}", e);
-                }
-
-                using (jsResult)
-                {
-                    if (jsResult.IsArray)
+                    InternalHandle jsRes = InternalHandle.Empty;
+                    try
                     {
-                        var length = (uint)jsResult.ArrayLength;
-                        for (int i = 0; i < length; i++)
+                        jsRes = MapFuncV8.StaticCall(jsItem);
+                        jsRes.ThrowOnError();
+                    }
+                    catch (V8Exception jse)
+                    {
+                        jsRes.Dispose();
+                        var (message, success) = JavaScriptIndexFuncException.PrepareErrorMessageForJavaScriptIndexFuncException(MapString, jse);
+                        if (success == false)
+                            throw new JavaScriptIndexFuncException($"Failed to execute {MapString}", jse);
+                        throw new JavaScriptIndexFuncException($"Failed to execute map script, {message}", jse);
+                    }
+                    catch (Exception e)
+                    {
+                        jsRes.Dispose();
+                        throw new JavaScriptIndexFuncException($"Failed to execute {MapString}", e);
+                    }
+
+                    using (jsRes)
+                    {
+                        if (jsRes.IsArray)
                         {
-                            using (var arrItem = jsResult.GetProperty(i))
+                            var length = (uint)jsRes.ArrayLength;
+                            for (int i = 0; i < length; i++)
                             {
-                                if (arrItem.IsObject)
-                                    yield return arrItem.Object; // no need to KeepTrack() as we return Handle
+                                using (var arrItem = jsRes.GetProperty(i))
+                                {
+                                    if (arrItem.IsObject)
+                                        yield return arrItem.Object; // no need to KeepTrack() as we return Handle
+                                }
                             }
                         }
+                        else if (jsRes.IsObject)
+                        {
+                            yield return jsRes.Object; // no need to KeepTrack() as we store Handle
+                        }
                     }
-                    else if (jsResult.IsObject)
-                    {
-                        yield return jsResult.Object; // no need to KeepTrack() as we store Handle
-                    }
+                    // we ignore everything else by design, we support only
+                    // objects and arrays, anything else is discarded
                 }
-                // we ignore everything else by design, we support only
-                // objects and arrays, anything else is discarded
             }
         }
 
@@ -135,7 +137,7 @@ namespace Raven.Server.Documents.Indexes.Static
                                 if (prop is Property property)
                                 {
                                     var fieldName = property.GetKey(engine);
-                                    var fieldNameAsString = fieldName.AsString;
+                                    var fieldNameAsString = fieldName.AsString();
                                     if (fieldName == "_")
                                         HasDynamicReturns = true;
 
@@ -233,8 +235,8 @@ namespace Raven.Server.Documents.Indexes.Static
                 return false;
             foreach (var p in oe.Properties)
             {
-                var key = p.GetKey(_engine);
-                var keyAsString = key.AsString;
+                var key = p.GetKey(_javaScriptIndexUtils.EngineJint);
+                var keyAsString = key.AsString();
                 if (Fields.Contains(keyAsString) == false)
                     return false;
             }

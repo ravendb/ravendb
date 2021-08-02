@@ -21,22 +21,26 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             _segment = segment ?? throw new ArgumentNullException(nameof(segment));
         }
 
+        public static TimeSeriesSegmentObjectInstance.CustomBinder CreateObjectBinder(V8EngineEx engine, TimeSeriesSegmentObjectInstance bo) {
+            return engine.CreateObjectBinder<TimeSeriesSegmentObjectInstance.CustomBinder>(bo, engine.TypeBinderTimeSeriesSegmentObjectInstance);
+        }
+
         public override InternalHandle NamedPropertyGetter(V8EngineEx engine, ref string propertyName)
         {
-            if (_properties.TryGetValue(propertyName, out InternalHandle value) == false)
+            if (_properties.TryGetValue(propertyName, out InternalHandle jsValue) == false)
             {
-                value = GetPropertyValue(engine, ref propertyName);
-                if (value.IsEmpty == false)
-                    _properties.Add(propertyName, value);
+                jsValue = GetPropertyValue(engine, ref propertyName);
+                if (jsValue.IsEmpty == false)
+                    _properties.Add(propertyName, jsValue);
             }
 
-            return value;
+            return jsValue;
         }
 
         private InternalHandle GetPropertyValue(V8EngineEx engine, ref string propertyName)
         {
             if (propertyName == nameof(DynamicTimeSeriesSegment.Entries))
-                return new InternalHandle(engine.CreateObjectBinder<DynamicTimeSeriesEntriesCustomBinder>(_segment.Entries, engine.TypeBinderDynamicTimeSeriesEntries)._);
+                return new InternalHandle(engine.CreateObjectBinder<DynamicTimeSeriesEntriesCustomBinder>(_segment.Entries, engine.TypeBinderDynamicTimeSeriesEntries)._, true);
 
             if (propertyName == nameof(TimeSeriesSegment.DocumentId))
                 return engine.CreateValue(_segment._segmentEntry.DocId.ToString());
@@ -72,7 +76,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
 
         public override InternalHandle IndexedPropertyGetter(int index)
         {
-            InternalHandle jsRes;
+            InternalHandle jsRes = InternalHandle.Empty;
             if (index < ObjCLR.Count()) 
             {
                 object elem = ObjCLR.Get(index);

@@ -770,7 +770,7 @@ namespace Raven.Server.Documents.Patch
                     Includes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 Includes.Add(id);
 
-                InternalHandle jsRes;
+                InternalHandle jsRes = InternalHandle.Empty;
                 return jsRes.Set(self);
             }
 
@@ -779,7 +779,7 @@ namespace Raven.Server.Documents.Patch
                 if (args.Length != 1)
                     throw new InvalidOperationException("includes.cmpxchg(key) must be called with a single argument");
 
-                InternalHandle jsRes;
+                InternalHandle jsRes = InternalHandle.Empty;
 
                 if (args[0].IsNull || args[0].IsUndefined)
                     return jsRes.Set(self);
@@ -878,7 +878,7 @@ namespace Raven.Server.Documents.Patch
 
             private InternalHandle OutputDebug(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
-                InternalHandle jsRes;
+                InternalHandle jsRes = InternalHandle.Empty;
                 if (DebugMode == false)
                     return jsRes.Set(self);
 

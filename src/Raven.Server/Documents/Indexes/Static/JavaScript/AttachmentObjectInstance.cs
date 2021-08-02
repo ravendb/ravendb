@@ -53,27 +53,27 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
 
         public override InternalHandle NamedPropertyGetter(V8EngineEx engine, ref string propertyName)
         {
-            if (_properties.TryGetValue(propertyName, out InternalHandle value) == false)
+            if (_properties.TryGetValue(propertyName, out InternalHandle jsValue) == false)
             {
                 if (propertyName == nameof(IAttachmentObject.Name))
-                    value = engine.CreateValue(_attachment.Name);
+                    jsValue = engine.CreateValue(_attachment.Name);
                 else if (propertyName == nameof(IAttachmentObject.ContentType))
-                    value = engine.CreateValue(_attachment.ContentType);
+                    jsValue = engine.CreateValue(_attachment.ContentType);
                 else if (propertyName == nameof(IAttachmentObject.Hash))
-                    value = engine.CreateValue(_attachment.Hash);
+                    jsValue = engine.CreateValue(_attachment.Hash);
                 else if (propertyName == nameof(IAttachmentObject.Size))
-                    value = engine.CreateValue(_attachment.Size);
+                    jsValue = engine.CreateValue(_attachment.Size);
                 else if (propertyName == GetContentAsStringMethodName)
-                    value = new ClrFunctionInstance(GetContentAsString);
+                    jsValue = new ClrFunctionInstance(GetContentAsString);
 
-                if (value.IsEmpty == false)
-                    _properties[propertyName].Set(value);
+                if (jsValue.IsEmpty == false)
+                    _properties[propertyName].Set(jsValue);
             }
 
-            if (value.IsEmpty)
-                value.Set(DynamicJsNull.ImplicitNull._);
+            if (jsValue.IsEmpty)
+                jsValue.Set(DynamicJsNull.ImplicitNull._);
 
-            return value;
+            return jsValue;
         }
 
         private static InternalHandle GetContentAsString(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback

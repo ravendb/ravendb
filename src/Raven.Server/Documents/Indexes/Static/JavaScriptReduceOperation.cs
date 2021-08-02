@@ -240,8 +240,8 @@ namespace Raven.Server.Documents.Indexes.Static
                     return EngineV8.CreateNullValue();
                 }
 
-                InternalHandle jsRes;
-                jsRes.Set(EngineV8.CreateObject());
+                InternalHandle jsRes = InternalHandle.Empty;
+                jsRes = EngineV8.CreateObject();
                 foreach (var groupByField in _groupByFields)
                 {
                     var index = values[0].GetPropertyIndex(groupByField.Name);
@@ -259,11 +259,11 @@ namespace Raven.Server.Documents.Indexes.Static
                             {
                                 BlittableJsonReaderObject bjro => ((Func<BlittableJsonReaderObject, InternalHandle>)((BlittableJsonReaderObject bjro) => {
                                     var boi = new BlittableObjectInstance(JavaScriptUtilsV8, null, bjro, null, null, null);
-                                    return jsRes.Set(boi.CreateObjectBinder()._); // maybe better move to FromObject?
+                                    return boi.CreateObjectBinder()._; // maybe better move to FromObject?
                                 }))(bjro),
                                 Document doc => ((Func<Document, InternalHandle>)((Document doc) => {
                                     var boi = new BlittableObjectInstance(JavaScriptUtilsV8, null, doc.Data, doc);
-                                    return jsRes.Set(boi.CreateObjectBinder()._); // maybe better  move to FromObject?
+                                    return boi.CreateObjectBinder()._; // maybe better  move to FromObject?
                                 }))(doc),
                                 LazyNumberValue lnv => EngineV8.CreateValue(lnv.ToDouble(CultureInfo.InvariantCulture)), // maybe better  move to FromObject?
                             _ =>  EngineV8.FromObject(value)
