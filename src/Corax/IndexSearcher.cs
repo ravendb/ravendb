@@ -10,6 +10,8 @@ using Voron.Data.Containers;
 using Corax.Queries;
 using System.Collections.Generic;
 using Voron.Data.CompactTrees;
+using Sparrow;
+using static Corax.Queries.SortingMatch;
 
 namespace Corax
 {
@@ -25,6 +27,13 @@ namespace Corax
         {
             _environment = environment;
             _transaction = environment.ReadTransaction();
+        }
+
+        public UnmanagedSpan GetIndexEntryPointer(long id)
+        {
+            var data = Container.Get(_transaction.LowLevelTransaction, id);
+            int size = ZigZagEncoding.Decode<int>(data.ToSpan(), out var len);
+            return data.ToUnmanagedSpan().Slice(size + len);
         }
 
         public IndexEntryReader GetReaderFor(long id)
@@ -114,7 +123,7 @@ namespace Corax
 
                     for (int i = 0; i < termsToProcess; i++)
                         stack[i] = Or(stack[i * 2], stack[i * 2 + 1]);
-                    
+
                     if (excessTerms != 0)
                         stack[termsToProcess - 1] = Or(stack[termsToProcess - 1], stack[currentTerms - 1]);
 
@@ -135,6 +144,44 @@ namespace Corax
                 return MultiTermMatch.CreateEmpty();
 
             return MultiTermMatch.Create(new MultiTermMatch<StartWithTermProvider>(new StartWithTermProvider(this, _transaction.Allocator, terms, field, 0, startWith)));
+        }
+
+        public SortingMatch OrderByAscending<TInner>(in TInner set, int fieldId, MatchCompareFieldType entryFieldType = MatchCompareFieldType.Sequence, int take = -1)
+            where TInner : IQueryMatch
+        {
+            return OrderBy<TInner, AscendingMatchComparer>(in set, fieldId, MatchCompareFieldType.Sequence, take);
+        }
+
+        public SortingMatch OrderByDescending<TInner>(in TInner set, int fieldId, MatchCompareFieldType entryFieldType = MatchCompareFieldType.Sequence, int take = -1)
+            where TInner : IQueryMatch
+        {
+            return OrderBy<TInner, DescendingMatchComparer>(in set, fieldId, MatchCompareFieldType.Sequence, take);
+        }
+
+        public SortingMatch OrderBy<TInner, TComparer>(in TInner set, int fieldId, MatchCompareFieldType entryFieldType = MatchCompareFieldType.Sequence, int take = -1)
+            where TInner : IQueryMatch
+            where TComparer : IMatchComparer
+        {
+            if (typeof(TComparer) == typeof(AscendingMatchComparer))
+            {
+                return Create(new SortingMatch<TInner, AscendingMatchComparer>(set, new AscendingMatchComparer(this, fieldId, entryFieldType), take));
+            }
+            else if(typeof(TComparer) == typeof(DescendingMatchComparer))
+            {
+                return Create(new SortingMatch<TInner, DescendingMatchComparer>(set, new DescendingMatchComparer(this, fieldId, entryFieldType), take));
+            }
+            else if (typeof(TComparer) == typeof(CustomMatchComparer))
+            {
+                throw new ArgumentException($"Custom comparers can only be created through the {nameof(OrderByCustomOrder)}");
+            }
+
+            throw new ArgumentException($"The comparer of type {typeof(TComparer).Name} is not supported. Isn't {nameof(OrderByCustomOrder)} the right call for it?");
+        }
+
+        public SortingMatch OrderByCustomOrder<TInner>(in TInner set, int fieldId, delegate*<IndexSearcher, int, long, long, int> customCompareFunc, int take = -1)
+            where TInner : IQueryMatch     
+        {
+            return Create(new SortingMatch<TInner, CustomMatchComparer>(set, new CustomMatchComparer(this, fieldId, customCompareFunc), take));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

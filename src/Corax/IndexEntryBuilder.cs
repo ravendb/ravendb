@@ -61,15 +61,6 @@ namespace Corax
         private static int Invalid = unchecked(~0);
         private static ushort MaxDynamicFields = byte.MaxValue;
 
-        internal static ReadOnlySpan<int> IsTypedMask => new(new int[]
-        {
-            0,                          // Unused
-            0x80,                       // Byte
-            0x8000,                     // Short
-            0,                          // Unused
-            unchecked((int)0x80000000)  // Int
-        });
-
         private static int LocationMask = 0x7FFF_FFFF;
 
         private readonly Dictionary<Slice, int> _knownFields;
@@ -91,9 +82,6 @@ namespace Corax
         private int _dynamicFieldIndex; 
 
         private static readonly Dictionary<Slice, int> Empty = new();
-
-
-
 
         public IndexEntryWriter(Span<byte> buffer, Dictionary<Slice, int> knownFields = null)
         {
@@ -141,7 +129,7 @@ namespace Corax
             int dataLocation = _dataIndex;
 
             // Write known field pointer.
-            _knownFieldsLocations[field] = dataLocation | IsTypedMask[sizeof(int)];
+            _knownFieldsLocations[field] = dataLocation | unchecked((int)0x80000000);
 
             // Write the tuple information. 
             dataLocation += VariableSizeEncoding.Write(_buffer, (byte)IndexEntryFieldType.Tuple, dataLocation);
@@ -169,7 +157,7 @@ namespace Corax
             int dataLocation = _dataIndex;
 
             // Write known field pointer.
-            _knownFieldsLocations[field] = dataLocation | IsTypedMask[sizeof(int)];
+            _knownFieldsLocations[field] = dataLocation | unchecked((int)0x80000000);
 
             // Write the list metadata information. 
             dataLocation += VariableSizeEncoding.Write(_buffer, (byte)IndexEntryFieldType.List, dataLocation);
@@ -210,7 +198,7 @@ namespace Corax
             int dataLocation = _dataIndex;
 
             // Write known field pointer.
-            _knownFieldsLocations[field] = dataLocation | IsTypedMask[sizeof(int)];
+            _knownFieldsLocations[field] = dataLocation | unchecked((int)0x80000000);
 
             // Write the list metadata information. 
             dataLocation += VariableSizeEncoding.Write(_buffer, (byte)(IndexEntryFieldType.List | IndexEntryFieldType.Tuple), dataLocation);
@@ -357,8 +345,17 @@ namespace Corax
                 int value = locations[i];
                 int location = value & LocationMask;
                 bool isTyped = value != location;
+
                 if (isTyped)
-                    location |= IsTypedMask[offset];
+                {
+                    location |= Unsafe.SizeOf<T>() switch
+                    {
+                        sizeof(int) => unchecked((int)0x80000000),
+                        sizeof(short) => 0x8000,
+                        sizeof(byte) => 0x80,
+                        _ => 0
+                    };
+                }
 
                 if (typeof(T) == typeof(uint))
                     Unsafe.WriteUnaligned(ref buffer[dataIndex + i * offset], location);
@@ -503,24 +500,6 @@ namespace Corax
     {
         private const int Invalid = unchecked((int)0xFFFF_FFFF);
 
-        internal static ReadOnlySpan<int> IsInvalidMask => new(new int[]
-        {            
-            0,                          // Unused
-            0xFF,                       // Byte
-            0xFFFF,                     // Short
-            0,                          // Unused
-            unchecked((int)0xFFFF_FFFF) // Int
-        });
-
-        internal static ReadOnlySpan<int> LocationMask => new(new int[]
-        {
-            ~0,                          // Unused
-            ~0x80,                       // Byte
-            ~0x8000,                     // Short
-            ~0,                          // Unused
-            ~unchecked((int)0x80000000)  // Int
-        });
-
         private readonly Span<byte> _buffer;
 
         public int Length => (int)MemoryMarshal.Read<uint>(_buffer);
@@ -530,7 +509,7 @@ namespace Corax
             _buffer = buffer;
         }
 
-
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static (int, bool) GetMetadataFieldLocation(Span<byte> buffer, int field)
         {
             ref var header = ref MemoryMarshal.AsRef<IndexEntryHeader>(buffer);            
@@ -546,21 +525,21 @@ namespace Corax
             {
                 case 4:
                     offset = (int)Unsafe.ReadUnaligned<uint>(ref buffer[locationOffset]);
-                    if (offset == IsInvalidMask[4]) goto Fail;
-                    isTyped = (offset & IndexEntryWriter.IsTypedMask[4]) != 0;
-                    offset &= LocationMask[4];
+                    if (offset == unchecked((int)0xFFFF_FFFF)) goto Fail;
+                    isTyped = (offset & unchecked((int)0x80000000)) != 0;
+                    offset &= ~unchecked((int)0x80000000);
                     break;
                 case 2:
                     offset = Unsafe.ReadUnaligned<ushort>(ref buffer[locationOffset]);
-                    if (offset == IsInvalidMask[2]) goto Fail;
-                    isTyped = (offset & IndexEntryWriter.IsTypedMask[2]) != 0;
-                    offset &= LocationMask[2];                    
+                    if (offset == 0xFFFF) goto Fail;
+                    isTyped = (offset & 0x8000) != 0;
+                    offset &= ~0x8000;                    
                     break;
                 case 1:
                     offset = Unsafe.ReadUnaligned<byte>(ref buffer[locationOffset]);
-                    if (offset == IsInvalidMask[1]) goto Fail;
-                    isTyped = (offset & IndexEntryWriter.IsTypedMask[1]) != 0;
-                    offset &= LocationMask[1];
+                    if (offset == 0xFF) goto Fail;
+                    isTyped = (offset & 0x80) != 0;
+                    offset &= ~0x80;
                     break;
                 default:
                     goto Fail;
@@ -571,7 +550,8 @@ namespace Corax
             Fail: return (Invalid, false);
         }
 
-        public bool Read<T>(int field, out T value) where T : unmanaged
+        
+        public bool Read<T>(int field, out IndexEntryFieldType type, out T value) where T : unmanaged
         {
             var (intOffset, isTyped) = GetMetadataFieldLocation(_buffer, field);
             if (intOffset == Invalid)
@@ -579,10 +559,10 @@ namespace Corax
 
             if (isTyped)
             {
-                byte type = VariableSizeEncoding.Read<byte>(_buffer, out var length, intOffset);
+                type = (IndexEntryFieldType) VariableSizeEncoding.Read<byte>(_buffer, out var length, intOffset);
                 intOffset += length;
 
-                if ((type & (byte)IndexEntryFieldType.Tuple) != 0)
+                if ((type & IndexEntryFieldType.Tuple) != 0)
                 {
                     var lResult = VariableSizeEncoding.Read<long>(_buffer, out length, intOffset);
                     if (typeof(long) == typeof(T))
@@ -653,8 +633,16 @@ namespace Corax
                 throw new NotSupportedException($"The type {nameof(T)} is unsupported.");
             }
 
-            Fail: Unsafe.SkipInit(out value);
+        Fail:
+            Unsafe.SkipInit(out value);
+            type = IndexEntryFieldType.Invalid;
             return false;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool Read<T>(int field, out T value) where T : unmanaged
+        {
+            return Read(field, out var _, out value);
         }
 
         public IndexEntryFieldType GetFieldType(int field)
@@ -683,6 +671,7 @@ namespace Corax
             return new IndexEntryFieldIterator(_buffer, intOffset);
         }
 
+
         public bool TryReadMany(int field, out IndexEntryFieldIterator iterator)
         {
             var (intOffset, isTyped) = GetMetadataFieldLocation(_buffer, field);
@@ -702,12 +691,19 @@ namespace Corax
             return true;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Read(int field, out ReadOnlySpan<byte> value, int elementIdx = 0)
+        {
+            return Read(field, out var _, out value, elementIdx);
+        }
+
+        public bool Read(int field, out IndexEntryFieldType type, out ReadOnlySpan<byte> value, int elementIdx = 0)
         {
             var (intOffset, isTyped) = GetMetadataFieldLocation(_buffer, field);
             if (intOffset == Invalid)
             {
                 value = ReadOnlySpan<byte>.Empty;
+                type = IndexEntryFieldType.Invalid;
                 return false;
             }
 
@@ -715,20 +711,22 @@ namespace Corax
 
             if (isTyped)
             {
-                byte type = VariableSizeEncoding.Read<byte>(_buffer, out var length, intOffset);
+                type = (IndexEntryFieldType) VariableSizeEncoding.Read<byte>(_buffer, out var length, intOffset);
+
                 intOffset += length;
-                if ((type & (byte)IndexEntryFieldType.List) != 0)
+                if ((type & IndexEntryFieldType.List) != 0)
                 {
                     int totalSize = VariableSizeEncoding.Read<ushort>(_buffer, out length, intOffset);
                     if (elementIdx >= totalSize)
                     {
                         value = ReadOnlySpan<byte>.Empty;
+                        type = IndexEntryFieldType.Invalid;
                         return false;
                     }
                     
                     intOffset += length;
                     var spanTableOffset = MemoryMarshal.Read<int>(_buffer[intOffset..]);
-                    if ((type & (byte)IndexEntryFieldType.Tuple) != 0)
+                    if ((type & IndexEntryFieldType.Tuple) != 0)
                     {
                         intOffset += 2 * sizeof(int) + totalSize * sizeof(double);
                     }
@@ -747,7 +745,7 @@ namespace Corax
 
                     stringLength = VariableSizeEncoding.Read<int>(_buffer, out length, spanTableOffset);
                 }
-                else if ((type & (byte)IndexEntryFieldType.Tuple) != 0)
+                else if ((type & IndexEntryFieldType.Tuple) != 0)
                 {
                     VariableSizeEncoding.Read<long>(_buffer, out length, intOffset); // Skip
                     intOffset += length;
@@ -762,13 +760,20 @@ namespace Corax
             {
                 stringLength = VariableSizeEncoding.Read<int>(_buffer, out int readOffset, intOffset);
                 intOffset += readOffset;
+                type = IndexEntryFieldType.None;
             }
 
-            value = _buffer.Slice(intOffset, stringLength);
+            value = _buffer.Slice(intOffset, stringLength);            
             return true;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]  
         public bool Read(int field, out long longValue, out double doubleValue, out ReadOnlySpan<byte> sequenceValue)
+        {
+            return Read(field, out var _, out longValue, out doubleValue, out sequenceValue);
+        }
+
+        public bool Read(int field, out IndexEntryFieldType type, out long longValue, out double doubleValue, out ReadOnlySpan<byte> sequenceValue)
         {
             var (intOffset, isTyped) = GetMetadataFieldLocation(_buffer, field);
             if (intOffset == Invalid)
@@ -776,13 +781,13 @@ namespace Corax
 
             if (isTyped)
             {
-                byte type = VariableSizeEncoding.Read<byte>(_buffer, out var length, intOffset);
+                type = (IndexEntryFieldType) VariableSizeEncoding.Read<byte>(_buffer, out var length, intOffset);
                 intOffset += length;
                 
-                if ((type & (byte)IndexEntryFieldType.Tuple) != 0)
+                if ((type & IndexEntryFieldType.Tuple) != 0)
                 {
                     int stringLength;
-                    if ((type & (byte)IndexEntryFieldType.List) != 0)
+                    if ((type & IndexEntryFieldType.List) != 0)
                     {
                         int totalElements = VariableSizeEncoding.Read<ushort>(_buffer, out length, intOffset);
                         intOffset += length;
@@ -821,6 +826,7 @@ namespace Corax
             Fail:  Unsafe.SkipInit(out longValue);
             Unsafe.SkipInit(out doubleValue);
             sequenceValue = ReadOnlySpan<byte>.Empty;
+            type = IndexEntryFieldType.Invalid;
             return false;
         }
 

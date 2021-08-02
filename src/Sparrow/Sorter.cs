@@ -14,7 +14,7 @@ namespace Sparrow
 
         private const int SizeThreshold = 16;
 
-        public Sorter(TSorter sorter)
+        public Sorter(in TSorter sorter)
         {
             _sorter = sorter;
         }

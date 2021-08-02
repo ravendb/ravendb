@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -20,6 +20,12 @@ namespace FastTests.Corax
         {
             public string Id;
             public string[] Content;
+        }
+
+        private class IndexSingleEntry
+        {
+            public string Id;
+            public string Content;
         }
 
         private readonly struct StringArrayIterator : IReadOnlySpanEnumerator
@@ -94,7 +100,7 @@ namespace FastTests.Corax
                 foreach (var entry in list)
                 {
                     var entryWriter = new IndexEntryWriter(buffer.ToSpan(), knownFields);
-                    var data = CreateIndexEntry(ref entryWriter, entry);                    
+                    var data = CreateIndexEntry(ref entryWriter, entry);
                     indexWriter.Index(entry.Id, data, knownFields);
                 }
                 indexWriter.Commit();
@@ -706,7 +712,119 @@ namespace FastTests.Corax
                 Assert.Equal(2, match.Fill(ids));
                 Assert.Equal(0, match.Fill(ids));
             }
+        }
 
+        private static Span<byte> CreateIndexEntry(ref IndexEntryWriter entryWriter, IndexSingleEntry value)
+        {
+            Span<byte> PrepareString(string value)
+            {
+                if (value == null)
+                    return Span<byte>.Empty;
+                return Encoding.UTF8.GetBytes(value);
+            }
+
+            entryWriter.Write(IdIndex, PrepareString(value.Id));
+            entryWriter.Write(ContentIndex, PrepareString(value.Content));
+
+            entryWriter.Finish(out var output);
+            return output;
+        }
+
+        private void IndexEntries(IEnumerable<IndexSingleEntry> list)
+        {
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            Dictionary<Slice, int> knownFields = CreateKnownFields(bsc);
+
+            const int bufferSize = 4096;
+            using var _ = bsc.Allocate(bufferSize, out ByteString buffer);
+
+            {
+                using var indexWriter = new IndexWriter(Env);
+                foreach (var entry in list)
+                {
+                    var entryWriter = new IndexEntryWriter(buffer.ToSpan(), knownFields);
+                    var data = CreateIndexEntry(ref entryWriter, entry);
+                    indexWriter.Index(entry.Id, data, knownFields);
+                }
+                indexWriter.Commit();
+            }
+        }
+
+        [Fact]
+        public void MixedSortedMatchStatement()
+        {
+            var entry1 = new IndexSingleEntry
+            {
+                Id = "entry/1",
+                Content = "3"
+            };
+            var entry2 = new IndexEntry
+            {
+                Id = "entry/2",
+                Content = new string[] { "4", "2" },
+            };
+            var entry3 = new IndexSingleEntry
+            {
+                Id = "entry/3",
+                Content = "1"
+            };
+
+            IndexEntries(new[] { entry1, entry3 });
+            IndexEntries(new[] { entry2 });
+
+            using var searcher = new IndexSearcher(Env);
+            {
+                var match1 = searcher.StartWithQuery("Id", "e");
+                var match = searcher.OrderByAscending(match1, ContentIndex);
+
+                Span<long> ids = stackalloc long[16];
+                Assert.Equal(3, match.Fill(ids));
+                Assert.Equal(0, match.Fill(ids));
+            }
+        }
+
+        [Fact]
+        public void SimpleSortedMatchStatement()
+        {
+            var entry1 = new IndexSingleEntry
+            {
+                Id = "entry/1",
+                Content = "3"
+            };
+            var entry2 = new IndexSingleEntry
+            {
+                Id = "entry/2",
+                Content = "2"
+            };
+            var entry3 = new IndexSingleEntry
+            {
+                Id = "entry/3",
+                Content = "1"
+            };
+
+            IndexEntries(new[] { entry1, entry2, entry3 });
+
+            using var searcher = new IndexSearcher(Env);
+
+            {
+                var match1 = searcher.StartWithQuery("Id", "e");
+                var match = searcher.OrderByAscending(match1, ContentIndex);
+
+                Span<long> ids = stackalloc long[16];
+                Assert.Equal(3, match.Fill(ids));
+                Assert.Equal(0, match.Fill(ids));
+            }
+
+            {
+                var match1 = searcher.StartWithQuery("Id", "e");
+                var match = searcher.OrderByAscending(match1, ContentIndex);
+
+                Span<long> ids = stackalloc long[2];
+                Assert.Equal(2, match.Fill(ids));
+                Assert.Equal(0, match.Fill(ids));
+
+                Assert.Equal("entry/3", searcher.GetIdentityFor(ids[0]));
+            }
         }
 
     }
