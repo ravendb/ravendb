@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using FastTests;
 using FastTests.Server.Replication;
 using Raven.Client.Documents.Operations.TimeSeries;
-using Raven.Client.Documents.Session;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
 using Raven.Server.Documents.TimeSeries;
@@ -73,7 +72,7 @@ namespace SlowTests.Issues
                 {
                     session.Store(new User(), "marker");
                     session.SaveChanges();
-                    Assert.True(await WaitForDocumentInClusterAsync<User>((DocumentSession)session, "marker", null, TimeSpan.FromSeconds(15)));
+                    Assert.True(await WaitForDocumentInClusterAsync<User>(cluster.Nodes, store.Database, "marker", null, TimeSpan.FromSeconds(15)));
                 }
 
                 var res = new Dictionary<string, int>();
@@ -201,7 +200,7 @@ namespace SlowTests.Issues
                 {
                     session.Store(new User(), "marker");
                     session.SaveChanges();
-                    Assert.True(await WaitForDocumentInClusterAsync<User>((DocumentSession)session, "marker", null, TimeSpan.FromSeconds(15)));
+                    Assert.True(await WaitForDocumentInClusterAsync<User>(cluster.Nodes, store.Database, "marker", null, TimeSpan.FromSeconds(15)));
                 }
 
                 foreach (var server in Servers)
@@ -293,7 +292,7 @@ namespace SlowTests.Issues
                 {
                     session.Store(new User(), "marker");
                     session.SaveChanges();
-                    Assert.True(await WaitForDocumentInClusterAsync<User>((DocumentSession)session, "marker", null, TimeSpan.FromSeconds(15)));
+                    Assert.True(await WaitForDocumentInClusterAsync<User>(cluster.Nodes, store.Database, "marker", null, TimeSpan.FromSeconds(15)));
                 }
 
                 var database = await Servers[0].ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
