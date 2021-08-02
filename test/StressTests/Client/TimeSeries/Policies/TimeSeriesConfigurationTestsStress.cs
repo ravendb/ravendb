@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.TimeSeries;
-using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Client.TimeSeries.Replication;
 using Sparrow;
@@ -70,7 +69,7 @@ namespace StressTests.Client.TimeSeries.Policies
                     session.Store(new User { Name = "Karmel" }, "marker");
                     session.SaveChanges();
 
-                    Assert.True(await WaitForDocumentInClusterAsync<User>((DocumentSession)session, "marker", null, TimeSpan.FromSeconds(15)));
+                    Assert.True(await WaitForDocumentInClusterAsync<User>(cluster.Nodes, store.Database, "marker", null, TimeSpan.FromSeconds(15)));
                 }
 
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
