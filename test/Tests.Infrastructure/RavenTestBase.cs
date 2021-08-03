@@ -198,6 +198,22 @@ namespace FastTests
             }
         }
 
+        protected string GetRaftHistory(RavenServer server)
+        {
+            var sb = new StringBuilder();
+
+            using (server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                foreach (var entry in server.ServerStore.Engine.LogHistory.GetHistoryLogs(context))
+                {
+                    sb.AppendLine(context.ReadObject(entry, "raft-command-history").ToString());
+                }
+            }
+
+            return sb.ToString();
+        }
+
         protected async Task WaitForRaftIndexToBeAppliedInCluster(long index, TimeSpan? timeout = null)
         {
             await WaitForRaftIndexToBeAppliedOnClusterNodes(index, Servers, timeout);
