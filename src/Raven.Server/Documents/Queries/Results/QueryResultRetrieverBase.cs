@@ -130,8 +130,6 @@ namespace Raven.Server.Documents.Queries.Results
                     return GetProjectionFromDocumentInternal(doc, input, scoreDoc, FieldsToFetch, _context, state);
                 }
 
-                var documentLoaded = false;
-
                 var result = new DynamicJsonValue();
 
                 Dictionary<string, FieldsToFetch.FieldToFetch> fields = null;
@@ -174,25 +172,24 @@ namespace Raven.Server.Documents.Queries.Results
                         continue;
                     }
 
-                    if (documentLoaded == false)
+                    if (doc == null)
                     {
                         using (_projectionStorageScope = _projectionStorageScope?.Start() ?? _projectionScope?.For(nameof(QueryTimingsScope.Names.Storage)))
                             doc = DirectGet(input, lowerId, DocumentFields.All, state);
 
-                        documentLoaded = true;
-                    }
-
-                    if (doc == null)
-                    {
-                        if (FieldsToFetch.Projection.MustExtractFromDocument)
+                        if (doc == null)
                         {
-                            if (FieldsToFetch.Projection.MustExtractOrThrow)
-                                FieldsToFetch.Projection.ThrowCouldNotExtractFieldFromDocumentBecauseDocumentDoesNotExistException(lowerId, fieldToFetch.Name.Value);
+                            if (FieldsToFetch.Projection.MustExtractFromDocument)
+                            {
+                                if (FieldsToFetch.Projection.MustExtractOrThrow)
+                                    FieldsToFetch.Projection.ThrowCouldNotExtractFieldFromDocumentBecauseDocumentDoesNotExistException(lowerId, fieldToFetch.Name.Value);
 
-                            break;
+                                break;
+                            }
+
+                            // we don't return partial results
+                            return null;
                         }
-
-                        continue;
                     }
 
                     if (TryGetValue(fieldToFetch, doc, input, state, FieldsToFetch.IndexFields, FieldsToFetch.AnyDynamicIndexFields, out var key, out var fieldVal))
@@ -229,6 +226,7 @@ namespace Raven.Server.Documents.Queries.Results
 
                 if (doc == null)
                 {
+                    // the fields were projected from the index
                     doc = new Document
                     {
                         Id = _context.GetLazyString(lowerId)
