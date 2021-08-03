@@ -237,6 +237,7 @@ class query extends viewModelBase {
     termsUrl: KnockoutComputed<string>;
     visualizerUrl: KnockoutComputed<string>;
     rawJsonUrl = ko.observable<string>();
+    rawJsonPayload = ko.observable<string>();
     csvUrl = ko.observable<string>();
 
     isLoading = ko.observable<boolean>(false);
@@ -893,6 +894,7 @@ class query extends viewModelBase {
             
             try {
                 this.rawJsonUrl(appUrl.forDatabaseQuery(database) + queryCmd.getUrl());
+                this.rawJsonPayload(queryCmd.getPayload());
                 this.csvUrl(queryCmd.getCsvUrl());
             } catch (error) {
                 // it may throw when unable to compute query parameters, etc.
@@ -1539,7 +1541,6 @@ class query extends viewModelBase {
             this.spatialMap().onResize();
         }
     }
-    
 
     exportCsvVisibleColumns() {
         const columns = this.columnsSelector.getSimpleColumnsFields();
@@ -1576,5 +1577,18 @@ class query extends viewModelBase {
         this.$downloadForm.attr("action", url);
         this.$downloadForm.submit();
     }
+    
+    requestRawJson(): void {
+        const payload = this.rawJsonPayload();
+        const url = this.rawJsonUrl();
+        
+        const inputElement = $("#rawJsonForm input");
+        inputElement.attr("name", payload);
+
+        const $rawJsonForm = $("#rawJsonForm");
+        $rawJsonForm.attr("action", url);
+        $rawJsonForm.submit();
+    }
 }
+
 export = query;
