@@ -106,8 +106,6 @@ namespace Raven.Server.Documents.Queries.Results
                     return GetProjectionFromDocument(doc, input, scoreDoc, FieldsToFetch, _context, state);
                 }
 
-                var documentLoaded = false;
-
                 var result = new DynamicJsonValue();
 
                 Dictionary<string, FieldsToFetch.FieldToFetch> fields = null;
@@ -140,16 +138,17 @@ namespace Raven.Server.Documents.Queries.Results
                     if (TryExtractValueFromIndex(fieldToFetch, input, result, state))
                         continue;
 
-                    if (documentLoaded == false)
+                    if (doc == null)
                     {
                         using (_projectionStorageScope = _projectionStorageScope?.Start() ?? _projectionScope?.For(nameof(QueryTimingsScope.Names.Storage)))
                             doc = DirectGet(input, lowerId, DocumentFields.All, state);
 
-                        documentLoaded = true;
+                        if (doc == null)
+                        {
+                            // we don't return partial results
+                            return null;
+                        }
                     }
-
-                    if (doc == null)
-                        continue;
 
                     if (TryGetValue(fieldToFetch, doc, input, state, FieldsToFetch.IndexFields, FieldsToFetch.AnyDynamicIndexFields, out var key, out var fieldVal))
                     {
@@ -177,12 +176,6 @@ namespace Raven.Server.Documents.Queries.Results
 
                 if (doc == null)
                 {
-                    if (documentLoaded)
-                    {
-                        // we tried to load it but the document doesn't exist
-                        return null;
-                    }
-
                     // the fields were projected from the index
                     doc = new Document
                     {
