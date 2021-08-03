@@ -190,6 +190,7 @@ namespace Voron.Benchmark.Corax
             //_queryStartWith = new QueryDefinition("Name", parser.Parse());
 
             _ids = new long[BufferSize];
+            _indexSearcher = new IndexSearcher(Env);
         }
 
         protected QueryDefinition _queryOr;
@@ -229,15 +230,15 @@ namespace Voron.Benchmark.Corax
         }
 
         private long[] _ids;
+        private IndexSearcher _indexSearcher;
 
         [Benchmark]
         public void OrderByRuntimeQuery()
-        {
-            using var indexSearcher = new IndexSearcher(Env);
-            var typeTerm = indexSearcher.TermQuery("Type", "Dog");
-            var ageTerm = indexSearcher.StartWithQuery("Age", "1");
-            var andQuery = indexSearcher.And(typeTerm, ageTerm);
-            var query = indexSearcher.OrderByAscending(andQuery, fieldId: 2, take: TakeSize);           
+        {            
+            var typeTerm = _indexSearcher.TermQuery("Type", "Dog");
+            var ageTerm = _indexSearcher.StartWithQuery("Age", "1");
+            var andQuery = _indexSearcher.And(typeTerm, ageTerm);
+            var query = _indexSearcher.OrderByAscending(andQuery, fieldId: 2, take: TakeSize);           
 
             Span<long> ids = _ids;
             while (query.Fill(ids) != 0)

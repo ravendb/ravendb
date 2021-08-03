@@ -10,6 +10,8 @@ namespace Sparrow.Server.Compression
     public static class ZigZagEncoding
     {
         public const int MaxEncodedSize = 10;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         public static int Encode<T>(Span<byte> buffer, T value, int pos = 0) where T : unmanaged
         {
             int sizeOfTInBits = Unsafe.SizeOf<T>() * 8 - 1;
@@ -62,18 +64,21 @@ namespace Sparrow.Server.Compression
             throw new NotSupportedException($"The type {nameof(T)} is not supported to be written.");
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         public static T Decode<T>(ReadOnlySpan<byte> buffer, int pos = 0) where T : unmanaged
         {
             T value = VariableSizeEncoding.Read<T>(buffer, out int _, pos);
             return UnZag(value);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         public static T Decode<T>(ReadOnlySpan<byte> buffer, out int len, int pos = 0) where T : unmanaged
         {
             T value = VariableSizeEncoding.Read<T>(buffer, out len, pos);
             return UnZag(value);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         private static T UnZag<T>(T value) where T : unmanaged
         {
             if (typeof(T) == typeof(sbyte))

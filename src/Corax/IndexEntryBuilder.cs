@@ -653,7 +653,7 @@ namespace Corax
 
             if (isTyped)
             {
-                return (IndexEntryFieldType)VariableSizeEncoding.Read<byte>(_buffer, out var length, intOffset);
+                return (IndexEntryFieldType)VariableSizeEncoding.Read<byte>(_buffer, out var _, intOffset);
             }
 
             return IndexEntryFieldType.None;
@@ -692,17 +692,17 @@ namespace Corax
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool Read(int field, out ReadOnlySpan<byte> value, int elementIdx = 0)
+        public bool Read(int field, out Span<byte> value, int elementIdx = 0)
         {
             return Read(field, out var _, out value, elementIdx);
         }
 
-        public bool Read(int field, out IndexEntryFieldType type, out ReadOnlySpan<byte> value, int elementIdx = 0)
+        public bool Read(int field, out IndexEntryFieldType type, out Span<byte> value, int elementIdx = 0)
         {
             var (intOffset, isTyped) = GetMetadataFieldLocation(_buffer, field);
             if (intOffset == Invalid)
             {
-                value = ReadOnlySpan<byte>.Empty;
+                value = Span<byte>.Empty;
                 type = IndexEntryFieldType.Invalid;
                 return false;
             }
@@ -719,7 +719,7 @@ namespace Corax
                     int totalSize = VariableSizeEncoding.Read<ushort>(_buffer, out length, intOffset);
                     if (elementIdx >= totalSize)
                     {
-                        value = ReadOnlySpan<byte>.Empty;
+                        value = Span<byte>.Empty;
                         type = IndexEntryFieldType.Invalid;
                         return false;
                     }
@@ -767,13 +767,13 @@ namespace Corax
             return true;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]  
-        public bool Read(int field, out long longValue, out double doubleValue, out ReadOnlySpan<byte> sequenceValue)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool Read(int field, out long longValue, out double doubleValue, out Span<byte> sequenceValue)
         {
             return Read(field, out var _, out longValue, out doubleValue, out sequenceValue);
         }
 
-        public bool Read(int field, out IndexEntryFieldType type, out long longValue, out double doubleValue, out ReadOnlySpan<byte> sequenceValue)
+        public bool Read(int field, out IndexEntryFieldType type, out long longValue, out double doubleValue, out Span<byte> sequenceValue)
         {
             var (intOffset, isTyped) = GetMetadataFieldLocation(_buffer, field);
             if (intOffset == Invalid)
@@ -825,7 +825,7 @@ namespace Corax
 
             Fail:  Unsafe.SkipInit(out longValue);
             Unsafe.SkipInit(out doubleValue);
-            sequenceValue = ReadOnlySpan<byte>.Empty;
+            sequenceValue = Span<byte>.Empty;
             type = IndexEntryFieldType.Invalid;
             return false;
         }

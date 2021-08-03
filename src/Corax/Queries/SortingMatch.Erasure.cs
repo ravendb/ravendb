@@ -50,7 +50,7 @@ namespace Corax.Queries
 
         private static class StaticFunctionCache<TInner, TComparer>
             where TInner : IQueryMatch
-            where TComparer : struct, IComparer<long>
+            where TComparer : struct, IMatchComparer
         {
             public static readonly FunctionTable FunctionTable;
 
@@ -78,7 +78,7 @@ namespace Corax.Queries
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static SortingMatch Create<TInner, TComparer>(in SortingMatch<TInner, TComparer> query)
             where TInner : IQueryMatch
-            where TComparer : struct, IComparer<long>
+            where TComparer : struct, IMatchComparer
         {
             return new SortingMatch(query, StaticFunctionCache<TInner, TComparer>.FunctionTable);
         }
