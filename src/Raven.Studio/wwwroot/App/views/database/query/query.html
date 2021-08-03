@@ -60,8 +60,13 @@
         <div class="flex-window-head">
             <h2 class="on-base-background">
                 Results
-                <a target="_blank" href="#" title="Show raw output" data-bind="attr: { href: rawJsonUrl }"><i class="icon-link"></i></a>
+                <a href="#" title="Show raw output" data-bind="click: requestRawJson"><i class="icon-link"></i></a>
             </h2>
+            <div class="hidden">
+                <form method="post" enctype='text/plain' target="_blank" id="rawJsonForm">
+                    <input type="hidden" name=""/>
+                </form>
+            </div>
             <div class="clearfix">
                 <div class="pull-left btn-group">
                     <div data-bind="visible: queryStats() && hasEditableIndex() && !isGraphQuery(), if: queryStats() && hasEditableIndex() && !isGraphQuery()" class="dropdown btn-group" >
