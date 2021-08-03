@@ -164,11 +164,11 @@ namespace Corax
         {
             if (typeof(TComparer) == typeof(AscendingMatchComparer))
             {
-                return Create(new SortingMatch<TInner, AscendingMatchComparer>(set, new AscendingMatchComparer(this, fieldId, entryFieldType), take));
+                return Create(new SortingMatch<TInner, AscendingMatchComparer>(this, set, new AscendingMatchComparer(this, fieldId, entryFieldType), take));
             }
-            else if(typeof(TComparer) == typeof(DescendingMatchComparer))
+            else if (typeof(TComparer) == typeof(DescendingMatchComparer))
             {
-                return Create(new SortingMatch<TInner, DescendingMatchComparer>(set, new DescendingMatchComparer(this, fieldId, entryFieldType), take));
+                return Create(new SortingMatch<TInner, DescendingMatchComparer>(this, set, new DescendingMatchComparer(this, fieldId, entryFieldType), take));
             }
             else if (typeof(TComparer) == typeof(CustomMatchComparer))
             {
@@ -178,10 +178,37 @@ namespace Corax
             throw new ArgumentException($"The comparer of type {typeof(TComparer).Name} is not supported. Isn't {nameof(OrderByCustomOrder)} the right call for it?");
         }
 
-        public SortingMatch OrderByCustomOrder<TInner>(in TInner set, int fieldId, delegate*<IndexSearcher, int, long, long, int> customCompareFunc, int take = -1)
+        public SortingMatch OrderBy<TInner, TComparer>(in TInner set, in TComparer comparer, int take = -1)
+            where TInner : IQueryMatch
+            where TComparer : struct, IMatchComparer
+        {
+            return Create(new SortingMatch<TInner, TComparer>(this, set, comparer, take));
+        }
+
+        public SortingMatch OrderByCustomOrder<TInner>(in TInner set, int fieldId, 
+                delegate*<IndexSearcher, int, long, long, int> compareByIdFunc,
+                delegate*<long, long, int> compareLongFunc,
+                delegate*<double, double, int> compareDoubleFunc,
+                delegate*<ReadOnlySpan<byte>, ReadOnlySpan<byte>, int> compareSequenceFunc,
+                MatchCompareFieldType entryFieldType = MatchCompareFieldType.Sequence, 
+                int take = -1)
             where TInner : IQueryMatch     
         {
-            return Create(new SortingMatch<TInner, CustomMatchComparer>(set, new CustomMatchComparer(this, fieldId, customCompareFunc), take));
+            // Federico: I don't even really know if we are going to find a use case for this. However, it was built for the purpose
+            //           of showing that it is possible to build any custom group of functions. Why would we want to do this instead
+            //           of just building a TComparer, I dont know. But for now the `CustomMatchComparer` can be built like this from
+            //           static functions. 
+            return Create(new SortingMatch<TInner, CustomMatchComparer>(
+                                    this, set, 
+                                    new CustomMatchComparer(
+                                        this, fieldId,
+                                        compareByIdFunc,
+                                        compareLongFunc,
+                                        compareDoubleFunc,
+                                        compareSequenceFunc,
+                                        entryFieldType
+                                        ),
+                                    take));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

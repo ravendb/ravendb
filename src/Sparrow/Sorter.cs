@@ -52,6 +52,7 @@ namespace Sparrow
 
             ref T ka = ref keys[x];
             ref T kb = ref keys[y];
+            
             if (ka != null && _sorter.Compare(ka, kb) > 0)
             {
                 T aux = ka;
