@@ -35,8 +35,8 @@ namespace SlowTests.MailingList
 
                 using (var session = store.OpenSession())
                 {
-                    var orderedWithoutAttribute = session.Query<MyClass>().OrderBy(x => x.ThisWillWork).Take(count).ToList();
-                    var orderedWithAttribute = session.Query<MyClass>().OrderByDescending(x => x.ThisWontWork).Take(count).ToList();
+                    var orderedWithoutAttribute = session.Query<MyClass>().Customize(x => x.WaitForNonStaleResults()).OrderBy(x => x.ThisWillWork).Take(count).ToList();
+                    var orderedWithAttribute = session.Query<MyClass>().Customize(x => x.WaitForNonStaleResults()).OrderByDescending(x => x.ThisWontWork).Take(count).ToList();
 
                     Assert.Equal(count, orderedWithoutAttribute.Count);
                     Assert.Equal(count, orderedWithAttribute.Count);

@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Indexes;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -66,7 +67,7 @@ namespace SlowTests.MailingList
                 WaitForIndexing(store);
                 Assert.True(index.IndexPersistence.HasWriter);
 
-                database.RunIdleOperations(DatabaseCleanupMode.Deep);
+                index.IndexPersistence.Clean(IndexCleanup.All);
                 await WaitAndAssertForValueAsync(() => index.IndexPersistence.HasWriter, false);
 
                 using (var session = store.OpenSession())
@@ -95,7 +96,7 @@ namespace SlowTests.MailingList
                     Assert.Empty(allowed);
                 }
 
-                database.RunIdleOperations(DatabaseCleanupMode.Deep);
+                index.IndexPersistence.Clean(IndexCleanup.All);
                 await WaitAndAssertForValueAsync(() => index.IndexPersistence.HasWriter, false);
 
                 using (var session = store.OpenSession())
