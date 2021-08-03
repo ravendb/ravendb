@@ -24,16 +24,19 @@ class storageReportItem {
     
     recyclableJournal = false;
 
-    constructor(name: string, type: string, showType: boolean, size: number, length: number, internalChildren: storageReportItem[] = null, isGrouped: boolean = false) {
+    constructor(name: string, type: string, showType: boolean, size: number, internalChildren: storageReportItem[] = null, isGrouped: boolean = false) {
         this.name = name;
         this.type = type;
         this.showType = showType;
         this.size = size;
-        this.length = length;
         this.internalChildren = internalChildren;
         this.isGrouped = isGrouped;
     }
 
+    setLength(length: number): void {
+        this.length = length;
+    }
+    
     formatSize(header: boolean) {
         return this.customSizeProvider ? this.customSizeProvider(header) : generalUtils.formatBytesToSize(this.size);
     }
