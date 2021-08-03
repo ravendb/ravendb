@@ -1,11 +1,9 @@
 ﻿using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -17,7 +15,7 @@ namespace SlowTests.Client.Queries
         {
         }
 
-        private class UserIndex : AbstractIndexCreationTask<User2>
+        private class UserIndex : AbstractIndexCreationTask<User>
         {
             public UserIndex()
             {
@@ -38,7 +36,7 @@ namespace SlowTests.Client.Queries
             public string Role;
         }
 
-        internal class User2
+        internal class User
         {
             public string FirstName;
             public string LastName;
@@ -46,34 +44,44 @@ namespace SlowTests.Client.Queries
         }
 
         [Fact]
-        public async Task Can_Include_With_Alias()
+        public async Task Can_Include_Secondary_Level_With_Alias()
         {
             using (var store = GetDocumentStore())
             {
                 var userIndex = new UserIndex();
                 await userIndex.ExecuteAsync(store);
-                WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
-                    var roles = new List<RoleData>() {new RoleData() {Name = "roles/1", Role = "admin"}, new RoleData() {Name = "role/2", Role = "developer"}};
-                    var user = new User2() {FirstName = "Rhini", LastName = "Hiber", Roles = roles};
+                    var role1 = new RoleData() {Name = "admin", Role = "role/1" };
+                    var role2 = new RoleData() {Name = "developer", Role = "role/2"};
+                    
+                    var roles = new List<RoleData>() { role1, role2 };
+                    var user = new User() {FirstName = "Rhini", LastName = "Hiber", Roles = roles};
+                    session.Store(role1, role1.Role);
+                    session.Store(role2, role2.Role);
                     session.Store(user);
                     session.SaveChanges();
                 }
 
+                WaitForIndexing(store);
+
                 using (var session = store.OpenSession())
                 {
 
-                    var users = session.Query<User2, UserIndex>()
+                    var users = session.Query<User, UserIndex>()
                         .Include(u => u.Roles.Select(r => r.Role))
                         .Select(u => new {u.FirstName, u.LastName, Roles = u.Roles.Select(r => new {r.Role}).ToList()})
                         .ToList();
 
-                    Assert.Equal(1, users.Count);
-                    Assert.Equal(2, users[0].Roles.Count);
-                    Assert.Equal("admin", users[0].Roles[0].Role);
-                    Assert.Equal("developer", users[0].Roles[1].Role);
+                    var loaded = session.Load<RoleData>("role/1");
 
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+                    Assert.Equal(1, users.Count);
+                    Assert.Equal(loaded.Role, "role/1");
+
+                    loaded = session.Load<RoleData>("role/2");
+
+                    Assert.Equal(loaded.Role, "role/2");
                 }
 
             }
