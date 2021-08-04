@@ -156,7 +156,7 @@
             <div data-bind="foreach: sortedGroups">
                 <h2 class="on-base-background" data-bind="text: entityName, visible: !groupHidden(), attr: { title: 'Collection: ' + entityName }"></h2>
                 <div data-bind="foreach: indexes, visible: !groupHidden()">
-                    <div data-bind="css: { 'sidebyside-indexes': replacement }, if: !filteredOut()">
+                    <div data-bind="css: { 'sidebyside-indexes': replacement }, visible: !filteredOut()">
                         <div class="panel panel-state panel-hover index" data-bind="template: { name: 'index-template' }, css: { 'has-replacement': replacement }">
                         </div>
                         <div class="sidebyside-actions" data-bind="with: replacement, visible: replacement">
