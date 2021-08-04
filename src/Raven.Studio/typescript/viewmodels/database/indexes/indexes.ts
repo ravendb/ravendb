@@ -250,8 +250,6 @@ class indexes extends viewModelBase {
                 return "some_checked";
             return "unchecked";
         });
-        
-        this.searchText.subscribe(() => this.highlightIndex(this.indexNameToHighlight(), false));
     }
 
     activate(args: any) {
