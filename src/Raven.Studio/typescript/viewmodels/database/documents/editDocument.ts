@@ -133,7 +133,8 @@ class editDocument extends viewModelBase {
         this.isCreatingNewDocument, 
         this.crudActionsProvider, 
         this.inReadOnlyMode,
-        this.isReadOnlyAccess);
+        this.isReadOnlyAccess,
+        this.isClone);
 
     isSaveEnabled: KnockoutComputed<boolean>;
     
@@ -164,7 +165,8 @@ class editDocument extends viewModelBase {
         this.initializeObservables();
         this.initValidation();
         
-        this.bindToCurrentInstance("compareRevisions", "forceCreateRevision", "copyChangeVectorToClipboard", "togglePropertiesPanel");
+        this.bindToCurrentInstance("compareRevisions", "forceCreateRevision", "copyChangeVectorToClipboard", 
+                                   "togglePropertiesPanel", "activateTimeSeriesTab", "activateAttachmentsTab");
     }
 
     canActivate(args: any) {
@@ -235,6 +237,7 @@ class editDocument extends viewModelBase {
             });
         }
 
+        this.setupDisableReasons();
         this.focusOnEditor();
     }
     
@@ -1203,6 +1206,16 @@ class editDocument extends viewModelBase {
             const sizeClass = genUtils.getSizeClass(number());
             return `badge ${sizeClass}`;
         });
+    }
+
+    activateAttachmentsTab(): void {
+        this.setupDisableReasons();
+        this.connectedDocuments.activateAttachments();
+    }
+
+    activateTimeSeriesTab(): void {
+        this.setupDisableReasons();
+        this.connectedDocuments.activateTimeSeries();
     }
 }
 
