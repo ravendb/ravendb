@@ -44,6 +44,7 @@ class connectedDocuments {
     
     isReadOnlyAccess: KnockoutObservable<boolean>;
     inReadOnlyMode: KnockoutObservable<boolean>;
+    isClone: KnockoutObservable<boolean>;
     searchInput = ko.observable<string>("");
     searchInputVisible: KnockoutObservable<boolean>;
     clearSearchInputSubscription: KnockoutSubscription;
@@ -88,7 +89,8 @@ class connectedDocuments {
         isCreatingNewDocument: KnockoutObservable<boolean>,
         crudActionsProvider: () => editDocumentCrudActions,
         inReadOnlyMode: KnockoutObservable<boolean>,
-        isReadOnlyAccess: KnockoutComputed<boolean>) {
+        isReadOnlyAccess: KnockoutComputed<boolean>,
+        isClone: KnockoutObservable<boolean>) {
 
         _.bindAll(this, ...["toggleStar"] as Array<keyof this & string>);
 
@@ -96,6 +98,7 @@ class connectedDocuments {
         this.db = db;
         this.isReadOnlyAccess = isReadOnlyAccess;
         this.inReadOnlyMode = inReadOnlyMode;
+        this.isClone = isClone;
         this.document.subscribe((doc) => this.onDocumentLoaded(doc));
         this.loadDocumentAction = loadDocument;
         this.compareWithRevisionAction = compareWithRevision;
@@ -204,7 +207,7 @@ class connectedDocuments {
                 "Details",
                 `<i class="icon-preview"></i>`,
                 "50px",
-                { title: () => 'Go to time series details' })
+                { title: () => this.isClone() ? 'Go to time series in source document' : 'Go to time series details' })
         ]
     }
 
