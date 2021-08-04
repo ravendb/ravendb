@@ -46,8 +46,8 @@
                         </button>
                     </div>
                 </div>
-                <div class="row text-center margin-top" data-bind="visible: spinners.anyInProgress, click: abortCreatePackage">
-                    <button class="btn btn-default" data-bind="css: { 'btn-spinner': spinners.abort }">
+                <div class="row text-center margin-top" data-bind="visible: spinners.anyInProgress">
+                    <button class="btn btn-default" data-bind="css: { 'btn-spinner': spinners.abort }, click: abortCreatePackage">
                         <i class="icon-cancel"></i><span>Abort</span>
                     </button>
                 </div>
