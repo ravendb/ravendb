@@ -3,7 +3,7 @@ import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import database = require("models/resources/database");
 
 class deleteDocumentsMatchingQueryConfirm extends dialogViewModelBase {
-    constructor(private indexName: string, private queryText: string, private totalDocCount: number, private db: database) {
+    constructor(private indexName: string, private queryText: string, private totalDocCount: number, private db: database, private hasMore: boolean = false) {
         super();
     }
 
