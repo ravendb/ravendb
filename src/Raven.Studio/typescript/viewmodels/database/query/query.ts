@@ -931,8 +931,10 @@ class query extends viewModelBase {
                         
                         itemsSoFar += queryResults.items.length;
                         
-                        if (itemsSoFar > totalFromQuery) {
-                            itemsSoFar = totalFromQuery;
+                        if (totalFromQuery != -1) {
+                            if (itemsSoFar > totalFromQuery) {
+                                itemsSoFar = totalFromQuery;
+                            }
                         }
                         
                         this.totalResultsForUi(totalFromQuery);
@@ -947,8 +949,8 @@ class query extends viewModelBase {
                             } else {
                                 queryResults.totalResultCount = skip + queryResults.items.length;
                             }
-                            queryResults.additionalResultInfo.TotalResults = queryResults.totalResultCount;
                             
+                            queryResults.additionalResultInfo.TotalResults = queryResults.totalResultCount;
                             this.totalResultsForUi(this.hasMoreUnboundedResults() ? itemsSoFar - 1 : itemsSoFar);
                         }
                         
@@ -972,8 +974,13 @@ class query extends viewModelBase {
                                     queryResults.totalResultCount = totalWithOffsetAndLimit - 1;
                                 }
                                 
-                                this.hasMoreUnboundedResults(itemsSoFar < totalFromQuery);
+                                if (totalFromQuery != -1) {
+                                    this.hasMoreUnboundedResults(itemsSoFar < totalFromQuery);
+                                } else {
+                                    this.hasMoreUnboundedResults(true); 
+                                }
                             }
+                            
                             this.totalResultsForUi(this.hasMoreUnboundedResults() ? itemsSoFar - 1 : itemsSoFar);
                         }
                         
@@ -1382,20 +1389,19 @@ class query extends viewModelBase {
         eventsCollector.default.reportEvent("query", "delete-documents");
         // Run the query so that we have an idea of what we'll be deleting.
         this.runQuery();
-        this.queryFetcher()(0, 1)
-            .done((results) => {
-                if (results.totalResultCount === 0) {
-                    app.showBootstrapMessage("There are no documents matching your query.", "Nothing to do");
-                } else {
-                    this.promptDeleteDocsMatchingQuery(results.totalResultCount);
-                }
-            });
+        
+        const resultsForUI = this.totalResultsForUi();
+        if (resultsForUI === 0) {
+            app.showBootstrapMessage("There are no documents matching your query.", "Nothing to do");
+        } else {
+            this.promptDeleteDocsMatchingQuery(resultsForUI, this.hasMoreUnboundedResults());
+        }
     }
 
-    private promptDeleteDocsMatchingQuery(resultCount: number) {
+    private promptDeleteDocsMatchingQuery(resultCount: number, hasMore: boolean) {
         const criteria = this.criteria();
         const db = this.activeDatabase();
-        const viewModel = new deleteDocumentsMatchingQueryConfirm(this.queriedIndex(), criteria.queryText(), resultCount, db);
+        const viewModel = new deleteDocumentsMatchingQueryConfirm(this.queriedIndex(), criteria.queryText(), resultCount, db, hasMore);
         app.showBootstrapDialog(viewModel)
            .done((result) => {
                 if (result) {
