@@ -227,10 +227,17 @@ namespace Raven.Client.Documents.BulkInsert
         {
             var errors = new List<Exception>(3);
 
-            var error = await GetExceptionFromOperation().ConfigureAwait(false);
+            try
+            {
+                var error = await GetExceptionFromOperation().ConfigureAwait(false);
 
-            if (error != null)
-                errors.Add(error);
+                if (error != null)
+                    errors.Add(error);
+            }
+            catch (Exception exceptionFromOperation)
+            {
+                errors.Add(exceptionFromOperation);
+            }
 
             if (flushEx != null)
                 errors.Add(flushEx);
