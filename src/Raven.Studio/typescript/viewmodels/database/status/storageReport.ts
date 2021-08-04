@@ -177,14 +177,13 @@ class storageReport extends viewModelBase {
     private groupChildren(items: storageReportItem[]): storageReportItem[] {
         
         if (items.length > storageReport.maxChildrenToShow) {
-            let clonedItems = _.clone(items);
-            clonedItems.sort((a, b) => b.size - a.size); // desc...
-            
-            const sampleItem = clonedItems[0];
-            
-            const itemsToShow = clonedItems.slice(0, storageReport.maxChildrenToShow);
-            const itemsToGroup = clonedItems.slice(storageReport.maxChildrenToShow);
-            
+            items.sort((a, b) => b.size - a.size); // desc...
+
+            const sampleItem = items[0];
+
+            const itemsToShow = items.slice(0, storageReport.maxChildrenToShow);
+            const itemsToGroup = items.slice(storageReport.maxChildrenToShow);
+
             const groupedItem: storageReportItem = itemsToGroup.reduce((a, b) => {
                     a.size += b.size;
                     a.length += b.length;
