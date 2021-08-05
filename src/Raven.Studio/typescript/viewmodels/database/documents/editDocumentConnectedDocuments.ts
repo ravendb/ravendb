@@ -311,7 +311,8 @@ class connectedDocuments {
     fetchRecentDocs(skip: number, take: number): JQueryPromise<pagedResult<connectedDocumentItem>> {
         const doc = this.document();
 
-        const recentDocs = this.recentDocuments.getTopRecentDocuments(this.db(), doc.getId());
+        const recentDocs = this.recentDocuments.getTopRecentDocuments(this.db(), doc.getId(), this.isClone());
+        
         return $.Deferred<pagedResult<connectedDocumentItem>>().resolve({
             items: recentDocs.map(x => ({ id: x.id, href: x.href, deletedRevision: false })),
             totalResultCount: recentDocs.length,
