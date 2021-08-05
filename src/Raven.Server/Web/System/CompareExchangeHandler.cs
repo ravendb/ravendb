@@ -44,6 +44,7 @@ namespace Raven.Server.Web.System
             var items = ServerStore.Cluster.GetCompareExchangeValuesStartsWith(context, Database.Name, CompareExchangeCommandBase.GetActualKey(Database.Name, startsWithKey), start, pageSize);
 
             var numberOfResults = 0;
+            var totalDocumentsSize = 0;
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
@@ -52,6 +53,7 @@ namespace Raven.Server.Web.System
                     (textWriter, operationContext, item) =>
                     {
                         numberOfResults++;
+                        totalDocumentsSize += item.Value.Size;
                         operationContext.Write(textWriter, new DynamicJsonValue
                         {
                             [nameof(CompareExchangeListItem.Key)] = item.Key,
@@ -64,7 +66,7 @@ namespace Raven.Server.Web.System
             }
 
             AddPagingPerformanceHint(PagingOperationType.CompareExchange, nameof(ClusterStateMachine.GetCompareExchangeValuesStartsWith), 
-                HttpContext.Request.QueryString.Value, numberOfResults, pageSize, sw.ElapsedMilliseconds);
+                HttpContext.Request.QueryString.Value, numberOfResults, pageSize, sw.ElapsedMilliseconds, totalDocumentsSize);
         }
         
         public class CompareExchangeListItem
@@ -92,6 +94,7 @@ namespace Raven.Server.Web.System
             }
 
             var numberOfResults = 0;
+            var totalDocumentsSize = 0;
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
@@ -100,6 +103,7 @@ namespace Raven.Server.Web.System
                     (textWriter, operationContext, item) =>
                     {
                         numberOfResults++;
+                        totalDocumentsSize += item.Value.Size;
                         operationContext.Write(textWriter, new DynamicJsonValue
                         {
                             ["Key"] = item.Key,
@@ -112,7 +116,7 @@ namespace Raven.Server.Web.System
             }
 
             AddPagingPerformanceHint(PagingOperationType.CompareExchange, nameof(GetCompareExchangeValuesByKey), HttpContext.Request.QueryString.Value, 
-                numberOfResults, keys.Count, sw.ElapsedMilliseconds);
+                numberOfResults, keys.Count, sw.ElapsedMilliseconds, totalDocumentsSize);
         }
 
 

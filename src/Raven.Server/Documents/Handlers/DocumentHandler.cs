@@ -188,19 +188,20 @@ namespace Raven.Server.Documents.Handlers
             }
 
             int numberOfResults;
+            long totalDocumentsSize = 0;
 
             using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream(), Database.DatabaseShutdown))
             {
                 writer.WriteStartObject();
                 writer.WritePropertyName("Results");
 
-                numberOfResults = await writer.WriteDocumentsAsync(context, documents, metadataOnly);
+                (numberOfResults, totalDocumentsSize) = await writer.WriteDocumentsAsync(context, documents, metadataOnly);
 
                 writer.WriteEndObject();
                 await writer.OuterFlushAsync();
             }
 
-            AddPagingPerformanceHint(PagingOperationType.Documents, isStartsWith ? nameof(DocumentsStorage.GetDocumentsStartingWith) : nameof(GetDocumentsAsync), HttpContext.Request.QueryString.Value, numberOfResults, pageSize, sw.ElapsedMilliseconds);
+            AddPagingPerformanceHint(PagingOperationType.Documents, isStartsWith ? nameof(DocumentsStorage.GetDocumentsStartingWith) : nameof(GetDocumentsAsync), HttpContext.Request.QueryString.Value, numberOfResults, pageSize, sw.ElapsedMilliseconds, totalDocumentsSize);
         }
 
         private async Task GetDocumentsByIdAsync(DocumentsOperationContext context, Microsoft.Extensions.Primitives.StringValues ids, bool metadataOnly)
@@ -211,7 +212,6 @@ namespace Raven.Server.Documents.Handlers
             var documents = new List<Document>(ids.Count);
             var includes = new List<Document>(includePaths.Count * ids.Count);
             var includeDocs = new IncludeDocumentsCommand(Database.DocumentsStorage, context, includePaths, isProjection: false);
-
             GetCountersQueryString(Database, context, out var includeCounters);
 
             foreach (var id in ids)
@@ -247,11 +247,9 @@ namespace Raven.Server.Documents.Handlers
 
             HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + actualEtag + "\"";
 
-            int numberOfResults = 0;
+            (int numberOfResults, long totalDocumentsSize) = await WriteDocumentsJsonAsync(context, metadataOnly, documents, includes, includeCounters?.Results);
 
-            numberOfResults = await WriteDocumentsJsonAsync(context, metadataOnly, documents, includes, includeCounters?.Results, numberOfResults);
-
-            AddPagingPerformanceHint(PagingOperationType.Documents, nameof(GetDocumentsByIdAsync), HttpContext.Request.QueryString.Value, numberOfResults, documents.Count, sw.ElapsedMilliseconds);
+            AddPagingPerformanceHint(PagingOperationType.Documents, nameof(GetDocumentsByIdAsync), HttpContext.Request.QueryString.Value, numberOfResults, documents.Count, sw.ElapsedMilliseconds, totalDocumentsSize);
         }
 
         private void GetCountersQueryString(DocumentDatabase database, DocumentsOperationContext context, out IncludeCountersCommand includeCounters)
@@ -271,13 +269,15 @@ namespace Raven.Server.Documents.Handlers
             includeCounters = new IncludeCountersCommand(database, context, counters);
         }
 
-        private async Task<int> WriteDocumentsJsonAsync(JsonOperationContext context, bool metadataOnly, IEnumerable<Document> documentsToWrite, List<Document> includes, Dictionary<string, List<CounterDetail>> counters, int numberOfResults)
+        private async Task<(int, long)> WriteDocumentsJsonAsync(JsonOperationContext context, bool metadataOnly, IEnumerable<Document> documentsToWrite, List<Document> includes, Dictionary<string, List<CounterDetail>> counters)
         {
+            int numberOfResults = 0;
+            long totalDocumentsSize = 0;
             using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream(), Database.DatabaseShutdown))
             {
                 writer.WriteStartObject();
                 writer.WritePropertyName(nameof(GetDocumentsResult.Results));
-                numberOfResults = await writer.WriteDocumentsAsync(context, documentsToWrite, metadataOnly);
+                (numberOfResults, totalDocumentsSize) = await writer.WriteDocumentsAsync(context, documentsToWrite, metadataOnly);
 
                 writer.WriteComma();
                 writer.WritePropertyName(nameof(GetDocumentsResult.Includes));
@@ -301,7 +301,7 @@ namespace Raven.Server.Documents.Handlers
                 writer.WriteEndObject();
                 await writer.OuterFlushAsync();
             }
-            return numberOfResults;
+            return (numberOfResults, totalDocumentsSize);
         }
 
         [RavenAction("/databases/*/docs", "DELETE", AuthorizationStatus.ValidUser, DisableOnCpuCreditsExhaustion = true)]

@@ -68,7 +68,7 @@ namespace Raven.Server.Documents.Handlers.Streaming
                     writer.WriteStartObject();
                     writer.WritePropertyName("Results");
 
-                    writer.WriteDocuments(context, documentsEnumerator, metadataOnly: false, numberOfResults: out int _);
+                    writer.WriteDocuments(context, documentsEnumerator, metadataOnly: false, numberOfResults: out int _, out long _);
 
                     writer.WriteEndObject();
                 }
