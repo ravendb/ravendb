@@ -29,14 +29,13 @@ namespace SlowTests.Client.Queries
             }
         }
 
-
-        internal class RoleData
+        private class RoleData
         {
             public string Name;
             public string Role;
         }
 
-        internal class User
+        private class User
         {
             public string FirstName;
             public string LastName;
@@ -54,9 +53,9 @@ namespace SlowTests.Client.Queries
                 {
                     var role1 = new RoleData() {Name = "admin", Role = "role/1" };
                     var role2 = new RoleData() {Name = "developer", Role = "role/2"};
-                    
                     var roles = new List<RoleData>() { role1, role2 };
-                    var user = new User() {FirstName = "Rhini", LastName = "Hiber", Roles = roles};
+                    var user = new User() {FirstName = "Rhinos", LastName = "Hiber", Roles = roles};
+
                     session.Store(role1, role1.Role);
                     session.Store(role2, role2.Role);
                     session.Store(user);
@@ -67,23 +66,31 @@ namespace SlowTests.Client.Queries
 
                 using (var session = store.OpenSession())
                 {
-
-                    var users = session.Query<User, UserIndex>()
+                    var query = session.Query<User, UserIndex>()
                         .Include(u => u.Roles.Select(r => r.Role))
-                        .Select(u => new {u.FirstName, u.LastName, Roles = u.Roles.Select(r => new {r.Role}).ToList()})
-                        .ToList();
+                        .Select(u => new {u.FirstName, u.LastName, Roles = u.Roles.Select(r => new {r.Role}).ToList()});
+
+                    var actualQuery = query.ToString();
+
+                    const string expectedQuery = "from index 'UserIndex' as u " +
+                                                 "select { FirstName : u.FirstName, " +
+                                                 "LastName : u.LastName, " +
+                                                 "Roles : u.Roles.map(function(r){return {Role:r.Role};}) } " +
+                                                 "include 'u.Roles[].Role'";
+
+                    Assert.Equal(expectedQuery, actualQuery);
+
+                    var users = query.ToList();
+                    Assert.Equal(1, users.Count);
 
                     var loaded = session.Load<RoleData>("role/1");
-
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
-                    Assert.Equal(1, users.Count);
                     Assert.Equal(loaded.Role, "role/1");
 
                     loaded = session.Load<RoleData>("role/2");
-
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
                     Assert.Equal(loaded.Role, "role/2");
                 }
-
             }
         }
     }
