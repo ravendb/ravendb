@@ -12,7 +12,7 @@ using Voron.Impl;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
-    public class IndexSearcherHolder : IDisposable
+    public class LuceneIndexSearcherHolder : IDisposable
     {
         private readonly Func<IState, IndexSearcher> _recreateSearcher;
         private readonly DocumentDatabase _documentDatabase;
@@ -20,11 +20,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private readonly Logger _logger;
         private ImmutableList<IndexSearcherHoldingState> _states = ImmutableList<IndexSearcherHoldingState>.Empty;
 
-        public IndexSearcherHolder(Func<IState, IndexSearcher> recreateSearcher, DocumentDatabase documentDatabase)
+        public LuceneIndexSearcherHolder(Func<IState, IndexSearcher> recreateSearcher, DocumentDatabase documentDatabase)
         {
             _recreateSearcher = recreateSearcher;
             _documentDatabase = documentDatabase;
-            _logger = LoggingSource.Instance.GetLogger<IndexSearcherHolder>(documentDatabase.Name);
+            _logger = LoggingSource.Instance.GetLogger<LuceneIndexSearcherHolder>(documentDatabase.Name);
         }
 
         public void SetIndexSearcher(Transaction asOfTx)
@@ -138,7 +138,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             public IndexSearcherHoldingState(Transaction tx, Func<IState, IndexSearcher> recreateSearcher, string dbName)
             {
                 _recreateSearcher = recreateSearcher;
-                _logger = LoggingSource.Instance.GetLogger<IndexSearcherHolder>(dbName);
+                _logger = LoggingSource.Instance.GetLogger<LuceneIndexSearcherHolder>(dbName);
                 AsOfTxId = tx.LowLevelTransaction.Id;
                 _lazyIndexSearcher = new Lazy<IndexSearcher>(() =>
                 {

@@ -7,6 +7,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes.Auto;
+using Raven.Server.Documents.Indexes.Persistence;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Queries;
@@ -56,12 +57,12 @@ namespace Raven.Server.Documents.Indexes.Errors
             throw new NotSupportedException($"Index {Name} is in-memory implementation of a faulty index", _e);
         }
 
-        public override void HandleDelete(Tombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        public override void HandleDelete(Tombstone tombstone, string collection, IndexWriteOperationBase writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             throw new NotSupportedException($"Index {Name} is in-memory implementation of a faulty index", _e);
         }
 
-        public override int HandleMap(IndexItem indexItem, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        public override int HandleMap(IndexItem indexItem, IEnumerable mapResults, IndexWriteOperationBase writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             throw new NotSupportedException($"Index {Name} is in-memory implementation of a faulty index", _e);
         }

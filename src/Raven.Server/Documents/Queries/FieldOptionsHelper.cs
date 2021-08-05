@@ -28,7 +28,7 @@ namespace Raven.Server.Documents.Queries
             }
             else if (optionsType == ValueTokenType.String)
             {
-                optionsJson = IndexReadOperation.ParseJsonStringIntoBlittable(optionsAsStringOrParameterName, context);
+                optionsJson = LuceneIndexReadOperation.ParseJsonStringIntoBlittable(optionsAsStringOrParameterName, context);
             }
             else
                 throw new InvalidOperationException($"Unknown options type '{optionsType}'.");

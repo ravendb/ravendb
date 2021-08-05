@@ -7,6 +7,7 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
+using Raven.Server.Documents.Indexes.Persistence;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Workers;
@@ -88,7 +89,7 @@ namespace SlowTests.Server.Documents.Indexing.Static
                     mapReduceContext.StoreByReduceKeyHash.Add(hashOfReduceKey, store);
 
                     var writeOperation =
-                        new Lazy<IndexWriteOperation>(() => index.IndexPersistence.OpenIndexWriter(tx.InnerTransaction, indexContext));
+                        new Lazy<IndexWriteOperationBase>(() => index.IndexPersistence.OpenIndexWriter(tx.InnerTransaction, indexContext));
 
                     var stats = new IndexingStatsScope(new IndexingRunStats());
                     reducer.Execute(null, indexContext,
@@ -147,7 +148,7 @@ namespace SlowTests.Server.Documents.Indexing.Static
                     mapReduceContext.StoreByReduceKeyHash.Add(hashOfReduceKey, store);
 
                     var writeOperation =
-                        new Lazy<IndexWriteOperation>(() => index.IndexPersistence.OpenIndexWriter(tx.InnerTransaction, indexContext));
+                        new Lazy<IndexWriteOperationBase>(() => index.IndexPersistence.OpenIndexWriter(tx.InnerTransaction, indexContext));
                     try
                     {
 
@@ -207,7 +208,7 @@ namespace SlowTests.Server.Documents.Indexing.Static
                     mapReduceContext.StoreByReduceKeyHash.Add(hashOfReduceKey, store);
 
                     var writeOperation =
-                        new Lazy<IndexWriteOperation>(() => index.IndexPersistence.OpenIndexWriter(tx.InnerTransaction, indexContext));
+                        new Lazy<IndexWriteOperationBase>(() => index.IndexPersistence.OpenIndexWriter(tx.InnerTransaction, indexContext));
                     try
                     {
                         var stats = new IndexingStatsScope(new IndexingRunStats());
@@ -267,7 +268,7 @@ namespace SlowTests.Server.Documents.Indexing.Static
                     mapReduceContext.StoreByReduceKeyHash.Add(hashOfReduceKey, store);
 
                     var writeOperation =
-                        new Lazy<IndexWriteOperation>(() => index.IndexPersistence.OpenIndexWriter(tx.InnerTransaction, indexContext));
+                        new Lazy<IndexWriteOperationBase>(() => index.IndexPersistence.OpenIndexWriter(tx.InnerTransaction, indexContext));
                     try
                     {
                         var stats = new IndexingStatsScope(new IndexingRunStats());

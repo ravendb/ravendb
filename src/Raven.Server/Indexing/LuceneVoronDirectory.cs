@@ -4,6 +4,7 @@ using System.IO;
 using Lucene.Net.Store;
 using Raven.Client.Util;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Indexes.Persistence;
 using Voron;
 using Voron.Impl;
 

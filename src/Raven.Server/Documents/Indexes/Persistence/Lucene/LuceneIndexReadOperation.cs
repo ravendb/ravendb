@@ -41,10 +41,9 @@ using Query = Lucene.Net.Search.Query;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
-    public sealed class IndexReadOperation : IndexOperationBase
+    public sealed class LuceneIndexReadOperation : IndexReadOperationBase
     {
         private static readonly Sort SortByFieldScore = new Sort(SortField.FIELD_SCORE);
-
         private readonly QueryBuilderFactories _queryBuilderFactories;
         private readonly IndexType _indexType;
         private readonly bool _indexHasBoostedFields;
@@ -60,8 +59,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private FastVectorHighlighter _highlighter;
         private FieldQuery _highlighterQuery;
 
-        public IndexReadOperation(Index index, LuceneVoronDirectory directory, IndexSearcherHolder searcherHolder, QueryBuilderFactories queryBuilderFactories, Transaction readTransaction)
-            : base(index, LoggingSource.Instance.GetLogger<IndexReadOperation>(index._indexStorage.DocumentDatabase.Name))
+        public LuceneIndexReadOperation(Index index, LuceneVoronDirectory directory, LuceneIndexSearcherHolder searcherHolder, QueryBuilderFactories queryBuilderFactories, Transaction readTransaction)
+            : base(index, LoggingSource.Instance.GetLogger<LuceneIndexReadOperation>(index._indexStorage.DocumentDatabase.Name))
         {
             try
             {
@@ -80,12 +79,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _releaseSearcher = searcherHolder.GetSearcher(readTransaction, _state, out _searcher);
         }
 
-        public int EntriesCount()
+        public override int EntriesCount()
         {
             return _searcher.IndexReader.NumDocs();
         }
 
-        public IEnumerable<QueryResult> Query(IndexQueryServerSide query, QueryTimingsScope queryTimings, FieldsToFetch fieldsToFetch, Reference<int> totalResults, Reference<int> skippedResults, IQueryResultRetriever retriever, DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField, CancellationToken token)
+        public override IEnumerable<QueryResult> Query(IndexQueryServerSide query, QueryTimingsScope queryTimings, FieldsToFetch fieldsToFetch, Reference<int> totalResults, Reference<int> skippedResults, IQueryResultRetriever retriever, DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField, CancellationToken token)
         {
             ExplanationOptions explanationOptions = null;
 
@@ -304,14 +303,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _highlighterQuery = _highlighter.GetFieldQuery(luceneQuery);
         }
 
-        public struct QueryResult
-        {
-            public Document Result;
-            public Dictionary<string, Dictionary<string, string[]>> Highlightings;
-            public ExplanationResult Explanation;
-        }
-
-        public IEnumerable<QueryResult> IntersectQuery(IndexQueryServerSide query, FieldsToFetch fieldsToFetch, Reference<int> totalResults, Reference<int> skippedResults, IQueryResultRetriever retriever, DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField, CancellationToken token)
+       
+        public override IEnumerable<QueryResult> IntersectQuery(IndexQueryServerSide query, FieldsToFetch fieldsToFetch, Reference<int> totalResults, Reference<int> skippedResults, IQueryResultRetriever retriever, DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField, CancellationToken token)
         {
             var method = query.Metadata.Query.Where as MethodExpression;
 
@@ -618,7 +611,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
-        public HashSet<string> Terms(string field, string fromValue, long pageSize, CancellationToken token)
+        public override HashSet<string> Terms(string field, string fromValue, long pageSize, CancellationToken token)
         {
             var results = new HashSet<string>();
             using (var termDocs = _searcher.IndexReader.HasDeletions ? _searcher.IndexReader.TermDocs(_state) : null)
@@ -665,7 +658,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return results;
         }
 
-        public IEnumerable<QueryResult> MoreLikeThis(
+        public override IEnumerable<QueryResult> MoreLikeThis(
             IndexQueryServerSide query,
             IQueryResultRetriever retriever,
             DocumentsOperationContext context,
@@ -791,7 +784,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
-        public IEnumerable<BlittableJsonReaderObject> IndexEntries(IndexQueryServerSide query, Reference<int> totalResults, DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField, CancellationToken token)
+        public override IEnumerable<BlittableJsonReaderObject> IndexEntries(IndexQueryServerSide query, Reference<int> totalResults, DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField, CancellationToken token)
         {
             var docsToGet = GetPageSize(_searcher, query.PageSize);
             var position = query.Start;
@@ -816,7 +809,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
-        public IEnumerable<string> DynamicEntriesFields(HashSet<string> staticFields)
+        public override IEnumerable<string> DynamicEntriesFields(HashSet<string> staticFields)
         {
             foreach (var fieldName in _searcher
                 .IndexReader
@@ -849,15 +842,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _releaseReadTransaction?.Dispose();
         }
 
-        internal static unsafe BlittableJsonReaderObject ParseJsonStringIntoBlittable(string json, JsonOperationContext context)
-        {
-            var bytes = Encoding.UTF8.GetBytes(json);
-            fixed (byte* ptr = bytes)
-            {
-                var blittableJson = context.ParseBuffer(ptr, bytes.Length, "MoreLikeThis/ExtractTermsFromJson", BlittableJsonDocumentBuilder.UsageMode.None);
-                blittableJson.BlittableValidation(); //precaution, needed because this is user input..
-                return blittableJson;
-            }
-        }
+       
     }
 }

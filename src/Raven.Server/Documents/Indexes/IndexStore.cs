@@ -2050,7 +2050,7 @@ namespace Raven.Server.Documents.Indexes
 
                 try
                 {
-                    IndexingExtensions.GetAnalyzerType(kvp.Key, kvp.Value.Analyzer, _documentDatabase.Name);
+                    LuceneIndexingExtensions.GetAnalyzerType(kvp.Key, kvp.Value.Analyzer, _documentDatabase.Name);
                 }
                 catch (Exception e)
                 {

@@ -29,6 +29,7 @@ using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Exceptions;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
+using Raven.Server.Documents.Indexes.Persistence;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Static.Counters;
@@ -112,7 +113,7 @@ namespace Raven.Server.Documents.Indexes
 
         protected Logger _logger;
 
-        internal LuceneIndexPersistence IndexPersistence;
+        internal IndexPersistenceBase IndexPersistence;
 
         internal IndexFieldsPersistence IndexFieldsPersistence;
 
@@ -2179,7 +2180,7 @@ namespace Raven.Server.Documents.Indexes
                 using (CurrentIndexingScope.Current =
                     new CurrentIndexingScope(this, DocumentDatabase.DocumentsStorage, context, Definition, indexContext, GetOrAddSpatialField, _unmanagedBuffersPool))
                 {
-                    var writeOperation = new Lazy<IndexWriteOperation>(() => IndexPersistence.OpenIndexWriter(indexContext.Transaction.InnerTransaction, indexContext));
+                    var writeOperation = new Lazy<IndexWriteOperationBase>(() => IndexPersistence.OpenIndexWriter(indexContext.Transaction.InnerTransaction, indexContext));
 
                     try
                     {
@@ -2270,7 +2271,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private void DisposeIndexWriterOnError(Lazy<IndexWriteOperation> writeOperation)
+        private void DisposeIndexWriterOnError(Lazy<IndexWriteOperationBase> writeOperation)
         {
             try
             {
@@ -2286,10 +2287,10 @@ namespace Raven.Server.Documents.Indexes
         public abstract IIndexedItemEnumerator GetMapEnumerator(IEnumerable<IndexItem> items, string collection, TransactionOperationContext indexContext,
             IndexingStatsScope stats, IndexType type);
 
-        public abstract void HandleDelete(Tombstone tombstone, string collection, IndexWriteOperation writer,
+        public abstract void HandleDelete(Tombstone tombstone, string collection, IndexWriteOperationBase writer,
             TransactionOperationContext indexContext, IndexingStatsScope stats);
 
-        public abstract int HandleMap(IndexItem indexItem, IEnumerable mapResults, IndexWriteOperation writer,
+        public abstract int HandleMap(IndexItem indexItem, IEnumerable mapResults, IndexWriteOperationBase writer,
             TransactionOperationContext indexContext, IndexingStatsScope stats);
 
         private void HandleIndexChange(IndexChange change)
@@ -3079,7 +3080,7 @@ namespace Raven.Server.Documents.Indexes
 
                                 var retriever = GetQueryResultRetriever(query, queryScope, queryContext.Documents, fieldsToFetch, includeDocumentsCommand, includeCompareExchangeValuesCommand, includeRevisionsCommand);
 
-                                IEnumerable<IndexReadOperation.QueryResult> documents;
+                                IEnumerable<IndexReadOperationBase.QueryResult> documents;
 
                                 if (query.Metadata.HasMoreLikeThis)
                                 {
@@ -3123,7 +3124,7 @@ namespace Raven.Server.Documents.Indexes
                                     {
                                         var originalEnumerator = enumerator;
 
-                                        enumerator = new PulsedTransactionEnumerator<IndexReadOperation.QueryResult, QueryResultsIterationState>(queryContext.Documents,
+                                        enumerator = new PulsedTransactionEnumerator<LuceneIndexReadOperation.QueryResult, QueryResultsIterationState>(queryContext.Documents,
                                             state => originalEnumerator,
                                             new QueryResultsIterationState(queryContext.Documents, DocumentDatabase.Configuration.Databases.PulseReadTransactionLimit));
                                     }
@@ -3507,7 +3508,7 @@ namespace Raven.Server.Documents.Indexes
                             foreach (var selectField in query.Metadata.SelectFields)
                             {
                                 var suggestField = (SuggestionField)selectField;
-                                using (var reader = IndexPersistence.OpenSuggestionIndexReader(indexTx.InnerTransaction, suggestField.Name))
+                                using (var reader = (IndexPersistence as LuceneIndexPersistence)?.OpenSuggestionIndexReader(indexTx.InnerTransaction, suggestField.Name))
                                     result.Results.Add(reader.Suggestions(query, suggestField, queryContext.Documents, token.Token));
                             }
 
@@ -4123,7 +4124,7 @@ namespace Raven.Server.Documents.Indexes
         }
 
         public CanContinueBatchResult CanContinueBatch(IndexingStatsScope stats, QueryOperationContext queryContext, TransactionOperationContext indexingContext,
-            IndexWriteOperation indexWriteOperation, long currentEtag, long maxEtag, long count,
+            IndexWriteOperationBase indexWriteOperationBase, long currentEtag, long maxEtag, long count,
             Stopwatch sw, ref TimeSpan maxTimeForDocumentTransactionToRemainOpen)
         {
             if (Configuration.MapBatchSize.HasValue && count >= Configuration.MapBatchSize.Value)
@@ -4169,7 +4170,7 @@ namespace Raven.Server.Documents.Indexes
                 return CanContinueBatchResult.False;
             }
 
-            var txAllocationsInBytes = UpdateThreadAllocations(indexingContext, indexWriteOperation, stats, updateReduceStats: false);
+            var txAllocationsInBytes = UpdateThreadAllocations(indexingContext, indexWriteOperationBase, stats, updateReduceStats: false);
 
             // we need to take the read transaction encryption size into account as we might read a lot of documents and produce very little indexing output.
             txAllocationsInBytes += queryContext.Documents.Transaction.InnerTransaction.LowLevelTransaction.AdditionalMemoryUsageSize.GetValue(SizeUnit.Bytes);
@@ -4338,7 +4339,7 @@ namespace Raven.Server.Documents.Indexes
 
         public long UpdateThreadAllocations(
             TransactionOperationContext indexingContext,
-            IndexWriteOperation indexWriteOperation,
+            IndexWriteOperationBase indexWriteOperation,
             IndexingStatsScope stats,
             bool updateReduceStats)
         {

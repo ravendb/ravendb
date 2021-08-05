@@ -17,7 +17,7 @@ using Voron.Impl;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
-    public class IndexWriteOperation : IndexOperationBase, IWriteOperationBuffer
+    public class LuceneIndexWriteOperation : IndexWriteOperationBase, IWriteOperationBuffer
     {
         private readonly Term _documentId = new Term(Constants.Documents.Indexing.Fields.DocumentIdFieldName, "Dummy");
         private readonly Term _reduceKeyHash = new Term(Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName, "Dummy");
@@ -41,8 +41,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private byte[] _buffer;
 
-        public IndexWriteOperation(Index index, LuceneVoronDirectory directory, LuceneDocumentConverterBase converter, Transaction writeTransaction, LuceneIndexPersistence persistence)
-            : base(index, LoggingSource.Instance.GetLogger<IndexWriteOperation>(index._indexStorage.DocumentDatabase.Name))
+        public LuceneIndexWriteOperation(Index index, LuceneVoronDirectory directory, LuceneDocumentConverterBase converter, Transaction writeTransaction, LuceneIndexPersistence persistence)
+            : base(index, LoggingSource.Instance.GetLogger<LuceneIndexWriteOperation>(index._indexStorage.DocumentDatabase.Name))
         {
             _converter = converter;
             DocumentDatabase = index._indexStorage.DocumentDatabase;
@@ -106,7 +106,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
-        public virtual void Commit(IndexingStatsScope stats)
+        public override void Commit(IndexingStatsScope stats)
         {
             if (_writer != null)
             {
@@ -123,7 +123,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
-        public void Optimize()
+        public override void Optimize()
         {
             if (_writer != null)
             {
@@ -137,7 +137,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
-        public virtual void IndexDocument(LazyStringValue key, LazyStringValue sourceDocumentId, object document, IndexingStatsScope stats, JsonOperationContext indexContext)
+        public override void IndexDocument(LazyStringValue key, LazyStringValue sourceDocumentId, object document, IndexingStatsScope stats, JsonOperationContext indexContext)
         {
             EnsureValidStats(stats);
 
@@ -170,12 +170,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
-        public int EntriesCount()
+        public override int EntriesCount()
         {
             return _writer.EntriesCount(_state);
         }
 
-        public (long RamSizeInBytes, long FilesAllocationsInBytes) GetAllocations()
+        public override (long RamSizeInBytes, long FilesAllocationsInBytes) GetAllocations()
         {
             var usedMemory = _writer.RamSizeInBytes();
             var fileAllocations = _directory.FilesAllocations;
@@ -192,7 +192,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return (usedMemory, fileAllocations);
         }
 
-        public virtual void Delete(LazyStringValue key, IndexingStatsScope stats)
+        public override void Delete(LazyStringValue key, IndexingStatsScope stats)
         {
             EnsureValidStats(stats);
 
@@ -200,7 +200,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 _writer.DeleteDocuments(_documentId.CreateTerm(key), _state);
         }
 
-        public virtual void DeleteBySourceDocument(LazyStringValue sourceDocumentId, IndexingStatsScope stats)
+        public override void DeleteBySourceDocument(LazyStringValue sourceDocumentId, IndexingStatsScope stats)
         {
             EnsureValidStats(stats);
 
@@ -208,7 +208,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 _writer.DeleteDocuments(_sourceDocumentIdHash.CreateTerm(sourceDocumentId), _state);
         }
 
-        public virtual void DeleteReduceResult(LazyStringValue reduceKeyHash, IndexingStatsScope stats)
+        public override void DeleteReduceResult(LazyStringValue reduceKeyHash, IndexingStatsScope stats)
         {
             EnsureValidStats(stats);
 

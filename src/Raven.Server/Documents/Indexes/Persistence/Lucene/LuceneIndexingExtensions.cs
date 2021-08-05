@@ -1,5 +1,5 @@
 ﻿//-----------------------------------------------------------------------
-// <copyright file="IndexingExtensions.cs" company="Hibernating Rhinos LTD">
+// <copyright file="LuceneIndexingExtensions.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
@@ -14,7 +14,7 @@ using Raven.Server.Documents.Indexes.Analysis;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
-    public static class IndexingExtensions
+    public static class LuceneIndexingExtensions
     {
         private static readonly Assembly LuceneAssembly = typeof(StandardAnalyzer).Assembly;
 
@@ -62,7 +62,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             throw new InvalidOperationException($"Cannot find analyzer type '{analyzerTypeAsString}' for field: {name}");
         }
 
-        static IndexingExtensions()
+        static LuceneIndexingExtensions()
         {
             AssemblyLoadContext.Default.Resolving += (context, name) =>
             {

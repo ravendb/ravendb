@@ -86,7 +86,7 @@ namespace Raven.Server.Documents.Queries
             {
                 var value = GetValue(query, metadata, parameters, moreLikeThisExpression.Arguments[1], allowObjectsInParameters: true);
                 if (value.Type == ValueTokenType.String)
-                    options = IndexReadOperation.ParseJsonStringIntoBlittable(GetValueAsString(value.Value), context);
+                    options = LuceneIndexReadOperation.ParseJsonStringIntoBlittable(GetValueAsString(value.Value), context);
                 else
                     options = value.Value as BlittableJsonReaderObject;
             }

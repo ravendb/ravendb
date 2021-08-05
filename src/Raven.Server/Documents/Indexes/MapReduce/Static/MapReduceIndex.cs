@@ -11,6 +11,7 @@ using Raven.Server.Config;
 using Raven.Server.Documents.Indexes.Configuration;
 using Raven.Server.Documents.Indexes.MapReduce.OutputToCollection;
 using Raven.Server.Documents.Indexes.MapReduce.Workers;
+using Raven.Server.Documents.Indexes.Persistence;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static;
@@ -347,7 +348,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             return references == null ? HandleReferencesBase.InMemoryReferencesInfo.Default : references.GetReferencesInfo(collection);
         }
 
-        public override void HandleDelete(Tombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        public override void HandleDelete(Tombstone tombstone, string collection, IndexWriteOperationBase writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             StaticIndexHelper.HandleReferencesDelete(_handleReferences, _handleCompareExchangeReferences, tombstone, collection, writer, indexContext, stats);
 
@@ -371,7 +372,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             }
         }
 
-        public override int HandleMap(IndexItem indexItem, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        public override int HandleMap(IndexItem indexItem, IEnumerable mapResults, IndexWriteOperationBase writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             if (_enumerationWrappers.TryGetValue(CurrentIndexingScope.Current.SourceCollection, out AnonymousObjectToBlittableMapResultsEnumerableWrapper wrapper) == false)
             {

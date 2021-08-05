@@ -8,6 +8,7 @@ using Lucene.Net.Analysis;
 using Lucene.Net.Search;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
+using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Queries;
@@ -18,7 +19,7 @@ using Sparrow.Logging;
 using Query = Lucene.Net.Search.Query;
 using Version = Lucene.Net.Util.Version;
 
-namespace Raven.Server.Documents.Indexes.Persistence.Lucene
+namespace Raven.Server.Documents.Indexes.Persistence
 {
     public abstract class IndexOperationBase : IDisposable
     {
@@ -36,6 +37,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _logger = logger;
         }
 
+        //todo maciej: switch implementation when using corax (maybe switch on type)
         protected static RavenPerFieldAnalyzerWrapper CreateAnalyzer(Index index, IndexDefinitionBase indexDefinition, bool forQuerying = false)
         {
             if (indexDefinition.IndexFields.ContainsKey(Constants.Documents.Indexing.Fields.AllFields))
@@ -145,7 +147,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 if (analyzerType == typeof(LowerCaseKeywordAnalyzer))
                     return new LowerCaseKeywordAnalyzer();
 
-                return IndexingExtensions.CreateAnalyzerInstance(fieldName, analyzerType);
+                return LuceneIndexingExtensions.CreateAnalyzerInstance(fieldName, analyzerType);
             }
 
             Analyzer CreateKeywordAnalyzer(string fieldName, Type analyzerType)
@@ -153,7 +155,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 if (analyzerType == typeof(KeywordAnalyzer))
                     return new KeywordAnalyzer();
 
-                return IndexingExtensions.CreateAnalyzerInstance(fieldName, analyzerType);
+                return LuceneIndexingExtensions.CreateAnalyzerInstance(fieldName, analyzerType);
             }
 
             Analyzer CreateStandardAnalyzer(string fieldName, Type analyzerType)
@@ -161,7 +163,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 if (analyzerType == typeof(RavenStandardAnalyzer))
                     return new RavenStandardAnalyzer(Version.LUCENE_29);
 
-                return IndexingExtensions.CreateAnalyzerInstance(fieldName, analyzerType);
+                return LuceneIndexingExtensions.CreateAnalyzerInstance(fieldName, analyzerType);
             }
         }
 
@@ -172,7 +174,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             if (string.IsNullOrWhiteSpace(analyzer))
                 return null;
 
-            var createAnalyzer = IndexingExtensions.GetAnalyzerType(fieldName, analyzer, databaseName);
+            var createAnalyzer = LuceneIndexingExtensions.GetAnalyzerType(fieldName, analyzer, databaseName);
 
             if (forQuerying)
             {

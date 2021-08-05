@@ -358,9 +358,9 @@ namespace Raven.Server.Config.Categories
 
         public void InitializeAnalyzers(string resourceName)
         {
-            DefaultAnalyzerType = new Lazy<AnalyzerFactory>(() => IndexingExtensions.GetAnalyzerType("@default", DefaultAnalyzer, resourceName));
-            DefaultExactAnalyzerType = new Lazy<AnalyzerFactory>(() => IndexingExtensions.GetAnalyzerType("@default", DefaultExactAnalyzer, resourceName));
-            DefaultSearchAnalyzerType = new Lazy<AnalyzerFactory>(() => IndexingExtensions.GetAnalyzerType("@default", DefaultSearchAnalyzer, resourceName));
+            DefaultAnalyzerType = new Lazy<AnalyzerFactory>(() => LuceneIndexingExtensions.GetAnalyzerType("@default", DefaultAnalyzer, resourceName));
+            DefaultExactAnalyzerType = new Lazy<AnalyzerFactory>(() => LuceneIndexingExtensions.GetAnalyzerType("@default", DefaultExactAnalyzer, resourceName));
+            DefaultSearchAnalyzerType = new Lazy<AnalyzerFactory>(() => LuceneIndexingExtensions.GetAnalyzerType("@default", DefaultSearchAnalyzer, resourceName));
         }
 
         public enum IndexStartupBehavior

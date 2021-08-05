@@ -13,12 +13,12 @@ using Voron.Impl;
 
 namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 {
-    public class OutputReduceIndexWriteOperation : IndexWriteOperation
+    public class OutputReduceLuceneIndexWriteOperation : LuceneIndexWriteOperation
     {
         private readonly OutputReduceToCollectionCommandBatcher _outputReduceToCollectionCommandBatcher;
         private readonly TransactionHolder _txHolder;
 
-        public OutputReduceIndexWriteOperation(MapReduceIndex index, LuceneVoronDirectory directory, LuceneDocumentConverterBase converter, Transaction writeTransaction,
+        public OutputReduceLuceneIndexWriteOperation(MapReduceIndex index, LuceneVoronDirectory directory, LuceneDocumentConverterBase converter, Transaction writeTransaction,
             LuceneIndexPersistence persistence, JsonOperationContext indexContext)
             : base(index, directory, converter, writeTransaction, persistence)
         {
