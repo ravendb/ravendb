@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Includes;
+using Raven.Server.Documents.Indexes.Persistence;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Results;
@@ -50,7 +51,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             return MapReduceWorkContext;
         }
 
-        public override unsafe void HandleDelete(Tombstone tombstone, string collection, IndexWriteOperation writer,
+        public override unsafe void HandleDelete(Tombstone tombstone, string collection, IndexWriteOperationBase writer,
             TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             using (Slice.External(indexContext.Allocator, tombstone.LowerId, out Slice docKeyAsSlice))

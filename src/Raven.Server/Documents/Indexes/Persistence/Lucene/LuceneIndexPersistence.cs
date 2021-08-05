@@ -30,12 +30,10 @@ using Version = Lucene.Net.Util.Version;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
-    public class LuceneIndexPersistence : IDisposable
+    public class LuceneIndexPersistence : IndexPersistenceBase
     {
-        private readonly Index _index;
-
         private readonly Analyzer _dummyAnalyzer = new SimpleAnalyzer();
-
+        internal IndexReader _lastReader;
         private readonly LuceneDocumentConverterBase _converter;
 
         private static readonly StopAnalyzer StopAnalyzer = new StopAnalyzer(Version.LUCENE_30);
@@ -45,6 +43,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private SnapshotDeletionPolicy _snapshotter;
 
+
         // this is used to remember the positions of files in the database
         // always points to the latest valid transaction and is updated by
         // the write tx on commit, thread safety is inherited from the voron
@@ -53,33 +52,31 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private LuceneVoronDirectory _directory;
         private readonly Dictionary<string, LuceneVoronDirectory> _suggestionsDirectories;
-        private readonly Dictionary<string, IndexSearcherHolder> _suggestionsIndexSearcherHolders;
+        private readonly Dictionary<string, LuceneIndexSearcherHolder> _suggestionsIndexSearcherHolders;
 
-        private readonly IndexSearcherHolder _indexSearcherHolder;
+        private readonly LuceneIndexSearcherHolder _luceneIndexSearcherHolder;
 
         private readonly DisposeOnce<SingleAttempt> _disposeOnce;
 
         private bool _initialized;
         private readonly Dictionary<string, IndexField> _fields;
-        internal IndexReader _lastReader;
         private readonly Logger _logger;
 
-        internal LuceneVoronDirectory LuceneDirectory => _directory;
+        internal override LuceneVoronDirectory LuceneDirectory => _directory;
 
         private readonly object _readersLock = new object();
 
-        public LuceneIndexPersistence(Index index)
+        public LuceneIndexPersistence(Index index) : base(index)
         {
-            _index = index;
             _logger = LoggingSource.Instance.GetLogger<LuceneIndexPersistence>(index.DocumentDatabase.Name);
             _suggestionsDirectories = new Dictionary<string, LuceneVoronDirectory>();
-            _suggestionsIndexSearcherHolders = new Dictionary<string, IndexSearcherHolder>();
+            _suggestionsIndexSearcherHolders = new Dictionary<string, LuceneIndexSearcherHolder>();
             _disposeOnce = new DisposeOnce<SingleAttempt>(() =>
             {
                 DisposeWriters();
 
                 _lastReader?.Dispose();
-                _indexSearcherHolder?.Dispose();
+                _luceneIndexSearcherHolder?.Dispose();
                 _converter?.Dispose();
                 _directory?.Dispose();
 
@@ -140,7 +137,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             _fields = fields.ToDictionary(x => x.Name, x => x);
 
-            _indexSearcherHolder = new IndexSearcherHolder(CreateIndexSearcher, _index._indexStorage.DocumentDatabase);
+            _luceneIndexSearcherHolder = new LuceneIndexSearcherHolder(CreateIndexSearcher, _index._indexStorage.DocumentDatabase);
 
             foreach (var field in _fields)
             {
@@ -148,7 +145,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     continue;
 
                 string fieldName = field.Key;
-                _suggestionsIndexSearcherHolders[fieldName] = new IndexSearcherHolder(state => new IndexSearcher(_suggestionsDirectories[fieldName], true, state), _index._indexStorage.DocumentDatabase);
+                _suggestionsIndexSearcherHolders[fieldName] = new LuceneIndexSearcherHolder(state => new IndexSearcher(_suggestionsDirectories[fieldName], true, state), _index._indexStorage.DocumentDatabase);
             }
 
             IndexSearcher CreateIndexSearcher(IState state)
@@ -198,7 +195,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private bool _indexWriterCleanupNeeded;
         
-        public void CleanWritersIfNeeded()
+        public override void CleanWritersIfNeeded()
         {
             if(_indexWriterCleanupNeeded == false)
                 return;
@@ -207,12 +204,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _indexWriterCleanupNeeded = false;
         }
 
-        public void Clean(IndexCleanup mode)
+        public override void Clean(IndexCleanup mode)
         {
             Debug.Assert(mode != IndexCleanup.None, "mode != IndexCleanup.None");
 
             _converter?.Clean();
-            _indexSearcherHolder.Cleanup(_index._indexStorage.Environment().PossibleOldestReadTransaction(null), mode);
+            _luceneIndexSearcherHolder.Cleanup(_index._indexStorage.Environment().PossibleOldestReadTransaction(null), mode);
 
             if (mode.HasFlag(IndexCleanup.Writers))
             {
@@ -230,7 +227,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
-        public void Initialize(StorageEnvironment environment)
+        public override void Initialize(StorageEnvironment environment)
         {
             if (_initialized)
                 throw new InvalidOperationException();
@@ -252,12 +249,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _initialized = true;
         }
 
-        public void PublishIndexCacheToNewTransactions(IndexTransactionCache transactionCache)
+        public override void PublishIndexCacheToNewTransactions(IndexTransactionCache transactionCache)
         {
             _streamsCache = transactionCache;
         }
 
-        internal IndexTransactionCache BuildStreamCacheAfterTx(Transaction tx)
+        internal override IndexTransactionCache BuildStreamCacheAfterTx(Transaction tx)
         {
             var newCache = new IndexTransactionCache();
 
@@ -409,7 +406,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             new IndexWriter(directory, _dummyAnalyzer, IndexWriter.MaxFieldLength.UNLIMITED, state).Dispose();
         }
 
-        public IndexWriteOperation OpenIndexWriter(Transaction writeTransaction, JsonOperationContext indexContext)
+        public override IndexWriteOperationBase OpenIndexWriter(Transaction writeTransaction, JsonOperationContext indexContext)
         {
             CheckDisposed();
             CheckInitialized();
@@ -418,10 +415,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             {
                 var mapReduceIndex = (MapReduceIndex)_index;
                 if (string.IsNullOrWhiteSpace(mapReduceIndex.Definition.OutputReduceToCollection) == false)
-                    return new OutputReduceIndexWriteOperation(mapReduceIndex, _directory, _converter, writeTransaction, this, indexContext);
+                    return new OutputReduceLuceneIndexWriteOperation(mapReduceIndex, _directory, _converter, writeTransaction, this, indexContext);
             }
 
-            return new IndexWriteOperation(
+            return new LuceneIndexWriteOperation(
                 _index,
                 _directory,
                 _converter,
@@ -430,23 +427,23 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 );
         }
 
-        public IndexReadOperation OpenIndexReader(Transaction readTransaction)
+        public override IndexReadOperationBase OpenIndexReader(Transaction readTransaction)
         {
             CheckDisposed();
             CheckInitialized();
 
-            return new IndexReadOperation(_index, _directory, _indexSearcherHolder, _index._queryBuilderFactories, readTransaction);
+            return new LuceneIndexReadOperation(_index, _directory, _luceneIndexSearcherHolder, _index._queryBuilderFactories, readTransaction);
         }
 
-        public IndexFacetedReadOperation OpenFacetedIndexReader(Transaction readTransaction)
+        public override IndexFacetedReadOperation OpenFacetedIndexReader(Transaction readTransaction)
         {
             CheckDisposed();
             CheckInitialized();
 
-            return new IndexFacetedReadOperation(_index, _index.Definition, _directory, _indexSearcherHolder, _index._queryBuilderFactories, readTransaction, _index._indexStorage.DocumentDatabase);
+            return new IndexFacetedReadOperation(_index, _index.Definition, _directory, _luceneIndexSearcherHolder, _index._queryBuilderFactories, readTransaction, _index._indexStorage.DocumentDatabase);
         }
 
-        public LuceneSuggestionIndexReader OpenSuggestionIndexReader(Transaction readTransaction, string field)
+        public override SuggestionIndexReaderBase OpenSuggestionIndexReader(Transaction readTransaction, string field)
         {
             CheckDisposed();
             CheckInitialized();
@@ -454,18 +451,18 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             if (!_suggestionsDirectories.TryGetValue(field, out LuceneVoronDirectory directory))
                 throw new InvalidOperationException($"No suggestions index found for field '{field}'.");
 
-            if (!_suggestionsIndexSearcherHolders.TryGetValue(field, out IndexSearcherHolder holder))
+            if (!_suggestionsIndexSearcherHolders.TryGetValue(field, out LuceneIndexSearcherHolder holder))
                 throw new InvalidOperationException($"No suggestions index found for field '{field}'.");
 
             return new LuceneSuggestionIndexReader(_index, directory, holder, readTransaction);
         }
 
-        internal void RecreateSearcher(Transaction asOfTx)
+        internal override void RecreateSearcher(Transaction asOfTx)
         {
-            _indexSearcherHolder.SetIndexSearcher(asOfTx);
+            _luceneIndexSearcherHolder.SetIndexSearcher(asOfTx);
         }
 
-        internal void RecreateSuggestionsSearchers(Transaction asOfTx)
+        internal override void RecreateSuggestionsSearchers(Transaction asOfTx)
         {
             foreach (var suggestion in _suggestionsIndexSearcherHolders)
             {
@@ -530,7 +527,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return _suggestionsIndexWriters;
         }
 
-        public bool ContainsField(string field)
+        public override bool ContainsField(string field)
         {
             if (field == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
                 return _index.Type.IsMap();
@@ -538,7 +535,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return _fields.ContainsKey(field);
         }
 
-        public void DisposeWriters()
+        public override void DisposeWriters()
         {
             _indexWriter?.Analyzer?.Dispose();
             _indexWriter?.Dispose();
@@ -555,7 +552,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
-        public void Dispose()
+        public override void Dispose()
         {
             _disposeOnce.Dispose();
         }
@@ -575,3 +572,4 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         }
     }
 }
+

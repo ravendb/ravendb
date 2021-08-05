@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.Exceptions;
+using Raven.Server.Documents.Indexes.Persistence;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.ServerWide.Context;
@@ -77,7 +78,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         public string Name { get; } = "Reduce";
 
-        public (bool MoreWorkFound, Index.CanContinueBatchResult BatchContinuationResult) Execute(QueryOperationContext queryContext, TransactionOperationContext indexContext, Lazy<IndexWriteOperation> writeOperation,
+        public (bool MoreWorkFound, Index.CanContinueBatchResult BatchContinuationResult) Execute(QueryOperationContext queryContext, TransactionOperationContext indexContext, Lazy<IndexWriteOperationBase> writeOperation,
                             IndexingStatsScope stats, CancellationToken token)
         {
             if (_mapReduceContext.StoreByReduceKeyHash.Count == 0)
@@ -169,7 +170,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         private void HandleNestedValuesReduction(TransactionOperationContext indexContext, IndexingStatsScope stats,
                     MapReduceResultsStore modifiedStore,
-                    IndexWriteOperation writer, LazyStringValue reduceKeyHash, CancellationToken token)
+                    IndexWriteOperationBase writer, LazyStringValue reduceKeyHash, CancellationToken token)
         {
             EnsureValidNestedValuesReductionStats(stats);
 
@@ -221,7 +222,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         private void HandleTreeReduction(TransactionOperationContext indexContext, IndexingStatsScope stats,
              MapReduceResultsStore modifiedStore, LowLevelTransaction lowLevelTransaction,
-            IndexWriteOperation writer, LazyStringValue reduceKeyHash, Table table, CancellationToken token)
+             IndexWriteOperationBase writer, LazyStringValue reduceKeyHash, Table table, CancellationToken token)
         {
             if (modifiedStore.ModifiedPages.Count == 0)
                 return;
@@ -638,7 +639,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             _nestedValuesReductionStats.NestedValuesAggregation = stats.For(IndexingOperation.Reduce.NestedValuesAggregation, start: false);
         }
 
-        private void HandleReductionError(Exception error, LazyStringValue reduceKeyHash, IndexWriteOperation writer, IndexingStatsScope stats, bool updateStats, TreePage page,
+        private void HandleReductionError(Exception error, LazyStringValue reduceKeyHash, IndexWriteOperationBase writer, IndexingStatsScope stats, bool updateStats, TreePage page,
             int numberOfNestedValues = -1)
         {
             var builder = new StringBuilder("Failed to execute reduce function on ");

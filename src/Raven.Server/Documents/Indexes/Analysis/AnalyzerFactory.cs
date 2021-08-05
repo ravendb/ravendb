@@ -15,7 +15,7 @@ namespace Raven.Server.Documents.Indexes.Analysis
 
         public virtual Analyzer CreateInstance(string fieldName)
         {
-            return IndexingExtensions.CreateAnalyzerInstance(fieldName, Type);
+            return LuceneIndexingExtensions.CreateAnalyzerInstance(fieldName, Type);
         }
     }
 }

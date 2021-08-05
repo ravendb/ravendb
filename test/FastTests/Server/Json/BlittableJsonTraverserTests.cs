@@ -12,7 +12,7 @@ namespace FastTests.Server.Json
     {
         private readonly JsonOperationContext _ctx;
         private readonly List<BlittableJsonReaderObject> _docs = new List<BlittableJsonReaderObject>();
-        private readonly BlittableJsonTraverser _sut = BlittableJsonTraverser.Default;
+        private readonly Raven.Server.Json.BlittableJsonTraverser _sut = Raven.Server.Json.BlittableJsonTraverser.Default;
 
         public BlittableJsonTraverserTests(ITestOutputHelper output) : base(output)
         {
