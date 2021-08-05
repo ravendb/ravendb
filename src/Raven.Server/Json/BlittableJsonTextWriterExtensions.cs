@@ -163,7 +163,7 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        public static void WriteSuggestionQueryResult(this BlittableJsonTextWriter writer, JsonOperationContext context, SuggestionQueryResult result, out int numberOfResults)
+        public static void WriteSuggestionQueryResult(this BlittableJsonTextWriter writer, JsonOperationContext context, SuggestionQueryResult result, out int numberOfResults, out long totalDocumentSize)
         {
             writer.WriteStartObject();
 
@@ -181,7 +181,7 @@ namespace Raven.Server.Json
             writer.WriteInteger(result.DurationInMs);
             writer.WriteComma();
 
-            writer.WriteQueryResult(context, result, metadataOnly: false, numberOfResults: out numberOfResults, partial: true);
+            writer.WriteQueryResult(context, result, metadataOnly: false, numberOfResults: out numberOfResults, out totalDocumentSize, partial: true);
 
             writer.WriteEndObject();
         }
@@ -204,7 +204,7 @@ namespace Raven.Server.Json
             writer.WriteInteger(result.DurationInMs);
             writer.WriteComma();
 
-            writer.WriteQueryResult(context, result, metadataOnly: false, numberOfResults: out numberOfResults, partial: true);
+            writer.WriteQueryResult(context, result, metadataOnly: false, numberOfResults: out numberOfResults, out _ , partial: true);
 
             writer.WriteEndObject();
         }
@@ -341,12 +341,12 @@ namespace Raven.Server.Json
             writer.WriteInteger(result.DurationInMs);
             writer.WriteComma();
 
-            writer.WriteQueryResult(context, result, metadataOnly: false, numberOfResults: out int _, partial: true);
+            writer.WriteQueryResult(context, result, metadataOnly: false, numberOfResults: out int _, out long _, partial: true);
 
             writer.WriteEndObject();
         }
 
-        public static async Task<int> WriteDocumentQueryResultAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, DocumentQueryResult result, bool metadataOnly, Action<AsyncBlittableJsonTextWriter> writeAdditionalData = null)
+        public static async Task<(int, long)> WriteDocumentQueryResultAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, DocumentQueryResult result, bool metadataOnly, Action<AsyncBlittableJsonTextWriter> writeAdditionalData = null)
         {
             writer.WriteStartObject();
 
@@ -371,7 +371,7 @@ namespace Raven.Server.Json
             writer.WriteArray(nameof(result.IncludedPaths), result.IncludedPaths);
             writer.WriteComma();
 
-            var numberOfResults = await writer.WriteQueryResultAsync(context, result, metadataOnly, partial: true);
+            (int numberOfResults, long totalDocumentsSize) = await writer.WriteQueryResultAsync(context, result, metadataOnly, partial: true);
 
             if (result.Highlightings != null)
             {
@@ -438,7 +438,7 @@ namespace Raven.Server.Json
             writeAdditionalData?.Invoke(writer);
 
             writer.WriteEndObject();
-            return numberOfResults;
+            return (numberOfResults, totalDocumentsSize);
 
         }
 
@@ -460,7 +460,7 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        public static void WriteQueryResult<TResult, TInclude>(this BlittableJsonTextWriter writer, JsonOperationContext context, QueryResultBase<TResult, TInclude> result, bool metadataOnly, out int numberOfResults, bool partial = false)
+        public static void WriteQueryResult<TResult, TInclude>(this BlittableJsonTextWriter writer, JsonOperationContext context, QueryResultBase<TResult, TInclude> result, bool metadataOnly, out int numberOfResults, out long totalDocumentsSize, bool partial = false)
         {
             if (partial == false)
                 writer.WriteStartObject();
@@ -469,17 +469,18 @@ namespace Raven.Server.Json
             writer.WriteString(result.IndexName);
             writer.WriteComma();
 
+            totalDocumentsSize = -1;
             var results = (object)result.Results;
             if (results is List<Document> documents)
             {
                 writer.WritePropertyName(nameof(result.Results));
-                writer.WriteDocuments(context, documents, metadataOnly, out numberOfResults);
+                writer.WriteDocuments(context, documents, metadataOnly, out numberOfResults, out totalDocumentsSize);
                 writer.WriteComma();
             }
             else if (results is List<BlittableJsonReaderObject> objects)
             {
                 writer.WritePropertyName(nameof(result.Results));
-                writer.WriteObjects(context, objects, out numberOfResults);
+                writer.WriteObjects(context, objects, out numberOfResults, out totalDocumentsSize);
                 writer.WriteComma();
             }
             else if (results is List<FacetResult> facets)
@@ -542,34 +543,35 @@ namespace Raven.Server.Json
                 writer.WriteEndObject();
         }
 
-        public static async Task<int> WriteQueryResultAsync<TResult, TInclude>(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, QueryResultBase<TResult, TInclude> result, bool metadataOnly, bool partial = false)
+        public static async Task<(int,long)> WriteQueryResultAsync<TResult, TInclude>(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, QueryResultBase<TResult, TInclude> result, bool metadataOnly, bool partial = false)
         {
             int numberOfResults;
+            long totalDocumentsSize = -1; // Size of facet is constant - no need to count that - similar situation happens on suggestions
 
             if (partial == false)
                 writer.WriteStartObject();
-
             writer.WritePropertyName(nameof(result.IndexName));
             writer.WriteString(result.IndexName);
             writer.WriteComma();
+
+            
 
             var results = (object)result.Results;
             if (results is List<Document> documents)
             {
                 writer.WritePropertyName(nameof(result.Results));
-                numberOfResults = await writer.WriteDocumentsAsync(context, documents, metadataOnly);
+                (numberOfResults, totalDocumentsSize) = await writer.WriteDocumentsAsync(context, documents, metadataOnly);
                 writer.WriteComma();
             }
             else if (results is List<BlittableJsonReaderObject> objects)
             {
                 writer.WritePropertyName(nameof(result.Results));
-                numberOfResults = await writer.WriteObjectsAsync(context, objects);
+                (numberOfResults, totalDocumentsSize) = await writer.WriteObjectsAsync(context, objects);
                 writer.WriteComma();
             }
             else if (results is List<FacetResult> facets)
             {
                 numberOfResults = facets.Count;
-
                 writer.WriteArray(context, nameof(result.Results), facets, (w, c, facet) => w.WriteFacetResult(c, facet));
                 writer.WriteComma();
                 await writer.MaybeOuterFlushAsync();
@@ -577,7 +579,6 @@ namespace Raven.Server.Json
             else if (results is List<SuggestionResult> suggestions)
             {
                 numberOfResults = suggestions.Count;
-
                 writer.WriteArray(context, nameof(result.Results), suggestions, (w, c, suggestion) => w.WriteSuggestionResult(c, suggestion));
                 writer.WriteComma();
                 await writer.MaybeOuterFlushAsync();
@@ -589,7 +590,7 @@ namespace Raven.Server.Json
             if (includes is List<Document> includeDocuments)
             {
                 writer.WritePropertyName(nameof(result.Includes));
-                await writer.WriteIncludesAsync(context, includeDocuments);
+                totalDocumentsSize += await writer.WriteIncludesAsync(context, includeDocuments);
                 writer.WriteComma();
             }
             else if (includes is List<BlittableJsonReaderObject> includeObjects)
@@ -634,7 +635,7 @@ namespace Raven.Server.Json
             if (partial == false)
                 writer.WriteEndObject();
 
-            return numberOfResults;
+            return (numberOfResults, totalDocumentsSize);
         }
 
         public static void WriteQueryTimings(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, QueryTimings queryTimings)
@@ -1229,15 +1230,16 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        public static void WriteDocuments(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<Document> documents, bool metadataOnly, out int numberOfResults)
+        public static void WriteDocuments(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<Document> documents, bool metadataOnly, out int numberOfResults, out long totalDocumentsSize)
         {
-            WriteDocuments(writer, context, documents.GetEnumerator(), metadataOnly, out numberOfResults);
+            WriteDocuments(writer, context, documents.GetEnumerator(), metadataOnly, out numberOfResults, out totalDocumentsSize);
         }
 
         public static void WriteDocuments(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, IEnumerator<Document> documents, bool metadataOnly,
-            out int numberOfResults)
+            out int numberOfResults, out long totalDocumentsSize)
         {
             numberOfResults = 0;
+            totalDocumentsSize = 0;
 
             writer.WriteStartArray();
 
@@ -1246,6 +1248,9 @@ namespace Raven.Server.Json
             while (documents.MoveNext())
             {
                 numberOfResults++;
+                
+                if (documents.Current != null)
+                    totalDocumentsSize += documents.Current.Data.Size;
 
                 if (first == false)
                     writer.WriteComma();
@@ -1258,9 +1263,10 @@ namespace Raven.Server.Json
             writer.WriteEndArray();
         }
 
-        public static async Task<int> WriteDocumentsAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<Document> documents, bool metadataOnly)
+        public static async Task<(int, long)> WriteDocumentsAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<Document> documents, bool metadataOnly)
         {
             int numberOfResults = 0;
+            long totalDocumentsSize = 0;
 
             writer.WriteStartArray();
 
@@ -1268,6 +1274,9 @@ namespace Raven.Server.Json
             foreach (var document in documents)
             {
                 numberOfResults++;
+
+                if (document != null)
+                    totalDocumentsSize += document.Data.Size;
 
                 if (first == false)
                     writer.WriteComma();
@@ -1278,7 +1287,7 @@ namespace Raven.Server.Json
             }
 
             writer.WriteEndArray();
-            return numberOfResults;
+            return (numberOfResults, totalDocumentsSize);
         }
 
         public static void WriteDocument(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, Document document, bool metadataOnly, Func<LazyStringValue, bool> filterMetadataProperty = null)
@@ -1332,13 +1341,16 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        public static async Task WriteIncludesAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, List<Document> includes)
+        public static async Task<long> WriteIncludesAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, List<Document> includes)
         {
+            long totalDocumentsSize = 0;
+
             writer.WriteStartObject();
 
             var first = true;
             foreach (var document in includes)
             {
+                totalDocumentsSize += document.Data.Size;
                 if (first == false)
                     writer.WriteComma();
                 first = false;
@@ -1357,6 +1369,7 @@ namespace Raven.Server.Json
             }
 
             writer.WriteEndObject();
+            return totalDocumentsSize;
         }
 
         private static void WriteConflict(AbstractBlittableJsonTextWriter writer, IncludeDocumentsCommand.ConflictDocument conflict)
@@ -1382,9 +1395,10 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        public static void WriteObjects(this BlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<BlittableJsonReaderObject> objects, out int numberOfResults)
+        public static void WriteObjects(this BlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<BlittableJsonReaderObject> objects, out int numberOfResults, out long totalDocumentsSize)
         {
             numberOfResults = 0;
+            totalDocumentsSize = 0;
 
             writer.WriteStartArray();
 
@@ -1403,6 +1417,8 @@ namespace Raven.Server.Json
                     continue;
                 }
 
+                totalDocumentsSize += o.Size;
+
                 using (o)
                 {
                     writer.WriteObject(o);
@@ -1412,9 +1428,10 @@ namespace Raven.Server.Json
             writer.WriteEndArray();
         }
 
-        public static async Task<int> WriteObjectsAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<BlittableJsonReaderObject> objects)
+        public static async Task<(int, long)> WriteObjectsAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<BlittableJsonReaderObject> objects)
         {
             int numberOfResults = 0;
+            long totalDocumentsSize = 0;
 
             writer.WriteStartArray();
 
@@ -1422,6 +1439,7 @@ namespace Raven.Server.Json
             foreach (var o in objects)
             {
                 numberOfResults++;
+                totalDocumentsSize += o.Size;
 
                 if (first == false)
                     writer.WriteComma();
@@ -1442,7 +1460,7 @@ namespace Raven.Server.Json
             }
 
             writer.WriteEndArray();
-            return numberOfResults;
+            return (numberOfResults, totalDocumentsSize);
         }
 
         public static async Task WriteCountersAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, Dictionary<string, List<CounterDetail>> counters)

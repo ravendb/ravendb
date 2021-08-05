@@ -76,19 +76,19 @@ namespace Raven.Server.Documents.Handlers
             {
                 var sw = Stopwatch.StartNew();
                 var pageSize = GetPageSize();
+                var totalDocumentsSize = default(long);
                 var documents = Database.DocumentsStorage.GetDocumentsInReverseEtagOrder(context, GetStringQueryString("name"), GetStart(), pageSize);
 
                 int numberOfResults;
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-
                     writer.WriteStartObject();
                     writer.WritePropertyName("Results");
-                    writer.WriteDocuments(context, documents, metadataOnly: false, numberOfResults: out numberOfResults);
+                    writer.WriteDocuments(context, documents, metadataOnly: false, numberOfResults: out numberOfResults, out totalDocumentsSize);
                     writer.WriteEndObject();
                 }
 
-                AddPagingPerformanceHint(PagingOperationType.Documents, "Collection", HttpContext.Request.QueryString.Value, numberOfResults, pageSize, sw.ElapsedMilliseconds);
+                AddPagingPerformanceHint(PagingOperationType.Documents, "Collection", HttpContext.Request.QueryString.Value, numberOfResults, pageSize, sw.ElapsedMilliseconds, totalDocumentsSize);
             }
 
             return Task.CompletedTask;

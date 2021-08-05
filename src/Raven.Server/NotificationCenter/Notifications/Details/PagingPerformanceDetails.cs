@@ -31,7 +31,8 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
                         [nameof(ActionDetails.PageSize)] = details.PageSize,
                         [nameof(ActionDetails.Occurrence)] = details.Occurrence,
                         [nameof(ActionDetails.Duration)] = details.Duration,
-                        [nameof(ActionDetails.Details)] = details.Details
+                        [nameof(ActionDetails.Details)] = details.Details,
+                        [nameof(ActionDetails.TotalDocumentsSize)] = details.TotalDocumentsSize
                     });
                 }
 
@@ -44,12 +45,12 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
             };
         }
 
-        public void Update(string action, string details, int numberOfResults, int pageSize, long duration, DateTime occurrence)
+        public void Update(string action, string details, int numberOfResults, int pageSize, long duration, DateTime occurrence, long totalDocumentsSize)
         {
             if (Actions.TryGetValue(action, out Queue<ActionDetails> actionDetails) == false)
                 Actions[action] = actionDetails = new Queue<ActionDetails>();
 
-            actionDetails.Enqueue(new ActionDetails { Duration = duration, Occurrence = occurrence, NumberOfResults = numberOfResults, PageSize = pageSize, Details = details });
+            actionDetails.Enqueue(new ActionDetails { Duration = duration, Occurrence = occurrence, NumberOfResults = numberOfResults, PageSize = pageSize, Details = details, TotalDocumentsSize = totalDocumentsSize});
 
             while (actionDetails.Count > 10)
                 actionDetails.Dequeue();
@@ -62,6 +63,7 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
             public DateTime Occurrence { get; set; }
             public int NumberOfResults { get; set; }
             public int PageSize { get; set; }
+            public long TotalDocumentsSize { get; set; }
         }
     }
 }
