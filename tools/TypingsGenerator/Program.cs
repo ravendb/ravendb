@@ -492,6 +492,7 @@ namespace TypingsGenerator
             // request with POST parameters
             scripter.AddType(typeof(DeleteDatabasesOperation.Parameters));
             scripter.AddType(typeof(ToggleDatabasesStateOperation.Parameters));
+            scripter.AddType(typeof(SetDatabasesLockOperation.Parameters));
             scripter.AddType(typeof(SetIndexesLockOperation.Parameters));
             scripter.AddType(typeof(SetIndexesPriorityOperation.Parameters));
             scripter.AddType(typeof(AdminRevisionsHandler.Parameters));

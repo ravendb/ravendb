@@ -60,7 +60,7 @@ class viewHelpers {
         const validationGroup = (context as any)();
         const keys = _.keys(validationGroup);
 
-        const asyncValidations = [] as Array<KnockoutObservable<boolean>>;
+        const asyncValidations: Array<KnockoutObservable<boolean>> = [];
 
         keys.forEach(key => {
             if ("isValidating" in validationGroup[key]) {
@@ -76,7 +76,7 @@ class viewHelpers {
 
         // there are any validations in progress, await them
 
-        let subscriptions = [] as Array<KnockoutSubscription>;
+        let subscriptions: KnockoutSubscription[] = [];
 
         const onUpdate = () => {
             if (_.every(asyncValidations, x => !x())) {

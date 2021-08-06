@@ -15,11 +15,11 @@ class getCompareExchangeItemsCommand extends commandBase {
             startsWith: this.prefix || undefined
         };
 
-        const resultsSelector = (dto: resultsDto<Raven.Server.Web.System.CompareExchangeHandler.CompareExchangeListItem>) => {
+        const resultsSelector = (dto: resultsDto<Raven.Server.Web.System.CompareExchangeHandler.CompareExchangeListItem>): pagedResult<Raven.Server.Web.System.CompareExchangeHandler.CompareExchangeListItem> => {
             return {
                 items: dto.Results,
                 totalResultCount: -1
-            } as pagedResult<Raven.Server.Web.System.CompareExchangeHandler.CompareExchangeListItem>;
+            };
         };
         const url = endpoints.databases.compareExchange.cmpxchg + this.urlEncodeArgs(args);
         return this.query(url, null, this.database, resultsSelector);

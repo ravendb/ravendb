@@ -483,7 +483,7 @@ class visualizerGraphGlobal {
             doc7: undefined as string,
             doc8: undefined as string,
         }
-    };
+    }
     
     private nextColorIndex = 0;
 

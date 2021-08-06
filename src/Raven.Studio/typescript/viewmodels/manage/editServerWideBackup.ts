@@ -182,7 +182,7 @@ class editServerWideBackup extends viewModelBase {
         this.spinners.save(true);
         eventsCollector.default.reportEvent("server-wide-backup", "save");
         
-        new saveServerWideBackupCommand(dto as Raven.Client.ServerWide.Operations.Configuration.ServerWideBackupConfiguration)
+        new saveServerWideBackupCommand(dto)
             .execute()
             .done(() => {
                 this.dirtyFlag().reset();

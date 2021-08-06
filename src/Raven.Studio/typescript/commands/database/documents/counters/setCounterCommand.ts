@@ -9,8 +9,7 @@ class setCounterCommand extends commandBase {
     }
 
     execute(): JQueryPromise<Raven.Client.Documents.Operations.Counters.CountersDetail> {
-
-        const payload = {
+        const payload: Omit<Raven.Client.Documents.Operations.Counters.CounterBatch, "FromEtl"> = {
             ReplyWithAllNodesValues: true,
             Documents:
                 [{
@@ -22,7 +21,7 @@ class setCounterCommand extends commandBase {
                             Delta: this.deltaValue
                         }]
                 }]
-        } as Raven.Client.Documents.Operations.Counters.CounterBatch;
+        };
 
         const url = endpoints.databases.counters.counters;
 

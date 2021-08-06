@@ -4,7 +4,7 @@ import endpoints = require("endpoints");
 import document = require("models/database/documents/document");
 
 class stubsObjectsContainer {
-    private static stubsObjects = {} as dictionary<{}>;
+    private static stubsObjects: dictionary<{}> = {};
   
     static getStubObject(propertiesCount: number) {
         if (propertiesCount in stubsObjectsContainer.stubsObjects) {

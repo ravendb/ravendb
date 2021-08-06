@@ -200,7 +200,7 @@ class aceEditorBindingHandler {
             const annotations = aceEditor.getSession().getAnnotations() as Array<AceAjax.Annotation>;
             
             if ('rules' in code && ko.isObservable(code.rules)) {
-                const rules = ko.unwrap(code.rules) as KnockoutValidationRule[];
+                const rules = ko.unwrap<KnockoutValidationRule[]>(code.rules);
                 if (_.some(rules, x => x.rule === "aceValidation")) {
                     const firstError = annotations.find(x => x.type === "error");
                     

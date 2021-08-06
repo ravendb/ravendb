@@ -29,12 +29,14 @@ class migrateDatabaseCommand<T> extends commandBase {
     }
     
     static validateMigratorPath(db: database, fullPath: string) {
-        const dto = {
+        const dto: Raven.Server.Smuggler.Migration.MigrationConfiguration = {
             MigratorFullPath: fullPath,
             InputConfiguration: {
                 Command: "validateMigratorPath"
-            }
-        } as Raven.Server.Smuggler.Migration.MigrationConfiguration; 
+            },
+            DatabaseTypeName: undefined,
+            TransformScript: undefined
+        }; 
         return new migrateDatabaseCommand<void>(db, dto, true);
     }
     

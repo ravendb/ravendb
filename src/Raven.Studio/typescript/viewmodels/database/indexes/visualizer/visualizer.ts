@@ -35,7 +35,7 @@ class visualizer extends viewModelBase {
         documentIdsSearchResults: ko.observableArray<autoCompleteItem>()
     };
 
-    private trees = [] as Raven.Server.Documents.Indexes.Debugging.ReduceTree[];
+    private trees: Raven.Server.Documents.Indexes.Debugging.ReduceTree[] = [];
 
     private globalGraph = new visualizerGraphGlobal();
     private detailsGraph = new visualizerGraphDetails();

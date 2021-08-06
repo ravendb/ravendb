@@ -42,14 +42,13 @@ class documentPropertyProvider {
                 return false;
             }
         } else {
-            const property = valueAccessor as string;
-            return !this.hasEntireValue(doc, property);
+            return !this.hasEntireValue(doc, valueAccessor);
         }
     }
 
     private fetchAndRespond(doc: document, column: textColumn<document>, onValue: (v: any) => void, onEvalError?: (e: Error) => void) {
         if (this.fullDocumentsCache.has(doc.getId())) {
-            const cachedValue = this.fullDocumentsCache.get(doc.getId()) as any;
+            const cachedValue = this.fullDocumentsCache.get(doc.getId());
             onValue(column.getCellValue(cachedValue));
             return;
         }

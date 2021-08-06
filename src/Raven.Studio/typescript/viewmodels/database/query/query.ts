@@ -1228,7 +1228,7 @@ class query extends viewModelBase {
             
             _.forIn(value, (fragments, key) => {
                if (!existingPerFieldCache.data.has(key)) {
-                   existingPerFieldCache.data.set(key, [] as Array<highlightItem>);
+                   existingPerFieldCache.data.set(key, []);
                } 
                const existingFragments = existingPerFieldCache.data.get(key);
                

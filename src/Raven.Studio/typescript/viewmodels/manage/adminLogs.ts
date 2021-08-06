@@ -14,9 +14,9 @@ import adminLogsOnDiskConfig = require("models/database/debug/adminLogsOnDiskCon
 
 class heightCalculator {
     
-    private charactersPerLine = undefined as number;
-    private padding = undefined as number;
-    private lineHeight = undefined as number;
+    private charactersPerLine: number = undefined;
+    private padding: number = undefined;
+    private lineHeight: number = undefined;
     
     measure(item: string, row: virtualListRow<string>) {
         this.ensureCacheFilled(row);
@@ -67,7 +67,7 @@ class adminLogs extends viewModelBase {
     private liveClient = ko.observable<adminLogsWebSocketClient>();
     private listController = ko.observable<listViewController<string>>();
     
-    private allData = [] as string[];
+    private allData: string[] = [];
     
     filter = ko.observable<string>("");
     onlyErrors = ko.observable<boolean>(false);
@@ -76,7 +76,7 @@ class adminLogs extends viewModelBase {
     headerValuePlaceholder: KnockoutComputed<string>;
     
     private appendTask: number;
-    private pendingMessages = [] as string[];
+    private pendingMessages: string[] = [];
     private heightCalculator = new heightCalculator();
     
     private onDiskConfiguration = ko.observable<adminLogsOnDiskConfig>();
@@ -392,7 +392,7 @@ class adminLogs extends viewModelBase {
     exportToFile() {
         eventsCollector.default.reportEvent("admin-logs", "export");
         const items = this.listController().getItems();
-        const lines = [] as string[];
+        const lines: string[] = [];
         items.forEach(v => {
             lines.push(v);
         });

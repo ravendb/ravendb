@@ -129,7 +129,7 @@ class gapFinder {
 
         let currentX = 0;
 
-        const range = [] as Array<number>;
+        const range: number[] = [];
 
         for (let i = 0; i < domain.length / 2; i++) {
             const s = domain[2 * i];
@@ -150,7 +150,7 @@ class gapFinder {
     }
 
     private static trimDomain(domain: Date[], start: Date, end: Date): Date[] {
-        const result = [] as Array<Date>;
+        const result: Date[] = [];
 
         // requested: |------|
         // items:              |----|  |-----|
