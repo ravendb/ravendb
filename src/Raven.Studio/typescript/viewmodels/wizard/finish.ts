@@ -162,7 +162,7 @@ class finish extends setupStep {
     
     private onChange(operation: Raven.Server.NotificationCenter.Notifications.OperationChanged) {
         if (operation.TaskType === "Setup") {
-            let dto = null as Raven.Server.Commercial.SetupProgressAndResult;
+            let dto: Raven.Server.Commercial.SetupProgressAndResult = null;
             
             switch (operation.State.Status) {
                 case "Completed":

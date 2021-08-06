@@ -28,7 +28,7 @@ import generalUtils = require("common/generalUtils");
 class createDatabase extends dialogViewModelBase {
     
     static readonly legacyKeySizes = [128, 192, 256];
-    static readonly legacyEncryptionAlgorithms = ['DES', 'RC2', 'Rijndael', 'Triple DES'] as legacyEncryptionAlgorithms[];
+    static readonly legacyEncryptionAlgorithms: legacyEncryptionAlgorithms[] = ['DES', 'RC2', 'Rijndael', 'Triple DES'];
 
     static readonly defaultSection = "replication";
     
@@ -40,7 +40,7 @@ class createDatabase extends dialogViewModelBase {
     };
 
     databaseModel: databaseCreationModel;
-    clusterNodes = [] as clusterNode[];
+    clusterNodes: clusterNode[] = [];
     
     encryptionSection: setupEncryptionKey;
     usingHttps = location.protocol === "https:"; 

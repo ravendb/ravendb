@@ -9,10 +9,10 @@ class saveIndexPriorityCommand extends commandBase {
     }
 
     execute(): JQueryPromise<void> {
-        const payload = {
+        const payload: Raven.Client.Documents.Operations.Indexes.SetIndexesPriorityOperation.Parameters = {
             Priority: this.priority,
             IndexNames: [this.indexName]
-        } as Raven.Client.Documents.Operations.Indexes.SetIndexesPriorityOperation.Parameters;
+        };
         
         const url = endpoints.databases.index.indexesSetPriority;
         

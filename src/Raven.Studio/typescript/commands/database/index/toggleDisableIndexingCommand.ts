@@ -15,9 +15,9 @@ class toggleDisableIndexingCommand extends commandBase {
 
         const url = endpoints.global.adminDatabases.adminDatabasesIndexing + this.urlEncodeArgs(args);
 
-        const payload = {
+        const payload: Raven.Client.ServerWide.Operations.ToggleDatabasesStateOperation.Parameters = {
             DatabaseNames: [this.db.name]
-        } as Raven.Client.ServerWide.Operations.ToggleDatabasesStateOperation.Parameters;
+        };
 
         return this.post(url, JSON.stringify(payload))
             .done(() => {

@@ -14,7 +14,7 @@ class queryCommand extends commandBase {
     }
 
     execute(): JQueryPromise<pagedResultExtended<document>> {
-        const selector = (results: Raven.Client.Documents.Queries.QueryResult<Array<any>, any>) =>
+        const selector = (results: Raven.Client.Documents.Queries.QueryResult<Array<any>, any>): pagedResultExtended<document> =>
             ({
                 items: results.Results.map(d => new document(d)), 
                 totalResultCount: results.CappedMaxResults || results.TotalResults, 
@@ -23,7 +23,7 @@ class queryCommand extends commandBase {
                 highlightings: results.Highlightings,
                 explanations: results.Explanations,
                 timings: results.Timings,
-                includes: results.Includes }) as pagedResultExtended<document>;
+                includes: results.Includes });
         
         return this.post<pagedResultExtended<document>>(this.getUrl(), this.getPayload(), this.db)
             .then((results) => selector(results))
