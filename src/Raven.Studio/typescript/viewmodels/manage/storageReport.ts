@@ -121,7 +121,7 @@ class storageReport extends viewModelBase {
     private mapDataFile(report: Voron.Debugging.DetailedStorageReport): storageReportItem {
         const dataFile = report.DataFile;
 
-        const d = new storageReportItem("Datafile", "data", false, dataFile.AllocatedSpaceInBytes, null);
+        const d = new storageReportItem("Datafile", "data", false, dataFile.AllocatedSpaceInBytes);
         const tables = this.mapTables(report.Tables);
         const trees = this.mapTrees(report.Trees, "Trees");
         const freeSpace = new storageReportItem("Free", "free", false, report.DataFile.FreeSpaceInBytes, []);
@@ -134,7 +134,7 @@ class storageReport extends viewModelBase {
 
     private mapPreAllocatedBuffers(buffersReport: Voron.Debugging.PreAllocatedBuffersReport): storageReportItem {
         const allocationTree = this.mapTree(buffersReport.AllocationTree);
-        const buffersSpace = new storageReportItem("Pre Allocated Buffers Space", "reserved", false, buffersReport.PreAllocatedBuffersSpaceInBytes, null);
+        const buffersSpace = new storageReportItem("Pre Allocated Buffers Space", "reserved", false, buffersReport.PreAllocatedBuffersSpaceInBytes);
         buffersSpace.pageCount = buffersReport.NumberOfPreAllocatedPages;
 
         const preAllocatedBuffers = new storageReportItem("Pre Allocated Buffers", "reserved", false, buffersReport.AllocatedSpaceInBytes, [allocationTree, buffersSpace]);
