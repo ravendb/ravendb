@@ -190,7 +190,7 @@ namespace Raven.Server.Documents.Handlers
             var sw = Stopwatch.StartNew();
 
             var revisions = new List<Document>(changeVectors.Count);
-            long totalDocumentsSize;
+            long totalDocumentsSizeInBytes;
             foreach (var changeVector in changeVectors)
             {
                 var revision = revisionsStorage.GetRevision(context, changeVector);
@@ -218,14 +218,14 @@ namespace Raven.Server.Documents.Handlers
             var blittable = GetBoolValueQueryString("blittable", required: false) ?? false;
             if (blittable)
             {
-                WriteRevisionsBlittable(context, revisions, out numberOfResults, out totalDocumentsSize);
+                WriteRevisionsBlittable(context, revisions, out numberOfResults, out totalDocumentsSizeInBytes);
             }
             else
             {
-                WriteRevisionsJson(context, metadataOnly, revisions, out numberOfResults, out totalDocumentsSize);
+                WriteRevisionsJson(context, metadataOnly, revisions, out numberOfResults, out totalDocumentsSizeInBytes);
             }
 
-            AddPagingPerformanceHint(PagingOperationType.Documents, nameof(GetRevisionByChangeVector), HttpContext.Request.QueryString.Value, numberOfResults, revisions.Count, sw.ElapsedMilliseconds, totalDocumentsSize);
+            AddPagingPerformanceHint(PagingOperationType.Documents, nameof(GetRevisionByChangeVector), HttpContext.Request.QueryString.Value, numberOfResults, revisions.Count, sw.ElapsedMilliseconds, totalDocumentsSizeInBytes);
         }
 
         private void WriteRevisionsJson(JsonOperationContext context, bool metadataOnly, IEnumerable<Document> documentsToWrite, out int numberOfResults, out long totalDocumentSize)
@@ -239,10 +239,10 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private void WriteRevisionsBlittable(DocumentsOperationContext context, IEnumerable<Document> documentsToWrite, out int numberOfResults, out long totalDocumentsSize)
+        private void WriteRevisionsBlittable(DocumentsOperationContext context, IEnumerable<Document> documentsToWrite, out int numberOfResults, out long totalDocumentsSizeInBytes)
         {
             numberOfResults = 0;
-            totalDocumentsSize = 0;
+            totalDocumentsSizeInBytes = 0;
             HttpContext.Response.Headers["Content-Type"] = "binary/blittable-json";
 
             using (var streamBuffer = new UnmanagedStreamBuffer(context, ResponseBodyStream()))
@@ -258,8 +258,8 @@ namespace Raven.Server.Documents.Handlers
                 foreach (var document in documentsToWrite)
                 {
                     numberOfResults++;
-                    totalDocumentsSize += document.Data.Size;
                     writer.WriteEmbeddedBlittableDocument(document.Data);
+                    totalDocumentsSizeInBytes += document.Data.Size;
                 }
                 writer.WriteArrayEnd();
 
@@ -294,7 +294,6 @@ namespace Raven.Server.Documents.Handlers
             var before = GetDateTimeQueryString("before", required: false);
             var start = GetStart();
             var pageSize = GetPageSize();
-            var totalDocumentsSize = default(long);
 
             Document[] revisions = Array.Empty<Document>();
             long count = 0;
@@ -323,11 +322,13 @@ namespace Raven.Server.Documents.Handlers
             HttpContext.Response.Headers["ETag"] = "\"" + actualChangeVector + "\"";
 
             int loadedRevisionsCount;
+            long totalDocumentsSizeInBytes;
+
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
                 writer.WritePropertyName("Results");
-                writer.WriteDocuments(context, revisions, metadataOnly, out loadedRevisionsCount, out totalDocumentsSize);
+                writer.WriteDocuments(context, revisions, metadataOnly, out loadedRevisionsCount, out totalDocumentsSizeInBytes);
 
                 writer.WriteComma();
 
@@ -336,7 +337,7 @@ namespace Raven.Server.Documents.Handlers
                 writer.WriteEndObject();
             }
 
-            AddPagingPerformanceHint(PagingOperationType.Revisions, nameof(GetRevisions), HttpContext.Request.QueryString.Value, loadedRevisionsCount, pageSize, sw.ElapsedMilliseconds, totalDocumentsSize);
+            AddPagingPerformanceHint(PagingOperationType.Revisions, nameof(GetRevisions), HttpContext.Request.QueryString.Value, loadedRevisionsCount, pageSize, sw.ElapsedMilliseconds, totalDocumentsSizeInBytes);
         }
 
         [RavenAction("/databases/*/revisions/resolved", "GET", AuthorizationStatus.ValidUser)]
@@ -368,7 +369,6 @@ namespace Raven.Server.Documents.Handlers
             var sw = Stopwatch.StartNew();
             var etag = GetLongQueryString("etag", false) ?? long.MaxValue;
             var pageSize = GetPageSize();
-            var totalDocumentsSize = default(long);
 
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
@@ -386,18 +386,20 @@ namespace Raven.Server.Documents.Handlers
                 }
 
                 int count;
+                long totalDocumentsSizeInBytes;
+
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
                     writer.WritePropertyName("Results");
 
                     var revisions = revisionsStorage.GetRevisionsBinEntries(context, etag, pageSize);
-                    writer.WriteDocuments(context, revisions, false, out count, out totalDocumentsSize);
+                    writer.WriteDocuments(context, revisions, false, out count, out totalDocumentsSizeInBytes);
 
                     writer.WriteEndObject();
                 }
 
-                AddPagingPerformanceHint(PagingOperationType.Revisions, nameof(GetRevisionsBin), HttpContext.Request.QueryString.Value, count, pageSize, sw.ElapsedMilliseconds, totalDocumentsSize);
+                AddPagingPerformanceHint(PagingOperationType.Revisions, nameof(GetRevisionsBin), HttpContext.Request.QueryString.Value, count, pageSize, sw.ElapsedMilliseconds, totalDocumentsSizeInBytes);
             }
 
             return Task.CompletedTask;

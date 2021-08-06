@@ -146,7 +146,7 @@ namespace Raven.Server.Documents.Handlers
                 return;
             }
 
-            var totalDocumentsSize = default(long);
+            long totalDocumentsSizeInBytes;
 
             if (result.NotModified)
             {
@@ -160,12 +160,12 @@ namespace Raven.Server.Documents.Handlers
             using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream(), Database.DatabaseShutdown))
             {
                 result.Timings = indexQuery.Timings?.ToTimings();
-                (numberOfResults, totalDocumentsSize) = await writer.WriteDocumentQueryResultAsync(context, result, metadataOnly, WriteAdditionalData(indexQuery, shouldReturnServerSideQuery));
+                (numberOfResults, totalDocumentsSizeInBytes) = await writer.WriteDocumentQueryResultAsync(context, result, metadataOnly, WriteAdditionalData(indexQuery, shouldReturnServerSideQuery));
                 await writer.OuterFlushAsync();
             }
 
             Database.QueryMetadataCache.MaybeAddToCache(indexQuery.Metadata, result.IndexName);
-            AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(Query)} ({result.IndexName})", indexQuery.Query, numberOfResults, indexQuery.PageSize, result.DurationInMs, totalDocumentsSize);
+            AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(Query)} ({result.IndexName})", indexQuery.Query, numberOfResults, indexQuery.PageSize, result.DurationInMs, totalDocumentsSizeInBytes);
         }
 
         private Action<AsyncBlittableJsonTextWriter> WriteAdditionalData(IndexQueryServerSide indexQuery, bool shouldReturnServerSideQuery)
@@ -203,7 +203,6 @@ namespace Raven.Server.Documents.Handlers
         private async Task SuggestQuery(IndexQueryServerSide indexQuery, DocumentsOperationContext context, OperationCancelToken token)
         {
             var existingResultEtag = GetLongFromHeaders("If-None-Match");
-            var totalDocumentSize = default(long);
             var result = await Database.QueryRunner.ExecuteSuggestionQuery(indexQuery, context, existingResultEtag, token);
             if (result.NotModified)
             {
@@ -214,12 +213,13 @@ namespace Raven.Server.Documents.Handlers
             HttpContext.Response.Headers[Constants.Headers.Etag] = CharExtensions.ToInvariantString(result.ResultEtag);
 
             int numberOfResults;
+            long totalDocumentsSizeInBytes;
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                writer.WriteSuggestionQueryResult(context, result, numberOfResults: out numberOfResults, out totalDocumentSize);
+                writer.WriteSuggestionQueryResult(context, result, numberOfResults: out numberOfResults, out totalDocumentsSizeInBytes);
             }
 
-            AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(SuggestQuery)} ({result.IndexName})", indexQuery.Query, numberOfResults, indexQuery.PageSize, result.DurationInMs, totalDocumentSize);
+            AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(SuggestQuery)} ({result.IndexName})", indexQuery.Query, numberOfResults, indexQuery.PageSize, result.DurationInMs, totalDocumentsSizeInBytes);
         }
 
         private async Task DetailedGraphResult(DocumentsOperationContext context, RequestTimeTracker tracker, HttpMethod method)

@@ -56,7 +56,7 @@ namespace SlowTests.Issues
                     Assert.True(detailsActions.TryGet("GetDocumentsByIdAsync", out BlittableJsonReaderArray detailsArray));
                     var index = detailsArray.GetByIndex<BlittableJsonReaderObject>(0);
                     Assert.NotNull(index);
-                    Assert.True(index.TryGet("TotalDocumentsSize", out int size));
+                    Assert.True(index.TryGet("TotalDocumentsSizeInBytes", out int size));
                     Assert.Equal(527, size);
                 }
 
@@ -95,7 +95,7 @@ namespace SlowTests.Issues
                     Assert.True(detailsActions.TryGet("Query (collection/Companies)", out BlittableJsonReaderArray detailsArray));
                     var index = detailsArray.GetByIndex<BlittableJsonReaderObject>(0);
                     Assert.NotNull(index);
-                    Assert.True(index.TryGet("TotalDocumentsSize", out int size));
+                    Assert.True(index.TryGet("TotalDocumentsSizeInBytes", out int size));
                     Assert.Equal(527, size);
                 }
             }
@@ -139,7 +139,7 @@ namespace SlowTests.Issues
                     Assert.True(detailsActions.TryGet("Query (collection/As)", out BlittableJsonReaderArray detailsArray));
                     var index = detailsArray.GetByIndex<BlittableJsonReaderObject>(0);
                     Assert.NotNull(index);
-                    Assert.True(index.TryGet("TotalDocumentsSize", out int size));
+                    Assert.True(index.TryGet("TotalDocumentsSizeInBytes", out int size));
                     Assert.Equal(496, size);
                 }
             }
@@ -207,7 +207,7 @@ namespace SlowTests.Issues
                     Assert.True(detailsActions.TryGet("GetRevisions", out BlittableJsonReaderArray detailsArray));
                     var index = detailsArray.GetByIndex<BlittableJsonReaderObject>(0);
                     Assert.NotNull(index);
-                    Assert.True(index.TryGet("TotalDocumentsSize", out int size));
+                    Assert.True(index.TryGet("TotalDocumentsSizeInBytes", out int size));
                     Assert.Equal(831, size);
                 }
             }
@@ -248,7 +248,7 @@ namespace SlowTests.Issues
                     Assert.True(detailsAction.TryGet("GetCompareExchangeValuesByKey", out BlittableJsonReaderArray cmpxchvalues));
                     var index = cmpxchvalues.GetByIndex<BlittableJsonReaderObject>(0);
                     Assert.NotNull(index);
-                    Assert.True(index.TryGet("TotalDocumentsSize", out int size));
+                    Assert.True(index.TryGet("TotalDocumentsSizeInBytes", out int size));
                     Assert.Equal(216, size);
                 }
             }

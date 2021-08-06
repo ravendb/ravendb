@@ -32,7 +32,7 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
                         [nameof(ActionDetails.Occurrence)] = details.Occurrence,
                         [nameof(ActionDetails.Duration)] = details.Duration,
                         [nameof(ActionDetails.Details)] = details.Details,
-                        [nameof(ActionDetails.TotalDocumentsSize)] = details.TotalDocumentsSize
+                        [nameof(ActionDetails.TotalDocumentsSizeInBytes)] = details.TotalDocumentsSizeInBytes
                     });
                 }
 
@@ -45,12 +45,20 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
             };
         }
 
-        public void Update(string action, string details, int numberOfResults, int pageSize, long duration, DateTime occurrence, long totalDocumentsSize)
+        public void Update(Paging.PagingInformation pagingInfo)
         {
-            if (Actions.TryGetValue(action, out Queue<ActionDetails> actionDetails) == false)
-                Actions[action] = actionDetails = new Queue<ActionDetails>();
+            if (Actions.TryGetValue(pagingInfo.Action, out Queue<ActionDetails> actionDetails) == false)
+                Actions[pagingInfo.Action] = actionDetails = new Queue<ActionDetails>();
 
-            actionDetails.Enqueue(new ActionDetails { Duration = duration, Occurrence = occurrence, NumberOfResults = numberOfResults, PageSize = pageSize, Details = details, TotalDocumentsSize = totalDocumentsSize});
+            actionDetails.Enqueue(new ActionDetails
+            {
+                Duration = pagingInfo.Duration,
+                Occurrence = pagingInfo.Occurrence,
+                NumberOfResults = pagingInfo.NumberOfResults,
+                PageSize = pagingInfo.PageSize,
+                Details = pagingInfo.Details,
+                TotalDocumentsSizeInBytes = pagingInfo.TotalDocumentsSizeInBytes
+            });
 
             while (actionDetails.Count > 10)
                 actionDetails.Dequeue();
@@ -63,7 +71,7 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
             public DateTime Occurrence { get; set; }
             public int NumberOfResults { get; set; }
             public int PageSize { get; set; }
-            public long TotalDocumentsSize { get; set; }
+            public long TotalDocumentsSizeInBytes { get; set; }
         }
     }
 }
