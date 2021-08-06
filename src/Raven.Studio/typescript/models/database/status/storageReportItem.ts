@@ -33,10 +33,6 @@ class storageReportItem {
         this.isGrouped = isGrouped;
     }
 
-    setLength(length: number): void {
-        this.length = length;
-    }
-    
     formatSize(header: boolean) {
         return this.customSizeProvider ? this.customSizeProvider(header) : generalUtils.formatBytesToSize(this.size);
     }

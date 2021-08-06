@@ -140,7 +140,7 @@ class storageReport extends viewModelBase {
     private mapDataFile(report: Voron.Debugging.StorageReport): storageReportItem {
         const dataFile = report.DataFile;
 
-        const storageItem = new storageReportItem("Datafile", "data", false, dataFile.AllocatedSpaceInBytes, null);
+        const storageItem = new storageReportItem("Datafile", "data", false, dataFile.AllocatedSpaceInBytes);
         storageItem.lazyLoadChildren = true;
 
         return storageItem;
@@ -159,7 +159,7 @@ class storageReport extends viewModelBase {
 
     private mapPreAllocatedBuffers(buffersReport: Voron.Debugging.PreAllocatedBuffersReport): storageReportItem {
         const allocationTree = this.mapTree(buffersReport.AllocationTree);
-        const buffersSpace = new storageReportItem("Pre Allocated Buffers Space", "reserved", false, buffersReport.PreAllocatedBuffersSpaceInBytes, null);
+        const buffersSpace = new storageReportItem("Pre Allocated Buffers Space", "reserved", false, buffersReport.PreAllocatedBuffersSpaceInBytes);
         buffersSpace.pageCount = buffersReport.NumberOfPreAllocatedPages;
 
         const preAllocatedBuffers = new storageReportItem("Pre Allocated Buffers", "reserved", false, buffersReport.AllocatedSpaceInBytes, [allocationTree, buffersSpace]);
@@ -175,44 +175,32 @@ class storageReport extends viewModelBase {
     }
     
     private groupChildren(items: storageReportItem[]): storageReportItem[] {
-        
         if (items.length > storageReport.maxChildrenToShow) {
-            items.sort((a, b) => b.size - a.size); // desc...
+            items.sort((a, b) => b.size - a.size);
 
             const sampleItem = items[0];
 
             const itemsToShow = items.slice(0, storageReport.maxChildrenToShow);
             const itemsToGroup = items.slice(storageReport.maxChildrenToShow);
-
-            const groupedItem: storageReportItem = itemsToGroup.reduce((a, b) => {
-                    a.size += b.size;
-                    a.length += b.length;
-                    a.pageCount += b.pageCount;
-                    a.numberOfEntries += b.numberOfEntries;
-                    return a;
-                },
-                {
-                    isGrouped: true,
-                    name: "Grouped Data",
-                    size: 0,
-                    length: 0,
-                    pageCount: 0,
-                    numberOfEntries: 0,
-                    internalChildren: [],
-                    hasChildren: () => false,
-                    lazyLoadChildren: false,
-                    type: sampleItem.type,
-                    parent: sampleItem.parent,
-                    showType: sampleItem.showType,
-                    formatSize: sampleItem.formatSize,
-                    formatPercentage: sampleItem.formatPercentage,
-                    recyclableJournal: sampleItem.recyclableJournal,
-                    customSizeProvider: sampleItem.customSizeProvider,
-                    isStorageEnvironment: sampleItem.isStorageEnvironment,
-                    setLength: sampleItem.setLength
-                })
             
-            itemsToShow.push(groupedItem);
+            let totalSize = 0;
+            let totalLength = 0;
+            let totalPageCount = 0;
+            let totalNumberOfEntries = 0;
+
+            for (let item of itemsToGroup) {
+                totalSize += item.size;
+                totalLength += item.length;
+                totalPageCount += item.pageCount;
+                totalNumberOfEntries += item.numberOfEntries;
+            }
+
+            const groupedItem = new storageReportItem("Grouped Data", sampleItem.type, sampleItem.showType, totalSize, [], true);
+            groupedItem.length = totalLength;
+            groupedItem.pageCount = totalPageCount;
+            groupedItem.numberOfEntries = totalNumberOfEntries;
+            
+            itemsToShow.unshift(groupedItem);
             return itemsToShow;
         }
         
@@ -283,7 +271,7 @@ class storageReport extends viewModelBase {
 
     private mapStream(stream: Voron.Debugging.StreamDetails): storageReportItem {
         const streamItem = new storageReportItem(stream.Name, "stream", false, stream.AllocatedSpaceInBytes, []);
-        streamItem.setLength(stream.Length);
+        streamItem.length = stream.Length;
         return streamItem;
     }
 
