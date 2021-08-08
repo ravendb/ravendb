@@ -50,7 +50,13 @@ namespace Raven.Server.Documents.Replication
 
         public void WaitForBackgroundResolveTask()
         {
-            _runOnce.Wait(TimeSpan.FromSeconds(60));
+            if (_runOnce.Wait(TimeSpan.FromSeconds(60)) == false)
+            {
+                if (_log.IsInfoEnabled)
+                {
+                    _log.Info("Waited for 60 seconds to close 'ResolveConflictOnReplicationConfigurationChange' gracefully, will dispose it anyway.");
+                }
+            }
             _runOnce.Dispose();
         }
 
