@@ -892,7 +892,7 @@ class query extends viewModelBase {
             let itemsSoFar = 0;
             
             try {
-                this.rawJsonUrl(appUrl.forDatabaseQuery(database) + queryCmd.getUrl(true));
+                this.rawJsonUrl(appUrl.forDatabaseQuery(database) + queryCmd.getUrl("GET"));
                 this.csvUrl(queryCmd.getCsvUrl());
             } catch (error) {
                 // it may throw when unable to compute query parameters, etc.
