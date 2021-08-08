@@ -230,7 +230,9 @@ namespace Raven.Server.ServerWide.Maintenance
                             continue;
                         }
 
-                        if (databaseTopology.NodesModifiedAt == null)
+                        // handle legacy commands
+                        if (databaseTopology.NodesModifiedAt == null || 
+                            databaseTopology.NodesModifiedAt == DateTime.MinValue)
                         {
                             AddToDecisionLog(database, $"Updating ModifiedAt");
 

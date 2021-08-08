@@ -237,8 +237,11 @@ namespace Raven.Server.Documents.Replication
 
             if (_outgoing.TryAdd(outgoingReplication) == false)
             {
-                outgoingReplication.Dispose();
-                tcpConnectionOptions.Dispose();
+                using (tcpConnectionOptions)
+                using (outgoingReplication)
+                {
+                    
+                }
                 return;
             }
 
@@ -258,7 +261,7 @@ namespace Raven.Server.Documents.Replication
         {
             var newIncoming = CreateIncomingReplicationHandler(tcpConnectionOptions, buffer, destination.HubDefinitionName);
             newIncoming.Failed += RetryPullReplication;
-            _outgoing.TryRemove(source);
+            _outgoing.TryRemove(source); // we are pulling and therefore incoming, upon failure 'RetryPullReplication' will put us back as an outgoing
 
             PoolOfThreads.PooledThread.ResetCurrentThreadName();
             Thread.CurrentThread.Name = $"Pull Replication as Sink from {destination.Database} at {destination.Url}";
