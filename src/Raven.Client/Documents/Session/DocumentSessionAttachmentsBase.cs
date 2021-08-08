@@ -30,12 +30,12 @@ namespace Raven.Client.Documents.Session
             if (entity is string)
                 throw new ArgumentException($"{nameof(GetNames)} requires a tracked entity object, other types such as documentId are not valid.", nameof(entity));
             
-            if (Session.DocumentsByEntity.TryGetValue(entity, out var document) == false)
+            if (Session.DocumentsByEntity.TryGetValue(entity, out DocumentInfo document) == false)
                 ThrowEntityNotInSession(entity);
-
+            
             if (document.Metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false)
                 return Array.Empty<AttachmentName>();
-
+           
             var results = new AttachmentName[attachments.Length];
             for (var i = 0; i < attachments.Length; i++)
             {
