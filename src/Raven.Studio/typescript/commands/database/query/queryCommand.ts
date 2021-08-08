@@ -124,17 +124,34 @@ f();
         return JSON.stringify(payload);
     }
     
-    getUrl() {
+    getUrl(GETRequest: boolean = false) {
         const criteria = this.criteria;
         const url = endpoints.databases.queries.queries;
         
-        const urlArgs = this.urlEncodeArgs({
+        const argsForPOST = {
             diagnostics: this.criteria.diagnostics() ? "true" : undefined,
             debug: criteria.indexEntries() ? "entries" : undefined,
             addTimeSeriesNames: true,
             addSpatialProperties: true,
-            metadataOnly: typeof(criteria.metadataOnly()) !== 'undefined' ? criteria.metadataOnly() : undefined,
-        });
+            metadataOnly: typeof(criteria.metadataOnly()) !== 'undefined' ? criteria.metadataOnly() : undefined
+        };
+        
+        let urlArgs = this.urlEncodeArgs(argsForPOST);
+        
+        if (GETRequest) {
+            const [parameters, rql] = this.getQueryText();
+            
+            const argsForGET = {...argsForPOST, ...{
+                    query: rql,
+                    parameters: JSON.stringify(parameters),
+                    start: this.skip,
+                    pageSize: this.take,
+                    disableCache: this.disableCache ? Date.now() : undefined 
+            }};
+            
+            urlArgs = this.urlEncodeArgs(argsForGET);
+        }
+        
         return url + urlArgs;
     }
 
