@@ -124,7 +124,7 @@ f();
         return JSON.stringify(payload);
     }
     
-    getUrl(GETRequest: boolean = false) {
+    getUrl(method: "POST"|"GET" = "POST") {
         const criteria = this.criteria;
         const url = endpoints.databases.queries.queries;
         
@@ -138,16 +138,16 @@ f();
         
         let urlArgs = this.urlEncodeArgs(argsForPOST);
         
-        if (GETRequest) {
+        if (method === "GET") {
             const [parameters, rql] = this.getQueryText();
             
-            const argsForGET = {...argsForPOST, ...{
+            const argsForGET = {...argsForPOST,
                     query: rql,
                     parameters: JSON.stringify(parameters),
                     start: this.skip,
                     pageSize: this.take,
-                    disableCache: this.disableCache ? Date.now() : undefined 
-            }};
+                    disableCache: this.disableCache ? Date.now() : undefined
+                };
             
             urlArgs = this.urlEncodeArgs(argsForGET);
         }
