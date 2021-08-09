@@ -101,7 +101,10 @@ namespace Raven.Server.Web.System
                     (textWriter, operationContext, item) =>
                     {
                         numberOfResults++;
-                        totalDocumentsSizeInBytes += item.Value.Size;
+
+                        if (item.Value != null)
+                            totalDocumentsSizeInBytes += item.Value.Size;
+
                         operationContext.Write(textWriter, new DynamicJsonValue
                         {
                             ["Key"] = item.Key,

@@ -212,7 +212,7 @@ namespace Raven.Server.Documents.Handlers
             var sw = Stopwatch.StartNew();
 
             var revisions = new List<Document>(changeVectors.Count);
-            long totalDocumentsSizeInBytes;
+
             foreach (var changeVector in changeVectors)
             {
                 var revision = revisionsStorage.GetRevision(context, changeVector);
@@ -237,6 +237,7 @@ namespace Raven.Server.Documents.Handlers
             HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + actualEtag + "\"";
 
             long numberOfResults;
+            long totalDocumentsSizeInBytes;
             var blittable = GetBoolValueQueryString("blittable", required: false) ?? false;
             if (blittable)
             {
