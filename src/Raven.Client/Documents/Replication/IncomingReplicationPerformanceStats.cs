@@ -26,6 +26,7 @@ namespace Raven.Client.Documents.Replication
             public int DocumentTombstoneReadCount { get; set; }
             public int AttachmentTombstoneReadCount { get; set; }
             public int AttachmentReadCount { get; set; }
+            public int CounterReadCount { get; set; }
         }
     }
 }

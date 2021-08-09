@@ -1373,6 +1373,7 @@ class ongoingTasksStats extends viewModelBase {
                         tooltipHtml += `Network input count: ${elementWithData.Network.InputCount}<br/>`;
                         tooltipHtml += `Documents read count: ${elementWithData.Network.DocumentReadCount}<br/>`;
                         tooltipHtml += `Attachments read count: ${elementWithData.Network.AttachmentReadCount}<br/>`;
+                        tooltipHtml += `Counters read count: ${elementWithData.Network.CounterReadCount}<br/>`;
                     }
                         break;
                     case "OutgoingPush":
@@ -1381,7 +1382,8 @@ class ongoingTasksStats extends viewModelBase {
                         tooltipHtml += `Sent last Etag: ${elementWithData.SendLastEtag}<br/>`;
                         tooltipHtml += `Storage input count: ${elementWithData.Storage.InputCount}<br/>`;
                         tooltipHtml += `Documents output count: ${elementWithData.Network.DocumentOutputCount}<br/>`;
-                        tooltipHtml += `Attachments read count: ${elementWithData.Network.AttachmentOutputCount}<br/>`;
+                        tooltipHtml += `Attachments output count: ${elementWithData.Network.AttachmentOutputCount}<br/>`;
+                        tooltipHtml += `Counters output count: ${elementWithData.Network.CounterOutputCount}<br/>`;
                     }
                         break;
                     case "Raven":
