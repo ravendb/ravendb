@@ -28,7 +28,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Raven.Server\Raven.Server.csproj" />
     <ProjectReference Include="..\Sparrow.Server\Sparrow.Server.csproj" />
     <ProjectReference Include="..\Sparrow\Sparrow.csproj" />
     <ProjectReference Include="..\Voron\Voron.csproj" />

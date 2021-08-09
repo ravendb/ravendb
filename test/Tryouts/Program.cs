@@ -152,9 +152,9 @@ namespace Tryouts
             GenerateData(env);
 
             using var searcher = new IndexSearcher(env);
+            var coraxQueryEvaluator = new CoraxQueryEvaluator(searcher);
 
-
-            var query = searcher.Search(queryDefinition.Query.Where);
+            var query = coraxQueryEvaluator.Search(queryDefinition.Query.Where);
 
             Span<long> ids = stackalloc long[2048];
             int read;
