@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Raven.Server.Documents.Queries.AST;
 
-namespace Corax.Queries
+namespace Tryouts
 {
     public class QueryDefinition
     {

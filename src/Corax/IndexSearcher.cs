@@ -2,8 +2,6 @@ using System;
 using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
 using System.Text;
-using Raven.Server.Documents.Queries.AST;
-using Raven.Server.Documents.Queries.Parser;
 using Sparrow.Server.Compression;
 using Voron;
 using Voron.Impl;
@@ -41,54 +39,6 @@ namespace Corax
             var data = Container.Get(_transaction.LowLevelTransaction, id).ToSpan();
             int size = ZigZagEncoding.Decode<int>(data, out var len);
             return Encoding.UTF8.GetString(data.Slice(len, size));
-        }
-
-        public IQueryMatch Search(string q)
-        {
-            var parser = new QueryParser();
-            parser.Init(q);
-            var query = parser.Parse();
-            return Search(query.Where);
-        }
-
-        public IQueryMatch Search(QueryExpression where)
-        {
-            return Evaluate(@where);
-        }
-
-        private IQueryMatch Evaluate(QueryExpression where)
-        {
-            switch (@where)
-            {
-                case TrueExpression _:
-                case null:
-                    return null; // all docs here
-                case InExpression ie:
-                    return (ie.Source, ie.Values) switch
-                    {
-                        (FieldExpression f, List<QueryExpression> list) => EvaluateInExpression(f, list),
-                        _ => throw new NotSupportedException()
-                    };
-                case BinaryExpression be:
-                    return (be.Operator, be.Left, be.Right) switch
-                    {
-                        (OperatorType.Equal, FieldExpression f, ValueExpression v) => TermQuery(f.FieldValue, v.Token.Value),
-                        (OperatorType.And, QueryExpression q1, QueryExpression q2) => And(Evaluate(q1), Evaluate(q2)),
-                        (OperatorType.Or, QueryExpression q1, QueryExpression q2) => Or(Evaluate(q1), Evaluate(q2)),
-                        _ => throw new NotSupportedException()
-                    };
-                default:
-                    return null;
-            }
-        }
-
-        private IQueryMatch EvaluateInExpression(FieldExpression f, List<QueryExpression> list)
-        {
-            var values = new List<string>();
-            foreach (ValueExpression v in list)
-                values.Add(v.Token.Value); 
-
-            return InQuery(f.FieldValue, values);
         }
 
         // foreach term in 2010 .. 2020
