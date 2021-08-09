@@ -1485,19 +1485,26 @@ namespace Raven.Server.Documents
                 {
                     tombstoneTable.Delete(local.Tombstone.StorageId);
                 }
-
+                DocumentFlags flags;
                 var localFlags = local.Tombstone.Flags.Strip(DocumentFlags.FromClusterTransaction);
-                var flags = localFlags | documentFlags;
-
-                if (collectionName.IsHiLo == false &&
-                    (flags & DocumentFlags.Artificial) != DocumentFlags.Artificial)
+                if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByEnforceRevisionConfiguration))
                 {
-                    var revisionsStorage = DocumentDatabase.DocumentsStorage.RevisionsStorage;
-                    if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) == false &&
-                        (revisionsStorage.Configuration != null || flags.Contain(DocumentFlags.Resolved)))
+                    flags = localFlags.Strip(DocumentFlags.HasRevisions);
+                }
+                else
+                {
+                    flags = localFlags | documentFlags;
+
+                    if (collectionName.IsHiLo == false &&
+                        (flags & DocumentFlags.Artificial) != DocumentFlags.Artificial)
                     {
-                        revisionsStorage.Delete(context, id, lowerId, collectionName, changeVector ?? local.Tombstone.ChangeVector,
-                            modifiedTicks, nonPersistentFlags, documentFlags);
+                        var revisionsStorage = DocumentDatabase.DocumentsStorage.RevisionsStorage;
+                        if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) == false &&
+                            (revisionsStorage.Configuration != null || flags.Contain(DocumentFlags.Resolved)))
+                        {
+                            revisionsStorage.Delete(context, id, lowerId, collectionName, changeVector ?? local.Tombstone.ChangeVector,
+                                modifiedTicks, nonPersistentFlags, documentFlags);
+                        }
                     }
                 }
 
