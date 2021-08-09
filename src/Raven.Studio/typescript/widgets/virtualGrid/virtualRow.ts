@@ -75,6 +75,9 @@ class virtualRow {
                 if (isSelected) {
                     hasChangedSelectedStatus = true;
                 }
+            } else {
+                // make sure we clear classes (is any)
+                this.element.attr("class", "virtual-row");
             }
 
             // Update the selected status. Displays as a different row color.
