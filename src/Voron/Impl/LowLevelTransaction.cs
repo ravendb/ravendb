@@ -1229,7 +1229,7 @@ namespace Voron.Impl
             // release scratch file page allocated for the transaction header
             Allocator.Release(ref _txHeaderMemory);
 
-            using (_env.IsInPreventNewTransactionsMode == false ? _env.PreventNewTransactions() : (IDisposable)null)
+            using (_env.PreventNewTransactions())
             {
                 _env.ScratchBufferPool.UpdateCacheForPagerStatesOfAllScratches();
                 _env.Journal.UpdateCacheForJournalSnapshots();
