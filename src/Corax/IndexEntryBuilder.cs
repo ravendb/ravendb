@@ -801,7 +801,6 @@ namespace Corax
 
                         doubleValue = Unsafe.ReadUnaligned<double>(ref _buffer[intOffset]);
                         longValue = VariableSizeEncoding.Read<long>(_buffer, out length, longTableOffset); // Read
-
                         stringLength = VariableSizeEncoding.Read<ushort>(_buffer, out _, spanTableOffset); // Read
 
                         // Jump to the string location
@@ -809,6 +808,8 @@ namespace Corax
                     }
                     else
                     {
+                        // TODO: This should use the same structure like LIST to simplify the code and achieve better performance. 
+
                         longValue = VariableSizeEncoding.Read<long>(_buffer, out length, intOffset); // Read
                         intOffset += length;
                         doubleValue = Unsafe.ReadUnaligned<double>(ref _buffer[intOffset]);
