@@ -141,13 +141,14 @@ f();
         if (method === "GET") {
             const [parameters, rql] = this.getQueryText();
             
-            const argsForGET = {...argsForPOST,
-                    query: rql,
-                    parameters: JSON.stringify(parameters),
-                    start: this.skip,
-                    pageSize: this.take,
-                    disableCache: this.disableCache ? Date.now() : undefined
-                };
+            const argsForGET = {
+                ...argsForPOST,
+                query: rql,
+                parameters: JSON.stringify(parameters),
+                start: this.skip,
+                pageSize: this.take,
+                disableCache: this.disableCache ? Date.now() : undefined
+            };
             
             urlArgs = this.urlEncodeArgs(argsForGET);
         }
