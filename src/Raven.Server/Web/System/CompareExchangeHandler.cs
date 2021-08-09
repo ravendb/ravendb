@@ -42,6 +42,7 @@ namespace Raven.Server.Web.System
             var items = ServerStore.Cluster.GetCompareExchangeValuesStartsWith(context, Database.Name, CompareExchangeKey.GetStorageKey(Database.Name, startsWithKey), start, pageSize);
 
             var numberOfResults = 0;
+            long totalDocumentsSizeInBytes = 0;
             await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
@@ -50,6 +51,7 @@ namespace Raven.Server.Web.System
                     (textWriter, operationContext, item) =>
                     {
                         numberOfResults++;
+                        totalDocumentsSizeInBytes += item.Value.Size;
                         operationContext.Write(textWriter, new DynamicJsonValue
                         {
                             [nameof(CompareExchangeListItem.Key)] = item.Key.Key,
@@ -62,7 +64,7 @@ namespace Raven.Server.Web.System
             }
 
             AddPagingPerformanceHint(PagingOperationType.CompareExchange, nameof(ClusterStateMachine.GetCompareExchangeValuesStartsWith),
-                HttpContext.Request.QueryString.Value, numberOfResults, pageSize, sw.ElapsedMilliseconds);
+                HttpContext.Request.QueryString.Value, numberOfResults, pageSize, sw.ElapsedMilliseconds, totalDocumentsSizeInBytes);
         }
 
         public class CompareExchangeListItem
@@ -90,6 +92,7 @@ namespace Raven.Server.Web.System
             }
 
             var numberOfResults = 0;
+            long totalDocumentsSizeInBytes = 0;
             await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
@@ -98,6 +101,10 @@ namespace Raven.Server.Web.System
                     (textWriter, operationContext, item) =>
                     {
                         numberOfResults++;
+
+                        if (item.Value != null)
+                            totalDocumentsSizeInBytes += item.Value.Size;
+
                         operationContext.Write(textWriter, new DynamicJsonValue
                         {
                             ["Key"] = item.Key,
@@ -110,7 +117,7 @@ namespace Raven.Server.Web.System
             }
 
             AddPagingPerformanceHint(PagingOperationType.CompareExchange, nameof(GetCompareExchangeValuesByKey), HttpContext.Request.QueryString.Value,
-                numberOfResults, keys.Count, sw.ElapsedMilliseconds);
+                numberOfResults, keys.Count, sw.ElapsedMilliseconds, totalDocumentsSizeInBytes);
         }
 
         [RavenAction("/databases/*/cmpxchg", "PUT", AuthorizationStatus.ValidUser, EndpointType.Write, DisableOnCpuCreditsExhaustion = true)]

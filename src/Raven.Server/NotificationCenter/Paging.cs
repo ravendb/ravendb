@@ -23,8 +23,7 @@ namespace Raven.Server.NotificationCenter
         private readonly string _database;
 
         private readonly object _locker = new object();
-        private readonly ConcurrentQueue<(PagingOperationType Type, string Action, string Details, long NumberOfResults, int PageSize, long Duration, DateTime Occurrence)> _pagingQueue = 
-            new ConcurrentQueue<(PagingOperationType Type, string Action, string Details, long NumberOfResults, int PageSize, long Duration, DateTime Occurrence)>();
+        private readonly ConcurrentQueue<PagingInformation> _pagingQueue = new ConcurrentQueue<PagingInformation>();
         private readonly DateTime[] _pagingUpdates = new DateTime[Enum.GetNames(typeof(PagingOperationType)).Length];
         private Timer _pagingTimer;
         private readonly Logger _logger;
@@ -37,7 +36,7 @@ namespace Raven.Server.NotificationCenter
             _logger = LoggingSource.Instance.GetLogger(database, GetType().FullName);
         }
 
-        public void Add(PagingOperationType operation, string action, string details, long numberOfResults, int pageSize, long duration)
+        public void Add(PagingOperationType operation, string action, string details, long numberOfResults, int pageSize, long duration, long totalDocumentsSizeInBytes)
         {
             var now = SystemTime.UtcNow;
             var update = _pagingUpdates[(int)operation];
@@ -46,7 +45,7 @@ namespace Raven.Server.NotificationCenter
                 return;
 
             _pagingUpdates[(int)operation] = now;
-            _pagingQueue.Enqueue((operation, action, details, numberOfResults, pageSize, duration, now));
+            _pagingQueue.Enqueue(new PagingInformation(operation, action, details, numberOfResults, pageSize, duration, now, totalDocumentsSizeInBytes));
 
             while (_pagingQueue.Count > 50)
                 _pagingQueue.TryDequeue(out _);
@@ -73,41 +72,30 @@ namespace Raven.Server.NotificationCenter
                 PerformanceHint documents = null, queries = null, revisions = null, compareExchange = null;
 
                 while (_pagingQueue.TryDequeue(
-                    out (PagingOperationType Type, string Action, string Details, long NumberOfResults, int PageSize, long Duration, DateTime Occurrence) tuple))
+                    out PagingInformation pagingInfo))
                 {
-                    switch (tuple.Type)
+                    switch (pagingInfo.Type)
                     {
                         case PagingOperationType.Documents:
-                            if (documents == null)
-                                documents = GetPagingPerformanceHint(PagingDocumentsId, tuple.Type);
-
-                            ((PagingPerformanceDetails)documents.Details).Update(tuple.Action, tuple.Details, tuple.NumberOfResults, tuple.PageSize, tuple.Duration,
-                                tuple.Occurrence);
-
+                            documents ??= GetPagingPerformanceHint(PagingDocumentsId, pagingInfo.Type);
+                            ((PagingPerformanceDetails)documents.Details).Update(pagingInfo);
                             break;
+
                         case PagingOperationType.Queries:
-                            if (queries == null)
-                                queries = GetPagingPerformanceHint(PagingQueriesId, tuple.Type);
-
-                            ((PagingPerformanceDetails)queries.Details).Update(tuple.Action, tuple.Details, tuple.NumberOfResults, tuple.PageSize, tuple.Duration,
-                                tuple.Occurrence);
-
+                            queries ??= GetPagingPerformanceHint(PagingQueriesId, pagingInfo.Type);
+                            ((PagingPerformanceDetails)queries.Details).Update(pagingInfo);
                             break;
-                        case PagingOperationType.Revisions:
-                            if (revisions == null)
-                                revisions = GetPagingPerformanceHint(PagingRevisionsId, tuple.Type);
 
-                            ((PagingPerformanceDetails)revisions.Details).Update(tuple.Action, tuple.Details, tuple.NumberOfResults, tuple.PageSize, tuple.Duration,
-                                tuple.Occurrence);
+                        case PagingOperationType.Revisions:
+                            revisions ??= GetPagingPerformanceHint(PagingRevisionsId, pagingInfo.Type);
+                            ((PagingPerformanceDetails)revisions.Details).Update(pagingInfo);
                             break;
 
                         case PagingOperationType.CompareExchange:
-                            if (compareExchange == null)
-                                compareExchange = GetPagingPerformanceHint(PagingCompareExchangeId, tuple.Type);
-
-                            ((PagingPerformanceDetails)compareExchange.Details).Update(tuple.Action, tuple.Details, tuple.NumberOfResults, tuple.PageSize, tuple.Duration,
-                                tuple.Occurrence);
+                            compareExchange ??= GetPagingPerformanceHint(PagingCompareExchangeId, pagingInfo.Type);
+                            ((PagingPerformanceDetails)compareExchange.Details).Update(pagingInfo);
                             break;
+
                         default:
                             throw new ArgumentOutOfRangeException();
                     }
@@ -167,5 +155,28 @@ namespace Raven.Server.NotificationCenter
         {
             _pagingTimer?.Dispose();
         }
+        internal readonly struct PagingInformation
+        {
+            public PagingOperationType Type { get; }
+            public string Action { get; }
+            public string Details { get; }
+            public long NumberOfResults { get; }
+            public int PageSize { get; }
+            public long Duration { get; }
+            public DateTime Occurrence { get; }
+            public long TotalDocumentsSizeInBytes { get; }
+
+            public PagingInformation(PagingOperationType type, string action, string details, long numberOfResults, int pageSize, long duration, DateTime occurrence, long totalDocumentsSizeInBytes)
+            {
+                Type = type;
+                Action = action;
+                Details = details;
+                NumberOfResults = numberOfResults;
+                PageSize = pageSize;
+                Duration = duration;
+                Occurrence = occurrence;
+                TotalDocumentsSizeInBytes = totalDocumentsSizeInBytes;  
+    }
+}
     }
 }
