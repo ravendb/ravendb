@@ -13,9 +13,9 @@ class explainQueryCommand extends commandBase {
             debug: "explain"
         };
         
-        const payload = {
+        const payload: Partial<Raven.Client.Documents.Queries.IndexQuery<any>> = {
             Query: this.queryText
-        } as Raven.Client.Documents.Queries.IndexQuery<any>;
+        };
 
         const url = endpoints.databases.queries.queries + this.urlEncodeArgs(args);
 

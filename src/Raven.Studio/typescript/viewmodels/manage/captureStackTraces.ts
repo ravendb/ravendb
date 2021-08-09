@@ -583,7 +583,7 @@ class captureStackTraces extends viewModelBase {
     }
     
     private onCopyStack(data: stackInfo) {
-        const stackFrames = [] as Array<string>;
+        const stackFrames: string[] = [];
         
         do {
             stackFrames.push(...data.stackTrace);

@@ -169,7 +169,7 @@ class reduceTreeItem {
             .map((x: pageItem) => x.pageNumber);
 
 
-        const collapsedItems = [] as Array<abstractPageItem>;
+        const collapsedItems: abstractPageItem[] = [];
         let currentAggregation: collapsedPageItem = null;
 
         for (let i = 0; i < levelItems.length; i++) {
@@ -326,7 +326,7 @@ class documentItem {
     height: number;
     color: string;
 
-    connectedPages = [] as Array<pageItem>;
+    connectedPages: pageItem[] = [];
 
     constructor(name: string) {
         this.name = name;
@@ -374,7 +374,7 @@ class hitTest {
             maxY: tree.y + tree.height,
             actionType: "reduceTreeClicked",
             arg: tree
-        } as rTreeLeaf);
+        });
     }
 
     registerTrash(docItem: documentItem) {
@@ -386,7 +386,7 @@ class hitTest {
             maxY: docItem.y + docItem.height,
             actionType: "trashClicked",
             arg: docItem
-        } as rTreeLeaf);
+        });
     }
 
     reset() {
@@ -503,7 +503,7 @@ class visualizerGraphGlobal {
     private totalWidth: number;
     private totalHeight: number; 
 
-    private documents = [] as Array<documentItem>;
+    private documents: documentItem[] = [];
     private reduceTrees: Array<reduceTreeItem> = [];
 
     private canvas: d3.Selection<void>;

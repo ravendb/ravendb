@@ -951,8 +951,8 @@ class ongoingTasksStats extends viewModelBase {
 
     private constructYScale() {
         let currentOffset = ongoingTasksStats.axisHeight - this.currentYOffset;
-        const domain = [] as Array<string>;
-        const range = [] as Array<number>;
+        const domain: string[] = [];
+        const range: number[] = [];
 
         const trackNames = this.filteredTrackNames();
 
@@ -1061,7 +1061,7 @@ class ongoingTasksStats extends viewModelBase {
     }
 
     private extractTimeRanges(): Array<[Date, Date]> {
-        const result = [] as Array<[Date, Date]>;
+        const result: Array<[Date, Date]> = [];
         
         const onPerf = (perfStatsWithCache: performanceBaseWithCache) => {
             const start = perfStatsWithCache.StartedAsDate;

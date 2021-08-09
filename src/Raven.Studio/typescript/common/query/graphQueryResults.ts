@@ -242,7 +242,7 @@ class graphQueryResults {
 
                     textNode.text("");
                     
-                    const lines = [] as Array<string>;
+                    const lines: string[] = [];
                     for (let l = 0; l < numberOfLines; l++) {
                         textNode.append("tspan")
                             .text(textToBreak.substr(l * charactersPerLine, charactersPerLine))
@@ -333,7 +333,7 @@ class graphQueryResults {
         const linkCardinalityCache = new Map<String, number>();
         
         const results = _.flatMap(data.Edges, edgesByType => {
-           return edgesByType.Results.map(edge => {
+           return edgesByType.Results.map((edge): debugGraphOutputEdge => {
                const cacheKey = edge.From + "->" + edge.To;
                const count = linkCardinalityCache.get(cacheKey) || 0;
                linkCardinalityCache.set(cacheKey, count + 1);
@@ -344,8 +344,9 @@ class graphQueryResults {
                    cacheKey: cacheKey,
                    name: edgesByType.Name,
                    payload: edge.Edge,
-                   connectionNumber: count
-               } as debugGraphOutputEdge;
+                   connectionNumber: count,
+                   totalConnections: undefined
+               };
            });
         }); 
         

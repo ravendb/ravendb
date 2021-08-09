@@ -65,7 +65,7 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
                 return [];
             }
 
-            const result = [] as Array<smugglerListItem>;
+            const result: smugglerListItem[] = [];
             if ("SnapshotBackup" in status) {
                 const backupCount = (status as Raven.Client.Documents.Operations.Backups.BackupProgress).SnapshotBackup;
 
@@ -161,7 +161,7 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
                 return [];
             }
 
-            const result = [] as Array<uploadListItem>;
+            const result: uploadListItem[] = [];
             if ("S3Backup" in status) {
                 const s3BackupStatus = (status as Raven.Client.Documents.Operations.Backups.BackupProgress).S3Backup;
                 const backupStatus = s3BackupStatus as Raven.Client.Documents.Operations.Backups.CloudUploadStatus;
