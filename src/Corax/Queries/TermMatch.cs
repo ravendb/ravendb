@@ -1,4 +1,4 @@
-﻿using System.Runtime.CompilerServices;
+using System.Runtime.CompilerServices;
 using Sparrow.Server.Compression;
 using Voron.Data.Sets;
 using Voron.Data.Containers;
@@ -175,7 +175,7 @@ namespace Corax.Queries
             {
                 int matchedIdx = 0;
 
-                term._set.Seek(matches[0] - 1);
+                term._set.MaybeSeek(matches[0] - 1);
 
                 // We update the current value we want to work with.
                 var current = term._set.Current;

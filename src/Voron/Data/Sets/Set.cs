@@ -515,6 +515,13 @@ namespace Voron.Data.Sets
                 _it = leafPage.GetIterator(_parent._llt);
             }
 
+            public bool? MaybeSeek(long from)
+            {
+                if (_it.IsInRange(from))
+                    return null;
+                return Seek(from);
+            }
+
             public bool Seek(long from = long.MinValue)
             {
                 _parent.FindPageFor(from);
@@ -537,6 +544,7 @@ namespace Voron.Data.Sets
                 return false;
             }
 
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public bool MoveNext()
             {
                 if (_it.MoveNext(out Current))

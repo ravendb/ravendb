@@ -450,15 +450,33 @@ namespace Voron.Data.Containers
 
         public static Item Get(LowLevelTransaction llt, long id)
         {
-            var pageNum = id / Constants.Storage.PageSize;
-            var offset = (int)(id % Constants.Storage.PageSize);
-
+            var pageNum = Math.DivRem(id, Constants.Storage.PageSize, out var offset);
             var page = llt.GetPage(pageNum);
             if (offset == 0)
             {
                 Debug.Assert(page.IsOverflow);
                 int numberOfPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(page.OverflowSize);
                 return new Item(page, PageHeader.SizeOf, page.OverflowSize);
+            }
+
+            var container = new Container(page);
+            ItemMetadata* metadata = (ItemMetadata*)(container._page.Pointer + offset);
+            Debug.Assert(metadata->Size != 0);
+            return new Item(page, metadata->Offset, metadata->Size);
+        }
+
+        public static Item MaybeGetFromSamePage(LowLevelTransaction llt, ref Page page, long id)
+        {
+            var pageNum = Math.DivRem(id, Constants.Storage.PageSize, out var offset);
+            if(!page.IsValid || pageNum != page.PageNumber)
+            {
+                page = llt.GetPage(pageNum);
+                if (offset == 0)
+                {
+                    Debug.Assert(page.IsOverflow);
+                    int numberOfPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(page.OverflowSize);
+                    return new Item(page, PageHeader.SizeOf, page.OverflowSize);
+                }
             }
 
             var container = new Container(page);

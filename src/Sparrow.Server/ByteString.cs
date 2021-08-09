@@ -438,11 +438,13 @@ namespace Sparrow.Server
                    Memory.Compare(Ptr, other.Buffer, Length) == 0;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ReadOnlySpan<byte> ToReadOnlySpan()
         {
             return new ReadOnlySpan<byte>(Ptr, Length);
         }
-        
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Span<byte> ToSpan()
         {
             return new Span<byte>(Ptr, Length);

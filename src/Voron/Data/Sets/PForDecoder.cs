@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.CompilerServices;
+using System.Xml;
 
 namespace Voron.Data.Sets
 {
@@ -32,47 +34,42 @@ namespace Voron.Data.Sets
             return new DecoderState(inputBuffer.Length);
         }
 
+        private static ReadOnlySpan<int> NumberOfValues => new int[] { 1, 32, 64, 128 };
+        
         public static int Decode(ref DecoderState state, in Span<byte> inputBuffer, in Span<int> outputBuffer)
         {
             Debug.Assert(inputBuffer.Length == state.BufferSize);
 
-            var bits = Read(ref state, inputBuffer, 2);
-            switch (bits)
-            {
-                case 0b00: // fixed header
-                    bits = Read(ref state, inputBuffer, 7);
-                    int numOfValues = (bits >> 5) switch
-                    {
-                        0b000 => 1,
-                        0b001 => 32,
-                        0b010 => 64,
-                        0b011 => 128,
-                        _ => throw new ArgumentOutOfRangeException((bits >> 5) + " isn't a valid number of items for fixed header")
-                    };
-                    return ReadNumbers(ref state, inputBuffer, outputBuffer, (int)(0x1F & bits), numOfValues);
-                case 0b01: // variable size
-                    bits = Read(ref state, inputBuffer, 13);
-                    return ReadNumbers(ref state, inputBuffer, outputBuffer, (int)(0x1F & bits), (int)(bits >> 5));
-                case 0b10: // repeated header
-                    bits = Read(ref state, inputBuffer, 13);
-                    int numOfRepeatedValues = (int)(bits >> 5);
-                    int numOfBits = (int)(0x1F & bits);
-                    var repeatedDelta = (int)Read(ref state, inputBuffer, numOfBits);
-                    for (int i = 0; i < numOfRepeatedValues; i++)
-                    {
-                        state._prevValue += repeatedDelta;
-                        outputBuffer[i] = state._prevValue;
-                    }
+            var headerBits = Read(ref state, inputBuffer, 2);
+            if (headerBits == 0b11)
+                return 0;
 
-                    state.NumberOfReads += numOfRepeatedValues;
-                    return numOfRepeatedValues;
-                case 0b11:
-                    return 0;
-                default:
-                    throw new ArgumentOutOfRangeException(bits + " isn't a valid header marker");
+            if (headerBits >= 0b11)
+                throw new ArgumentOutOfRangeException(headerBits + " isn't a valid header marker");
+
+            var bitsToRead = headerBits == 0b00 ? 7 : 13;
+            var bits = Read(ref state, inputBuffer, bitsToRead);
+
+            int numOfRepeatedValues = headerBits == 0b00 ? NumberOfValues[(int)(bits >> 5)] : (int)(bits >> 5);
+
+            if (headerBits == 0b10)
+            {
+                int numOfBits = (int)(0x1F & bits);
+                var repeatedDelta = (int)Read(ref state, inputBuffer, numOfBits);
+                for (int i = 0; i < numOfRepeatedValues; i++)
+                {
+                    state._prevValue += repeatedDelta;
+                    outputBuffer[i] = state._prevValue;
+                }
+                state.NumberOfReads += numOfRepeatedValues;
+                return numOfRepeatedValues;
             }
+
+            // We are sure they are 0b00 or 0b01
+            return ReadNumbers(ref state, inputBuffer, outputBuffer, (int)(0x1F & bits), numOfRepeatedValues);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static int ReadNumbers(ref DecoderState state, in Span<byte> inputBuffer, in Span<int> outputBuffer, int numOfBits, int numOfValues)
         {
             if (numOfBits == 0)
@@ -89,20 +86,23 @@ namespace Voron.Data.Sets
             return numOfValues;
         }
 
-        private static ulong Read(ref DecoderState state, in Span<byte> inputBuffer, int bitsToRead)
-        {
-            int end = state._bitPos + bitsToRead;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static ulong Read(ref DecoderState state, in ReadOnlySpan<byte> inputBuffer, int bitsToRead)
+{
+            int stateBitPos = state._bitPos;
+            int end = stateBitPos + bitsToRead;
             if (end > state.MaxBits)
                 throw new EndOfStreamException();
 
             ulong value = 0;
-            while (state._bitPos < end)
+            while (stateBitPos < end)
             {
                 value <<= 1;
-                ulong bit = (ulong)(inputBuffer[state._bitPos >> 3] >> 7 - (state._bitPos & 0x7) & 1);
-                value += bit;
-                state._bitPos++;
+                value += (ulong)(inputBuffer[stateBitPos >> 3] >> 7 - (stateBitPos & 0x7) & 1);
+                stateBitPos++;
             }
+
+            state._bitPos = stateBitPos;
             return value;
         }
 
