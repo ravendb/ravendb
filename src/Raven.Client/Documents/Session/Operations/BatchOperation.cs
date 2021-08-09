@@ -258,7 +258,6 @@ namespace Raven.Client.Documents.Session.Operations
                     continue;
 
                 attachments.Add(attachment);
-                break;
             }
         }
 
