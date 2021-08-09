@@ -716,7 +716,9 @@ class editDocument extends viewModelBase {
     }
     
     private createCloneInternal(attachments: attachmentItem[], timeseries: timeSeriesItem[], counters: counterItem[], keepChanges: boolean = false) {
-        // Show current document as a new document...
+        // Show current document as a clone document...
+        router.navigate(window.location.hash + "&isClone=true", { trigger: false, replace: false });
+        
         this.crudActionsProvider(new clonedDocumentCrudActions(this, this.activeDatabase, attachments, timeseries, counters, () => this.connectedDocuments.reload()));
 
         this.isCreatingNewDocument(true);

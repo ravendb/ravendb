@@ -1945,7 +1945,7 @@ namespace Voron.Impl.Journal
         private CompressionAccelerationStats _lastCompressionAccelerationInfo = new CompressionAccelerationStats();
         private readonly bool _is32Bit;
 
-        public void ReduceSizeOfCompressionBufferIfNeeded(bool forceReduce = false)
+        private void ReduceSizeOfCompressionBufferIfNeeded(bool forceReduce = false)
         {
             var maxSize = _env.Options.MaxScratchBufferSize;
             if (ShouldReduceSizeOfCompressionPager(maxSize, forceReduce) == false)
@@ -1972,16 +1972,32 @@ namespace Voron.Impl.Journal
             _lastCompressionBufferReduceCheck = DateTime.UtcNow;
 
             _compressionPager.Dispose();
+           
+            _forTestingPurposes?.OnReduceSizeOfCompressionBufferIfNeeded_RightAfterDisposingCompressionPager?.Invoke();
+
             _compressionPager = CreateCompressionPager(maxSize);
         }
 
         public void ZeroCompressionBuffer(IPagerLevelTransactionState tx)
         {
-            var compressionBufferSize = _compressionPager.NumberOfAllocatedPages * Constants.Storage.PageSize;
-            _compressionPager.EnsureMapped(tx, 0, checked((int)_compressionPager.NumberOfAllocatedPages));
-            var pagePointer = _compressionPager.AcquirePagePointer(tx, 0);
+            var lockTaken = false;
 
-            Sodium.sodium_memzero(pagePointer, (UIntPtr)compressionBufferSize);
+            if (Monitor.IsEntered(_writeLock) == false) 
+                Monitor.Enter(_writeLock, ref lockTaken);
+
+            try
+            {
+                var compressionBufferSize = _compressionPager.NumberOfAllocatedPages * Constants.Storage.PageSize;
+                _compressionPager.EnsureMapped(tx, 0, checked((int)_compressionPager.NumberOfAllocatedPages));
+                var pagePointer = _compressionPager.AcquirePagePointer(tx, 0);
+
+                Sodium.sodium_memzero(pagePointer, (UIntPtr)compressionBufferSize);
+            }
+            finally
+            {
+                if (lockTaken)
+                    Monitor.Exit(_writeLock);
+            }
         }
 
         private bool ShouldReduceSizeOfCompressionPager(long maxSize, bool forceReduce)
@@ -2019,6 +2035,21 @@ namespace Voron.Impl.Journal
             {
                 Monitor.Exit(_writeLock);
             }
+        }
+
+        private TestingStuff _forTestingPurposes;
+
+        internal TestingStuff ForTestingPurposesOnly()
+        {
+            if (_forTestingPurposes != null)
+                return _forTestingPurposes;
+
+            return _forTestingPurposes = new TestingStuff();
+        }
+
+        internal class TestingStuff
+        {
+            internal Action OnReduceSizeOfCompressionBufferIfNeeded_RightAfterDisposingCompressionPager;
         }
     }
 

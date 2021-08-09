@@ -494,4 +494,4 @@ class storageReport extends viewModelBase {
     }
 }
 
-export = storageReport;    
+export = storageReport;

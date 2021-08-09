@@ -192,18 +192,19 @@ namespace Raven.Server.Documents.Handlers
             }
 
             long numberOfResults;
+            long totalDocumentsSizeInBytes;
 
             await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
                 writer.WritePropertyName("Results");
 
-                numberOfResults = await writer.WriteDocumentsAsync(context, documents, metadataOnly, Database.DatabaseShutdown);
+                (numberOfResults, totalDocumentsSizeInBytes) = await writer.WriteDocumentsAsync(context, documents, metadataOnly, Database.DatabaseShutdown);
 
                 writer.WriteEndObject();
             }
 
-            AddPagingPerformanceHint(PagingOperationType.Documents, isStartsWith ? nameof(DocumentsStorage.GetDocumentsStartingWith) : nameof(GetDocumentsAsync), HttpContext.Request.QueryString.Value, numberOfResults, pageSize, sw.ElapsedMilliseconds);
+            AddPagingPerformanceHint(PagingOperationType.Documents, isStartsWith ? nameof(DocumentsStorage.GetDocumentsStartingWith) : nameof(GetDocumentsAsync), HttpContext.Request.QueryString.Value, numberOfResults, pageSize, sw.ElapsedMilliseconds, totalDocumentsSizeInBytes);
         }
 
         private async Task GetDocumentsByIdAsync(DocumentsOperationContext context, Microsoft.Extensions.Primitives.StringValues ids, bool metadataOnly)
@@ -214,7 +215,6 @@ namespace Raven.Server.Documents.Handlers
             var documents = new List<Document>(ids.Count);
             var includes = new List<Document>(includePaths.Count * ids.Count);
             var includeDocs = new IncludeDocumentsCommand(Database.DocumentsStorage, context, includePaths, isProjection: false);
-
             GetCountersQueryString(Database, context, out var includeCounters);
             
             GetRevisionsQueryString(Database, context, out var includeRevisions);
@@ -235,7 +235,7 @@ namespace Raven.Server.Documents.Handlers
 
                     if (document == null && ids.Count == 1)
                     {
-                     HttpContext.Response.StatusCode = GetStringFromHeaders("If-None-Match") == HttpCache.NotFoundResponse
+                        HttpContext.Response.StatusCode = GetStringFromHeaders("If-None-Match") == HttpCache.NotFoundResponse
                         ?(int)HttpStatusCode.NotModified
                         :(int)HttpStatusCode.NotFound;
                         return;
@@ -263,11 +263,12 @@ namespace Raven.Server.Documents.Handlers
 
                 HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + actualEtag + "\"";
 
-                var numberOfResults = await WriteDocumentsJsonAsync(context, metadataOnly, documents, includes, includeCounters?.Results, includeRevisions?.RevisionsChangeVectorResults, includeRevisions?.IdByRevisionsByDateTimeResults, includeTimeSeries?.Results,
+
+                var (numberOfResults, totalDocumentsSizeInBytes) = await WriteDocumentsJsonAsync(context, metadataOnly, documents, includes, includeCounters?.Results, includeRevisions?.RevisionsChangeVectorResults, includeRevisions?.IdByRevisionsByDateTimeResults, includeTimeSeries?.Results,
                     includeCompareExchangeValues?.Results);
 
                 AddPagingPerformanceHint(PagingOperationType.Documents, nameof(GetDocumentsByIdAsync), HttpContext.Request.QueryString.Value, numberOfResults,
-                    documents.Count, sw.ElapsedMilliseconds);
+                    documents.Count, sw.ElapsedMilliseconds, totalDocumentsSizeInBytes);
             }
         }
 
@@ -404,7 +405,7 @@ namespace Raven.Server.Documents.Handlers
             includeTimeSeries = new IncludeTimeSeriesCommand(context, new Dictionary<string, HashSet<AbstractTimeSeriesRange>> { { string.Empty, hs } });
         }
 
-        private async Task<long> WriteDocumentsJsonAsync(
+        private async Task<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteDocumentsJsonAsync(
             JsonOperationContext context, bool metadataOnly, IEnumerable<Document> documentsToWrite, List<Document> includes,
             Dictionary<string, List<CounterDetail>> counters, Dictionary<string, Document> revisionByChangeVectorResults,
             Dictionary<string, Dictionary<DateTime, Document>> revisionsByDateTimeResults,
@@ -412,11 +413,12 @@ namespace Raven.Server.Documents.Handlers
             Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>> compareExchangeValues)
         {
             long numberOfResults;
+            long totalDocumentsSizeInBytes;
             await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
                 writer.WritePropertyName(nameof(GetDocumentsResult.Results));
-                numberOfResults = await writer.WriteDocumentsAsync(context, documentsToWrite, metadataOnly, Database.DatabaseShutdown);
+                (numberOfResults, totalDocumentsSizeInBytes) = await writer.WriteDocumentsAsync(context, documentsToWrite, metadataOnly, Database.DatabaseShutdown);
 
                 writer.WriteComma();
                 writer.WritePropertyName(nameof(GetDocumentsResult.Includes));
@@ -458,7 +460,7 @@ namespace Raven.Server.Documents.Handlers
 
                 writer.WriteEndObject();
             }
-            return numberOfResults;
+            return (numberOfResults, totalDocumentsSizeInBytes);
         }
 
         [RavenAction("/databases/*/docs", "DELETE", AuthorizationStatus.ValidUser, EndpointType.Write, DisableOnCpuCreditsExhaustion = true)]
