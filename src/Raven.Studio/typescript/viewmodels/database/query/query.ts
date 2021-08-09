@@ -124,7 +124,7 @@ class query extends viewModelBase {
     static readonly RangeSearchTypes: rangeSearchType[] = ["Numeric Double", "Numeric Long", "Alphabetical", "Datetime"];
     static readonly SortTypes: querySortType[] = ["Ascending", "Descending", "Range Ascending", "Range Descending"];
 
-    static lastQuery = new Map<string, string>();
+    static lastQueryNotExecuted = new Map<string, string>();
     
     autoOpenGraph: boolean = false;
 
@@ -179,6 +179,7 @@ class query extends viewModelBase {
 
     criteria = ko.observable<queryCriteria>(queryCriteria.empty());
     cacheEnabled = ko.observable<boolean>(true);
+    lastCriteriaExecuted: queryCriteria = queryCriteria.empty();
 
     private indexEntriesStateWasTrue: boolean = false; // Used to save current query settings when switching to a 'dynamic' index
 
@@ -545,13 +546,11 @@ class query extends viewModelBase {
     deactivate(): void {
         super.deactivate();
 
-        const queryText = this.criteria().queryText();
-
-        this.saveLastQuery(queryText);
-    }
-
-    private saveLastQuery(queryText: string) {
-        query.lastQuery.set(this.activeDatabase().name, queryText);
+        const currentQueryText = this.criteria().queryText();
+        
+        if (currentQueryText !== this.lastCriteriaExecuted.queryText()) {
+            query.lastQueryNotExecuted.set(this.activeDatabase().name, currentQueryText);
+        }
     }
 
     attached() {
@@ -559,16 +558,15 @@ class query extends viewModelBase {
 
         this.createKeyboardShortcut("ctrl+enter", () => this.runQuery(), query.ContainerSelector);
         
-        
         this.createKeyboardShortcut("ctrl+s", () => {
             if (!this.inSaveMode()) {
-                this.saveQuery();
+                this.saveQueryToLocalStorage();
                 this.saveQueryFocus(true);
             }
         }, query.ContainerSelector);
         
         this.createKeyboardShortcut("enter", () => {
-            this.saveQuery();
+            this.saveQueryToLocalStorage();
         }, query.SaveQuerySelector);
 
         /* TODO
@@ -788,15 +786,15 @@ class query extends viewModelBase {
     }
 
     private loadSavedQueries() {
-
         const db = this.activeDatabase();
 
         this.savedQueries(savedQueriesStorage.getSavedQueries(db));
         
-        const myLastQuery = query.lastQuery.get(db.name);
+        const lastQueryThatWasNotExecuted = query.lastQueryNotExecuted.get(db.name);
 
-        if (myLastQuery) {
-            this.criteria().queryText(myLastQuery);
+        if (lastQueryThatWasNotExecuted) {
+            this.criteria().queryText(lastQueryThatWasNotExecuted);
+            query.lastQueryNotExecuted.set(this.activeDatabase().name, "");
         }
     }
 
@@ -885,7 +883,7 @@ class query extends viewModelBase {
 
             //TODO: this.currentColumnsParams().enabled(this.showFields() === false && this.indexEntries() === false);
 
-            const queryCmd = new queryCommand(database, 0, 25, this.criteria(), disableCache);
+            const queryCmd = new queryCommand(database, 0, 25, criteria, disableCache);
 
             // we declare this variable here, if any result returns skippedResults <> 0 we enter infinite scroll mode 
             let totalSkippedResults = 0;
@@ -900,12 +898,16 @@ class query extends viewModelBase {
                 this.isLoading(false);
                 return;
             }
+
+            this.lastCriteriaExecuted = criteria.clone();
             
             const resultsFetcher = (skip: number, take: number) => {
-                const command = new queryCommand(database, skip + totalSkippedResults, take + 1, this.criteria(), disableCache);
+                const criteriaForFetcher = this.lastCriteriaExecuted;
+                
+                const command = new queryCommand(database, skip + totalSkippedResults, take + 1, criteriaForFetcher, disableCache);
                 
                 const resultsTask = $.Deferred<pagedResultExtended<document>>();
-                const queryForAllFields = this.criteria().showFields();
+                const queryForAllFields = criteriaForFetcher.showFields();
                                 
                 // Note: 
                 // When server response is '304 Not Modified' then the browser cached data contains duration time from the 'first' execution
@@ -958,8 +960,8 @@ class query extends viewModelBase {
                             // apply skipped results (if any)
                             totalSkippedResults += queryResults.additionalResultInfo.SkippedResults;
                             
-                            // find if query contains positive offset or limit, if so warn about paging. 
-                            const [_, rqlWithoutParameters] = queryCommand.extractQueryParameters(this.criteria().queryText());
+                            // find if query contains positive offset or limit, if so warn about paging.
+                            const [_, rqlWithoutParameters] = queryCommand.extractQueryParameters(criteriaForFetcher.queryText());
                             if (/\s+(offset|limit)\s+/img.test(rqlWithoutParameters)) {
                                 this.showFanOutWarning(true);
                             }
@@ -970,7 +972,7 @@ class query extends viewModelBase {
                             if (queryResults.items.length === take + 1) {
                                 queryResults.totalResultCount += 30;
                                 const totalWithOffsetAndLimit = queryResults.additionalResultInfo.CappedMaxResults;
-                                if (totalWithOffsetAndLimit && totalWithOffsetAndLimit < queryResults.totalResultCount) { 
+                                if (totalWithOffsetAndLimit && totalWithOffsetAndLimit < queryResults.totalResultCount) {
                                     queryResults.totalResultCount = totalWithOffsetAndLimit - 1;
                                 }
                                 
@@ -1017,8 +1019,8 @@ class query extends viewModelBase {
                             this.onTimingsLoaded(queryResults.timings);
                             this.onSpatialLoaded(queryResults);
                         }
-                        this.saveLastQuery("");
-                        this.saveRecentQuery(criteriaDto, optionalSavedQueryName);
+                        
+                        this.saveRecentQueryToStorage(criteriaDto, optionalSavedQueryName);
                         
                         this.setupDisableReasons(); 
                         
@@ -1043,7 +1045,7 @@ class query extends viewModelBase {
             };
 
             this.queryFetcher(resultsFetcher);
-            this.recordQueryRun(this.criteria());
+            this.updateBrowserUrl(this.criteria());
         }
     }
     
@@ -1055,7 +1057,7 @@ class query extends viewModelBase {
             });
     }
 
-    saveQuery() {
+    saveQueryToLocalStorage() {
         if (this.inSaveMode()) {
             eventsCollector.default.reportEvent("query", "save");
 
@@ -1092,19 +1094,19 @@ class query extends viewModelBase {
     
     private saveQueryToStorage(criteria: storedQueryDto) {
         criteria.name = this.querySaveName();
-        this.saveQueryInStorage(criteria, false);
+        this.saveToStorage(criteria, false);
         this.querySaveName(null);
         this.saveQueryValidationGroup.errors.showAllMessages(false);
         messagePublisher.reportSuccess("Query saved successfully");
     }
 
-    private saveRecentQuery(criteria: storedQueryDto, optionalSavedQueryName?: string) {
+    private saveRecentQueryToStorage(criteria: storedQueryDto, optionalSavedQueryName?: string) {
         const name = optionalSavedQueryName || this.getRecentQueryName();
         criteria.name = name;
-        this.saveQueryInStorage(criteria, !optionalSavedQueryName);
+        this.saveToStorage(criteria, !optionalSavedQueryName);
     }
 
-    private saveQueryInStorage(criteria: storedQueryDto, isRecent: boolean) {
+    private saveToStorage(criteria: storedQueryDto, isRecent: boolean) {
         criteria.recentQuery = isRecent;
         this.appendQuery(criteria);
         savedQueriesStorage.storeSavedQueries(this.activeDatabase(), this.savedQueries());
@@ -1117,24 +1119,25 @@ class query extends viewModelBase {
         this.previewItem(savedQueriesStorage.getSavedQueries(this.activeDatabase())[0]);
     }
     
-    appendQuery(doc: storedQueryDto) {
-        if (doc.recentQuery) {
-            const existing = this.savedQueries().find(query => query.hash === doc.hash);
+    appendQuery(criteria: storedQueryDto) {
+        if (criteria.recentQuery) {
+            const existing = this.savedQueries().find(query => query.hash === criteria.hash);
+            
             if (existing) {
                 this.savedQueries.remove(existing);
-                this.savedQueries.unshift(doc);
+                this.savedQueries.unshift(criteria);
             } else {
                 this.removeLastRecentQueryIfMoreThanLimit();
-                this.savedQueries.unshift(doc);
+                this.savedQueries.unshift(criteria);
             }
         } else {
-            const existing = this.savedQueries().find(x => x.name === doc.name);
+            const existing = this.savedQueries().find(x => x.name === criteria.name);
             
             if (existing) {
                 this.savedQueries.remove(existing);
             }
 
-            this.savedQueries.unshift(doc);
+            this.savedQueries.unshift(criteria);
         }
     }
 
@@ -1358,7 +1361,7 @@ class query extends viewModelBase {
         app.showBootstrapDialog(viewModel);
     }
 
-    private recordQueryRun(criteria: queryCriteria) {
+    private updateBrowserUrl(criteria: queryCriteria) {
         const newQuery: storedQueryDto = criteria.toStorageDto();
 
         const queryUrl = appUrl.forQuery(this.activeDatabase(), newQuery.hash);
@@ -1387,31 +1390,20 @@ class query extends viewModelBase {
 
     deleteDocsMatchingQuery() {
         eventsCollector.default.reportEvent("query", "delete-documents");
-        // Run the query so that we have an idea of what we'll be deleting.
-        this.runQuery();
-        
-        const resultsForUI = this.totalResultsForUi();
-        if (resultsForUI === 0) {
-            app.showBootstrapMessage("There are no documents matching your query.", "Nothing to do");
-        } else {
-            this.promptDeleteDocsMatchingQuery(resultsForUI, this.hasMoreUnboundedResults());
-        }
-    }
 
-    private promptDeleteDocsMatchingQuery(resultCount: number, hasMore: boolean) {
-        const criteria = this.criteria();
         const db = this.activeDatabase();
-        const viewModel = new deleteDocumentsMatchingQueryConfirm(this.queriedIndex(), criteria.queryText(), resultCount, db, hasMore);
+        const viewModel = new deleteDocumentsMatchingQueryConfirm(this.queriedIndex(), this.lastCriteriaExecuted.queryText(), this.totalResultsForUi(), db, this.hasMoreUnboundedResults());
+
         app.showBootstrapDialog(viewModel)
-           .done((result) => {
+            .done((result) => {
                 if (result) {
-                    new deleteDocsMatchingQueryCommand(criteria.queryText(), this.activeDatabase())
+                    new deleteDocsMatchingQueryCommand(this.lastCriteriaExecuted.queryText(), this.activeDatabase())
                         .execute()
                         .done((operationId: operationIdDto) => {
                             this.monitorDeleteOperation(db, operationId.OperationId);
                         });
                 }
-           });
+            });
     }
 
     syntaxHelp() {
