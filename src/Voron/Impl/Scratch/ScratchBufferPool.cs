@@ -300,7 +300,7 @@ namespace Voron.Impl.Scratch
 
             if (recycledScratchesToDispose != null)
             {
-                using (_env.IsInPreventNewTransactionsMode == false ? _env.PreventNewTransactions() : (IDisposable)null)
+                using (_env.PreventNewTransactions())
                 {
                     // we're about to dispose recycled scratch pagers, we need to update the cache so next transactions won't attempt to EnsurePagerStateReference() on them
 
