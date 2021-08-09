@@ -231,7 +231,7 @@ class leafPageItem extends pageItem {
 
     nestedSection: boolean;
 
-    entries = [] as Array<entryItem | entryPaddingItem>;
+    entries: Array<entryItem | entryPaddingItem> = [];
 
     constructor(sourceObject: Raven.Server.Documents.Indexes.Debugging.ReduceTreePage, parentPage: branchPageItem, pageNumber: number, aggregationResult: any, nestedSection: boolean, entries: Array<entryItem | entryPaddingItem>) {
         super(sourceObject, parentPage, pageNumber, aggregationResult);
@@ -631,7 +631,7 @@ class visualizerGraphDetails {
 
     private hitTest = new hitTest();
 
-    private documents = [] as Array<documentItem>;
+    private documents: documentItem[] = [];
 
     private canvas: d3.Selection<void>;
     private svg: d3.Selection<void>;

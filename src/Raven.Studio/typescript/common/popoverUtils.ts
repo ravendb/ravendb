@@ -15,7 +15,7 @@ class popoverUtils {
         let overElement = false;
         let hideHandler: number = undefined;
         
-        let lastHideTime = null as number;
+        let lastHideTime: number = null;
 
         _.assign(options, extraOptions);
         const popover = selector.popover(options);

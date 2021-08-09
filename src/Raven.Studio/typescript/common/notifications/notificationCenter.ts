@@ -99,9 +99,9 @@ class notificationCenter {
 
     severityFilter = ko.observable<Raven.Server.NotificationCenter.Notifications.NotificationSeverity>();
 
-    detailsProviders = [] as Array<detailsProvider>;
-    customOperationMerger = [] as Array<customOperationMerger>;
-    customOperationHandler = [] as Array<customOperationHandler>;
+    detailsProviders: detailsProvider[] = [];
+    customOperationMerger: customOperationMerger[] = [];
+    customOperationHandler: customOperationHandler[] = [];
 
     private hideHandler = (e: Event) => {
         if (this.shouldConsumeHideEvent(e)) {

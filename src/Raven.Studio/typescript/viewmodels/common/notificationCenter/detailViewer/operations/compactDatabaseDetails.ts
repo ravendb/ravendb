@@ -49,7 +49,7 @@ class compactDatabaseDetails extends abstractOperationDetails {
                 return [];
             }
 
-            const result = [] as Array<compactListItem>;
+            const result: compactListItem[] = [];
 
             if (status.IndexesResults) {
                 for (const indexName of Object.keys(status.IndexesResults))

@@ -82,7 +82,7 @@ abstract class backupConfiguration {
     initObservables() {
         this.anyBackupTypeIsDirty = ko.pureComputed(() => {
             let anyDirty = false;
-            const backupTypes = [this.localSettings(), this.s3Settings(), this.glacierSettings(), this.azureSettings(), this.googleCloudSettings(), this.ftpSettings()] as backupSettings[];
+            const backupTypes: backupSettings[] = [this.localSettings(), this.s3Settings(), this.glacierSettings(), this.azureSettings(), this.googleCloudSettings(), this.ftpSettings()];
 
             backupTypes.forEach(type => {
                 if (type.dirtyFlag().isDirty()) {

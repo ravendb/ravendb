@@ -27,7 +27,7 @@ class flagsColumn implements virtualColumn {
     renderCell(item: document, isSelected: boolean, isSorted: boolean): string {
         const metadata = item.__metadata;
         
-        const extraClasses = [] as Array<string>;
+        const extraClasses: string[] = [];
         
         if (metadata) {
             const flags = (metadata.flags || "").split(",").map(x => x.trim());

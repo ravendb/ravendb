@@ -27,8 +27,7 @@ class testSubscriptionTaskCommand extends commandBase {
         this.post(url, JSON.stringify(this.payload), this.db)
             .done((dto: queryResultDto<documentDto>) => { 
 
-                const result = {
-
+                const result: testSubscriptionPagedResult<document> = {
                     items: dto.Results.map((x: document | Raven.Server.Documents.Handlers.DocumentWithException) => {
                         if ('@metadata' in x) {
                             // ==> plain document
@@ -47,8 +46,7 @@ class testSubscriptionTaskCommand extends commandBase {
                     }), 
                     includes: dto.Includes,
                     totalResultCount: dto.Results.length,
-                    
-                } as testSubscriptionPagedResult<document>;
+                };
 
                 testTask.resolve(result);
             })

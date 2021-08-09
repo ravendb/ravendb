@@ -33,7 +33,7 @@ class rootSqlTable extends abstractSqlTable {
     hasDuplicateProperties: KnockoutComputed<boolean>;
     
     testMode = ko.observable<Raven.Server.SqlMigration.Model.MigrationTestMode>("First");
-    testPrimaryKeys = [] as Array<valueHolder<string>>;
+    testPrimaryKeys: Array<valueHolder<string>> = [];
     
     constructor() {
         super();
@@ -68,7 +68,7 @@ class rootSqlTable extends abstractSqlTable {
         });
     }
     
-    toDto(binaryToAttachment: boolean) {
+    toDto(binaryToAttachment: boolean): Raven.Server.SqlMigration.Model.RootCollection {
         return {
             SourceTableName: this.tableName,
             SourceTableSchema: this.tableSchema,
@@ -79,7 +79,7 @@ class rootSqlTable extends abstractSqlTable {
             LinkedCollections: this.getLinkedReferencesDto(),
             ColumnsMapping: this.getColumnsMapping(binaryToAttachment),
             AttachmentNameMapping: this.getAttachmentsMapping(binaryToAttachment)
-        } as Raven.Server.SqlMigration.Model.RootCollection;
+        };
     }
     
     cloneForEmbed(parentReference: sqlReference): innerSqlTable {

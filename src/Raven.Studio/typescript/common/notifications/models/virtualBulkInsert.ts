@@ -34,7 +34,7 @@ class virtualBulkInsert extends virtualNotification {
         const bulkResult = dto.State.Result as Raven.Client.Documents.Operations.BulkOperationResult;
         const bulkInsertInfo = bulkResult || progress;
         
-        const item = {
+        const item: virtualBulkOperationItem = {
             id: dto.Id,
             date: dto.StartTime,
             duration: moment.utc(dto.EndTime).diff(moment.utc(dto.StartTime)),
@@ -43,8 +43,7 @@ class virtualBulkInsert extends virtualNotification {
             attachmentsProcessed: bulkInsertInfo.AttachmentsProcessed,
             countersProcessed: bulkInsertInfo.CountersProcessed,
             timeSeriesProcessed: bulkInsertInfo.TimeSeriesProcessed,
-            
-        } as virtualBulkOperationItem;
+        };
         
         const existingItemIndex = this.operations().findIndex(x => x.id === dto.Id);
         if (existingItemIndex !== -1) {

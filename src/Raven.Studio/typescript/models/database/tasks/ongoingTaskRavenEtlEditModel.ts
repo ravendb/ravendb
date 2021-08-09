@@ -109,7 +109,7 @@ class ongoingTaskRavenEtlEditModel extends ongoingTaskEditModel {
             MentorNode: this.manualChooseMentor() ? this.mentorNode() : undefined,
             TaskId: this.taskId,
             LoadRequestTimeoutInSec: this.loadRequestTimeout() || null,
-        } as Raven.Client.Documents.Operations.ETL.RavenEtlConfiguration;
+        };
     }
 
     deleteTransformationScript(transformationScript: ongoingTaskRavenEtlTransformationModel) { 

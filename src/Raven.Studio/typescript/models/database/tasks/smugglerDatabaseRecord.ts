@@ -68,7 +68,7 @@ class smugglerDatabaseRecord {
     }
     
     getDatabaseRecordTypes(): Array<Raven.Client.Documents.Smuggler.DatabaseRecordItemType> {
-        const result = [] as Array<Raven.Client.Documents.Smuggler.DatabaseRecordItemType>;
+        const result: Raven.Client.Documents.Smuggler.DatabaseRecordItemType[] = [];
         
         if (!this.customizeDatabaseRecordTypes()) {
             return ["None"];

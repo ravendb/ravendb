@@ -24,17 +24,17 @@ abstract class ongoingTaskModel {
     static mapTaskType(taskType: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType): TasksNamesInUI {
         switch (taskType) {
             case "RavenEtl":
-                return "RavenDB ETL" as TasksNamesInUI;
+                return "RavenDB ETL";
             case "Replication":
-                return "External Replication" as TasksNamesInUI;
+                return "External Replication";
             case "SqlEtl":
-                return "SQL ETL" as TasksNamesInUI;
+                return "SQL ETL";
             case "OlapEtl":
-                return "OLAP ETL" as TasksNamesInUI;
+                return "OLAP ETL";
             case "PullReplicationAsHub":
-                return "Replication Hub" as TasksNamesInUI;
+                return "Replication Hub";
             case "PullReplicationAsSink":
-                return "Replication Sink" as TasksNamesInUI;
+                return "Replication Sink";
             default:
                 return taskType;
         }

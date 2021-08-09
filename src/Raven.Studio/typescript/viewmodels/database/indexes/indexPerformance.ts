@@ -48,38 +48,38 @@ class hitTest {
     }
 
     registerTrackItem(x: number, y: number, width: number, height: number, element: Raven.Client.Documents.Indexes.IndexingPerformanceOperation) {
-        const data = {
+        const data: rTreeLeaf = {
             minX: x,
             minY: y,
             maxX: x + width,
             maxY: y + height,
             actionType: "trackItem",
             arg: element
-        } as rTreeLeaf;
+        };
         this.rTree.insert(data);
     }
 
     registerIndexToggle(x: number, y: number, width: number, height: number, indexName: string) {
-        const data = {
+        const data: rTreeLeaf = {
             minX: x,
             minY: y,
             maxX: x + width,
             maxY: y + height,
             actionType: "toggleIndex",
             arg: indexName
-        } as rTreeLeaf;
+        };
         this.rTree.insert(data);
     }
    
     registerGapItem(x: number, y: number, width: number, height: number, element: timeGapInfo) {
-        const data = {
+        const data: rTreeLeaf = {
             minX: x,
             minY: y,
             maxX: x + width,
             maxY: y + height,
             actionType: "gapItem",
             arg: element
-        } as rTreeLeaf;
+        };
         this.rTree.insert(data);
     }
 
@@ -722,8 +722,8 @@ class indexPerformance extends viewModelBase {
 
     private constructYScale() {
         let currentOffset = indexPerformance.axisHeight - this.currentYOffset;
-        const domain = [] as Array<string>;
-        const range = [] as Array<number>;
+        const domain: string[] = [];
+        const range: number[] = [];
 
         const indexesInfo = this.filteredIndexNames();
 
@@ -833,7 +833,7 @@ class indexPerformance extends viewModelBase {
     }
 
     private extractTimeRanges(): Array<[Date, Date]> {
-        const result = [] as Array<[Date, Date]>;
+        const result: Array<[Date, Date]> = [];
         this.data.forEach(indexStats => {
             indexStats.Performance.forEach(perfStat => {
                 const perfStatsWithCache = perfStat as IndexingPerformanceStatsWithCache;

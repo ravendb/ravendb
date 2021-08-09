@@ -60,7 +60,7 @@ class conflictResolutionModel {
     }
 
     toDto(): Raven.Client.ServerWide.ConflictSolver {
-        const perCollectionScripts = {} as dictionary<Raven.Client.ServerWide.ScriptResolver>;
+        const perCollectionScripts: dictionary<Raven.Client.ServerWide.ScriptResolver> = {};
 
         this.perCollectionResolvers().forEach(resolver => {
             perCollectionScripts[resolver.collection()] = resolver.toDto()

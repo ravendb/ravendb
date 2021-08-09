@@ -64,7 +64,8 @@ class queryCriteria {
             queryText: queryText,
             recentQuery: this.recentQuery(),
             modificationDate: moment().format("YYYY-MM-DD HH:mm"),
-            hash: genUtils.hashCode(name + (queryText || "")) } as storedQueryDto;
+            hash: genUtils.hashCode(name + (queryText || "")) 
+        };
     }
 
     setSelectedIndex(indexName: string) {

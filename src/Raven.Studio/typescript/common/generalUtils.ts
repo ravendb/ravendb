@@ -113,7 +113,7 @@ class genUtils {
     }
 
     static formatDuration(duration: moment.Duration, longFormat = false, desiredAccuracy = 5, skipSecondsAndMilliseconds = false) {
-        const timeTokens = [] as Array<string>;
+        const timeTokens: string[] = [];
 
         if (duration.years() >= 1) {
             timeTokens.push(longFormat ?

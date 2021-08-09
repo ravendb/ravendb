@@ -602,7 +602,7 @@ class indexes extends viewModelBase {
     }
 
     private findIndexesByName(indexName: string): index[] {
-        const result = [] as Array<index>;
+        const result: Array<index> = [];
         this.indexGroups().forEach(g => {
             g.indexes().forEach(i => {
                 if (i.name === indexName) {
@@ -929,7 +929,7 @@ class indexes extends viewModelBase {
         if (selectedIndexesCount > 0) {
             this.selectedIndexesName([]);
         } else {
-            const namesToSelect = [] as Array<string>;
+            const namesToSelect: string[] = [];
 
             this.indexGroups().forEach(indexGroup => {
                 if (!indexGroup.groupHidden()) {
