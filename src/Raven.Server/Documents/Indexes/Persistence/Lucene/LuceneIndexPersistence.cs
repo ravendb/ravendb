@@ -196,8 +196,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             if (mode.HasFlag(IndexCleanup.Writers))
             {
-                _indexWriterCleanupNeeded = true;
-                _index.ScheduleIndexingRun();
+                if (_indexWriter != null)
+                {
+                    // schedule index run only if clean is really needed
+                    _indexWriterCleanupNeeded = true;
+                    _index.ScheduleIndexingRun();
+                }
             }
 
             if (mode.HasFlag(IndexCleanup.Readers))
