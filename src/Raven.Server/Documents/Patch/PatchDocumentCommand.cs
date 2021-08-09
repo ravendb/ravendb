@@ -25,6 +25,8 @@ namespace Raven.Server.Documents.Patch
         private readonly bool _debugMode;
         protected readonly bool _returnDocument;
 
+        private bool ModifiedDocumentRequired => _externalContext != null || _returnDocument || _isTest || _debugMode;
+
         protected readonly (PatchRequest Run, BlittableJsonReaderObject Args) _patchIfMissing;
         private readonly BlittableJsonReaderObject _createIfMissing;
         protected readonly (PatchRequest Run, BlittableJsonReaderObject Args) _patch;
@@ -152,10 +154,10 @@ namespace Raven.Server.Documents.Patch
                     {
                         Status = PatchStatus.NotModified,
                         OriginalDocument = _isTest == false ? null : originalDocument?.Data?.Clone(_externalContext ?? context),
-                        ModifiedDocument = modifiedDoc?.Clone(_externalContext ?? context)
+                        ModifiedDocument = ModifiedDocumentRequired == false ? null : modifiedDoc?.Clone(_externalContext ?? context)
                     };
 
-                    if (result.ModifiedDocument == null)
+                    if (modifiedDoc == null)
                     {
                         result.Status = PatchStatus.Skipped;
                         return result;
@@ -173,7 +175,7 @@ namespace Raven.Server.Documents.Patch
                     if (originalDocument?.Data == null)
                     {
                         if (_isTest == false || run?.PutOrDeleteCalled == true || _createIfMissing != null)
-                            putResult = _database.DocumentsStorage.Put(context, id, null, result.ModifiedDocument, nonPersistentFlags: nonPersistentFlags);
+                            putResult = _database.DocumentsStorage.Put(context, id, null, modifiedDoc, nonPersistentFlags: nonPersistentFlags);
 
                         result.Status = PatchStatus.Created;
                     }
@@ -187,7 +189,7 @@ namespace Raven.Server.Documents.Patch
                         {
                             try
                             {
-                                compareResult = DocumentCompare.IsEqualTo(originalDocument.Data, result.ModifiedDocument,
+                                compareResult = DocumentCompare.IsEqualTo(originalDocument.Data, modifiedDoc,
                                     DocumentCompare.DocumentCompareOptions.MergeMetadataAndThrowOnAttachmentModification);
                             }
                             catch (InvalidOperationException ioe)
@@ -205,7 +207,7 @@ namespace Raven.Server.Documents.Patch
                                     context,
                                     id,
                                     originalDocument.ChangeVector,
-                                    result.ModifiedDocument,
+                                    modifiedDoc,
                                     lastModifiedTicks: null,
                                     changeVector: null,
                                     oldChangeVectorForClusterTransactionIndexCheck: null,
@@ -226,7 +228,7 @@ namespace Raven.Server.Documents.Patch
 
                     if (_isTest && result.Status == PatchStatus.NotModified)
                     {
-                        using (var old = result.ModifiedDocument)
+                        using (var old = modifiedDoc)
                         {
                             result.ModifiedDocument =  originalDocument?.Data?.Clone(_externalContext ?? context);
                         }
