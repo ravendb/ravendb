@@ -149,7 +149,7 @@ namespace Raven.Server.NotificationCenter
         {
             _pagingTimer?.Dispose();
         }
-        internal class PagingInformation
+        internal readonly struct PagingInformation
         {
             public PagingOperationType Type { get; }
             public string Action { get; }
