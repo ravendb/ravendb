@@ -134,6 +134,8 @@ namespace Raven.Server.Documents.Indexes
 
         internal PoolOfThreads.LongRunningWork _indexingThread;
 
+        private bool CalledUnderIndexingThread => _indexingThread?.ManagedThreadId == Thread.CurrentThread.ManagedThreadId;
+
         private bool _initialized;
 
         protected UnmanagedBuffersPoolWithLowMemoryHandling _unmanagedBuffersPool;
@@ -1149,10 +1151,14 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
+        private NativeMemory.ThreadStats _indexingThreadStats; 
+
         protected void ExecuteIndexing()
         {
             _priorityChanged.Raise();
             NativeMemory.EnsureRegistered();
+            _indexingThreadStats = NativeMemory.CurrentThreadStats;
+
             using (CultureHelper.EnsureInvariantCulture())
             {
                 // if we are starting indexing e.g. manually after failure
@@ -1614,19 +1620,26 @@ namespace Raven.Server.Documents.Indexes
 
             try
             {
-                var allocatedBeforeCleanup = NativeMemory.CurrentThreadStats.TotalAllocated;
+                var indexingStats = _indexingThreadStats ?? NativeMemory.CurrentThreadStats;
+
+                var allocatedBeforeCleanup = indexingStats.TotalAllocated;
                 if (allocatedBeforeCleanup == _allocatedAfterPreviousCleanup)
                     return;
 
                 DocumentDatabase.DocumentsStorage.ContextPool.Clean();
                 _contextPool.Clean();
-                ByteStringMemoryCache.CleanForCurrentThread();
+                
+                if (CalledUnderIndexingThread)
+                {
+                    ByteStringMemoryCache.CleanForCurrentThread();
+                }
+
                 IndexPersistence.Clean(mode);
                 environment?.Cleanup();
 
                 _currentMaximumAllowedMemory = DefaultMaximumMemoryAllocation;
 
-                _allocatedAfterPreviousCleanup = NativeMemory.CurrentThreadStats.TotalAllocated;
+                _allocatedAfterPreviousCleanup = indexingStats.TotalAllocated;
                 if (_logger.IsInfoEnabled)
                 {
                     _logger.Info($"Reduced the memory usage of index '{Name}' (mode:{mode}). " +
