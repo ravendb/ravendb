@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System;
+using System.Net;
 using System.Reflection;
 using System.Threading.Tasks;
 using Raven.Server.Commercial;
@@ -132,6 +133,45 @@ namespace Raven.Server.Web.Studio
             {
                 var renewLicense = await ServerStore.LicenseManager.RenewLicense();
                 context.Write(writer, renewLicense.ToJson());
+            }
+        }
+
+        [RavenAction("/license-server/connectivity", "GET", AuthorizationStatus.ValidUser)]
+        public async Task CheckConnectivityToLicenseServer()
+        {
+            var result = new ConnectivityToLicenseServer();
+
+            try
+            {
+                var response = await ApiHttpClient.Instance.GetAsync("/Subscription.svc");
+                result.StatusCode = response.StatusCode;
+            }
+            catch (Exception e)
+            {
+                result.StatusCode = HttpStatusCode.BadRequest;
+                result.Exception = e.Message;
+            }
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                context.Write(writer, result.ToJson());
+            }
+        }
+
+        public class ConnectivityToLicenseServer : IDynamicJson
+        {
+            public HttpStatusCode StatusCode { get; set; }
+
+            public string Exception { get; set; }
+
+            public DynamicJsonValue ToJson()
+            {
+                return new DynamicJsonValue
+                {
+                    [nameof(StatusCode)] = StatusCode,
+                    [nameof(Exception)] = Exception
+                };
             }
         }
     }
