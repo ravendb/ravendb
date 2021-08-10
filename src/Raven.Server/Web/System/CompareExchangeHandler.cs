@@ -53,7 +53,7 @@ namespace Raven.Server.Web.System
                     (textWriter, operationContext, item) =>
                     {
                         numberOfResults++;
-                        totalDocumentsSizeInBytes += item.Value.Size;
+                        totalDocumentsSizeInBytes += item.Value?.Size ?? 0;
                         operationContext.Write(textWriter, new DynamicJsonValue
                         {
                             [nameof(CompareExchangeListItem.Key)] = item.Key,
@@ -103,7 +103,7 @@ namespace Raven.Server.Web.System
                     (textWriter, operationContext, item) =>
                     {
                         numberOfResults++;
-                        totalDocumentsSizeInBytes += item.Value.Size;
+                        totalDocumentsSizeInBytes += item.Value?.Size ?? 0;
                         operationContext.Write(textWriter, new DynamicJsonValue
                         {
                             ["Key"] = item.Key,
