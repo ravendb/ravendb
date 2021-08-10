@@ -249,7 +249,28 @@ namespace SlowTests.Issues
                     var index = cmpxchvalues.GetByIndex<BlittableJsonReaderObject>(0);
                     Assert.NotNull(index);
                     Assert.True(index.TryGet("TotalDocumentsSizeInBytes", out int size));
-                    Assert.True(size > 0);                }
+                    Assert.True(size > 0);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task NullCompareExchangeValuesDoNotBreakTotalDocumentsSizeAccumulating()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession(new SessionOptions {TransactionMode = TransactionMode.ClusterWide}))
+                {
+                    var address = session.Advanced.ClusterTransaction.GetCompareExchangeValue<Address>("companies/hr");
+                    Assert.Null(address);
+
+                    var addresses = session.Advanced.ClusterTransaction.GetCompareExchangeValues<Address>(new[] {"companies/hr", "companies/cf"});
+
+                    Assert.True(addresses.ContainsKey("companies/hr"));
+                    Assert.True(addresses.ContainsKey("companies/cf"));
+                    Assert.Null(addresses["companies/hr"].Value);
+                    Assert.Null(addresses["companies/cf"].Value);
+                }
             }
         }
 
