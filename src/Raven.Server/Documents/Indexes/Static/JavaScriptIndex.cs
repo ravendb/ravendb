@@ -359,26 +359,28 @@ function map(name, lambda) {
             var indexConfiguration = new SingleIndexConfiguration(definition.Configuration, configuration);
 
             //_resolverJint = new JintPreventResolvingTasksReferenceResolver();
-            _engineJint = new Engine(options =>
+            _engineJint = new Engine();
+            /*_engineJint = new Engine(options =>
             {
-                /*options.LimitRecursion(64)
-                    .SetReferencesResolver(_resolverJint)
+                options
+                    .LimitRecursion(64)
+                    //.SetReferencesResolver(_resolverJint)
                     .MaxStatements(indexConfiguration.MaxStepsForScript)
                     .Strict(configuration.Patching.StrictMode)
-                    .AddObjectConverter(new JintGuidConverter())
-                    .AddObjectConverter(new JintStringConverter())
-                    .AddObjectConverter(new JintEnumConverter())
-                    .AddObjectConverter(new JintDateTimeConverter())
-                    .AddObjectConverter(new JintTimeSpanConverter())
-                    .LocalTimeZone(TimeZoneInfo.Utc);*/
-            });
-
+                    //.AddObjectConverter(new JintGuidConverter())
+                    //.AddObjectConverter(new JintStringConverter())
+                    //.AddObjectConverter(new JintEnumConverter())
+                    //.AddObjectConverter(new JintDateTimeConverter())
+                    //.AddObjectConverter(new JintTimeSpanConverter())
+                    .LocalTimeZone(TimeZoneInfo.Utc);
+            });*/
 
             // we create the engine instance directly instead of using SingleRun
             // because the index is single threaded and long lived
             _engine = new V8EngineEx();
 
-            string[] optionsCmd = {$"use_strict={configuration.Patching.StrictMode}"}; // TODO construct from options
+            string strictModeFlag = configuration.Patching.StrictMode ? "--use_strict" : "--no-use_strict";
+            string[] optionsCmd = {strictModeFlag}; // TODO construct from options
             _engine.SetFlagsFromCommandLine(optionsCmd);
                     //.LimitRecursion(64)
                     //.MaxStatements(indexConfiguration.MaxStepsForScript)
@@ -407,6 +409,7 @@ function map(name, lambda) {
 
         ~AbstractJavaScriptIndex()
         {
+            _engine.Dispose();
             _definitions.Dispose();
         }
 
