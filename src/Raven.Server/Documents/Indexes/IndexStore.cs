@@ -577,12 +577,12 @@ namespace Raven.Server.Documents.Indexes
 
             _initialized = true;
 
-            if (_documentDatabase.Configuration.Indexing.RunInMemory)
-                return Task.CompletedTask;
-
             return Task.Run(() =>
             {
-                OpenIndexesFromRecord(record, raftIndex, addToInitLog);
+                if (_documentDatabase.Configuration.Indexing.RunInMemory == false)
+                    OpenIndexesFromRecord(record, raftIndex, addToInitLog);
+
+                HandleSorters(record, raftIndex);
             });
         }
 
@@ -1275,30 +1275,6 @@ namespace Raven.Server.Documents.Indexes
             List<Exception> exceptions = null;
             if (_documentDatabase.Configuration.Core.ThrowIfAnyIndexCannotBeOpened)
                 exceptions = new List<Exception>();
-
-            // delete all unrecognized index directories
-            //foreach (var indexDirectory in new DirectoryInfo(path.FullPath).GetDirectories().Concat(indexesCustomPaths.Values.SelectMany(x => new DirectoryInfo(x).GetDirectories())))
-            //{
-            //    if (record.Indexes.ContainsKey(indexDirectory.Name) == false)
-            //    {
-            //        IOExtensions.DeleteDirectory(indexDirectory.FullName);
-
-            //        continue;
-            //    }
-
-            //    // delete all redundant index instances
-            //    var indexInstances = indexDirectory.GetDirectories();
-            //    if (indexInstances.Length > 2)
-            //    {
-            //        var orderedIndexes = indexInstances.OrderByDescending(x =>
-            //            int.Parse(x.Name.Substring(x.Name.LastIndexOf("\\") +1)));
-
-            //        foreach (var indexToRemove in orderedIndexes.Skip(2))
-            //        {
-            //            Directory.Delete(indexToRemove.FullName);
-            //        }
-            //    }
-            //}
 
             var totalSp = Stopwatch.StartNew();
 
