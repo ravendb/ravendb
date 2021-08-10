@@ -333,17 +333,17 @@ namespace Raven.Server.Documents
                 _serverStore.StorageSpaceMonitor.Subscribe(this);
 
                 ThreadPool.QueueUserWorkItem(_ =>
-               {
-                   try
-                   {
-                       NotifyFeaturesAboutStateChange(record, index);
-                       RachisLogIndexNotifications.NotifyListenersAbout(index, null);
-                   }
-                   catch (Exception e)
-                   {
-                       RachisLogIndexNotifications.NotifyListenersAbout(index, e);
-                   }
-               }, null);
+                {
+                    try
+                    {
+                        NotifyFeaturesAboutStateChange(record, index);
+                        RachisLogIndexNotifications.NotifyListenersAbout(index, null);
+                    }
+                    catch (Exception e)
+                    {
+                        RachisLogIndexNotifications.NotifyListenersAbout(index, e);
+                    }
+                }, null);
 
                 Task.Run(async () =>
                 {
