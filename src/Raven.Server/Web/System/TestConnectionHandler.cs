@@ -1,8 +1,11 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Net.Http;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Exceptions.Security;
 using Raven.Client.Http;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Tcp;
@@ -41,51 +44,65 @@ namespace Raven.Server.Web.System
                         result = await ServerStore.TestConnectionFromRemote(requestExecutor, context, url);
                     }
                 }
+
                 context.Write(writer, result.ToJson());
             }
         }
 
-        public static async Task ConnectToClientNodeAsync(RavenServer server, TcpConnectionInfo tcpConnectionInfo, TimeSpan timeout, Logger log, string database, NodeConnectionTestResult result, CancellationToken token = default)
+        public static async Task ConnectToClientNodeAsync(RavenServer server, TcpConnectionInfo tcpConnectionInfo, TimeSpan timeout, Logger log, string database,
+            NodeConnectionTestResult result, CancellationToken token = default)
         {
-            TcpClient tcpClient;
-            string url;
-            (tcpClient, url) =  await TcpUtils.ConnectSocketAsync(tcpConnectionInfo, timeout, log, token);
-            var connection = await TcpUtils.WrapStreamWithSslAsync(tcpClient, tcpConnectionInfo, server.Certificate.Certificate, server.CipherSuitesPolicy, timeout, token);
-            using (tcpClient)
+            List<string> negLogs = new();
+
+            using (server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
             {
-                using (server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
-                await using (var writer = new AsyncBlittableJsonTextWriter(ctx, connection))
+                await TcpUtils.ConnectSecuredTcpSocket(tcpConnectionInfo, server.Certificate.Certificate, server.CipherSuitesPolicy,
+                    TcpConnectionHeaderMessage.OperationTypes.TestConnection,
+                    NegotiateWithRemote, ctx, timeout, negLogs, token);
+            }
+
+            result.Log = negLogs;
+
+            async Task<TcpConnectionHeaderMessage.SupportedFeatures> NegotiateWithRemote(string url, TcpConnectionInfo info, Stream stream, JsonOperationContext context, List<string> logs = null)
+            {
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, stream))
                 {
-                    await WriteOperationHeaderToRemote(writer, TcpConnectionHeaderMessage.OperationTypes.TestConnection, database);
-                    using (var responseJson = await ctx.ReadForMemoryAsync(connection, $"TestConnectionHandler/{url}/Read-Handshake-Response"))
+                    await WriteOperationHeaderToRemote(writer, TcpConnectionHeaderMessage.OperationTypes.TestConnection, database, info.ServerGuid);
+                    using (var responseJson = await context.ReadForMemoryAsync(stream, $"TestConnectionHandler/{url}/Read-Handshake-Response"))
                     {
                         var headerResponse = JsonDeserializationServer.TcpConnectionHeaderResponse(responseJson);
                         switch (headerResponse.Status)
                         {
                             case TcpConnectionStatus.Ok:
                                 result.Success = true;
+                                result.Error = null;
+                                logs?.Add($"Successfully negotiated with {url}.");
                                 break;
 
                             case TcpConnectionStatus.AuthorizationFailed:
                                 result.Success = false;
                                 result.Error = $"Connection to {url} failed because of authorization failure: {headerResponse.Message}";
-                                break;
+                                logs?.Add(result.Error);
+                                throw new AuthorizationException(result.Error);
 
                             case TcpConnectionStatus.TcpVersionMismatch:
                                 result.Success = false;
                                 result.Error = $"Connection to {url} failed because of mismatching tcp version: {headerResponse.Message}";
-                                await WriteOperationHeaderToRemote(writer, TcpConnectionHeaderMessage.OperationTypes.Drop, database);
-                                break;
+                                logs?.Add(result.Error);
+                                await WriteOperationHeaderToRemote(writer, TcpConnectionHeaderMessage.OperationTypes.Drop, database, info.ServerGuid);
+                                throw new AuthorizationException(result.Error);
                         }
                     }
                 }
+                return null;
             }
         }
 
-        private static async ValueTask WriteOperationHeaderToRemote(AsyncBlittableJsonTextWriter writer, TcpConnectionHeaderMessage.OperationTypes operation, string databaseName)
+        private static async ValueTask WriteOperationHeaderToRemote(AsyncBlittableJsonTextWriter writer, TcpConnectionHeaderMessage.OperationTypes operation,
+            string databaseName, string destinationServerGuid)
         {
-           writer.WriteStartObject();
-           {
+            writer.WriteStartObject();
+            {
                 writer.WritePropertyName(nameof(TcpConnectionHeaderMessage.Operation));
                 writer.WriteString(operation.ToString());
                 writer.WriteComma();
@@ -94,9 +111,11 @@ namespace Raven.Server.Web.System
                 writer.WriteComma();
                 writer.WritePropertyName(nameof(TcpConnectionHeaderMessage.DatabaseName));
                 writer.WriteString(databaseName);
-           }
-           writer.WriteEndObject();
-           await writer.FlushAsync();
+                writer.WritePropertyName(nameof(TcpConnectionHeaderMessage.ServerGuid));
+                writer.WriteString(destinationServerGuid);
+            }
+            writer.WriteEndObject();
+            await writer.FlushAsync();
         }
     }
 
@@ -106,6 +125,7 @@ namespace Raven.Server.Web.System
         public bool HTTPSuccess;
         public string TcpServerUrl;
         public string Error;
+        public List<string> Log;
 
         public DynamicJsonValue ToJson()
         {
@@ -114,7 +134,8 @@ namespace Raven.Server.Web.System
                 [nameof(Success)] = Success,
                 [nameof(HTTPSuccess)] = HTTPSuccess,
                 [nameof(TcpServerUrl)] = TcpServerUrl,
-                [nameof(Error)] = Error
+                [nameof(Error)] = Error,
+                [nameof(Log)] = new DynamicJsonArray(Log)
             };
 
             return djv;

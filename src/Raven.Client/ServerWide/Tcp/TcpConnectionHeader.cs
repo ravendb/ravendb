@@ -47,6 +47,8 @@ namespace Raven.Client.ServerWide.Tcp
 
         public string SourceNodeTag { get; set; }
 
+        public string ServerGuid; //TODO: change to dbguid?
+
         public OperationTypes Operation { get; set; }
 
         public int OperationVersion { get; set; }

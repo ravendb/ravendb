@@ -216,47 +216,28 @@ namespace Raven.Client.Documents.Subscriptions
                         tcpInfo = await LegacyTryGetTcpInfo(requestExecutor, context, token).ConfigureAwait(false);
                     }
                 }
-
-                string chosenUrl;
-                (_tcpClient, chosenUrl) = await TcpUtils.ConnectAsyncWithPriority(
-                    tcpInfo,
-                    requestExecutor.DefaultTimeout
-#if TCP_CLIENT_CANCELLATIONTOKEN_SUPPORT
-                    ,
-                    token
-#endif
-                    ).ConfigureAwait(false);
-                _tcpClient.NoDelay = true;
-                _tcpClient.SendBufferSize = _options?.SendBufferSizeInBytes ?? SubscriptionWorkerOptions.DefaultSendBufferSizeInBytes;
-                _tcpClient.ReceiveBufferSize = _options?.ReceiveBufferSizeInBytes ?? SubscriptionWorkerOptions.DefaultReceiveBufferSizeInBytes;
-                _stream = _tcpClient.GetStream();
-                _stream = await TcpUtils.WrapStreamWithSslAsync(
-                    _tcpClient,
+                
+                (_tcpClient, _stream, _, _supportedFeatures) = await TcpUtils.ConnectSecuredTcpSocket(
                     tcpInfo,
                     _store.Certificate,
 #if SSL_STREAM_CIPHERSUITESPOLICY_SUPPORT
                     null,
 #endif
-                    requestExecutor.DefaultTimeout
+                    TcpConnectionHeaderMessage.OperationTypes.Subscription,
+                    NegotiateProtocolVersionAsyncForSubscription,
+                    context,
+                    requestExecutor.DefaultTimeout, 
+                    null
 #if TCP_CLIENT_CANCELLATIONTOKEN_SUPPORT
                     ,
                     token
 #endif
                     ).ConfigureAwait(false);
-
-                var databaseName = _store.GetDatabase(_dbName);
-
-                var parameters = new AsyncTcpNegotiateParameters
-                {
-                    Database = databaseName,
-                    Operation = TcpConnectionHeaderMessage.OperationTypes.Subscription,
-                    Version = SubscriptionTcpVersion ?? TcpConnectionHeaderMessage.SubscriptionTcpVersion,
-                    ReadResponseAndGetVersionCallbackAsync = ReadServerResponseAndGetVersionAsync,
-                    DestinationNodeTag = CurrentNodeTag,
-                    DestinationUrl = chosenUrl
-                };
-                _supportedFeatures = await TcpNegotiation.NegotiateProtocolVersionAsync(context, _stream, parameters).ConfigureAwait(false);
-
+                
+                _tcpClient.NoDelay = true;
+                _tcpClient.SendBufferSize = _options?.SendBufferSizeInBytes ?? SubscriptionWorkerOptions.DefaultSendBufferSizeInBytes;
+                _tcpClient.ReceiveBufferSize = _options?.ReceiveBufferSizeInBytes ?? SubscriptionWorkerOptions.DefaultReceiveBufferSizeInBytes;
+                
                 if (_supportedFeatures.ProtocolVersion <= 0)
                 {
                     throw new InvalidOperationException(
@@ -276,6 +257,22 @@ namespace Raven.Client.Documents.Subscriptions
 
                 return _stream;
             }
+        }
+
+        private async Task<TcpConnectionHeaderMessage.SupportedFeatures> NegotiateProtocolVersionAsyncForSubscription(string chosenUrl, TcpConnectionInfo tcpInfo, Stream stream, JsonOperationContext context, List<string> _)
+        {
+            var parameters = new AsyncTcpNegotiateParameters
+            {
+                Database = _store.GetDatabase(_dbName),
+                Operation = TcpConnectionHeaderMessage.OperationTypes.Subscription,
+                Version = SubscriptionTcpVersion ?? TcpConnectionHeaderMessage.SubscriptionTcpVersion,
+                ReadResponseAndGetVersionCallbackAsync = ReadServerResponseAndGetVersionAsync,
+                DestinationNodeTag = CurrentNodeTag,
+                DestinationUrl = chosenUrl,
+                DestinationServerGuid = tcpInfo.ServerGuid
+            };
+
+            return await TcpNegotiation.NegotiateProtocolVersionAsync(context, stream, parameters).ConfigureAwait(false);
         }
 
         private async Task<TcpConnectionInfo> LegacyTryGetTcpInfo(RequestExecutor requestExecutor, JsonOperationContext context, CancellationToken token)
@@ -315,9 +312,10 @@ namespace Raven.Client.Documents.Subscriptions
         private async ValueTask<int> ReadServerResponseAndGetVersionAsync(JsonOperationContext context, AsyncBlittableJsonTextWriter writer, Stream stream, string destinationUrl)
         {
             //Reading reply from server
-            using (var response = await context.ReadForMemoryAsync(_stream, "Subscription/tcp-header-response").ConfigureAwait(false))
+            using (var response = await context.ReadForMemoryAsync(stream, "Subscription/tcp-header-response").ConfigureAwait(false))
             {
                 var reply = JsonDeserializationClient.TcpConnectionHeaderResponse(response);
+                
                 switch (reply.Status)
                 {
                     case TcpConnectionStatus.Ok:
@@ -541,6 +539,7 @@ namespace Raven.Client.Documents.Subscriptions
                 while (endOfBatch == false && _processingCts.IsCancellationRequested == false)
                 {
                     SubscriptionConnectionServerMessage receivedMessage = await ReadNextObject(context, tcpStream, buffer).ConfigureAwait(false);
+                    
                     if (receivedMessage == null || _processingCts.IsCancellationRequested)
                     {
                         break;
@@ -628,7 +627,7 @@ namespace Raven.Client.Documents.Subscriptions
 
             try
             {
-                var blittable = await context.ParseToMemoryAsync(stream, "Subscription/next/object", BlittableJsonDocumentBuilder.UsageMode.None, buffer)
+                var blittable = await context.ParseToMemoryAsync(stream, "Subscription/next/object", BlittableJsonDocumentBuilder.UsageMode.None, buffer, token: _processingCts.Token)
                     .ConfigureAwait(false);
 
                 blittable.BlittableValidation();

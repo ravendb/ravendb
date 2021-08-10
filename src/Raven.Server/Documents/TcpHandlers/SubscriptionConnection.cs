@@ -782,7 +782,7 @@ namespace Raven.Server.Documents.TcpHandlers
                     replyFromClientTask = GetReplyFromClientAsync();
                     break;
                 }
-
+                
                 await SendHeartBeat("Waiting for client ACK");
                 await SendNoopAck();
             }
