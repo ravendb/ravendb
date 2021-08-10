@@ -255,8 +255,11 @@ namespace Raven.Server.Documents.Patch
 
             if (originalDocument != null)
             {
-                // we clone it, to keep it safe from defrag due to the patch modifications
-                originalDocument.Data = originalDocument.Data?.CloneOnTheSameContext();
+                using (var oldData = originalDocument.Data)
+                {
+                    // we clone it, to keep it safe from defrag due to the patch modifications
+                    originalDocument.Data = originalDocument.Data?.CloneOnTheSameContext();
+                }
             }
 
             return originalDocument;
