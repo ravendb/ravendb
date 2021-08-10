@@ -714,7 +714,7 @@ namespace Raven.Server.Documents.TcpHandlers
                                 (replyFromClientTask, subscriptionChangeVectorBeforeCurrentBatch) =
                                     await WaitForClientAck(replyFromClientTask, subscriptionChangeVectorBeforeCurrentBatch);
                             }
-                            
+
                             UpdateBatchPerformanceStats(batchScope.GetBatchSize());
                         }
                         catch (Exception e)
@@ -779,7 +779,7 @@ namespace Raven.Server.Documents.TcpHandlers
                     replyFromClientTask = GetReplyFromClientAsync();
                     break;
                 }
-
+                
                 await SendHeartBeat("Waiting for client ACK");
                 await SendNoopAck();
             }

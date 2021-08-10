@@ -1,9 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Exceptions.Security;
+using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
 using Raven.Server.Json;
@@ -105,13 +108,14 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }
         }
 
-        private class PingResult : IDynamicJsonValueConvertible
+        internal class PingResult : IDynamicJsonValueConvertible
         {
             public string Url;
             public long TcpInfoTime;
             public long SendTime;
             public long ReceiveTime;
             public string Error;
+            public List<string> Log = new ();
 
             public DynamicJsonValue ToJson()
             {
@@ -121,7 +125,8 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     [nameof(TcpInfoTime)] = TcpInfoTime,
                     [nameof(SendTime)] = SendTime,
                     [nameof(ReceiveTime)] = ReceiveTime,
-                    [nameof(Error)] = Error
+                    [nameof(Error)] = Error,
+                    [nameof(Log)] = new DynamicJsonArray(Log)
                 };
             }
         }
@@ -133,40 +138,82 @@ namespace Raven.Server.Documents.Handlers.Debugging
             {
                 Url = url
             };
-            try
-            {
-                using (var cts = new CancellationTokenSource(ServerStore.Engine.TcpConnectionTimeout))
-                {
-                    var info = await ReplicationUtils.GetTcpInfoAsync(url, null, "PingTest", ServerStore.Engine.ClusterCertificate, cts.Token);
-                    result.TcpInfoTime = sp.ElapsedMilliseconds;
-                    using (var tcpClient = await TcpUtils.ConnectAsync(info.Url, ServerStore.Engine.TcpConnectionTimeout, token: cts.Token).ConfigureAwait(false))
-                    await using (var stream = await TcpUtils.WrapStreamWithSslAsync(tcpClient, info, ServerStore.Engine.ClusterCertificate, Server.CipherSuitesPolicy, ServerStore.Engine.TcpConnectionTimeout, cts.Token).ConfigureAwait(false))
-                    using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-                    {
-                        var msg = new DynamicJsonValue
-                        {
-                            [nameof(TcpConnectionHeaderMessage.DatabaseName)] = null,
-                            [nameof(TcpConnectionHeaderMessage.Operation)] = TcpConnectionHeaderMessage.OperationTypes.Ping,
-                            [nameof(TcpConnectionHeaderMessage.OperationVersion)] = -1
-                        };
 
-                        await using (var writer = new AsyncBlittableJsonTextWriter(context, stream))
-                        using (var msgJson = context.ReadObject(msg, "message"))
+            using (var cts = new CancellationTokenSource(ServerStore.Engine.TcpConnectionTimeout))
+            {
+                var info = await ReplicationUtils.GetTcpInfoAsync(url, null, "PingTest", ServerStore.Engine.ClusterCertificate, cts.Token);
+                result.TcpInfoTime = sp.ElapsedMilliseconds;
+                
+                using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+                {
+
+                    List<string> log = new();
+
+                    await TcpUtils.ConnectSecuredTcpSocket(info, ServerStore.Engine.ClusterCertificate, Server.CipherSuitesPolicy,
+                        TcpConnectionHeaderMessage.OperationTypes.Ping, NegotiationCallback, context, ServerStore.Engine.TcpConnectionTimeout, log, cts.Token);
+
+                    result.Log = log;
+
+                    async Task<TcpConnectionHeaderMessage.SupportedFeatures> NegotiationCallback(string curUrl, TcpConnectionInfo tcpInfo, Stream stream,
+                        JsonOperationContext ctx, List<string> logs = null)
+                    {
+                        try
                         {
-                            result.SendTime = sp.ElapsedMilliseconds;
-                            context.Write(writer, msgJson);
+                            var msg = new DynamicJsonValue
+                            {
+                                [nameof(TcpConnectionHeaderMessage.DatabaseName)] = null,
+                                [nameof(TcpConnectionHeaderMessage.Operation)] = TcpConnectionHeaderMessage.OperationTypes.Ping,
+                                [nameof(TcpConnectionHeaderMessage.OperationVersion)] = -1,
+                                [nameof(TcpConnectionHeaderMessage.ServerGuid)] = tcpInfo.ServerGuid
+                            };
+
+                            await using (var writer = new AsyncBlittableJsonTextWriter(ctx, stream))
+                            using (var msgJson = ctx.ReadObject(msg, "message"))
+                            {
+                                result.SendTime = sp.ElapsedMilliseconds;
+                                logs?.Add($"message sent to url {curUrl} at {result.SendTime} ms.");
+                                ctx.Write(writer, msgJson);
+                            }
+
+                            using (var rawResponse = await ctx.ReadForMemoryAsync(stream, "cluster-ConnectToPeer-header-response"))
+                            {
+                                TcpConnectionHeaderResponse response = JsonDeserializationServer.TcpConnectionHeaderResponse(rawResponse);
+                                result.ReceiveTime = sp.ElapsedMilliseconds;
+                                logs?.Add($"response received from url {curUrl} at {result.ReceiveTime} ms.");
+
+                                switch (response.Status)
+                                {
+                                    case TcpConnectionStatus.Ok:
+                                        result.Error = null;
+                                        logs?.Add($"Successfully negotiated with {url}.");
+                                        break;
+
+                                    case TcpConnectionStatus.AuthorizationFailed:
+                                        result.Error = $"Connection to {url} failed because of authorization failure: {response.Message}";
+                                        logs?.Add(result.Error);
+                                        throw new AuthorizationException(result.Error);
+
+                                    case TcpConnectionStatus.TcpVersionMismatch:
+                                        result.Error = $"Connection to {url} failed because of mismatching tcp version: {response.Message}";
+                                        logs?.Add(result.Error);
+                                        throw new AuthorizationException(result.Error);
+                                }
+                            }
                         }
-                        using (var response = await context.ReadForMemoryAsync(stream, "cluster-ConnectToPeer-header-response"))
+                        catch (AuthorizationException e)
                         {
-                            JsonDeserializationServer.TcpConnectionHeaderResponse(response);
-                            result.ReceiveTime = sp.ElapsedMilliseconds;
+                            throw e;
                         }
+                        catch (Exception e)
+                        {
+                            result.Error = e.ToString();
+                            logs?.Add($"Error occurred while attempting to negotiate with the server. {e.Message}");
+                            throw new Exception("Error occurred while attempting to negotiate with the server.", e);
+                        }
+
+                        return null;
                     }
                 }
-            }
-            catch (Exception e)
-            {
-                result.Error = e.ToString();
             }
             return result;
         }

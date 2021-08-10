@@ -75,7 +75,8 @@ namespace Raven.Server.ServerWide.Tcp.Sync
                 [nameof(TcpConnectionHeaderMessage.Operation)] = parameters.Operation.ToString(),
                 [nameof(TcpConnectionHeaderMessage.SourceNodeTag)] = parameters.SourceNodeTag,
                 [nameof(TcpConnectionHeaderMessage.OperationVersion)] = currentVersion,
-                [nameof(TcpConnectionHeaderMessage.AuthorizeInfo)] = parameters.AuthorizeInfo?.ToJson()
+                [nameof(TcpConnectionHeaderMessage.AuthorizeInfo)] = parameters.AuthorizeInfo?.ToJson(),
+                [nameof(TcpConnectionHeaderMessage.ServerGuid)] = parameters.DestinationServerGuid
             });
             writer.Flush();
         }

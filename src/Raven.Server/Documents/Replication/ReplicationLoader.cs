@@ -1445,7 +1445,7 @@ namespace Raven.Server.Documents.Replication
                 switch (node)
                 {
                     case ExternalReplicationBase exNode:
-                        {
+                    {
                             var database = exNode.ConnectionString.Database;
                             if (node is PullReplicationAsSink sink)
                             {
@@ -1454,17 +1454,17 @@ namespace Raven.Server.Documents.Replication
 
                             // normal external replication
                             return GetExternalReplicationTcpInfo(exNode as ExternalReplication, certificate, database);
-                        }
+                    }
                     case InternalReplication internalNode:
+                    {
+                        using (var cts = CancellationTokenSource.CreateLinkedTokenSource(_shutdownToken))
                         {
-                            using (var cts = CancellationTokenSource.CreateLinkedTokenSource(_shutdownToken))
-                            {
-                                cts.CancelAfter(_server.Engine.TcpConnectionTimeout);
-                                return ReplicationUtils.GetTcpInfo(internalNode.Url, internalNode.Database, Database.DbId.ToString(), Database.ReadLastEtag(),
-                                    "Replication",
-                            certificate, cts.Token);
-                            }
+                            cts.CancelAfter(_server.Engine.TcpConnectionTimeout);
+                            return ReplicationUtils.GetTcpInfo(internalNode.Url, internalNode.Database, Database.DbId.ToString(), Database.ReadLastEtag(),
+                                "Replication",
+                        certificate, cts.Token);
                         }
+                    }
                     default:
                         throw new InvalidOperationException(
                             $"Unexpected replication node type, Expected to be '{typeof(ExternalReplication)}' or '{typeof(InternalReplication)}', but got '{node.GetType()}'");

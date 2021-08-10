@@ -9,6 +9,7 @@ namespace Raven.Client.ServerWide.Commands
         public string Certificate;
         public string[] Urls;
         public string NodeTag;
+        public string ServerGuid;
 
         public DynamicJsonValue ToJson()
         {
@@ -17,7 +18,8 @@ namespace Raven.Client.ServerWide.Commands
                 [nameof(Port)] = Port,
                 [nameof(Url)] = Url,
                 [nameof(Certificate)] = Certificate,
-                [nameof(NodeTag)] = NodeTag
+                [nameof(NodeTag)] = NodeTag,
+                [nameof(ServerGuid)] = ServerGuid
             };
             if (Urls == null)
                 return res;

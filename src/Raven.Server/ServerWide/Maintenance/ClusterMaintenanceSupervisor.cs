@@ -394,26 +394,24 @@ namespace Raven.Server.ServerWide.Maintenance
             private async Task<ClusterMaintenanceConnection> ConnectToClientNodeAsync(TcpConnectionInfo tcpConnectionInfo, TimeSpan timeout)
             {
                 TcpConnectionHeaderMessage.SupportedFeatures supportedFeatures;
+                Stream connection;
                 TcpClient tcpClient;
-                string url;
-                (tcpClient, url) = await TcpUtils.ConnectSocketAsync(tcpConnectionInfo, timeout, _log, _token);
 
-                var connection = await TcpUtils.WrapStreamWithSslAsync(tcpClient, tcpConnectionInfo, _parent._server.Server.Certificate.Certificate, _parent._server.Server.CipherSuitesPolicy, timeout, _token);
                 using (_contextPool.AllocateOperationContext(out JsonOperationContext ctx))
-                await using (var writer = new AsyncBlittableJsonTextWriter(ctx, connection))
                 {
-                    var parameters = new AsyncTcpNegotiateParameters
-                    {
-                        Database = null,
-                        Operation = TcpConnectionHeaderMessage.OperationTypes.Heartbeats,
-                        Version = TcpConnectionHeaderMessage.HeartbeatsTcpVersion,
-                        ReadResponseAndGetVersionCallbackAsync = SupervisorReadResponseAndGetVersionAsync,
-                        DestinationUrl = url,
-                        DestinationNodeTag = ClusterTag
-                    };
-                    supportedFeatures = await TcpNegotiation.NegotiateProtocolVersionAsync(ctx, connection, parameters);
+                    (tcpClient, connection, _, supportedFeatures) = await TcpUtils.ConnectSecuredTcpSocket(
+                        tcpConnectionInfo,
+                        _parent._server.Server.Certificate.Certificate,
+                        _parent._server.Server.CipherSuitesPolicy,
+                        TcpConnectionHeaderMessage.OperationTypes.Heartbeats,
+                        NegotiateProtocolVersionAsyncForClusterSupervisor,
+                        ctx,
+                        timeout, null, _token);
 
-                    await WriteClusterMaintenanceConnectionHeaderAsync(writer);
+                    await using (var writer = new AsyncBlittableJsonTextWriter(ctx, connection))
+                    {
+                        await WriteClusterMaintenanceConnectionHeaderAsync(writer);
+                    }
                 }
 
                 return new ClusterMaintenanceConnection
@@ -422,6 +420,21 @@ namespace Raven.Server.ServerWide.Maintenance
                     Stream = connection,
                     SupportedFeatures = supportedFeatures
                 };
+            }
+
+            private async Task<TcpConnectionHeaderMessage.SupportedFeatures> NegotiateProtocolVersionAsyncForClusterSupervisor(string url, TcpConnectionInfo info, Stream stream, JsonOperationContext context, List<string> _)
+            {
+                var parameters = new AsyncTcpNegotiateParameters
+                {
+                    Database = null,
+                    Operation = TcpConnectionHeaderMessage.OperationTypes.Heartbeats,
+                    Version = TcpConnectionHeaderMessage.HeartbeatsTcpVersion,
+                    ReadResponseAndGetVersionCallbackAsync = SupervisorReadResponseAndGetVersionAsync,
+                    DestinationUrl = url,
+                    DestinationNodeTag = ClusterTag,
+                    DestinationServerGuid = info.ServerGuid
+                };
+                return await TcpNegotiation.NegotiateProtocolVersionAsync(context, stream, parameters);
             }
 
             private async ValueTask<int> SupervisorReadResponseAndGetVersionAsync(JsonOperationContext ctx, AsyncBlittableJsonTextWriter writer, Stream stream, string url)

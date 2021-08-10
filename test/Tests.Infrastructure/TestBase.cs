@@ -190,7 +190,7 @@ namespace FastTests
         protected TestCertificatesHolder GenerateAndSaveSelfSignedCertificate(bool createNew = false)
         {
             if (createNew)
-                return ReturnCertificatesHolder(Generate());
+                return ReturnCertificatesHolder(Generate(Interlocked.Increment(ref _counter)));
 
             var selfSignedCertificates = _selfSignedCertificates;
             if (selfSignedCertificates != null)
@@ -210,12 +210,14 @@ namespace FastTests
                 return new TestCertificatesHolder(certificates, GetTempFileName);
             }
 
-            TestCertificatesHolder Generate()
+            TestCertificatesHolder Generate(int gen = 0)
             {
                 var log = new StringBuilder();
                 byte[] certBytes;
                 string serverCertificatePath = null;
-                serverCertificatePath = Path.Combine(Path.GetTempPath(), $"Server-{RavenVersionAttribute.Instance.Build}-{DateTime.Today:yyyy-MM-dd}.pfx");
+
+                serverCertificatePath = Path.Combine(Path.GetTempPath(), $"Server-{gen}-{RavenVersionAttribute.Instance.Build}-{DateTime.Today:yyyy-MM-dd}.pfx");
+
                 if (File.Exists(serverCertificatePath) == false)
                 {
                     try
