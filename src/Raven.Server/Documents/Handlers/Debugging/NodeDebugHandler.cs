@@ -115,19 +115,25 @@ namespace Raven.Server.Documents.Handlers.Debugging
             public long SendTime;
             public long ReceiveTime;
             public string Error;
-            public List<string> Log = new ();
+            public List<string> Log = null;
 
             public DynamicJsonValue ToJson()
             {
-                return new DynamicJsonValue
+                var djv = new DynamicJsonValue
                 {
                     [nameof(Url)] = Url,
                     [nameof(TcpInfoTime)] = TcpInfoTime,
                     [nameof(SendTime)] = SendTime,
                     [nameof(ReceiveTime)] = ReceiveTime,
-                    [nameof(Error)] = Error,
-                    [nameof(Log)] = new DynamicJsonArray(Log)
+                    [nameof(Error)] = Error
                 };
+
+                if(Log != null)
+                {
+                    djv[nameof(Log)] = new DynamicJsonArray(Log);
+                }
+
+                return djv;
             }
         }
 
@@ -146,7 +152,6 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 
                 using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
-
                     List<string> log = new();
 
                     await TcpUtils.ConnectSecuredTcpSocket(info, ServerStore.Engine.ClusterCertificate, Server.CipherSuitesPolicy,
@@ -164,7 +169,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                                 [nameof(TcpConnectionHeaderMessage.DatabaseName)] = null,
                                 [nameof(TcpConnectionHeaderMessage.Operation)] = TcpConnectionHeaderMessage.OperationTypes.Ping,
                                 [nameof(TcpConnectionHeaderMessage.OperationVersion)] = -1,
-                                [nameof(TcpConnectionHeaderMessage.ServerGuid)] = tcpInfo.ServerGuid
+                                [nameof(TcpConnectionHeaderMessage.ServerId)] = tcpInfo.ServerId
                             };
 
                             await using (var writer = new AsyncBlittableJsonTextWriter(ctx, stream))
@@ -200,15 +205,11 @@ namespace Raven.Server.Documents.Handlers.Debugging
                                 }
                             }
                         }
-                        catch (AuthorizationException e)
-                        {
-                            throw e;
-                        }
                         catch (Exception e)
                         {
                             result.Error = e.ToString();
                             logs?.Add($"Error occurred while attempting to negotiate with the server. {e.Message}");
-                            throw new Exception("Error occurred while attempting to negotiate with the server.", e);
+                            throw;
                         }
 
                         return null;

@@ -3501,7 +3501,7 @@ namespace Raven.Server.ServerWide
                 DestinationUrl = url,
                 DestinationNodeTag = tag,
                 SourceNodeTag = _parent.Tag,
-                DestinationServerGuid = info.ServerGuid
+                DestinationServerId = info.ServerId
             };
 
             return await TcpNegotiation.NegotiateProtocolVersionAsync(ctx, stream, parameters);

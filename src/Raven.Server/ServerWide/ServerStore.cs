@@ -2175,7 +2175,7 @@ namespace Raven.Server.ServerWide
             return _env.DbId;
         }
 
-        public Guid ServerGuid => GetServerId();
+        public Guid ServerId => GetServerId();
 
         public void Dispose()
         {
@@ -3178,7 +3178,7 @@ namespace Raven.Server.ServerWide
                 [nameof(TcpConnectionInfo.Url)] = tcpServerUrl,
                 [nameof(TcpConnectionInfo.Certificate)] = _server.Certificate.CertificateForClients,
                 [nameof(TcpConnectionInfo.NodeTag)] = NodeTag,
-                [nameof(TcpConnectionInfo.ServerGuid)] = ServerGuid.ToString()
+                [nameof(TcpConnectionInfo.ServerId)] = ServerId.ToString()
             };
 
             var urls = GetNodeClusterTcpServerUrls(clientRequestedNodeUrl, forExternalUse);
