@@ -1608,6 +1608,15 @@ namespace Raven.Server.ServerWide
 
         }
 
+        public byte[] GetSecretKey(string name)
+        {
+            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                return GetSecretKey(context, name);
+            }
+        }
+
         public void DeleteSecretKey(string databaseName)
         {
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))

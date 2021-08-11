@@ -1037,7 +1037,7 @@ namespace FastTests
             }
         }
 
-        private static string CreateMasterKey(out byte[] masterKey)
+        public static string CreateMasterKey(out byte[] masterKey)
         {
             var buffer = new byte[32];
             using (var rand = RandomNumberGenerator.Create())
