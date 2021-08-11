@@ -4,6 +4,7 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Server.Rachis;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -52,7 +53,10 @@ namespace Raven.Server.ServerWide.Commands.ETL
 
         public override string GetItemId()
         {
-            return EtlProcessState.GenerateItemName(DatabaseName, ConfigurationName, TransformationName);
+            var databaseName = DatabaseName;
+            ShardHelper.TryGetShardIndexAndDatabaseName(ref databaseName);
+
+            return EtlProcessState.GenerateItemName(databaseName, ConfigurationName, TransformationName);
         }
 
         private IDatabaseTask GetMatchingConfiguration(RawDatabaseRecord record)
@@ -147,7 +151,6 @@ namespace Raven.Server.ServerWide.Commands.ETL
             etlState.NodeTag = NodeTag;
             etlState.SkippedTimeSeriesDocs = SkippedTimeSeriesDocs;
             etlState.LastBatchTime = LastBatchTime;
-
 
             return context.ReadObject(etlState.ToJson(), GetItemId());
         }

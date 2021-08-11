@@ -29,6 +29,7 @@ using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.ETL.Test;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TimeSeries;
+using Raven.Server.Monitoring.Snmp.Objects.Database;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
@@ -89,10 +90,13 @@ namespace Raven.Server.Documents.ETL
 
         public static EtlProcessState GetProcessState(DocumentDatabase database, string configurationName, string transformationName)
         {
+            var databaseName = database.Name;
+            ShardHelper.TryGetShardIndexAndDatabaseName(ref databaseName);
+
             using (database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var stateBlittable = database.ServerStore.Cluster.Read(context, EtlProcessState.GenerateItemName(database.Name, configurationName, transformationName));
+                var stateBlittable = database.ServerStore.Cluster.Read(context, EtlProcessState.GenerateItemName(databaseName, configurationName, transformationName));
 
                 if (stateBlittable != null)
                 {

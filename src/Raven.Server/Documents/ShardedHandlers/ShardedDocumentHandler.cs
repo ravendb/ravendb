@@ -373,7 +373,7 @@ namespace Raven.Server.Documents.ShardedHandlers
             {
                 sb.Clear();
                 sb.Append("/docs?");
-                if(ignoreIncludes == false)
+                if (ignoreIncludes == false)
                 {
                     foreach (string includePath in includePaths)
                     {
@@ -389,7 +389,7 @@ namespace Raven.Server.Documents.ShardedHandlers
                 var matches = new List<int>();
                 foreach (var idIdx in shard.Value)
                 {
-                    sb.Append($"&id={Uri.EscapeUriString(ids[idIdx])}");
+                    sb.Append("&id=").Append(Uri.EscapeUriString(ids[idIdx]));
                     matches.Add(idIdx);
                 }
 
