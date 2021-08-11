@@ -21,7 +21,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
         {
             var count = 0;
             foreach (var database in GetLoadedDatabases())
-                count += GetCount(database);
+                count += GetCountSafely(database, GetCount);
 
             return new Integer32(count);
         }

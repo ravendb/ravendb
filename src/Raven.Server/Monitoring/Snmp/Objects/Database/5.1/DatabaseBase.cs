@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Lextm.SharpSnmpLib;
 using Raven.Client;
@@ -33,6 +34,19 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
                     continue;
 
                 yield return databaseTask.Result;
+            }
+        }
+
+        protected static int GetCountSafely(DocumentDatabase database, Func<DocumentDatabase, int> getCount)
+        {
+            try
+            {
+                return getCount(database);
+            }
+            catch
+            {
+                // e.g. database may be unloaded already
+                return 0;
             }
         }
     }
