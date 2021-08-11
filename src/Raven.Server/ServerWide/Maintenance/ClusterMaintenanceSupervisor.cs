@@ -432,7 +432,7 @@ namespace Raven.Server.ServerWide.Maintenance
                     ReadResponseAndGetVersionCallbackAsync = SupervisorReadResponseAndGetVersionAsync,
                     DestinationUrl = url,
                     DestinationNodeTag = ClusterTag,
-                    DestinationServerGuid = info.ServerGuid
+                    DestinationServerId = info.ServerId
                 };
                 return await TcpNegotiation.NegotiateProtocolVersionAsync(context, stream, parameters);
             }

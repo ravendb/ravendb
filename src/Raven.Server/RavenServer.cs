@@ -285,6 +285,8 @@ namespace Raven.Server
                 if (Logger.IsInfoEnabled)
                     Logger.Info($"Initialized Server... {WebUrl}");
 
+                _tcpListenerStatus = StartTcpListener();
+
                 try
                 {
                     ServerStore.Initialize();
@@ -295,9 +297,7 @@ namespace Raven.Server
                         Logger.Operations("Could not open the server store", e);
                     throw;
                 }
-
-                _tcpListenerStatus = StartTcpListener();
-
+                
                 ServerStore.TriggerDatabases();
 
                 StartSnmp();
@@ -1797,7 +1797,7 @@ namespace Raven.Server
                             Logger.Operations(msg, ex);
                         
                         ServerStore.NotificationCenter.Add(AlertRaised.Create(Notification.ServerWide, "Unable to start tcp listener", msg,
-                            AlertType.TcpListenerError, NotificationSeverity.Error, key: $"{ipAddress}:{port}", details: new ExceptionDetails(ex)));
+                            AlertType.TcpListenerError, NotificationSeverity.Error, key: $"tcp/listener/{ipAddress}/{port}", details: new ExceptionDetails(ex)));
                         
                         continue;
                     }
@@ -2409,10 +2409,10 @@ namespace Raven.Server
         private bool TryAuthorize(RavenConfiguration configuration, Stream stream, TcpConnectionHeaderMessage header, TcpClient tcpClient, out string msg)
         {
             msg = null;
-            if (header.ServerGuid != null && header.ServerGuid != ServerStore.ServerGuid.ToString())
+            if (header.ServerId != null && header.ServerId != ServerStore.ServerId.ToString())
             {
-                msg = $"Tried to connect to server with Id {header.ServerGuid} at {tcpClient.Client.LocalEndPoint} "+
-                      $" but instead reached a server with Id {ServerStore.ServerGuid}. Check your network configuration.";
+                msg = $"Tried to connect to server with Id {header.ServerId} at {tcpClient.Client.LocalEndPoint} "+
+                      $" but instead reached a server with Id {ServerStore.ServerId}. Check your network configuration.";
                 return false;
             }
             

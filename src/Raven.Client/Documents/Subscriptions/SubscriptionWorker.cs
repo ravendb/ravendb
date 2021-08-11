@@ -269,7 +269,7 @@ namespace Raven.Client.Documents.Subscriptions
                 ReadResponseAndGetVersionCallbackAsync = ReadServerResponseAndGetVersionAsync,
                 DestinationNodeTag = CurrentNodeTag,
                 DestinationUrl = chosenUrl,
-                DestinationServerGuid = tcpInfo.ServerGuid
+                DestinationServerId = tcpInfo.ServerId
             };
 
             return await TcpNegotiation.NegotiateProtocolVersionAsync(context, stream, parameters).ConfigureAwait(false);

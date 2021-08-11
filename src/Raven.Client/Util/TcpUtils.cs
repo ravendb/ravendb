@@ -6,9 +6,9 @@
 #define SSL_STREAM_CIPHERSUITESPOLICY_SUPPORT
 #endif
 
- using System;
+using System;
 using System.Collections.Generic;
- using System.Diagnostics;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -40,7 +40,7 @@ namespace Raven.Client.Util
             client.SendTimeout = (int)timeout.TotalMilliseconds;
             client.ReceiveTimeout = (int)timeout.TotalMilliseconds;
         }
-        internal static async Task<(TcpClient, Stream, string, TcpConnectionHeaderMessage.SupportedFeatures)> ConnectAndWrapWithSslAsReplication(
+        internal static async Task<(TcpClient Client, Stream Stream, string Url, TcpConnectionHeaderMessage.SupportedFeatures SupportedFeatures)> ConnectSecuredTcpSocketAsReplication(
             TcpConnectionInfo connection, 
             X509Certificate2 certificate,
 #if !(NETSTANDARD2_0 || NETSTANDARD2_1 || NETCOREAPP2_1)
@@ -258,7 +258,7 @@ namespace Raven.Client.Util
 
         public delegate Task<TcpConnectionHeaderMessage.SupportedFeatures> NegotiationCallback(string url, TcpConnectionInfo tcpInfo, Stream stream, JsonOperationContext context, List<string> logs = null);
 
-        internal static async Task<(TcpClient Client, Stream Stream, string ChosenUrl, TcpConnectionHeaderMessage.SupportedFeatures supportedFeatures)> ConnectSecuredTcpSocket(
+        internal static async Task<(TcpClient Client, Stream Stream, string ChosenUrl, TcpConnectionHeaderMessage.SupportedFeatures SupportedFeatures)> ConnectSecuredTcpSocket(
             TcpConnectionInfo info, 
             X509Certificate2 cert,
 #if !(NETSTANDARD2_0 || NETSTANDARD2_1 || NETCOREAPP2_1)
@@ -279,9 +279,9 @@ namespace Raven.Client.Util
             Stream stream = null;
             TcpConnectionHeaderMessage.SupportedFeatures supportedFeatures = null;
 
-            string[]  infoUrls = info.Urls == null ? new string[] {} : info.Urls.Append(info.Url).ToArray();
-
-            logs?.Add($"Received tcpInfo: {Environment.NewLine}urls: { string.Join(",", infoUrls)} {Environment.NewLine}guid:{ info.ServerGuid}");
+            string[]  infoUrls = info.Urls == null ? new string[] {info.Url} : info.Urls.Append(info.Url).ToArray();
+            
+            logs?.Add($"Received tcpInfo: {Environment.NewLine}urls: { string.Join(",", infoUrls)} {Environment.NewLine}guid:{ info.ServerId}");
             
             for (int i=0; i < infoUrls.Length; i++)
             {
@@ -293,7 +293,14 @@ namespace Raven.Client.Util
                     
                     logs?.Add($"Trying to connect to :{url}");
 
-                    tcpClient = await ConnectAsync(url, timeout).ConfigureAwait(false);
+                    tcpClient = await ConnectAsync(
+                        url, 
+                        timeout
+#if TCP_CLIENT_CANCELLATIONTOKEN_SUPPORT
+                        ,
+                        token: token
+#endif
+                        ).ConfigureAwait(false);
                     
                     stream = await TcpUtils.WrapStreamWithSslAsync(
                         tcpClient,
@@ -335,12 +342,13 @@ namespace Raven.Client.Util
                     logs?.Add($"Failed to connect to url {url}: {e.Message}");
                     if (i == infoUrls.Length - 1)
                     {
-                        throw new Exception($"Failed to connect to url {url}", e);
+                        throw;
                     }
                 }
             }
             //Should not reach here
-            throw new Exception();
+            Debug.Assert(false, "Shouldn't have reached here. This is likely a bug.");
+            throw new InvalidOperationException();
         }
     }
 }

@@ -229,7 +229,7 @@ namespace Raven.Server.Documents.Replication
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (context.GetMemoryBuffer(out _buffer))
             {
-                var task = TcpUtils.ConnectAndWrapWithSslAsReplication(_connectionInfo, certificate, _parent._server.Server.CipherSuitesPolicy,
+                var task = TcpUtils.ConnectSecuredTcpSocketAsReplication(_connectionInfo, certificate, _parent._server.Server.CipherSuitesPolicy,
                     (_, info, s, _, _) => NegotiateReplicationVersion(info, s, authorizationInfo),
                     _parent._server.Engine.TcpConnectionTimeout, _log, CancellationToken);
                 task.Wait(CancellationToken);
@@ -716,7 +716,7 @@ namespace Raven.Server.Documents.Replication
                     ReadResponseAndGetVersionCallback = ReadHeaderResponseAndThrowIfUnAuthorized,
                     Version = TcpConnectionHeaderMessage.ReplicationTcpVersion,
                     AuthorizeInfo = authorizationInfo,
-                    DestinationServerGuid = info?.ServerGuid
+                    DestinationServerId = info?.ServerId
                 };
 
                 //This will either throw or return acceptable protocol version.

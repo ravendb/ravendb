@@ -67,7 +67,7 @@ namespace Raven.Server.Web.System
             {
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, stream))
                 {
-                    await WriteOperationHeaderToRemote(writer, TcpConnectionHeaderMessage.OperationTypes.TestConnection, database, info.ServerGuid);
+                    await WriteOperationHeaderToRemote(writer, TcpConnectionHeaderMessage.OperationTypes.TestConnection, database, info.ServerId);
                     using (var responseJson = await context.ReadForMemoryAsync(stream, $"TestConnectionHandler/{url}/Read-Handshake-Response"))
                     {
                         var headerResponse = JsonDeserializationServer.TcpConnectionHeaderResponse(responseJson);
@@ -89,7 +89,7 @@ namespace Raven.Server.Web.System
                                 result.Success = false;
                                 result.Error = $"Connection to {url} failed because of mismatching tcp version: {headerResponse.Message}";
                                 logs?.Add(result.Error);
-                                await WriteOperationHeaderToRemote(writer, TcpConnectionHeaderMessage.OperationTypes.Drop, database, info.ServerGuid);
+                                await WriteOperationHeaderToRemote(writer, TcpConnectionHeaderMessage.OperationTypes.Drop, database, info.ServerId);
                                 throw new AuthorizationException(result.Error);
                         }
                     }
@@ -99,21 +99,21 @@ namespace Raven.Server.Web.System
         }
 
         private static async ValueTask WriteOperationHeaderToRemote(AsyncBlittableJsonTextWriter writer, TcpConnectionHeaderMessage.OperationTypes operation,
-            string databaseName, string destinationServerGuid)
+            string databaseName, string destinationServerId)
         {
             writer.WriteStartObject();
-            {
-                writer.WritePropertyName(nameof(TcpConnectionHeaderMessage.Operation));
-                writer.WriteString(operation.ToString());
-                writer.WriteComma();
-                writer.WritePropertyName(nameof(TcpConnectionHeaderMessage.OperationVersion));
-                writer.WriteInteger(TcpConnectionHeaderMessage.GetOperationTcpVersion(operation));
-                writer.WriteComma();
-                writer.WritePropertyName(nameof(TcpConnectionHeaderMessage.DatabaseName));
-                writer.WriteString(databaseName);
-                writer.WritePropertyName(nameof(TcpConnectionHeaderMessage.ServerGuid));
-                writer.WriteString(destinationServerGuid);
-            }
+            
+            writer.WritePropertyName(nameof(TcpConnectionHeaderMessage.Operation));
+            writer.WriteString(operation.ToString());
+            writer.WriteComma();
+            writer.WritePropertyName(nameof(TcpConnectionHeaderMessage.OperationVersion));
+            writer.WriteInteger(TcpConnectionHeaderMessage.GetOperationTcpVersion(operation));
+            writer.WriteComma();
+            writer.WritePropertyName(nameof(TcpConnectionHeaderMessage.DatabaseName));
+            writer.WriteString(databaseName);
+            writer.WritePropertyName(nameof(TcpConnectionHeaderMessage.ServerId));
+            writer.WriteString(destinationServerId);
+            
             writer.WriteEndObject();
             await writer.FlushAsync();
         }
@@ -134,9 +134,13 @@ namespace Raven.Server.Web.System
                 [nameof(Success)] = Success,
                 [nameof(HTTPSuccess)] = HTTPSuccess,
                 [nameof(TcpServerUrl)] = TcpServerUrl,
-                [nameof(Error)] = Error,
-                [nameof(Log)] = new DynamicJsonArray(Log)
+                [nameof(Error)] = Error
             };
+
+            if (Log != null)
+            {
+                djv[nameof(Log)] = new DynamicJsonArray(Log);
+            }
 
             return djv;
         }
