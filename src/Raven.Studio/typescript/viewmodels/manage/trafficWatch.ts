@@ -174,7 +174,7 @@ class trafficWatch extends viewModelBase {
         awesomeMultiselect.rebuild($("#visibleTypesSelectorTcp"));
     }
 
-    private refresh() {
+    private refresh(): void {
         this.gridController().reset(false);
     }
 
@@ -310,7 +310,7 @@ class trafficWatch extends viewModelBase {
         this.stats.percentile_99_9(generalUtils.formatTimeSpan(timings[Math.ceil(99.9 / 100 * timings.length) - 1]));
     }
 
-    private formatSource(item: Raven.Client.Documents.Changes.TrafficWatchChangeBase, asHtml: boolean) {
+    private formatSource(item: Raven.Client.Documents.Changes.TrafficWatchChangeBase, asHtml: boolean): string {
         const thumbprint = item.CertificateThumbprint;
         const cert = thumbprint ? this.certificatesCache.get(thumbprint) : null;
         const certName = cert?.name;
@@ -348,7 +348,7 @@ class trafficWatch extends viewModelBase {
         }
     }
 
-    private static formatDetails(item: Raven.Client.Documents.Changes.TrafficWatchChangeBase) {
+    private static formatDetails(item: Raven.Client.Documents.Changes.TrafficWatchChangeBase): string {
         if (trafficWatch.isHttpItem(item)) {
             return item.RequestUri;
         }
@@ -461,7 +461,7 @@ class trafficWatch extends viewModelBase {
                     onValue(moment.utc(item.TimeStamp), item.TimeStamp);
                 } else if (column.header === "Custom Info") {
                     onValue(generalUtils.escapeHtml(item.CustomInfo), item.CustomInfo);
-                } else if (column.header === "Src") {
+                } else if (column.header === "Source") {
                     onValue(this.formatSource(item, true), this.formatSource(item, false), false);
                 }
             });
