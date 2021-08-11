@@ -420,6 +420,14 @@ namespace Raven.Server.Monitoring.Snmp
             store.Add(new DatabaseEncryptedCount(server.ServerStore));
             store.Add(new DatabaseNodeCount(server.ServerStore));
 
+            store.Add(new TotalDatabaseNumberOfIndexes(server.ServerStore));
+            store.Add(new TotalDatabaseCountOfStaleIndexes(server.ServerStore));
+            store.Add(new TotalDatabaseNumberOfErrorIndexes(server.ServerStore));
+
+            store.Add(new TotalDatabaseMapIndexIndexedPerSecond(server.ServerStore));
+            store.Add(new TotalDatabaseMapReduceIndexMappedPerSecond(server.ServerStore));
+            store.Add(new TotalDatabaseMapReduceIndexReducedPerSecond(server.ServerStore));
+
             store.Add(new ClusterNodeState(server.ServerStore));
             store.Add(new ClusterNodeTag(server.ServerStore));
 
