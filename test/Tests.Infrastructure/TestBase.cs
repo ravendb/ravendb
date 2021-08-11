@@ -9,6 +9,7 @@ using System.Runtime.Loader;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
@@ -24,6 +25,7 @@ using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.Documents.PeriodicBackup;
+using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -97,6 +99,8 @@ namespace FastTests
             Lucene.Net.Util.UnmanagedStringArray.Segment.FreeMemory = NativeMemory.Free;
 
             BackupTask.DateTimeFormat = "yyyy-MM-dd-HH-mm-ss-fffffff";
+            RestorePointsBase.BackupFolderRegex = new Regex(@"([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{2}-[0-9]{2}(-[0-9]{2}-[0-9]{7})?).ravendb-(.+)-([A-Za-z]+)-(.+)$", RegexOptions.Compiled);
+
 #if DEBUG2
             TaskScheduler.UnobservedTaskException += (sender, args) =>
             {
