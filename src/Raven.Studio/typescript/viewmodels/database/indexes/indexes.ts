@@ -293,17 +293,21 @@ class indexes extends viewModelBase {
             const indexElement = document.getElementById(indexId);
             generalUtils.scrollToElement(indexElement);
             
-            this.highlightIndex(indexToHighlight);
+            this.highlightIndexElement(indexElement);
         }
     }
     
     private highlightIndex(indexName: string, highlight: boolean = true): void {
         const indexId = "index_" + indexName;
-        
+        const indexElement = document.getElementById(indexId);
+        this.highlightIndexElement(indexElement, highlight);
+    }
+
+    private highlightIndexElement(indexElement: HTMLElement, highlight: boolean = true): void {
         if (highlight) {
-            $("#" + indexId).addClass("blink-style-basic");
+            indexElement.classList.add("blink-style-basic");
         } else {
-            $("#" + indexId).removeClass("blink-style-basic");
+            indexElement.classList.remove("blink-style-basic");
         }
     }
     
