@@ -103,7 +103,7 @@ class ongoingTaskRavenEtlEditModel extends ongoingTaskEditModel {
             Name: this.taskName(),
             ConnectionStringName: this.connectionStringName(),
             AllowEtlOnNonEncryptedChannel: this.allowEtlOnNonEncryptedChannel(),
-            Disabled: false,
+            Disabled: this.taskState() === "Disabled",
             Transforms: this.transformationScripts().map(x => x.toDto()),
             EtlType: "Raven",
             MentorNode: this.manualChooseMentor() ? this.mentorNode() : undefined,

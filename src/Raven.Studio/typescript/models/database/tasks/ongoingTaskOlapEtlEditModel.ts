@@ -116,7 +116,7 @@ class ongoingTaskOlapEtlEditModel extends ongoingTaskEditModel {
             EtlType: "Olap",
             ConnectionStringName: this.connectionStringName(),
             AllowEtlOnNonEncryptedChannel: true,
-            Disabled: false,
+            Disabled: this.taskState() === "Disabled",
             MentorNode: this.manualChooseMentor() ? this.mentorNode() : undefined,
             Transforms: this.transformationScripts().map(x => x.toDto()),
             CustomPartitionValue: this.customPartitionEnabled() ? this.customPartition() : null,
