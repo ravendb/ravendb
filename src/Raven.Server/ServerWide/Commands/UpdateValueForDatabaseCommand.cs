@@ -1,5 +1,4 @@
-﻿using Raven.Client;
-using Raven.Client.ServerWide;
+﻿using Raven.Client.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -11,6 +10,7 @@ namespace Raven.Server.ServerWide.Commands
     public abstract class UpdateValueForDatabaseCommand : CommandBase
     {
         public string DatabaseName { get; set; }
+
         public abstract string GetItemId();
 
         public abstract void FillJson(DynamicJsonValue json);

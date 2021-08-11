@@ -692,12 +692,15 @@ namespace Raven.Server.Documents.ETL
 
         public void HandleDatabaseValueChanged(DatabaseRecord record)
         {
+            var dbName = record.DatabaseName;
+            ShardHelper.TryGetShardIndexAndDatabaseName(ref dbName);
+
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
                 foreach (var process in _processes)
                 {
-                    var state = _serverStore.Cluster.Read(context, EtlProcessState.GenerateItemName(record.DatabaseName, process.ConfigurationName, process.TransformationName));
+                    var state = _serverStore.Cluster.Read(context, EtlProcessState.GenerateItemName(dbName, process.ConfigurationName, process.TransformationName));
 
                     if (state == null)
                     {
