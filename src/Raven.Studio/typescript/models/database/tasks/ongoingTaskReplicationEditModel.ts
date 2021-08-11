@@ -49,7 +49,7 @@ class ongoingTaskReplicationEditModel extends ongoingTaskEditModel {
             TaskId: taskId,
             DelayReplicationFor: this.showDelayReplication() ? generalUtils.formatAsTimeSpan(this.delayReplicationTime() * 1000) : null,
             Url: undefined,
-            Disabled: false,
+            Disabled: this.taskState() === "Disabled",
             Database: undefined
         };
     }
