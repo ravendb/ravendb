@@ -1608,12 +1608,12 @@ namespace Raven.Server.ServerWide
 
         }
 
-        public byte[] GetSecretKey(string name)
+        public byte[] GetSecretKey(string databaseName)
         {
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                return GetSecretKey(context, name);
+                return GetSecretKey(context, databaseName);
             }
         }
 
