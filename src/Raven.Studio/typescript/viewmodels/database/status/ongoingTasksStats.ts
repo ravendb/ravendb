@@ -1838,6 +1838,7 @@ class ongoingTasksStats extends viewModelBase {
                         tooltipHtml += `<div class="tooltip-li">Network input count: <div class="value">${elementWithData.Network.InputCount.toLocaleString()} </div></div>`;
                         tooltipHtml += `<div class="tooltip-li">Documents read count: <div class="value">${elementWithData.Network.DocumentReadCount.toLocaleString()} </div></div>`;
                         tooltipHtml += `<div class="tooltip-li">Attachments read count: <div class="value">${elementWithData.Network.AttachmentReadCount.toLocaleString()} </div></div>`;
+                        tooltipHtml += `Counters read count: ${elementWithData.Network.CounterReadCount}<br/>`;
                     }
                         break;
                     case "OutgoingPush":
@@ -1846,8 +1847,8 @@ class ongoingTasksStats extends viewModelBase {
                         tooltipHtml += `<div class="tooltip-li">Sent last Etag: <div class="value">${elementWithData.SendLastEtag}</div></div>`;
                         tooltipHtml += `<div class="tooltip-li">Storage input count: <div class="value">${elementWithData.Storage.InputCount.toLocaleString()}</div></div>`;
                         tooltipHtml += `<div class="tooltip-li">Documents output count: <div class="value">${elementWithData.Network.DocumentOutputCount.toLocaleString()}</div></div>`;
-                        tooltipHtml += `<div class="tooltip-li">Attachments read count: <div class="value">${elementWithData.Network.AttachmentOutputCount.toLocaleString()}</div></div>`;
-                    }
+                        tooltipHtml += `<div class="tooltip-li">Attachments output count: <div class="value">${elementWithData.Network.AttachmentOutputCount.toLocaleString()}</div></div>`;
+                        tooltipHtml += `<div class="tooltip-li">Counters output count: <div class="value">${elementWithData.Network.CounterOutputCount.toLocaleString()}</div></div>`;                    }
                         break;
                     case "Raven":
                     case "Sql":
