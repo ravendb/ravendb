@@ -3,10 +3,10 @@
         <a target="_blank" href="#" title="Show raw output" data-bind="attr: { href: rawJsonUrl }"><i class="icon-link"></i></a>
     </h2>
     <hr />
-    <div id="storage-report" title="Base path for database data files">
+    <div id="storage-report">
         <div class="base-path">
             <i class="icon-folder"></i>
-            <span class="small" data-bind="text: dataLocation"></span>
+            <span class="small" data-bind="text: dataLocation" title="Base path for database data files"></span>
         </div>
     </div>
     <div class="stats-list panel" data-bind="with: stats">
@@ -123,6 +123,16 @@
                 </div>
             </div>
         </div>
+        <div class="row">
+            <div class="col-sm-6 col-lg-4 col-xl-3">
+                <div class="stats-item">
+                    <div class="name"><i class="icon-timeseries-settings"></i><span>Time Series Segments Count</span>
+                        <span class="margin-left margin-left-sm js-timeseries-segments has-info-icon"><i class="icon-info text-info"></i></span>
+                    </div>
+                    <div class="value"><span data-bind="text: countOfTimeSeriesSegments"></span></div>
+                </div>
+            </div>
+        </div>
     </div>
     <h2 class="on-base-background margin-top margin-top-lg">Indexes Stats</h2>
     <hr />
@@ -210,7 +220,7 @@
     <div class="identities">
         <div class="flex-horizontal">
             <h2 class="flex-end on-base-background">Identities</h2>
-            <small class="js-identities-header identities-header flex-end"><i class="icon-info text-info"></i></small>
+            <small class="js-identities-header identities-header has-info-icon flex-end"><i class="icon-info text-info"></i></small>
         </div>
         <div class="row" data-bind="visible: identities().length === 0">
             <div class="col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3">
