@@ -81,7 +81,7 @@ class taskNode extends layoutable {
 
     updateWith(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTask, responsibleNode: databaseNode) {
         this.type = dto.TaskType;
-        this.uniqueId = databaseGroupGraph.getUniqueTaskId(dto);
+        this.uniqueId = databaseGroupGraph.getTaskId(dto);
         this.taskId = dto.TaskId;
         this.state = dto.TaskState;
         this.name = dto.TaskName;
@@ -687,23 +687,21 @@ class databaseGroupGraph {
         });
     }
     
-    static getUniqueTaskId(task: Raven.Client.Documents.Operations.OngoingTasks.OngoingTask): string {
-        if (task.TaskType === "PullReplicationAsHub") {
-            const hubTask = task as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskPullReplicationAsHub;
-            // since hub is generic definition we need to differentiate between instances
-            return hubTask.TaskId + ":" + hubTask.DestinationDatabase + "@" + hubTask.DestinationUrl;
-        }
-        
+    static getTaskId(task: Raven.Client.Documents.Operations.OngoingTasks.OngoingTask): string {
         return task.TaskId.toString();
     }
-
+    
     private updateTasks() {
-        const newTasksIds = this.ongoingTasksCache.OngoingTasksList.map(x => databaseGroupGraph.getUniqueTaskId(x));
-        
+        const newTasksIds = this.ongoingTasksCache.OngoingTasksList.map(x => databaseGroupGraph.getTaskId(x));
+
         this.ongoingTasksCache.OngoingTasksList.forEach(taskDto => {
             const responsibleNode = taskDto.ResponsibleNode ? this.data.databaseNodes.find(x => x.tag === taskDto.ResponsibleNode.NodeTag) : null;
-            
-            const taskUniqueId = databaseGroupGraph.getUniqueTaskId(taskDto);
+
+            const taskUniqueId = databaseGroupGraph.getTaskId(taskDto);
+
+            if (taskDto.TaskType === "PullReplicationAsHub") {
+                taskDto.TaskName = this.getHubName(taskDto.TaskId);
+            }
             
             const existing = this.data.tasks.find(x => x.uniqueId === taskUniqueId);
             if (existing) {
@@ -715,6 +713,11 @@ class databaseGroupGraph {
 
         const tasksToDelete = this.data.tasks.filter(x => !_.includes(newTasksIds, x.uniqueId));
         _.pullAll(this.data.tasks, tasksToDelete);
+    }
+    
+    getHubName(taskId: number): string {
+        const hubTask = this.ongoingTasksCache.PullReplications.find(x => x.TaskId === taskId);
+        return hubTask.Name;
     }
      
     onResize() {
@@ -766,7 +769,6 @@ class databaseGroupGraph {
         
         return result.join(",");
     }
-
 }
 
 export = databaseGroupGraph;
