@@ -235,6 +235,7 @@ namespace Raven.Server.Utils
 
         private static object ToBlittableSupportedType(object root, object value, bool flattenArrays, bool forIndexing, int recursiveLevel, Engine engine, JsonOperationContext context)
         {
+            RuntimeHelpers.EnsureSufficientExecutionStack();
             if (recursiveLevel > MaxAllowedRecursiveLevelForType)
                 NestingLevelTooDeep(root);
 
@@ -423,6 +424,8 @@ namespace Raven.Server.Utils
 
         private static DynamicJsonArray EnumerableToJsonArray(IEnumerable propertyEnumerable, object root, bool flattenArrays, bool forIndexing, int recursiveLevel, Engine engine, JsonOperationContext context)
         {
+            RuntimeHelpers.EnsureSufficientExecutionStack();
+            
             var dja = new DynamicJsonArray();
 
             foreach (var x in propertyEnumerable)
@@ -443,6 +446,7 @@ namespace Raven.Server.Utils
 
         internal static IEnumerable<object> Flatten(IEnumerable items)
         {
+            RuntimeHelpers.EnsureSufficientExecutionStack();
             foreach (var item in items)
             {
                 if (item is IEnumerable enumerable && ShouldTreatAsEnumerable(enumerable))
