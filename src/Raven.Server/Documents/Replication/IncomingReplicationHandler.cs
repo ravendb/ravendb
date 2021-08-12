@@ -898,9 +898,9 @@ namespace Raven.Server.Documents.Replication
 
                     item.CounterValues = new BlittableJsonReaderObject(mem, sizeOfData, context);
                     item.CounterValues.BlittableValidation();
-                    
-                    item.CounterValues.TryGet(CountersStorage.Values, out BlittableJsonReaderObject counters);
-                    stats.RecordCountersRead(counters.Count); 
+
+                    if (item.CounterValues.TryGet(CountersStorage.Values, out BlittableJsonReaderObject counters) && counters != null)
+                        stats.RecordCountersRead(counters.Count);
                 }
                 else if (item.Type == ReplicationBatchItem.ReplicationItemType.LegacyCounter ||
 #pragma warning disable 618
