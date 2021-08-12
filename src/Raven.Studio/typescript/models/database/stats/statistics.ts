@@ -18,6 +18,7 @@ class statistics {
     countOfCompareExchange: string;
     countOfRevisions: string;
     countOfCounters: string;
+    countOfTimeSeriesSegments:string;
     is64Bit: boolean;
     indexPerformanceURL: string;
     dataSizeOnDisk: string;
@@ -43,6 +44,7 @@ class statistics {
         this.countOfCompareExchange = dbStats.CountOfCompareExchange.toLocaleString();
         this.countOfRevisions =  dbStats.CountOfRevisionDocuments ? dbStats.CountOfRevisionDocuments.toLocaleString() : "0";
         this.countOfCounters = dbStats.CountOfCounterEntries.toLocaleString();
+        this.countOfTimeSeriesSegments = dbStats.CountOfTimeSeriesSegments.toLocaleString();
         this.is64Bit = dbStats.Is64Bit;
         this.dataSizeOnDisk = generalUtils.formatBytesToSize(dbStats.SizeOnDisk.SizeInBytes);
         this.tempBuffersSizeOnDisk = generalUtils.formatBytesToSize(dbStats.TempBuffersSizeOnDisk.SizeInBytes);
