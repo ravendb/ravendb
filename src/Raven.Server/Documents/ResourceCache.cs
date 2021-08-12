@@ -179,6 +179,17 @@ namespace Raven.Server.Documents
                     TryRemove(databaseName, out _);
                 });
             }
+
+            if (current.IsFaulted && current.Exception?.Data.Contains(DatabasesLandlord.DoNotRemove) == false)
+            {
+                // some real exception occurred, but we still want to remove / unload the faulty database
+                resource = default; 
+                return new DisposableAction(() =>
+                {
+                    TryRemove(databaseName, out _);
+                });
+            }
+
             current.Wait();// will throw immediately because the task failed
             resource = default(TResource);
             Debug.Assert(false, "Should never reach this place");
