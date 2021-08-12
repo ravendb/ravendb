@@ -1607,7 +1607,6 @@ namespace Raven.Server.Json
         public static void WriteCounters(this AbstractBlittableJsonTextWriter writer, Dictionary<string, List<CounterDetail>> counters)
         {
             writer.WriteStartObject();
-            long totalDocumentsSizeInBytes = 0;
 
             var first = true;
             foreach (var kvp in counters)
