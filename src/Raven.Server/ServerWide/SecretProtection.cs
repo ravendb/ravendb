@@ -756,14 +756,10 @@ namespace Raven.Server.ServerWide
 
         internal static void ValidatePrivateKey(string source, string certificatePassword, byte[] rawData, out AsymmetricKeyEntry pk)
         {
-            // Using a partial copy of the Pkcs12Store class
-            // Workaround for https://github.com/dotnet/corefx/issues/30946
-            var store = new PkcsStoreWorkaroundFor30946();
-            store.Load(new MemoryStream(rawData), certificatePassword?.ToCharArray() ?? Array.Empty<char>());
             pk = null;
-            foreach (string alias in store.Aliases)
+            foreach (string alias in GetAliases(certificatePassword, rawData, out var getKey))
             {
-                pk = store.GetKey(alias);
+                pk = getKey(alias);
                 if (pk != null)
                     break;
             }
@@ -774,6 +770,38 @@ namespace Raven.Server.ServerWide
                 if (Logger.IsOperationsEnabled)
                     Logger.Operations(msg);
                 throw new EncryptionException(msg);
+            }
+
+            static IEnumerable GetAliases(string certificatePassword, byte[] rawData, out Func<string, AsymmetricKeyEntry> getKey)
+            {
+                try
+                {
+                    var store = new Pkcs12Store();
+                    store.Load(new MemoryStream(rawData), certificatePassword?.ToCharArray() ?? Array.Empty<char>());
+
+                    getKey = store.GetKey;
+                    return store.Aliases;
+                }
+                catch (Exception)
+                {
+                    try
+                    {
+                        // Using a partial copy of the Pkcs12Store class
+                        // Workaround for https://github.com/dotnet/corefx/issues/30946
+
+                        var store = new PkcsStoreWorkaroundFor30946();
+                        store.Load(new MemoryStream(rawData), certificatePassword?.ToCharArray() ?? Array.Empty<char>());
+
+                        getKey = store.GetKey;
+                        return store.Aliases;
+                    }
+                    catch
+                    {
+                        // ignore - we prefer the original exception
+                    }
+
+                    throw;
+                }
             }
         }
 
@@ -806,10 +834,10 @@ namespace Raven.Server.ServerWide
                     }
                 }
 
-              
+
             }
 
-            if (clientCert  == false ||  serverCert == false || keyUsages == false)
+            if (clientCert == false || serverCert == false || keyUsages == false)
             {
                 var msg = "Server certificate " + loadedCertificate.FriendlyName + "from " + source +
                           " must be defined with the 'Key Usages' 'DigitalSignature' and 'KeyEncipherment' as well as  'Enhanced Key Usages': Client Authentication (Oid 1.3.6.1.5.5.7.3.2) & Server Authentication (Oid 1.3.6.1.5.5.7.3.1)";
