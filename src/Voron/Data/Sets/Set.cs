@@ -192,7 +192,7 @@ namespace Voron.Data.Sets
                 if (leafPage.IsValidValue(last) == false)
                 {
                     // must still fit in the page
-                    last = leafPage.Header.Baseline + int.MaxValue;
+                    last = leafPage.Header->Baseline + int.MaxValue;
                     if (values[index] > last)
                     {
                         // add a single item, forcing new page creation
@@ -266,12 +266,12 @@ namespace Voron.Data.Sets
 
             if (leafPage.IsValidValue(value) == false) 
             {
-                if (leafPage.Header.NumberOfCompressedPositions == 0 &&
-                    leafPage.Header.NumberOfRawValues == 0)
+                if (leafPage.Header->NumberOfCompressedPositions == 0 &&
+                    leafPage.Header->NumberOfRawValues == 0)
                 {
                     // never had a write, the baseline is wrong, can update 
                     // this and move on
-                    leafPage.Header.Baseline = value & ~int.MaxValue;
+                    leafPage.Header->Baseline = value & ~int.MaxValue;
                     if(leafPage.Add(_llt, value) == false)
                         throw new InvalidOperationException("Adding value to empty page failed?!");
                     return;
@@ -546,44 +546,58 @@ namespace Voron.Data.Sets
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public bool MoveNext()
-            {
+            {                
                 if (_it.MoveNext(out Current))
                     return true;
 
-                if (_parent._pos == 0)
+                var parent = _parent;
+
+                if (parent._pos == 0)
                     return false;
 
-                _parent.PopPage();
+                parent.PopPage();
+                
+                var llt = parent._llt;
+
+                var it = _it;
+                bool result = false;
                 while (true)
                 {
-                    ref var state = ref _parent._stk[_parent._pos];
+                    ref var state = ref parent._stk[_parent._pos];
                     state.LastSearchPosition++;
                     Debug.Assert(state.IsLeaf == false);
                     if (state.LastSearchPosition >= state.BranchHeader->NumberOfEntries)
                     {
-                        if (_parent._pos == 0)
-                            return false;
-                        _parent.PopPage();
+                        if (parent._pos == 0)
+                            break;
+
+                        parent.PopPage();
                         continue;
                     }
 
                     var branch = new SetBranchPage(state.Page);
                     (_, long pageNum) = branch.GetByIndex(state.LastSearchPosition);
-                    var page = _parent._llt.GetPage(pageNum);
+                    var page = llt.GetPage(pageNum);
                     var header = (SetLeafPageHeader*)page.Pointer;
 
-                    _parent.PushPage(pageNum);
+                    parent.PushPage(pageNum);
 
                     if (header->SetFlags == ExtendedPageType.SetBranch)
                     {
                         // we'll increment on the next
-                        _parent._stk[_parent._pos].LastSearchPosition = -1;
+                        parent._stk[parent._pos].LastSearchPosition = -1;
                         continue;
                     }
-                    _it = new SetLeafPage(page).GetIterator(_parent._llt);
-                    if (_it.MoveNext(out Current))
-                        return true;
+                    it = new SetLeafPage(page).GetIterator(llt);
+                    if (it.MoveNext(out Current))
+                    {
+                        result = true;
+                        break;
+                    }
                 }
+
+                _it = it;
+                return result;
             }
 
             public void Reset()

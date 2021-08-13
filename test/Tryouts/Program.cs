@@ -134,7 +134,6 @@ namespace Tryouts
             var iterator = reader.ReadMany(1);
             while (iterator.ReadNext())
             {
-                sequenceValue = iterator.Sequence;
             }
         }
 
@@ -155,14 +154,23 @@ namespace Tryouts
             using var searcher = new IndexSearcher(env);
             var coraxQueryEvaluator = new CoraxQueryEvaluator(searcher);
 
-            var typeTerm = searcher.TermQuery("Type", "Dog");
-            var ageTerm = searcher.StartWithQuery("Age", "1");
-            var andQuery = searcher.And(typeTerm, ageTerm);
-            var query = searcher.OrderBy(andQuery, field: 2, take: 16);
+            var watch = Stopwatch.StartNew();
 
             Span<long> ids = stackalloc long[2048];
-            while (query.Fill(ids) != 0)
-                ;
+            for ( int i = 0; i < 1000; i++)
+            {
+                var typeTerm = searcher.TermQuery("Type", "Dog");
+                var ageTerm = searcher.StartWithQuery("Age", "1");
+                var andQuery = searcher.And(typeTerm, ageTerm);
+                var query = searcher.OrderByAscending(andQuery, fieldId: 2, take: 16);
+
+                while (query.Fill(ids) != 0)
+                    ;
+            }
+
+            watch.Stop();
+            Console.WriteLine($"Cost: {watch.ElapsedMilliseconds} ms.");
+            Console.WriteLine($"Cost Per Search: {watch.ElapsedMilliseconds / 1000} ms.");
 
 
             //var query = searcher.Search(queryDefinition.Query.Where);
@@ -280,7 +288,7 @@ namespace Tryouts
                     writer.Index("dogs/phoebe", entry, fields);
                 }
 
-                for (int i = 0; i < 10_000; i++)
+                for (int i = 0; i < 100_000; i++)
                 {
                     var entryWriter = new IndexEntryWriter(buffer, fields);
                     entryWriter.Write(0, Encoding.UTF8.GetBytes("Dog #" + i));

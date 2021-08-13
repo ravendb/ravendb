@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
-
+using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 
 namespace Corax.Queries
 {
@@ -52,6 +53,7 @@ namespace Corax.Queries
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static BinaryMatch<TInner, TOuter> YieldAnd(in TInner inner, in TOuter outer)
         {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             static int FillFunc(ref BinaryMatch<TInner, TOuter> match, Span<long> matches)
             {
                 ref var inner = ref match._inner;
@@ -69,6 +71,7 @@ namespace Corax.Queries
                 }
             }
 
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             static int AndWith(ref BinaryMatch<TInner, TOuter> match, Span<long> matches)
             {
                 ref var inner = ref match._inner;
@@ -98,7 +101,12 @@ namespace Corax.Queries
                 Span<long> orMatches = stackalloc long[matches.Length];
                 var count = FillFunc(ref match, orMatches);
 
-                return MergeHelper.And(matches, matches, orMatches.Slice(0, count));
+                var matchesPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(matches));                
+                int matchesSize = matches.Length;
+
+                var orMatchesPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(orMatches));
+
+                return MergeHelper.And(matchesPtr, matchesSize, matchesPtr, matchesSize, orMatchesPtr, count);
             }
 
             [SkipLocalsInit]
@@ -114,42 +122,48 @@ namespace Corax.Queries
                 var innerCount = inner.Fill(innerMatches);
                 var outerCount = outer.Fill(outerMatches);
 
+                long* innerMatchesPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(innerMatches));
+                long* outerMatchesPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(outerMatches));
+                long* matchesPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(matches));
+
                 if (innerCount == 0)
-                {
-                    outerMatches.Slice(0, outerCount).CopyTo(matches);
+{
+                    Unsafe.CopyBlockUnaligned(ref Unsafe.AsRef<byte>(matchesPtr), ref Unsafe.AsRef<byte>(outerMatchesPtr), (uint)outerCount * sizeof(long));
+                    //outerMatches.Slice(0, outerCount).CopyTo(matches);
                     return outerCount;
                 }
                 if (outerCount == 0)
                 {
-                    innerMatches.Slice(0, innerCount).CopyTo(matches);
+                    Unsafe.CopyBlockUnaligned(ref Unsafe.AsRef<byte>(matchesPtr), ref Unsafe.AsRef<byte>(innerMatchesPtr), (uint)innerCount * sizeof(long));
+                    //innerMatches.Slice(0, innerCount).CopyTo(matches);
                     return innerCount;
                 }
 
                 int innerIdx = 0, outerIdx = 0, matchesIdx = 0;
                 while (innerIdx < innerCount && outerIdx < outerCount)
                 {
-                    if (innerMatches[innerIdx] == outerMatches[outerIdx])
+                    if (innerMatchesPtr[innerIdx] == outerMatchesPtr[outerIdx])
                     {
-                        matches[matchesIdx++] = innerMatches[innerIdx++];
+                        matchesPtr[matchesIdx++] = innerMatches[innerIdx++];
                         outerIdx++;
                     }
-                    else if (innerMatches[innerIdx] < outerMatches[outerIdx])
+                    else if (innerMatchesPtr[innerIdx] < outerMatchesPtr[outerIdx])
                     {
-                        matches[matchesIdx++] = innerMatches[innerIdx++];
+                        matchesPtr[matchesIdx++] = innerMatchesPtr[innerIdx++];
                     }
                     else
                     {
-                        matches[matchesIdx++] = outerMatches[outerIdx++];
+                        matchesPtr[matchesIdx++] = outerMatchesPtr[outerIdx++];
                     }
                 }
 
                 while (innerIdx < innerCount)
                 {
-                    matches[matchesIdx++] = innerMatches[innerIdx++];
+                    matchesPtr[matchesIdx++] = innerMatchesPtr[innerIdx++];
                 }
                 while (outerIdx < outerCount)
                 {
-                    matches[matchesIdx++] = outerMatches[outerIdx++];
+                    matchesPtr[matchesIdx++] = outerMatchesPtr[outerIdx++];
                 }
                 return matchesIdx;
             }

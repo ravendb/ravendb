@@ -389,12 +389,12 @@ namespace Voron.Debugging
                 //sw.WriteLine(
                 //    string.Format("<ul><li><input type='checkbox' id='page-{0}-details'/><label for='page-{0}-details'>Compression details</label><ul>",
                 //        page.PageNumber));
-                for (int i = 0; i < leaf.Header.NumberOfCompressedPositions; i++)
+                for (int i = 0; i < leaf.Header->NumberOfCompressedPositions; i++)
                 {
                     var entry = leaf.Positions[i];
                     sw.Write($"<li>Compressed with {entry.Length:#,#;;0} bytes</li>");
                 }
-                sw.Write($"<li>Raw with {leaf.Header.NumberOfRawValues:#,#;;0} values</li>");
+                sw.Write($"<li>Raw with {leaf.Header->NumberOfRawValues:#,#;;0} values</li>");
                 var range = leaf.GetRange();
                 sw.WriteLine($"<li>Range {range.First} ... {range.Last}</li>");
 

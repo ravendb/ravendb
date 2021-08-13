@@ -54,6 +54,7 @@ namespace Corax.Queries
 
         public static TermMatch YieldOnce(long value)
         {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             static int FillFunc(ref TermMatch term, Span<long> matches)
             {
                 if (term._currentIdx == QueryMatch.Start)
@@ -67,6 +68,7 @@ namespace Corax.Queries
                 return 0;
             }
 
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             static int AndWithFunc(ref TermMatch term, Span<long> matches)
             {
                 // TODO: If matches is too big, we should use quicksort
@@ -175,10 +177,12 @@ namespace Corax.Queries
             {
                 int matchedIdx = 0;
 
-                term._set.MaybeSeek(matches[0] - 1);
+                var it = term._set;
+
+                it.MaybeSeek(matches[0] - 1);
 
                 // We update the current value we want to work with.
-                var current = term._set.Current;
+                var current = it.Current;
 
                 // Check if there are matches left to process or is any posibility of a match to be available in this block.
                 int i = 0;                
@@ -203,13 +207,14 @@ namespace Corax.Queries
                     }
 
                     // We look into the next.
-                    if (term._set.MoveNext() == false)
+                    if (it.MoveNext() == false)
                         goto End;
 
-                    current = term._set.Current;                    
+                    current = it.Current;                    
                 }
 
-                End:
+            End:
+                term._set = it;
                 term._current = current;
                 return matchedIdx;
             }
@@ -219,10 +224,12 @@ namespace Corax.Queries
             static int FillFunc(ref TermMatch term, Span<long> matches)
             {
                 int i = 0;
-                while (i < matches.Length && term._set.MoveNext())
+                var set = term._set;
+                while (i < matches.Length && set.MoveNext())
                 {
-                    matches[i++] = term._set.Current;
+                    matches[i++] = set.Current;
                 }
+                term._set = set;
                 return i;
             }
 
