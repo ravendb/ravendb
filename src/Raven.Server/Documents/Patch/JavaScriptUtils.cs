@@ -51,91 +51,109 @@ namespace Raven.Server.Documents.Patch
 
         internal InternalHandle GetMetadata(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
-            if (args.Length != 1 || !(args[0].BoundObject is BlittableObjectInstance boi))
-                throw new InvalidOperationException("metadataFor(doc) must be called with a single entity argument");
+            try {
+                if (args.Length != 1 || !(args[0].BoundObject is BlittableObjectInstance boi))
+                    throw new InvalidOperationException("metadataFor(doc) must be called with a single entity argument");
 
-            if (!(boi.Blittable[Constants.Documents.Metadata.Key] is BlittableJsonReaderObject metadata))
-                return engine.CreateNullValue();
-            metadata.Modifications = new DynamicJsonValue
-            {
-                [Constants.Documents.Metadata.ChangeVector] = boi.ChangeVector,
-                [Constants.Documents.Metadata.Id] = boi.DocumentId,
-                [Constants.Documents.Metadata.LastModified] = boi.LastModified,
-            };
+                if (!(boi.Blittable[Constants.Documents.Metadata.Key] is BlittableJsonReaderObject metadata))
+                    return engine.CreateNullValue();
+                metadata.Modifications = new DynamicJsonValue
+                {
+                    [Constants.Documents.Metadata.ChangeVector] = boi.ChangeVector,
+                    [Constants.Documents.Metadata.Id] = boi.DocumentId,
+                    [Constants.Documents.Metadata.LastModified] = boi.LastModified,
+                };
 
-            if (boi.IndexScore != null)
-                metadata.Modifications[Constants.Documents.Metadata.IndexScore] = boi.IndexScore.Value;
+                if (boi.IndexScore != null)
+                    metadata.Modifications[Constants.Documents.Metadata.IndexScore] = boi.IndexScore.Value;
 
-            if (boi.Distance != null)
-                metadata.Modifications[Constants.Documents.Metadata.SpatialResult] = boi.Distance.Value.ToJson();
+                if (boi.Distance != null)
+                    metadata.Modifications[Constants.Documents.Metadata.SpatialResult] = boi.Distance.Value.ToJson();
 
-            using (var old = metadata)
-            {
-                metadata = Context.ReadObject(metadata, boi.DocumentId);
-                InternalHandle metadataJs = TranslateToJs(Context, metadata);
-                if (metadataJs.IsError)
+                using (var old = metadata)
+                {
+                    metadata = Context.ReadObject(metadata, boi.DocumentId);
+                    InternalHandle metadataJs = TranslateToJs(Context, metadata);
+                    if (metadataJs.IsError)
+                        return metadataJs;
+                    args[0].SetProperty(Constants.Documents.Metadata.Key, metadataJs);
+
                     return metadataJs;
-                args[0].SetProperty(Constants.Documents.Metadata.Key, metadataJs);
-
-                return metadataJs;
+                }
+            }
+            catch (Exception e) 
+            {
+                return engine.CreateError(e.Message, JSValueType.ExecutionError);
             }
         }
 
         internal InternalHandle AttachmentsFor(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
-            var engineEx = (V8EngineEx)engine;
-            if (args.Length != 1 || !(args[0].BoundObject is BlittableObjectInstance boi))
-                throw new InvalidOperationException($"{nameof(AttachmentsFor)} must be called with a single entity argument");
+            try {
+                var engineEx = (V8EngineEx)engine;
+                if (args.Length != 1 || !(args[0].BoundObject is BlittableObjectInstance boi))
+                    throw new InvalidOperationException($"{nameof(AttachmentsFor)} must be called with a single entity argument");
 
-            if (!(boi.Blittable[Constants.Documents.Metadata.Key] is BlittableJsonReaderObject metadata))
-                return EmptyArray(engine);
+                if (!(boi.Blittable[Constants.Documents.Metadata.Key] is BlittableJsonReaderObject metadata))
+                    return EmptyArray(engine);
 
-            if (metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false)
-                return EmptyArray(engine);
+                if (metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false)
+                    return EmptyArray(engine);
 
-            int arrayLength =  attachments.Length;
-            InternalHandle[] jsItems = new InternalHandle[arrayLength];
-            for (int i = 0; i < arrayLength; i++)
-                jsItems[i] = engineEx.CreateObjectBinder(new AttachmentNameObjectInstance((BlittableJsonReaderObject)attachments[i]), engineEx.TypeBinderAttachmentNameObjectInstance);
+                int arrayLength =  attachments.Length;
+                InternalHandle[] jsItems = new InternalHandle[arrayLength];
+                for (int i = 0; i < arrayLength; i++)
+                    jsItems[i] = engineEx.CreateObjectBinder(new AttachmentNameObjectInstance((BlittableJsonReaderObject)attachments[i]), engineEx.TypeBinderAttachmentNameObjectInstance);
 
-            return engineEx.CreateArrayWithDisposal(jsItems);
+                return engineEx.CreateArrayWithDisposal(jsItems);
 
-            static InternalHandle EmptyArray(V8Engine engine)
+                static InternalHandle EmptyArray(V8Engine engine)
+                {
+                    return engine.CreateArray(Array.Empty<InternalHandle>());
+                }
+            }
+            catch (Exception e) 
             {
-                return engine.CreateArray(Array.Empty<InternalHandle>());
+                return engine.CreateError(e.Message, JSValueType.ExecutionError);
             }
         }
 
         internal static InternalHandle LoadAttachment(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
-            if (args.Length != 2)
-                throw new InvalidOperationException($"{nameof(LoadAttachment)} may only be called with two arguments, but '{args.Length}' were passed.");
+            try {
+                if (args.Length != 2)
+                    throw new InvalidOperationException($"{nameof(LoadAttachment)} may only be called with two arguments, but '{args.Length}' were passed.");
 
-            var engineEx = (V8EngineEx)engine;
-            InternalHandle jsRes = InternalHandle.Empty;
-            if (args[0].IsNull)
-                return jsRes.Set(DynamicJsNull.ImplicitNull._);
+                var engineEx = (V8EngineEx)engine;
+                InternalHandle jsRes = InternalHandle.Empty;
+                if (args[0].IsNull)
+                    return jsRes.Set(DynamicJsNull.ImplicitNull._);
 
-            if (args[0].IsObject == false)
-                ThrowInvalidFirstParameter();
+                if (args[0].IsObject == false)
+                    ThrowInvalidFirstParameter();
 
-            var doc = args[0].BoundObject as BlittableObjectInstance;
-            if (doc == null)
-                ThrowInvalidFirstParameter();
+                var doc = args[0].BoundObject as BlittableObjectInstance;
+                if (doc == null)
+                    ThrowInvalidFirstParameter();
 
-            if (args[1].IsString == false)
-                ThrowInvalidSecondParameter();
+                if (args[1].IsString == false)
+                    ThrowInvalidSecondParameter();
 
-            var attachmentName = args[1].AsString;
+                var attachmentName = args[1].AsString;
 
-            if (CurrentIndexingScope.Current == null)
-                throw new InvalidOperationException($"Indexing scope was not initialized. Attachment Name: {attachmentName}");
+                if (CurrentIndexingScope.Current == null)
+                    throw new InvalidOperationException($"Indexing scope was not initialized. Attachment Name: {attachmentName}");
 
-            var attachment = CurrentIndexingScope.Current.LoadAttachment(doc.DocumentId, attachmentName);
-            if (attachment.BoundObject is DynamicNullObject)
-                return jsRes.Set(DynamicJsNull.ImplicitNull._);
+                var attachment = CurrentIndexingScope.Current.LoadAttachment(doc.DocumentId, attachmentName);
+                if (attachment.BoundObject is DynamicNullObject)
+                    return jsRes.Set(DynamicJsNull.ImplicitNull._);
 
-            return engineEx.CreateObjectBinder(new AttachmentObjectInstance((DynamicAttachment)attachment), engineEx.TypeBinderAttachmentObjectInstance);
+                return engineEx.CreateObjectBinder(new AttachmentObjectInstance((DynamicAttachment)attachment), engineEx.TypeBinderAttachmentObjectInstance);
+            }
+            catch (Exception e) 
+            {
+                return engine.CreateError(e.Message, JSValueType.ExecutionError);
+            }
 
             void ThrowInvalidFirstParameter()
             {
@@ -150,37 +168,42 @@ namespace Raven.Server.Documents.Patch
 
         internal static InternalHandle LoadAttachments(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
-            if (args.Length != 1)
-                throw new InvalidOperationException($"{nameof(LoadAttachment)} may only be called with one argument, but '{args.Length}' were passed.");
+            try {
+                if (args.Length != 1)
+                    throw new InvalidOperationException($"{nameof(LoadAttachment)} may only be called with one argument, but '{args.Length}' were passed.");
 
-            var engineEx = (V8EngineEx)engine;
-            InternalHandle jsRes = InternalHandle.Empty;
-            if (args[0].IsNull)
-                return jsRes.Set(DynamicJsNull.ImplicitNull._);
+                var engineEx = (V8EngineEx)engine;
+                InternalHandle jsRes = InternalHandle.Empty;
+                if (args[0].IsNull)
+                    return jsRes.Set(DynamicJsNull.ImplicitNull._);
 
-            if (args[0].IsObject == false)
-                ThrowInvalidParameter();
+                if (args[0].IsObject == false)
+                    ThrowInvalidParameter();
 
-            var doc = args[0].BoundObject as BlittableObjectInstance;
-            if (doc == null)
-                ThrowInvalidParameter();
+                var doc = args[0].BoundObject as BlittableObjectInstance;
+                if (doc == null)
+                    ThrowInvalidParameter();
 
-            if (CurrentIndexingScope.Current == null)
-                throw new InvalidOperationException($"Indexing scope was not initialized.");
+                if (CurrentIndexingScope.Current == null)
+                    throw new InvalidOperationException($"Indexing scope was not initialized.");
 
-            var attachments = CurrentIndexingScope.Current.LoadAttachments(doc.DocumentId, GetAttachmentNames());
-            if (attachments.Count == 0)
-                return engine.CreateArray(Array.Empty<InternalHandle>());
+                var attachments = CurrentIndexingScope.Current.LoadAttachments(doc.DocumentId, GetAttachmentNames());
+                if (attachments.Count == 0)
+                    return engine.CreateArray(Array.Empty<InternalHandle>());
 
-            int arrayLength =  attachments.Count;
-            var jsItems = new InternalHandle[attachments.Count];
-            for (int i = 0; i < arrayLength; i++) {
-                jsItems[i] = InternalHandle.Empty;
-                jsItems[i].Set(engineEx.CreateObjectBinder(new AttachmentObjectInstance(attachments[i]), engineEx.TypeBinderAttachmentObjectInstance)._);
+                int arrayLength =  attachments.Count;
+                var jsItems = new InternalHandle[attachments.Count];
+                for (int i = 0; i < arrayLength; i++) {
+                    jsItems[i] = InternalHandle.Empty;
+                    jsItems[i].Set(engineEx.CreateObjectBinder(new AttachmentObjectInstance(attachments[i]), engineEx.TypeBinderAttachmentObjectInstance)._);
+                }
+
+                return engineEx.CreateArrayWithDisposal(jsItems);
             }
-
-            return engineEx.CreateArrayWithDisposal(jsItems);
-
+            catch (Exception e) 
+            {
+                return engine.CreateError(e.Message, JSValueType.ExecutionError);
+            }
 
             void ThrowInvalidParameter()
             {
@@ -213,12 +236,24 @@ namespace Raven.Server.Documents.Patch
 
         internal static InternalHandle GetTimeSeriesNamesFor(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
-            return GetNamesFor(engine, isConstructCall, self, args, Constants.Documents.Metadata.TimeSeries, "timeSeriesNamesFor");
+            try {
+                return GetNamesFor(engine, isConstructCall, self, args, Constants.Documents.Metadata.TimeSeries, "timeSeriesNamesFor");
+            }
+            catch (Exception e) 
+            {
+                return engine.CreateError(e.Message, JSValueType.ExecutionError);
+            }
         }
 
         internal static InternalHandle GetCounterNamesFor(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
-            return GetNamesFor(engine, isConstructCall, self, args, Constants.Documents.Metadata.Counters, "counterNamesFor");
+            try {
+                return GetNamesFor(engine, isConstructCall, self, args, Constants.Documents.Metadata.Counters, "counterNamesFor");
+            }
+            catch (Exception e) 
+            {
+                return engine.CreateError(e.Message, JSValueType.ExecutionError);
+            }
         }
 
         private static InternalHandle GetNamesFor(V8Engine engine, bool isConstructCall, InternalHandle self, InternalHandle[] args, string metadataKey, string methodName)
@@ -242,40 +277,46 @@ namespace Raven.Server.Documents.Patch
 
         internal static InternalHandle GetDocumentId(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
-            //throw new InvalidOperationException("JSUtils::GetDocumentId has been called");
-            //return engine.CreateNullValue();
-            //return engine.CreateValue("example/1-A");
+            try {
+                throw new InvalidOperationException("JSUtils::GetDocumentId has been called");
+                //return engine.CreateNullValue();
+                //return engine.CreateValue("example/1-A");
 
-            if (args.Length != 1 && args.Length != 2) //length == 2 takes into account Query Arguments that can be added to args
-                throw new InvalidOperationException("id(doc) must be called with a single argument");
+                if (args.Length != 1 && args.Length != 2) //length == 2 takes into account Query Arguments that can be added to args
+                    throw new InvalidOperationException("id(doc) must be called with a single argument");
 
-            InternalHandle jsDoc = args[0];
-            if (jsDoc.IsNull || jsDoc.IsUndefined)
-                return jsDoc;
+                InternalHandle jsDoc = args[0];
+                if (jsDoc.IsNull || jsDoc.IsUndefined)
+                    return jsDoc;
 
-            if (jsDoc.IsObject == false)
-                throw new InvalidOperationException("id(doc) must be called with an object argument");
+                if (jsDoc.IsObject == false)
+                    throw new InvalidOperationException("id(doc) must be called with an object argument");
 
-            if (jsDoc.BoundObject != null && jsDoc.BoundObject is BlittableObjectInstance doc && doc.DocumentId != null)
-                return engine.CreateValue(doc.DocumentId);
+                if (jsDoc.BoundObject != null && jsDoc.BoundObject is BlittableObjectInstance doc && doc.DocumentId != null)
+                    return engine.CreateValue(doc.DocumentId);
 
-            using (var jsValue = jsDoc.GetProperty(Constants.Documents.Metadata.Key))
-            {
-                // search either @metadata.@id or @id
-                using (var metadata = jsValue.IsObject == false ? jsDoc : jsValue)
+                using (var jsValue = jsDoc.GetProperty(Constants.Documents.Metadata.Key))
                 {
-                    var jsRes = metadata.GetProperty(Constants.Documents.Metadata.Id);
-                    if (jsRes.IsString == false)
+                    // search either @metadata.@id or @id
+                    using (var metadata = jsValue.IsObject == false ? jsDoc : jsValue)
                     {
-                        // search either @metadata.Id or Id
-                        jsRes.Set(metadata.GetProperty(Constants.Documents.Metadata.IdProperty));
-                        if (jsRes.IsString == false) {
-                            jsRes.Dispose();
-                            return engine.CreateNullValue();
+                        var jsRes = metadata.GetProperty(Constants.Documents.Metadata.Id);
+                        if (jsRes.IsString == false)
+                        {
+                            // search either @metadata.Id or Id
+                            jsRes.Set(metadata.GetProperty(Constants.Documents.Metadata.IdProperty));
+                            if (jsRes.IsString == false) {
+                                jsRes.Dispose();
+                                return engine.CreateNullValue();
+                            }
                         }
+                        return jsRes;
                     }
-                    return jsRes;
                 }
+            }
+            catch (Exception e) 
+            {
+                return engine.CreateError(e.Message, JSValueType.ExecutionError);
             }
         }
 

@@ -79,10 +79,16 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
 
         private static InternalHandle GetContentAsString(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
-            var attachment = (AttachmentObjectInstance)self.BoundObject;
-            if (attachment == null)
-                throw new InvalidOperationException($"GetContentAsString: BoundObject is null.");
-            return attachment.GetContentAsString(engine, args);
+            try {
+                var attachment = (AttachmentObjectInstance)self.BoundObject;
+                if (attachment == null)
+                    throw new InvalidOperationException($"GetContentAsString: BoundObject is null.");
+                return attachment.GetContentAsString(engine, args);
+            }
+            catch (Exception e) 
+            {
+                return engine.CreateError(e.Message, JSValueType.ExecutionError);
+            }
         }
 
         public class CustomBinder : ObjectInstanceBase.CustomBinder<AttachmentObjectInstance>

@@ -93,20 +93,26 @@ namespace Raven.Server.Documents.ETL
 
         private InternalHandle LoadToFunctionTranslator(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
-            InternalHandle jsRes = InternalHandle.Empty;
-            if (args.Length != 2)
-                ThrowInvalidScriptMethodCall("loadTo(name, obj) must be called with exactly 2 parameters");
-            if (args[0].IsString == false)
-                ThrowInvalidScriptMethodCall("loadTo(name, obj) first argument must be a string");
-            if (args[1].IsObject == false)
-                ThrowInvalidScriptMethodCall("loadTo(name, obj) second argument must be an object");
+            try {
+                InternalHandle jsRes = InternalHandle.Empty;
+                if (args.Length != 2)
+                    ThrowInvalidScriptMethodCall("loadTo(name, obj) must be called with exactly 2 parameters");
+                if (args[0].IsString == false)
+                    ThrowInvalidScriptMethodCall("loadTo(name, obj) first argument must be a string");
+                if (args[1].IsObject == false)
+                    ThrowInvalidScriptMethodCall("loadTo(name, obj) second argument must be an object");
 
-            // explicitly not disposing here, this will clear the context from the JavaScriptUtils, but this is 
-            // called _midway_ through the script, so that is not something that we want to do. The caller will
-            // already be calling that.
-            var result = new ScriptRunnerResult(DocumentScript, args[1]);
-            LoadToFunction(args[0].AsString, result);
-            return jsRes.Set(result.Instance);
+                // explicitly not disposing here, this will clear the context from the JavaScriptUtils, but this is 
+                // called _midway_ through the script, so that is not something that we want to do. The caller will
+                // already be calling that.
+                var result = new ScriptRunnerResult(DocumentScript, args[1]);
+                LoadToFunction(args[0].AsString, result);
+                return jsRes.Set(result.Instance);
+            }
+            catch (Exception e) 
+            {
+                return engine.CreateError(e.Message, JSValueType.ExecutionError);
+            }
         }
 
         private InternalHandle LoadToFunctionTranslator(string name, InternalHandle self, params InternalHandle[] args)
@@ -134,30 +140,36 @@ namespace Raven.Server.Documents.ETL
 
         private InternalHandle LoadAttachment(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args)
         {
-            if (args.Length != 1 || args[0].IsString == false)
-                ThrowInvalidScriptMethodCall($"{Transformation.LoadAttachment}(name) must have a single string argument");
+            try {
+                if (args.Length != 1 || args[0].IsString == false)
+                    ThrowInvalidScriptMethodCall($"{Transformation.LoadAttachment}(name) must have a single string argument");
 
-            var attachmentName = args[0].AsString;
-            var loadAttachmentReference = CreateLoadAttachmentReference(engine, attachmentName);
+                var attachmentName = args[0].AsString;
+                var loadAttachmentReference = CreateLoadAttachmentReference(engine, attachmentName);
 
-            if ((Current.Document.Flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
-            {
-                var attachment = Database.DocumentsStorage.AttachmentsStorage.GetAttachment(Context, Current.DocumentId, attachmentName, AttachmentType.Document, null);
+                if ((Current.Document.Flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
+                {
+                    var attachment = Database.DocumentsStorage.AttachmentsStorage.GetAttachment(Context, Current.DocumentId, attachmentName, AttachmentType.Document, null);
 
-                if (attachment == null) {
+                    if (attachment == null) {
+                        loadAttachmentReference.Dispose();
+                        return engine.CreateNullValue();
+                    }
+
+                    AddLoadedAttachment(loadAttachmentReference, attachmentName, attachment);
+                }
+                else
+                {
                     loadAttachmentReference.Dispose();
                     return engine.CreateNullValue();
                 }
 
-                AddLoadedAttachment(loadAttachmentReference, attachmentName, attachment);
+                return loadAttachmentReference;
             }
-            else
+            catch (Exception e) 
             {
-                loadAttachmentReference.Dispose();
-                return engine.CreateNullValue();
+                return engine.CreateError(e.Message, JSValueType.ExecutionError);
             }
-
-            return loadAttachmentReference;
         }
 
         private static InternalHandle CreateLoadAttachmentReference(V8Engine engine, string attachmentName)
@@ -167,30 +179,36 @@ namespace Raven.Server.Documents.ETL
 
         private InternalHandle LoadCounter(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args)
         {
-            if (args.Length != 1 || args[0].IsString == false)
-                ThrowInvalidScriptMethodCall($"{Transformation.CountersTransformation.Load}(name) must have a single string argument");
+            try {
+                if (args.Length != 1 || args[0].IsString == false)
+                    ThrowInvalidScriptMethodCall($"{Transformation.CountersTransformation.Load}(name) must have a single string argument");
 
-            var counterName = args[0].AsString;
-            var loadCounterReference = CreateLoadCounterReference(engine, counterName);
+                var counterName = args[0].AsString;
+                var loadCounterReference = CreateLoadCounterReference(engine, counterName);
 
-            if ((Current.Document.Flags & DocumentFlags.HasCounters) == DocumentFlags.HasCounters)
-            {
-                var value = Database.DocumentsStorage.CountersStorage.GetCounterValue(Context, Current.DocumentId, counterName);
+                if ((Current.Document.Flags & DocumentFlags.HasCounters) == DocumentFlags.HasCounters)
+                {
+                    var value = Database.DocumentsStorage.CountersStorage.GetCounterValue(Context, Current.DocumentId, counterName);
 
-                if (value == null) {
+                    if (value == null) {
+                        loadCounterReference.Dispose();
+                        return engine.CreateNullValue();
+                    }
+
+                    AddLoadedCounter(loadCounterReference, counterName, value.Value.Value);
+                }
+                else
+                {
                     loadCounterReference.Dispose();
                     return engine.CreateNullValue();
                 }
 
-                AddLoadedCounter(loadCounterReference, counterName, value.Value.Value);
+                return loadCounterReference;
             }
-            else
+            catch (Exception e) 
             {
-                loadCounterReference.Dispose();
-                return engine.CreateNullValue();
+                return engine.CreateError(e.Message, JSValueType.ExecutionError);
             }
-
-            return loadCounterReference;
         }
 
         private static InternalHandle CreateLoadCounterReference(V8Engine engine, string counterName)
@@ -200,34 +218,40 @@ namespace Raven.Server.Documents.ETL
 
         private InternalHandle LoadTimeSeries(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args)
         {
-            if ((Current.Document.Flags & DocumentFlags.HasTimeSeries) == DocumentFlags.HasTimeSeries == false)
-                return engine.CreateNullValue();
+            try {
+                if ((Current.Document.Flags & DocumentFlags.HasTimeSeries) == DocumentFlags.HasTimeSeries == false)
+                    return engine.CreateNullValue();
 
-            const int minParamsCount = Transformation.TimeSeriesTransformation.LoadTimeSeries.MinParamsCount;
-            const int maxParamsCount = Transformation.TimeSeriesTransformation.LoadTimeSeries.MaxParamsCount;
-            const string signature = Transformation.TimeSeriesTransformation.LoadTimeSeries.Signature;
-            
-            if (args.Length < minParamsCount || args.Length > maxParamsCount)
-                ThrowInvalidScriptMethodCall($"{signature} must have between {minParamsCount} to {maxParamsCount} arguments");
+                const int minParamsCount = Transformation.TimeSeriesTransformation.LoadTimeSeries.MinParamsCount;
+                const int maxParamsCount = Transformation.TimeSeriesTransformation.LoadTimeSeries.MaxParamsCount;
+                const string signature = Transformation.TimeSeriesTransformation.LoadTimeSeries.Signature;
                 
-            if(args[0].IsString == false)
-                ThrowInvalidScriptMethodCall($"{signature}. The argument timeSeriesName must be a string");
-            var timeSeriesName = args[0].AsString;
+                if (args.Length < minParamsCount || args.Length > maxParamsCount)
+                    ThrowInvalidScriptMethodCall($"{signature} must have between {minParamsCount} to {maxParamsCount} arguments");
+                    
+                if(args[0].IsString == false)
+                    ThrowInvalidScriptMethodCall($"{signature}. The argument timeSeriesName must be a string");
+                var timeSeriesName = args[0].AsString;
 
-            var from = args.Length < 2 ? DateTime.MinValue : ScriptRunner.GetDateArg(args[1], signature, "from"); 
-            var to = args.Length < 3 ? DateTime.MaxValue : ScriptRunner.GetDateArg(args[2], signature, "to"); 
-                
-            var loadTimeSeriesReference = CreateLoadTimeSeriesReference(engine, timeSeriesName, @from, to);
+                var from = args.Length < 2 ? DateTime.MinValue : ScriptRunner.GetDateArg(args[1], signature, "from"); 
+                var to = args.Length < 3 ? DateTime.MaxValue : ScriptRunner.GetDateArg(args[2], signature, "to"); 
+                    
+                var loadTimeSeriesReference = CreateLoadTimeSeriesReference(engine, timeSeriesName, @from, to);
 
-            var reader = Database.DocumentsStorage.TimeSeriesStorage.GetReader(Context, Current.DocumentId, timeSeriesName, from, to);
-            if(reader.AllValues().Any() == false) {
-                loadTimeSeriesReference.Dispose();
-                return engine.CreateNullValue();
+                var reader = Database.DocumentsStorage.TimeSeriesStorage.GetReader(Context, Current.DocumentId, timeSeriesName, from, to);
+                if(reader.AllValues().Any() == false) {
+                    loadTimeSeriesReference.Dispose();
+                    return engine.CreateNullValue();
+                }
+
+                AddLoadedTimeSeries(loadTimeSeriesReference, timeSeriesName, reader.AllValues());
+
+                return loadTimeSeriesReference;
             }
-
-            AddLoadedTimeSeries(loadTimeSeriesReference, timeSeriesName, reader.AllValues());
-
-            return loadTimeSeriesReference;
+            catch (Exception e) 
+            {
+                return engine.CreateError(e.Message, JSValueType.ExecutionError);
+            }
         }
 
         private static InternalHandle CreateLoadTimeSeriesReference(V8Engine engine, string timeSeriesName, DateTime from, DateTime to)
@@ -237,154 +261,190 @@ namespace Raven.Server.Documents.ETL
 
         private InternalHandle GetAttachments(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args)
         {
-            if (args.Length != 0)
-                ThrowInvalidScriptMethodCall("getAttachments() must be called without any argument");
+            try {
+                if (args.Length != 0)
+                    ThrowInvalidScriptMethodCall("getAttachments() must be called without any argument");
 
-            if (Current.Document.TryGetMetadata(out var metadata) == false ||
-                metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachmentsBlittableArray) == false)
-            {
-                return Engine.CreateArray(Array.Empty<InternalHandle>());
+                if (Current.Document.TryGetMetadata(out var metadata) == false ||
+                    metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachmentsBlittableArray) == false)
+                {
+                    return Engine.CreateArray(Array.Empty<InternalHandle>());
+                }
+
+                int arrayLength = attachmentsBlittableArray.Length;
+                var jsItems = new InternalHandle[arrayLength];
+                for (int i = 0; i < arrayLength; ++i)
+                {
+                    jsItems[i] = (InternalHandle)DocumentScript.Translate(Context, attachmentsBlittableArray[i]);
+                }
+
+                return Engine.CreateArrayWithDisposal(jsItems);
             }
-
-            int arrayLength = attachmentsBlittableArray.Length;
-            var jsItems = new InternalHandle[arrayLength];
-            for (int i = 0; i < arrayLength; ++i)
+            catch (Exception e) 
             {
-                jsItems[i] = (InternalHandle)DocumentScript.Translate(Context, attachmentsBlittableArray[i]);
+                return engine.CreateError(e.Message, JSValueType.ExecutionError);
             }
-
-            return Engine.CreateArrayWithDisposal(jsItems);
         }
 
         private InternalHandle HasAttachment(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args)
         {
-            if (args.Length != 1 || args[0].IsString == false)
-                ThrowInvalidScriptMethodCall("hasAttachment(name) must be called with one argument (string)");
+            try {
+                if (args.Length != 1 || args[0].IsString == false)
+                    ThrowInvalidScriptMethodCall("hasAttachment(name) must be called with one argument (string)");
 
-            if ((Current.Document.Flags & DocumentFlags.HasAttachments) != DocumentFlags.HasAttachments)
-                return Engine.CreateValue(false);
+                if ((Current.Document.Flags & DocumentFlags.HasAttachments) != DocumentFlags.HasAttachments)
+                    return Engine.CreateValue(false);
 
-            if (Current.Document.TryGetMetadata(out var metadata) == false ||
-                metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false)
-            {
-                return Engine.CreateValue(false);
-            }
-
-            var checkedName = args[0].AsString;
-
-            foreach (var attachment in attachments)
-            {
-                var attachmentInfo = (BlittableJsonReaderObject)attachment;
-                
-                if (attachmentInfo.TryGet(nameof(AttachmentName.Name), out string name) && checkedName.Equals(name, StringComparison.OrdinalIgnoreCase))
+                if (Current.Document.TryGetMetadata(out var metadata) == false ||
+                    metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false)
                 {
-                    return Engine.CreateValue(true);
+                    return Engine.CreateValue(false);
                 }
-            }
 
-            return Engine.CreateValue(false);
+                var checkedName = args[0].AsString;
+
+                foreach (var attachment in attachments)
+                {
+                    var attachmentInfo = (BlittableJsonReaderObject)attachment;
+                    
+                    if (attachmentInfo.TryGet(nameof(AttachmentName.Name), out string name) && checkedName.Equals(name, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return Engine.CreateValue(true);
+                    }
+                }
+
+                return Engine.CreateValue(false);
+            }
+            catch (Exception e) 
+            {
+                return engine.CreateError(e.Message, JSValueType.ExecutionError);
+            }
         }
 
         private InternalHandle GetCounters(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args)
         {
-            if (args.Length != 0)
-                ThrowInvalidScriptMethodCall("getCounters() must be called without any argument");
+            try {
+                if (args.Length != 0)
+                    ThrowInvalidScriptMethodCall("getCounters() must be called without any argument");
 
-            if (Current.Document.TryGetMetadata(out var metadata) == false ||
-                metadata.TryGet(Constants.Documents.Metadata.Counters, out BlittableJsonReaderArray countersArray) == false)
-            {
-                return Engine.CreateArray();
+                if (Current.Document.TryGetMetadata(out var metadata) == false ||
+                    metadata.TryGet(Constants.Documents.Metadata.Counters, out BlittableJsonReaderArray countersArray) == false)
+                {
+                    return Engine.CreateArray();
+                }
+
+                int arrayLength = countersArray.Length;
+                var jsItems = new InternalHandle[arrayLength];
+                for (int i = 0; i < arrayLength; ++i)
+                {
+                    jsItems[i] = (InternalHandle)DocumentScript.Translate(Context, countersArray[i]);
+                }
+
+                return Engine.CreateArrayWithDisposal(jsItems);
             }
-
-            int arrayLength = countersArray.Length;
-            var jsItems = new InternalHandle[arrayLength];
-            for (int i = 0; i < arrayLength; ++i)
+            catch (Exception e) 
             {
-                jsItems[i] = (InternalHandle)DocumentScript.Translate(Context, countersArray[i]);
+                return engine.CreateError(e.Message, JSValueType.ExecutionError);
             }
-
-            return Engine.CreateArrayWithDisposal(jsItems);
         }
 
         private InternalHandle HasCounter(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args)
         {
-            if (args.Length != 1 || args[0].IsString == false)
-                ThrowInvalidScriptMethodCall("hasCounter(name) must be called with one argument (string)");
+            try {
+                if (args.Length != 1 || args[0].IsString == false)
+                    ThrowInvalidScriptMethodCall("hasCounter(name) must be called with one argument (string)");
 
-            if ((Current.Document.Flags & DocumentFlags.HasCounters) != DocumentFlags.HasCounters)
-                return engine.CreateValue(false);
+                if ((Current.Document.Flags & DocumentFlags.HasCounters) != DocumentFlags.HasCounters)
+                    return engine.CreateValue(false);
 
-            if (Current.Document.TryGetMetadata(out var metadata) == false ||
-                metadata.TryGet(Constants.Documents.Metadata.Counters, out BlittableJsonReaderArray counters) == false)
-            {
+                if (Current.Document.TryGetMetadata(out var metadata) == false ||
+                    metadata.TryGet(Constants.Documents.Metadata.Counters, out BlittableJsonReaderArray counters) == false)
+                {
+                    return engine.CreateValue(false);
+                }
+
+                var checkedName = args[0].AsString;
+
+                foreach (var counter in counters)
+                {
+                    var counterName = (LazyStringValue)counter;
+
+                    if (checkedName.Equals(counterName, StringComparison.OrdinalIgnoreCase))
+                        return engine.CreateValue(true);
+                }
+
                 return engine.CreateValue(false);
             }
-
-            var checkedName = args[0].AsString;
-
-            foreach (var counter in counters)
+            catch (Exception e) 
             {
-                var counterName = (LazyStringValue)counter;
-
-                if (checkedName.Equals(counterName, StringComparison.OrdinalIgnoreCase))
-                    return engine.CreateValue(true);
+                return engine.CreateError(e.Message, JSValueType.ExecutionError);
             }
-
-            return engine.CreateValue(false);
         }
 
         private InternalHandle GetTimeSeries(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args)
         {
-            const int paramsCount = Transformation.TimeSeriesTransformation.GetTimeSeries.ParamsCount;
-            const string signature = Transformation.TimeSeriesTransformation.GetTimeSeries.Signature;
-            
-            if (args.Length != paramsCount)
-                ThrowInvalidScriptMethodCall($"{signature} must be called without any argument");
+            try {
+                const int paramsCount = Transformation.TimeSeriesTransformation.GetTimeSeries.ParamsCount;
+                const string signature = Transformation.TimeSeriesTransformation.GetTimeSeries.Signature;
+                
+                if (args.Length != paramsCount)
+                    ThrowInvalidScriptMethodCall($"{signature} must be called without any argument");
 
-            if ((Current.Document.Flags & DocumentFlags.HasTimeSeries) != DocumentFlags.HasTimeSeries)
-                return engine.CreateValue(false);
-            
-            if (Current.Document.TryGetMetadata(out var metadata) == false ||
-                metadata.TryGet(Constants.Documents.Metadata.TimeSeries, out BlittableJsonReaderArray timeSeriesArray) == false)
-            {
-                return Engine.CreateArray(Array.Empty<InternalHandle>());
-            }
+                if ((Current.Document.Flags & DocumentFlags.HasTimeSeries) != DocumentFlags.HasTimeSeries)
+                    return engine.CreateValue(false);
+                
+                if (Current.Document.TryGetMetadata(out var metadata) == false ||
+                    metadata.TryGet(Constants.Documents.Metadata.TimeSeries, out BlittableJsonReaderArray timeSeriesArray) == false)
+                {
+                    return Engine.CreateArray(Array.Empty<InternalHandle>());
+                }
 
-            var jsItems = new InternalHandle[timeSeriesArray.Length];
-            for (int i = 0; i < timeSeriesArray.Length; i++)
-            {
-                jsItems[i] = (InternalHandle)DocumentScript.Translate(Context, timeSeriesArray[i]);
+                var jsItems = new InternalHandle[timeSeriesArray.Length];
+                for (int i = 0; i < timeSeriesArray.Length; i++)
+                {
+                    jsItems[i] = (InternalHandle)DocumentScript.Translate(Context, timeSeriesArray[i]);
+                }
+                return Engine.CreateArrayWithDisposal(jsItems);
             }
-            return Engine.CreateArrayWithDisposal(jsItems);
+            catch (Exception e) 
+            {
+                return engine.CreateError(e.Message, JSValueType.ExecutionError);
+            }
         }
 
         private InternalHandle HasTimeSeries(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args)
         {
-            const int paramsCount = Transformation.TimeSeriesTransformation.HasTimeSeries.ParamsCount;
-            const string signature = Transformation.TimeSeriesTransformation.HasTimeSeries.Signature;
+            try {
+                const int paramsCount = Transformation.TimeSeriesTransformation.HasTimeSeries.ParamsCount;
+                const string signature = Transformation.TimeSeriesTransformation.HasTimeSeries.Signature;
 
-            if (args.Length != paramsCount || args[0].IsString == false)
-                ThrowInvalidScriptMethodCall($"{signature} must be called with one argument (string)");
+                if (args.Length != paramsCount || args[0].IsString == false)
+                    ThrowInvalidScriptMethodCall($"{signature} must be called with one argument (string)");
 
-            if ((Current.Document.Flags & DocumentFlags.HasTimeSeries) != DocumentFlags.HasTimeSeries)
-                return engine.CreateValue(false);
+                if ((Current.Document.Flags & DocumentFlags.HasTimeSeries) != DocumentFlags.HasTimeSeries)
+                    return engine.CreateValue(false);
 
-            if (Current.Document.TryGetMetadata(out var metadata) == false ||
-                metadata.TryGet(Constants.Documents.Metadata.TimeSeries, out BlittableJsonReaderArray timeSeriesNames) == false)
-            {
+                if (Current.Document.TryGetMetadata(out var metadata) == false ||
+                    metadata.TryGet(Constants.Documents.Metadata.TimeSeries, out BlittableJsonReaderArray timeSeriesNames) == false)
+                {
+                    return engine.CreateValue(false);
+                }
+
+                var checkedName = args[0].AsString;
+
+                foreach (var timeSeries in timeSeriesNames)
+                {
+                    var counterName = (LazyStringValue)timeSeries;
+                    if (checkedName.Equals(counterName, StringComparison.OrdinalIgnoreCase))
+                        return engine.CreateValue(true);
+                }
+
                 return engine.CreateValue(false);
             }
-
-            var checkedName = args[0].AsString;
-
-            foreach (var timeSeries in timeSeriesNames)
+            catch (Exception e) 
             {
-                var counterName = (LazyStringValue)timeSeries;
-                if (checkedName.Equals(counterName, StringComparison.OrdinalIgnoreCase))
-                    return engine.CreateValue(true);
+                return engine.CreateError(e.Message, JSValueType.ExecutionError);
             }
-
-            return engine.CreateValue(false);
         }        
         
         protected abstract string[] LoadToDestinations { get; }

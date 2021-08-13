@@ -395,7 +395,7 @@ namespace Raven.Server.Documents.Patch
                 }
                 catch (Exception e) 
                 {
-                    return ScriptEngine.CreateError(e.Message, JSValueType.ExecutionError);
+                    return engine.CreateError(e.Message, JSValueType.ExecutionError);
                 }
             }
 
@@ -419,7 +419,7 @@ namespace Raven.Server.Documents.Patch
                 }
                 catch (Exception e) 
                 {
-                    return ScriptEngine.CreateError(e.Message, JSValueType.ExecutionError);
+                    return engine.CreateError(e.Message, JSValueType.ExecutionError);
                 }
             }
 
@@ -528,159 +528,171 @@ namespace Raven.Server.Documents.Patch
                 }
                 catch (Exception e) 
                 {
-                    return ScriptEngine.CreateError(e.Message, JSValueType.ExecutionError);
+                    return engine.CreateError(e.Message, JSValueType.ExecutionError);
                 }
             }
 
             private InternalHandle DeleteRangeTimeSeries(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args)
             {
-                using (var document = self.GetProperty("doc"))
-                using (var name = self.GetProperty("name"))
-                {
-                    AssertValidDatabaseContext("timeseries(doc, name).delete");
-
-                    const string deleteAll = "delete()";
-                    const string deleteSignature = "delete(from, to)";
-
-                    DateTime from, to;
-                    switch (args.Length)
+                try {
+                    using (var document = self.GetProperty("doc"))
+                    using (var name = self.GetProperty("name"))
                     {
-                        case 0:
-                            from = DateTime.MinValue;
-                            to = DateTime.MaxValue;
-                            break;
-                        case 2:
-                            from = GetTimeSeriesDateArg(args[0], deleteSignature, "from");
-                            to = GetTimeSeriesDateArg(args[1], deleteSignature, "to");
-                            break;
-                        default:
-                            throw new ArgumentException($"'delete' method has only the overloads: '{deleteSignature}' or '{deleteAll}', but was called with {args.Length} arguments.");
-                    }
+                        AssertValidDatabaseContext("timeseries(doc, name).delete");
 
-                    var (id, doc) = GetIdAndDocFromArg(document, _timeSeriesSignature);
+                        const string deleteAll = "delete()";
+                        const string deleteSignature = "delete(from, to)";
 
-                    string timeSeries = GetStringArg(name, _timeSeriesSignature, "name");
-
-                    var count = _database.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(_docsCtx, id, timeSeries).Count;
-                    if (count == 0)
-                        return InternalHandle.Empty;
-
-                    var deletionRangeRequest = new TimeSeriesStorage.DeletionRangeRequest
-                    {
-                        DocumentId = id,
-                        Collection = CollectionName.GetCollectionName(doc),
-                        Name = timeSeries,
-                        From = from,
-                        To = to,
-                    };
-                    _database.DocumentsStorage.TimeSeriesStorage.DeleteTimestampRange(_docsCtx, deletionRangeRequest, updateMetadata: false);
-
-                    count = _database.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(_docsCtx, id, timeSeries).Count;
-                    if (count == 0)
-                    {
-                        DocumentTimeSeriesToUpdate ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                        DocumentTimeSeriesToUpdate.Add(id);
-                    }
-
-                    if (DebugMode)
-                    {
-                        DebugActions.DeleteTimeSeries.Add(new DynamicJsonValue
+                        DateTime from, to;
+                        switch (args.Length)
                         {
-                            ["Name"] = timeSeries,
-                            ["From"] = from,
-                            ["To"] = to
-                        });
+                            case 0:
+                                from = DateTime.MinValue;
+                                to = DateTime.MaxValue;
+                                break;
+                            case 2:
+                                from = GetTimeSeriesDateArg(args[0], deleteSignature, "from");
+                                to = GetTimeSeriesDateArg(args[1], deleteSignature, "to");
+                                break;
+                            default:
+                                throw new ArgumentException($"'delete' method has only the overloads: '{deleteSignature}' or '{deleteAll}', but was called with {args.Length} arguments.");
+                        }
+
+                        var (id, doc) = GetIdAndDocFromArg(document, _timeSeriesSignature);
+
+                        string timeSeries = GetStringArg(name, _timeSeriesSignature, "name");
+
+                        var count = _database.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(_docsCtx, id, timeSeries).Count;
+                        if (count == 0)
+                            return InternalHandle.Empty;
+
+                        var deletionRangeRequest = new TimeSeriesStorage.DeletionRangeRequest
+                        {
+                            DocumentId = id,
+                            Collection = CollectionName.GetCollectionName(doc),
+                            Name = timeSeries,
+                            From = from,
+                            To = to,
+                        };
+                        _database.DocumentsStorage.TimeSeriesStorage.DeleteTimestampRange(_docsCtx, deletionRangeRequest, updateMetadata: false);
+
+                        count = _database.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(_docsCtx, id, timeSeries).Count;
+                        if (count == 0)
+                        {
+                            DocumentTimeSeriesToUpdate ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                            DocumentTimeSeriesToUpdate.Add(id);
+                        }
+
+                        if (DebugMode)
+                        {
+                            DebugActions.DeleteTimeSeries.Add(new DynamicJsonValue
+                            {
+                                ["Name"] = timeSeries,
+                                ["From"] = from,
+                                ["To"] = to
+                            });
+                        }
                     }
+                    return InternalHandle.Empty;
                 }
-                return InternalHandle.Empty;
+                catch (Exception e) 
+                {
+                    return engine.CreateError(e.Message, JSValueType.ExecutionError);
+                }
             }
 
             private InternalHandle GetRangeTimeSeries(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args)
             {
-                using (var document = self.GetProperty("doc"))
-                using (var name = self.GetProperty("name"))
-                {
-                    AssertValidDatabaseContext("get");
-
-                    const string getRangeSignature = "get(from, to)";
-                    const string getAllSignature = "get()";
-
-                    var id = GetIdFromArg(document, _timeSeriesSignature);
-                    var timeSeries = GetStringArg(name, _timeSeriesSignature, "name");
-
-                    DateTime from, to;
-                    switch (args.Length)
+                try {
+                    using (var document = self.GetProperty("doc"))
+                    using (var name = self.GetProperty("name"))
                     {
-                        case 0:
-                            from = DateTime.MinValue;
-                            to = DateTime.MaxValue;
-                            break;
-                        case 2:
-                            from = GetTimeSeriesDateArg(args[0], getRangeSignature, "from");
-                            to = GetTimeSeriesDateArg(args[1], getRangeSignature, "to");
-                            break;
-                        default:
-                            throw new ArgumentException($"'get' method has only the overloads: '{getRangeSignature}' or '{getAllSignature}', but was called with {args.Length} arguments.");
-                    }
+                        AssertValidDatabaseContext("get");
 
-                    var reader = _database.DocumentsStorage.TimeSeriesStorage.GetReader(_docsCtx, id, timeSeries, from, to);
+                        const string getRangeSignature = "get(from, to)";
+                        const string getAllSignature = "get()";
 
-                    var entries = ScriptEngine.CreateArray(Array.Empty<InternalHandle>());
-                    var noEntries = true;
-                    foreach (var singleResult in reader.AllValues())
-                    {
-                        Span<double> valuesSpan = singleResult.Values.Span;
-                        var jsSpanItems = new InternalHandle[valuesSpan.Length];
-                        for (int i = 0; i < valuesSpan.Length; i++)
+                        var id = GetIdFromArg(document, _timeSeriesSignature);
+                        var timeSeries = GetStringArg(name, _timeSeriesSignature, "name");
+
+                        DateTime from, to;
+                        switch (args.Length)
                         {
-                            jsSpanItems[i] = ScriptEngine.CreateValue(valuesSpan[i]);
+                            case 0:
+                                from = DateTime.MinValue;
+                                to = DateTime.MaxValue;
+                                break;
+                            case 2:
+                                from = GetTimeSeriesDateArg(args[0], getRangeSignature, "from");
+                                to = GetTimeSeriesDateArg(args[1], getRangeSignature, "to");
+                                break;
+                            default:
+                                throw new ArgumentException($"'get' method has only the overloads: '{getRangeSignature}' or '{getAllSignature}', but was called with {args.Length} arguments.");
                         }
-                        using (var jsValues = ScriptEngine.CreateArray(Array.Empty<InternalHandle>()))
-                        {
-                            //jsValues.FastAddProperty("length", ScriptEngine.CreateValue(0), true, false, false);
-                            
-                            using (var jsResPush = jsValues.Call("push", InternalHandle.Empty, jsSpanItems)) // KeepAlive to each item has been done earlier (upper)
-                                jsResPush.ThrowOnError(); // TODO check if is needed here
-                            
-                            if (noEntries)
-                                noEntries = false;
 
-                            using (var entry = ScriptEngine.CreateObject())
+                        var reader = _database.DocumentsStorage.TimeSeriesStorage.GetReader(_docsCtx, id, timeSeries, from, to);
+
+                        var entries = ScriptEngine.CreateArray(Array.Empty<InternalHandle>());
+                        var noEntries = true;
+                        foreach (var singleResult in reader.AllValues())
+                        {
+                            Span<double> valuesSpan = singleResult.Values.Span;
+                            var jsSpanItems = new InternalHandle[valuesSpan.Length];
+                            for (int i = 0; i < valuesSpan.Length; i++)
                             {
-                                entry.SetProperty(nameof(TimeSeriesEntry.Timestamp), engine.CreateValue(singleResult.Timestamp.GetDefaultRavenFormat(isUtc: true)));
-                                entry.SetProperty(nameof(TimeSeriesEntry.Tag), engine.CreateValue(singleResult.Tag?.ToString()));
-                                entry.SetProperty(nameof(TimeSeriesEntry.Values), jsValues);
-                                entry.SetProperty(nameof(TimeSeriesEntry.IsRollup), engine.CreateValue(singleResult.Type == SingleResultType.RolledUp));
+                                jsSpanItems[i] = ScriptEngine.CreateValue(valuesSpan[i]);
+                            }
+                            using (var jsValues = ScriptEngine.CreateArray(Array.Empty<InternalHandle>()))
+                            {
+                                //jsValues.FastAddProperty("length", ScriptEngine.CreateValue(0), true, false, false);
                                 
-                                using (var jsResPush = jsValues.Call("push", InternalHandle.Empty, entry))
+                                using (var jsResPush = jsValues.Call("push", InternalHandle.Empty, jsSpanItems)) // KeepAlive to each item has been done earlier (upper)
                                     jsResPush.ThrowOnError(); // TODO check if is needed here
+                                
+                                if (noEntries)
+                                    noEntries = false;
+
+                                using (var entry = ScriptEngine.CreateObject())
+                                {
+                                    entry.SetProperty(nameof(TimeSeriesEntry.Timestamp), engine.CreateValue(singleResult.Timestamp.GetDefaultRavenFormat(isUtc: true)));
+                                    entry.SetProperty(nameof(TimeSeriesEntry.Tag), engine.CreateValue(singleResult.Tag?.ToString()));
+                                    entry.SetProperty(nameof(TimeSeriesEntry.Values), jsValues);
+                                    entry.SetProperty(nameof(TimeSeriesEntry.IsRollup), engine.CreateValue(singleResult.Type == SingleResultType.RolledUp));
+                                    
+                                    using (var jsResPush = jsValues.Call("push", InternalHandle.Empty, entry))
+                                        jsResPush.ThrowOnError(); // TODO check if is needed here
+                                }
+                            }
+                            V8EngineEx.Dispose(jsSpanItems);
+
+                            if (DebugMode)
+                            {
+                                DebugActions.GetTimeSeries.Add(new DynamicJsonValue
+                                {
+                                    ["Name"] = timeSeries,
+                                    ["Timestamp"] = singleResult.Timestamp.GetDefaultRavenFormat(isUtc: true),
+                                    ["Tag"] = singleResult.Tag?.ToString(),
+                                    ["Values"] = singleResult.Values.ToArray().Cast<object>(),
+                                    ["Type"] = singleResult.Type,
+                                    ["Exists"] = true
+                                });
                             }
                         }
-                        V8EngineEx.Dispose(jsSpanItems);
 
-                        if (DebugMode)
+                        if (DebugMode && noEntries)
                         {
                             DebugActions.GetTimeSeries.Add(new DynamicJsonValue
                             {
                                 ["Name"] = timeSeries,
-                                ["Timestamp"] = singleResult.Timestamp.GetDefaultRavenFormat(isUtc: true),
-                                ["Tag"] = singleResult.Tag?.ToString(),
-                                ["Values"] = singleResult.Values.ToArray().Cast<object>(),
-                                ["Type"] = singleResult.Type,
-                                ["Exists"] = true
+                                ["Exists"] = false
                             });
                         }
+                        return entries;
                     }
-
-                    if (DebugMode && noEntries)
-                    {
-                        DebugActions.GetTimeSeries.Add(new DynamicJsonValue
-                        {
-                            ["Name"] = timeSeries,
-                            ["Exists"] = false
-                        });
-                    }
-                    return entries;
+                }
+                catch (Exception e) 
+                {
+                    return engine.CreateError(e.Message, JSValueType.ExecutionError);
                 }
             }
 
@@ -745,90 +757,114 @@ namespace Raven.Server.Documents.Patch
 
             private InternalHandle Raven_Max(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
-                GenericSortTwoElementArray(args);
-                return args[1];
+                try {
+                    GenericSortTwoElementArray(args);
+                    return args[1];
+                }
+                catch (Exception e) 
+                {
+                    return engine.CreateError(e.Message, JSValueType.ExecutionError);
+                }
             }
 
             private InternalHandle Raven_Min(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
-                GenericSortTwoElementArray(args);
-                return args[0];
+                try {
+                    GenericSortTwoElementArray(args);
+                    return args[0];
+                }
+                catch (Exception e) 
+                {
+                    return engine.CreateError(e.Message, JSValueType.ExecutionError);
+                }
             }
 
             private InternalHandle IncludeDoc(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
-                if (args.Length != 1)
-                    throw new InvalidOperationException("include(id) must be called with a single argument");
+                try {
+                    if (args.Length != 1)
+                        throw new InvalidOperationException("include(id) must be called with a single argument");
 
-                if (args[0].IsNull || args[0].IsUndefined)
-                    return args[0];
+                    if (args[0].IsNull || args[0].IsUndefined)
+                        return args[0];
 
-                if (args[0].IsArray)// recursive call ourselves
-                {
-                    var jsArray = args[0];
-                    int arrayLength = jsArray.ArrayLength;
-                    for (int i = 0; i < arrayLength; ++i)
+                    if (args[0].IsArray)// recursive call ourselves
                     {
-                        using (var jsItem = jsArray.GetProperty(i))
+                        var jsArray = args[0];
+                        int arrayLength = jsArray.ArrayLength;
+                        for (int i = 0; i < arrayLength; ++i)
                         {
-                            args[0].Set(jsItem);
-                            if (args[0].IsString)
-                                IncludeDoc(engine, isConstructCall, self, args);
+                            using (var jsItem = jsArray.GetProperty(i))
+                            {
+                                args[0].Set(jsItem);
+                                if (args[0].IsString)
+                                    IncludeDoc(engine, isConstructCall, self, args);
+                            }
                         }
+                        return self;
                     }
-                    return self;
+
+                    if (args[0].IsString == false)
+                        throw new InvalidOperationException("include(doc) must be called with an string or string array argument");
+
+                    var id = args[0].AsString;
+
+                    if (Includes == null)
+                        Includes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    Includes.Add(id);
+
+                    InternalHandle jsRes = InternalHandle.Empty;
+                    return jsRes.Set(self);
                 }
-
-                if (args[0].IsString == false)
-                    throw new InvalidOperationException("include(doc) must be called with an string or string array argument");
-
-                var id = args[0].AsString;
-
-                if (Includes == null)
-                    Includes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                Includes.Add(id);
-
-                InternalHandle jsRes = InternalHandle.Empty;
-                return jsRes.Set(self);
+                catch (Exception e) 
+                {
+                    return engine.CreateError(e.Message, JSValueType.ExecutionError);
+                }
             }
 
             private InternalHandle IncludeCompareExchangeValue(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
-                if (args.Length != 1)
-                    throw new InvalidOperationException("includes.cmpxchg(key) must be called with a single argument");
+                try {
+                    if (args.Length != 1)
+                        throw new InvalidOperationException("includes.cmpxchg(key) must be called with a single argument");
 
-                InternalHandle jsRes = InternalHandle.Empty;
+                    InternalHandle jsRes = InternalHandle.Empty;
 
-                if (args[0].IsNull || args[0].IsUndefined)
-                    return jsRes.Set(self);
+                    if (args[0].IsNull || args[0].IsUndefined)
+                        return jsRes.Set(self);
 
-                if (args[0].IsArray)// recursive call ourselves
-                {
-                    var jsArray = args[0];
-                    int arrayLength = jsArray.ArrayLength;
-                    for (int i = 0; i < arrayLength; ++i)
+                    if (args[0].IsArray)// recursive call ourselves
                     {
-                        using (args[0] = jsArray.GetProperty(i))
+                        var jsArray = args[0];
+                        int arrayLength = jsArray.ArrayLength;
+                        for (int i = 0; i < arrayLength; ++i)
                         {
-                            if (args[0].IsString)
-                                IncludeCompareExchangeValue(engine, isConstructCall, self, args);
+                            using (args[0] = jsArray.GetProperty(i))
+                            {
+                                if (args[0].IsString)
+                                    IncludeCompareExchangeValue(engine, isConstructCall, self, args);
+                            }
                         }
+                        args[0] = jsArray;
+                        return jsRes.Set(self);
                     }
-                    args[0] = jsArray;
+
+                    if (args[0].IsString == false)
+                        throw new InvalidOperationException("includes.cmpxchg(key) must be called with an string or string array argument");
+
+                    var key = args[0].AsString;
+
+                    if (CompareExchangeValueIncludes == null)
+                        CompareExchangeValueIncludes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                    CompareExchangeValueIncludes.Add(key);
+
                     return jsRes.Set(self);
                 }
-
-                if (args[0].IsString == false)
-                    throw new InvalidOperationException("includes.cmpxchg(key) must be called with an string or string array argument");
-
-                var key = args[0].AsString;
-
-                if (CompareExchangeValueIncludes == null)
-                    CompareExchangeValueIncludes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-                CompareExchangeValueIncludes.Add(key);
-
-                return jsRes.Set(self);
+                catch (Exception e) 
+                {
+                    return engine.CreateError(e.Message, JSValueType.ExecutionError);
+                }
             }
 
             public override string ToString()
@@ -838,72 +874,90 @@ namespace Raven.Server.Documents.Patch
 
             private InternalHandle GetLastModified(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
-                if (args.Length != 1)
-                    throw new InvalidOperationException("lastModified(doc) must be called with a single argument");
+                try {
+                    if (args.Length != 1)
+                        throw new InvalidOperationException("lastModified(doc) must be called with a single argument");
 
-                if (args[0].IsNull || args[0].IsUndefined)
-                    return args[0];
+                    if (args[0].IsNull || args[0].IsUndefined)
+                        return args[0];
 
-                if (args[0].IsObject == false)
-                    throw new InvalidOperationException("lastModified(doc) must be called with an object argument");
+                    if (args[0].IsObject == false)
+                        throw new InvalidOperationException("lastModified(doc) must be called with an object argument");
 
-                if (args[0].BoundObject is BlittableObjectInstance doc)
-                {
-                    if (doc.LastModified == null)
-                        return InternalHandle.Empty;
+                    if (args[0].BoundObject is BlittableObjectInstance doc)
+                    {
+                        if (doc.LastModified == null)
+                            return InternalHandle.Empty;
 
-                    // we use UTC because last modified is in UTC
-                    var epoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-                    var time = doc.LastModified.Value.Subtract(epoch)
-                        .TotalMilliseconds;
-                    return ScriptEngine.CreateValue(time);
+                        // we use UTC because last modified is in UTC
+                        var epoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+                        var time = doc.LastModified.Value.Subtract(epoch)
+                            .TotalMilliseconds;
+                        return ScriptEngine.CreateValue(time);
+                    }
+                    return InternalHandle.Empty;
                 }
-                return InternalHandle.Empty;
+                catch (Exception e) 
+                {
+                    return engine.CreateError(e.Message, JSValueType.ExecutionError);
+                }
             }
 
             private InternalHandle Spatial_Distance(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
-                if (args.Length < 4 && args.Length > 5)
-                    throw new ArgumentException("Called with expected number of arguments, expected: spatial.distance(lat1, lng1, lat2, lng2, kilometers | miles | cartesian)");
+                try {
+                    if (args.Length < 4 && args.Length > 5)
+                        throw new ArgumentException("Called with expected number of arguments, expected: spatial.distance(lat1, lng1, lat2, lng2, kilometers | miles | cartesian)");
 
-                for (int i = 0; i < 4; i++)
-                {
-                    if (args[i].IsNumber == false)
-                        return InternalHandle.Empty;
+                    for (int i = 0; i < 4; i++)
+                    {
+                        if (args[i].IsNumber == false)
+                            return InternalHandle.Empty;
+                    }
+
+                    var lat1 = args[0].AsDouble;
+                    var lng1 = args[1].AsDouble;
+                    var lat2 = args[2].AsDouble;
+                    var lng2 = args[3].AsDouble;
+
+                    var units = SpatialUnits.Kilometers;
+                    if (args.Length > 4 && args[4].IsString)
+                    {
+                        if (string.Equals("cartesian", args[4].AsString, StringComparison.OrdinalIgnoreCase))
+                            return engine.CreateValue(SpatialDistanceFieldComparatorSource.SpatialDistanceFieldComparator.CartesianDistance(lat1, lng1, lat2, lng2));
+
+                        if (Enum.TryParse(args[4].AsString, ignoreCase: true, out units) == false)
+                            throw new ArgumentException("Unable to parse units " + args[5] + ", expected: 'kilometers' or 'miles'");
+                    }
+
+                    var result = SpatialDistanceFieldComparatorSource.SpatialDistanceFieldComparator.HaverstineDistanceInMiles(lat1, lng1, lat2, lng2);
+                    if (units == SpatialUnits.Kilometers)
+                        result *= DistanceUtils.MILES_TO_KM;
+
+                    return engine.CreateValue(result);
                 }
-
-                var lat1 = args[0].AsDouble;
-                var lng1 = args[1].AsDouble;
-                var lat2 = args[2].AsDouble;
-                var lng2 = args[3].AsDouble;
-
-                var units = SpatialUnits.Kilometers;
-                if (args.Length > 4 && args[4].IsString)
+                catch (Exception e) 
                 {
-                    if (string.Equals("cartesian", args[4].AsString, StringComparison.OrdinalIgnoreCase))
-                        return engine.CreateValue(SpatialDistanceFieldComparatorSource.SpatialDistanceFieldComparator.CartesianDistance(lat1, lng1, lat2, lng2));
-
-                    if (Enum.TryParse(args[4].AsString, ignoreCase: true, out units) == false)
-                        throw new ArgumentException("Unable to parse units " + args[5] + ", expected: 'kilometers' or 'miles'");
+                    return engine.CreateError(e.Message, JSValueType.ExecutionError);
                 }
-
-                var result = SpatialDistanceFieldComparatorSource.SpatialDistanceFieldComparator.HaverstineDistanceInMiles(lat1, lng1, lat2, lng2);
-                if (units == SpatialUnits.Kilometers)
-                    result *= DistanceUtils.MILES_TO_KM;
-
-                return engine.CreateValue(result);
             }
 
             private InternalHandle OutputDebug(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
-                InternalHandle jsRes = InternalHandle.Empty;
-                if (DebugMode == false)
+                try {
+                    InternalHandle jsRes = InternalHandle.Empty;
+                    if (DebugMode == false)
+                        return jsRes.Set(self);
+
+                    InternalHandle obj = args[0];
+
+                    DebugOutput.Add(GetDebugValue(obj, false));
                     return jsRes.Set(self);
-
-                InternalHandle obj = args[0];
-
-                DebugOutput.Add(GetDebugValue(obj, false));
-                return jsRes.Set(self);
+                }
+                catch (Exception e) 
+                {
+                    return engine.CreateError(e.Message, JSValueType.ExecutionError);
+                }
             }
 
             private string GetDebugValue(InternalHandle obj, bool recursive)
@@ -946,62 +1000,68 @@ namespace Raven.Server.Documents.Patch
 
             public InternalHandle PutDocument(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
-                string changeVector = null;
+                try {
+                    string changeVector = null;
 
-                if (args.Length != 2 && args.Length != 3)
-                    throw new InvalidOperationException("put(id, doc, changeVector) must be called with called with 2 or 3 arguments only");
-                AssertValidDatabaseContext("put document");
-                AssertNotReadOnly();
-                if (args[0].IsString == false && args[0].IsNull == false && args[0].IsUndefined == false)
-                    AssertValidId();
+                    if (args.Length != 2 && args.Length != 3)
+                        throw new InvalidOperationException("put(id, doc, changeVector) must be called with called with 2 or 3 arguments only");
+                    AssertValidDatabaseContext("put document");
+                    AssertNotReadOnly();
+                    if (args[0].IsString == false && args[0].IsNull == false && args[0].IsUndefined == false)
+                        AssertValidId();
 
-                var id = args[0].IsNull || args[0].IsUndefined ? null : args[0].AsString;
+                    var id = args[0].IsNull || args[0].IsUndefined ? null : args[0].AsString;
 
-                if (args[1].IsObject == false)
-                    throw new InvalidOperationException(
-                        $"Created document must be a valid object which is not null or empty. Document ID: '{id}'.");
-
-                PutOrDeleteCalled = true;
-
-                if (args.Length == 3)
-                    if (args[2].IsString)
-                        changeVector = args[2].AsString;
-                    else if (args[2].IsNull == false && args[0].IsUndefined == false)
+                    if (args[1].IsObject == false)
                         throw new InvalidOperationException(
-                            $"The change vector must be a string or null. Document ID: '{id}'.");
+                            $"Created document must be a valid object which is not null or empty. Document ID: '{id}'.");
 
-                BlittableJsonReaderObject reader = null;
-                try
-                {
-                    reader = JsBlittableBridge.Translate(_jsonCtx, ScriptEngine, args[1].Object, usageMode: BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                    PutOrDeleteCalled = true;
 
-                    var put = _database.DocumentsStorage.Put(
-                        _docsCtx,
-                        id,
-                        _docsCtx.GetLazyString(changeVector),
-                        reader,
-                        //RavenDB-11391 Those flags were added to cause attachment/counter metadata table check & remove metadata properties if not necessary
-                        nonPersistentFlags: NonPersistentDocumentFlags.ResolveAttachmentsConflict | NonPersistentDocumentFlags.ResolveCountersConflict | NonPersistentDocumentFlags.ResolveTimeSeriesConflict
-                    );
+                    if (args.Length == 3)
+                        if (args[2].IsString)
+                            changeVector = args[2].AsString;
+                        else if (args[2].IsNull == false && args[0].IsUndefined == false)
+                            throw new InvalidOperationException(
+                                $"The change vector must be a string or null. Document ID: '{id}'.");
 
-                    if (DebugMode)
+                    BlittableJsonReaderObject reader = null;
+                    try
                     {
-                        DebugActions.PutDocument.Add(new DynamicJsonValue
+                        reader = JsBlittableBridge.Translate(_jsonCtx, ScriptEngine, args[1].Object, usageMode: BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+
+                        var put = _database.DocumentsStorage.Put(
+                            _docsCtx,
+                            id,
+                            _docsCtx.GetLazyString(changeVector),
+                            reader,
+                            //RavenDB-11391 Those flags were added to cause attachment/counter metadata table check & remove metadata properties if not necessary
+                            nonPersistentFlags: NonPersistentDocumentFlags.ResolveAttachmentsConflict | NonPersistentDocumentFlags.ResolveCountersConflict | NonPersistentDocumentFlags.ResolveTimeSeriesConflict
+                        );
+
+                        if (DebugMode)
                         {
-                            ["Id"] = put.Id,
-                            ["Data"] = reader
-                        });
+                            DebugActions.PutDocument.Add(new DynamicJsonValue
+                            {
+                                ["Id"] = put.Id,
+                                ["Data"] = reader
+                            });
+                        }
+
+                        if (RefreshOriginalDocument == false && string.Equals(put.Id, OriginalDocumentId, StringComparison.OrdinalIgnoreCase))
+                            RefreshOriginalDocument = true;
+
+                        return engine.CreateValue(put.Id);
                     }
-
-                    if (RefreshOriginalDocument == false && string.Equals(put.Id, OriginalDocumentId, StringComparison.OrdinalIgnoreCase))
-                        RefreshOriginalDocument = true;
-
-                    return engine.CreateValue(put.Id);
+                    finally
+                    {
+                        if (DebugMode == false)
+                            reader?.Dispose();
+                    }
                 }
-                finally
+                catch (Exception e) 
                 {
-                    if (DebugMode == false)
-                        reader?.Dispose();
+                    return engine.CreateError(e.Message, JSValueType.ExecutionError);
                 }
             }
 
@@ -1012,33 +1072,39 @@ namespace Raven.Server.Documents.Patch
 
             public InternalHandle DeleteDocument(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
-                if (args.Length != 1 && args.Length != 2)
-                    throw new InvalidOperationException("delete(id, changeVector) must be called with at least one parameter");
+                try {
+                    if (args.Length != 1 && args.Length != 2)
+                        throw new InvalidOperationException("delete(id, changeVector) must be called with at least one parameter");
 
-                if (args[0].IsString == false)
-                    throw new InvalidOperationException("delete(id, changeVector) id argument must be a string");
+                    if (args[0].IsString == false)
+                        throw new InvalidOperationException("delete(id, changeVector) id argument must be a string");
 
-                var id = args[0].AsString;
-                string changeVector = null;
+                    var id = args[0].AsString;
+                    string changeVector = null;
 
-                if (args.Length == 2 && args[1].IsString)
-                    changeVector = args[1].AsString;
+                    if (args.Length == 2 && args[1].IsString)
+                        changeVector = args[1].AsString;
 
-                PutOrDeleteCalled = true;
-                AssertValidDatabaseContext("delete document");
-                AssertNotReadOnly();
+                    PutOrDeleteCalled = true;
+                    AssertValidDatabaseContext("delete document");
+                    AssertNotReadOnly();
 
-                var result = _database.DocumentsStorage.Delete(_docsCtx, id, changeVector);
+                    var result = _database.DocumentsStorage.Delete(_docsCtx, id, changeVector);
 
-                if (RefreshOriginalDocument && string.Equals(OriginalDocumentId, id, StringComparison.OrdinalIgnoreCase))
-                    RefreshOriginalDocument = false;
+                    if (RefreshOriginalDocument && string.Equals(OriginalDocumentId, id, StringComparison.OrdinalIgnoreCase))
+                        RefreshOriginalDocument = false;
 
-                if (DebugMode)
-                {
-                    DebugActions.DeleteDocument.Add(id);
+                    if (DebugMode)
+                    {
+                        DebugActions.DeleteDocument.Add(id);
+                    }
+
+                    return engine.CreateValue(result != null);
                 }
-
-                return engine.CreateValue(result != null);
+                catch (Exception e) 
+                {
+                    return engine.CreateError(e.Message, JSValueType.ExecutionError);
+                }
             }
 
             private void AssertNotReadOnly()
@@ -1093,94 +1159,124 @@ namespace Raven.Server.Documents.Patch
             
             private InternalHandle LoadDocumentByPath(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
-                using (_loadScope = _loadScope?.Start() ?? _scope?.For(nameof(QueryTimingsScope.Names.Load)))
-                {
-                    AssertValidDatabaseContext("loadPath");
-
-                    if (args.Length != 2 ||
-                        (args[0].IsNull == false && args[0].IsUndefined == false && args[0].IsObject == false)
-                        || args[1].IsString == false)
-                        throw new InvalidOperationException("loadPath(doc, path) must be called with a document and path");
-
-                    if (args[0].IsNull || args[1].IsUndefined)
-                        return args[0];
-
-                    if (args[0].BoundObject is BlittableObjectInstance b)
+                try {
+                    using (_loadScope = _loadScope?.Start() ?? _scope?.For(nameof(QueryTimingsScope.Names.Load)))
                     {
-                        var path = args[1].AsString;
-                        if (_documentIds == null)
-                            _documentIds = new HashSet<string>();
+                        AssertValidDatabaseContext("loadPath");
 
-                        _documentIds.Clear();
-                        IncludeUtil.GetDocIdFromInclude(b.Blittable, path, _documentIds, _database.IdentityPartsSeparator);
-                        if (path.IndexOf("[]", StringComparison.InvariantCulture) != -1) // array
-                            return ScriptEngine.FromObject(_documentIds.Select(LoadDocumentInternal).ToList());
-                        if (_documentIds.Count == 0)
-                            return ScriptEngine.CreateNullValue();
+                        if (args.Length != 2 ||
+                            (args[0].IsNull == false && args[0].IsUndefined == false && args[0].IsObject == false)
+                            || args[1].IsString == false)
+                            throw new InvalidOperationException("loadPath(doc, path) must be called with a document and path");
 
-                        return LoadDocumentInternal(_documentIds.First());
+                        if (args[0].IsNull || args[1].IsUndefined)
+                            return args[0];
+
+                        if (args[0].BoundObject is BlittableObjectInstance b)
+                        {
+                            var path = args[1].AsString;
+                            if (_documentIds == null)
+                                _documentIds = new HashSet<string>();
+
+                            _documentIds.Clear();
+                            IncludeUtil.GetDocIdFromInclude(b.Blittable, path, _documentIds, _database.IdentityPartsSeparator);
+                            if (path.IndexOf("[]", StringComparison.InvariantCulture) != -1) // array
+                                return ScriptEngine.FromObject(_documentIds.Select(LoadDocumentInternal).ToList());
+                            if (_documentIds.Count == 0)
+                                return ScriptEngine.CreateNullValue();
+
+                            return LoadDocumentInternal(_documentIds.First());
+                        }
+
+                        throw new InvalidOperationException("loadPath(doc, path) must be called with a valid document instance, but got a JS object instead");
                     }
-
-                    throw new InvalidOperationException("loadPath(doc, path) must be called with a valid document instance, but got a JS object instead");
+                }
+                catch (Exception e) 
+                {
+                    return engine.CreateError(e.Message, JSValueType.ExecutionError);
                 }
             }
 
             private InternalHandle CompareExchange(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
-                AssertValidDatabaseContext("cmpxchg");
+                try {
+                    AssertValidDatabaseContext("cmpxchg");
 
-                if (args.Length != 1 && args.Length != 2 || args[0].IsString == false)
-                    throw new InvalidOperationException("cmpxchg(key) must be called with a single string argument");
+                    if (args.Length != 1 && args.Length != 2 || args[0].IsString == false)
+                        throw new InvalidOperationException("cmpxchg(key) must be called with a single string argument");
 
-                return CmpXchangeInternal(CompareExchangeKey.GetStorageKey(_database.Name, args[0].AsString));
+                    return CmpXchangeInternal(CompareExchangeKey.GetStorageKey(_database.Name, args[0].AsString));
+                }
+                catch (Exception e) 
+                {
+                    return engine.CreateError(e.Message, JSValueType.ExecutionError);
+                }
             }
 
             private InternalHandle LoadDocument(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
-                using (_loadScope = _loadScope?.Start() ?? _scope?.For(nameof(QueryTimingsScope.Names.Load)))
-                {
-                    AssertValidDatabaseContext("load");
-
-                    if (args.Length != 1)
-                        throw new InvalidOperationException($"load(id | ids) must be called with a single string argument");
-
-                    if (args[0].IsNull || args[0].IsUndefined)
-                        return args[0];
-
-                    if (args[0].IsArray)
+                try {
+                    using (_loadScope = _loadScope?.Start() ?? _scope?.For(nameof(QueryTimingsScope.Names.Load)))
                     {
-                        var results = ScriptEngine.CreateArray(Array.Empty<InternalHandle>());
-                        var jsArray = args[0];
-                        int arrayLength = jsArray.ArrayLength;
-                        for (int i = 0; i < arrayLength; ++i)
+                        AssertValidDatabaseContext("load");
+
+                        if (args.Length != 1)
+                            throw new InvalidOperationException($"load(id | ids) must be called with a single string argument");
+
+                        if (args[0].IsNull || args[0].IsUndefined)
+                            return args[0];
+
+                        if (args[0].IsArray)
                         {
-                            using (var jsItem = jsArray.GetProperty(i))
+                            var results = ScriptEngine.CreateArray(Array.Empty<InternalHandle>());
+                            var jsArray = args[0];
+                            int arrayLength = jsArray.ArrayLength;
+                            for (int i = 0; i < arrayLength; ++i)
                             {
-                                if (jsItem.IsString == false)
-                                    throw new InvalidOperationException("load(ids) must be called with a array of strings, but got " + jsItem.ValueType + " - " + jsItem.ToString());
-                                using (var result = LoadDocumentInternal(jsItem.AsString))
-                                using (var jsResPush = results.Call("push", InternalHandle.Empty, result))
-                                    jsResPush.ThrowOnError(); // TODO check if is needed here
+                                using (var jsItem = jsArray.GetProperty(i))
+                                {
+                                    if (jsItem.IsString == false)
+                                        throw new InvalidOperationException("load(ids) must be called with a array of strings, but got " + jsItem.ValueType + " - " + jsItem.ToString());
+                                    using (var result = LoadDocumentInternal(jsItem.AsString))
+                                    using (var jsResPush = results.Call("push", InternalHandle.Empty, result))
+                                        jsResPush.ThrowOnError(); // TODO check if is needed here
+                                }
                             }
+                            return results;
                         }
-                        return results;
+
+                        if (args[0].IsString == false)
+                            throw new InvalidOperationException("load(id | ids) must be called with a single string or array argument");
+
+                        return LoadDocumentInternal(args[0].AsString);
                     }
-
-                    if (args[0].IsString == false)
-                        throw new InvalidOperationException("load(id | ids) must be called with a single string or array argument");
-
-                    return LoadDocumentInternal(args[0].AsString);
+                }
+                catch (Exception e) 
+                {
+                    return engine.CreateError(e.Message, JSValueType.ExecutionError);
                 }
             }
 
             private InternalHandle GetCounter(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
-                return GetCounterInternal(args);
+                try {
+                    return GetCounterInternal(args);
+                }
+                catch (Exception e) 
+                {
+                    return engine.CreateError(e.Message, JSValueType.ExecutionError);
+                }
             }
 
             private InternalHandle GetCounterRaw(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
-                return GetCounterInternal(args, true);
+                try {
+                    return GetCounterInternal(args, true);
+                }
+                catch (Exception e) 
+                {
+                    return engine.CreateError(e.Message, JSValueType.ExecutionError);
+                }
             }
 
             private InternalHandle GetCounterInternal(InternalHandle[] args, bool raw = false)
@@ -1245,141 +1341,153 @@ namespace Raven.Server.Documents.Patch
 
             private InternalHandle IncrementCounter(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
-                AssertValidDatabaseContext("incrementCounter");
+                try {
+                    AssertValidDatabaseContext("incrementCounter");
 
-                if (args.Length < 2 || args.Length > 3)
-                {
-                    ThrowInvalidIncrementCounterArgs(args);
-                }
-
-                var signature = args.Length == 2 ? "incrementCounter(doc, name)" : "incrementCounter(doc, name, value)";
-
-                BlittableJsonReaderObject docBlittable = null;
-                string id = null;
-
-                if (args[0].BoundObject != null && args[0].BoundObject is BlittableObjectInstance doc)
-                {
-                    id = doc.DocumentId;
-                    docBlittable = doc.Blittable;
-                }
-                else if (args[0].IsString)
-                {
-                    id = args[0].AsString;
-                    var document = _database.DocumentsStorage.Get(_docsCtx, id);
-                    if (document == null)
+                    if (args.Length < 2 || args.Length > 3)
                     {
-                        ThrowMissingDocument(id);
-                        Debug.Assert(false); // never hit
+                        ThrowInvalidIncrementCounterArgs(args);
                     }
 
-                    docBlittable = document.Data;
-                }
-                else
-                {
-                    ThrowInvalidDocumentArgsType(signature);
-                }
+                    var signature = args.Length == 2 ? "incrementCounter(doc, name)" : "incrementCounter(doc, name, value)";
 
-                Debug.Assert(id != null && docBlittable != null);
+                    BlittableJsonReaderObject docBlittable = null;
+                    string id = null;
 
-                if (args[1].IsString == false)
-                    ThrowInvalidCounterName(signature);
-
-                var name = args[1].AsString;
-                if (string.IsNullOrWhiteSpace(name))
-                    ThrowInvalidCounterName(signature);
-
-                double value = 1;
-                if (args.Length == 3)
-                {
-                    if (args[2].IsNumber == false)
-                        ThrowInvalidCounterValue();
-                    value = args[2].AsDouble;
-                }
-
-                long? currentValue = null;
-                if (DebugMode)
-                {
-                    currentValue = _database.DocumentsStorage.CountersStorage.GetCounterValue(_docsCtx, id, name)?.Value;
-                }
-
-                _database.DocumentsStorage.CountersStorage.IncrementCounter(_docsCtx, id, CollectionName.GetCollectionName(docBlittable), name, (long)value, out var exists);
-
-                if (exists == false)
-                {
-                    DocumentCountersToUpdate ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                    DocumentCountersToUpdate.Add(id);
-                }
-
-                if (DebugMode)
-                {
-                    var newValue = _database.DocumentsStorage.CountersStorage.GetCounterValue(_docsCtx, id, name)?.Value;
-
-                    DebugActions.IncrementCounter.Add(new DynamicJsonValue
+                    if (args[0].BoundObject != null && args[0].BoundObject is BlittableObjectInstance doc)
                     {
-                        ["Name"] = name,
-                        ["OldValue"] = currentValue,
-                        ["AddedValue"] = value,
-                        ["NewValue"] = newValue,
-                        ["Created"] = exists == false
-                    });
-                }
+                        id = doc.DocumentId;
+                        docBlittable = doc.Blittable;
+                    }
+                    else if (args[0].IsString)
+                    {
+                        id = args[0].AsString;
+                        var document = _database.DocumentsStorage.Get(_docsCtx, id);
+                        if (document == null)
+                        {
+                            ThrowMissingDocument(id);
+                            Debug.Assert(false); // never hit
+                        }
 
-                return engine.CreateValue(true);
+                        docBlittable = document.Data;
+                    }
+                    else
+                    {
+                        ThrowInvalidDocumentArgsType(signature);
+                    }
+
+                    Debug.Assert(id != null && docBlittable != null);
+
+                    if (args[1].IsString == false)
+                        ThrowInvalidCounterName(signature);
+
+                    var name = args[1].AsString;
+                    if (string.IsNullOrWhiteSpace(name))
+                        ThrowInvalidCounterName(signature);
+
+                    double value = 1;
+                    if (args.Length == 3)
+                    {
+                        if (args[2].IsNumber == false)
+                            ThrowInvalidCounterValue();
+                        value = args[2].AsDouble;
+                    }
+
+                    long? currentValue = null;
+                    if (DebugMode)
+                    {
+                        currentValue = _database.DocumentsStorage.CountersStorage.GetCounterValue(_docsCtx, id, name)?.Value;
+                    }
+
+                    _database.DocumentsStorage.CountersStorage.IncrementCounter(_docsCtx, id, CollectionName.GetCollectionName(docBlittable), name, (long)value, out var exists);
+
+                    if (exists == false)
+                    {
+                        DocumentCountersToUpdate ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                        DocumentCountersToUpdate.Add(id);
+                    }
+
+                    if (DebugMode)
+                    {
+                        var newValue = _database.DocumentsStorage.CountersStorage.GetCounterValue(_docsCtx, id, name)?.Value;
+
+                        DebugActions.IncrementCounter.Add(new DynamicJsonValue
+                        {
+                            ["Name"] = name,
+                            ["OldValue"] = currentValue,
+                            ["AddedValue"] = value,
+                            ["NewValue"] = newValue,
+                            ["Created"] = exists == false
+                        });
+                    }
+
+                    return engine.CreateValue(true);
+                }
+                catch (Exception e) 
+                {
+                    return engine.CreateError(e.Message, JSValueType.ExecutionError);
+                }
             }
 
             private InternalHandle DeleteCounter(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
-                AssertValidDatabaseContext("deleteCounter");
+                try {
+                    AssertValidDatabaseContext("deleteCounter");
 
-                if (args.Length != 2)
-                {
-                    ThrowInvalidDeleteCounterArgs();
-                }
-
-                string id = null;
-                BlittableJsonReaderObject docBlittable = null;
-
-                if (args[0].BoundObject != null && args[0].BoundObject is BlittableObjectInstance doc)
-                {
-                    id = doc.DocumentId;
-                    docBlittable = doc.Blittable;
-                }
-                else if (args[0].IsString)
-                {
-                    id = args[0].AsString;
-                    var document = _database.DocumentsStorage.Get(_docsCtx, id);
-                    if (document == null)
+                    if (args.Length != 2)
                     {
-                        ThrowMissingDocument(id);
-                        Debug.Assert(false); // never hit
+                        ThrowInvalidDeleteCounterArgs();
                     }
 
-                    docBlittable = document.Data;
+                    string id = null;
+                    BlittableJsonReaderObject docBlittable = null;
+
+                    if (args[0].BoundObject != null && args[0].BoundObject is BlittableObjectInstance doc)
+                    {
+                        id = doc.DocumentId;
+                        docBlittable = doc.Blittable;
+                    }
+                    else if (args[0].IsString)
+                    {
+                        id = args[0].AsString;
+                        var document = _database.DocumentsStorage.Get(_docsCtx, id);
+                        if (document == null)
+                        {
+                            ThrowMissingDocument(id);
+                            Debug.Assert(false); // never hit
+                        }
+
+                        docBlittable = document.Data;
+                    }
+                    else
+                    {
+                        ThrowInvalidDeleteCounterDocumentArg();
+                    }
+
+                    Debug.Assert(id != null && docBlittable != null);
+
+                    if (args[1].IsString == false)
+                    {
+                        ThrowDeleteCounterNameArg();
+                    }
+
+                    var name = args[1].AsString;
+                    _database.DocumentsStorage.CountersStorage.DeleteCounter(_docsCtx, id, CollectionName.GetCollectionName(docBlittable), name);
+
+                    DocumentCountersToUpdate ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    DocumentCountersToUpdate.Add(id);
+
+                    if (DebugMode)
+                    {
+                        DebugActions.DeleteCounter.Add(name);
+                    }
+
+                    return engine.CreateValue(true);
                 }
-                else
+                catch (Exception e) 
                 {
-                    ThrowInvalidDeleteCounterDocumentArg();
+                    return engine.CreateError(e.Message, JSValueType.ExecutionError);
                 }
-
-                Debug.Assert(id != null && docBlittable != null);
-
-                if (args[1].IsString == false)
-                {
-                    ThrowDeleteCounterNameArg();
-                }
-
-                var name = args[1].AsString;
-                _database.DocumentsStorage.CountersStorage.DeleteCounter(_docsCtx, id, CollectionName.GetCollectionName(docBlittable), name);
-
-                DocumentCountersToUpdate ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                DocumentCountersToUpdate.Add(id);
-
-                if (DebugMode)
-                {
-                    DebugActions.DeleteCounter.Add(name);
-                }
-
-                return engine.CreateValue(true);
             }
 
             private V8Function NamedInvokeTimeSeriesFunction(string name)
@@ -1507,242 +1615,302 @@ namespace Raven.Server.Documents.Patch
 
             private static InternalHandle ThrowOnLoadDocument(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
-                throw new MissingMethodException("The method LoadDocument was renamed to 'load'");
+                try {
+                    throw new MissingMethodException("The method LoadDocument was renamed to 'load'");
+                }
+                catch (Exception e) 
+                {
+                    return engine.CreateError(e.Message, JSValueType.ExecutionError);
+                }
             }
 
             private static InternalHandle ThrowOnPutDocument(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
-                throw new MissingMethodException("The method PutDocument was renamed to 'put'");
+                try {
+                    throw new MissingMethodException("The method PutDocument was renamed to 'put'");
+                }
+                catch (Exception e) 
+                {
+                    return engine.CreateError(e.Message, JSValueType.ExecutionError);
+                }
             }
 
             private static InternalHandle ThrowOnDeleteDocument(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
-                throw new MissingMethodException("The method DeleteDocument was renamed to 'del'");
+                try {
+                    throw new MissingMethodException("The method DeleteDocument was renamed to 'del'");
+                }
+                catch (Exception e) 
+                {
+                    return engine.CreateError(e.Message, JSValueType.ExecutionError);
+                }
             }
 
             private InternalHandle ConvertJsTimeToTimeSpanString(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
-                if (args.Length != 1 || args[0].IsNumber == false)
-                    throw new InvalidOperationException("convertJsTimeToTimeSpanString(ticks) must be called with a single long argument");
+                try {
+                    if (args.Length != 1 || args[0].IsNumber == false)
+                        throw new InvalidOperationException("convertJsTimeToTimeSpanString(ticks) must be called with a single long argument");
 
-                var ticks = Convert.ToInt64(args[0].AsDouble) * 10000;
+                    var ticks = Convert.ToInt64(args[0].AsDouble) * 10000;
 
-                var asTimeSpan = new TimeSpan(ticks);
+                    var asTimeSpan = new TimeSpan(ticks);
 
-                return engine.CreateValue(asTimeSpan.ToString());
+                    return engine.CreateValue(asTimeSpan.ToString());
+                }
+                catch (Exception e) 
+                {
+                    return engine.CreateError(e.Message, JSValueType.ExecutionError);
+                }
             }
 
             private InternalHandle ConvertToTimeSpanString(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
-                if (args.Length == 1)
-                {
-                    if (args[0].IsNumber == false)
-                        throw new InvalidOperationException("convertToTimeSpanString(ticks) must be called with a single long argument");
+                try {
+                    if (args.Length == 1)
+                    {
+                        if (args[0].IsNumber == false)
+                            throw new InvalidOperationException("convertToTimeSpanString(ticks) must be called with a single long argument");
 
-                    var ticks = Convert.ToInt64(args[0].AsDouble);
-                    var asTimeSpan = new TimeSpan(ticks);
-                    return engine.CreateValue(asTimeSpan.ToString());
+                        var ticks = Convert.ToInt64(args[0].AsDouble);
+                        var asTimeSpan = new TimeSpan(ticks);
+                        return engine.CreateValue(asTimeSpan.ToString());
+                    }
+
+                    if (args.Length == 3)
+                    {
+                        if (args[0].IsNumber == false || args[1].IsNumber == false || args[2].IsNumber == false)
+                            throw new InvalidOperationException("convertToTimeSpanString(hours, minutes, seconds) must be called with integer values");
+
+                        var hours = Convert.ToInt32(args[0].AsDouble);
+                        var minutes = Convert.ToInt32(args[1].AsDouble);
+                        var seconds = Convert.ToInt32(args[2].AsDouble);
+
+                        var asTimeSpan = new TimeSpan(hours, minutes, seconds);
+                        return engine.CreateValue(asTimeSpan.ToString());
+                    }
+
+                    if (args.Length == 4)
+                    {
+                        if (args[0].IsNumber == false || args[1].IsNumber == false || args[2].IsNumber == false || args[3].IsNumber == false)
+                            throw new InvalidOperationException("convertToTimeSpanString(days, hours, minutes, seconds) must be called with integer values");
+
+                        var days = Convert.ToInt32(args[0].AsDouble);
+                        var hours = Convert.ToInt32(args[1].AsDouble);
+                        var minutes = Convert.ToInt32(args[2].AsDouble);
+                        var seconds = Convert.ToInt32(args[3].AsDouble);
+
+                        var asTimeSpan = new TimeSpan(days, hours, minutes, seconds);
+                        return engine.CreateValue(asTimeSpan.ToString());
+                    }
+
+                    if (args.Length == 5)
+                    {
+                        if (args[0].IsNumber == false || args[1].IsNumber == false || args[2].IsNumber == false || args[3].IsNumber == false || args[4].IsNumber == false)
+                            throw new InvalidOperationException("convertToTimeSpanString(days, hours, minutes, seconds, milliseconds) must be called with integer values");
+
+                        var days = Convert.ToInt32(args[0].AsDouble);
+                        var hours = Convert.ToInt32(args[1].AsDouble);
+                        var minutes = Convert.ToInt32(args[2].AsDouble);
+                        var seconds = Convert.ToInt32(args[3].AsDouble);
+                        var milliseconds = Convert.ToInt32(args[4].AsDouble);
+
+                        var asTimeSpan = new TimeSpan(days, hours, minutes, seconds, milliseconds);
+                        return engine.CreateValue(asTimeSpan.ToString());
+                    }
+
+                    throw new InvalidOperationException("supported overloads are: " +
+                                                        "convertToTimeSpanString(ticks), " +
+                                                        "convertToTimeSpanString(hours, minutes, seconds), " +
+                                                        "convertToTimeSpanString(days, hours, minutes, seconds), " +
+                                                        "convertToTimeSpanString(days, hours, minutes, seconds, milliseconds)");
                 }
-
-                if (args.Length == 3)
+                catch (Exception e) 
                 {
-                    if (args[0].IsNumber == false || args[1].IsNumber == false || args[2].IsNumber == false)
-                        throw new InvalidOperationException("convertToTimeSpanString(hours, minutes, seconds) must be called with integer values");
-
-                    var hours = Convert.ToInt32(args[0].AsDouble);
-                    var minutes = Convert.ToInt32(args[1].AsDouble);
-                    var seconds = Convert.ToInt32(args[2].AsDouble);
-
-                    var asTimeSpan = new TimeSpan(hours, minutes, seconds);
-                    return engine.CreateValue(asTimeSpan.ToString());
+                    return engine.CreateError(e.Message, JSValueType.ExecutionError);
                 }
-
-                if (args.Length == 4)
-                {
-                    if (args[0].IsNumber == false || args[1].IsNumber == false || args[2].IsNumber == false || args[3].IsNumber == false)
-                        throw new InvalidOperationException("convertToTimeSpanString(days, hours, minutes, seconds) must be called with integer values");
-
-                    var days = Convert.ToInt32(args[0].AsDouble);
-                    var hours = Convert.ToInt32(args[1].AsDouble);
-                    var minutes = Convert.ToInt32(args[2].AsDouble);
-                    var seconds = Convert.ToInt32(args[3].AsDouble);
-
-                    var asTimeSpan = new TimeSpan(days, hours, minutes, seconds);
-                    return engine.CreateValue(asTimeSpan.ToString());
-                }
-
-                if (args.Length == 5)
-                {
-                    if (args[0].IsNumber == false || args[1].IsNumber == false || args[2].IsNumber == false || args[3].IsNumber == false || args[4].IsNumber == false)
-                        throw new InvalidOperationException("convertToTimeSpanString(days, hours, minutes, seconds, milliseconds) must be called with integer values");
-
-                    var days = Convert.ToInt32(args[0].AsDouble);
-                    var hours = Convert.ToInt32(args[1].AsDouble);
-                    var minutes = Convert.ToInt32(args[2].AsDouble);
-                    var seconds = Convert.ToInt32(args[3].AsDouble);
-                    var milliseconds = Convert.ToInt32(args[4].AsDouble);
-
-                    var asTimeSpan = new TimeSpan(days, hours, minutes, seconds, milliseconds);
-                    return engine.CreateValue(asTimeSpan.ToString());
-                }
-
-                throw new InvalidOperationException("supported overloads are: " +
-                                                    "convertToTimeSpanString(ticks), " +
-                                                    "convertToTimeSpanString(hours, minutes, seconds), " +
-                                                    "convertToTimeSpanString(days, hours, minutes, seconds), " +
-                                                    "convertToTimeSpanString(days, hours, minutes, seconds, milliseconds)");
             }
 
             private static InternalHandle CompareDates(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
-                if (args.Length < 1 || args.Length > 3)
-                {
-                    throw new InvalidOperationException($"No overload for method 'compareDates' takes {args.Length} arguments. " +
-                                                        "Supported overloads are : compareDates(date1, date2), compareDates(date1, date2, operationType)");
-                }
+                try {
+                    if (args.Length < 1 || args.Length > 3)
+                    {
+                        throw new InvalidOperationException($"No overload for method 'compareDates' takes {args.Length} arguments. " +
+                                                            "Supported overloads are : compareDates(date1, date2), compareDates(date1, date2, operationType)");
+                    }
 
-                ExpressionType binaryOperationType;
-                if (args.Length == 2)
-                {
-                    binaryOperationType = ExpressionType.Subtract;
-                }
-                else if (args[2].IsString == false ||
-                         Enum.TryParse(args[2].AsString, out binaryOperationType) == false)
-                {
-                    throw new InvalidOperationException("compareDates(date1, date2, operationType) : 'operationType' must be a string argument representing a valid 'ExpressionType'");
-                }
+                    ExpressionType binaryOperationType;
+                    if (args.Length == 2)
+                    {
+                        binaryOperationType = ExpressionType.Subtract;
+                    }
+                    else if (args[2].IsString == false ||
+                            Enum.TryParse(args[2].AsString, out binaryOperationType) == false)
+                    {
+                        throw new InvalidOperationException("compareDates(date1, date2, operationType) : 'operationType' must be a string argument representing a valid 'ExpressionType'");
+                    }
 
-                dynamic date1, date2;
-                if ((binaryOperationType == ExpressionType.Equal ||
-                     binaryOperationType == ExpressionType.NotEqual) &&
-                    args[0].IsString && args[1].IsString)
-                {
-                    date1 = args[0].AsString;
-                    date2 = args[1].AsString;
-                }
-                else
-                {
-                    const string signature = "compareDates(date1, date2, binaryOp)";
-                    date1 = GetDateArg(args[0], signature, "date1");
-                    date2 = GetDateArg(args[1], signature, "date2");
-                }
+                    dynamic date1, date2;
+                    if ((binaryOperationType == ExpressionType.Equal ||
+                        binaryOperationType == ExpressionType.NotEqual) &&
+                        args[0].IsString && args[1].IsString)
+                    {
+                        date1 = args[0].AsString;
+                        date2 = args[1].AsString;
+                    }
+                    else
+                    {
+                        const string signature = "compareDates(date1, date2, binaryOp)";
+                        date1 = GetDateArg(args[0], signature, "date1");
+                        date2 = GetDateArg(args[1], signature, "date2");
+                    }
 
-                switch (binaryOperationType)
+                    switch (binaryOperationType)
+                    {
+                        case ExpressionType.Subtract:
+                            return (date1 - date2).ToString();
+                        case ExpressionType.GreaterThan:
+                            return date1 > date2;
+                        case ExpressionType.GreaterThanOrEqual:
+                            return date1 >= date2;
+                        case ExpressionType.LessThan:
+                            return date1 < date2;
+                        case ExpressionType.LessThanOrEqual:
+                            return date1 <= date2;
+                        case ExpressionType.Equal:
+                            return date1 == date2;
+                        case ExpressionType.NotEqual:
+                            return date1 != date2;
+                        default:
+                            throw new InvalidOperationException($"compareDates(date1, date2, binaryOp) : unsupported binary operation '{binaryOperationType}'");
+                    }
+                }
+                catch (Exception e) 
                 {
-                    case ExpressionType.Subtract:
-                        return (date1 - date2).ToString();
-                    case ExpressionType.GreaterThan:
-                        return date1 > date2;
-                    case ExpressionType.GreaterThanOrEqual:
-                        return date1 >= date2;
-                    case ExpressionType.LessThan:
-                        return date1 < date2;
-                    case ExpressionType.LessThanOrEqual:
-                        return date1 <= date2;
-                    case ExpressionType.Equal:
-                        return date1 == date2;
-                    case ExpressionType.NotEqual:
-                        return date1 != date2;
-                    default:
-                        throw new InvalidOperationException($"compareDates(date1, date2, binaryOp) : unsupported binary operation '{binaryOperationType}'");
+                    return engine.CreateError(e.Message, JSValueType.ExecutionError);
                 }
             }
 
             private unsafe InternalHandle ToStringWithFormat(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
-                if (args.Length < 1 || args.Length > 3)
-                {
-                    throw new InvalidOperationException($"No overload for method 'toStringWithFormat' takes {args.Length} arguments. " +
-                                                        "Supported overloads are : toStringWithFormat(object), toStringWithFormat(object, format), toStringWithFormat(object, culture), toStringWithFormat(object, format, culture).");
-                }
-
-                var cultureInfo = CultureInfo.InvariantCulture;
-                string format = null;
-
-                for (var i = 1; i < args.Length; i++)
-                {
-                    if (args[i].IsString == false)
+                try {
+                    if (args.Length < 1 || args.Length > 3)
                     {
-                        throw new InvalidOperationException("toStringWithFormat : 'format' and 'culture' must be string arguments");
+                        throw new InvalidOperationException($"No overload for method 'toStringWithFormat' takes {args.Length} arguments. " +
+                                                            "Supported overloads are : toStringWithFormat(object), toStringWithFormat(object, format), toStringWithFormat(object, culture), toStringWithFormat(object, format, culture).");
                     }
 
-                    var arg = args[i].AsString;
-                    if (CultureHelper.Cultures.TryGetValue(arg, out var culture))
+                    var cultureInfo = CultureInfo.InvariantCulture;
+                    string format = null;
+
+                    for (var i = 1; i < args.Length; i++)
                     {
-                        cultureInfo = culture;
-                        continue;
-                    }
-
-                    format = arg;
-                }
-
-                if (args[0].IsDate)
-                {
-                    var date = args[0].AsDate;
-                    return engine.CreateValue(format != null ?
-                        date.ToString(format, cultureInfo) :
-                        date.ToString(cultureInfo));
-                }
-
-                if (args[0].IsNumber)
-                {
-                    var num = args[0].AsDouble;
-                    return engine.CreateValue(format != null ?
-                        num.ToString(format, cultureInfo) :
-                        num.ToString(cultureInfo));
-                }
-
-                if (args[0].IsString)
-                {
-                    var s = args[0].AsString;
-                    fixed (char* pValue = s)
-                    {
-                        var result = LazyStringParser.TryParseDateTime(pValue, s.Length, out DateTime dt, out _);
-                        switch (result)
+                        if (args[i].IsString == false)
                         {
-                            case LazyStringParser.Result.DateTime:
-                                return engine.CreateValue(format != null ?
-                                    dt.ToString(format, cultureInfo) :
-                                    dt.ToString(cultureInfo));
-                            default:
-                                throw new InvalidOperationException("toStringWithFormat(dateString) : 'dateString' is not a valid DateTime string");
+                            throw new InvalidOperationException("toStringWithFormat : 'format' and 'culture' must be string arguments");
+                        }
+
+                        var arg = args[i].AsString;
+                        if (CultureHelper.Cultures.TryGetValue(arg, out var culture))
+                        {
+                            cultureInfo = culture;
+                            continue;
+                        }
+
+                        format = arg;
+                    }
+
+                    if (args[0].IsDate)
+                    {
+                        var date = args[0].AsDate;
+                        return engine.CreateValue(format != null ?
+                            date.ToString(format, cultureInfo) :
+                            date.ToString(cultureInfo));
+                    }
+
+                    if (args[0].IsNumber)
+                    {
+                        var num = args[0].AsDouble;
+                        return engine.CreateValue(format != null ?
+                            num.ToString(format, cultureInfo) :
+                            num.ToString(cultureInfo));
+                    }
+
+                    if (args[0].IsString)
+                    {
+                        var s = args[0].AsString;
+                        fixed (char* pValue = s)
+                        {
+                            var result = LazyStringParser.TryParseDateTime(pValue, s.Length, out DateTime dt, out _);
+                            switch (result)
+                            {
+                                case LazyStringParser.Result.DateTime:
+                                    return engine.CreateValue(format != null ?
+                                        dt.ToString(format, cultureInfo) :
+                                        dt.ToString(cultureInfo));
+                                default:
+                                    throw new InvalidOperationException("toStringWithFormat(dateString) : 'dateString' is not a valid DateTime string");
+                            }
                         }
                     }
-                }
 
-                if (args[0].IsBoolean == false)
+                    if (args[0].IsBoolean == false)
+                    {
+                        throw new InvalidOperationException($"toStringWithFormat() is not supported for objects of type {args[0].ValueType} ");
+                    }
+
+                    var boolean = args[0].AsBoolean;
+                    return engine.CreateValue(boolean.ToString(cultureInfo));
+                }
+                catch (Exception e) 
                 {
-                    throw new InvalidOperationException($"toStringWithFormat() is not supported for objects of type {args[0].ValueType} ");
+                    return engine.CreateError(e.Message, JSValueType.ExecutionError);
                 }
-
-                var boolean = args[0].AsBoolean;
-                return engine.CreateValue(boolean.ToString(cultureInfo));
             }
 
             private InternalHandle StartsWith(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
-                if (args.Length != 2 || args[0].IsString == false || args[1].IsString == false)
-                    throw new InvalidOperationException("startsWith(text, contained) must be called with two string parameters");
+                try {
+                    if (args.Length != 2 || args[0].IsString == false || args[1].IsString == false)
+                        throw new InvalidOperationException("startsWith(text, contained) must be called with two string parameters");
 
-                return engine.CreateValue(args[0].AsString.StartsWith(args[1].AsString, StringComparison.OrdinalIgnoreCase));
+                    return engine.CreateValue(args[0].AsString.StartsWith(args[1].AsString, StringComparison.OrdinalIgnoreCase));
+                }
+                catch (Exception e) 
+                {
+                    return engine.CreateError(e.Message, JSValueType.ExecutionError);
+                }
             }
 
             private InternalHandle EndsWith(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
-                if (args.Length != 2 || args[0].IsString == false || args[1].IsString == false)
-                    throw new InvalidOperationException("endsWith(text, contained) must be called with two string parameters");
+                try {
+                    if (args.Length != 2 || args[0].IsString == false || args[1].IsString == false)
+                        throw new InvalidOperationException("endsWith(text, contained) must be called with two string parameters");
 
-                return engine.CreateValue(args[0].AsString.EndsWith(args[1].AsString, StringComparison.OrdinalIgnoreCase));
+                    return engine.CreateValue(args[0].AsString.EndsWith(args[1].AsString, StringComparison.OrdinalIgnoreCase));
+                }
+                catch (Exception e) 
+                {
+                    return engine.CreateError(e.Message, JSValueType.ExecutionError);
+                }
             }
 
             private InternalHandle Regex(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
-                if (args.Length != 2 || args[0].IsString == false || args[1].IsString == false)
-                    throw new InvalidOperationException("regex(text, regex) must be called with two string parameters");
+                try {
+                    if (args.Length != 2 || args[0].IsString == false || args[1].IsString == false)
+                        throw new InvalidOperationException("regex(text, regex) must be called with two string parameters");
 
-                var regex = _regexCache.Get(args[1].AsString);
+                    var regex = _regexCache.Get(args[1].AsString);
 
-                return engine.CreateValue(regex.IsMatch(args[0].AsString));
+                    return engine.CreateValue(regex.IsMatch(args[0].AsString));
+                }
+                catch (Exception e) 
+                {
+                    return engine.CreateError(e.Message, JSValueType.ExecutionError);
+                }
             }
 
             /*private InternalHandle ScalarToRawString(InternalHandle self2, params InternalHandle[] args)

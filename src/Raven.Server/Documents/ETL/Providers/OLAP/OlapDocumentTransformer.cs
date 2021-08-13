@@ -145,21 +145,27 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
         private InternalHandle LoadToFunctionTranslator(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args)
         {
-            var methodSignature = "loadTo(name, key, obj)";
+            try {
+                var methodSignature = "loadTo(name, key, obj)";
 
-            if (args.Length != 3)
-                ThrowInvalidScriptMethodCall($"{methodSignature} must be called with exactly 3 parameters");
+                if (args.Length != 3)
+                    ThrowInvalidScriptMethodCall($"{methodSignature} must be called with exactly 3 parameters");
 
-            if (args[0].IsString == false)
-                ThrowInvalidScriptMethodCall($"{methodSignature} first argument must be a string");
+                if (args[0].IsString == false)
+                    ThrowInvalidScriptMethodCall($"{methodSignature} first argument must be a string");
 
-            if (args[1].IsObject == false)
-                ThrowInvalidScriptMethodCall($"{methodSignature} second argument must be an object");
+                if (args[1].IsObject == false)
+                    ThrowInvalidScriptMethodCall($"{methodSignature} second argument must be an object");
 
-            if (args[2].IsObject == false)
-                ThrowInvalidScriptMethodCall($"{methodSignature} third argument must be an object");
+                if (args[2].IsObject == false)
+                    ThrowInvalidScriptMethodCall($"{methodSignature} third argument must be an object");
 
-            return LoadToFunctionTranslatorInternal(engine, args[0].AsString, args[1], args[2], methodSignature);
+                return LoadToFunctionTranslatorInternal(engine, args[0].AsString, args[1], args[2], methodSignature);
+            }
+            catch (Exception e) 
+            {
+                return engine.CreateError(e.Message, JSValueType.ExecutionError);
+            }
         }
 
         private InternalHandle LoadToFunctionTranslator(V8Engine engine, string name, InternalHandle[] args)
@@ -235,33 +241,39 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
         private static InternalHandle PartitionBy(V8Engine engine, bool isConstructCall, InternalHandle self, InternalHandle[] args)
         {
-            if (args.Length == 0)
-                ThrowInvalidScriptMethodCall("partitionBy(args) cannot be called with 0 arguments");
+            try {            
+                if (args.Length == 0)
+                    ThrowInvalidScriptMethodCall("partitionBy(args) cannot be called with 0 arguments");
 
-            InternalHandle jsArr;
-            if (args.Length == 1 && args[0].IsArray == false)
-            {
-                jsArr = engine.CreateArray(new[]
+                InternalHandle jsArr;
+                if (args.Length == 1 && args[0].IsArray == false)
                 {
-                    engine.CreateArray(new[]
+                    jsArr = engine.CreateArray(new[]
                     {
-                        engine.CreateValue(DefaultPartitionColumnName), args[0]
-                    })
-                });
+                        engine.CreateArray(new[]
+                        {
+                            engine.CreateValue(DefaultPartitionColumnName), args[0]
+                        })
+                    });
+                }
+                else
+                {
+                    jsArr = ((V8EngineEx)engine).FromObject(args);
+                }
+
+                InternalHandle o;
+                using (jsArr)
+                {  
+                    o = engine.CreateObject();
+                    o.FastAddProperty(PartitionKeys, jsArr, false, true, false);
+                }
+
+                return o;
             }
-            else
+            catch (Exception e) 
             {
-                jsArr = ((V8EngineEx)engine).FromObject(args);
+                return engine.CreateError(e.Message, JSValueType.ExecutionError);
             }
-
-            InternalHandle o;
-            using (jsArr)
-            {  
-                o = engine.CreateObject();
-                o.FastAddProperty(PartitionKeys, jsArr, false, true, false);
-            }
-
-            return o;
         }
 
         private static InternalHandle NoPartition(OlapDocumentTransformer owner, V8Engine engine, bool isConstructCall, InternalHandle self, InternalHandle[] args)
@@ -271,16 +283,22 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
         private InternalHandle NoPartition(V8Engine engine, bool isConstructCall, InternalHandle self, InternalHandle[] args)
         {
-            if (args.Length != 0)
-                ThrowInvalidScriptMethodCall("noPartition() must be called with 0 parameters");
+            try {
+                if (args.Length != 0)
+                    ThrowInvalidScriptMethodCall("noPartition() must be called with 0 parameters");
 
-            if (_noPartition == null)
-            {
-                _noPartition = engine.CreateObject();
-                _noPartition.FastAddProperty(PartitionKeys, engine.CreateNullValue(), false, true, false);
+                if (_noPartition == null)
+                {
+                    _noPartition = engine.CreateObject();
+                    _noPartition.FastAddProperty(PartitionKeys, engine.CreateNullValue(), false, true, false);
+                }
+
+                return _noPartition;
             }
-
-            return _noPartition;
+            catch (Exception e) 
+            {
+                return engine.CreateError(e.Message, JSValueType.ExecutionError);
+            }
         }
 
         public override IEnumerable<OlapTransformedItems> GetTransformedResults() => _tables.Values;

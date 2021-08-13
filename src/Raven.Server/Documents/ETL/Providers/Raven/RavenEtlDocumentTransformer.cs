@@ -137,103 +137,121 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
         private InternalHandle AddAttachment(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
-            InternalHandle jsRes = InternalHandle.Empty;
-            InternalHandle attachmentReference = InternalHandle.Empty;
-            string name = null; // will preserve original name
+            try {
+                InternalHandle jsRes = InternalHandle.Empty;
+                InternalHandle attachmentReference = InternalHandle.Empty;
+                string name = null; // will preserve original name
 
-            switch (args.Length)
-            {
-                case 2:
-                    if (args[0].IsString == false)
-                        ThrowInvalidScriptMethodCall($"First argument of {Transformation.AddAttachment}(name, attachment) must be string");
+                switch (args.Length)
+                {
+                    case 2:
+                        if (args[0].IsString == false)
+                            ThrowInvalidScriptMethodCall($"First argument of {Transformation.AddAttachment}(name, attachment) must be string");
 
-                    name = args[0].AsString;
-                    attachmentReference = args[1];
-                    break;
-                case 1:
-                    attachmentReference = args[0];
-                    break;
-                default:
-                    ThrowInvalidScriptMethodCall($"{Transformation.AddAttachment} must have one or two arguments");
-                    break;
-            }
+                        name = args[0].AsString;
+                        attachmentReference = args[1];
+                        break;
+                    case 1:
+                        attachmentReference = args[0];
+                        break;
+                    default:
+                        ThrowInvalidScriptMethodCall($"{Transformation.AddAttachment} must have one or two arguments");
+                        break;
+                }
 
-            if (attachmentReference.IsNull) {
+                if (attachmentReference.IsNull) {
+                    return jsRes.Set(self);
+                }
+
+                if (attachmentReference.IsString == false || attachmentReference.AsString.StartsWith(Transformation.AttachmentMarker) == false)
+                {
+                    var message =
+                        $"{Transformation.AddAttachment}() method expects to get the reference to an attachment while it got argument of '{attachmentReference.ValueType}' type";
+
+                    if (attachmentReference.IsString)
+                        message += $" (value: '{attachmentReference.AsString}')";
+
+                    ThrowInvalidScriptMethodCall(message);
+                }
+
+                _currentRun.AddAttachment(self, name, attachmentReference);
                 return jsRes.Set(self);
             }
-
-            if (attachmentReference.IsString == false || attachmentReference.AsString.StartsWith(Transformation.AttachmentMarker) == false)
+            catch (Exception e) 
             {
-                var message =
-                    $"{Transformation.AddAttachment}() method expects to get the reference to an attachment while it got argument of '{attachmentReference.ValueType}' type";
-
-                if (attachmentReference.IsString)
-                    message += $" (value: '{attachmentReference.AsString}')";
-
-                ThrowInvalidScriptMethodCall(message);
+                return engine.CreateError(e.Message, JSValueType.ExecutionError);
             }
-
-            _currentRun.AddAttachment(self, name, attachmentReference);
-            return jsRes.Set(self);
         }
 
         private InternalHandle AddCounter(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
-            if (args.Length != 1)
-                ThrowInvalidScriptMethodCall($"{Transformation.CountersTransformation.Add} must have one arguments");
+            try {
+                if (args.Length != 1)
+                    ThrowInvalidScriptMethodCall($"{Transformation.CountersTransformation.Add} must have one arguments");
 
-            InternalHandle jsRes = InternalHandle.Empty;
-            var counterReference = args[0];
+                InternalHandle jsRes = InternalHandle.Empty;
+                var counterReference = args[0];
 
-            if (counterReference.IsNull)
+                if (counterReference.IsNull)
+                    return jsRes.Set(self);
+
+                if (counterReference.IsString == false || counterReference.AsString.StartsWith(Transformation.CountersTransformation.Marker) == false)
+                {
+                    var message =
+                        $"{Transformation.CountersTransformation.Add}() method expects to get the reference to a counter while it got argument of '{counterReference.ValueType}' type";
+
+                    if (counterReference.IsString)
+                        message += $" (value: '{counterReference.AsString}')";
+
+                    ThrowInvalidScriptMethodCall(message);
+                }
+
+                _currentRun.AddCounter(self, counterReference);
+
                 return jsRes.Set(self);
-
-            if (counterReference.IsString == false || counterReference.AsString.StartsWith(Transformation.CountersTransformation.Marker) == false)
-            {
-                var message =
-                    $"{Transformation.CountersTransformation.Add}() method expects to get the reference to a counter while it got argument of '{counterReference.ValueType}' type";
-
-                if (counterReference.IsString)
-                    message += $" (value: '{counterReference.AsString}')";
-
-                ThrowInvalidScriptMethodCall(message);
             }
-
-            _currentRun.AddCounter(self, counterReference);
-
-            return jsRes.Set(self);
+            catch (Exception e) 
+            {
+                return engine.CreateError(e.Message, JSValueType.ExecutionError);
+            }
         }
         
         private InternalHandle AddTimeSeries(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
-            if (args.Length != Transformation.TimeSeriesTransformation.AddTimeSeries.ParamsCount)
-            {
-                ThrowInvalidScriptMethodCall(
-                    $"{Transformation.TimeSeriesTransformation.AddTimeSeries.Name} must have {Transformation.TimeSeriesTransformation.AddTimeSeries.ParamsCount} arguments. " +
-                    $"Signature `{Transformation.TimeSeriesTransformation.AddTimeSeries.Signature}`");
-            }
+            try {
+                if (args.Length != Transformation.TimeSeriesTransformation.AddTimeSeries.ParamsCount)
+                {
+                    ThrowInvalidScriptMethodCall(
+                        $"{Transformation.TimeSeriesTransformation.AddTimeSeries.Name} must have {Transformation.TimeSeriesTransformation.AddTimeSeries.ParamsCount} arguments. " +
+                        $"Signature `{Transformation.TimeSeriesTransformation.AddTimeSeries.Signature}`");
+                }
 
-            InternalHandle jsRes = InternalHandle.Empty;
-            var timeSeriesReference = args[0];
+                InternalHandle jsRes = InternalHandle.Empty;
+                var timeSeriesReference = args[0];
 
-            if (timeSeriesReference.IsNull)
+                if (timeSeriesReference.IsNull)
+                    return jsRes.Set(self);
+
+                if (timeSeriesReference.IsString == false || timeSeriesReference.AsString.StartsWith(Transformation.TimeSeriesTransformation.Marker) == false)
+                {
+                    var message =
+                        $"{Transformation.TimeSeriesTransformation.AddTimeSeries.Name} method expects to get the reference to a time-series while it got argument of '{timeSeriesReference.ValueType}' type";
+
+                    if (timeSeriesReference.IsString)
+                        message += $" (value: '{timeSeriesReference.AsString}')";
+
+                    message += $". Signature `{Transformation.TimeSeriesTransformation.AddTimeSeries.Signature}`";
+                    ThrowInvalidScriptMethodCall(message);
+                }
+
+                _currentRun.AddTimeSeries(self, timeSeriesReference);
+
                 return jsRes.Set(self);
-
-            if (timeSeriesReference.IsString == false || timeSeriesReference.AsString.StartsWith(Transformation.TimeSeriesTransformation.Marker) == false)
-            {
-                var message =
-                    $"{Transformation.TimeSeriesTransformation.AddTimeSeries.Name} method expects to get the reference to a time-series while it got argument of '{timeSeriesReference.ValueType}' type";
-
-                if (timeSeriesReference.IsString)
-                    message += $" (value: '{timeSeriesReference.AsString}')";
-
-                message += $". Signature `{Transformation.TimeSeriesTransformation.AddTimeSeries.Signature}`";
-                ThrowInvalidScriptMethodCall(message);
             }
-
-            _currentRun.AddTimeSeries(self, timeSeriesReference);
-
-            return jsRes.Set(self);
+            catch (Exception e) 
+            {
+                return engine.CreateError(e.Message, JSValueType.ExecutionError);
+            }
         }
 
 
