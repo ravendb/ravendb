@@ -103,8 +103,7 @@ namespace Corax.Queries
                         readX = reader.Read<double>(_fieldId, out var value);
                         ix.Value = (W)(object)new NumericalItem<double>(value);
                     }
-                    else
-                        throw new NotSupportedException("Not supported.");
+                    else return ThrowNotSupportedException();
 
                     ix.Match = (long)((ulong)x | (readX ? 0 : NoMatch));
                 }
@@ -121,7 +120,7 @@ namespace Corax.Queries
                     var reader = _searcher.GetReaderFor(y);
                     if (typeof(W) == typeof(SequenceItem))
                     {
-                        readY = reader.Read(_fieldId, out var sv);                        
+                        readY = reader.Read(_fieldId, out var sv);
                         iy.Value = (W)(object)new SequenceItem((byte*)Unsafe.AsPointer(ref sv[0]), sv.Length);
                     }
                     else if (typeof(W) == typeof(NumericalItem<long>))
@@ -134,8 +133,7 @@ namespace Corax.Queries
                         readY = reader.Read<double>(_fieldId, out var value);
                         iy.Value = (W)(object)new NumericalItem<double>(value);
                     }
-                    else
-                        throw new NotSupportedException("Not supported.");
+                    else return ThrowNotSupportedException();
 
                     iy.Match = (long)((ulong)y | (readY ? 0 : NoMatch));
                 }
@@ -165,11 +163,18 @@ namespace Corax.Queries
                 return -1;
             }
 
+            private int ThrowNotSupportedException()
+            {
+                throw new NotSupportedException("Not supported.");
+            }
+
             public void Dispose()
             {
                 ArrayPool<Item>.Shared.Return(_hash);
             }
         }
+
+
 
         public SortingMatch(IndexSearcher searcher, in TInner inner, in TComparer comparer, int take = -1)
         {
@@ -191,15 +196,16 @@ namespace Corax.Queries
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int Fill(Span<long> matches)
 {
-            return _comparer.FieldType switch
-            {
-                MatchCompareFieldType.Floating => Fill<NumericalItem<double>>(matches),
-                MatchCompareFieldType.Integer => Fill<NumericalItem<long>>(matches),
-                MatchCompareFieldType.Sequence => Fill<SequenceItem>(matches),
-            };
+            if (_comparer.FieldType == MatchCompareFieldType.Sequence)
+                return Fill<SequenceItem>(matches);
+            else if (_comparer.FieldType == MatchCompareFieldType.Integer)
+                return Fill<NumericalItem<long>>(matches);
+            else
+                return Fill<NumericalItem<double>>(matches);
         }
 
         [SkipLocalsInit]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private int Fill<W>(Span<long> matches) where W : struct
         {
             int take = _take <= 0 ? matches.Length : _take;

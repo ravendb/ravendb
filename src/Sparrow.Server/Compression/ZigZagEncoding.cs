@@ -115,6 +115,7 @@ namespace Sparrow.Server.Compression
             return fst + snd;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static (T, T) Decode2<T>(ReadOnlySpan<byte> buffer, out int len, int pos = 0) where T : unmanaged
         {
             T one = UnZag(VariableSizeEncoding.Read<T>(buffer, out int fst, pos));

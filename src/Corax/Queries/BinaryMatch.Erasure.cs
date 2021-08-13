@@ -60,7 +60,8 @@ namespace Corax.Queries
                 {
                     return ((BinaryMatch<TInner, TOuter>)match._inner).Count;
                 }
-           
+
+                [MethodImpl(MethodImplOptions.AggressiveInlining)]
                 static int FillFunc(ref BinaryMatch match, Span<long> matches)
                 {
                     if (match._inner is BinaryMatch<TInner, TOuter> inner)
@@ -72,6 +73,7 @@ namespace Corax.Queries
                     return 0;
                 }
 
+                [MethodImpl(MethodImplOptions.AggressiveInlining)]
                 static int AndWithFunc(ref BinaryMatch match, Span<long> matches)
                 {
                     if (match._inner is BinaryMatch<TInner, TOuter> inner)

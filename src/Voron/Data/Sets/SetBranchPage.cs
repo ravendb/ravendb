@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection.Metadata;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Xml;
 using Sparrow.Server.Compression;
@@ -125,6 +126,7 @@ namespace Voron.Data.Sets
             return (value, index, match);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public (long Key, long Page) GetByIndex(int index)
         {
             return ZigZagEncoding.Decode2<long>(Span, out var _, Positions[index]);

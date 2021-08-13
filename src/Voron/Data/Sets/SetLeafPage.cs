@@ -16,7 +16,7 @@ namespace Voron.Data.Sets
         private const int MaxNumberOfRawValues = 256;
         private const int MinNumberOfRawValues = 64;
         private const int MaxNumberOfCompressedEntries = 16;
-        public ref SetLeafPageHeader Header => ref MemoryMarshal.AsRef<SetLeafPageHeader>(Span);       
+        public SetLeafPageHeader* Header => (SetLeafPageHeader*)_page.Pointer;       
 
         public struct CompressedHeader
         {
@@ -35,22 +35,34 @@ namespace Voron.Data.Sets
             get { return new Span<byte>(_page.Pointer, Constants.Storage.PageSize); }
         }
 
+        public readonly byte* Ptr
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return _page.Pointer; }
+        }
+
         public Span<CompressedHeader> Positions
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return new Span<CompressedHeader>(_page.Pointer + PageHeader.SizeOf, Header.NumberOfCompressedPositions); }
+            get { return new Span<CompressedHeader>(_page.Pointer + PageHeader.SizeOf, Header->NumberOfCompressedPositions); }
+        }
+
+        public CompressedHeader* PositionsPtr
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return (CompressedHeader*)(_page.Pointer + PageHeader.SizeOf); }
         }
 
         private int OffsetOfRawValuesStart
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return Constants.Storage.PageSize - (Header.NumberOfRawValues * sizeof(int)); }
+            get { return Constants.Storage.PageSize - (Header->NumberOfRawValues * sizeof(int)); }
         }
         
         private Span<int> RawValues
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return new Span<int>(_page.Pointer + OffsetOfRawValuesStart, Header.NumberOfRawValues); }
+            get { return new Span<int>(_page.Pointer + OffsetOfRawValuesStart, Header->NumberOfRawValues); }
         }
 
         public SetLeafPage(Page page)
@@ -60,17 +72,17 @@ namespace Voron.Data.Sets
 
         public void Init(long baseline)
         {
-            Header.Baseline = baseline & ~int.MaxValue;
-            Header.Flags = PageFlags.Single | PageFlags.Other;
-            Header.SetFlags = ExtendedPageType.SetLeaf;
-            Header.CompressedValuesCeiling = (ushort)(PageHeader.SizeOf + MaxNumberOfCompressedEntries  * sizeof(CompressedHeader));
-            Header.NumberOfCompressedPositions = 0;
-            Header.NumberOfRawValues = 0;
+            Header->Baseline = baseline & ~int.MaxValue;
+            Header->Flags = PageFlags.Single | PageFlags.Other;
+            Header->SetFlags = ExtendedPageType.SetLeaf;
+            Header->CompressedValuesCeiling = (ushort)(PageHeader.SizeOf + MaxNumberOfCompressedEntries  * sizeof(CompressedHeader));
+            Header->NumberOfCompressedPositions = 0;
+            Header->NumberOfRawValues = 0;
         }
 
         public struct Iterator : IDisposable
         {
-            private readonly SetLeafPage _parent;
+            private SetLeafPage _parent;
 
             private int _compressIndex, _compressLength;
             private CompressedHeader _compressedEntry;
@@ -96,10 +108,10 @@ namespace Voron.Data.Sets
                 if (v <= _lastVal)// we expect to get v on the _next_ MoveNext()
                     return false;
 
-                if (_compressedEntryIndex >= _parent.Header.NumberOfCompressedPositions)
+                if (_compressedEntryIndex >= _parent.Header->NumberOfCompressedPositions)
                     return false;
 
-                var end = _parent.Header.Baseline | (long)_parent.GetCompressRangeEnd(ref _parent.Positions[_compressedEntryIndex]);
+                var end = _parent.Header->Baseline | (long)_parent.GetCompressRangeEnd(ref _parent.Positions[_compressedEntryIndex]);
                 return  v <= end;
             }
 
@@ -108,9 +120,9 @@ namespace Voron.Data.Sets
                 _scratchScope = allocator.Allocate(PForEncoder.BufferLen * sizeof(int), out _scratchMemory);               
 
                 _parent = parent;
-                _rawValuesIndex = _parent.Header.NumberOfRawValues-1;
+                _rawValuesIndex = _parent.Header->NumberOfRawValues-1;
                 _compressedEntryIndex = 0;                
-                _hasDecoder = parent.Header.NumberOfCompressedPositions > 0;
+                _hasDecoder = parent.Header->NumberOfCompressedPositions > 0;
 
                 _compressIndex = _compressLength = 0;
                 _decoderState = default;
@@ -136,70 +148,101 @@ namespace Voron.Data.Sets
             public bool MoveNext(out long l)
             {
                 var result = MoveNext(out int t);
-                l = (long)t | _parent.Header.Baseline;
+                l = (long)t | _parent.Header->Baseline;
                 return result;
             }
 
-            [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+            [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]            
             public bool MoveNext(out int i)
-            {
-                var scratch = MemoryMarshal.Cast<byte, int>(_scratchMemory.ToSpan());
+            {                
+                var scratchPtr = (int*) _scratchMemory.Ptr;
+                var parentRawValues = _parent.RawValues;
+                var rawValuesIndex = _rawValuesIndex;
+                var compressIndex = _compressIndex;
+                var compressLength = _compressLength;
+                var parent = (SetLeafPage*) Unsafe.AsPointer(ref _parent);
+                var decoderState = (PForDecoder.DecoderState*) Unsafe.AsPointer(ref _decoderState);
 
-                TryReadMoreCompressedValues(scratch);
+                TryReadMoreCompressedValues(parent, decoderState, ref _compressedEntry, ref compressIndex, ref compressLength, ref _compressedEntryIndex, ref _hasDecoder, scratchPtr);
 
-                while (_rawValuesIndex >= 0)
+                bool result;
+                while (rawValuesIndex >= 0)
                 {
                     // note, reading in reverse!
-                    int rawValue = _parent.RawValues[_rawValuesIndex];
+                    int rawValue = parentRawValues[rawValuesIndex];
                     int rawValueMasked = rawValue & int.MaxValue;
-                    if (_compressIndex < _compressLength)
+                    if (compressIndex < compressLength)
                     {
-                        if(rawValueMasked > scratch[_compressIndex])
+                        if(rawValueMasked > scratchPtr[compressIndex])
                             break; // need to read from the compressed first
-                        if (rawValueMasked == scratch[_compressIndex])
+                        if (rawValueMasked == scratchPtr[compressIndex])
                         {
-                            _compressIndex++; // skip this one
-                            TryReadMoreCompressedValues(scratch);
+                            compressIndex++; // skip this one
+                            
+                            TryReadMoreCompressedValues(parent, decoderState, ref _compressedEntry, ref compressIndex, ref compressLength, ref _compressedEntryIndex, ref _hasDecoder, scratchPtr);
                         }
                     }
-                    _rawValuesIndex--;
+                    rawValuesIndex--;
                     if (rawValue < 0) // removed, ignore
                         continue; 
+                    
                     i = rawValue;
-                    return true;
+                    result = true;
+                    goto End;                    
                 }
-
-                if (_compressIndex == _compressLength)
+                
+                if (compressIndex == compressLength)
                 {
                     i = default;
-                    return false;
+                    result = false;
+                }
+                else
+                {
+                    i = scratchPtr[compressIndex++];
+                    result = true;
                 }
 
-                i = scratch[_compressIndex++];
-                return true;
+            End:
+
+                _rawValuesIndex = rawValuesIndex;
+                _compressIndex = compressIndex;
+                _compressLength = compressLength;
+
+                return result;
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            private void TryReadMoreCompressedValues(Span<int> scratch)
+            private static void TryReadMoreCompressedValues(SetLeafPage* parent, 
+                PForDecoder.DecoderState* decoderState, 
+                ref CompressedHeader compressedEntry, 
+                ref int compressIndex,
+                ref int compressLength,
+                ref int compressedEntryIndex,
+                ref bool hasDecoder,
+                int* scratch)
             {
-                var parentSpan = _parent.Span;
-                while (_compressIndex == _compressLength && _hasDecoder)
+                var parentPtr = parent->Ptr;
+                var parentHeader = parent->Header;
+                var parentPositions = parent->PositionsPtr;
+
+                while (compressIndex == compressLength && hasDecoder)
                 {
-                    _compressIndex = 0;
-                    _compressLength = PForDecoder.Decode(ref _decoderState, parentSpan.Slice(_compressedEntry.Position, _compressedEntry.Length), scratch);
-                    if (_compressLength != 0)
+                    compressIndex = 0;
+                    compressLength = PForDecoder.Decode(decoderState, parentPtr + compressedEntry.Position, compressedEntry.Length, scratch);
+                    if (compressLength != 0)
                         return;
 
-                    if (++_compressedEntryIndex >= _parent.Header.NumberOfCompressedPositions)
+                    if (++compressedEntryIndex >= parentHeader->NumberOfCompressedPositions)
                     {
-                        _hasDecoder = false;
+                        hasDecoder = false;
                         return;
                     }
 
-                    _compressedEntry = _parent.Positions[_compressedEntryIndex];
-                    _decoderState = PForDecoder.Initialize(parentSpan.Slice(_compressedEntry.Position, _compressedEntry.Length));
+                    compressedEntry = parentPositions[compressedEntryIndex];
+                    PForDecoder.Reset(decoderState, compressedEntry.Length);                    
                 }
             }
+
             public void SkipTo(long val)
             {
                 var iVal = (int)(val & int.MaxValue);
@@ -215,13 +258,13 @@ namespace Voron.Data.Sets
             internal void SkipToCompressedEntryFor(int value, int sizeLimit)
             {
                 _compressedEntryIndex = 0;
-                for (; _compressedEntryIndex < _parent.Header.NumberOfCompressedPositions; _compressedEntryIndex++)
+                for (; _compressedEntryIndex < _parent.Header->NumberOfCompressedPositions; _compressedEntryIndex++)
                 {
                     var end = _parent.GetCompressRangeEnd(ref _parent.Positions[_compressedEntryIndex]);
                     if (end >= value || _parent.Positions[_compressedEntryIndex].Length > sizeLimit)
                         break;
                 }
-                if (_compressedEntryIndex < _parent.Header.NumberOfCompressedPositions)
+                if (_compressedEntryIndex < _parent.Header->NumberOfCompressedPositions)
                 {
                     InitializeDecoder(_compressedEntryIndex);
                     _hasDecoder = true;
@@ -262,12 +305,12 @@ namespace Voron.Data.Sets
 
         public bool IsValidValue(long value)
         {
-            return (value & ~int.MaxValue) == Header.Baseline;
+            return (value & ~int.MaxValue) == Header->Baseline;
         }
 
         public bool Remove(LowLevelTransaction tx, long value)
         {
-            Debug.Assert((value & ~int.MaxValue) == Header.Baseline);
+            Debug.Assert((value & ~int.MaxValue) == Header->Baseline);
             return AddInternal(tx, int.MinValue | ((int)value & int.MaxValue));
         }
 
@@ -287,7 +330,7 @@ namespace Voron.Data.Sets
             }
 
             // need to add a value, let's check if we can...
-            if (Header.NumberOfRawValues == MaxNumberOfRawValues || // the raw values range is full
+            if (Header->NumberOfRawValues == MaxNumberOfRawValues || // the raw values range is full
                 RunOutOfFreeSpace) // run into the compressed, cannot proceed
             {
                 using var cmp = new Compressor(this, tx);
@@ -295,12 +338,12 @@ namespace Voron.Data.Sets
                     return false;
 
                 // we didn't free enough space
-                if (Header.CompressedValuesCeiling > Constants.Storage.PageSize - MinNumberOfRawValues * sizeof(int))
+                if (Header->CompressedValuesCeiling > Constants.Storage.PageSize - MinNumberOfRawValues * sizeof(int))
                     return false;
                 return AddInternal(tx, value);
             }
 
-            Header.NumberOfRawValues++; // increase the size of the buffer _downward_
+            Header->NumberOfRawValues++; // increase the size of the buffer _downward_
             var newRawValues = RawValues;
             index = ~index;
             oldRawValues.Slice(0, index).CopyTo(newRawValues);
@@ -308,7 +351,7 @@ namespace Voron.Data.Sets
             return true;
         }
 
-        private bool RunOutOfFreeSpace => Header.CompressedValuesCeiling > OffsetOfRawValuesStart - sizeof(int);
+        private bool RunOutOfFreeSpace => Header->CompressedValuesCeiling > OffsetOfRawValuesStart - sizeof(int);
 
         public int SpaceUsed
         {
@@ -369,7 +412,7 @@ namespace Voron.Data.Sets
                 _parent.Span.Slice(0, PageHeader.SizeOf).CopyTo(_tmpPage.AsSpan());
                 _tempPositions = new Span<CompressedHeader>(_tmpPage.TempPagePointer + PageHeader.SizeOf, MaxNumberOfCompressedEntries);
                 
-                TempHeader.PageNumber = _parent.Header.PageNumber;
+                TempHeader.PageNumber = _parent.Header->PageNumber;
                 TempHeader.CompressedValuesCeiling = (ushort)(PageHeader.SizeOf + MaxNumberOfCompressedEntries * sizeof(CompressedHeader));
                 TempHeader.NumberOfRawValues = 0;
             }
@@ -379,10 +422,10 @@ namespace Voron.Data.Sets
                 int compressedEntryIndex = 0;
                 using var it = _parent.GetIterator(_llt);
 
-                if (_parent.Header.NumberOfCompressedPositions != MaxNumberOfCompressedEntries &&
-                    _parent.Header.NumberOfRawValues != 0)
+                if (_parent.Header->NumberOfCompressedPositions != MaxNumberOfCompressedEntries &&
+                    _parent.Header->NumberOfRawValues != 0)
                 {
-                    var sizeConstrained = (Constants.Storage.PageSize - _parent.Header.CompressedValuesCeiling) < 1024;
+                    var sizeConstrained = (Constants.Storage.PageSize - _parent.Header->CompressedValuesCeiling) < 1024;
                     // optimize the compaction by merging just the relevant values
                     it.SkipToCompressedEntryFor(_rawValues[^1] & int.MaxValue,
                         // This determine when we should recompress the whole page to save more space
@@ -449,31 +492,31 @@ namespace Voron.Data.Sets
 
         public void SplitHalfInto(ref SetLeafPage newPage)
         {
-            newPage.Init(Header.Baseline);
+            newPage.Init(Header->Baseline);
 
-            for (int i = Header.NumberOfCompressedPositions / 2; i < Header.NumberOfCompressedPositions ; i++)
+            for (int i = Header->NumberOfCompressedPositions / 2; i < Header->NumberOfCompressedPositions ; i++)
             {
-                var newIndex = newPage.Header.NumberOfCompressedPositions++;
+                var newIndex = newPage.Header->NumberOfCompressedPositions++;
 
                 newPage.Positions[newIndex] = new CompressedHeader
                 {
                     Length = Positions[i].Length,
-                    Position = newPage.Header.CompressedValuesCeiling
+                    Position = newPage.Header->CompressedValuesCeiling
                 };
                 Span.Slice(Positions[i].Position, Positions[i].Length)
-                    .CopyTo(newPage.Span.Slice(newPage.Header.CompressedValuesCeiling));
-                newPage.Header.CompressedValuesCeiling += Positions[i].Length;
+                    .CopyTo(newPage.Span.Slice(newPage.Header->CompressedValuesCeiling));
+                newPage.Header->CompressedValuesCeiling += Positions[i].Length;
             }
-            Header.NumberOfCompressedPositions /= 2; // truncate current positions
-            Debug.Assert(Header.NumberOfCompressedPositions > 0);
+            Header->NumberOfCompressedPositions /= 2; // truncate current positions
+            Debug.Assert(Header->NumberOfCompressedPositions > 0);
             var nextCompressedValue = GetCompressRangeEnd(ref Positions[^1]) + 1;
             var index = RawValues.BinarySearch(nextCompressedValue, new CompareIntsWithoutSignDescending());
             if (index < 0)
                 index = ~index;
-            newPage.Header.NumberOfRawValues = (ushort)(Header.NumberOfRawValues - index);
-            Debug.Assert(newPage.OffsetOfRawValuesStart > newPage.Header.CompressedValuesCeiling);
+            newPage.Header->NumberOfRawValues = (ushort)(Header->NumberOfRawValues - index);
+            Debug.Assert(newPage.OffsetOfRawValuesStart > newPage.Header->CompressedValuesCeiling);
             RawValues.Slice(index).CopyTo(newPage.RawValues);
-            Header.NumberOfRawValues = (ushort)index;
+            Header->NumberOfRawValues = (ushort)index;
         }
 
         private struct CompareIntsWithoutSignDescending : IComparer<int>
@@ -490,9 +533,9 @@ namespace Voron.Data.Sets
         {
             int? first = null;
             int? last = null;
-            Debug.Assert(Header.NumberOfCompressedPositions > 0 || Header.NumberOfRawValues > 0);
+            Debug.Assert(Header->NumberOfCompressedPositions > 0 || Header->NumberOfRawValues > 0);
 
-            if (Header.NumberOfCompressedPositions > 0)
+            if (Header->NumberOfCompressedPositions > 0)
             {
                 ref var pos = ref Positions[^1];
                 last = GetCompressRangeEnd(ref pos);
@@ -537,7 +580,7 @@ namespace Voron.Data.Sets
 
             Debug.Assert(first != null, nameof(first) + " != null");
             Debug.Assert(last != null, nameof(last) + " != null");
-            return (Header.Baseline | (long)first.Value, Header.Baseline | (long)last.Value);
+            return (Header->Baseline | (long)first.Value, Header->Baseline | (long)last.Value);
         }
     }
     

@@ -145,11 +145,12 @@ namespace Sparrow.Server.Compression
                     continue;
                 }
 
-                throw new NotSupportedException($"The type {nameof(T)} is not supported to be written.");
+                goto FailSupport;
             }
 
             return pos;
 
+            FailSupport: ThrowNotSupportedException<T>();
             FailCount: ThrowNotEnoughOutputSpace();
             Fail: ThrowInvalidShift();
             return -1;
@@ -279,11 +280,16 @@ namespace Sparrow.Server.Compression
                 return (T)(object)ul;
             }
 
-            throw new NotSupportedException($"The type {nameof(T)} is not supported to be written.");
+            ThrowNotSupportedException<T>();
 
             Fail:
             ThrowInvalidShift();
-            return (T)(object)-1;
+            return (T)(object)-1;            
+        }
+
+        private static void ThrowNotSupportedException<T>()
+        {
+            throw new NotSupportedException($"The type {nameof(T)} is not supported to be written.");
         }
 
         private static void ThrowInvalidShift()
@@ -485,7 +491,8 @@ namespace Sparrow.Server.Compression
                 return i + 1;
             }
 
-            throw new NotSupportedException($"The type {nameof(T)} is not supported to be written.");
+            ThrowNotSupportedException<T>();
+            return -1;
         }
     }
 }
