@@ -18,7 +18,7 @@ class statistics {
     countOfCompareExchange: string;
     countOfRevisions: string;
     countOfCounters: string;
-    countOfTimeSeriesSegments:string;
+    countOfTimeSeriesSegments: string;
     is64Bit: boolean;
     indexPerformanceURL: string;
     dataSizeOnDisk: string;
