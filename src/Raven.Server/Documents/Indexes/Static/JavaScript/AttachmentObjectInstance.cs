@@ -63,8 +63,9 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
                     jsValue = engine.CreateValue(_attachment.Hash);
                 else if (propertyName == nameof(IAttachmentObject.Size))
                     jsValue = engine.CreateValue(_attachment.Size);
-                else if (propertyName == GetContentAsStringMethodName)
-                    jsValue = new ClrFunctionInstance(GetContentAsString);
+                else if (propertyName == GetContentAsStringMethodName) {
+                    jsValue = engine.CreateFunctionTemplate().GetFunctionObject<V8Function>(GetContentAsString);
+                }
 
                 if (jsValue.IsEmpty == false)
                     _properties[propertyName].Set(jsValue);
@@ -76,7 +77,7 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
             return jsValue;
         }
 
-        private static InternalHandle GetContentAsString(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+        private static InternalHandle GetContentAsString(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
             var attachment = (AttachmentObjectInstance)self.BoundObject;
             if (attachment == null)

@@ -57,17 +57,17 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             var engine = DocumentScript.ScriptEngine;
             base.Initialize(debugMode);
 
-            DocumentScript.ScriptEngine.GlobalObject.SetProperty(Transformation.LoadTo, new ClrFunctionInstance(LoadToFunctionTranslator));
+            DocumentScript.ScriptEngine.GlobalObject.SetProperty(Transformation.LoadTo, engine.CreateFunctionTemplate().GetFunctionObject<V8Function>(LoadToFunctionTranslator));
 
             foreach (var table in LoadToDestinations)
             {
                 var name = Transformation.LoadTo + table;
-                DocumentScript.ScriptEngine.GlobalObject.SetProperty(name, new ClrFunctionInstance(
+                DocumentScript.ScriptEngine.GlobalObject.SetProperty(name, engine.CreateFunctionTemplate().GetFunctionObject<V8Function>(
                     (engine, isConstructCall, self, args) => LoadToFunctionTranslator(engine, table, args)));
             }
 
-            DocumentScript.ScriptEngine.GlobalObject.SetProperty("partitionBy", new ClrFunctionInstance(PartitionBy));
-            DocumentScript.ScriptEngine.GlobalObject.SetProperty("noPartition", new ClrFunctionInstance(NoPartition));
+            DocumentScript.ScriptEngine.GlobalObject.SetProperty("partitionBy", engine.CreateFunctionTemplate().GetFunctionObject<V8Function>(PartitionBy));
+            DocumentScript.ScriptEngine.GlobalObject.SetProperty("noPartition", engine.CreateFunctionTemplate().GetFunctionObject<V8Function>(NoPartition));
 
             if (_config.CustomPartitionValue != null)
             {
@@ -143,7 +143,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             return table;
         }
 
-        private InternalHandle LoadToFunctionTranslator(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args)
+        private InternalHandle LoadToFunctionTranslator(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args)
         {
             var methodSignature = "loadTo(name, key, obj)";
 
@@ -162,7 +162,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             return LoadToFunctionTranslatorInternal(engine, args[0].AsString, args[1], args[2], methodSignature);
         }
 
-        private InternalHandle LoadToFunctionTranslator(V8EngineEx engine, string name, InternalHandle[] args)
+        private InternalHandle LoadToFunctionTranslator(V8Engine engine, string name, InternalHandle[] args)
         {
             var methodSignature = $"loadTo{name}(key, obj)";
 
@@ -178,7 +178,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             return LoadToFunctionTranslatorInternal(engine, name, args[0], args[1], methodSignature);
         }
 
-        private InternalHandle LoadToFunctionTranslatorInternal(V8EngineEx engine, string name, InternalHandle key, InternalHandle obj, string methodSignature)
+        private InternalHandle LoadToFunctionTranslatorInternal(V8Engine engine, string name, InternalHandle key, InternalHandle obj, string methodSignature)
         {
             InternalHandle jsRes = InternalHandle.Empty;
             if (key.HasOwnProperty(PartitionKeys) == false)
@@ -233,7 +233,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             }
         }
 
-        private static InternalHandle PartitionBy(V8EngineEx engine, bool isConstructCall, InternalHandle self, InternalHandle[] args)
+        private static InternalHandle PartitionBy(V8Engine engine, bool isConstructCall, InternalHandle self, InternalHandle[] args)
         {
             if (args.Length == 0)
                 ThrowInvalidScriptMethodCall("partitionBy(args) cannot be called with 0 arguments");
@@ -264,12 +264,12 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             return o;
         }
 
-        private static InternalHandle NoPartition(OlapDocumentTransformer owner, V8EngineEx engine, bool isConstructCall, InternalHandle self, InternalHandle[] args)
+        private static InternalHandle NoPartition(OlapDocumentTransformer owner, V8Engine engine, bool isConstructCall, InternalHandle self, InternalHandle[] args)
         {
             return owner.NoPartition(engine, isConstructCall, self, args);
         }
 
-        private InternalHandle NoPartition(V8EngineEx engine, bool isConstructCall, InternalHandle self, InternalHandle[] args)
+        private InternalHandle NoPartition(V8Engine engine, bool isConstructCall, InternalHandle self, InternalHandle[] args)
         {
             if (args.Length != 0)
                 ThrowInvalidScriptMethodCall("noPartition() must be called with 0 parameters");

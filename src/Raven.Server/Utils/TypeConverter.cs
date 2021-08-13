@@ -301,7 +301,7 @@ namespace Raven.Server.Utils
                             ThrowInvalidObject(jsValue);
                         }
                         else {
-                            return JsBlittableBridge.Translate(context, engine, jsValue.Object);
+                            return JsBlittableBridge.Translate(context, engine, jsValue);
                         }
                     }
                     ThrowInvalidObject(jsValue);

@@ -141,21 +141,13 @@ function map() {{
 
                                 if (map.HasOwnProperty(MethodProperty) == false)
                                     ThrowIndexCreationException($"map function #{i} is missing its {MethodProperty} property");
+
                                 using (var func = map.GetProperty(MethodProperty))
                                 {
                                     if (func.IsFunction == false)
                                         ThrowIndexCreationException($"map function #{i} {MethodProperty} property isn't a 'FunctionInstance'");
-                                    var funcInstance = func.Object as V8Function;
-                                    if (funcInstance == null)
-                                        ThrowIndexCreationException($"map function #{i} {MethodProperty} property isn't a 'V8Function'");
-                                    var operation = new JavaScriptMapOperation(JavaScriptIndexUtils)
-                                    {
-                                        MapFunc = funcInstanceJint,
-                                        MapFuncV8 = funcInstance,
-                                        IndexName = Definition.Name,
-                                        MapString = mapList[i]
-                                    };
 
+                                    var operation = new JavaScriptMapOperation(JavaScriptIndexUtils, funcInstanceJint, func, Definition.Name, mapList[i]);
                                     if (mapJint.HasOwnProperty(MoreArgsProperty))
                                     {
                                         var moreArgsObjJint = mapJint.Get(MoreArgsProperty);

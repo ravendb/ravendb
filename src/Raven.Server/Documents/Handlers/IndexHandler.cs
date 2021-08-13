@@ -1030,7 +1030,7 @@ namespace Raven.Server.Documents.Handlers
                         }
                     }
 
-                    var mapRes = new List<V8NativeObject>();
+                    var mapRes = new List<InternalHandle>();
                     //all maps
                     foreach (var listOfFunctions in compiledIndex.Maps)
                     {
@@ -1042,7 +1042,7 @@ namespace Raven.Server.Documents.Handlers
                             {
                                 if (docsPerCollection.TryGetValue(listOfFunctions.Key, out var docs))
                                 {
-                                    foreach (V8NativeObject res in mapFunc(docs))
+                                    foreach (InternalHandle res in mapFunc(docs))
                                     {
                                         mapRes.Add(res);
                                     }
@@ -1058,7 +1058,7 @@ namespace Raven.Server.Documents.Handlers
                         writer.WriteStartArray();
                         foreach (var mapResult in mapRes)
                         {
-                            using (var jsStr = compiledIndex.JavaScriptIndexUtils.StringifyObject(mapResult.InternalHandle)) 
+                            using (var jsStr = compiledIndex.JavaScriptIndexUtils.StringifyObject(mapResult)) 
                             {
                                 if (jsStr.IsString)
                                 {
@@ -1084,9 +1084,10 @@ namespace Raven.Server.Documents.Handlers
 
                                 var reduceResults = compiledIndex.Reduce(mapRes.Select(mr => new DynamicBlittableJson(JsBlittableBridge.Translate(context, mr.Engine, mr))));
 
-                                foreach (V8NativeObject reduceResult in reduceResults)
+                                foreach (InternalHandle reduceResult in reduceResults)
                                 {
-                                    using (var jsStr = compiledIndex.JavaScriptIndexUtils.StringifyObject(reduceResult.InternalHandle)) 
+                                    using (reduceResult)
+                                    using (var jsStr = compiledIndex.JavaScriptIndexUtils.StringifyObject(reduceResult)) 
                                     {
                                         if (jsStr.IsString)
                                         {
@@ -1099,6 +1100,11 @@ namespace Raven.Server.Documents.Handlers
                                             first = false;
                                         }
                                     }
+                                }
+
+                                foreach (InternalHandle mr in mapRes)
+                                {
+                                    mr.Dispose();
                                 }
                             }
 

@@ -28,9 +28,9 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
     {
         private readonly Transformation _transformation;
         private readonly ScriptInput _script;
-        private ClrFunctionInstance _addAttachmentMethod;
-        private ClrFunctionInstance _addCounterMethod;
-        private ClrFunctionInstance _addTimeSeriesMethod;
+        private V8Function _addAttachmentMethod;
+        private V8Function _addCounterMethod;
+        private V8Function _addTimeSeriesMethod;
         private RavenEtlScriptRun _currentRun;
 
         public RavenEtlDocumentTransformer(Transformation transformation, DocumentDatabase database, DocumentsOperationContext context, ScriptInput script)
@@ -45,21 +45,22 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         public override void Initialize(bool debugMode)
         {
             base.Initialize(debugMode);
+            var engine = DocumentScript.ScriptEngine;
 
             if (DocumentScript == null)
                 return;
 
             if (_transformation.IsAddingAttachments)
-                _addAttachmentMethod = new ClrFunctionInstance(AddAttachment);
+                _addAttachmentMethod = engine.CreateFunctionTemplate().GetFunctionObject<V8Function>(AddAttachment);
 
             if (_transformation.Counters.IsAddingCounters)
             {
-                _addCounterMethod = new ClrFunctionInstance(AddCounter);
+                _addCounterMethod = engine.CreateFunctionTemplate().GetFunctionObject<V8Function>(AddCounter);
             }
 
             if (_transformation.TimeSeries.IsAddingTimeSeries)
             {
-                _addTimeSeriesMethod = new ClrFunctionInstance(AddTimeSeries);
+                _addTimeSeriesMethod = engine.CreateFunctionTemplate().GetFunctionObject<V8Function>(AddTimeSeries);
             }
         }
 
@@ -134,7 +135,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             }
         }
 
-        private InternalHandle AddAttachment(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+        private InternalHandle AddAttachment(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
             InternalHandle jsRes = InternalHandle.Empty;
             InternalHandle attachmentReference = InternalHandle.Empty;
@@ -176,7 +177,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             return jsRes.Set(self);
         }
 
-        private InternalHandle AddCounter(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+        private InternalHandle AddCounter(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
             if (args.Length != 1)
                 ThrowInvalidScriptMethodCall($"{Transformation.CountersTransformation.Add} must have one arguments");
@@ -203,7 +204,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             return jsRes.Set(self);
         }
         
-        private InternalHandle AddTimeSeries(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+        private InternalHandle AddTimeSeries(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
             if (args.Length != Transformation.TimeSeriesTransformation.AddTimeSeries.ParamsCount)
             {

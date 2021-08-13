@@ -10,6 +10,16 @@ namespace Raven.Server.Extensions
 {
     public static class JsV8Extensions
     {
+        public static bool IsNumberEx(this InternalHandle value) 
+        {
+            return value.IsNumber || value.IsNumberObject;
+        }
+
+        public static bool IsStringEx(this InternalHandle value) 
+        {
+            return value.IsString || value.IsStringObject;
+        }
+
         public static InternalHandle GetOwnProperty(this V8NativeObject obj, string name)
         {
             return obj._.GetOwnProperty(name);
@@ -72,7 +82,9 @@ namespace Raven.Server.Extensions
 
         public static bool HasProperty (this InternalHandle value, string name)
         {
-            return value.GetPropertyAttributes(name) != V8PropertyAttributes.None;
+            return value.GetPropertyAttributes(name) != V8PropertyAttributes.Undefined;
+            //using (var jsRes = obj.GetProperty(propertyName));
+            //    return !jsRes.IsUndefined);
         }
 
         public static bool TryGetValue(this InternalHandle obj, string propertyName, out InternalHandle jsRes)

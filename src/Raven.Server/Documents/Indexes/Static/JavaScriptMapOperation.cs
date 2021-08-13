@@ -30,15 +30,32 @@ namespace Raven.Server.Documents.Indexes.Static
         private readonly JavaScriptIndexUtils _javaScriptIndexUtils;
         private readonly V8EngineEx _engine;
         public string IndexName { get; set; }
-        public V8Function MapFuncV8;
+        public Handle MapFuncV8;
 
-        public JavaScriptMapOperation(JavaScriptIndexUtils javaScriptIndexUtils) : base ()
+        public JavaScriptMapOperation(JavaScriptIndexUtils javaScriptIndexUtils, FunctionInstance mapFunc, Handle mapFuncV8, string indexName, string mapString)
         {
             _javaScriptIndexUtils = javaScriptIndexUtils;
             _engine = _javaScriptIndexUtils.Engine;
+
+            if (!mapFuncV8._.IsFunction)
+                throw new JavaScriptIndexFuncException($"mapFuncV8 is not a function");
+
+            MapFunc = mapFunc;
+            MapFuncV8 = mapFuncV8;
+            IndexName = indexName;
+            MapString = mapString;
+
+            if (!MapFuncV8._.IsFunction)
+                throw new JavaScriptIndexFuncException($"constructor: MapFuncV8 is not a function");
+
         }
 
-        public IEnumerable<V8NativeObject> IndexingFunction(IEnumerable<object> items)
+        ~JavaScriptMapOperation()
+        {
+            //MapFuncV8._.Dispose();
+        }
+
+        public IEnumerable<InternalHandle> IndexingFunction(IEnumerable<object> items)
         {
             foreach (var item in items)
             {
@@ -54,12 +71,13 @@ namespace Raven.Server.Documents.Indexes.Static
                     InternalHandle jsRes = InternalHandle.Empty;
                     try
                     {
-                        jsRes = MapFuncV8.StaticCall(jsItem);
+                        if (!MapFuncV8._.IsFunction)
+                            throw new JavaScriptIndexFuncException($"MapFuncV8 is not a function");
+                        jsRes = MapFuncV8._.StaticCall(jsItem);
                         jsRes.ThrowOnError();
                     }
                     catch (V8Exception jse)
                     {
-                        jsRes.Dispose();
                         var (message, success) = JavaScriptIndexFuncException.PrepareErrorMessageForJavaScriptIndexFuncException(MapString, jse);
                         if (success == false)
                             throw new JavaScriptIndexFuncException($"Failed to execute {MapString}", jse);
@@ -80,14 +98,25 @@ namespace Raven.Server.Documents.Indexes.Static
                             {
                                 using (var arrItem = jsRes.GetProperty(i))
                                 {
-                                    if (arrItem.IsObject)
-                                        yield return arrItem.Object; // no need to KeepTrack() as we return Handle
+                                    if (arrItem.IsObject) {
+                                        InternalHandle jRes2 = InternalHandle.Empty;
+                                        yield return jRes2.Set(arrItem);
+                                    }
+                                    else {
+                                        // this check should be to catch map errors
+                                        throw new JavaScriptIndexFuncException($"Failed to execute {MapString}", new Exception($"At leaset one of map results is not object: {jsRes.ToString()}"));
+                                    }
                                 }
                             }
                         }
                         else if (jsRes.IsObject)
                         {
-                            yield return jsRes.Object; // no need to KeepTrack() as we store Handle
+                            InternalHandle jRes2 = InternalHandle.Empty;
+                            yield return jRes2.Set(jsRes);
+                        }
+                        else {
+                            // this check should be to catch map errors
+                            throw new JavaScriptIndexFuncException($"Failed to execute {MapString}", new Exception($"Map result is not object: {jsRes.ToString()}"));
                         }
                     }
                     // we ignore everything else by design, we support only

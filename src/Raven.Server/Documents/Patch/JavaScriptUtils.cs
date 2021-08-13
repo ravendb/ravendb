@@ -29,6 +29,9 @@ namespace Raven.Server.Documents.Patch
             get
             {
                 Debug.Assert(_context != null, "_context != null");
+                if(_context == null) { // TODO temporary
+                    throw new Exception("_context is null");
+                }
                 return _context;
             }
         }
@@ -46,7 +49,7 @@ namespace Raven.Server.Documents.Patch
             Engine = engine;
         }
 
-        internal InternalHandle GetMetadata(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+        internal InternalHandle GetMetadata(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
             if (args.Length != 1 || !(args[0].BoundObject is BlittableObjectInstance boi))
                 throw new InvalidOperationException("metadataFor(doc) must be called with a single entity argument");
@@ -70,14 +73,17 @@ namespace Raven.Server.Documents.Patch
             {
                 metadata = Context.ReadObject(metadata, boi.DocumentId);
                 InternalHandle metadataJs = TranslateToJs(Context, metadata);
+                if (metadataJs.IsError)
+                    return metadataJs;
                 args[0].SetProperty(Constants.Documents.Metadata.Key, metadataJs);
 
                 return metadataJs;
             }
         }
 
-        internal InternalHandle AttachmentsFor(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+        internal InternalHandle AttachmentsFor(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
+            var engineEx = (V8EngineEx)engine;
             if (args.Length != 1 || !(args[0].BoundObject is BlittableObjectInstance boi))
                 throw new InvalidOperationException($"{nameof(AttachmentsFor)} must be called with a single entity argument");
 
@@ -90,9 +96,9 @@ namespace Raven.Server.Documents.Patch
             int arrayLength =  attachments.Length;
             InternalHandle[] jsItems = new InternalHandle[arrayLength];
             for (int i = 0; i < arrayLength; i++)
-                jsItems[i] = engine.CreateObjectBinder(new AttachmentNameObjectInstance((BlittableJsonReaderObject)attachments[i]), engine.TypeBinderAttachmentNameObjectInstance);
+                jsItems[i] = engineEx.CreateObjectBinder(new AttachmentNameObjectInstance((BlittableJsonReaderObject)attachments[i]), engineEx.TypeBinderAttachmentNameObjectInstance);
 
-            return engine.CreateArrayWithDisposal(jsItems);
+            return engineEx.CreateArrayWithDisposal(jsItems);
 
             static InternalHandle EmptyArray(V8Engine engine)
             {
@@ -100,11 +106,12 @@ namespace Raven.Server.Documents.Patch
             }
         }
 
-        internal static InternalHandle LoadAttachment(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+        internal static InternalHandle LoadAttachment(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
             if (args.Length != 2)
                 throw new InvalidOperationException($"{nameof(LoadAttachment)} may only be called with two arguments, but '{args.Length}' were passed.");
 
+            var engineEx = (V8EngineEx)engine;
             InternalHandle jsRes = InternalHandle.Empty;
             if (args[0].IsNull)
                 return jsRes.Set(DynamicJsNull.ImplicitNull._);
@@ -128,7 +135,7 @@ namespace Raven.Server.Documents.Patch
             if (attachment.BoundObject is DynamicNullObject)
                 return jsRes.Set(DynamicJsNull.ImplicitNull._);
 
-            return engine.CreateObjectBinder(new AttachmentObjectInstance((DynamicAttachment)attachment), engine.TypeBinderAttachmentObjectInstance);
+            return engineEx.CreateObjectBinder(new AttachmentObjectInstance((DynamicAttachment)attachment), engineEx.TypeBinderAttachmentObjectInstance);
 
             void ThrowInvalidFirstParameter()
             {
@@ -141,11 +148,12 @@ namespace Raven.Server.Documents.Patch
             }
         }
 
-        internal static InternalHandle LoadAttachments(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+        internal static InternalHandle LoadAttachments(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
             if (args.Length != 1)
                 throw new InvalidOperationException($"{nameof(LoadAttachment)} may only be called with one argument, but '{args.Length}' were passed.");
 
+            var engineEx = (V8EngineEx)engine;
             InternalHandle jsRes = InternalHandle.Empty;
             if (args[0].IsNull)
                 return jsRes.Set(DynamicJsNull.ImplicitNull._);
@@ -168,10 +176,10 @@ namespace Raven.Server.Documents.Patch
             var jsItems = new InternalHandle[attachments.Count];
             for (int i = 0; i < arrayLength; i++) {
                 jsItems[i] = InternalHandle.Empty;
-                jsItems[i].Set(engine.CreateObjectBinder(new AttachmentObjectInstance(attachments[i]), engine.TypeBinderAttachmentObjectInstance)._);
+                jsItems[i].Set(engineEx.CreateObjectBinder(new AttachmentObjectInstance(attachments[i]), engineEx.TypeBinderAttachmentObjectInstance)._);
             }
 
-            return engine.CreateArrayWithDisposal(jsItems);
+            return engineEx.CreateArrayWithDisposal(jsItems);
 
 
             void ThrowInvalidParameter()
@@ -203,21 +211,22 @@ namespace Raven.Server.Documents.Patch
             }
         }
 
-        internal static InternalHandle GetTimeSeriesNamesFor(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+        internal static InternalHandle GetTimeSeriesNamesFor(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
             return GetNamesFor(engine, isConstructCall, self, args, Constants.Documents.Metadata.TimeSeries, "timeSeriesNamesFor");
         }
 
-        internal static InternalHandle GetCounterNamesFor(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+        internal static InternalHandle GetCounterNamesFor(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
             return GetNamesFor(engine, isConstructCall, self, args, Constants.Documents.Metadata.Counters, "counterNamesFor");
         }
 
-        private static InternalHandle GetNamesFor(V8EngineEx engine, bool isConstructCall, InternalHandle self, InternalHandle[] args, string metadataKey, string methodName)
+        private static InternalHandle GetNamesFor(V8Engine engine, bool isConstructCall, InternalHandle self, InternalHandle[] args, string metadataKey, string methodName)
         {
             if (args.Length != 1 || !(args[0].BoundObject is BlittableObjectInstance boi))
                 throw new InvalidOperationException($"{methodName}(doc) must be called with a single entity argument");
 
+            var engineEx = (V8EngineEx)engine;
             if (!(boi.Blittable[Constants.Documents.Metadata.Key] is BlittableJsonReaderObject metadata))
                 return engine.CreateArray(Array.Empty<InternalHandle>());
 
@@ -228,39 +237,44 @@ namespace Raven.Server.Documents.Patch
             for (var i = 0; i < timeSeries.Length; i++)
                 jsItems[i] = engine.CreateValue(timeSeries[i]?.ToString());
 
-            return engine.CreateArrayWithDisposal(jsItems);
+            return engineEx.CreateArrayWithDisposal(jsItems);
         }
 
-        internal static InternalHandle GetDocumentId(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+        internal static InternalHandle GetDocumentId(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
+            //throw new InvalidOperationException("JSUtils::GetDocumentId has been called");
+            //return engine.CreateNullValue();
+            //return engine.CreateValue("example/1-A");
+
             if (args.Length != 1 && args.Length != 2) //length == 2 takes into account Query Arguments that can be added to args
                 throw new InvalidOperationException("id(doc) must be called with a single argument");
 
-            if (args[0].IsNull || args[0].IsUndefined)
-                return args[0];
+            InternalHandle jsDoc = args[0];
+            if (jsDoc.IsNull || jsDoc.IsUndefined)
+                return jsDoc;
 
-            if (args[0].IsObject == false)
+            if (jsDoc.IsObject == false)
                 throw new InvalidOperationException("id(doc) must be called with an object argument");
 
-            if (args[0].BoundObject != null && args[0].BoundObject is BlittableObjectInstance doc && doc.DocumentId != null)
+            if (jsDoc.BoundObject != null && jsDoc.BoundObject is BlittableObjectInstance doc && doc.DocumentId != null)
                 return engine.CreateValue(doc.DocumentId);
 
-            using (var jsValue = args[0].GetProperty(Constants.Documents.Metadata.Key))
+            using (var jsValue = jsDoc.GetProperty(Constants.Documents.Metadata.Key))
             {
                 // search either @metadata.@id or @id
-                using (var metadata = jsValue.IsObject == false ? args[0] : jsValue)
+                using (var metadata = jsValue.IsObject == false ? jsDoc : jsValue)
                 {
-                    var value = metadata.GetProperty(Constants.Documents.Metadata.Id);
-                    if (value.IsString == false)
+                    var jsRes = metadata.GetProperty(Constants.Documents.Metadata.Id);
+                    if (jsRes.IsString == false)
                     {
                         // search either @metadata.Id or Id
-                        value.Dispose();
-                        value = metadata.GetProperty(Constants.Documents.Metadata.IdProperty);
-                        if (value.IsString == false)
-                            value.Dispose();
+                        jsRes.Set(metadata.GetProperty(Constants.Documents.Metadata.IdProperty));
+                        if (jsRes.IsString == false) {
+                            jsRes.Dispose();
                             return engine.CreateNullValue();
+                        }
                     }
-                    return value;
+                    return jsRes;
                 }
             }
         }
@@ -309,6 +323,8 @@ namespace Raven.Server.Documents.Patch
                 for (int i = 0; i < arrayLength; ++i)
                 {
                     jsItems[i] = TranslateToJs(context, bjra[i]);
+                    if (jsItems[i].IsError)
+                        return jsItems[i];
                 }
 
                 return Engine.CreateArrayWithDisposal(jsItems);
@@ -320,6 +336,8 @@ namespace Raven.Server.Documents.Patch
                 for (int i = 0; i < arrayLength; ++i)
                 {
                     jsItems[i] = TranslateToJs(context, list[i]);
+                    if (jsItems[i].IsError)
+                        return jsItems[i];
                 }
 
                 return Engine.CreateArrayWithDisposal(jsItems);
@@ -381,7 +399,7 @@ namespace Raven.Server.Documents.Patch
             var noCache = origin.NoCache;
             origin.NoCache = true;
             // RavenDB-8286
-            // here we need to make sure that we aren't sending a value to
+            // here we need to make sure that we aren't sending a jsRes to
             // the js engine that might be modified by the actions of the js engine
             // for example, calling put() might cause the original data to change
             // because we defrag the data that we looked at. We are handling this by
@@ -604,36 +622,36 @@ namespace Raven.Server.Documents.Patch
             return tb.CreateObjectBinder<TObjectBinder, object>(obj);
         }
 
-        public InternalHandle FromObject(object value)
+        public InternalHandle FromObject(object obj)
         {
-            if (value == null)
+            if (obj == null)
             {
                 return InternalHandle.Empty;
             }
 
-            if (value is InternalHandle jsValue)
+            if (obj is InternalHandle jsValue)
             {
                 return jsValue;
             }
 
-            Type t = value.GetType();
-            if (t.IsEnum)
+            var valueType = obj.GetType();
+            if (valueType.IsEnum)
             {
-                return CreateValue(value.ToString());
+                return CreateValue(obj.ToString());
                 
                 // is overloaded with upper code
-                /*Type ut = Enum.GetUnderlyingType(t);
+                /*Type ut = Enum.GetUnderlyingType(valueType);
 
                 if (ut == typeof(ulong))
-                    return CreateValue(System.Convert.ToDouble(value));
+                    return CreateValue(System.Convert.ToDouble(obj));
 
                 if (ut == typeof(uint) || ut == typeof(long))
-                    return CreateValue(System.Convert.ToInt64(value));
+                    return CreateValue(System.Convert.ToInt64(obj));
 
-                return CreateValue(System.Convert.ToInt32(value));*/
+                return CreateValue(System.Convert.ToInt32(obj));*/
             }
 
-            jsValue = value switch 
+            jsValue = obj switch 
             {
                 //BlittableJsonReaderObject bjro => (new BlittableObjectInstance(this, null, bjro, null, null, null)).CreateObjectBinder(),
                 //Document doc => (new BlittableObjectInstance(this, null, doc.Data, doc)).CreateObjectBinder(),
@@ -652,23 +670,20 @@ namespace Raven.Server.Documents.Patch
                 return jsValue;
             }
 
-            var valueType = value.GetType();
-
             var typeMappers = TypeMappers;
-
             if (typeMappers.TryGetValue(valueType, out var typeMapper))
             {
-                return typeMapper(value);
+                return typeMapper(obj);
             }
 
-            /*var type = value as Type;
+            /*var type = obj as Type;
             if (type != null)
             {
                 var typeReference = TypeReference.CreateTypeReference(this, type);
                 return typeReference;
             }*/
 
-            if (value is System.Array a)
+            if (obj is System.Array a)
             {
                 // racy, we don't care, worst case we'll catch up later
                 Interlocked.CompareExchange(ref TypeMappers, new Dictionary<Type, Func<object, InternalHandle>>(typeMappers)
@@ -680,13 +695,11 @@ namespace Raven.Server.Documents.Patch
             }
 
             InternalHandle jsRes = InternalHandle.Empty;
-            if (value is JSFunction d)
-            {
-                return jsRes.Set((new ClrFunctionInstanceBase(d))._);
-            }
+            if (obj is JSFunction d)
+                return jsRes.Set((this.CreateFunctionTemplate().GetFunctionObject<V8Function>(d))._);
 
             // if no known type could be guessed, wrap it as an ObjectBinder
-            return jsRes.Set(CreateObjectBinder(value)._);
+            return jsRes.Set(CreateObjectBinder(obj)._);
         }
 
         private InternalHandle Convert(object v)
@@ -711,7 +724,7 @@ namespace Raven.Server.Documents.Patch
 
     }
 
-    public class ClrFunctionInstance : V8Function
+    /*public class ClrFunctionInstance : V8Function
     {
         internal Func<V8EngineEx, bool, InternalHandle, InternalHandle[], InternalHandle> _func;
 
@@ -754,7 +767,7 @@ namespace Raven.Server.Documents.Patch
         {
             return _func(engine, isConstructCall, _this, args);
         }
-    }
+    }*/
 
     /*public class ClrFunctionInstance<T> : V8Function
     {

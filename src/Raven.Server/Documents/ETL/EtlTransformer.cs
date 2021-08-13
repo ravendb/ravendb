@@ -60,38 +60,38 @@ namespace Raven.Server.Documents.ETL
                 DocumentScript.DebugMode = true;
 
             Engine = DocumentScript.ScriptEngine;
-            Engine.GlobalObject.SetProperty(Transformation.LoadTo, new ClrFunctionInstance(LoadToFunctionTranslator));
+            Engine.GlobalObject.SetProperty(Transformation.LoadTo, Engine.CreateFunctionTemplate().GetFunctionObject<V8Function>(LoadToFunctionTranslator));
 
             foreach (var collection in LoadToDestinations)
             {
                 var name = Transformation.LoadTo + collection;
-                Engine.GlobalObject.SetProperty(name, new ClrFunctionInstance(LoadToFunctionTranslator));
+                Engine.GlobalObject.SetProperty(name, Engine.CreateFunctionTemplate().GetFunctionObject<V8Function>(LoadToFunctionTranslator));
             }
 
-            Engine.GlobalObject.SetProperty(Transformation.LoadAttachment, new ClrFunctionInstance(LoadAttachment));
+            Engine.GlobalObject.SetProperty(Transformation.LoadAttachment, Engine.CreateFunctionTemplate().GetFunctionObject<V8Function>(LoadAttachment));
 
             const string loadCounter = Transformation.CountersTransformation.Load;
-            Engine.GlobalObject.SetProperty(loadCounter, new ClrFunctionInstance(LoadCounter));
+            Engine.GlobalObject.SetProperty(loadCounter, Engine.CreateFunctionTemplate().GetFunctionObject<V8Function>(LoadCounter));
 
             const string loadTimeSeries = Transformation.TimeSeriesTransformation.LoadTimeSeries.Name;
-            Engine.GlobalObject.SetProperty(loadTimeSeries, new ClrFunctionInstance(LoadTimeSeries));
+            Engine.GlobalObject.SetProperty(loadTimeSeries, Engine.CreateFunctionTemplate().GetFunctionObject<V8Function>(LoadTimeSeries));
 
-            Engine.GlobalObject.SetProperty("getAttachments", new ClrFunctionInstance(GetAttachments));
+            Engine.GlobalObject.SetProperty("getAttachments", Engine.CreateFunctionTemplate().GetFunctionObject<V8Function>(GetAttachments));
 
-            Engine.GlobalObject.SetProperty("hasAttransfochment", new ClrFunctionInstance(HasAttachment));
+            Engine.GlobalObject.SetProperty("hasAttransfochment", Engine.CreateFunctionTemplate().GetFunctionObject<V8Function>(HasAttachment));
 
-            Engine.GlobalObject.SetProperty("getCounters", new ClrFunctionInstance(GetCounters));
+            Engine.GlobalObject.SetProperty("getCounters", Engine.CreateFunctionTemplate().GetFunctionObject<V8Function>(GetCounters));
 
-            Engine.GlobalObject.SetProperty("hasCounter", new ClrFunctionInstance(HasCounter));
+            Engine.GlobalObject.SetProperty("hasCounter", Engine.CreateFunctionTemplate().GetFunctionObject<V8Function>(HasCounter));
             
             const string hasTimeSeries = Transformation.TimeSeriesTransformation.HasTimeSeries.Name;
-            Engine.GlobalObject.SetProperty(hasTimeSeries, new ClrFunctionInstance(HasTimeSeries));
+            Engine.GlobalObject.SetProperty(hasTimeSeries, Engine.CreateFunctionTemplate().GetFunctionObject<V8Function>(HasTimeSeries));
             
             const string getTimeSeries = Transformation.TimeSeriesTransformation.GetTimeSeries.Name;
-            Engine.GlobalObject.SetProperty(getTimeSeries, new ClrFunctionInstance(GetTimeSeries));
+            Engine.GlobalObject.SetProperty(getTimeSeries, Engine.CreateFunctionTemplate().GetFunctionObject<V8Function>(GetTimeSeries));
         }
 
-        private InternalHandle LoadToFunctionTranslator(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+        private InternalHandle LoadToFunctionTranslator(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
             InternalHandle jsRes = InternalHandle.Empty;
             if (args.Length != 2)
@@ -132,7 +132,7 @@ namespace Raven.Server.Documents.ETL
         
         protected abstract void AddLoadedTimeSeries(InternalHandle reference, string name, IEnumerable<SingleResult> entries);
 
-        private InternalHandle LoadAttachment(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args)
+        private InternalHandle LoadAttachment(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args)
         {
             if (args.Length != 1 || args[0].IsString == false)
                 ThrowInvalidScriptMethodCall($"{Transformation.LoadAttachment}(name) must have a single string argument");
@@ -160,12 +160,12 @@ namespace Raven.Server.Documents.ETL
             return loadAttachmentReference;
         }
 
-        private static InternalHandle CreateLoadAttachmentReference(V8EngineEx engine, string attachmentName)
+        private static InternalHandle CreateLoadAttachmentReference(V8Engine engine, string attachmentName)
         {
             return engine.CreateValue($"{Transformation.AttachmentMarker}{attachmentName}{Guid.NewGuid():N}");
         }
 
-        private InternalHandle LoadCounter(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args)
+        private InternalHandle LoadCounter(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args)
         {
             if (args.Length != 1 || args[0].IsString == false)
                 ThrowInvalidScriptMethodCall($"{Transformation.CountersTransformation.Load}(name) must have a single string argument");
@@ -193,12 +193,12 @@ namespace Raven.Server.Documents.ETL
             return loadCounterReference;
         }
 
-        private static InternalHandle CreateLoadCounterReference(V8EngineEx engine, string counterName)
+        private static InternalHandle CreateLoadCounterReference(V8Engine engine, string counterName)
         {
             return engine.CreateValue(Transformation.CountersTransformation.Marker + counterName);
         }
 
-        private InternalHandle LoadTimeSeries(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args)
+        private InternalHandle LoadTimeSeries(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args)
         {
             if ((Current.Document.Flags & DocumentFlags.HasTimeSeries) == DocumentFlags.HasTimeSeries == false)
                 return engine.CreateNullValue();
@@ -230,12 +230,12 @@ namespace Raven.Server.Documents.ETL
             return loadTimeSeriesReference;
         }
 
-        private static InternalHandle CreateLoadTimeSeriesReference(V8EngineEx engine, string timeSeriesName, DateTime from, DateTime to)
+        private static InternalHandle CreateLoadTimeSeriesReference(V8Engine engine, string timeSeriesName, DateTime from, DateTime to)
         {
             return engine.CreateValue(Transformation.TimeSeriesTransformation.Marker + timeSeriesName + from.Ticks + ':' + to.Ticks);
         }
 
-        private InternalHandle GetAttachments(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args)
+        private InternalHandle GetAttachments(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args)
         {
             if (args.Length != 0)
                 ThrowInvalidScriptMethodCall("getAttachments() must be called without any argument");
@@ -256,7 +256,7 @@ namespace Raven.Server.Documents.ETL
             return Engine.CreateArrayWithDisposal(jsItems);
         }
 
-        private InternalHandle HasAttachment(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args)
+        private InternalHandle HasAttachment(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args)
         {
             if (args.Length != 1 || args[0].IsString == false)
                 ThrowInvalidScriptMethodCall("hasAttachment(name) must be called with one argument (string)");
@@ -285,7 +285,7 @@ namespace Raven.Server.Documents.ETL
             return Engine.CreateValue(false);
         }
 
-        private InternalHandle GetCounters(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args)
+        private InternalHandle GetCounters(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args)
         {
             if (args.Length != 0)
                 ThrowInvalidScriptMethodCall("getCounters() must be called without any argument");
@@ -306,7 +306,7 @@ namespace Raven.Server.Documents.ETL
             return Engine.CreateArrayWithDisposal(jsItems);
         }
 
-        private InternalHandle HasCounter(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args)
+        private InternalHandle HasCounter(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args)
         {
             if (args.Length != 1 || args[0].IsString == false)
                 ThrowInvalidScriptMethodCall("hasCounter(name) must be called with one argument (string)");
@@ -333,7 +333,7 @@ namespace Raven.Server.Documents.ETL
             return engine.CreateValue(false);
         }
 
-        private InternalHandle GetTimeSeries(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args)
+        private InternalHandle GetTimeSeries(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args)
         {
             const int paramsCount = Transformation.TimeSeriesTransformation.GetTimeSeries.ParamsCount;
             const string signature = Transformation.TimeSeriesTransformation.GetTimeSeries.Signature;
@@ -358,7 +358,7 @@ namespace Raven.Server.Documents.ETL
             return Engine.CreateArrayWithDisposal(jsItems);
         }
 
-        private InternalHandle HasTimeSeries(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args)
+        private InternalHandle HasTimeSeries(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args)
         {
             const int paramsCount = Transformation.TimeSeriesTransformation.HasTimeSeries.ParamsCount;
             const string signature = Transformation.TimeSeriesTransformation.HasTimeSeries.Signature;

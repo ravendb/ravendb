@@ -27,7 +27,7 @@ namespace Raven.Server.Documents.Indexes.Static
     public class JavaScriptReduceOperation
     {
         public JavaScriptReduceOperation(ScriptFunctionInstance reduce, ScriptFunctionInstance key, Engine engine,
-            V8Function reduceV8, V8Function keyV8, JavaScriptIndexUtils javaScriptIndexUtilsV8)
+            InternalHandle reduceV8, InternalHandle keyV8, JavaScriptIndexUtils javaScriptIndexUtilsV8)
         {
             Reduce = reduce ?? throw new ArgumentNullException(nameof(reduce));
             Key = key ?? throw new ArgumentNullException(nameof(key));
@@ -36,14 +36,26 @@ namespace Raven.Server.Documents.Indexes.Static
 
             _groupedItems = null;
 
-            ReduceV8 = reduceV8 ?? throw new ArgumentNullException(nameof(reduceV8));
-            KeyV8 = keyV8 ?? throw new ArgumentNullException(nameof(keyV8));
+            if (reduceV8.IsUndefined || reduceV8.IsNull)
+                throw new ArgumentNullException(nameof(reduceV8));
+            ReduceV8.Set(reduceV8);
+
+            if (keyV8.IsUndefined || keyV8.IsNull)
+                throw new ArgumentNullException(nameof(keyV8));
+            KeyV8.Set(keyV8);
 
             JavaScriptIndexUtilsV8 = javaScriptIndexUtilsV8;
             JavaScriptUtilsV8 = JavaScriptIndexUtilsV8.JavaScriptUtils;
             EngineV8 = JavaScriptIndexUtilsV8.Engine;
 
         }
+
+        ~JavaScriptReduceOperation()
+        {
+            ReduceV8.Dispose();
+            KeyV8.Dispose();
+        }
+
 
         private Dictionary<BlittableJsonReaderObject, List<BlittableJsonReaderObject>> _groupedItems;
 
@@ -147,7 +159,7 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
-        public IEnumerable<V8NativeObject> IndexingFunction(IEnumerable<dynamic> items)
+        public IEnumerable<InternalHandle> IndexingFunction(IEnumerable<dynamic> items)
         {
             try
             {
@@ -166,16 +178,13 @@ namespace Raven.Server.Documents.Indexes.Static
                     EngineV8.ResetCallStack();
                     EngineV8.ResetConstraints();
 
-                    V8NativeObject jsResObj;
+                    InternalHandle jsRes = InternalHandle.Empty;
                     try
                     {
-                        using (var jsRes = ReduceV8.StaticCall(ConstructGrouping(item)))
-                        {
-                            jsRes.ThrowOnError(); // TODO check if is needed here
-                            if (jsRes.IsObject == false)
-                                throw new JavaScriptIndexFuncException($"Failed to execute {ReduceString}", new Exception($"Reduce result is not object: {jsRes.ToString()}"));
-                            jsResObj = jsRes.Object; // no need to KeepTrack() as we store Handle
-                        }
+                        jsRes = ReduceV8.StaticCall(ConstructGrouping(item));
+                        jsRes.ThrowOnError(); // TODO check if is needed here
+                        if (jsRes.IsObject == false)
+                            throw new JavaScriptIndexFuncException($"Failed to execute {ReduceString}", new Exception($"Reduce result is not object: {jsRes.ToString()}"));
                     }
                     catch (V8Exception jse)
                     {
@@ -186,9 +195,10 @@ namespace Raven.Server.Documents.Indexes.Static
                     }
                     catch (Exception e)
                     {
+                        jsRes.Dispose();
                         throw new JavaScriptIndexFuncException($"Failed to execute {ReduceString}", e);
                     }
-                    yield return jsResObj;
+                    yield return jsRes;
                 }
             }
             finally
@@ -307,8 +317,8 @@ namespace Raven.Server.Documents.Indexes.Static
         public JavaScriptUtils JavaScriptUtilsV8 { get; }
         public V8EngineEx EngineV8 { get; }
 
-        public V8Function ReduceV8 { get; }
-        public V8Function KeyV8 { get; }
+        public InternalHandle ReduceV8 { get; }
+        public InternalHandle KeyV8 { get; }
 
         private CompiledIndexField[] _groupByFields;
         private bool _singleField;

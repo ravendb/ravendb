@@ -19,6 +19,7 @@ using Jint.Native.Object;
 using Jint.Runtime;
 //using Jint.Runtime.Interop;
 using JintClrFunctionInstance = Jint.Runtime.Interop.ClrFunctionInstance;
+using Raven.Server.Documents.Jint.Patch;
 
 using V8.Net;
 
@@ -65,14 +66,14 @@ function map(name, lambda) {
             _engineJint.SetValue("loadAttachments", new JintClrFunctionInstance(_engineJint, "loadAttachments", LoadAttachmentsJint));
             _engineJint.SetValue("id", new JintClrFunctionInstance(_engineJint, "id", GetDocumentIdJint));
 
-            _engine.GlobalObject.SetProperty("getMetadata", new ClrFunctionInstance(MetadataFor)); // for backward-compatibility only
-            _engine.GlobalObject.SetProperty("metadataFor", new ClrFunctionInstance(MetadataFor));
-            _engine.GlobalObject.SetProperty("attachmentsFor", new ClrFunctionInstance(AttachmentsFor));
-            _engine.GlobalObject.SetProperty("timeSeriesNamesFor", new ClrFunctionInstance(TimeSeriesNamesFor));
-            _engine.GlobalObject.SetProperty("counterNamesFor", new ClrFunctionInstance(CounterNamesFor));
-            _engine.GlobalObject.SetProperty("loadAttachment", new ClrFunctionInstance(LoadAttachment));
-            _engine.GlobalObject.SetProperty("loadAttachments", new ClrFunctionInstance(LoadAttachments));
-            _engine.GlobalObject.SetProperty("id", new ClrFunctionInstance(GetDocumentId));
+            _engine.GlobalObject.SetProperty("getMetadata", _engine.CreateFunctionTemplate().GetFunctionObject<V8Function>(MetadataFor)); // for backward-compatibility only
+            _engine.GlobalObject.SetProperty("metadataFor", _engine.CreateFunctionTemplate().GetFunctionObject<V8Function>(MetadataFor));
+            _engine.GlobalObject.SetProperty("attachmentsFor", _engine.CreateFunctionTemplate().GetFunctionObject<V8Function>(AttachmentsFor));
+            _engine.GlobalObject.SetProperty("timeSeriesNamesFor", _engine.CreateFunctionTemplate().GetFunctionObject<V8Function>(TimeSeriesNamesFor));
+            _engine.GlobalObject.SetProperty("counterNamesFor", _engine.CreateFunctionTemplate().GetFunctionObject<V8Function>(CounterNamesFor));
+            _engine.GlobalObject.SetProperty("loadAttachment", _engine.CreateFunctionTemplate().GetFunctionObject<V8Function>(LoadAttachment));
+            _engine.GlobalObject.SetProperty("loadAttachments", _engine.CreateFunctionTemplate().GetFunctionObject<V8Function>(LoadAttachments));
+            _engine.GlobalObject.SetProperty("id", _engine.CreateFunctionTemplate().GetFunctionObject<V8Function>(GetDocumentId));
 
         }
 
@@ -127,21 +128,18 @@ function map(name, lambda) {
 
                             if (map.HasProperty(MethodProperty) == false)
                                 ThrowIndexCreationException($"map function #{i} is missing its {MethodProperty} property");
-                            using (var funcObj = map.GetProperty(MethodProperty))
-                            {
-                                if (funcObj.IsFunction == false)
-                                    ThrowIndexCreationException($"map function #{i} collection name isn't a string");
-                                var funcInstance = funcObj.Object as V8Function;
-                                if (funcInstance == null)
-                                    ThrowIndexCreationException($"map function #{i} {MethodProperty} property isn't a 'V8Function'");
-                                var operation = new JavaScriptMapOperation(JavaScriptIndexUtils)
-                                {
-                                    MapFunc = funcInstanceJint,
-                                    MapFuncV8 = funcInstance,
-                                    IndexName = Definition.Name,
-                                    MapString = mapList[i]
-                                };
 
+                            //using (var
+                            Handle func = map.GetProperty(MethodProperty);
+                            {
+                                if (func._.IsFunction == false)
+                                    ThrowIndexCreationException($"map function #{i} {MethodProperty} property isn't a function");
+
+                                /*using (var jsRes = func.StaticCall(InternalHandle.Empty)) {
+                                    jsRes.ThrowOnError();
+                                }*/
+
+                                JavaScriptMapOperation operation = new JavaScriptMapOperation(JavaScriptIndexUtils, funcInstanceJint, func, Definition.Name, mapList[i]);
                                 if (mapJint.HasOwnProperty(MoreArgsProperty))
                                 {
                                     var moreArgsObjJint = mapJint.Get(MoreArgsProperty);
@@ -246,7 +244,7 @@ function map(name, lambda) {
         }
 
 
-        private InternalHandle GetDocumentId(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+        private InternalHandle GetDocumentId(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
             var scope = CurrentIndexingScope.Current;
             scope.RegisterJavaScriptUtils(JavaScriptUtils);
@@ -254,7 +252,7 @@ function map(name, lambda) {
             return JavaScriptUtils.GetDocumentId(engine, isConstructCall, self, args);
         }
 
-        private InternalHandle AttachmentsFor(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+        private InternalHandle AttachmentsFor(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
             var scope = CurrentIndexingScope.Current;
             scope.RegisterJavaScriptUtils(JavaScriptUtils);
@@ -262,7 +260,7 @@ function map(name, lambda) {
             return JavaScriptUtils.AttachmentsFor(engine, isConstructCall, self, args);
         }
 
-        private InternalHandle MetadataFor(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+        private InternalHandle MetadataFor(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
             var scope = CurrentIndexingScope.Current;
             scope.RegisterJavaScriptUtils(JavaScriptUtils);
@@ -270,7 +268,7 @@ function map(name, lambda) {
             return JavaScriptUtils.GetMetadata(engine, isConstructCall, self, args);
         }
 
-        private InternalHandle TimeSeriesNamesFor(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+        private InternalHandle TimeSeriesNamesFor(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
             var scope = CurrentIndexingScope.Current;
             scope.RegisterJavaScriptUtils(JavaScriptUtils);
@@ -278,7 +276,7 @@ function map(name, lambda) {
             return JavaScriptUtils.GetTimeSeriesNamesFor(engine, isConstructCall, self, args);
         }
 
-        private InternalHandle CounterNamesFor(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+        private InternalHandle CounterNamesFor(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
             var scope = CurrentIndexingScope.Current;
             scope.RegisterJavaScriptUtils(JavaScriptUtils);
@@ -286,7 +284,7 @@ function map(name, lambda) {
             return JavaScriptUtils.GetCounterNamesFor(engine, isConstructCall, self, args);
         }
 
-        private InternalHandle LoadAttachment(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+        private InternalHandle LoadAttachment(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
             var scope = CurrentIndexingScope.Current;
             scope.RegisterJavaScriptUtils(JavaScriptUtils);
@@ -294,7 +292,7 @@ function map(name, lambda) {
             return JavaScriptUtils.LoadAttachment(engine, isConstructCall, self, args);
         }
 
-        private InternalHandle LoadAttachments(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+        private InternalHandle LoadAttachments(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
             var scope = CurrentIndexingScope.Current;
             scope.RegisterJavaScriptUtils(JavaScriptUtils);
@@ -323,7 +321,7 @@ function map(name, lambda) {
         public readonly JavaScriptIndexUtils JavaScriptIndexUtils;
 
 
-        //private JintPreventResolvingTasksReferenceResolver _resolverJint;
+        //private JintNullPropagationReferenceResolver _resolverJint;
         protected Engine _engineJint; // in V8 mode is used for maps static analysis, but not for running
         protected ObjectInstance _definitionsJint;
 
@@ -358,13 +356,12 @@ function map(name, lambda) {
 
             var indexConfiguration = new SingleIndexConfiguration(definition.Configuration, configuration);
 
-            //_resolverJint = new JintPreventResolvingTasksReferenceResolver();
-            _engineJint = new Engine();
-            /*_engineJint = new Engine(options =>
+            //_resolverJint = new JintNullPropagationReferenceResolver(); //JintPreventResolvingTasksReferenceResolver();
+            _engineJint = new Engine(); /*options =>
             {
                 options
                     .LimitRecursion(64)
-                    //.SetReferencesResolver(_resolverJint)
+                    .SetReferencesResolver(_resolverJint)
                     .MaxStatements(indexConfiguration.MaxStepsForScript)
                     .Strict(configuration.Patching.StrictMode)
                     //.AddObjectConverter(new JintGuidConverter())
@@ -378,6 +375,10 @@ function map(name, lambda) {
             // we create the engine instance directly instead of using SingleRun
             // because the index is single threaded and long lived
             _engine = new V8EngineEx();
+
+            JavaScriptUtils = new JavaScriptUtils(null, _engine);
+
+            JavaScriptIndexUtils = new JavaScriptIndexUtils(JavaScriptUtils, _engineJint);
 
             string strictModeFlag = configuration.Patching.StrictMode ? "--use_strict" : "--no-use_strict";
             string[] optionsCmd = {strictModeFlag}; // TODO construct from options
@@ -401,10 +402,6 @@ function map(name, lambda) {
 
                 ProcessFields(collectionFunctions);
             //}
-
-            JavaScriptUtils = new JavaScriptUtils(null, _engine);
-
-            JavaScriptIndexUtils = new JavaScriptIndexUtils(JavaScriptUtils, _engineJint);
         }
 
         ~AbstractJavaScriptIndex()
@@ -464,9 +461,9 @@ function map(name, lambda) {
                 var reduceObj = _definitions.GetProperty(ReduceProperty);
                 if (!reduceObj.IsUndefined && reduceObj.IsObject)
                 {
-                    var groupByKey = reduceObj.GetProperty(KeyProperty).As<V8Function>();
-                    var reduce = reduceObj.GetProperty(AggregateByProperty).As<V8Function>();
-                    ReduceOperation = new JavaScriptReduceOperation(reduceJint, groupByKeyJint, _engineJint, reduce, groupByKey, JavaScriptIndexUtils) { ReduceString = Definition.Reduce };
+                    using (var groupByKey = reduceObj.GetProperty(KeyProperty))
+                    using (var reduce = reduceObj.GetProperty(AggregateByProperty))
+                        ReduceOperation = new JavaScriptReduceOperation(reduceJint, groupByKeyJint, _engineJint, reduce, groupByKey, JavaScriptIndexUtils) { ReduceString = Definition.Reduce };
                     GroupByFields = ReduceOperation.GetReduceFieldsNames();
                     Reduce = ReduceOperation.IndexingFunction;
                 }
@@ -482,10 +479,10 @@ function map(name, lambda) {
             _engineJint.SetValue("tryConvertToNumber", new JintClrFunctionInstance(_engineJint, "tryConvertToNumber", TryConvertToNumberJint));
             _engineJint.SetValue("recurse", new JintClrFunctionInstance(_engineJint, "recurse", RecurseJint));
 
-            _engine.GlobalObject.SetProperty("load", new ClrFunctionInstance(LoadDocument));
-            _engine.GlobalObject.SetProperty("cmpxchg", new ClrFunctionInstance(LoadCompareExchangeValue));
-            _engine.GlobalObject.SetProperty("tryConvertToNumber", new ClrFunctionInstance(TryConvertToNumber));
-            _engine.GlobalObject.SetProperty("recurse", new ClrFunctionInstance(Recurse));
+            _engine.GlobalObject.SetProperty("load", _engine.CreateFunctionTemplate().GetFunctionObject<V8Function>(LoadDocument));
+            _engine.GlobalObject.SetProperty("cmpxchg", _engine.CreateFunctionTemplate().GetFunctionObject<V8Function>(LoadCompareExchangeValue));
+            _engine.GlobalObject.SetProperty("tryConvertToNumber", _engine.CreateFunctionTemplate().GetFunctionObject<V8Function>(TryConvertToNumber));
+            _engine.GlobalObject.SetProperty("recurse", _engine.CreateFunctionTemplate().GetFunctionObject<V8Function>(Recurse));
         }
 
         private List<MapMetadata> InitializeEngine(IndexDefinition definition, List<string> maps, string mapCode)
@@ -670,7 +667,7 @@ function map(name, lambda) {
         }
 
 
-        private InternalHandle Recurse(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+        private InternalHandle Recurse(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
             if (args.Length != 2)
             {
@@ -686,33 +683,32 @@ function map(name, lambda) {
             return new RecursiveJsFunction(_engine, item, func).Execute();
         }
 
-        private static InternalHandle TryConvertToNumber(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+        private static InternalHandle TryConvertToNumber(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
             if (args.Length != 1)
             {
                 throw new ArgumentException("The tryConvertToNumber(value) method expects one argument, but got: " + args.Length);
             }
 
+            InternalHandle value = args[0];
             InternalHandle jsRes = InternalHandle.Empty;
-            var value = args[0];
 
             if (value.IsNull || value.IsUndefined)
                 return jsRes.Set(DynamicJsNull.ImplicitNull._);
 
-            if (value.IsNumber)
-                return value;
+            if (value.IsInt32 || value.IsNumberEx())
+                return jsRes.Set(value);
 
-            if (value.IsString)
+            if (value.IsStringEx())
             {
-                var valueAsString = value.AsString;
-                if (Double.TryParse(valueAsString, out var valueAsDbl))
+                if (Double.TryParse(value.AsString, out var valueAsDbl))
                     return engine.CreateValue(valueAsDbl);
             }
 
             return jsRes.Set(DynamicJsNull.ImplicitNull._);
         }
 
-        private InternalHandle LoadDocument(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+        private InternalHandle LoadDocument(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
             if (args.Length != 2)
             {
@@ -736,7 +732,7 @@ function map(name, lambda) {
             return jsRes.Set(DynamicJsNull.ImplicitNull._);
         }
 
-        private InternalHandle LoadCompareExchangeValue(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+        private InternalHandle LoadCompareExchangeValue(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
             if (args.Length != 1)
                 throw new ArgumentException("The cmpxchg(key) method expects one argument, but got: " + args.Length);
@@ -867,6 +863,11 @@ function map(name, lambda) {
         }
 
         private const string Code = @"
+var process = {
+    env: {
+        EXEC_ENV: 'RavenDB'
+    }
+}
 var globalDefinition =
 {
     maps: [],

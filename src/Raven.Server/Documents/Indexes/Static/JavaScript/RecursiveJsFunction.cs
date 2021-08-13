@@ -9,21 +9,25 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
         private InternalHandle _result;
         private readonly V8Engine _engine;
         private readonly InternalHandle _item;
-        private readonly V8Function _func;
+        private readonly InternalHandle _func;
         private readonly HashSet<Handle> _results = new HashSet<Handle>();
         private readonly Queue<object> _queue = new Queue<object>();
 
-        public RecursiveJsFunction(V8Engine engine, InternalHandle item, V8Function func)
+        public RecursiveJsFunction(V8Engine engine, InternalHandle item, InternalHandle func)
         {
             _engine = engine ?? throw new ArgumentNullException(nameof(engine));
             _item.Set(item);
-            _func = func ?? throw new ArgumentNullException(nameof(func));
+
+            if (func.IsUndefined || func.IsNull)
+                throw new ArgumentNullException(nameof(func));
+            _func.Set(func);
         }
 
         ~RecursiveJsFunction()
         {
             _item.Dispose();
             _result.Dispose();
+            _func.Dispose();
         }
 
         public InternalHandle Execute()

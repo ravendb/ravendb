@@ -45,7 +45,16 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         protected override int GetFields<T>(T instance, LazyStringValue key, LazyStringValue sourceDocumentId, object document, JsonOperationContext indexContext, IWriteOperationBuffer writeBuffer)
         {
-            if (!(document is V8NativeObject documentToProcess))
+            InternalHandle documentToProcess;
+            if (document is V8NativeObject documentToProcessObj) {
+                documentToProcess = documentToProcessObj._;
+            }
+            else if (document is InternalHandle documentToProcess2) {
+                documentToProcess = documentToProcess2;
+                if (!documentToProcess.IsObject)
+                    return 0;
+            }
+            else
                 return 0;
 
             int newFields = 0;

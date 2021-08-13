@@ -228,22 +228,22 @@ namespace Raven.Server.Documents.Patch
 
                 JavaScriptUtils = new JavaScriptUtils(_runner, ScriptEngine);
 
-                ScriptEngine.GlobalObject.SetProperty(GetMetadataMethod, new ClrFunctionInstance(JavaScriptUtils.GetMetadata));
-                ScriptEngine.GlobalObject.SetProperty("id", new ClrFunctionInstance(JavaScriptUtils.GetDocumentId));
+                ScriptEngine.GlobalObject.SetProperty(GetMetadataMethod, ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(JavaScriptUtils.GetMetadata));
+                ScriptEngine.GlobalObject.SetProperty("id", ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(JavaScriptUtils.GetDocumentId));
 
-                ScriptEngine.GlobalObject.SetProperty("output", new ClrFunctionInstance(OutputDebug));
+                ScriptEngine.GlobalObject.SetProperty("output", ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(OutputDebug));
 
                 //console.log
                 using (var consoleObject = ScriptEngine.CreateObject())
                 {
-                    consoleObject.FastAddProperty("log", new ClrFunctionInstance(OutputDebug), false, false, false);
+                    consoleObject.FastAddProperty("log", ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(OutputDebug), false, false, false);
                     ScriptEngine.GlobalObject.SetProperty("console", consoleObject);
                 }
 
                 //spatial.distance
                 using (var spatialObject = ScriptEngine.CreateObject())
                 {
-                    var spatialFunc = new ClrFunctionInstance(Spatial_Distance);
+                    var spatialFunc = ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(Spatial_Distance);
                     spatialObject.FastAddProperty("distance", spatialFunc, false, false, false);
                     ScriptEngine.GlobalObject.SetProperty("spatial", spatialObject);
                     ScriptEngine.GlobalObject.SetProperty("spatial.distance", spatialFunc);
@@ -252,51 +252,51 @@ namespace Raven.Server.Documents.Patch
                 // includes
                 using (var includesObject = ScriptEngine.CreateObject())
                 {
-                    var includeDocumentFunc = new ClrFunctionInstance(IncludeDoc);
+                    var includeDocumentFunc = ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(IncludeDoc);
                     includesObject.FastAddProperty("document", includeDocumentFunc, false, false, false);
-                    includesObject.FastAddProperty("cmpxchg", new ClrFunctionInstance(IncludeCompareExchangeValue), false, false, false);
-                    includesObject.FastAddProperty("revisions", new ClrFunctionInstance(IncludeRevisions), false, false, false);
+                    includesObject.FastAddProperty("cmpxchg", ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(IncludeCompareExchangeValue), false, false, false);
+                    includesObject.FastAddProperty("revisions", ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(IncludeRevisions), false, false, false);
                     ScriptEngine.GlobalObject.SetProperty("includes", includesObject);
 
                     // includes - backward compatibility
                     ScriptEngine.GlobalObject.SetProperty("include", includeDocumentFunc);
                 }
 
-                ScriptEngine.GlobalObject.SetProperty("load", new ClrFunctionInstance(LoadDocument));
-                ScriptEngine.GlobalObject.SetProperty("LoadDocument", new ClrFunctionInstance(ThrowOnLoadDocument));
+                ScriptEngine.GlobalObject.SetProperty("load", ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(LoadDocument));
+                ScriptEngine.GlobalObject.SetProperty("LoadDocument", ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(ThrowOnLoadDocument));
 
-                ScriptEngine.GlobalObject.SetProperty("loadPath", new ClrFunctionInstance(LoadDocumentByPath));
-                ScriptEngine.GlobalObject.SetProperty("del", new ClrFunctionInstance(DeleteDocument));
-                ScriptEngine.GlobalObject.SetProperty("DeleteDocument", new ClrFunctionInstance(ThrowOnDeleteDocument));
-                ScriptEngine.GlobalObject.SetProperty("put", new ClrFunctionInstance(PutDocument));
-                ScriptEngine.GlobalObject.SetProperty("PutDocument", new ClrFunctionInstance(ThrowOnPutDocument));
-                ScriptEngine.GlobalObject.SetProperty("cmpxchg", new ClrFunctionInstance(CompareExchange));
+                ScriptEngine.GlobalObject.SetProperty("loadPath", ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(LoadDocumentByPath));
+                ScriptEngine.GlobalObject.SetProperty("del", ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(DeleteDocument));
+                ScriptEngine.GlobalObject.SetProperty("DeleteDocument", ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(ThrowOnDeleteDocument));
+                ScriptEngine.GlobalObject.SetProperty("put", ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(PutDocument));
+                ScriptEngine.GlobalObject.SetProperty("PutDocument", ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(ThrowOnPutDocument));
+                ScriptEngine.GlobalObject.SetProperty("cmpxchg", ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(CompareExchange));
 
-                ScriptEngine.GlobalObject.SetProperty("counter", new ClrFunctionInstance(GetCounter));
-                ScriptEngine.GlobalObject.SetProperty("counterRaw", new ClrFunctionInstance(GetCounterRaw));
-                ScriptEngine.GlobalObject.SetProperty("incrementCounter", new ClrFunctionInstance(IncrementCounter));
-                ScriptEngine.GlobalObject.SetProperty("deleteCounter", new ClrFunctionInstance(DeleteCounter));
+                ScriptEngine.GlobalObject.SetProperty("counter", ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(GetCounter));
+                ScriptEngine.GlobalObject.SetProperty("counterRaw", ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(GetCounterRaw));
+                ScriptEngine.GlobalObject.SetProperty("incrementCounter", ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(IncrementCounter));
+                ScriptEngine.GlobalObject.SetProperty("deleteCounter", ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(DeleteCounter));
 
-                ScriptEngine.GlobalObject.SetProperty("lastModified", new ClrFunctionInstance(GetLastModified));
+                ScriptEngine.GlobalObject.SetProperty("lastModified", ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(GetLastModified));
 
-                ScriptEngine.GlobalObject.SetProperty("startsWith", new ClrFunctionInstance(StartsWith));
-                ScriptEngine.GlobalObject.SetProperty("endsWith", new ClrFunctionInstance(EndsWith));
-                ScriptEngine.GlobalObject.SetProperty("regex", new ClrFunctionInstance(Regex));
+                ScriptEngine.GlobalObject.SetProperty("startsWith", ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(StartsWith));
+                ScriptEngine.GlobalObject.SetProperty("endsWith", ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(EndsWith));
+                ScriptEngine.GlobalObject.SetProperty("regex", ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(Regex));
 
-                //ScriptEngine.GlobalObject.SetProperty("Raven_ExplodeArgs", new ClrFunctionInstance(ExplodeArgs));
-                ScriptEngine.GlobalObject.SetProperty("Raven_Min", new ClrFunctionInstance(Raven_Min));
-                ScriptEngine.GlobalObject.SetProperty("Raven_Max", new ClrFunctionInstance(Raven_Max));
+                //ScriptEngine.GlobalObject.SetProperty("Raven_ExplodeArgs", ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(ExplodeArgs));
+                ScriptEngine.GlobalObject.SetProperty("Raven_Min", ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(Raven_Min));
+                ScriptEngine.GlobalObject.SetProperty("Raven_Max", ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(Raven_Max));
 
-                ScriptEngine.GlobalObject.SetProperty("convertJsTimeToTimeSpanString", new ClrFunctionInstance(ConvertJsTimeToTimeSpanString));
-                ScriptEngine.GlobalObject.SetProperty("convertToTimeSpanString", new ClrFunctionInstance(ConvertToTimeSpanString));
-                ScriptEngine.GlobalObject.SetProperty("compareDates", new ClrFunctionInstance(CompareDates));
+                ScriptEngine.GlobalObject.SetProperty("convertJsTimeToTimeSpanString", ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(ConvertJsTimeToTimeSpanString));
+                ScriptEngine.GlobalObject.SetProperty("convertToTimeSpanString", ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(ConvertToTimeSpanString));
+                ScriptEngine.GlobalObject.SetProperty("compareDates", ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(CompareDates));
 
-                ScriptEngine.GlobalObject.SetProperty("toStringWithFormat", new ClrFunctionInstance(ToStringWithFormat));
+                ScriptEngine.GlobalObject.SetProperty("toStringWithFormat", ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(ToStringWithFormat));
 
-                //ScriptEngine.GlobalObject.SetProperty("scalarToRawString", new ClrFunctionInstance(ScalarToRawString));
+                //ScriptEngine.GlobalObject.SetProperty("scalarToRawString", ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(ScalarToRawString));
 
                 //TimeSeries
-                ScriptEngine.GlobalObject.SetProperty("timeseries", new ClrFunctionInstance(TimeSeries));
+                ScriptEngine.GlobalObject.SetProperty("timeseries", ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(TimeSeries));
                 ScriptEngine.Execute(ScriptRunnerCache.PolyfillJs);
 
                 foreach (var script in scriptsSource)
@@ -375,146 +375,164 @@ namespace Raven.Server.Documents.Patch
                 }
             }
 
-            private InternalHandle TimeSeries(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+            private InternalHandle TimeSeries(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
-                AssertValidDatabaseContext(_timeSeriesSignature);
+                try {
+                    AssertValidDatabaseContext(_timeSeriesSignature);
 
-                if (args.Length != 2)
-                    throw new ArgumentException($"{_timeSeriesSignature}: This method requires 2 arguments but was called with {args.Length}");
+                    if (args.Length != 2)
+                        throw new ArgumentException($"{_timeSeriesSignature}: This method requires 2 arguments but was called with {args.Length}");
 
-                var obj = ScriptEngine.CreateObject();
-                obj.SetProperty("append", new ClrFunctionInstance(AppendTimeSeries));
-                obj.SetProperty("delete", new ClrFunctionInstance(DeleteRangeTimeSeries));
-                obj.SetProperty("get", new ClrFunctionInstance(GetRangeTimeSeries));
-                obj.SetProperty("doc", args[0]);
-                obj.SetProperty("name", args[1]);
-                obj.SetProperty("getStats", new ClrFunctionInstance(GetStatsTimeSeries));
+                    var obj = ScriptEngine.CreateObject();
+                    obj.SetProperty("append", ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(AppendTimeSeries));
+                    obj.SetProperty("delete", ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(DeleteRangeTimeSeries));
+                    obj.SetProperty("get", ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(GetRangeTimeSeries));
+                    obj.SetProperty("doc", args[0]);
+                    obj.SetProperty("name", args[1]);
+                    obj.SetProperty("getStats", ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(GetStatsTimeSeries));
 
-                return obj;
-            }
-
-            private InternalHandle GetStatsTimeSeries(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args)
-            {
-                using (var document = self.GetProperty("doc"))
-                using (var name = self.GetProperty("name"))
+                    return obj;
+                }
+                catch (Exception e) 
                 {
-                    var (id, doc) = GetIdAndDocFromArg(document, _timeSeriesSignature);
-
-                    string timeSeries = GetStringArg(name, _timeSeriesSignature, "name");
-                    var stats = _database.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(_docsCtx, id, timeSeries);
-
-                    var tsStats = ScriptEngine.CreateObject();
-                    tsStats.SetProperty(nameof(stats.Start), engine.CreateValue(stats.Start));
-                    tsStats.SetProperty(nameof(stats.End), engine.CreateValue(stats.End));
-                    tsStats.SetProperty(nameof(stats.Count), engine.CreateValue(stats.Count));
-                    return tsStats;
+                    return ScriptEngine.CreateError(e.Message, JSValueType.ExecutionError);
                 }
             }
 
-            private InternalHandle AppendTimeSeries(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args)
+            private InternalHandle GetStatsTimeSeries(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args)
             {
-                using (var document = self.GetProperty("doc"))
-                using (var name = self.GetProperty("name"))
-                {
-                    AssertValidDatabaseContext("timeseries(doc, name).append");
-
-                    const string signature2Args = "timeseries(doc, name).append(timestamp, values)";
-                    const string signature3Args = "timeseries(doc, name).append(timestamp, values, tag)";
-
-                    string signature;
-                    LazyStringValue lsTag = null;
-                    switch (args.Length)
+                try {
+                    using (var document = self.GetProperty("doc"))
+                    using (var name = self.GetProperty("name"))
                     {
-                        case 2:
-                            signature = signature2Args;
-                            break;
-                        case 3:
-                            signature = signature3Args;
-                            var tagArgument = args.Last();
-                            if (tagArgument != null && tagArgument.IsNull == false && tagArgument.IsUndefined == false)
+                        var (id, doc) = GetIdAndDocFromArg(document, _timeSeriesSignature);
+
+                        string timeSeries = GetStringArg(name, _timeSeriesSignature, "name");
+                        var stats = _database.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(_docsCtx, id, timeSeries);
+
+                        var tsStats = ScriptEngine.CreateObject();
+                        tsStats.SetProperty(nameof(stats.Start), engine.CreateValue(stats.Start));
+                        tsStats.SetProperty(nameof(stats.End), engine.CreateValue(stats.End));
+                        tsStats.SetProperty(nameof(stats.Count), engine.CreateValue(stats.Count));
+                        return tsStats;
+                    }
+                }
+                catch (Exception e) 
+                {
+                    return ScriptEngine.CreateError(e.Message, JSValueType.ExecutionError);
+                }
+            }
+
+            private InternalHandle AppendTimeSeries(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args)
+            {
+                try {
+                    using (var document = self.GetProperty("doc"))
+                    using (var name = self.GetProperty("name"))
+                    {
+                        AssertValidDatabaseContext("timeseries(doc, name).append");
+
+                        const string signature2Args = "timeseries(doc, name).append(timestamp, values)";
+                        const string signature3Args = "timeseries(doc, name).append(timestamp, values, tag)";
+
+                        string signature;
+                        LazyStringValue lsTag = null;
+                        switch (args.Length)
+                        {
+                            case 2:
+                                signature = signature2Args;
+                                break;
+                            case 3:
+                                signature = signature3Args;
+                                var tagArgument = args.Last();
+                                if (tagArgument != null && tagArgument.IsNull == false && tagArgument.IsUndefined == false)
+                                {
+                                    var tag = GetStringArg(tagArgument, signature, "tag");
+                                    lsTag = _jsonCtx.GetLazyString(tag);
+                                }
+                                break;
+                            default:
+                                throw new ArgumentException($"There is no overload with {args.Length} arguments for this method should be {signature2Args} or {signature3Args}");
+                        }
+
+                        var (id, doc) = GetIdAndDocFromArg(document, _timeSeriesSignature);
+
+                        string timeSeries = GetStringArg(name, _timeSeriesSignature, "name");
+                        var timestamp = GetTimeSeriesDateArg(args[0], signature, "timestamp");
+
+                        double[] valuesBuffer = null;
+                        try
+                        {
+                            var jsValues = args[1];
+                            Memory<double> values;
+                            if (jsValues.IsArray)
                             {
-                                var tag = GetStringArg(tagArgument, signature, "tag");
-                                lsTag = _jsonCtx.GetLazyString(tag);
+                                valuesBuffer = ArrayPool<double>.Shared.Rent((int)jsValues.ArrayLength);
+                                FillDoubleArrayFromJsArray(valuesBuffer, jsValues, signature);
+                                values = new Memory<double>(valuesBuffer, 0, (int)jsValues.ArrayLength);
                             }
-                            break;
-                        default:
-                            throw new ArgumentException($"There is no overload with {args.Length} arguments for this method should be {signature2Args} or {signature3Args}");
-                    }
-
-                    var (id, doc) = GetIdAndDocFromArg(document, _timeSeriesSignature);
-
-                    string timeSeries = GetStringArg(name, _timeSeriesSignature, "name");
-                    var timestamp = GetTimeSeriesDateArg(args[0], signature, "timestamp");
-
-                    double[] valuesBuffer = null;
-                    try
-                    {
-                        var jsValues = args[1];
-                        Memory<double> values;
-                        if (jsValues.IsArray)
-                        {
-                            valuesBuffer = ArrayPool<double>.Shared.Rent((int)jsValues.ArrayLength);
-                            FillDoubleArrayFromJsArray(valuesBuffer, jsValues, signature);
-                            values = new Memory<double>(valuesBuffer, 0, (int)jsValues.ArrayLength);
-                        }
-                        else if (jsValues.IsNumber)
-                        {
-                            valuesBuffer = ArrayPool<double>.Shared.Rent(1);
-                            valuesBuffer[0] = jsValues.AsDouble;
-                            values = new Memory<double>(valuesBuffer, 0, 1);
-                        }
-                        else
-                        {
-                            throw new ArgumentException($"{signature}: The values should be an array but got {GetTypes(jsValues)}");
-                        }
-
-                        var tss = _database.DocumentsStorage.TimeSeriesStorage;
-                        var newSeries = tss.Stats.GetStats(_docsCtx, id, timeSeries).Count == 0;
-
-                        if (newSeries)
-                        {
-                            DocumentTimeSeriesToUpdate ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                            DocumentTimeSeriesToUpdate.Add(id);
-                        }
-
-                        var toAppend = new SingleResult
-                        {
-                            Values = values,
-                            Tag = lsTag,
-                            Timestamp = timestamp,
-                            Status = TimeSeriesValuesSegment.Live
-                        };
-
-                        tss.AppendTimestamp(
-                            _docsCtx,
-                            id,
-                            CollectionName.GetCollectionName(doc),
-                            timeSeries,
-                            new[] { toAppend }, 
-                            addNewNameToMetadata: false);
-
-                        if (DebugMode)
-                        {
-                            DebugActions.AppendTimeSeries.Add(new DynamicJsonValue
+                            else if (jsValues.IsNumber)
                             {
-                                ["Name"] = timeSeries,
-                                ["Timestamp"] = timestamp,
-                                ["Tag"] = lsTag,
-                                ["Values"] = values.ToArray().Cast<object>(),
-                                ["Created"] = newSeries
-                            });
+                                valuesBuffer = ArrayPool<double>.Shared.Rent(1);
+                                valuesBuffer[0] = jsValues.AsDouble;
+                                values = new Memory<double>(valuesBuffer, 0, 1);
+                            }
+                            else
+                            {
+                                throw new ArgumentException($"{signature}: The values should be an array but got {GetTypes(jsValues)}");
+                            }
+
+                            var tss = _database.DocumentsStorage.TimeSeriesStorage;
+                            var newSeries = tss.Stats.GetStats(_docsCtx, id, timeSeries).Count == 0;
+
+                            if (newSeries)
+                            {
+                                DocumentTimeSeriesToUpdate ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                                DocumentTimeSeriesToUpdate.Add(id);
+                            }
+
+                            var toAppend = new SingleResult
+                            {
+                                Values = values,
+                                Tag = lsTag,
+                                Timestamp = timestamp,
+                                Status = TimeSeriesValuesSegment.Live
+                            };
+
+                            tss.AppendTimestamp(
+                                _docsCtx,
+                                id,
+                                CollectionName.GetCollectionName(doc),
+                                timeSeries,
+                                new[] { toAppend }, 
+                                addNewNameToMetadata: false);
+
+                            if (DebugMode)
+                            {
+                                DebugActions.AppendTimeSeries.Add(new DynamicJsonValue
+                                {
+                                    ["Name"] = timeSeries,
+                                    ["Timestamp"] = timestamp,
+                                    ["Tag"] = lsTag,
+                                    ["Values"] = values.ToArray().Cast<object>(),
+                                    ["Created"] = newSeries
+                                });
+                            }
+                        }
+                        finally
+                        {
+                            if (valuesBuffer != null)
+                                ArrayPool<double>.Shared.Return(valuesBuffer);
                         }
                     }
-                    finally
-                    {
-                        if (valuesBuffer != null)
-                            ArrayPool<double>.Shared.Return(valuesBuffer);
-                    }
+                    return InternalHandle.Empty;
                 }
-                return InternalHandle.Empty;
+                catch (Exception e) 
+                {
+                    return ScriptEngine.CreateError(e.Message, JSValueType.ExecutionError);
+                }
             }
 
-            private InternalHandle DeleteRangeTimeSeries(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args)
+            private InternalHandle DeleteRangeTimeSeries(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args)
             {
                 using (var document = self.GetProperty("doc"))
                 using (var name = self.GetProperty("name"))
@@ -577,7 +595,7 @@ namespace Raven.Server.Documents.Patch
                 return InternalHandle.Empty;
             }
 
-            private InternalHandle GetRangeTimeSeries(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args)
+            private InternalHandle GetRangeTimeSeries(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args)
             {
                 using (var document = self.GetProperty("doc"))
                 using (var name = self.GetProperty("name"))
@@ -725,19 +743,19 @@ namespace Raven.Server.Documents.Patch
                 }
             }
 
-            private InternalHandle Raven_Max(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+            private InternalHandle Raven_Max(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
                 GenericSortTwoElementArray(args);
                 return args[1];
             }
 
-            private InternalHandle Raven_Min(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+            private InternalHandle Raven_Min(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
                 GenericSortTwoElementArray(args);
                 return args[0];
             }
 
-            private InternalHandle IncludeDoc(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+            private InternalHandle IncludeDoc(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
                 if (args.Length != 1)
                     throw new InvalidOperationException("include(id) must be called with a single argument");
@@ -774,7 +792,7 @@ namespace Raven.Server.Documents.Patch
                 return jsRes.Set(self);
             }
 
-            private InternalHandle IncludeCompareExchangeValue(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+            private InternalHandle IncludeCompareExchangeValue(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
                 if (args.Length != 1)
                     throw new InvalidOperationException("includes.cmpxchg(key) must be called with a single argument");
@@ -818,7 +836,7 @@ namespace Raven.Server.Documents.Patch
                 return string.Join(Environment.NewLine, _runner.ScriptsSource);
             }
 
-            private InternalHandle GetLastModified(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+            private InternalHandle GetLastModified(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
                 if (args.Length != 1)
                     throw new InvalidOperationException("lastModified(doc) must be called with a single argument");
@@ -843,7 +861,7 @@ namespace Raven.Server.Documents.Patch
                 return InternalHandle.Empty;
             }
 
-            private InternalHandle Spatial_Distance(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+            private InternalHandle Spatial_Distance(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
                 if (args.Length < 4 && args.Length > 5)
                     throw new ArgumentException("Called with expected number of arguments, expected: spatial.distance(lat1, lng1, lat2, lng2, kilometers | miles | cartesian)");
@@ -876,7 +894,7 @@ namespace Raven.Server.Documents.Patch
                 return engine.CreateValue(result);
             }
 
-            private InternalHandle OutputDebug(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+            private InternalHandle OutputDebug(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
                 InternalHandle jsRes = InternalHandle.Empty;
                 if (DebugMode == false)
@@ -926,7 +944,7 @@ namespace Raven.Server.Documents.Patch
                 return obj.ToString();
             }
 
-            public InternalHandle PutDocument(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+            public InternalHandle PutDocument(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
                 string changeVector = null;
 
@@ -992,7 +1010,7 @@ namespace Raven.Server.Documents.Patch
                 throw new InvalidOperationException("The first parameter to put(id, doc, changeVector) must be a string");
             }
 
-            public InternalHandle DeleteDocument(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+            public InternalHandle DeleteDocument(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
                 if (args.Length != 1 && args.Length != 2)
                     throw new InvalidOperationException("delete(id, changeVector) must be called with at least one parameter");
@@ -1035,7 +1053,7 @@ namespace Raven.Server.Documents.Patch
                     throw new InvalidOperationException($"Unable to use `{functionName}` when this instance is not attached to a database operation");
             }
 
-            private InternalHandle IncludeRevisions(V8EngineEx engine, bool isConstructCall, InternalHandle self, InternalHandle[] args)
+            private InternalHandle IncludeRevisions(V8Engine engine, bool isConstructCall, InternalHandle self, InternalHandle[] args)
             {
                 if (args == null)
                     return ScriptEngine.CreateNullValue();
@@ -1073,7 +1091,7 @@ namespace Raven.Server.Documents.Patch
                 return ScriptEngine.CreateNullValue();
             }
             
-            private InternalHandle LoadDocumentByPath(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+            private InternalHandle LoadDocumentByPath(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
                 using (_loadScope = _loadScope?.Start() ?? _scope?.For(nameof(QueryTimingsScope.Names.Load)))
                 {
@@ -1107,7 +1125,7 @@ namespace Raven.Server.Documents.Patch
                 }
             }
 
-            private InternalHandle CompareExchange(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+            private InternalHandle CompareExchange(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
                 AssertValidDatabaseContext("cmpxchg");
 
@@ -1117,7 +1135,7 @@ namespace Raven.Server.Documents.Patch
                 return CmpXchangeInternal(CompareExchangeKey.GetStorageKey(_database.Name, args[0].AsString));
             }
 
-            private InternalHandle LoadDocument(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+            private InternalHandle LoadDocument(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
                 using (_loadScope = _loadScope?.Start() ?? _scope?.For(nameof(QueryTimingsScope.Names.Load)))
                 {
@@ -1155,12 +1173,12 @@ namespace Raven.Server.Documents.Patch
                 }
             }
 
-            private InternalHandle GetCounter(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+            private InternalHandle GetCounter(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
                 return GetCounterInternal(args);
             }
 
-            private InternalHandle GetCounterRaw(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+            private InternalHandle GetCounterRaw(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
                 return GetCounterInternal(args, true);
             }
@@ -1225,7 +1243,7 @@ namespace Raven.Server.Documents.Patch
                 return rawValues;
             }
 
-            private InternalHandle IncrementCounter(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+            private InternalHandle IncrementCounter(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
                 AssertValidDatabaseContext("incrementCounter");
 
@@ -1309,7 +1327,7 @@ namespace Raven.Server.Documents.Patch
                 return engine.CreateValue(true);
             }
 
-            private InternalHandle DeleteCounter(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+            private InternalHandle DeleteCounter(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
                 AssertValidDatabaseContext("deleteCounter");
 
@@ -1364,9 +1382,9 @@ namespace Raven.Server.Documents.Patch
                 return engine.CreateValue(true);
             }
 
-            private ClrFunctionInstance NamedInvokeTimeSeriesFunction(string name)
+            private V8Function NamedInvokeTimeSeriesFunction(string name)
             {
-                return new ClrFunctionInstance((engine, isConstructCall, self, args) => InvokeTimeSeriesFunction(name, args));
+                return ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>((engine, isConstructCall, self, args) => InvokeTimeSeriesFunction(name, args));
             }
 
             private InternalHandle InvokeTimeSeriesFunction(string name, params InternalHandle[] args)
@@ -1487,22 +1505,22 @@ namespace Raven.Server.Documents.Patch
                 throw new InvalidOperationException("deleteCounter(doc, name) must be called with exactly 2 arguments");
             }
 
-            private static InternalHandle ThrowOnLoadDocument(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+            private static InternalHandle ThrowOnLoadDocument(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
                 throw new MissingMethodException("The method LoadDocument was renamed to 'load'");
             }
 
-            private static InternalHandle ThrowOnPutDocument(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+            private static InternalHandle ThrowOnPutDocument(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
                 throw new MissingMethodException("The method PutDocument was renamed to 'put'");
             }
 
-            private static InternalHandle ThrowOnDeleteDocument(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+            private static InternalHandle ThrowOnDeleteDocument(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
                 throw new MissingMethodException("The method DeleteDocument was renamed to 'del'");
             }
 
-            private InternalHandle ConvertJsTimeToTimeSpanString(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+            private InternalHandle ConvertJsTimeToTimeSpanString(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
                 if (args.Length != 1 || args[0].IsNumber == false)
                     throw new InvalidOperationException("convertJsTimeToTimeSpanString(ticks) must be called with a single long argument");
@@ -1514,7 +1532,7 @@ namespace Raven.Server.Documents.Patch
                 return engine.CreateValue(asTimeSpan.ToString());
             }
 
-            private InternalHandle ConvertToTimeSpanString(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+            private InternalHandle ConvertToTimeSpanString(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
                 if (args.Length == 1)
                 {
@@ -1575,7 +1593,7 @@ namespace Raven.Server.Documents.Patch
                                                     "convertToTimeSpanString(days, hours, minutes, seconds, milliseconds)");
             }
 
-            private static InternalHandle CompareDates(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+            private static InternalHandle CompareDates(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
                 if (args.Length < 1 || args.Length > 3)
                 {
@@ -1630,7 +1648,7 @@ namespace Raven.Server.Documents.Patch
                 }
             }
 
-            private unsafe InternalHandle ToStringWithFormat(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+            private unsafe InternalHandle ToStringWithFormat(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
                 if (args.Length < 1 || args.Length > 3)
                 {
@@ -1701,7 +1719,7 @@ namespace Raven.Server.Documents.Patch
                 return engine.CreateValue(boolean.ToString(cultureInfo));
             }
 
-            private InternalHandle StartsWith(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+            private InternalHandle StartsWith(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
                 if (args.Length != 2 || args[0].IsString == false || args[1].IsString == false)
                     throw new InvalidOperationException("startsWith(text, contained) must be called with two string parameters");
@@ -1709,7 +1727,7 @@ namespace Raven.Server.Documents.Patch
                 return engine.CreateValue(args[0].AsString.StartsWith(args[1].AsString, StringComparison.OrdinalIgnoreCase));
             }
 
-            private InternalHandle EndsWith(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+            private InternalHandle EndsWith(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
                 if (args.Length != 2 || args[0].IsString == false || args[1].IsString == false)
                     throw new InvalidOperationException("endsWith(text, contained) must be called with two string parameters");
@@ -1717,7 +1735,7 @@ namespace Raven.Server.Documents.Patch
                 return engine.CreateValue(args[0].AsString.EndsWith(args[1].AsString, StringComparison.OrdinalIgnoreCase));
             }
 
-            private InternalHandle Regex(V8EngineEx engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+            private InternalHandle Regex(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
                 if (args.Length != 2 || args[0].IsString == false || args[1].IsString == false)
                     throw new InvalidOperationException("regex(text, regex) must be called with two string parameters");
@@ -1911,7 +1929,7 @@ namespace Raven.Server.Documents.Patch
                 if (e.Handle.IsString)
                     msg = e.Handle.AsString;
                 else if (e.Handle.IsObject)
-                    msg = JsBlittableBridge.Translate(_jsonCtx, ScriptEngine, e.Handle.Object).ToString();
+                    msg = JsBlittableBridge.Translate(_jsonCtx, ScriptEngine, e.Handle).ToString();
                 else
                     msg = e.Handle.ToString();
 
@@ -1970,7 +1988,7 @@ namespace Raven.Server.Documents.Patch
                 {
                     if (jsValue.IsNull)
                         return null;
-                    return JsBlittableBridge.Translate(context, ScriptEngine, jsValue.Object, modifier, usageMode);
+                    return JsBlittableBridge.Translate(context, ScriptEngine, jsValue, modifier, usageMode);
                 }
                 if (jsValue.IsNumber)
                     return jsValue.AsDouble;

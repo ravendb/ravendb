@@ -47,7 +47,7 @@ namespace Raven.Server.Documents.Patch
             if (IsNull)
                 return null;
 
-            return JsBlittableBridge.Translate(context, _parent.ScriptEngine, Instance.Object, modifier, usageMode);
+            return JsBlittableBridge.Translate(context, _parent.ScriptEngine, Instance, modifier, usageMode);
         }
 
         public void Dispose()

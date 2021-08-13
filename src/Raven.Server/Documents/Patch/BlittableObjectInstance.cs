@@ -89,14 +89,14 @@ namespace Raven.Server.Documents.Patch
         {
             private BlittableObjectProperty GetOwnProperty(string propertyName)
             {
-                if (propertyName == Constants.Documents.Metadata.Key)
+                /*if (propertyName == Constants.Documents.Metadata.Key)
                 { 
                     using (var jsValue = ObjCLR.JavaScriptUtils.GetMetadata((V8EngineEx)Engine, false, InternalHandle.Empty, this))
                     {
                         jsValue.ThrowOnError(); // TODO check if is needed here
                         return new BlittableObjectProperty(ObjCLR, propertyName, jsValue);
                     }
-                }
+                }*/
 
                 BlittableObjectProperty val = null;
                 if (ObjCLR.OwnValues?.TryGetValue(propertyName, out val) == true &&
