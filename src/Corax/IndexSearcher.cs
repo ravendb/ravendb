@@ -103,7 +103,7 @@ namespace Corax
             var fields = _transaction.ReadTree(IndexWriter.FieldsSlice);
             var terms = fields.CompactTreeFor(field);
             if (terms == null)
-                return MultiTermMatch.CreateEmpty();
+                return MultiTermMatch.CreateEmpty(_transaction.Allocator);
 
             if (inTerms.Count > 1 && inTerms.Count <= 16)
             {
@@ -134,7 +134,7 @@ namespace Corax
                 return MultiTermMatch.Create(stack[0]);
             }
 
-            return MultiTermMatch.Create(new MultiTermMatch<InTermProvider>(new InTermProvider(this, field, 0, inTerms)));
+            return MultiTermMatch.Create(new MultiTermMatch<InTermProvider>(_transaction.Allocator, new InTermProvider(this, field, 0, inTerms)));
         }
 
         public MultiTermMatch StartWithQuery(string field, string startWith)
@@ -143,9 +143,9 @@ namespace Corax
             var fields = _transaction.ReadTree(IndexWriter.FieldsSlice);
             var terms = fields.CompactTreeFor(field);
             if (terms == null)
-                return MultiTermMatch.CreateEmpty();
+                return MultiTermMatch.CreateEmpty(_transaction.Allocator);
 
-            return MultiTermMatch.Create(new MultiTermMatch<StartWithTermProvider>(new StartWithTermProvider(this, _transaction.Allocator, terms, field, 0, startWith)));
+            return MultiTermMatch.Create(new MultiTermMatch<StartWithTermProvider>(_transaction.Allocator, new StartWithTermProvider(this, _transaction.Allocator, terms, field, 0, startWith)));
         }
 
         public SortingMatch OrderByAscending<TInner>(in TInner set, int fieldId, MatchCompareFieldType entryFieldType = MatchCompareFieldType.Sequence, int take = -1)

@@ -128,14 +128,12 @@ namespace Corax.Queries
 
                 if (innerCount == 0)
 {
-                    Unsafe.CopyBlockUnaligned(ref Unsafe.AsRef<byte>(matchesPtr), ref Unsafe.AsRef<byte>(outerMatchesPtr), (uint)outerCount * sizeof(long));
-                    //outerMatches.Slice(0, outerCount).CopyTo(matches);
+                    Unsafe.CopyBlockUnaligned(ref Unsafe.AsRef<byte>(matchesPtr), ref Unsafe.AsRef<byte>(outerMatchesPtr), (uint)outerCount * sizeof(long));                    
                     return outerCount;
                 }
                 if (outerCount == 0)
                 {
                     Unsafe.CopyBlockUnaligned(ref Unsafe.AsRef<byte>(matchesPtr), ref Unsafe.AsRef<byte>(innerMatchesPtr), (uint)innerCount * sizeof(long));
-                    //innerMatches.Slice(0, innerCount).CopyTo(matches);
                     return innerCount;
                 }
 

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
+using Sparrow.Server;
 
 namespace Corax.Queries
 {
@@ -152,9 +153,9 @@ namespace Corax.Queries
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static MultiTermMatch CreateEmpty()
+        public static MultiTermMatch CreateEmpty(ByteStringContext context)
         {
-            return new MultiTermMatch(new MultiTermMatch<EmptyTermProvider>(new EmptyTermProvider()), StaticFunctionCache<EmptyTermProvider>.FunctionTable);
+            return new MultiTermMatch(new MultiTermMatch<EmptyTermProvider>(context, new EmptyTermProvider()), StaticFunctionCache<EmptyTermProvider>.FunctionTable);
         }
     }
 }
