@@ -62,7 +62,7 @@ class statistics extends viewModelBase {
 
         popoverUtils.longWithHover($(".js-cv-tooltip"),
             {
-                content: this.stats().databaseChangeVector.length == 0 ? "" : `<div>${cvTooltip}</div>`
+                content: this.stats().databaseChangeVector.length === 0 ? "" : `<div>${cvTooltip}</div>`
             });
         
         popoverUtils.longWithHover($(".js-identities-header"),
