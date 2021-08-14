@@ -124,46 +124,66 @@ namespace Corax.Queries
 
                 long* innerMatchesPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(innerMatches));
                 long* outerMatchesPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(outerMatches));
-                long* matchesPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(matches));
+                long* matchesStartPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(matches));
 
                 if (innerCount == 0)
-{
-                    Unsafe.CopyBlockUnaligned(ref Unsafe.AsRef<byte>(matchesPtr), ref Unsafe.AsRef<byte>(outerMatchesPtr), (uint)outerCount * sizeof(long));                    
+                {
+                    Unsafe.CopyBlockUnaligned(ref Unsafe.AsRef<byte>(matchesStartPtr), ref Unsafe.AsRef<byte>(outerMatchesPtr), (uint)outerCount * sizeof(long));
                     return outerCount;
                 }
                 if (outerCount == 0)
                 {
-                    Unsafe.CopyBlockUnaligned(ref Unsafe.AsRef<byte>(matchesPtr), ref Unsafe.AsRef<byte>(innerMatchesPtr), (uint)innerCount * sizeof(long));
+                    Unsafe.CopyBlockUnaligned(ref Unsafe.AsRef<byte>(matchesStartPtr), ref Unsafe.AsRef<byte>(innerMatchesPtr), (uint)innerCount * sizeof(long));
                     return innerCount;
-                }
+                }               
 
-                int innerIdx = 0, outerIdx = 0, matchesIdx = 0;
-                while (innerIdx < innerCount && outerIdx < outerCount)
+                var innerMatchesPtrEnd = innerMatchesPtr + innerCount;
+                var outerMatchesPtrEnd = outerMatchesPtr + outerCount;
+
+                long* matchesPtr = matchesStartPtr;
+                long* matchesPtrEnd = matchesStartPtr + outerCount;
+
+                while (innerMatchesPtr < innerMatchesPtrEnd && outerMatchesPtr < outerMatchesPtrEnd)
                 {
-                    if (innerMatchesPtr[innerIdx] == outerMatchesPtr[outerIdx])
+                    long innerMatch = *innerMatchesPtr;
+                    long outerMatch = *outerMatchesPtr;
+
+                    // PERF: The if-then-else version is actually faster than the branchless version because the
+                    //       JIT wont generate a CMOV operation and there is no intrinsic yet available;
+                    if (innerMatch == outerMatch)
                     {
-                        matchesPtr[matchesIdx++] = innerMatches[innerIdx++];
-                        outerIdx++;
+                        *matchesPtr = *innerMatchesPtr;
+                        innerMatchesPtr++;
+                        outerMatchesPtr++;
                     }
-                    else if (innerMatchesPtr[innerIdx] < outerMatchesPtr[outerIdx])
+                    else if (innerMatch < outerMatch)
                     {
-                        matchesPtr[matchesIdx++] = innerMatchesPtr[innerIdx++];
+                        *matchesPtr = *innerMatchesPtr;
+                        innerMatchesPtr++;
                     }
                     else
                     {
-                        matchesPtr[matchesIdx++] = outerMatchesPtr[outerIdx++];
+                        *matchesPtr = *outerMatchesPtr;
+                        outerMatchesPtr++;
                     }
+
+                    matchesPtr++;
                 }
 
-                while (innerIdx < innerCount)
+                long values = 0;
+                if (innerMatchesPtr < innerMatchesPtrEnd)
                 {
-                    matchesPtr[matchesIdx++] = innerMatchesPtr[innerIdx++];
+                    values = innerMatchesPtrEnd - innerMatchesPtr;
+                    Unsafe.CopyBlockUnaligned(ref Unsafe.AsRef<byte>(matchesPtr), ref Unsafe.AsRef<byte>(innerMatchesPtr), (uint)values * sizeof(long));
                 }
-                while (outerIdx < outerCount)
+                else if (outerMatchesPtr < outerMatchesPtrEnd)
                 {
-                    matchesPtr[matchesIdx++] = outerMatchesPtr[outerIdx++];
+                    values = outerMatchesPtrEnd - outerMatchesPtr;
+                    Unsafe.CopyBlockUnaligned(ref Unsafe.AsRef<byte>(matchesPtr), ref Unsafe.AsRef<byte>(outerMatchesPtr), (uint)values * sizeof(long));                    
                 }
-                return matchesIdx;
+
+                matchesPtr += values;
+                return (int) (matchesPtr - matchesStartPtr);
             }
 
             // Estimate Confidence values.

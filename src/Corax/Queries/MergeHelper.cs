@@ -24,25 +24,56 @@ namespace Corax.Queries
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe static int And(long* dst, int dstLength, long* left, int leftLength, long* right, int rightLength)
         {
-            int dstIdx = 0, leftIdx = 0, rightIdx = 0;
-            while (leftIdx < leftLength && rightIdx < rightLength)
+            long* dstPtr = dst;
+            long* leftPtr = left;
+            long* rightPtr = right;
+
+            long* leftEndPtr = leftPtr + leftLength;
+            long* rightEndPtr = rightPtr + rightLength;
+
+            while (leftPtr < leftEndPtr && rightPtr < rightEndPtr)
             {
-                if (left[leftIdx] < right[rightIdx])
+                long leftValue = *leftPtr;
+                long rightValue = *rightPtr;
+
+                if (leftValue < rightValue)
                 {
-                    leftIdx++;
+                    leftPtr++;
                 }
-                else if (left[leftIdx] > right[rightIdx])
+                else if (leftValue > rightValue)
                 {
-                    rightIdx++;
+                    rightPtr++;
                 }
                 else
                 {
-                    dst[dstIdx++] = left[leftIdx];
-                    leftIdx++;
-                    rightIdx++;
+                    *dstPtr = leftValue;
+                    dstPtr++;
+                    leftPtr++;
+                    rightPtr++;                    
                 }
             }
-            return dstIdx;
+
+            return (int)(dstPtr - dst);
+
+            //int dstIdx = 0, leftIdx = 0, rightIdx = 0;
+            //while (leftIdx < leftLength && rightIdx < rightLength)
+            //{
+            //    if (left[leftIdx] < right[rightIdx])
+            //    {
+            //        leftIdx++;
+            //    }
+            //    else if (left[leftIdx] > right[rightIdx])
+            //    {
+            //        rightIdx++;
+            //    }
+            //    else
+            //    {
+            //        dst[dstIdx++] = left[leftIdx];
+            //        leftIdx++;
+            //        rightIdx++;
+            //    }
+            //}
+            //return dstIdx;
         }
 
         /// <summary>
@@ -64,39 +95,54 @@ namespace Corax.Queries
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe static int Or(long* dst, int dstLength, long* left, int leftLength, long* right, int rightLength)
         {
-            int dstIdx = 0, leftIdx = 0, rightIdx = 0;
-            while (leftIdx < leftLength && rightIdx < rightLength)
+            long* dstPtr = dst;
+            long* dstEndPtr = dst + dstLength;
+
+            long* leftPtr = left;
+            long* leftEndPtr = left + leftLength;
+
+            long* rightPtr = left;
+            long* rightEndPtr = left + leftLength;
+
+            while (leftPtr < leftEndPtr && rightPtr < rightEndPtr)
             {
-                if (left[leftIdx] < right[rightIdx])
+                long leftValue = *leftPtr;
+                long rightValue = *rightPtr;
+
+                if (leftValue < rightValue)
                 {
-                    dst[dstIdx++] = left[leftIdx++];
+                    *dstPtr = leftValue;
+                    leftPtr++;
                 }
-                else if (left[leftIdx] > right[rightIdx])
+                else if (leftValue > rightValue)
                 {
-                    dst[dstIdx++] = right[rightIdx++];
+                    *dstPtr = rightValue;
+                    rightPtr++;
                 }
                 else
                 {
-                    dst[dstIdx++] = left[leftIdx++];
-                    rightIdx++;
+                    *dstPtr = leftValue;
+                    rightPtr++;
                 }
+
+                dstPtr++;
             }
 
-            if (leftLength - leftIdx != 0)
+            long values = 0;
+            if (leftPtr != leftEndPtr)
             {
                 // We have items still available in the left arm                
-                Unsafe.CopyBlockUnaligned(ref Unsafe.AsRef<byte>(dst + dstIdx), ref Unsafe.AsRef<byte>(left + leftIdx), (uint)(leftLength - leftIdx) * sizeof(long));
-                return dstIdx + (leftLength - leftIdx);
+                values = leftEndPtr - leftPtr;
+                Unsafe.CopyBlockUnaligned(ref Unsafe.AsRef<byte>(dstPtr), ref Unsafe.AsRef<byte>(leftPtr), (uint)values * sizeof(long));
             }
-            else if (rightLength - rightIdx != 0)
+            else if (rightPtr != rightEndPtr)
             {
                 // We have items still available in the left arm
-
-                Unsafe.CopyBlockUnaligned(ref Unsafe.AsRef<byte>(dst + dstIdx), ref Unsafe.AsRef<byte>(right + rightIdx), (uint)(rightLength - rightIdx) * sizeof(long));
-                return dstIdx + (rightLength - rightIdx);
+                values = rightEndPtr - rightPtr;
+                Unsafe.CopyBlockUnaligned(ref Unsafe.AsRef<byte>(dstPtr), ref Unsafe.AsRef<byte>(rightPtr), (uint)values * sizeof(long));
             }
 
-            return dstIdx;
+            return (int) (dstPtr + values - dst);
         }
     }
 }

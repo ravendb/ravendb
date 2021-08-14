@@ -89,34 +89,6 @@ namespace Corax.Queries
                 bufferState[count++] = bufferState[^1];
             }
 
-            //// If it is the first time and the buffer is full (there are no more to get)            
-            //if (_memoizedCount == 0)
-            //{
-            //    if (count == 0)
-            //    {
-            //        _memoizedCount = -1;
-            //    }
-            //    else if (noMoreData)
-            //    {
-            //        // TODO: Check it if matters to return the buffer in case we need a larger one. 
-            //        _context.Allocate(count * sizeof(long), out _cachedResult);
-
-            //        // Copy array to cache.
-            //        Unsafe.CopyBlockUnaligned(
-            //            ref Unsafe.AsRef<byte>(_cachedResult.Ptr),
-            //            ref Unsafe.As<long, byte>(ref MemoryMarshal.GetReference(buffer)),
-            //            (uint)(count * sizeof(long)));
-
-            //        // Signal that memoization was posible.
-            //        _memoizedCount = count;
-            //    }
-            //    else
-            //    {
-            //        // Memoization not possible without a larger buffer.
-            //        _memoizedCount = -1;
-            //    }                 
-            //}
-
             return count;
         }
 
