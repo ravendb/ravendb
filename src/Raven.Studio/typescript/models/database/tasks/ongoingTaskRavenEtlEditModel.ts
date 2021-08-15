@@ -48,6 +48,7 @@ class ongoingTaskRavenEtlEditModel extends ongoingTaskEditModel {
         this.dirtyFlag = new ko.DirtyFlag([
                 innerDirtyFlag,
                 this.taskName,
+                this.taskState,
                 this.mentorNode,
                 this.manualChooseMentor,
                 this.connectionStringName,

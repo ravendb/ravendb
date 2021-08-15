@@ -31,7 +31,7 @@ class editPeriodicBackupTask extends viewModelBase {
     constructor() {
         super();
         
-        this.bindToCurrentInstance("testCredentials");
+        this.bindToCurrentInstance("testCredentials", "setState");
         
         this.titleForView = ko.pureComputed(() => this.configuration().getTitleForView(this.isAddingNewBackupTask()));
     }
@@ -225,6 +225,10 @@ class editPeriodicBackupTask extends viewModelBase {
             valid = false;
 
         return valid;
+    }
+
+    setState(state: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskState): void {
+        this.configuration().setState(state);
     }
 }
 

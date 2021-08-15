@@ -6,7 +6,10 @@ class ongoingTaskReplicationHubEditModel {
     taskId: number;
     taskName = ko.observable<string>();
     taskType = ko.observable<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType>();
-    taskState: boolean;
+
+    disabled = ko.observable<boolean>();
+    stateText: KnockoutComputed<string>;
+
     responsibleNode = ko.observable<Raven.Client.ServerWide.Operations.NodeId>();
     
     manualChooseMentor = ko.observable<boolean>();
@@ -49,12 +52,20 @@ class ongoingTaskReplicationHubEditModel {
             return (this.allowReplicationFromHubToSink()) ? "HubToSink" :
                     this.allowReplicationFromSinkToHub() ? "SinkToHub" : "None";
         })
+
+        this.stateText = ko.pureComputed(() => {
+            if (this.disabled()) {
+                return "Disabled";
+            }
+            
+            return "Enabled";
+        });
     }
     
     update(dto: Raven.Client.Documents.Operations.Replication.PullReplicationDefinition) {
         this.taskName(dto.Name);
         this.taskId = dto.TaskId;
-        this.taskState = dto.Disabled;
+        this.disabled(dto.Disabled);
 
         this.manualChooseMentor(!!dto.MentorNode);
         this.mentorNode(dto.MentorNode);
@@ -77,7 +88,7 @@ class ongoingTaskReplicationHubEditModel {
             TaskId: taskId,
             DelayReplicationFor: this.showDelayReplication() ? generalUtils.formatAsTimeSpan(this.delayReplicationTime() * 1000) : null,
             Mode: this.replicationMode(),
-            Disabled: this.taskState,
+            Disabled: this.disabled(),
             PreventDeletionsMode: this.preventDeletions() ? "PreventSinkToHubDeletions" : "None",
             WithFiltering: this.withFiltering()
         } as Raven.Client.Documents.Operations.Replication.PullReplicationDefinition;

@@ -33,6 +33,7 @@ class ongoingTaskSqlEtlEditModel extends ongoingTaskEditModel {
         
         this.dirtyFlag = new ko.DirtyFlag([
             this.taskName,
+            this.taskState,
             this.connectionStringName,
             this.mentorNode,
             this.manualChooseMentor,
