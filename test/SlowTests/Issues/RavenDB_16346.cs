@@ -41,8 +41,11 @@ function execute(doc, args)
                 engine.Execute(script);
                 using(var execute = engine.GlobalObject.GetProperty("execute"))
                 {
-                    var call = execute.Object.TryCast<V8Function>();
-                    call.StaticCall(args);
+                    //var call = execute.Object.TryCast<V8Function>();
+                    if (execute.IsFunction)
+                        call.StaticCall(args);
+                    else
+                        throw new Exception("execute property is not a function");
                 }
             }
 
