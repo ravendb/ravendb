@@ -399,7 +399,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
                 using (_contextPool.AllocateOperationContext(out JsonOperationContext ctx))
                 {
-                    (tcpClient, connection, _, supportedFeatures) = await TcpUtils.ConnectSecuredTcpSocket(
+                    var result = await TcpUtils.ConnectSecuredTcpSocket(
                         tcpConnectionInfo,
                         _parent._server.Server.Certificate.Certificate,
                         _parent._server.Server.CipherSuitesPolicy,
@@ -407,6 +407,10 @@ namespace Raven.Server.ServerWide.Maintenance
                         NegotiateProtocolVersionAsyncForClusterSupervisor,
                         ctx,
                         timeout, null, _token);
+
+                    tcpClient = result.TcpClient;
+                    connection = result.Stream;
+                    supportedFeatures = result.SupportedFeatures;
 
                     await using (var writer = new AsyncBlittableJsonTextWriter(ctx, connection))
                     {

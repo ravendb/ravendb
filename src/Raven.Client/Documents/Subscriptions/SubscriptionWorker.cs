@@ -217,7 +217,7 @@ namespace Raven.Client.Documents.Subscriptions
                     }
                 }
                 
-                (_tcpClient, _stream, _, _supportedFeatures) = await TcpUtils.ConnectSecuredTcpSocket(
+                var result = await TcpUtils.ConnectSecuredTcpSocket(
                     tcpInfo,
                     _store.Certificate,
 #if SSL_STREAM_CIPHERSUITESPOLICY_SUPPORT
@@ -233,7 +233,11 @@ namespace Raven.Client.Documents.Subscriptions
                     token
 #endif
                     ).ConfigureAwait(false);
-                
+
+                _tcpClient = result.TcpClient;
+                _stream = result.Stream;
+                _supportedFeatures = result.SupportedFeatures;
+
                 _tcpClient.NoDelay = true;
                 _tcpClient.SendBufferSize = _options?.SendBufferSizeInBytes ?? SubscriptionWorkerOptions.DefaultSendBufferSizeInBytes;
                 _tcpClient.ReceiveBufferSize = _options?.ReceiveBufferSizeInBytes ?? SubscriptionWorkerOptions.DefaultReceiveBufferSizeInBytes;

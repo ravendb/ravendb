@@ -116,6 +116,7 @@ namespace Raven.Server.Web.System
             writer.WriteComma();
             writer.WritePropertyName(nameof(TcpConnectionHeaderMessage.DatabaseName));
             writer.WriteString(databaseName);
+            writer.WriteComma();
             writer.WritePropertyName(nameof(TcpConnectionHeaderMessage.ServerId));
             writer.WriteString(destinationServerId);
             
