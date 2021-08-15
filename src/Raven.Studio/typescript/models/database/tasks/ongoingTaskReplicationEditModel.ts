@@ -82,6 +82,7 @@ class ongoingTaskReplicationEditModel extends ongoingTaskEditModel {
     static empty(): ongoingTaskReplicationEditModel {
         return new ongoingTaskReplicationEditModel({
             TaskName: "",
+            TaskState: "Enabled",
             TaskType: "Replication",
             DestinationDatabase: null,
             DestinationUrl: null

@@ -14,11 +14,24 @@
                     <div data-bind="with: editedSqlEtl">
                         <div class="panel-body">
                             <h3 data-bind="text: $parent.isAddingNewSqlEtlTask() ? 'New SQL ETL' : 'Edit SQL ETL'"></h3>
-                            <div class="form-group" data-bind="validationElement: taskName">
+                            <div class="form-group margin-top margin-top-lg" data-bind="validationElement: taskName">
                                 <label for="taskName" class="control-label">Task Name</label>
                                 <div class="flex-grow">
                                     <input type="text" class="form-control" id="taskName"
                                            placeholder="Enter a descriptive name for the SQL ETL task (optional)" data-bind="textInput: taskName">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="control-label">Task State</label>
+                                <div class="flex-grow">
+                                    <button type="button" class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown" aria-expanded="false">
+                                        <span data-bind="text: stateText()"></span>
+                                        <span class="caret"></span>
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li><a href="#" data-bind="click: _.partial($root.setState, 'Enabled')"><span>Enabled</span></a></li>
+                                        <li><a href="#" data-bind="click: _.partial($root.setState, 'Disabled')"><span>Disabled</span></a></li>
+                                    </ul>
                                 </div>
                             </div>
                             <div data-bind="if: $root.activeDatabase() && $root.activeDatabase().isEncrypted">
@@ -91,7 +104,7 @@
                                 </div>
                             </div>
                             <div class="flex-horizontal">
-                                <div class="flex-grow">
+                                <div class="flex-grow margin-top">
                                     <button type="button" class="btn btn-info" data-bind="click: $root.toggleAdvancedArea">
                                             <i class="icon-settings"></i><span>Advanced</span>
                                     </button>
@@ -159,7 +172,7 @@
                     </div>
                 </div>
             </form>
-            <div class="flex-horizontal flex-header">
+            <div class="flex-horizontal flex-header margin-top margin-top-lg">
                 <div class="flex-grow"><h3>SQL Tables</h3></div>
                 <div><button type="button" class="btn btn-info" data-bind="click: addNewSqlTable, disable: showEditSqlTableArea()"><i class="icon-plus"></i><span>Add Table</span></button></div>
             </div>

@@ -52,7 +52,7 @@ class editReplicationSinkTask extends viewModelBase {
     constructor() {
         super();
         this.bindToCurrentInstance("useConnectionString", "onTestConnectionRaven", "onConfigurationFileSelected",
-                                   "certFileSelected", "removeCertificate", "downloadServerCertificate");
+                                   "certFileSelected", "removeCertificate", "downloadServerCertificate", "setState");
     }
 
     canActivate(args: any) {
@@ -153,6 +153,7 @@ class editReplicationSinkTask extends viewModelBase {
         
         this.dirtyFlag = new ko.DirtyFlag([
                 model.taskName,
+                model.taskState,
                 model.manualChooseMentor,
                 model.mentorNode,
                 model.connectionStringName,
@@ -451,6 +452,10 @@ class editReplicationSinkTask extends viewModelBase {
         const targetFrame = $("form#certificates_download_form");
         targetFrame.attr("action", this.exportCertificateUrl);
         targetFrame.submit();
+    }
+
+    setState(state: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskState): void {
+        this.editedSinkTask().taskState(state);
     }
 }
 

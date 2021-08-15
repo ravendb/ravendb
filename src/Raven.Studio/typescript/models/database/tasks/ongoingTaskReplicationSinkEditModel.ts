@@ -114,6 +114,7 @@ class ongoingTaskReplicationSinkEditModel extends ongoingTaskEditModel {
         return new ongoingTaskReplicationSinkEditModel({
             TaskType: "ReplicationAsSink" as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType,
             TaskName: "",
+            TaskState: "Enabled",
             AccessName: "",
             AllowedHubToSinkPaths: null,
             AllowedSinkToHubPaths: null,

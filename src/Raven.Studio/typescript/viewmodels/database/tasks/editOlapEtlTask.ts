@@ -265,7 +265,8 @@ class editOlapEtlTask extends viewModelBase {
                                    "saveEditedOlapTable",
                                    "syntaxHelp",
                                    "deleteOlapTable",
-                                   "editOlapTable");
+                                   "editOlapTable",
+                                   "setState");
 
         aceEditorBindingHandler.install();
     }
@@ -818,6 +819,10 @@ class editOlapEtlTask extends viewModelBase {
     editOlapTable(olapTableModel: ongoingTaskOlapEtlTableModel) {
         this.olapTableSelectedForEdit(olapTableModel);
         this.editedOlapTableSandbox(new ongoingTaskOlapEtlTableModel(olapTableModel.toDto(), false));
+    }
+
+    setState(state: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskState): void {
+        this.editedOlapEtl().taskState(state);
     }
 }
 

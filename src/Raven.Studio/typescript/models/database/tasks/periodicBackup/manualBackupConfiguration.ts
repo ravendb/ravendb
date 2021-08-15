@@ -8,7 +8,6 @@ import notificationCenter = require("common/notifications/notificationCenter");
 class manualBackupConfiguration extends backupConfiguration {
 
     backupOperation = "manual";
-    hasDestination: KnockoutComputed<boolean>;
 
     constructor(databaseName: KnockoutObservable<string>,
                 dto: Raven.Client.Documents.Operations.Backups.PeriodicBackupConfiguration,
@@ -23,15 +22,6 @@ class manualBackupConfiguration extends backupConfiguration {
     
     initObservables() {
         super.initObservables();
-        
-        this.hasDestination = ko.pureComputed(() => {
-            return this.localSettings().enabled() ||
-                   this.s3Settings().enabled() ||
-                   this.glacierSettings().enabled() ||
-                   this.azureSettings().enabled() ||
-                   this.googleCloudSettings().enabled() ||
-                   this.ftpSettings().enabled();
-        })
 
         this.dirtyFlag = new ko.DirtyFlag([
             this.backupType,
@@ -45,15 +35,6 @@ class manualBackupConfiguration extends backupConfiguration {
         
         this.backupType.extend({
             required: true
-        });
-        
-        this.hasDestination.extend({
-            validation: [
-                {
-                    validator: () => this.hasDestination(),
-                    message: "No destination is defined"
-                }
-            ]
         });
 
         this.validationGroup = ko.validatedObservable({
@@ -93,6 +74,8 @@ class manualBackupConfiguration extends backupConfiguration {
                 notificationCenter.instance.openDetailsForOperationById(db, manualBackupResult.OperationId);
             });
     }
+
+    setState(state: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskState): void {}
 }
 
 export = manualBackupConfiguration;
