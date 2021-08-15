@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using CsvHelper;
+using CsvHelper.Configuration;
 using Microsoft.AspNetCore.Http;
 using Raven.Client;
 using Raven.Client.Json;
@@ -38,8 +39,11 @@ namespace Raven.Server.Documents.Handlers
             response.Headers["Content-Type"] = "text/csv";
 
             _writer = new StreamWriter(stream, Encoding.UTF8);
-            _csvWriter = new CsvWriter(_writer, CultureInfo.InvariantCulture);
-            _csvWriter.Configuration.Delimiter = ",";
+            _csvWriter = new CsvWriter(_writer, new CsvConfiguration(CultureInfo.InvariantCulture)
+            {
+                Delimiter = ","
+            });
+
             //We need to write headers without the escaping but the path should be escaped
             //so @metadata.@collection should not be written in the header as @metadata\.@collection
             //We can't escape while constructing the path since we will write the escaping in the header this way, we need both.

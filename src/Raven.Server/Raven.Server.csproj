@@ -118,7 +118,7 @@
     <PackageReference Include="AWSSDK.Glacier" Version="3.7.0.44" />
     <PackageReference Include="AWSSDK.S3" Version="3.7.1.16" />
     <PackageReference Include="Azure.Storage.Blobs" Version="12.9.1" />
-    <PackageReference Include="CsvHelper" Version="15.0.10" />
+    <PackageReference Include="CsvHelper" Version="27.1.1" />
     <PackageReference Include="DasMulli.Win32.ServiceUtils.Signed" Version="1.1.0" />
     <PackageReference Include="JetBrains.Annotations" Version="2021.2.0">
       <PrivateAssets>All</PrivateAssets>
