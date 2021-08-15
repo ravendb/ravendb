@@ -107,7 +107,7 @@ namespace Raven.Server.Documents.Queries
             return Compare(xObject, yObject);
         }
 
-        private (bool IsNumber,int Compare) SetObjectIfNumericType(object xResult, object yResult, ref object yObject)
+        private (bool IsNumber, int Compare) SetObjectIfNumericType(object xResult, object yResult, ref object yObject)
         {
             switch (yResult)
             {

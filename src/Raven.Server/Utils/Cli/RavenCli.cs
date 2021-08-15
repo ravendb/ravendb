@@ -49,6 +49,8 @@ using Size = Sparrow.Size;
 using SizeClient = Raven.Client.Util.Size;
 #endif
 
+using Raven.Server.Extensions;
+
 namespace Raven.Server.Utils.Cli
 {
     public class RavenCli
@@ -1050,7 +1052,7 @@ namespace Raven.Server.Utils.Cli
                 {
                     writer.WriteBool(result.RawJsValue.AsBoolean);
                 }
-                else if (result.RawJsValue.IsString)
+                else if (result.RawJsValue.IsStringEx())
                 {
                     writer.WriteString(result.RawJsValue.AsString);
                 }
@@ -1059,7 +1061,11 @@ namespace Raven.Server.Utils.Cli
                     var date = result.RawJsValue.AsDate;
                     writer.WriteString(date.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite));
                 }
-                else if (result.RawJsValue.IsNumber)
+                else if (result.RawJsValue.IsInt32)
+                {
+                    writer.WriteInteger(result.RawJsValue.AsInt32);
+                }
+                else if (result.RawJsValue.IsNumberEx())
                 {
                     writer.WriteDouble(result.RawJsValue.AsDouble);
                 }

@@ -4,6 +4,7 @@ using V8.Net;
 using Raven.Client.Documents.Operations.Attachments;
 using Sparrow.Json;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Extensions;
 
 namespace Raven.Server.Documents.Indexes.Static.JavaScript
 {

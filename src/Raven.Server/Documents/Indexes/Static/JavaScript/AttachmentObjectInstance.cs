@@ -4,6 +4,7 @@ using System.Text;
 using V8.Net;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Extensions;
 
 namespace Raven.Server.Documents.Indexes.Static.JavaScript
 {
@@ -24,7 +25,7 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
             var encoding = Encoding.UTF8;
             if (args.Length > 0)
             {
-                if (args[0].IsString == false)
+                if (args[0].IsStringEx() == false)
                     throw new InvalidOperationException($"Encoding parameter must be of type string and convertible to one of the .NET supported encodings, but was '{args[0]}'.");
 
                 var encodingAsString = args[0].AsString;

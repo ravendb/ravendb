@@ -199,11 +199,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 jsValue.Dispose();
                 return null;
             }
-            if (jsValue.IsString)
+            if (jsValue.IsStringEx())
                 return jsValue.AsString;
             if (jsValue.IsBoolean)
                 return jsValue.AsBoolean;
-            if (jsValue.IsNumber)
+            if (jsValue.IsInt32)
+                return jsValue.AsInt32;
+            if (jsValue.IsNumberEx())
                 return jsValue.AsDouble;
             if (jsValue.IsDate)
                 return jsValue.AsDate;

@@ -150,7 +150,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                             {
                                 SpatialField spatialField;
                                 IEnumerable<AbstractField> spatial;
-                                if (inner.IsString)
+                                if (inner.IsStringEx())
                                 {
                                     spatialField = AbstractStaticIndexBase.GetOrCreateSpatialField(field.Name);
                                     spatial = AbstractStaticIndexBase.CreateSpatialField(spatialField, inner.AsString);
@@ -161,7 +161,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                                     {
                                         using (lat)
                                         {
-                                            if (lat.IsNumber && inner.TryGetValue("Lng", out var lng) && lng.IsNumber)
+                                            if (lat.IsNumberOrIntEx() && inner.TryGetValue("Lng", out var lng) && lng.IsNumberOrIntEx())
                                             {
                                                 using (lng)
                                                 {
@@ -260,7 +260,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 if (valueToCheck.TryGetValue(ValuePropertyName, out var valueValue) == false)
                     return false;
 
-                if (boostValue.IsNumber == false)
+                if (boostValue.IsNumberOrIntEx() == false)
                     return false;
 
                 boost = (float)boostValue.AsDouble;
@@ -280,7 +280,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             {
                 if (fieldNameObj.IsUndefined)
                 {
-                    if (fieldNameObj.IsString == false)
+                    if (fieldNameObj.IsStringEx() == false)
                         throw new ArgumentException($"Dynamic field {property} is expected to have a string {NamePropertyName} property but got {fieldNameObj}");
 
                     field.Name = fieldNameObj.AsString;
@@ -341,7 +341,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             TEnum GetEnum<TEnum>(InternalHandle optionValue, string propertyName)
             {
-                if (optionValue.IsString == false)
+                if (optionValue.IsStringEx() == false)
                     throw new ArgumentException($"Could not parse dynamic field option property '{propertyName}' value ('{optionValue}') because it is not a string.");
 
                 var optionValueAsString = optionValue.AsString;

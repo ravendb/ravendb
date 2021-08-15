@@ -1,6 +1,7 @@
 using System;
 using V8.Net;
 using Sparrow.Json;
+using Raven.Server.Extensions;
 
 namespace Raven.Server.Documents.Patch
 {
@@ -39,7 +40,7 @@ namespace Raven.Server.Documents.Patch
         public bool? BooleanValue => Instance.IsBoolean ? Instance.AsBoolean : (bool?)null;
 
         public bool IsNull => Instance == null || Instance.IsNull || Instance.IsUndefined;
-        public string StringValue => Instance.IsString ? Instance.AsString : null;
+        public string StringValue => Instance.IsStringEx() ? Instance.AsString : null;
         public InternalHandle RawJsValue => Instance;
 
         public BlittableJsonReaderObject TranslateToObject(JsonOperationContext context, JsBlittableBridge.IResultModifier modifier = null, BlittableJsonDocumentBuilder.UsageMode usageMode = BlittableJsonDocumentBuilder.UsageMode.None)

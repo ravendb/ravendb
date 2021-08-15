@@ -10,6 +10,7 @@ using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using Raven.Server.Extensions;
 
 
 
@@ -209,13 +210,13 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
 
             using (type)
             {
-                if (args[0].IsString == false)
+                if (args[0].IsStringEx() == false)
                     throw new InvalidOperationException("varchar() / nvarchar(): first argument must be a string");
 
                 var sizeSpecified = args.Length > 1;
 
-                if (sizeSpecified && args[1].IsNumber == false)
-                    throw new InvalidOperationException("varchar() / nvarchar(): second argument must be a number");
+                if (sizeSpecified && args[1].IsInt32 == false)
+                    throw new InvalidOperationException("varchar() / nvarchar(): second argument must be an integer");
 
                 InternalHandle item = engine.CreateObject();
                 {

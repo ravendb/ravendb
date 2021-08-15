@@ -121,7 +121,7 @@ function map() {{
                             ThrowIndexCreationException($"map function #{i} is missing a collection name");
                         using (var mapCollectionStr = map.GetProperty(CollectionProperty))
                         {
-                            if (mapCollectionStr.IsString == false)
+                            if (mapCollectionStr.IsStringEx() == false)
                                 ThrowIndexCreationException($"map function #{i} collection name isn't a string");
                             var mapCollection = mapCollectionStr.AsString;
 
@@ -132,7 +132,7 @@ function map() {{
                                 ThrowIndexCreationException($"map function #{i} is missing its {NameProperty} property");
                             using (var mapNameStr = map.GetProperty(NameProperty))
                             {
-                                if (mapNameStr.IsString == false)
+                                if (mapNameStr.IsStringEx() == false)
                                     ThrowIndexCreationException($"map function #{i} TimeSeries name isn't a string");
                                 var mapName = mapNameStr.AsString;
 

@@ -15,6 +15,11 @@ namespace Raven.Server.Extensions
             return value.IsNumber || value.IsNumberObject;
         }
 
+        public static bool IsNumberOrIntEx(this InternalHandle value) 
+        {
+            return value.IsNumberEx() || value.IsInt32;
+        }
+
         public static bool IsStringEx(this InternalHandle value) 
         {
             return value.IsString || value.IsStringObject;

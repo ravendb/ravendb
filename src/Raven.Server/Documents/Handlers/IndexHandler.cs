@@ -29,6 +29,7 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Raven.Server.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
@@ -1060,7 +1061,7 @@ namespace Raven.Server.Documents.Handlers
                         {
                             using (var jsStr = compiledIndex.JavaScriptIndexUtils.StringifyObject(mapResult)) 
                             {
-                                if (jsStr.IsString)
+                                if (jsStr.IsStringEx())
                                 {
                                     if (first == false)
                                     {
@@ -1089,7 +1090,7 @@ namespace Raven.Server.Documents.Handlers
                                     using (reduceResult)
                                     using (var jsStr = compiledIndex.JavaScriptIndexUtils.StringifyObject(reduceResult)) 
                                     {
-                                        if (jsStr.IsString)
+                                        if (jsStr.IsStringEx())
                                         {
                                             if (first == false)
                                             {

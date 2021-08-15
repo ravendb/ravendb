@@ -63,7 +63,7 @@ namespace Raven.Server.Documents.Patch
                 }
                 else if (jsValue.IsUndefined || jsValue.IsNull)
                     _writer.WriteValueNull();
-                else if (jsValue.IsString) {
+                else if (jsValue.IsStringEx()) {
                     _writer.WriteValue(jsValue.AsString);
                 }
                 else if (jsValue.IsDate)
@@ -78,7 +78,10 @@ namespace Raven.Server.Documents.Patch
                     */
                     _writer.WriteValue(date.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite));
                 }
-                else if (jsValue.IsNumber) {
+                else if (jsValue.IsInt32) {
+                    WriteNumber(parent, propertyName, jsValue.AsInt32);
+                }
+                else if (jsValue.IsNumberEx()) {
                     WriteNumber(parent, propertyName, jsValue.AsDouble);
                 }
                 else if (jsValue.IsArray) {

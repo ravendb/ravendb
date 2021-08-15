@@ -147,7 +147,7 @@ namespace Raven.Server.Documents.Patch
             if (arg.IsDate)
                 return arg.AsDate;
 
-            if (arg.IsString == false)
+            if (arg.IsStringEx() == false)
                 ThrowInvalidDateArgument();
 
             var s = arg.AsString;
@@ -169,7 +169,7 @@ namespace Raven.Server.Documents.Patch
             if (arg.IsDate)
                 return arg.AsDate;
 
-            if (arg.IsString == false)
+            if (arg.IsStringEx() == false)
                 throw new ArgumentException($"{signature} : {argName} must be of type 'DateInstance' or a DateTime string. {GetTypes(arg)}");
 
             return TimeSeriesRetriever.ParseDateTime(arg.AsString);
@@ -327,7 +327,7 @@ namespace Raven.Server.Documents.Patch
                 if (docArg.BoundObject != null && docArg.BoundObject is BlittableObjectInstance doc)
                     return (doc.DocumentId, doc.Blittable);
 
-                if (docArg.IsString)
+                if (docArg.IsStringEx())
                 {
                     var id = docArg.AsString;
                     var document = _database.DocumentsStorage.Get(_docsCtx, id);
@@ -345,7 +345,7 @@ namespace Raven.Server.Documents.Patch
                 if (docArg.BoundObject != null && docArg.BoundObject is BlittableObjectInstance doc)
                     return doc.DocumentId;
 
-                if (docArg.IsString)
+                if (docArg.IsStringEx())
                 {
                     var id = docArg.AsString;
                     return id;
@@ -356,7 +356,7 @@ namespace Raven.Server.Documents.Patch
 
             private static string GetStringArg(InternalHandle jsArg, string signature, string argName)
             {
-                if (jsArg.IsString == false)
+                if (jsArg.IsStringEx() == false)
                     throw new ArgumentException($"{signature}: The '{argName}' argument should be a string, but got {GetTypes(jsArg)}");
                 return jsArg.AsString;
             }
@@ -368,7 +368,7 @@ namespace Raven.Server.Documents.Patch
                 {
                     using (var jsItem = jsArray.GetProperty(i))
                     {
-                        if (jsItem.IsNumber == false)
+                        if (jsItem.IsNumberOrIntEx() == false)
                             throw new ArgumentException($"{signature}: The values argument must be an array of numbers, but got {jsItem.ValueType} key({i}) value({jsItem})");
                         array[i] = jsItem.AsDouble;
                     }
@@ -470,7 +470,7 @@ namespace Raven.Server.Documents.Patch
                                 FillDoubleArrayFromJsArray(valuesBuffer, jsValues, signature);
                                 values = new Memory<double>(valuesBuffer, 0, (int)jsValues.ArrayLength);
                             }
-                            else if (jsValues.IsNumber)
+                            else if (jsValues.IsNumberOrIntEx())
                             {
                                 valuesBuffer = ArrayPool<double>.Shared.Rent(1);
                                 valuesBuffer[0] = jsValues.AsDouble;
@@ -797,14 +797,14 @@ namespace Raven.Server.Documents.Patch
                             using (var jsItem = jsArray.GetProperty(i))
                             {
                                 args[0].Set(jsItem);
-                                if (args[0].IsString)
+                                if (args[0].IsStringEx())
                                     IncludeDoc(engine, isConstructCall, self, args);
                             }
                         }
                         return self;
                     }
 
-                    if (args[0].IsString == false)
+                    if (args[0].IsStringEx() == false)
                         throw new InvalidOperationException("include(doc) must be called with an string or string array argument");
 
                     var id = args[0].AsString;
@@ -841,7 +841,7 @@ namespace Raven.Server.Documents.Patch
                         {
                             using (args[0] = jsArray.GetProperty(i))
                             {
-                                if (args[0].IsString)
+                                if (args[0].IsStringEx())
                                     IncludeCompareExchangeValue(engine, isConstructCall, self, args);
                             }
                         }
@@ -849,7 +849,7 @@ namespace Raven.Server.Documents.Patch
                         return jsRes.Set(self);
                     }
 
-                    if (args[0].IsString == false)
+                    if (args[0].IsStringEx() == false)
                         throw new InvalidOperationException("includes.cmpxchg(key) must be called with an string or string array argument");
 
                     var key = args[0].AsString;
@@ -911,7 +911,7 @@ namespace Raven.Server.Documents.Patch
 
                     for (int i = 0; i < 4; i++)
                     {
-                        if (args[i].IsNumber == false)
+                        if (args[i].IsNumberOrIntEx() == false)
                             return InternalHandle.Empty;
                     }
 
@@ -921,7 +921,7 @@ namespace Raven.Server.Documents.Patch
                     var lng2 = args[3].AsDouble;
 
                     var units = SpatialUnits.Kilometers;
-                    if (args.Length > 4 && args[4].IsString)
+                    if (args.Length > 4 && args[4].IsStringEx())
                     {
                         if (string.Equals("cartesian", args[4].AsString, StringComparison.OrdinalIgnoreCase))
                             return engine.CreateValue(SpatialDistanceFieldComparatorSource.SpatialDistanceFieldComparator.CartesianDistance(lat1, lng1, lat2, lng2));
@@ -962,7 +962,7 @@ namespace Raven.Server.Documents.Patch
 
             private string GetDebugValue(InternalHandle obj, bool recursive)
             {
-                if (obj.IsString)
+                if (obj.IsStringEx())
                 {
                     var debugValue = obj.ToString();
                     return recursive ? '"' + debugValue + '"' : debugValue;
@@ -989,7 +989,9 @@ namespace Raven.Server.Documents.Patch
                 }
                 if (obj.IsBoolean)
                     return obj.AsBoolean.ToString();
-                if (obj.IsNumber)
+                if (obj.IsInt32)
+                    return obj.AsInt32.ToString(CultureInfo.InvariantCulture);
+                if (obj.IsNumberEx())
                     return obj.AsDouble.ToString(CultureInfo.InvariantCulture);
                 if (obj.IsNull)
                     return "null";
@@ -1007,7 +1009,7 @@ namespace Raven.Server.Documents.Patch
                         throw new InvalidOperationException("put(id, doc, changeVector) must be called with called with 2 or 3 arguments only");
                     AssertValidDatabaseContext("put document");
                     AssertNotReadOnly();
-                    if (args[0].IsString == false && args[0].IsNull == false && args[0].IsUndefined == false)
+                    if (args[0].IsStringEx() == false && args[0].IsNull == false && args[0].IsUndefined == false)
                         AssertValidId();
 
                     var id = args[0].IsNull || args[0].IsUndefined ? null : args[0].AsString;
@@ -1019,7 +1021,7 @@ namespace Raven.Server.Documents.Patch
                     PutOrDeleteCalled = true;
 
                     if (args.Length == 3)
-                        if (args[2].IsString)
+                        if (args[2].IsStringEx())
                             changeVector = args[2].AsString;
                         else if (args[2].IsNull == false && args[0].IsUndefined == false)
                             throw new InvalidOperationException(
@@ -1076,13 +1078,13 @@ namespace Raven.Server.Documents.Patch
                     if (args.Length != 1 && args.Length != 2)
                         throw new InvalidOperationException("delete(id, changeVector) must be called with at least one parameter");
 
-                    if (args[0].IsString == false)
+                    if (args[0].IsStringEx() == false)
                         throw new InvalidOperationException("delete(id, changeVector) id argument must be a string");
 
                     var id = args[0].AsString;
                     string changeVector = null;
 
-                    if (args.Length == 2 && args[1].IsString)
+                    if (args.Length == 2 && args[1].IsStringEx())
                         changeVector = args[1].AsString;
 
                     PutOrDeleteCalled = true;
@@ -1145,7 +1147,7 @@ namespace Raven.Server.Documents.Patch
                             {
                                 using (var jsItem = jsArray.GetProperty(i))
                                 {
-                                    if (jsItem.IsString == false)
+                                    if (jsItem.IsStringEx() == false)
                                         continue;
                                     IncludeRevisionsChangeVectors.Add(jsItem.ToString());
                                 }
@@ -1166,7 +1168,7 @@ namespace Raven.Server.Documents.Patch
 
                         if (args.Length != 2 ||
                             (args[0].IsNull == false && args[0].IsUndefined == false && args[0].IsObject == false)
-                            || args[1].IsString == false)
+                            || args[1].IsStringEx() == false)
                             throw new InvalidOperationException("loadPath(doc, path) must be called with a document and path");
 
                         if (args[0].IsNull || args[1].IsUndefined)
@@ -1202,7 +1204,7 @@ namespace Raven.Server.Documents.Patch
                 try {
                     AssertValidDatabaseContext("cmpxchg");
 
-                    if (args.Length != 1 && args.Length != 2 || args[0].IsString == false)
+                    if (args.Length != 1 && args.Length != 2 || args[0].IsStringEx() == false)
                         throw new InvalidOperationException("cmpxchg(key) must be called with a single string argument");
 
                     return CmpXchangeInternal(CompareExchangeKey.GetStorageKey(_database.Name, args[0].AsString));
@@ -1235,7 +1237,7 @@ namespace Raven.Server.Documents.Patch
                             {
                                 using (var jsItem = jsArray.GetProperty(i))
                                 {
-                                    if (jsItem.IsString == false)
+                                    if (jsItem.IsStringEx() == false)
                                         throw new InvalidOperationException("load(ids) must be called with a array of strings, but got " + jsItem.ValueType + " - " + jsItem.ToString());
                                     using (var result = LoadDocumentInternal(jsItem.AsString))
                                     using (var jsResPush = results.Call("push", InternalHandle.Empty, result))
@@ -1245,7 +1247,7 @@ namespace Raven.Server.Documents.Patch
                             return results;
                         }
 
-                        if (args[0].IsString == false)
+                        if (args[0].IsStringEx() == false)
                             throw new InvalidOperationException("load(id | ids) must be called with a single string or array argument");
 
                         return LoadDocumentInternal(args[0].AsString);
@@ -1292,7 +1294,7 @@ namespace Raven.Server.Documents.Patch
                 {
                     id = doc.DocumentId;
                 }
-                else if (args[0].IsString)
+                else if (args[0].IsStringEx())
                 {
                     id = args[0].AsString;
                 }
@@ -1301,7 +1303,7 @@ namespace Raven.Server.Documents.Patch
                     throw new InvalidOperationException($"{signature}: 'doc' must be a string argument (the document id) or the actual document instance itself");
                 }
 
-                if (args[1].IsString == false)
+                if (args[1].IsStringEx() == false)
                 {
                     throw new InvalidOperationException($"{signature}: 'name' must be a string argument");
                 }
@@ -1359,7 +1361,7 @@ namespace Raven.Server.Documents.Patch
                         id = doc.DocumentId;
                         docBlittable = doc.Blittable;
                     }
-                    else if (args[0].IsString)
+                    else if (args[0].IsStringEx())
                     {
                         id = args[0].AsString;
                         var document = _database.DocumentsStorage.Get(_docsCtx, id);
@@ -1378,7 +1380,7 @@ namespace Raven.Server.Documents.Patch
 
                     Debug.Assert(id != null && docBlittable != null);
 
-                    if (args[1].IsString == false)
+                    if (args[1].IsStringEx() == false)
                         ThrowInvalidCounterName(signature);
 
                     var name = args[1].AsString;
@@ -1388,7 +1390,7 @@ namespace Raven.Server.Documents.Patch
                     double value = 1;
                     if (args.Length == 3)
                     {
-                        if (args[2].IsNumber == false)
+                        if (args[2].IsNumberOrIntEx() == false)
                             ThrowInvalidCounterValue();
                         value = args[2].AsDouble;
                     }
@@ -1447,7 +1449,7 @@ namespace Raven.Server.Documents.Patch
                         id = doc.DocumentId;
                         docBlittable = doc.Blittable;
                     }
-                    else if (args[0].IsString)
+                    else if (args[0].IsStringEx())
                     {
                         id = args[0].AsString;
                         var document = _database.DocumentsStorage.Get(_docsCtx, id);
@@ -1466,7 +1468,7 @@ namespace Raven.Server.Documents.Patch
 
                     Debug.Assert(id != null && docBlittable != null);
 
-                    if (args[1].IsString == false)
+                    if (args[1].IsStringEx() == false)
                     {
                         ThrowDeleteCounterNameArg();
                     }
@@ -1649,7 +1651,7 @@ namespace Raven.Server.Documents.Patch
             private InternalHandle ConvertJsTimeToTimeSpanString(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
                 try {
-                    if (args.Length != 1 || args[0].IsNumber == false)
+                    if (args.Length != 1 || args[0].IsNumberOrIntEx() == false)
                         throw new InvalidOperationException("convertJsTimeToTimeSpanString(ticks) must be called with a single long argument");
 
                     var ticks = Convert.ToInt64(args[0].AsDouble) * 10000;
@@ -1669,7 +1671,7 @@ namespace Raven.Server.Documents.Patch
                 try {
                     if (args.Length == 1)
                     {
-                        if (args[0].IsNumber == false)
+                        if (args[0].IsNumberOrIntEx() == false)
                             throw new InvalidOperationException("convertToTimeSpanString(ticks) must be called with a single long argument");
 
                         var ticks = Convert.ToInt64(args[0].AsDouble);
@@ -1679,7 +1681,7 @@ namespace Raven.Server.Documents.Patch
 
                     if (args.Length == 3)
                     {
-                        if (args[0].IsNumber == false || args[1].IsNumber == false || args[2].IsNumber == false)
+                        if (args[0].IsNumberOrIntEx() == false || args[1].IsNumberOrIntEx() == false || args[2].IsNumberOrIntEx() == false)
                             throw new InvalidOperationException("convertToTimeSpanString(hours, minutes, seconds) must be called with integer values");
 
                         var hours = Convert.ToInt32(args[0].AsDouble);
@@ -1692,7 +1694,7 @@ namespace Raven.Server.Documents.Patch
 
                     if (args.Length == 4)
                     {
-                        if (args[0].IsNumber == false || args[1].IsNumber == false || args[2].IsNumber == false || args[3].IsNumber == false)
+                        if (args[0].IsNumberOrIntEx() == false || args[1].IsNumberOrIntEx() == false || args[2].IsNumberOrIntEx() == false || args[3].IsNumberOrIntEx() == false)
                             throw new InvalidOperationException("convertToTimeSpanString(days, hours, minutes, seconds) must be called with integer values");
 
                         var days = Convert.ToInt32(args[0].AsDouble);
@@ -1706,7 +1708,7 @@ namespace Raven.Server.Documents.Patch
 
                     if (args.Length == 5)
                     {
-                        if (args[0].IsNumber == false || args[1].IsNumber == false || args[2].IsNumber == false || args[3].IsNumber == false || args[4].IsNumber == false)
+                        if (args[0].IsNumberOrIntEx() == false || args[1].IsNumberOrIntEx() == false || args[2].IsNumberOrIntEx() == false || args[3].IsNumberOrIntEx() == false || args[4].IsNumberOrIntEx() == false)
                             throw new InvalidOperationException("convertToTimeSpanString(days, hours, minutes, seconds, milliseconds) must be called with integer values");
 
                         var days = Convert.ToInt32(args[0].AsDouble);
@@ -1745,7 +1747,7 @@ namespace Raven.Server.Documents.Patch
                     {
                         binaryOperationType = ExpressionType.Subtract;
                     }
-                    else if (args[2].IsString == false ||
+                    else if (args[2].IsStringEx() == false ||
                             Enum.TryParse(args[2].AsString, out binaryOperationType) == false)
                     {
                         throw new InvalidOperationException("compareDates(date1, date2, operationType) : 'operationType' must be a string argument representing a valid 'ExpressionType'");
@@ -1754,7 +1756,7 @@ namespace Raven.Server.Documents.Patch
                     dynamic date1, date2;
                     if ((binaryOperationType == ExpressionType.Equal ||
                         binaryOperationType == ExpressionType.NotEqual) &&
-                        args[0].IsString && args[1].IsString)
+                        args[0].IsStringEx() && args[1].IsStringEx())
                     {
                         date1 = args[0].AsString;
                         date2 = args[1].AsString;
@@ -1806,7 +1808,7 @@ namespace Raven.Server.Documents.Patch
 
                     for (var i = 1; i < args.Length; i++)
                     {
-                        if (args[i].IsString == false)
+                        if (args[i].IsStringEx() == false)
                         {
                             throw new InvalidOperationException("toStringWithFormat : 'format' and 'culture' must be string arguments");
                         }
@@ -1829,7 +1831,7 @@ namespace Raven.Server.Documents.Patch
                             date.ToString(cultureInfo));
                     }
 
-                    if (args[0].IsNumber)
+                    if (args[0].IsNumberOrIntEx())
                     {
                         var num = args[0].AsDouble;
                         return engine.CreateValue(format != null ?
@@ -1837,7 +1839,7 @@ namespace Raven.Server.Documents.Patch
                             num.ToString(cultureInfo));
                     }
 
-                    if (args[0].IsString)
+                    if (args[0].IsStringEx())
                     {
                         var s = args[0].AsString;
                         fixed (char* pValue = s)
@@ -1872,7 +1874,7 @@ namespace Raven.Server.Documents.Patch
             private InternalHandle StartsWith(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
                 try {
-                    if (args.Length != 2 || args[0].IsString == false || args[1].IsString == false)
+                    if (args.Length != 2 || args[0].IsStringEx() == false || args[1].IsStringEx() == false)
                         throw new InvalidOperationException("startsWith(text, contained) must be called with two string parameters");
 
                     return engine.CreateValue(args[0].AsString.StartsWith(args[1].AsString, StringComparison.OrdinalIgnoreCase));
@@ -1886,7 +1888,7 @@ namespace Raven.Server.Documents.Patch
             private InternalHandle EndsWith(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
                 try {
-                    if (args.Length != 2 || args[0].IsString == false || args[1].IsString == false)
+                    if (args.Length != 2 || args[0].IsStringEx() == false || args[1].IsStringEx() == false)
                         throw new InvalidOperationException("endsWith(text, contained) must be called with two string parameters");
 
                     return engine.CreateValue(args[0].AsString.EndsWith(args[1].AsString, StringComparison.OrdinalIgnoreCase));
@@ -1900,7 +1902,7 @@ namespace Raven.Server.Documents.Patch
             private InternalHandle Regex(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
                 try {
-                    if (args.Length != 2 || args[0].IsString == false || args[1].IsString == false)
+                    if (args.Length != 2 || args[0].IsStringEx() == false || args[1].IsStringEx() == false)
                         throw new InvalidOperationException("regex(text, regex) must be called with two string parameters");
 
                     var regex = _regexCache.Get(args[1].AsString);
@@ -2094,7 +2096,7 @@ namespace Raven.Server.Documents.Patch
             private JavaScriptException CreateFullError(V8Exception e)
             {
                 /*string msg;
-                if (e.Handle.IsString)
+                if (e.Handle.IsStringEx())
                     msg = e.Handle.AsString;
                 else if (e.Handle.IsObject)
                     msg = JsBlittableBridge.Translate(_jsonCtx, ScriptEngine, e.Handle).ToString();
@@ -2148,7 +2150,7 @@ namespace Raven.Server.Documents.Patch
 
             internal object Translate(InternalHandle jsValue, JsonOperationContext context, JsBlittableBridge.IResultModifier modifier = null, BlittableJsonDocumentBuilder.UsageMode usageMode = BlittableJsonDocumentBuilder.UsageMode.None)
             {
-                if (jsValue.IsString)
+                if (jsValue.IsStringEx())
                     return jsValue.AsString;
                 if (jsValue.IsBoolean)
                     return jsValue.AsBoolean;
@@ -2158,7 +2160,7 @@ namespace Raven.Server.Documents.Patch
                         return null;
                     return JsBlittableBridge.Translate(context, ScriptEngine, jsValue, modifier, usageMode);
                 }
-                if (jsValue.IsNumber)
+                if (jsValue.IsNumberOrIntEx())
                     return jsValue.AsDouble;
                 if (jsValue.IsNull || jsValue.IsUndefined)
                     return null;

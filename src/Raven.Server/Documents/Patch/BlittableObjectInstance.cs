@@ -469,7 +469,19 @@ namespace Raven.Server.Documents.Patch
             {
                 bjra.NoCache = true;
 
-                var jsArray = engine.CreateArray(Array.Empty<InternalHandle>());
+                int arrayLength = bjra.Length;
+                var jsItems = new InternalHandle[arrayLength];
+                for (int i = 0; i < arrayLength; ++i)
+                {
+                    var json = bjra.GetValueTokenTupleByIndex(i);
+                    BlittableJsonToken itemType = json.Item2 & BlittableJsonReaderBase.TypesMask;
+                    jsItems[i] = (itemType == BlittableJsonToken.Integer || itemType == BlittableJsonToken.LazyNumber)
+                        ? TranslateToJs(null, null, json.Item2, json.Item1)
+                        : TranslateToJs(parent, null, json.Item2, json.Item1);
+                }
+
+                return Engine.CreateArrayWithDisposal(jsItems);
+                /*var jsArray = engine.CreateArray(Array.Empty<InternalHandle>());
                 for (var i = 0; i < bjra.Length; i++)
                 {
                     var json = bjra.GetValueTokenTupleByIndex(i);
@@ -482,7 +494,7 @@ namespace Raven.Server.Documents.Patch
                             jsResPush.ThrowOnError(); // TODO check if is needed here
                     }
                 }
-                return jsArray;
+                return jsArray;*/
             }
 
             private InternalHandle TranslateToJs(BlittableObjectInstance owner, string key, BlittableJsonToken type, object value)

@@ -151,7 +151,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                 if (args.Length != 3)
                     ThrowInvalidScriptMethodCall($"{methodSignature} must be called with exactly 3 parameters");
 
-                if (args[0].IsString == false)
+                if (args[0].IsStringEx() == false)
                     ThrowInvalidScriptMethodCall($"{methodSignature} first argument must be a string");
 
                 if (args[1].IsObject == false)

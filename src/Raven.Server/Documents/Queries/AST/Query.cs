@@ -8,6 +8,7 @@ using Raven.Client;
 using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.TimeSeries;
+using Raven.Server.Extensions;
 using Sparrow;
 
 namespace Raven.Server.Documents.Queries.AST

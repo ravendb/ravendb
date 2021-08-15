@@ -145,7 +145,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 switch (args.Length)
                 {
                     case 2:
-                        if (args[0].IsString == false)
+                        if (args[0].IsStringEx() == false)
                             ThrowInvalidScriptMethodCall($"First argument of {Transformation.AddAttachment}(name, attachment) must be string");
 
                         name = args[0].AsString;
@@ -163,12 +163,12 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                     return jsRes.Set(self);
                 }
 
-                if (attachmentReference.IsString == false || attachmentReference.AsString.StartsWith(Transformation.AttachmentMarker) == false)
+                if (attachmentReference.IsStringEx() == false || attachmentReference.AsString.StartsWith(Transformation.AttachmentMarker) == false)
                 {
                     var message =
                         $"{Transformation.AddAttachment}() method expects to get the reference to an attachment while it got argument of '{attachmentReference.ValueType}' type";
 
-                    if (attachmentReference.IsString)
+                    if (attachmentReference.IsStringEx())
                         message += $" (value: '{attachmentReference.AsString}')";
 
                     ThrowInvalidScriptMethodCall(message);
@@ -195,12 +195,12 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 if (counterReference.IsNull)
                     return jsRes.Set(self);
 
-                if (counterReference.IsString == false || counterReference.AsString.StartsWith(Transformation.CountersTransformation.Marker) == false)
+                if (counterReference.IsStringEx() == false || counterReference.AsString.StartsWith(Transformation.CountersTransformation.Marker) == false)
                 {
                     var message =
                         $"{Transformation.CountersTransformation.Add}() method expects to get the reference to a counter while it got argument of '{counterReference.ValueType}' type";
 
-                    if (counterReference.IsString)
+                    if (counterReference.IsStringEx())
                         message += $" (value: '{counterReference.AsString}')";
 
                     ThrowInvalidScriptMethodCall(message);
@@ -232,12 +232,12 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 if (timeSeriesReference.IsNull)
                     return jsRes.Set(self);
 
-                if (timeSeriesReference.IsString == false || timeSeriesReference.AsString.StartsWith(Transformation.TimeSeriesTransformation.Marker) == false)
+                if (timeSeriesReference.IsStringEx() == false || timeSeriesReference.AsString.StartsWith(Transformation.TimeSeriesTransformation.Marker) == false)
                 {
                     var message =
                         $"{Transformation.TimeSeriesTransformation.AddTimeSeries.Name} method expects to get the reference to a time-series while it got argument of '{timeSeriesReference.ValueType}' type";
 
-                    if (timeSeriesReference.IsString)
+                    if (timeSeriesReference.IsStringEx())
                         message += $" (value: '{timeSeriesReference.AsString}')";
 
                     message += $". Signature `{Transformation.TimeSeriesTransformation.AddTimeSeries.Signature}`";

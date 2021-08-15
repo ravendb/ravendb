@@ -266,7 +266,7 @@ namespace Raven.Server.Utils
 
                     if (jsValue.IsUndefined)
                         return null;
-                    if (jsValue.IsString)
+                    if (jsValue.IsStringEx())
                         return jsValue.AsString;
                     if (jsValue.IsRegExp)              // added, check
                         return jsValue.AsString;
@@ -274,7 +274,7 @@ namespace Raven.Server.Utils
                         return jsValue.AsBoolean;
                     if (jsValue.IsInt32)               // added, check
                         return jsValue.AsInt32;
-                    if (jsValue.IsNumber)
+                    if (jsValue.IsNumberEx())
                         return jsValue.AsDouble;
                     if (jsValue.IsDate)
                         return jsValue.AsDate;

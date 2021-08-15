@@ -10,6 +10,7 @@ using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Extensions;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.ETL
@@ -97,7 +98,7 @@ namespace Raven.Server.Documents.ETL
                 InternalHandle jsRes = InternalHandle.Empty;
                 if (args.Length != 2)
                     ThrowInvalidScriptMethodCall("loadTo(name, obj) must be called with exactly 2 parameters");
-                if (args[0].IsString == false)
+                if (args[0].IsStringEx() == false)
                     ThrowInvalidScriptMethodCall("loadTo(name, obj) first argument must be a string");
                 if (args[1].IsObject == false)
                     ThrowInvalidScriptMethodCall("loadTo(name, obj) second argument must be an object");
@@ -141,7 +142,7 @@ namespace Raven.Server.Documents.ETL
         private InternalHandle LoadAttachment(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args)
         {
             try {
-                if (args.Length != 1 || args[0].IsString == false)
+                if (args.Length != 1 || args[0].IsStringEx() == false)
                     ThrowInvalidScriptMethodCall($"{Transformation.LoadAttachment}(name) must have a single string argument");
 
                 var attachmentName = args[0].AsString;
@@ -180,7 +181,7 @@ namespace Raven.Server.Documents.ETL
         private InternalHandle LoadCounter(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args)
         {
             try {
-                if (args.Length != 1 || args[0].IsString == false)
+                if (args.Length != 1 || args[0].IsStringEx() == false)
                     ThrowInvalidScriptMethodCall($"{Transformation.CountersTransformation.Load}(name) must have a single string argument");
 
                 var counterName = args[0].AsString;
@@ -229,7 +230,7 @@ namespace Raven.Server.Documents.ETL
                 if (args.Length < minParamsCount || args.Length > maxParamsCount)
                     ThrowInvalidScriptMethodCall($"{signature} must have between {minParamsCount} to {maxParamsCount} arguments");
                     
-                if(args[0].IsString == false)
+                if(args[0].IsStringEx() == false)
                     ThrowInvalidScriptMethodCall($"{signature}. The argument timeSeriesName must be a string");
                 var timeSeriesName = args[0].AsString;
 
@@ -289,7 +290,7 @@ namespace Raven.Server.Documents.ETL
         private InternalHandle HasAttachment(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args)
         {
             try {
-                if (args.Length != 1 || args[0].IsString == false)
+                if (args.Length != 1 || args[0].IsStringEx() == false)
                     ThrowInvalidScriptMethodCall("hasAttachment(name) must be called with one argument (string)");
 
                 if ((Current.Document.Flags & DocumentFlags.HasAttachments) != DocumentFlags.HasAttachments)
@@ -330,7 +331,7 @@ namespace Raven.Server.Documents.ETL
                 if (Current.Document.TryGetMetadata(out var metadata) == false ||
                     metadata.TryGet(Constants.Documents.Metadata.Counters, out BlittableJsonReaderArray countersArray) == false)
                 {
-                    return Engine.CreateArray();
+                    return Engine.CreateArray(Array.Empty<InternalHandle>());
                 }
 
                 int arrayLength = countersArray.Length;
@@ -351,7 +352,7 @@ namespace Raven.Server.Documents.ETL
         private InternalHandle HasCounter(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args)
         {
             try {
-                if (args.Length != 1 || args[0].IsString == false)
+                if (args.Length != 1 || args[0].IsStringEx() == false)
                     ThrowInvalidScriptMethodCall("hasCounter(name) must be called with one argument (string)");
 
                 if ((Current.Document.Flags & DocumentFlags.HasCounters) != DocumentFlags.HasCounters)
@@ -418,7 +419,7 @@ namespace Raven.Server.Documents.ETL
                 const int paramsCount = Transformation.TimeSeriesTransformation.HasTimeSeries.ParamsCount;
                 const string signature = Transformation.TimeSeriesTransformation.HasTimeSeries.Signature;
 
-                if (args.Length != paramsCount || args[0].IsString == false)
+                if (args.Length != paramsCount || args[0].IsStringEx() == false)
                     ThrowInvalidScriptMethodCall($"{signature} must be called with one argument (string)");
 
                 if ((Current.Document.Flags & DocumentFlags.HasTimeSeries) != DocumentFlags.HasTimeSeries)
