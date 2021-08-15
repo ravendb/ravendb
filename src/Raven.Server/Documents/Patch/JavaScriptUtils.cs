@@ -136,7 +136,7 @@ namespace Raven.Server.Documents.Patch
                 if (doc == null)
                     ThrowInvalidFirstParameter();
 
-                if (args[1].IsString == false)
+                if (args[1].IsStringEx() == false)
                     ThrowInvalidSecondParameter();
 
                 var attachmentName = args[1].AsString;
@@ -278,10 +278,6 @@ namespace Raven.Server.Documents.Patch
         internal static InternalHandle GetDocumentId(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
             try {
-                throw new InvalidOperationException("JSUtils::GetDocumentId has been called");
-                //return engine.CreateNullValue();
-                //return engine.CreateValue("example/1-A");
-
                 if (args.Length != 1 && args.Length != 2) //length == 2 takes into account Query Arguments that can be added to args
                     throw new InvalidOperationException("id(doc) must be called with a single argument");
 
@@ -295,17 +291,18 @@ namespace Raven.Server.Documents.Patch
                 if (jsDoc.BoundObject != null && jsDoc.BoundObject is BlittableObjectInstance doc && doc.DocumentId != null)
                     return engine.CreateValue(doc.DocumentId);
 
+                //throw new InvalidOperationException("jsDoc is not BoundObject");
                 using (var jsValue = jsDoc.GetProperty(Constants.Documents.Metadata.Key))
                 {
                     // search either @metadata.@id or @id
                     using (var metadata = jsValue.IsObject == false ? jsDoc : jsValue)
                     {
                         var jsRes = metadata.GetProperty(Constants.Documents.Metadata.Id);
-                        if (jsRes.IsString == false)
+                        if (jsRes.IsStringEx() == false)
                         {
                             // search either @metadata.Id or Id
                             jsRes.Set(metadata.GetProperty(Constants.Documents.Metadata.IdProperty));
-                            if (jsRes.IsString == false) {
+                            if (jsRes.IsStringEx() == false) {
                                 jsRes.Dispose();
                                 return engine.CreateNullValue();
                             }

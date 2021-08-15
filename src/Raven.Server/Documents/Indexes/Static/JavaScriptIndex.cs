@@ -116,7 +116,7 @@ function map(name, lambda) {
                         if (map.HasProperty(CollectionProperty) == false)
                             ThrowIndexCreationException($"map function #{i} is missing a collection name");
                         using (var mapCollectionStr = map.GetProperty(CollectionProperty)) {
-                            if (mapCollectionStr.IsString == false)
+                            if (mapCollectionStr.IsStringEx() == false)
                                 ThrowIndexCreationException($"map function #{i} collection name isn't a string");
                             var mapCollection = mapCollectionStr.AsString;
 
@@ -531,12 +531,11 @@ function map(name, lambda) {
         {
             OnInitializeEngine();
 
-            _engineJint.ExecuteWithReset(Code);
-            _engineJint.ExecuteWithReset(mapCode);
-
-
             _engine.ExecuteWithReset(Code, "Code");
             _engine.ExecuteWithReset(MapCode, "MapCode");
+
+            _engineJint.ExecuteWithReset(Code);
+            _engineJint.ExecuteWithReset(mapCode);
 
             var sb = new StringBuilder();
             if (definition.AdditionalSources != null)
@@ -544,8 +543,8 @@ function map(name, lambda) {
                 foreach (var kvpScript in definition.AdditionalSources)
                 {
                     var script = kvpScript.Value;
-                    _engineJint.ExecuteWithReset(script);
                     _engine.ExecuteWithReset(script, $"additionalSource[{kvpScript.Key}]");
+                    _engineJint.ExecuteWithReset(script);
                     sb.Append(Environment.NewLine);
                     sb.AppendLine(script);
                 }
@@ -555,16 +554,16 @@ function map(name, lambda) {
             var mapReferencedCollections = new List<MapMetadata>();
             foreach (var map in maps)
             {
-                _engineJint.ExecuteWithReset(map);
                 _engine.ExecuteWithReset(map, "map");
+                _engineJint.ExecuteWithReset(map);
                 var result = CollectReferencedCollections(map, additionalSources);
                 mapReferencedCollections.Add(result);
             }
 
             if (definition.Reduce != null)
             {
-                _engineJint.ExecuteWithReset(definition.Reduce);
                 _engine.ExecuteWithReset(definition.Reduce, "reduce");
+                _engineJint.ExecuteWithReset(definition.Reduce);
             }
 
             return mapReferencedCollections;
@@ -603,10 +602,10 @@ function map(name, lambda) {
             if (value.IsNull() || value.IsUndefined())
                 return DynamicJsNull.ImplicitNull;
 
-            if (value.IsNumber)
+            if (value.IsNumber())
                 return value;
 
-            if (value.IsString)
+            if (value.IsString())
             {
                 var valueAsString = value.AsString;
                 if (double.TryParse(valueAsString, out var valueAsDbl))
@@ -628,8 +627,8 @@ function map(name, lambda) {
             if (args[0].IsNull() || args[0].IsUndefined())
                 return DynamicJsNull.ImplicitNull;
 
-            if (args[0].IsString == false ||
-                args[1].IsString == false)
+            if (args[0].IsStringEx() == false ||
+                args[1].IsStringEx() == false)
             {
                 throw new ArgumentException($"The load(id, collection) method expects two string arguments, but got: load({args[0]}, {args[1]})");
             }
@@ -652,7 +651,7 @@ function map(name, lambda) {
             if (keyArgument.IsNull() || keyArgument.IsUndefined())
                 return DynamicJsNull.ImplicitNull;
 
-            if (keyArgument.IsString)
+            if (keyArgument.IsStringEx())
             {
                 object value = CurrentIndexingScope.Current.LoadCompareExchangeValue(null, keyArgument.AsString);
                 return ConvertToJsValue(value);
@@ -668,7 +667,7 @@ function map(name, lambda) {
                 for (uint i = 0; i < keys.Length; i++)
                 {
                     var key = keys[i];
-                    if (key.IsString == false)
+                    if (key.IsStringEx() == false)
                         ThrowInvalidType(key, Types.String);
 
                     object value = CurrentIndexingScope.Current.LoadCompareExchangeValue(null, key.AsString);
@@ -741,16 +740,17 @@ function map(name, lambda) {
                 InternalHandle jsRes = InternalHandle.Empty;
 
                 if (value.IsNull || value.IsUndefined)
-                    return DynamicJsNull.ImplicitNull._; //jsRes.Set(DynamicJsNull.ImplicitNull._);
+                    return DynamicJsNull.ImplicitNull._;
 
-                if (value.IsInt32 || value.IsNumberEx())
-                    return value; //jsRes.Set(value);
+                if (value.IsNumberOrIntEx())
+                    return jsRes.Set(value); // value;
 
                 if (value.IsStringEx())
                 {
                     if (Double.TryParse(value.AsString, out var valueAsDbl)) {
-                        using (jsRes = engine.CreateValue(valueAsDbl))
-                            return jsRes;
+                        return engine.CreateValue(valueAsDbl);
+                        /*using (jsRes = engine.CreateValue(valueAsDbl))
+                            return jsRes;*/
                     }
                 }
 
@@ -774,8 +774,8 @@ function map(name, lambda) {
                 if (args[0].IsNull || args[0].IsUndefined)
                     return jsRes.Set(DynamicJsNull.ImplicitNull._);
 
-                if (args[0].IsString == false ||
-                    args[1].IsString == false)
+                if (args[0].IsStringEx() == false ||
+                    args[1].IsStringEx() == false)
                 {
                     throw new ArgumentException($"The load(id, collection) method expects two string arguments, but got: load({args[0]}, {args[1]})");
                 }
@@ -803,7 +803,7 @@ function map(name, lambda) {
                 if (keyArgument.IsNull || keyArgument.IsUndefined)
                     return jsRes.Set(DynamicJsNull.ImplicitNull._);
 
-                if (keyArgument.IsString)
+                if (keyArgument.IsStringEx())
                 {
                     object value = CurrentIndexingScope.Current.LoadCompareExchangeValue(null, keyArgument.AsString);
                     return ConvertToJsValue(value);
@@ -819,7 +819,7 @@ function map(name, lambda) {
                     {
                         using (var key = keyArgument.GetProperty(i)) 
                         {
-                            if (key.IsString == false)
+                            if (key.IsStringEx() == false)
                                 ThrowInvalidType(key, JSValueType.String);
 
                             object value = CurrentIndexingScope.Current.LoadCompareExchangeValue(null, key.AsString);
