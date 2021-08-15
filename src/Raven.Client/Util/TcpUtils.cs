@@ -40,7 +40,8 @@ namespace Raven.Client.Util
             client.SendTimeout = (int)timeout.TotalMilliseconds;
             client.ReceiveTimeout = (int)timeout.TotalMilliseconds;
         }
-        internal static async Task<(TcpClient Client, Stream Stream, string Url, TcpConnectionHeaderMessage.SupportedFeatures SupportedFeatures)> ConnectSecuredTcpSocketAsReplication(
+
+        internal static async Task<ConnectSecuredTcpSocketResult> ConnectSecuredTcpSocketAsReplication(
             TcpConnectionInfo connection, 
             X509Certificate2 certificate,
 #if !(NETSTANDARD2_0 || NETSTANDARD2_1 || NETCOREAPP2_1)
@@ -256,9 +257,25 @@ namespace Raven.Client.Util
             return tcpClient;
         }
 
+        internal class ConnectSecuredTcpSocketResult
+        {
+            public string Url;
+            public TcpClient TcpClient;
+            public Stream Stream;
+            public TcpConnectionHeaderMessage.SupportedFeatures SupportedFeatures;
+
+            public ConnectSecuredTcpSocketResult(string url, TcpClient tcpClient, Stream stream, TcpConnectionHeaderMessage.SupportedFeatures supportedFeatures)
+            {
+                Url = url;
+                TcpClient = tcpClient;
+                Stream = stream;
+                SupportedFeatures = supportedFeatures;
+            }
+        }
+
         public delegate Task<TcpConnectionHeaderMessage.SupportedFeatures> NegotiationCallback(string url, TcpConnectionInfo tcpInfo, Stream stream, JsonOperationContext context, List<string> logs = null);
 
-        internal static async Task<(TcpClient Client, Stream Stream, string ChosenUrl, TcpConnectionHeaderMessage.SupportedFeatures SupportedFeatures)> ConnectSecuredTcpSocket(
+        internal static async Task<ConnectSecuredTcpSocketResult> ConnectSecuredTcpSocket(
             TcpConnectionInfo info, 
             X509Certificate2 cert,
 #if !(NETSTANDARD2_0 || NETSTANDARD2_1 || NETCOREAPP2_1)
@@ -336,7 +353,7 @@ namespace Raven.Client.Util
                     logs?.Add($"{Environment.NewLine}Negotiation successful for operation {operationType}.{Environment.NewLine} {tcpClient.Client.LocalEndPoint} "+
                               $"is connected to {tcpClient.Client.RemoteEndPoint}{Environment.NewLine}");
 
-                    return (tcpClient, stream, url, supportedFeatures);
+                    return new ConnectSecuredTcpSocketResult(url, tcpClient, stream, supportedFeatures);
                 }
                 catch (Exception e)
                 {

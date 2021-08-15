@@ -234,8 +234,9 @@ namespace Raven.Server.Documents.Replication
                     _parent._server.Engine.TcpConnectionTimeout, _log, CancellationToken);
                 task.Wait(CancellationToken);
 
-                var (tcpClient, stream, url, supportedFeatures) = task.Result;
-                _stream = stream;
+                var socketResult = task.Result;
+                
+                _stream = socketResult.Stream;
 
                 if (SupportedFeatures.ProtocolVersion <= 0)
                 {
@@ -243,25 +244,25 @@ namespace Raven.Server.Documents.Replication
                         $"{OutgoingReplicationThreadName}: TCP negotiation resulted with an invalid protocol version:{SupportedFeatures.ProtocolVersion}");
                 }
 
-                using (Interlocked.Exchange(ref _tcpClient, tcpClient))
+                using (Interlocked.Exchange(ref _tcpClient, socketResult.TcpClient))
                 {
-                    if (supportedFeatures.Replication.PullReplication)
+                    if (socketResult.SupportedFeatures.Replication.PullReplication)
                     {
                         SendPreliminaryData();
                         if (Destination is PullReplicationAsSink sink && (sink.Mode & PullReplicationMode.HubToSink) == PullReplicationMode.HubToSink)
                         {
-                            if (supportedFeatures.Replication.PullReplication == false)
+                            if (socketResult.SupportedFeatures.Replication.PullReplication == false)
                                 throw new InvalidOperationException("Other side does not support pull replication " + Destination);
-                            InitiatePullReplicationAsSink(supportedFeatures, certificate);
+                            InitiatePullReplicationAsSink(socketResult.SupportedFeatures, certificate);
                             return;
                         }
                     }
                     
                     AddReplicationPulse(ReplicationPulseDirection.OutgoingInitiate);
                     if (_log.IsInfoEnabled)
-                        _log.Info($"Will replicate to {Destination.FromString()} via {url}");
+                        _log.Info($"Will replicate to {Destination.FromString()} via {socketResult.Url}");
 
-                    _tcpConnectionOptions.TcpClient = tcpClient;
+                    _tcpConnectionOptions.TcpClient = socketResult.TcpClient;
 
                     using (_stream) // note that _stream is being disposed by the interruptible read
                     using (_interruptibleRead)

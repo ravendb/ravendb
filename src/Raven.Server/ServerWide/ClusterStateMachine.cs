@@ -3444,7 +3444,7 @@ namespace Raven.Server.ServerWide
 
                 info = await ReplicationUtils.GetTcpInfoAsync(url, null, "Cluster", certificate, cts.Token);
             }
-
+            
             TcpClient tcpClient = null;
             Stream stream = null;
             try
@@ -3452,11 +3452,15 @@ namespace Raven.Server.ServerWide
                 TcpConnectionHeaderMessage.SupportedFeatures supportedFeatures;
                 using (ContextPoolForReadOnlyOperations.AllocateOperationContext(out JsonOperationContext context))
                 {
-                    (tcpClient, stream, _, supportedFeatures) = await TcpUtils.ConnectSecuredTcpSocket(info, _parent.ClusterCertificate, _parent.CipherSuitesPolicy,
+                    var result = await TcpUtils.ConnectSecuredTcpSocket(info, _parent.ClusterCertificate, _parent.CipherSuitesPolicy,
                         TcpConnectionHeaderMessage.OperationTypes.Cluster, 
                         (string destUrl, TcpConnectionInfo tcpInfo, Stream conn, JsonOperationContext ctx, List<string> _) => NegotiateProtocolVersionAsyncForCluster(destUrl, tcpInfo, conn, ctx, tag), 
                         context, _parent.TcpConnectionTimeout, null, token);
-                    
+
+                    tcpClient = result.TcpClient;
+                    stream = result.Stream;
+                    supportedFeatures = result.SupportedFeatures;
+
                     if (supportedFeatures.ProtocolVersion <= 0)
                     {
                         throw new InvalidOperationException(
