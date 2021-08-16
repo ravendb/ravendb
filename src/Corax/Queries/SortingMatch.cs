@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Buffers;
-using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using Sparrow;
 
 namespace Corax.Queries
@@ -173,9 +171,6 @@ namespace Corax.Queries
                 ArrayPool<Item>.Shared.Return(_hash);
             }
         }
-
-
-
         public SortingMatch(IndexSearcher searcher, in TInner inner, in TComparer comparer, int take = -1)
         {
             _searcher = searcher;
@@ -210,18 +205,11 @@ namespace Corax.Queries
         {
             int take = _take <= 0 ? matches.Length : _take;
 
-            // We get the first batch. 
-            int totalMatches = 0;
-            var tmpMatches = matches;
-            while (tmpMatches.Length != 0)
-            {
-                int read = _inner.Fill(tmpMatches);
-                if (read == 0)
-                    break;
+            int totalMatches = _inner.Fill(matches);
+            if (totalMatches == 0)
+                return 0;
 
-                totalMatches += read;
-                tmpMatches = matches.Slice(totalMatches);
-            }
+            var tmpMatches = matches.Slice(totalMatches);
 
             // We sort the first batch
             using var hashCacheComparer = new HashCacheMatchComparer<TComparer, W>(_searcher, _comparer);
@@ -234,17 +222,7 @@ namespace Corax.Queries
             while (true)
             {
                 // We get a new batch
-                var tmp = b;
-                int bTotalMatches = 0;
-                while (tmp.Length != 0)
-                {
-                    int read = _inner.Fill(tmp);
-                    if (read == 0)
-                        break;
-
-                    bTotalMatches += read;
-                    tmp = b.Slice(bTotalMatches);
-                }
+                int bTotalMatches = _inner.Fill(b);
 
                 // When we don't have any new batch, we are done.
                 if (bTotalMatches == 0)
