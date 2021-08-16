@@ -118,7 +118,7 @@ namespace Raven.Server.Documents.Indexes.Static.Utils
                     if (dbj.TryGetDocument(out var doc))
                     {
                         BlittableObjectInstance boi = new BlittableObjectInstance(JavaScriptUtils, null, dbj.BlittableJson, doc);
-                        jsItem.Set(boi.CreateObjectBinder()._);
+                        jsItem = boi.CreateObjectBinder();
                     }
                     else
                     {
@@ -129,25 +129,25 @@ namespace Raven.Server.Documents.Indexes.Static.Utils
                             changeVector = cv;
 
                         var boi = new BlittableObjectInstance(JavaScriptUtils, null, dbj.BlittableJson, id, lastModified, changeVector);
-                        jsItem.Set(boi.CreateObjectBinder()._);
+                        jsItem = boi.CreateObjectBinder();
                     }
 
                     return true;
                 }
                 case DynamicTimeSeriesSegment dtss: {
                     var bo = new TimeSeriesSegmentObjectInstance(dtss);
-                    jsItem.Set(TimeSeriesSegmentObjectInstance.CreateObjectBinder(Engine, bo)._);
+                    jsItem = TimeSeriesSegmentObjectInstance.CreateObjectBinder(Engine, bo);
                     return true;
                 }
                 case DynamicCounterEntry dce: {
                     var bo = new CounterEntryObjectInstance(dce);
-                    jsItem.Set(CounterEntryObjectInstance.CreateObjectBinder(Engine, bo)._);
+                    jsItem = CounterEntryObjectInstance.CreateObjectBinder(Engine, bo);
                     return true;
                 }
                 case BlittableJsonReaderObject bjro: {
                     //This is the case for map-reduce
                     BlittableObjectInstance bo = new BlittableObjectInstance(JavaScriptUtils, null, bjro, null, null, null);
-                    jsItem.Set(bo.CreateObjectBinder()._);
+                    jsItem = bo.CreateObjectBinder();
                     return true;
                 }
             }

@@ -265,23 +265,21 @@ namespace Raven.Server.Documents.Indexes.Static
                             propertyName = jsnf.PropertyName;
 
                         var value = groupByField.GetValue(null, prop.Value);
-                        using (var jsValue = value switch 
-                            {
-                                BlittableJsonReaderObject bjro => ((Func<BlittableJsonReaderObject, InternalHandle>)((BlittableJsonReaderObject bjro) => {
-                                    var boi = new BlittableObjectInstance(JavaScriptUtilsV8, null, bjro, null, null, null);
-                                    return boi.CreateObjectBinder()._; // maybe better move to FromObject?
-                                }))(bjro),
-                                Document doc => ((Func<Document, InternalHandle>)((Document doc) => {
-                                    var boi = new BlittableObjectInstance(JavaScriptUtilsV8, null, doc.Data, doc);
-                                    return boi.CreateObjectBinder()._; // maybe better  move to FromObject?
-                                }))(doc),
-                                LazyNumberValue lnv => EngineV8.CreateValue(lnv.ToDouble(CultureInfo.InvariantCulture)), // maybe better  move to FromObject?
-                            _ =>  EngineV8.FromObject(value)
-                            }
-                        )
+                        var jsValue = value switch 
                         {
-                            jsRes.SetProperty(propertyName, jsValue);
-                        }
+                            BlittableJsonReaderObject bjro => ((Func<BlittableJsonReaderObject, InternalHandle>)((BlittableJsonReaderObject bjro) => {
+                                var boi = new BlittableObjectInstance(JavaScriptUtilsV8, null, bjro, null, null, null);
+                                return boi.CreateObjectBinder(); // maybe better move to FromObject?
+                            }))(bjro),
+                            Document doc => ((Func<Document, InternalHandle>)((Document doc) => {
+                                var boi = new BlittableObjectInstance(JavaScriptUtilsV8, null, doc.Data, doc);
+                                return boi.CreateObjectBinder(); // maybe better  move to FromObject?
+                            }))(doc),
+                            LazyNumberValue lnv => EngineV8.CreateValue(lnv.ToDouble(CultureInfo.InvariantCulture)), // maybe better  move to FromObject?
+                            _ =>  EngineV8.FromObject(value)
+                        };
+
+                        jsRes.SetProperty(propertyName, jsValue);
                     }
                 }
 

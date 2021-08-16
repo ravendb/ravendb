@@ -15,7 +15,7 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
             _entry = entry ?? throw new ArgumentNullException(nameof(entry));
         }
 
-        public static CounterEntryObjectInstance.CustomBinder CreateObjectBinder(V8EngineEx engine, CounterEntryObjectInstance bo) {
+        public static InternalHandle CreateObjectBinder(V8EngineEx engine, CounterEntryObjectInstance bo) {
             return engine.CreateObjectBinder<CounterEntryObjectInstance.CustomBinder>(bo, engine.TypeBinderCounterEntryObjectInstance);
         }
 

@@ -45,11 +45,11 @@ namespace Raven.Server.Documents.Patch
         public float? IndexScore => _doc?.IndexScore;
 
 
-        public BlittableObjectInstance.CustomBinder CreateObjectBinder() {
+        public InternalHandle CreateObjectBinder() {
             return BlittableObjectInstance.CreateObjectBinder(Engine, this);
         }
 
-        public static BlittableObjectInstance.CustomBinder CreateObjectBinder(V8EngineEx engine, BlittableObjectInstance boi) {
+        public static InternalHandle CreateObjectBinder(V8EngineEx engine, BlittableObjectInstance boi) {
             return engine.CreateObjectBinder<BlittableObjectInstance.CustomBinder>(boi, engine.TypeBinderBlittableObjectInstance);
         }
 
@@ -503,7 +503,7 @@ namespace Raven.Server.Documents.Patch
                 switch (type & BlittableJsonReaderBase.TypesMask)
                 {
                     case BlittableJsonToken.Null:
-                        return jsRes.Set(DynamicJsNull.ExplicitNull._);
+                        return DynamicJsNull.ExplicitNull._;
 
                     case BlittableJsonToken.Boolean:
                         return Engine.CreateValue((bool)value);
@@ -546,7 +546,7 @@ namespace Raven.Server.Documents.Patch
                                     owner,
                                     blittable, null, null, null
                                 );
-                                return jsRes.Set(boi.CreateObjectBinder()._);
+                                return boi.CreateObjectBinder();
                         }
 
                     case BlittableJsonToken.StartArray:

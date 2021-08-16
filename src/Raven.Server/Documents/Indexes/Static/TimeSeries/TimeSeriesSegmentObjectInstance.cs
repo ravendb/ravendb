@@ -21,7 +21,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             _segment = segment ?? throw new ArgumentNullException(nameof(segment));
         }
 
-        public static TimeSeriesSegmentObjectInstance.CustomBinder CreateObjectBinder(V8EngineEx engine, TimeSeriesSegmentObjectInstance bo) {
+        public static InternalHandle CreateObjectBinder(V8EngineEx engine, TimeSeriesSegmentObjectInstance bo) {
             return engine.CreateObjectBinder<TimeSeriesSegmentObjectInstance.CustomBinder>(bo, engine.TypeBinderTimeSeriesSegmentObjectInstance);
         }
 
@@ -40,7 +40,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
         private InternalHandle GetPropertyValue(V8EngineEx engine, ref string propertyName)
         {
             if (propertyName == nameof(DynamicTimeSeriesSegment.Entries))
-                return new InternalHandle(engine.CreateObjectBinder<DynamicTimeSeriesEntriesCustomBinder>(_segment.Entries, engine.TypeBinderDynamicTimeSeriesEntries)._, true);
+                return engine.CreateObjectBinder<DynamicTimeSeriesEntriesCustomBinder>(_segment.Entries, engine.TypeBinderDynamicTimeSeriesEntries);
 
             if (propertyName == nameof(TimeSeriesSegment.DocumentId))
                 return engine.CreateValue(_segment._segmentEntry.DocId.ToString());
@@ -80,7 +80,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             if (index < ObjCLR.Count()) 
             {
                 object elem = ObjCLR.Get(index);
-                return jsRes.Set(((V8EngineEx)Engine).CreateObjectBinder<DynamicTimeSeriesEntryCustomBinder>(elem)._);
+                return ((V8EngineEx)Engine).CreateObjectBinder<DynamicTimeSeriesEntryCustomBinder>(elem);
             }
 
             return InternalHandle.Empty;
