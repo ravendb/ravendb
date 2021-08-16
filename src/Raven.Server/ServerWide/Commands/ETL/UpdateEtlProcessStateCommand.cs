@@ -20,6 +20,8 @@ namespace Raven.Server.ServerWide.Commands.ETL
 
         public string NodeTag { get; set; }
 
+        public string DbId { get; set; }
+
         public bool HasHighlyAvailableTasks;
 
         private UpdateEtlProcessStateCommand()
@@ -28,7 +30,7 @@ namespace Raven.Server.ServerWide.Commands.ETL
         }
 
         public UpdateEtlProcessStateCommand(string databaseName, string configurationName, string transformationName, long lastProcessedEtag, string changeVector,
-            string nodeTag, bool hasHighlyAvailableTasks, string uniqueRequestId) : base(databaseName, uniqueRequestId)
+            string nodeTag, bool hasHighlyAvailableTasks, string uniqueRequestId, string dbId) : base(databaseName, uniqueRequestId)
         {
             ConfigurationName = configurationName;
             TransformationName = transformationName;
@@ -36,6 +38,7 @@ namespace Raven.Server.ServerWide.Commands.ETL
             ChangeVector = changeVector;
             NodeTag = nodeTag;
             HasHighlyAvailableTasks = hasHighlyAvailableTasks;
+            DbId = dbId;
         }
 
         public override string GetItemId()
@@ -99,7 +102,7 @@ namespace Raven.Server.ServerWide.Commands.ETL
                 };
             }
 
-            etlState.LastProcessedEtagPerNode[NodeTag] = LastProcessedEtag;
+            etlState.LastProcessedEtagPerDbId[DbId] = LastProcessedEtag;
             etlState.ChangeVector = ChangeVector;
             etlState.NodeTag = NodeTag;
 
@@ -131,6 +134,7 @@ namespace Raven.Server.ServerWide.Commands.ETL
             json[nameof(ChangeVector)] = ChangeVector;
             json[nameof(NodeTag)] = NodeTag;
             json[nameof(HasHighlyAvailableTasks)] = HasHighlyAvailableTasks;
+            json[nameof(DbId)] = DbId;
         }
     }
 }
