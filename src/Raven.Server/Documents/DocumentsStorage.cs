@@ -1489,6 +1489,7 @@ namespace Raven.Server.Documents
                 var localFlags = local.Tombstone.Flags.Strip(DocumentFlags.FromClusterTransaction);
                 if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByEnforceRevisionConfiguration))
                 {
+                    //after enforce revision configuration we don't have revision and we want to remove the flag from tombstone
                     flags = localFlags.Strip(DocumentFlags.HasRevisions);
                 }
                 else
