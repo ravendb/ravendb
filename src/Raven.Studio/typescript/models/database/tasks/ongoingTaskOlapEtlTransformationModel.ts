@@ -63,7 +63,7 @@ class ongoingTaskOlapEtlTransformationModel {
             ApplyToAllDocuments: this.applyScriptForAllCollections(),
             Collections: this.applyScriptForAllCollections() ? null : this.transformScriptCollections(),
             Disabled: false,
-            Name: this.name(),
+            Name: this.name().trim(),
             Script: this.script()
         }
     }
@@ -72,6 +72,16 @@ class ongoingTaskOlapEtlTransformationModel {
         this.script.extend({
             required: true,
             aceValidation: true
+        });
+
+        const noWhiteSpaceRegExp = /^\S*$/;
+        this.name.extend({
+            validation: [
+                {
+                    validator: (scriptName: string) => noWhiteSpaceRegExp.test(scriptName),
+                    message: "Script name cannot contain any whitespace"
+                }
+            ]
         });
 
         this.transformScriptCollections.extend({
@@ -84,6 +94,7 @@ class ongoingTaskOlapEtlTransformationModel {
         });
 
         this.validationGroup = ko.validatedObservable({
+            name: this.name,
             script: this.script,
             transformScriptCollections: this.transformScriptCollections,
         });

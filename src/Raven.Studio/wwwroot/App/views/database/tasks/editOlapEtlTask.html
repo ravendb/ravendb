@@ -234,75 +234,75 @@
         </div>
         <div class="col-xs-12 col-lg-6 flex-vertical" data-bind="with: editedTransformationScriptSandbox()">
             <div class="flex-grow">
-                <div class="panel" data-bind="if: $root.showEditTransformationArea">
-                    <div class="padding padding-sm">
-                        <div data-bind="visible: !isNew()">
-                            <label>
-                                <strong>Name:</strong> <span data-bind="text: name"></span>
-                            </label>
+                <div class="panel padding" data-bind="if: $root.showEditTransformationArea">
+                    <div class="flex-horizontal margin-bottom" data-bind="validationElement: name">
+                        <label class="control-label"><strong>Name:</strong></label>
+                        <div class="flex-grow margin-left">
+                            <input type="text" class="form-control" placeholder="Enter script name (optional)" autocomplete="off" 
+                                   data-bind="textInput: name, disable: $root.enableTestArea() || !isNew()" />
                         </div>
-                        <label><strong>Script:</strong></label>
-                        <span class="pull-right"><a href="#" data-bind="click: $root.syntaxHelp"><small>Syntax <i class="icon-help"></i></small></a></span>
-                        <div data-bind="validationElement: script">
+                    </div>
+                    <label><strong>Script:</strong></label>
+                    <span class="pull-right"><a href="#" data-bind="click: $root.syntaxHelp"><small>Syntax <i class="icon-help"></i></small></a></span>
+                    <div data-bind="validationElement: script">
                             <pre class="form-control editor"
                                  data-bind="aceEditor: { code: script, fontSize: '14px', lang: 'ace/mode/javascript' }, validationOptions: { errorsAsTitle: false }, validationElement: script" style="height: 300px;"></pre>
-                            <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: script">
-                                <div class="help-block" data-bind="validationMessage: script"></div>
-                            </div>
+                        <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: script">
+                            <div class="help-block" data-bind="validationMessage: script"></div>
                         </div>
-                        <div class="margin-bottom margin-top">
-                            <div class="flex-horizontal">
-                                <div class="flex-grow">
-                                    <div class="dropdown btn-block flex-grow">
-                                        <input class="form-control dropdown-toggle" placeholder="Select (or enter) a collection" data-toggle="dropdown" autocomplete="off"
-                                               data-bind="textInput: inputCollection, attr: { id: 'collectionNameInput' }, disable: $root.collections().length === 0" />
-                                        <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
-                                        <ul class="dropdown-menu" role="menu" style="display: none;"
-                                            data-bind="autoComplete: '#collectionNameInput', foreach: $root.createCollectionNameAutoCompleter(transformScriptCollections, inputCollection)">
-                                            <li role="presentation" data-bind="click: $parent.addWithBlink.bind($parent, $data)">
-                                                <a role="menuitem" tabindex="-1" href="#">
-                                                    <span data-bind="text: $data"></span>
-                                                </a>
-                                                <div class="divider" data-bind="visible: $root.constructor.isApplyToAll($data)"></div>
-                                            </li>
-                                        </ul>
-                                        <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: transformScriptCollections">
-                                            <div class="help-block" data-bind="validationMessage: transformScriptCollections"></div>
-                                        </div>
+                    </div>
+                    <div class="margin-bottom margin-top margin-top-lg">
+                        <div class="flex-horizontal margin-bottom">
+                            <div class="flex-grow">
+                                <div class="dropdown btn-block flex-grow">
+                                    <input class="form-control dropdown-toggle" placeholder="Select (or enter) a collection" data-toggle="dropdown" autocomplete="off"
+                                           data-bind="textInput: inputCollection, attr: { id: 'collectionNameInput' }, disable: $root.collections().length === 0" />
+                                    <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
+                                    <ul class="dropdown-menu" role="menu" style="display: none;"
+                                        data-bind="autoComplete: '#collectionNameInput', foreach: $root.createCollectionNameAutoCompleter(transformScriptCollections, inputCollection)">
+                                        <li role="presentation" data-bind="click: $parent.addWithBlink.bind($parent, $data)">
+                                            <a role="menuitem" tabindex="-1" href="#">
+                                                <span data-bind="text: $data"></span>
+                                            </a>
+                                            <div class="divider" data-bind="visible: $root.constructor.isApplyToAll($data)"></div>
+                                        </li>
+                                    </ul>
+                                    <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: transformScriptCollections">
+                                        <div class="help-block" data-bind="validationMessage: transformScriptCollections"></div>
                                     </div>
                                 </div>
-                                <div>
-                                    <button class="btn btn-info" data-bind="click: addCollection, enable: inputCollection() && canAddCollection()">
-                                        <i class="icon-plus"></i><span>Add Collection</span>
-                                    </button>
-                                </div>
                             </div>
-                            <div data-bind="visible: transformScriptCollections().length" class="margin-top">
-                                <label><strong>Collections Selected:</strong></label>
-                                <ul class="well collection-list" data-bind="foreach: transformScriptCollections">
-                                    <li>
-                                        <div class="name" data-bind="text: $data"></div>
-                                        <a title="Remove collection" href="#" data-bind="click: $parent.removeCollection.bind($parent, $data)"><i class="icon-trash"></i></a>
-                                    </li>
-                                </ul>
-                            </div>
-                        </div>
-                        <div class="toggle margin-top margin-bottom" data-bind="visible: !isNew()">
-                            <input id="reset" type="checkbox" data-bind="checked: resetScript" />
-                            <label for="reset">Apply script to documents from beginning of time (Reset)</label>
-                        </div>
-                        <div class="flex-horizontal">
                             <div>
-                                <button type="button" class="btn btn-success" data-bind="click: $root.saveEditedTransformation, attr: { title : (isNew() ? 'Add' : 'Update') + ' this transformation script' }">
-                                    <i class="icon-tick"></i> <span data-bind="text: isNew() ? 'Add' : 'Update'"></span>
+                                <button class="btn btn-info" data-bind="click: addCollection, enable: inputCollection() && canAddCollection()">
+                                    <i class="icon-plus"></i><span>Add Collection</span>
                                 </button>
-                                <button type="button" title="Cancel" class="btn btn-default" data-bind="click: $root.cancelEditedTransformation"><i class="icon-cancel"></i> <span>Cancel</span></button>
                             </div>
-                            <div class="flex-separator"></div>
-                            <button type="button" class="btn btn-info" data-bind="click: $root.toggleTestArea, visible: !$root.enableTestArea()">
-                                <i class="icon-rocket"></i> <span>Test script</span>
-                            </button>
                         </div>
+                        <div data-bind="visible: transformScriptCollections().length" class="margin-top">
+                            <label><strong>Collections Selected:</strong></label>
+                            <ul class="well collection-list" data-bind="foreach: transformScriptCollections">
+                                <li>
+                                    <div class="name" data-bind="text: $data"></div>
+                                    <a title="Remove collection" href="#" data-bind="click: $parent.removeCollection.bind($parent, $data)"><i class="icon-trash"></i></a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="toggle margin-top margin-top-lg margin-bottom" data-bind="visible: !isNew() && !$root.enableTestArea()">
+                        <input id="reset" type="checkbox" data-bind="checked: resetScript" />
+                        <label for="reset">Apply script to documents from beginning of time (Reset)</label>
+                    </div>
+                    <div class="flex-horizontal margin-top margin-top-lg">
+                        <div data-bind="visible: !$root.enableTestArea()">
+                            <button type="button" class="btn btn-success" data-bind="click: $root.saveEditedTransformation, attr: { title : (isNew() ? 'Add' : 'Update') + ' this transformation script' }">
+                                <i class="icon-tick"></i> <span data-bind="text: isNew() ? 'Add' : 'Update'"></span>
+                            </button>
+                            <button type="button" title="Cancel" class="btn btn-default" data-bind="click: $root.cancelEditedTransformation"><i class="icon-cancel"></i> <span>Cancel</span></button>
+                        </div>
+                        <div class="flex-separator"></div>
+                        <button type="button" class="btn btn-info" data-bind="click: $root.toggleTestArea, visible: !$root.enableTestArea()" title="Click to open the test area">
+                            <i class="icon-rocket"></i> <span>Test script</span>
+                        </button>
                     </div>
                 </div>
                 <div class="js-test-area" data-bind="collapse: $root.enableTestArea()">
@@ -392,7 +392,7 @@
                         Partition key: <code class="force-text-wrap"><strong data-bind="text: key"></strong></code>
                     </div>
                     <div style="position: relative" data-bind="style: { height: height + 'px' }">
-                        <virtual-grid class="resizable virtual-grid" params="controller: gridController, afterRender: init"></virtual-grid>    
+                        <virtual-grid class="resizable virtual-grid" params="controller: gridController, afterRender: init"></virtual-grid>
                     </div>
                 </div>
             </div>
