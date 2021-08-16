@@ -1503,7 +1503,8 @@ namespace Raven.Server.Documents.Revisions
 
                     if (document.Data != null)
                     {
-                        documentsStorage.Put(context, document.Id, null, document.Data, flags: DocumentFlags.Reverted);
+                        var flag = document.Flags | DocumentFlags.Reverted;
+                        documentsStorage.Put(context, document.Id, null, document.Data, flags: flag.Strip(DocumentFlags.Revision) );
                     }
                     else
                     {
