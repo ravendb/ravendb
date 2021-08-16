@@ -59,11 +59,11 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             var engine = DocumentScript.ScriptEngine;
             base.Initialize(debugMode);
             
-            DocumentScript.ScriptEngine.GlobalObject.SetProperty("varchar",
-                engine.CreateFunctionTemplate().GetFunctionObject<V8Function>((engine, isConstructCall, self, args) => ToVarcharTranslator(engine.CreateValue(VarcharFunctionCall.AnsiStringType), args)));
+            DocumentScript.ScriptEngine.SetGlobalCLRCallBack("varchar",
+                (engine, isConstructCall, self, args) => ToVarcharTranslator(engine.CreateValue(VarcharFunctionCall.AnsiStringType), args));
 
-            DocumentScript.ScriptEngine.GlobalObject.SetProperty("nvarchar",
-                engine.CreateFunctionTemplate().GetFunctionObject<V8Function>((engine, isConstructCall, self, args) => ToVarcharTranslator(engine.CreateValue(VarcharFunctionCall.StringType), args)));
+            DocumentScript.ScriptEngine.SetGlobalCLRCallBack("nvarchar",
+                (engine, isConstructCall, self, args) => ToVarcharTranslator(engine.CreateValue(VarcharFunctionCall.StringType), args));
         }
 
         protected override string[] LoadToDestinations { get; }
@@ -208,28 +208,24 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
         {
             var engine = DocumentScript.ScriptEngine;
 
-            using (type)
+            if (args[0].IsStringEx() == false)
+                throw new InvalidOperationException("varchar() / nvarchar(): first argument must be a string");
+
+            var sizeSpecified = args.Length > 1;
+
+            if (sizeSpecified && args[1].IsInt32 == false)
+                throw new InvalidOperationException("varchar() / nvarchar(): second argument must be an integer");
+
+            InternalHandle item = engine.CreateObject();
             {
-                if (args[0].IsStringEx() == false)
-                    throw new InvalidOperationException("varchar() / nvarchar(): first argument must be a string");
-
-                var sizeSpecified = args.Length > 1;
-
-                if (sizeSpecified && args[1].IsInt32 == false)
-                    throw new InvalidOperationException("varchar() / nvarchar(): second argument must be an integer");
-
-                InternalHandle item = engine.CreateObject();
-                {
-                    if (item.SetProperty(nameof(VarcharFunctionCall.Type), type) == false)
-                        throw new InvalidOperationException($"Failed to set {nameof(VarcharFunctionCall.Type)} on item");
-                    if (item.SetProperty(nameof(VarcharFunctionCall.Value), args[0]) == false)
-                        throw new InvalidOperationException($"Failed to set {nameof(VarcharFunctionCall.Value)} on item");
-                    using (var jsDefaultVarCharSize = engine.CreateValue(DefaultVarCharSize))
-                        if (item.SetProperty(nameof(VarcharFunctionCall.Size), sizeSpecified ? args[1] : jsDefaultVarCharSize) == false)
-                            throw new InvalidOperationException($"Failed to set {nameof(VarcharFunctionCall.Size)} on item");
-                }
-                return item;
+                if (item.SetProperty(nameof(VarcharFunctionCall.Type), new InternalHandle(type, true)) == false)
+                    throw new InvalidOperationException($"Failed to set {nameof(VarcharFunctionCall.Type)} on item");
+                if (item.SetProperty(nameof(VarcharFunctionCall.Value), new InternalHandle(args[0], true)) == false)
+                    throw new InvalidOperationException($"Failed to set {nameof(VarcharFunctionCall.Value)} on item");
+                if (item.SetProperty(nameof(VarcharFunctionCall.Size), sizeSpecified ? new InternalHandle(args[1], true) : engine.CreateValue(DefaultVarCharSize)) == false)
+                    throw new InvalidOperationException($"Failed to set {nameof(VarcharFunctionCall.Size)} on item");
             }
+            return item;
         }
 
         public class VarcharFunctionCall

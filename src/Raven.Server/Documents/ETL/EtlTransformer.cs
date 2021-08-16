@@ -61,41 +61,40 @@ namespace Raven.Server.Documents.ETL
                 DocumentScript.DebugMode = true;
 
             Engine = DocumentScript.ScriptEngine;
-            Engine.GlobalObject.SetProperty(Transformation.LoadTo, Engine.CreateFunctionTemplate().GetFunctionObject<V8Function>(LoadToFunctionTranslator));
+            Engine.SetGlobalCLRCallBack(Transformation.LoadTo, LoadToFunctionTranslator);
 
             foreach (var collection in LoadToDestinations)
             {
                 var name = Transformation.LoadTo + collection;
-                Engine.GlobalObject.SetProperty(name, Engine.CreateFunctionTemplate().GetFunctionObject<V8Function>(LoadToFunctionTranslator));
+                Engine.SetGlobalCLRCallBack(name, LoadToFunctionTranslator);
             }
 
-            Engine.GlobalObject.SetProperty(Transformation.LoadAttachment, Engine.CreateFunctionTemplate().GetFunctionObject<V8Function>(LoadAttachment));
+            Engine.SetGlobalCLRCallBack(Transformation.LoadAttachment, LoadAttachment);
 
             const string loadCounter = Transformation.CountersTransformation.Load;
-            Engine.GlobalObject.SetProperty(loadCounter, Engine.CreateFunctionTemplate().GetFunctionObject<V8Function>(LoadCounter));
+            Engine.SetGlobalCLRCallBack(loadCounter, LoadCounter);
 
             const string loadTimeSeries = Transformation.TimeSeriesTransformation.LoadTimeSeries.Name;
-            Engine.GlobalObject.SetProperty(loadTimeSeries, Engine.CreateFunctionTemplate().GetFunctionObject<V8Function>(LoadTimeSeries));
+            Engine.SetGlobalCLRCallBack(loadTimeSeries, LoadTimeSeries);
 
-            Engine.GlobalObject.SetProperty("getAttachments", Engine.CreateFunctionTemplate().GetFunctionObject<V8Function>(GetAttachments));
+            Engine.SetGlobalCLRCallBack("getAttachments", GetAttachments);
 
-            Engine.GlobalObject.SetProperty("hasAttransfochment", Engine.CreateFunctionTemplate().GetFunctionObject<V8Function>(HasAttachment));
+            Engine.SetGlobalCLRCallBack("hasAttransfochment", HasAttachment);
 
-            Engine.GlobalObject.SetProperty("getCounters", Engine.CreateFunctionTemplate().GetFunctionObject<V8Function>(GetCounters));
+            Engine.SetGlobalCLRCallBack("getCounters", GetCounters);
 
-            Engine.GlobalObject.SetProperty("hasCounter", Engine.CreateFunctionTemplate().GetFunctionObject<V8Function>(HasCounter));
+            Engine.SetGlobalCLRCallBack("hasCounter", HasCounter);
             
             const string hasTimeSeries = Transformation.TimeSeriesTransformation.HasTimeSeries.Name;
-            Engine.GlobalObject.SetProperty(hasTimeSeries, Engine.CreateFunctionTemplate().GetFunctionObject<V8Function>(HasTimeSeries));
+            Engine.SetGlobalCLRCallBack(hasTimeSeries, HasTimeSeries);
             
             const string getTimeSeries = Transformation.TimeSeriesTransformation.GetTimeSeries.Name;
-            Engine.GlobalObject.SetProperty(getTimeSeries, Engine.CreateFunctionTemplate().GetFunctionObject<V8Function>(GetTimeSeries));
+            Engine.SetGlobalCLRCallBack(getTimeSeries, GetTimeSeries);
         }
 
         private InternalHandle LoadToFunctionTranslator(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
             try {
-                InternalHandle jsRes = InternalHandle.Empty;
                 if (args.Length != 2)
                     ThrowInvalidScriptMethodCall("loadTo(name, obj) must be called with exactly 2 parameters");
                 if (args[0].IsStringEx() == false)
@@ -108,7 +107,7 @@ namespace Raven.Server.Documents.ETL
                 // already be calling that.
                 var result = new ScriptRunnerResult(DocumentScript, args[1]);
                 LoadToFunction(args[0].AsString, result);
-                return jsRes.Set(result.Instance);
+                return new InternalHandle(result.Instance, true);
             }
             catch (Exception e) 
             {
@@ -118,7 +117,6 @@ namespace Raven.Server.Documents.ETL
 
         private InternalHandle LoadToFunctionTranslator(string name, InternalHandle self, params InternalHandle[] args)
         {
-            InternalHandle jsRes = InternalHandle.Empty;
             if (args.Length != 1)
                 ThrowInvalidScriptMethodCall($"loadTo{name}(obj) must be called with exactly 1 parameter");
 
@@ -130,7 +128,7 @@ namespace Raven.Server.Documents.ETL
             // already be calling that.
             var result = new ScriptRunnerResult(DocumentScript, args[0]);
             LoadToFunction(name, result);
-            return jsRes.Set(result.Instance);
+            return new InternalHandle(result.Instance, true);
         }
 
         protected abstract void AddLoadedAttachment(InternalHandle reference, string name, Attachment attachment);

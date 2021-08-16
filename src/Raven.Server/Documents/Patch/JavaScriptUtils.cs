@@ -127,7 +127,7 @@ namespace Raven.Server.Documents.Patch
                 var engineEx = (V8EngineEx)engine;
                 InternalHandle jsRes = InternalHandle.Empty;
                 if (args[0].IsNull)
-                    return jsRes.Set(DynamicJsNull.ImplicitNull._);
+                    return DynamicJsNull.ImplicitNull._;
 
                 if (args[0].IsObject == false)
                     ThrowInvalidFirstParameter();
@@ -146,7 +146,7 @@ namespace Raven.Server.Documents.Patch
 
                 var attachment = CurrentIndexingScope.Current.LoadAttachment(doc.DocumentId, attachmentName);
                 if (attachment.BoundObject is DynamicNullObject)
-                    return jsRes.Set(DynamicJsNull.ImplicitNull._);
+                    return DynamicJsNull.ImplicitNull._;
 
                 return engineEx.CreateObjectBinder(new AttachmentObjectInstance((DynamicAttachment)attachment), engineEx.TypeBinderAttachmentObjectInstance);
             }
@@ -175,7 +175,7 @@ namespace Raven.Server.Documents.Patch
                 var engineEx = (V8EngineEx)engine;
                 InternalHandle jsRes = InternalHandle.Empty;
                 if (args[0].IsNull)
-                    return jsRes.Set(DynamicJsNull.ImplicitNull._);
+                    return DynamicJsNull.ImplicitNull._;
 
                 if (args[0].IsObject == false)
                     ThrowInvalidParameter();
@@ -194,8 +194,7 @@ namespace Raven.Server.Documents.Patch
                 int arrayLength =  attachments.Count;
                 var jsItems = new InternalHandle[attachments.Count];
                 for (int i = 0; i < arrayLength; i++) {
-                    jsItems[i] = InternalHandle.Empty;
-                    jsItems[i].Set(engineEx.CreateObjectBinder(new AttachmentObjectInstance(attachments[i]), engineEx.TypeBinderAttachmentObjectInstance)._);
+                    jsItems[i] = engineEx.CreateObjectBinder(new AttachmentObjectInstance(attachments[i]), engineEx.TypeBinderAttachmentObjectInstance);
                 }
 
                 return engineEx.CreateArrayWithDisposal(jsItems);
@@ -301,7 +300,8 @@ namespace Raven.Server.Documents.Patch
                         if (jsRes.IsStringEx() == false)
                         {
                             // search either @metadata.Id or Id
-                            jsRes.Set(metadata.GetProperty(Constants.Documents.Metadata.IdProperty));
+                            jsRes.Dispose();
+                            jsRes = metadata.GetProperty(Constants.Documents.Metadata.IdProperty);
                             if (jsRes.IsStringEx() == false) {
                                 jsRes.Dispose();
                                 return engine.CreateNullValue();
@@ -319,7 +319,6 @@ namespace Raven.Server.Documents.Patch
 
         internal InternalHandle TranslateToJs(JsonOperationContext context, object o)
         {
-            InternalHandle jsRes = InternalHandle.Empty;
             if (o is Tuple<Document, Lucene.Net.Documents.Document, IState, Dictionary<string, IndexField>, bool?, ProjectionOptions> t)
             {
                 var d = t.Item1;
@@ -331,23 +330,23 @@ namespace Raven.Server.Documents.Patch
                     LuceneAnyDynamicIndexFields = t.Item5 ?? false,
                     Projection = t.Item6
                 };
-                return jsRes.Set(boi.CreateObjectBinder()._);
+                return boi.CreateObjectBinder();
             }
             if (o is Document doc)
             {
                 BlittableObjectInstance boi = new BlittableObjectInstance(this, null, Clone(doc.Data, context), doc);
-                return jsRes.Set(boi.CreateObjectBinder()._);
+                return boi.CreateObjectBinder();
             }
             if (o is DocumentConflict dc)
             {
                 BlittableObjectInstance boi = new BlittableObjectInstance(this, null, Clone(dc.Doc, context), dc.Id, dc.LastModified, dc.ChangeVector);
-                return jsRes.Set(boi.CreateObjectBinder()._);
+                return boi.CreateObjectBinder();
             }
 
             if (o is BlittableJsonReaderObject json)
             {
                 BlittableObjectInstance boi = new BlittableObjectInstance(this, null, Clone(json, context), null, null, null);
-                return jsRes.Set(boi.CreateObjectBinder()._);
+                return boi.CreateObjectBinder();
             }
 
             if (o == null)
@@ -387,7 +386,7 @@ namespace Raven.Server.Documents.Patch
                 for (int i = 0; i < arrayLength; ++i)
                 {
                     BlittableObjectInstance boi = new BlittableObjectInstance(this, null, Clone(docList[i].Data, context), docList[i]);
-                    jsItems[i].Set(boi.CreateObjectBinder()._);
+                    jsItems[i] = boi.CreateObjectBinder();
                 }
 
                 return Engine.CreateArrayWithDisposal(jsItems);
@@ -399,7 +398,7 @@ namespace Raven.Server.Documents.Patch
                 return Engine.FromObject(o);
             }
             if (o is V8NativeObject j) {
-                return jsRes.Set(j._);
+                return new InternalHandle(j._, true);
             }
             if (o is bool b)
                 return Engine.CreateValue(b);
@@ -466,6 +465,20 @@ namespace Raven.Server.Documents.Patch
 
     public class V8EngineEx : V8Engine
     {
+        public InternalHandle CreateCLRCallBack(JSFunction func)
+        {
+            var jsFunc = CreateFunctionTemplate().GetFunctionObject<V8Function>(func);
+            return new InternalHandle(jsFunc._, true);
+        }
+
+        public void SetGlobalCLRCallBack(string propertyName, JSFunction func)
+        {
+            if (!GlobalObject.SetProperty(propertyName, CreateCLRCallBack(func)))
+            {
+                throw new InvalidOperationException($"Failed to set CLR callback global property {propertyName}");
+            }
+        }
+
         public static void Dispose(InternalHandle[] jsItems)
         {
             for (int i = 0; i < jsItems.Length; ++i)
@@ -477,7 +490,26 @@ namespace Raven.Server.Documents.Patch
         public InternalHandle CreateArrayWithDisposal(InternalHandle[] jsItems)
         {
             var jsArr = CreateArray(jsItems);
-            V8EngineEx.Dispose(jsItems);
+            //V8EngineEx.Dispose(jsItems);
+
+            /*using (var jsEl01 = jsArr.GetProperty(0)) {
+                if (jsEl01.IsEmpty) {
+                    long c = 0;
+                }
+            }
+
+            using (var jsEl02 = jsArr.GetProperty(0)) {
+                if (jsEl02.IsEmpty) {
+                    long a = 0;
+                }
+            }
+
+            using (var jsEl03 = jsArr.GetProperty(0)) {
+                if (jsEl03.IsEmpty) {
+                    long b = 0;
+                }
+            }*/
+
             return jsArr;
         }
 
@@ -635,7 +667,7 @@ namespace Raven.Server.Documents.Patch
             return v < int.MaxValue && v > int.MinValue ? CreateValue((Int32) v) : CreateValue((double) v);
         }
 
-        public ObjectBinder CreateObjectBinder(object obj, TypeBinder tb = null)
+        public InternalHandle CreateObjectBinder(object obj, TypeBinder tb = null)
         {
             if (obj == null) {
                 return null;
@@ -644,10 +676,10 @@ namespace Raven.Server.Documents.Patch
                 var type = obj.GetType();
                 tb = GetTypeBinder(type);
             }
-            return tb.CreateObjectBinder<ObjectBinder, object>(obj);
+            return new InternalHandle(tb.CreateObjectBinder<ObjectBinder, object>(obj)._, true);
         }
 
-        public TObjectBinder CreateObjectBinder<TObjectBinder>(object obj, TypeBinder tb = null)
+        public InternalHandle CreateObjectBinder<TObjectBinder>(object obj, TypeBinder tb = null)
         where TObjectBinder : ObjectBinder, new()
         {
             if (obj == null) {
@@ -657,7 +689,7 @@ namespace Raven.Server.Documents.Patch
                 var type = obj.GetType();
                 tb = GetTypeBinder(type);
             }
-            return tb.CreateObjectBinder<TObjectBinder, object>(obj);
+            return new InternalHandle(tb.CreateObjectBinder<TObjectBinder, object>(obj)._, true);
         }
 
         public InternalHandle FromObject(object obj)
@@ -732,12 +764,11 @@ namespace Raven.Server.Documents.Patch
                 return Convert(a);
             }
 
-            InternalHandle jsRes = InternalHandle.Empty;
             if (obj is JSFunction d)
-                return jsRes.Set((this.CreateFunctionTemplate().GetFunctionObject<V8Function>(d))._);
+                return new InternalHandle(this.CreateFunctionTemplate().GetFunctionObject<V8Function>(d)._, true);
 
             // if no known type could be guessed, wrap it as an ObjectBinder
-            return jsRes.Set(CreateObjectBinder(obj)._);
+            return CreateObjectBinder(obj);
         }
 
         private InternalHandle Convert(object v)

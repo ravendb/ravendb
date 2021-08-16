@@ -65,7 +65,7 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
                 else if (propertyName == nameof(IAttachmentObject.Size))
                     jsValue = engine.CreateValue(_attachment.Size);
                 else if (propertyName == GetContentAsStringMethodName) {
-                    jsValue = engine.CreateFunctionTemplate().GetFunctionObject<V8Function>(GetContentAsString);
+                    jsValue = engine.CreateCLRCallBack(GetContentAsString);
                 }
 
                 if (jsValue.IsEmpty == false)

@@ -690,7 +690,7 @@ namespace Raven.Server.Utils
         {
             var type = value.GetType();
 
-            if (type == typeof(V8NativeObject)) // We don't cache JS types
+            if (type == typeof(InternalHandle) || type == typeof(V8NativeObject) || type.IsSubclassOf(typeof(V8NativeObject))) // We don't cache JS types
                 return PropertyAccessor.CreateMapReduceOutputAccessor(type, value, groupByFields, true);
 
             if (value is Dictionary<string, object>) // don't use cache when using dictionaries

@@ -148,7 +148,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         internal static IPropertyAccessor CreateMapReduceOutputAccessor(Type type, object instance, Dictionary<string, CompiledIndexField> groupByFields, bool isObjectInstance = false)
         {
-            if (isObjectInstance || type == typeof(V8NativeObject) || type.IsSubclassOf(typeof(V8NativeObject)))
+            if (isObjectInstance || type == typeof(InternalHandle) || type == typeof(V8NativeObject) || type.IsSubclassOf(typeof(V8NativeObject)))
                 return new JsPropertyAccessor(groupByFields);
 
             if (instance is Dictionary<string, object> dict)
@@ -169,7 +169,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         public IEnumerable<(string Key, object Value, CompiledIndexField GroupByField, bool IsGroupByField)> GetPropertiesInOrder(object target)
         {
-            if (!(target is V8NativeObject oi))
+            if (!(target is InternalHandle oi))
                 throw new ArgumentException($"JsPropertyAccessor.GetPropertiesInOrder is expecting a target of type V8NativeObject but got one of type {target.GetType().Name}.");
             foreach (var (propertyName, jsPropertyValue) in oi.GetOwnProperties())
             {
@@ -185,7 +185,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         public object GetValue(string name, object target)
         {
-            if (!(target is V8NativeObject oi))
+            if (!(target is InternalHandle oi))
                 throw new ArgumentException($"JsPropertyAccessor.GetValue is expecting a target of type V8NativeObject but got one of type {target.GetType().Name}.");
             if (oi.HasOwnProperty(name))
                 throw new MissingFieldException($"The target for 'JsPropertyAccessor.GetValue' doesn't contain the property {name}.");
@@ -240,7 +240,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                     }
                     ThrowInvalidObject(jsValue);
                 }
-                return jsValue.Object; // no need to KeepTrack() as we store Handle
+                return jsValue.Object;
             }
 
             if (jsValue.IsUndefined)

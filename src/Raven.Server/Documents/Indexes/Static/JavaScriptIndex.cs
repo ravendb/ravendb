@@ -66,14 +66,14 @@ function map(name, lambda) {
             _engineJint.SetValue("loadAttachments", new JintClrFunctionInstance(_engineJint, "loadAttachments", LoadAttachmentsJint));
             _engineJint.SetValue("id", new JintClrFunctionInstance(_engineJint, "id", GetDocumentIdJint));
 
-            _engine.GlobalObject.SetProperty("getMetadata", _engine.CreateFunctionTemplate().GetFunctionObject<V8Function>(MetadataFor)); // for backward-compatibility only
-            _engine.GlobalObject.SetProperty("metadataFor", _engine.CreateFunctionTemplate().GetFunctionObject<V8Function>(MetadataFor));
-            _engine.GlobalObject.SetProperty("attachmentsFor", _engine.CreateFunctionTemplate().GetFunctionObject<V8Function>(AttachmentsFor));
-            _engine.GlobalObject.SetProperty("timeSeriesNamesFor", _engine.CreateFunctionTemplate().GetFunctionObject<V8Function>(TimeSeriesNamesFor));
-            _engine.GlobalObject.SetProperty("counterNamesFor", _engine.CreateFunctionTemplate().GetFunctionObject<V8Function>(CounterNamesFor));
-            _engine.GlobalObject.SetProperty("loadAttachment", _engine.CreateFunctionTemplate().GetFunctionObject<V8Function>(LoadAttachment));
-            _engine.GlobalObject.SetProperty("loadAttachments", _engine.CreateFunctionTemplate().GetFunctionObject<V8Function>(LoadAttachments));
-            _engine.GlobalObject.SetProperty("id", _engine.CreateFunctionTemplate().GetFunctionObject<V8Function>(GetDocumentId));
+            _engine.SetGlobalCLRCallBack("getMetadata", MetadataFor); // for backward-compatibility only
+            _engine.SetGlobalCLRCallBack("metadataFor", MetadataFor);
+            _engine.SetGlobalCLRCallBack("attachmentsFor", AttachmentsFor);
+            _engine.SetGlobalCLRCallBack("timeSeriesNamesFor", TimeSeriesNamesFor);
+            _engine.SetGlobalCLRCallBack("counterNamesFor", CounterNamesFor);
+            _engine.SetGlobalCLRCallBack("loadAttachment", LoadAttachment);
+            _engine.SetGlobalCLRCallBack("loadAttachments", LoadAttachments);
+            _engine.SetGlobalCLRCallBack("id", GetDocumentId);
 
         }
 
@@ -521,10 +521,10 @@ function map(name, lambda) {
             _engineJint.SetValue("tryConvertToNumber", new JintClrFunctionInstance(_engineJint, "tryConvertToNumber", TryConvertToNumberJint));
             _engineJint.SetValue("recurse", new JintClrFunctionInstance(_engineJint, "recurse", RecurseJint));
 
-            _engine.GlobalObject.SetProperty("load", _engine.CreateFunctionTemplate().GetFunctionObject<V8Function>(LoadDocument));
-            _engine.GlobalObject.SetProperty("cmpxchg", _engine.CreateFunctionTemplate().GetFunctionObject<V8Function>(LoadCompareExchangeValue));
-            _engine.GlobalObject.SetProperty("tryConvertToNumber", _engine.CreateFunctionTemplate().GetFunctionObject<V8Function>(TryConvertToNumber));
-            _engine.GlobalObject.SetProperty("recurse", _engine.CreateFunctionTemplate().GetFunctionObject<V8Function>(Recurse));
+            _engine.SetGlobalCLRCallBack("load", LoadDocument);
+            _engine.SetGlobalCLRCallBack("cmpxchg", LoadCompareExchangeValue);
+            _engine.SetGlobalCLRCallBack("tryConvertToNumber", TryConvertToNumber);
+            _engine.SetGlobalCLRCallBack("recurse", Recurse);
         }
 
         private List<MapMetadata> InitializeEngine(IndexDefinition definition, List<string> maps, string mapCode)
@@ -743,14 +743,12 @@ function map(name, lambda) {
                     return DynamicJsNull.ImplicitNull._;
 
                 if (value.IsNumberOrIntEx())
-                    return jsRes.Set(value); // value;
+                    return jsRes.Set(value);
 
                 if (value.IsStringEx())
                 {
                     if (Double.TryParse(value.AsString, out var valueAsDbl)) {
                         return engine.CreateValue(valueAsDbl);
-                        /*using (jsRes = engine.CreateValue(valueAsDbl))
-                            return jsRes;*/
                     }
                 }
 
@@ -772,7 +770,7 @@ function map(name, lambda) {
 
                 InternalHandle jsRes = InternalHandle.Empty;
                 if (args[0].IsNull || args[0].IsUndefined)
-                    return jsRes.Set(DynamicJsNull.ImplicitNull._);
+                    return DynamicJsNull.ImplicitNull._;
 
                 if (args[0].IsStringEx() == false ||
                     args[1].IsStringEx() == false)
@@ -784,7 +782,7 @@ function map(name, lambda) {
                 if (JavaScriptIndexUtils.GetValue(doc, out InternalHandle jsItem))
                     return jsItem;
 
-                return jsRes.Set(DynamicJsNull.ImplicitNull._);
+                return DynamicJsNull.ImplicitNull._;
             }
             catch (Exception e) 
             {
@@ -801,7 +799,7 @@ function map(name, lambda) {
                 InternalHandle jsRes = InternalHandle.Empty;
                 var keyArgument = args[0];
                 if (keyArgument.IsNull || keyArgument.IsUndefined)
-                    return jsRes.Set(DynamicJsNull.ImplicitNull._);
+                    return DynamicJsNull.ImplicitNull._;
 
                 if (keyArgument.IsStringEx())
                 {
@@ -812,7 +810,7 @@ function map(name, lambda) {
                 {
                     int arrayLength =  keyArgument.ArrayLength;
                     if (arrayLength == 0)
-                        return jsRes.Set(DynamicJsNull.ImplicitNull._);
+                        return DynamicJsNull.ImplicitNull._;
 
                     var jsItems = new InternalHandle[arrayLength];
                     for (int i = 0; i < arrayLength; i++)
@@ -845,16 +843,16 @@ function map(name, lambda) {
                 switch (value)
                 {
                     case null:
-                        return jsRes.Set(DynamicJsNull.ImplicitNull._);
+                        return DynamicJsNull.ImplicitNull._;
 
                     case DynamicNullObject dno: {
                         var dynamicNull = dno.IsExplicitNull ? DynamicJsNull.ExplicitNull : DynamicJsNull.ImplicitNull;
-                        return jsRes.Set(dynamicNull._);
+                        return dynamicNull._;
                     }
 
                     case DynamicBlittableJson dbj: {
                         BlittableObjectInstance boi = new BlittableObjectInstance(JavaScriptUtils, null, dbj.BlittableJson, id: null, lastModified: null, changeVector: null);
-                        return jsRes.Set(boi.CreateObjectBinder()._);
+                        return boi.CreateObjectBinder();
                     }
 
                     default:

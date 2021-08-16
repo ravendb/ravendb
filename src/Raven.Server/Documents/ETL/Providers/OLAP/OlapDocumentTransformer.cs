@@ -57,21 +57,20 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             var engine = DocumentScript.ScriptEngine;
             base.Initialize(debugMode);
 
-            DocumentScript.ScriptEngine.GlobalObject.SetProperty(Transformation.LoadTo, engine.CreateFunctionTemplate().GetFunctionObject<V8Function>(LoadToFunctionTranslator));
+            engine.SetGlobalCLRCallBack(Transformation.LoadTo, LoadToFunctionTranslator);
 
             foreach (var table in LoadToDestinations)
             {
                 var name = Transformation.LoadTo + table;
-                DocumentScript.ScriptEngine.GlobalObject.SetProperty(name, engine.CreateFunctionTemplate().GetFunctionObject<V8Function>(
-                    (engine, isConstructCall, self, args) => LoadToFunctionTranslator(engine, table, args)));
+                engine.SetGlobalCLRCallBack(name, (engine, isConstructCall, self, args) => LoadToFunctionTranslator(engine, table, args));
             }
 
-            DocumentScript.ScriptEngine.GlobalObject.SetProperty("partitionBy", engine.CreateFunctionTemplate().GetFunctionObject<V8Function>(PartitionBy));
-            DocumentScript.ScriptEngine.GlobalObject.SetProperty("noPartition", engine.CreateFunctionTemplate().GetFunctionObject<V8Function>(NoPartition));
+            engine.SetGlobalCLRCallBack("partitionBy", PartitionBy);
+            engine.SetGlobalCLRCallBack("noPartition", NoPartition);
 
             if (_config.CustomPartitionValue != null)
             {
-                DocumentScript.ScriptEngine.GlobalObject.SetProperty(CustomPartition, engine.CreateValue(_config.CustomPartitionValue));
+                engine.GlobalObject.SetProperty(CustomPartition, engine.CreateValue(_config.CustomPartitionValue));
             }
         }
 
@@ -186,7 +185,6 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
         private InternalHandle LoadToFunctionTranslatorInternal(V8Engine engine, string name, InternalHandle key, InternalHandle obj, string methodSignature)
         {
-            InternalHandle jsRes = InternalHandle.Empty;
             if (key.HasOwnProperty(PartitionKeys) == false)
                 ThrowInvalidScriptMethodCall(
                     $"{methodSignature} argument 'key' must have {PartitionKeys} property. Did you forget to use 'partitionBy(p)' / 'noPartition()' ? ");
@@ -199,7 +197,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                 {
                     // no partition
                     LoadToFunction(name, key: name, result);
-                    return jsRes.Set(result.Instance);
+                    return new InternalHandle(result.Instance, true);
                 }
 
                 if (partitionBy.IsArray == false)
@@ -235,7 +233,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                     }
                 }
                 LoadToFunction(name, sb.ToString(), result, partitions);
-                return jsRes.Set(result.Instance);
+                return new InternalHandle(result.Instance, true);
             }
         }
 

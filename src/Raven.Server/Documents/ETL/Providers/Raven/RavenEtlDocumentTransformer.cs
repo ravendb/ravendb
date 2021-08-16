@@ -28,9 +28,9 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
     {
         private readonly Transformation _transformation;
         private readonly ScriptInput _script;
-        private V8Function _addAttachmentMethod;
-        private V8Function _addCounterMethod;
-        private V8Function _addTimeSeriesMethod;
+        private InternalHandle _addAttachmentMethod;
+        private InternalHandle _addCounterMethod;
+        private InternalHandle _addTimeSeriesMethod;
         private RavenEtlScriptRun _currentRun;
 
         public RavenEtlDocumentTransformer(Transformation transformation, DocumentDatabase database, DocumentsOperationContext context, ScriptInput script)
@@ -42,6 +42,13 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             LoadToDestinations = _script.LoadToCollections;
         }
 
+        ~RavenEtlDocumentTransformer()
+        {
+            _addAttachmentMethod.Dispose();
+            _addCounterMethod.Dispose();
+            _addTimeSeriesMethod.Dispose();
+        }
+
         public override void Initialize(bool debugMode)
         {
             base.Initialize(debugMode);
@@ -51,16 +58,21 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 return;
 
             if (_transformation.IsAddingAttachments)
-                _addAttachmentMethod = engine.CreateFunctionTemplate().GetFunctionObject<V8Function>(AddAttachment);
+            {
+                _addAttachmentMethod = engine.CreateCLRCallBack(AddAttachment);
+                _addAttachmentMethod.ThrowOnError();
+            }
 
             if (_transformation.Counters.IsAddingCounters)
             {
-                _addCounterMethod = engine.CreateFunctionTemplate().GetFunctionObject<V8Function>(AddCounter);
+                _addCounterMethod = engine.CreateCLRCallBack(AddCounter);
+                _addCounterMethod.ThrowOnError();
             }
 
             if (_transformation.TimeSeries.IsAddingTimeSeries)
             {
-                _addTimeSeriesMethod = engine.CreateFunctionTemplate().GetFunctionObject<V8Function>(AddTimeSeries);
+                _addTimeSeriesMethod = engine.CreateCLRCallBack(AddTimeSeries);
+                _addTimeSeriesMethod.ThrowOnError();
             }
         }
 
@@ -118,20 +130,17 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
             if (_transformation.IsAddingAttachments)
             {
-                using (var docInstance = document.Instance)
-                    docInstance.SetProperty(Transformation.AddAttachment, _addAttachmentMethod, V8PropertyAttributes.ReadOnly); // or Locked
+                document.Instance.SetProperty(Transformation.AddAttachment, new InternalHandle(_addAttachmentMethod, true), V8PropertyAttributes.ReadOnly); // or Locked
             }
 
             if (_transformation.Counters.IsAddingCounters)
             {
-                using (var docInstance = document.Instance)
-                    docInstance.SetProperty(Transformation.CountersTransformation.Add, _addCounterMethod, V8PropertyAttributes.ReadOnly); // or Locked
+                document.Instance.SetProperty(Transformation.CountersTransformation.Add, new InternalHandle(_addCounterMethod, true), V8PropertyAttributes.ReadOnly); // or Locked
             }
             
             if (_transformation.TimeSeries.IsAddingTimeSeries)
             {
-                using (var docInstance = document.Instance)
-                    docInstance.SetProperty(Transformation.TimeSeriesTransformation.AddTimeSeries.Name, _addTimeSeriesMethod, V8PropertyAttributes.ReadOnly); // or Locked
+                document.Instance.SetProperty(Transformation.TimeSeriesTransformation.AddTimeSeries.Name, new InternalHandle(_addTimeSeriesMethod, true), V8PropertyAttributes.ReadOnly); // or Locked
             }
         }
 

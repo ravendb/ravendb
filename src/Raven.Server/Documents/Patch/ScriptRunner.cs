@@ -228,22 +228,22 @@ namespace Raven.Server.Documents.Patch
 
                 JavaScriptUtils = new JavaScriptUtils(_runner, ScriptEngine);
 
-                ScriptEngine.GlobalObject.SetProperty(GetMetadataMethod, ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(JavaScriptUtils.GetMetadata));
-                ScriptEngine.GlobalObject.SetProperty("id", ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(JavaScriptUtils.GetDocumentId));
+                ScriptEngine.SetGlobalCLRCallBack(GetMetadataMethod, JavaScriptUtils.GetMetadata);
+                ScriptEngine.SetGlobalCLRCallBack("id", JavaScriptUtils.GetDocumentId);
 
-                ScriptEngine.GlobalObject.SetProperty("output", ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(OutputDebug));
+                ScriptEngine.SetGlobalCLRCallBack("output", OutputDebug);
 
                 //console.log
                 using (var consoleObject = ScriptEngine.CreateObject())
                 {
-                    consoleObject.FastAddProperty("log", ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(OutputDebug), false, false, false);
+                    consoleObject.FastAddProperty("log", ScriptEngine.CreateCLRCallBack(OutputDebug), false, false, false);
                     ScriptEngine.GlobalObject.SetProperty("console", consoleObject);
                 }
 
                 //spatial.distance
                 using (var spatialObject = ScriptEngine.CreateObject())
                 {
-                    var spatialFunc = ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(Spatial_Distance);
+                    var spatialFunc = ScriptEngine.CreateCLRCallBack(Spatial_Distance);
                     spatialObject.FastAddProperty("distance", spatialFunc, false, false, false);
                     ScriptEngine.GlobalObject.SetProperty("spatial", spatialObject);
                     ScriptEngine.GlobalObject.SetProperty("spatial.distance", spatialFunc);
@@ -252,51 +252,51 @@ namespace Raven.Server.Documents.Patch
                 // includes
                 using (var includesObject = ScriptEngine.CreateObject())
                 {
-                    var includeDocumentFunc = ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(IncludeDoc);
+                    var includeDocumentFunc = ScriptEngine.CreateCLRCallBack(IncludeDoc);
                     includesObject.FastAddProperty("document", includeDocumentFunc, false, false, false);
-                    includesObject.FastAddProperty("cmpxchg", ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(IncludeCompareExchangeValue), false, false, false);
-                    includesObject.FastAddProperty("revisions", ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(IncludeRevisions), false, false, false);
+                    includesObject.FastAddProperty("cmpxchg", ScriptEngine.CreateCLRCallBack(IncludeCompareExchangeValue), false, false, false);
+                    includesObject.FastAddProperty("revisions", ScriptEngine.CreateCLRCallBack(IncludeRevisions), false, false, false);
                     ScriptEngine.GlobalObject.SetProperty("includes", includesObject);
 
                     // includes - backward compatibility
                     ScriptEngine.GlobalObject.SetProperty("include", includeDocumentFunc);
                 }
 
-                ScriptEngine.GlobalObject.SetProperty("load", ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(LoadDocument));
-                ScriptEngine.GlobalObject.SetProperty("LoadDocument", ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(ThrowOnLoadDocument));
+                ScriptEngine.SetGlobalCLRCallBack("load", LoadDocument);
+                ScriptEngine.SetGlobalCLRCallBack("LoadDocument", ThrowOnLoadDocument);
 
-                ScriptEngine.GlobalObject.SetProperty("loadPath", ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(LoadDocumentByPath));
-                ScriptEngine.GlobalObject.SetProperty("del", ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(DeleteDocument));
-                ScriptEngine.GlobalObject.SetProperty("DeleteDocument", ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(ThrowOnDeleteDocument));
-                ScriptEngine.GlobalObject.SetProperty("put", ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(PutDocument));
-                ScriptEngine.GlobalObject.SetProperty("PutDocument", ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(ThrowOnPutDocument));
-                ScriptEngine.GlobalObject.SetProperty("cmpxchg", ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(CompareExchange));
+                ScriptEngine.SetGlobalCLRCallBack("loadPath", LoadDocumentByPath);
+                ScriptEngine.SetGlobalCLRCallBack("del", DeleteDocument);
+                ScriptEngine.SetGlobalCLRCallBack("DeleteDocument", ThrowOnDeleteDocument);
+                ScriptEngine.SetGlobalCLRCallBack("put", PutDocument);
+                ScriptEngine.SetGlobalCLRCallBack("PutDocument", ThrowOnPutDocument);
+                ScriptEngine.SetGlobalCLRCallBack("cmpxchg", CompareExchange);
 
-                ScriptEngine.GlobalObject.SetProperty("counter", ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(GetCounter));
-                ScriptEngine.GlobalObject.SetProperty("counterRaw", ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(GetCounterRaw));
-                ScriptEngine.GlobalObject.SetProperty("incrementCounter", ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(IncrementCounter));
-                ScriptEngine.GlobalObject.SetProperty("deleteCounter", ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(DeleteCounter));
+                ScriptEngine.SetGlobalCLRCallBack("counter", GetCounter);
+                ScriptEngine.SetGlobalCLRCallBack("counterRaw", GetCounterRaw);
+                ScriptEngine.SetGlobalCLRCallBack("incrementCounter", IncrementCounter);
+                ScriptEngine.SetGlobalCLRCallBack("deleteCounter", DeleteCounter);
 
-                ScriptEngine.GlobalObject.SetProperty("lastModified", ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(GetLastModified));
+                ScriptEngine.SetGlobalCLRCallBack("lastModified", GetLastModified);
 
-                ScriptEngine.GlobalObject.SetProperty("startsWith", ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(StartsWith));
-                ScriptEngine.GlobalObject.SetProperty("endsWith", ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(EndsWith));
-                ScriptEngine.GlobalObject.SetProperty("regex", ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(Regex));
+                ScriptEngine.SetGlobalCLRCallBack("startsWith", StartsWith);
+                ScriptEngine.SetGlobalCLRCallBack("endsWith", EndsWith);
+                ScriptEngine.SetGlobalCLRCallBack("regex", Regex);
 
-                //ScriptEngine.GlobalObject.SetProperty("Raven_ExplodeArgs", ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(ExplodeArgs));
-                ScriptEngine.GlobalObject.SetProperty("Raven_Min", ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(Raven_Min));
-                ScriptEngine.GlobalObject.SetProperty("Raven_Max", ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(Raven_Max));
+                //ScriptEngine.SetGlobalCLRCallBack("Raven_ExplodeArgs", ExplodeArgs);
+                ScriptEngine.SetGlobalCLRCallBack("Raven_Min", Raven_Min);
+                ScriptEngine.SetGlobalCLRCallBack("Raven_Max", Raven_Max);
 
-                ScriptEngine.GlobalObject.SetProperty("convertJsTimeToTimeSpanString", ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(ConvertJsTimeToTimeSpanString));
-                ScriptEngine.GlobalObject.SetProperty("convertToTimeSpanString", ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(ConvertToTimeSpanString));
-                ScriptEngine.GlobalObject.SetProperty("compareDates", ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(CompareDates));
+                ScriptEngine.SetGlobalCLRCallBack("convertJsTimeToTimeSpanString", ConvertJsTimeToTimeSpanString);
+                ScriptEngine.SetGlobalCLRCallBack("convertToTimeSpanString", ConvertToTimeSpanString);
+                ScriptEngine.SetGlobalCLRCallBack("compareDates", CompareDates);
 
-                ScriptEngine.GlobalObject.SetProperty("toStringWithFormat", ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(ToStringWithFormat));
+                ScriptEngine.SetGlobalCLRCallBack("toStringWithFormat", ToStringWithFormat);
 
-                //ScriptEngine.GlobalObject.SetProperty("scalarToRawString", ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(ScalarToRawString));
+                //ScriptEngine.SetGlobalCLRCallBack("scalarToRawString", ScalarToRawString);
 
                 //TimeSeries
-                ScriptEngine.GlobalObject.SetProperty("timeseries", ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(TimeSeries));
+                ScriptEngine.SetGlobalCLRCallBack("timeseries", TimeSeries);
                 ScriptEngine.Execute(ScriptRunnerCache.PolyfillJs);
 
                 foreach (var script in scriptsSource)
@@ -313,7 +313,7 @@ namespace Raven.Server.Documents.Patch
 
                 foreach (var ts in runner.TimeSeriesDeclaration)
                 {
-                    ScriptEngine.GlobalObject.SetProperty(ts.Key, NamedInvokeTimeSeriesFunction(ts.Key));
+                    ScriptEngine.SetGlobalCLRCallBack(ts.Key, (engine, isConstructCall, self, args) => InvokeTimeSeriesFunction(ts.Key, args));
                 }
             }
 
@@ -384,12 +384,12 @@ namespace Raven.Server.Documents.Patch
                         throw new ArgumentException($"{_timeSeriesSignature}: This method requires 2 arguments but was called with {args.Length}");
 
                     var obj = ScriptEngine.CreateObject();
-                    obj.SetProperty("append", ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(AppendTimeSeries));
-                    obj.SetProperty("delete", ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(DeleteRangeTimeSeries));
-                    obj.SetProperty("get", ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(GetRangeTimeSeries));
+                    obj.SetProperty("append", ScriptEngine.CreateCLRCallBack(AppendTimeSeries));
+                    obj.SetProperty("delete", ScriptEngine.CreateCLRCallBack(DeleteRangeTimeSeries));
+                    obj.SetProperty("get", ScriptEngine.CreateCLRCallBack(GetRangeTimeSeries));
                     obj.SetProperty("doc", args[0]);
                     obj.SetProperty("name", args[1]);
-                    obj.SetProperty("getStats", ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>(GetStatsTimeSeries));
+                    obj.SetProperty("getStats", ScriptEngine.CreateCLRCallBack(GetStatsTimeSeries));
 
                     return obj;
                 }
@@ -1490,11 +1490,6 @@ namespace Raven.Server.Documents.Patch
                 {
                     return engine.CreateError(e.Message, JSValueType.ExecutionError);
                 }
-            }
-
-            private V8Function NamedInvokeTimeSeriesFunction(string name)
-            {
-                return ScriptEngine.CreateFunctionTemplate().GetFunctionObject<V8Function>((engine, isConstructCall, self, args) => InvokeTimeSeriesFunction(name, args));
             }
 
             private InternalHandle InvokeTimeSeriesFunction(string name, params InternalHandle[] args)
