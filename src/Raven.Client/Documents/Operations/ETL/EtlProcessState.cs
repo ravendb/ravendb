@@ -9,7 +9,7 @@ namespace Raven.Client.Documents.Operations.ETL
     {
         public EtlProcessState()
         {
-            LastProcessedEtagPerNode = new Dictionary<string, long>();
+            LastProcessedEtagPerDbId = new Dictionary<string, long>();
             ChangeVector = null;
         }
 
@@ -17,15 +17,15 @@ namespace Raven.Client.Documents.Operations.ETL
 
         public string TransformationName { get; set; }
 
-        public Dictionary<string, long> LastProcessedEtagPerNode { get; set; }
+        public Dictionary<string, long> LastProcessedEtagPerDbId { get; set; }
 
         public string ChangeVector { get; set; }
 
         public string NodeTag { get; set; }
 
-        public long GetLastProcessedEtagForNode(string nodeTag)
+        public long GetLastProcessedEtagForDbId(string dbId)
         {
-            if (LastProcessedEtagPerNode.TryGetValue(nodeTag, out var etag))
+            if (LastProcessedEtagPerDbId.TryGetValue(dbId, out var etag))
                 return etag;
 
             return 0;
@@ -37,7 +37,7 @@ namespace Raven.Client.Documents.Operations.ETL
             {
                 [nameof(ConfigurationName)] = ConfigurationName,
                 [nameof(TransformationName)] = TransformationName,
-                [nameof(LastProcessedEtagPerNode)] = LastProcessedEtagPerNode.ToJson(),
+                [nameof(LastProcessedEtagPerDbId)] = LastProcessedEtagPerDbId.ToJson(),
                 [nameof(ChangeVector)] = ChangeVector,
                 [nameof(NodeTag)] = NodeTag
             };

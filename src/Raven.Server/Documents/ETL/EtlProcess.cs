@@ -622,7 +622,7 @@ namespace Raven.Server.Documents.ETL
 
                     var state  = _lastProcessState = GetProcessState(Database, Configuration.Name, Transformation.Name);
 
-                    var loadLastProcessedEtag = state.GetLastProcessedEtagForNode(_serverStore.NodeTag);
+                    var loadLastProcessedEtag = state.GetLastProcessedEtagForDbId(Database.DbBase64Id);
 
                     using (Statistics.NewBatch())
                     using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -705,7 +705,7 @@ namespace Raven.Server.Documents.ETL
                     {
                         var command = new UpdateEtlProcessStateCommand(Database.Name, Configuration.Name, Transformation.Name, Statistics.LastProcessedEtag,
                             ChangeVectorUtils.MergeVectors(Statistics.LastChangeVector, state.ChangeVector), _serverStore.NodeTag,
-                            _serverStore.LicenseManager.HasHighlyAvailableTasks(), RaftIdGenerator.NewId());
+                            _serverStore.LicenseManager.HasHighlyAvailableTasks(), RaftIdGenerator.NewId(), Database.DbBase64Id);
 
                         try
                         {
@@ -1071,7 +1071,7 @@ namespace Raven.Server.Documents.ETL
             long counterGroupsToProcess = 0;
             long totalCounterGroupsCount = 0;
 
-            var lastProcessedEtag = _lastProcessState.GetLastProcessedEtagForNode(_serverStore.NodeTag);
+            var lastProcessedEtag = _lastProcessState.GetLastProcessedEtagForDbId(Database.DbBase64Id);
 
             foreach (var collection in collections)
             {
