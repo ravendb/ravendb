@@ -1860,7 +1860,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                 }
 
                 var database = await GetDocumentDatabaseInstanceFor(store);
-                await database.TimeSeriesPolicyRunner.RunRollups();
+                await WaitForPolicyRunner(database);
 
                 using (var session = store.OpenSession())
                 {
