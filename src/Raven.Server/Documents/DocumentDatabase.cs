@@ -319,7 +319,7 @@ namespace Raven.Server.Documents
                 _addToInitLog("Initializing IndexStore (async)");
                 _indexStoreTask = IndexStore.InitializeAsync(record, index, _addToInitLog);
                 _addToInitLog("Initializing Replication");
-                ReplicationLoader?.Initialize(record);
+                ReplicationLoader?.Initialize(record, index);
                 _addToInitLog("Initializing ETL");
                 EtlLoader.Initialize(record);
 
@@ -656,7 +656,7 @@ namespace Raven.Server.Documents
 
                 ForTestingPurposes?.DisposeLog?.Invoke(Name, $"Drained all requests. Took: {sp.Elapsed}");
             }
-
+            
             var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(DocumentDatabase)} {Name}");
 
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Acquiring cluster lock");
@@ -1227,6 +1227,7 @@ namespace Raven.Server.Documents
                 StudioConfiguration = record.Studio;
 
                 NotifyFeaturesAboutStateChange(record, index);
+
                 RachisLogIndexNotifications.NotifyListenersAbout(index, null);
             }
             catch (Exception e)
@@ -1254,6 +1255,8 @@ namespace Raven.Server.Documents
                 return;
 
             var taken = false;
+            Stopwatch sp = default;
+
             while (taken == false)
             {
                 Monitor.TryEnter(_clusterLocker, TimeSpan.FromSeconds(5), ref taken);
@@ -1269,6 +1272,8 @@ namespace Raven.Server.Documents
                     if (taken == false)
                         continue;
 
+                    sp = Stopwatch.StartNew();
+
                     Debug.Assert(string.Equals(Name, record.DatabaseName, StringComparison.OrdinalIgnoreCase),
                         $"{Name} != {record.DatabaseName}");
 
@@ -1282,7 +1287,7 @@ namespace Raven.Server.Documents
                         SetUnusedDatabaseIds(record);
                         InitializeFromDatabaseRecord(record);
                         IndexStore.HandleDatabaseRecordChange(record, index);
-                        ReplicationLoader?.HandleDatabaseRecordChange(record);
+                        ReplicationLoader?.HandleDatabaseRecordChange(record, index);
                         EtlLoader?.HandleDatabaseRecordChange(record);
                         SubscriptionStorage?.HandleDatabaseRecordChange(record);
 
@@ -1303,7 +1308,28 @@ namespace Raven.Server.Documents
                 finally
                 {
                     if (taken)
+                    {
                         Monitor.Exit(_clusterLocker);
+
+                        if (sp?.Elapsed > TimeSpan.FromSeconds(10))
+                        {
+                            if (_logger.IsOperationsEnabled)
+                            {
+                                using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                                using (ctx.OpenReadTransaction())
+                                {
+                                    var logs = ServerStore.Engine.LogHistory.GetLogByIndex(ctx, index).Select(djv => ctx.ReadObject(djv, "djv").ToString());
+                                    var msg =
+                                        $"Lock held for a very long time {sp.Elapsed} in database {Name} for index {index} ({string.Join(", ", logs)})";
+                                    _logger.Operations(msg);
+
+#if !RELEASE
+                                    Console.WriteLine(msg);   
+#endif
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
