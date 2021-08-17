@@ -9,18 +9,20 @@ namespace Sparrow.Server
     public class AsyncManualResetEvent : IDisposable
     {
         private volatile TaskCompletionSource<bool> _tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly CancellationTokenSource _cts = new CancellationTokenSource();
         private readonly CancellationToken _token;
         private readonly CancellationTokenRegistration _cancellationTokenRegistration;
 
         public AsyncManualResetEvent()
         {
-            _token = CancellationToken.None;
+            _token = _cts.Token;
         }
 
         public AsyncManualResetEvent(CancellationToken token)
         {
             _cancellationTokenRegistration = token.Register(() => _tcs.TrySetCanceled());
-            _token = token;
+            _cts = CancellationTokenSource.CreateLinkedTokenSource(token);
+            _token = _cts.Token;
         }
 
         public Task<bool> WaitAsync()
@@ -56,7 +58,7 @@ namespace Sparrow.Server
                   tcs.TrySetResult(t.Result);
               }, token);
 
-            using (token.Register(() => tcs.TrySetCanceled(token)))
+            await using (token.Register(() => tcs.TrySetCanceled(token)))
             {
                 return await tcs.Task.ConfigureAwait(false);
             }
@@ -182,7 +184,9 @@ namespace Sparrow.Server
         public void Dispose()
         {
             GC.SuppressFinalize(this);
+            _cts.Cancel();
             _cancellationTokenRegistration.Dispose();
+            _cts.Dispose();
         }
     }
 }

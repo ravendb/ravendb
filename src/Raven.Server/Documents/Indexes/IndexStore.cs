@@ -2385,6 +2385,17 @@ namespace Raven.Server.Documents.Indexes
                 _command.Static.Add(definition);
             }
 
+            public async Task SaveIfNeeded()
+            {
+                if (_command == null)
+                    return;
+
+                if (_command.Static.Count + _command.Auto.Count > 50)
+                {
+                    await SaveAsync();
+                }
+            }
+
             public async Task SaveAsync()
             {
                 if (_command == null || _command.Static.Count == 0 && _command.Auto.Count == 0)
