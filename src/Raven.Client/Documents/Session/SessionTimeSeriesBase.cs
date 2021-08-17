@@ -124,7 +124,7 @@ namespace Raven.Client.Documents.Session
             }
         }
 
-        public void Increment(DateTime timestamp, long delta)
+        public void Increment(DateTime timestamp, IEnumerable<double> values)
         {
             if (Session.DocumentsById.TryGetValue(DocId, out DocumentInfo documentInfo) &&
                 Session.DeletedEntities.Contains(documentInfo.Entity))
@@ -133,7 +133,7 @@ namespace Raven.Client.Documents.Session
             var op = new TimeSeriesOperation.IncrementOperation()
             {
                 Timestamp = timestamp.EnsureUtc(),
-                Delta = delta
+                Values = values.ToArray()
             };
 
             if (Session.DeferredCommandsDictionary.TryGetValue((DocId, CommandType.TimeSeries, Name), out var command))
@@ -145,6 +145,21 @@ namespace Raven.Client.Documents.Session
             {
                 Session.Defer(new TimeSeriesBatchCommandData(DocId, Name, appends: null, deletes: null, increments: new List<TimeSeriesOperation.IncrementOperation> { op }));
             }
+        }
+
+        public void Increment(IEnumerable<double> values)
+        {
+            Increment(DateTime.UtcNow, values);
+        }
+
+        public void Increment(DateTime timestamp, double value)
+        {
+            Increment(timestamp, new [] {value});
+        }
+
+        public void Increment( double value)
+        {
+            Increment(DateTime.UtcNow, new [] { value });
         }
 
         private static void ThrowDocumentAlreadyDeletedInSession(string documentId, string timeseries)

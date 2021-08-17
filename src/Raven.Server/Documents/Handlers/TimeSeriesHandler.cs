@@ -875,15 +875,14 @@ namespace Raven.Server.Documents.Handlers
                 if (_operation.Appends?.Count > 0 == false)
                     return changes;
 
-                (string changeVector, int operationsCount) = tss.AppendTimestamp(context,
+                LastChangeVector = tss.AppendTimestamp(context,
                     _documentId,
                     docCollection,
                     _operation.Name,
                     _operation.Appends
                 );
 
-                LastChangeVector = changeVector;
-                changes += operationsCount;
+                changes += _operation.Appends.Count;
 
                 return changes;
             }

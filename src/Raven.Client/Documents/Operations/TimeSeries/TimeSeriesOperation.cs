@@ -13,29 +13,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         private bool _appendSorted;
         private List<AppendOperation> _appends;
 
-        public class AppendOperationEqualityComparer : IEqualityComparer<AppendOperation>
-        {
-            public static AppendOperationEqualityComparer Instance = new AppendOperationEqualityComparer();
-
-            public bool Equals(AppendOperation x, AppendOperation y)
-            {
-                if (ReferenceEquals(x, y))
-                    return true;
-                if (ReferenceEquals(x, null))
-                    return false;
-                if (ReferenceEquals(y, null))
-                    return false;
-                if (x.GetType() != y.GetType())
-                    return false;
-                return x.Timestamp.Equals(y.Timestamp) && x.Tag.Equals(y.Tag, StringComparison.Ordinal);
-            }
-
-            public int GetHashCode(AppendOperation obj)
-            {
-                return HashCode.Combine(obj.Timestamp, obj.Tag);
-            }
-        }
-        private class AppendOperationComparer : IComparer<AppendOperation>
+        public class AppendOperationComparer : IComparer<AppendOperation>
         {
             public static AppendOperationComparer Instance = new AppendOperationComparer();
 
@@ -46,7 +24,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                 if (ReferenceEquals(null, x)) return -1;
                 int timestampComparison = x.Timestamp.CompareTo(y.Timestamp);
                 if (timestampComparison != 0) return timestampComparison;
-                return string.Compare(x.Tag, y.Tag, StringComparison.Ordinal);
+                return string.Compare(x.Tag, y.Tag, StringComparison.OrdinalIgnoreCase);
             }
         }
 
@@ -97,7 +75,6 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         public void Increment(IncrementOperation incrementOperation)
         {
             Increments ??= new List<IncrementOperation>();
-            incrementOperation.Timestamp = incrementOperation.Timestamp.EnsureUtc().EnsureMilliseconds();
             Increments.Add(incrementOperation);
         }
 
@@ -391,21 +368,26 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         public class IncrementOperation
         {
             public DateTime Timestamp;
-            public long  Delta;
+            public double[] Values;
 
             internal static IncrementOperation Parse(BlittableJsonReaderObject input)
             {
                 if (input.TryGet(nameof(Timestamp), out DateTime ts) == false)
                     throw new InvalidDataException($"Missing '{nameof(Timestamp)}' property");
 
-                if(input.TryGet(nameof(Delta), out long delta) == false)
-                    throw new InvalidDataException($"Missing '{nameof(Delta)}' property");
+                if (input.TryGet(nameof(Values), out BlittableJsonReaderArray values) == false || values == null)
+                    throw new InvalidDataException($"Missing '{nameof(Values)}' property");
 
+                var doubleValues = new double[values.Length];
+                for (int i = 0; i < doubleValues.Length; i++)
+                {
+                    doubleValues[i] = values.GetByIndex<double>(i);
+                }
 
                 var op = new IncrementOperation
                 {
                     Timestamp = ts,
-                    Delta = delta
+                    Values = doubleValues
                 };
 
                 return op;
@@ -416,7 +398,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                 return new DynamicJsonValue
                 {
                     [nameof(Timestamp)] = Timestamp,
-                    [nameof(Delta)] = Delta
+                    [nameof(Values)] = new DynamicJsonArray(Values.Select(x => (object)x))
                 };
             }
         }

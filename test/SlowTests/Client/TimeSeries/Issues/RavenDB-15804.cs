@@ -77,7 +77,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                     using (var session = storeA.OpenSession())
                     {
                         var ts = session.TimeSeriesFor("users/ayende", "HeartRate");
-                        for (int j = 0; j < 10; j++)
+                        for (int j = 0; j < 100; j++)
                         {
                             ts.Append(baseline.AddMinutes(i), _rng.Next(-10, 10), $"foo-{i}");
                         }
@@ -90,7 +90,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                     using (var session = storeB.OpenSession())
                     {
                         var ts = session.TimeSeriesFor("users/ayende", "HeartRate");
-                        for (int j = 0; j < 10; j++)
+                        for (int j = 0; j < 100; j++)
                         {
                             ts.Append(baseline.AddMinutes(i), _rng.Next(-10, 10), $"bar-{i}");
                         }
@@ -228,7 +228,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                 using (var session = store.OpenSession())
                 {
                     var ts = session.TimeSeriesFor("users/ayende", "HeartRate").Get(baseline);
-                    Assert.Equal(3, ts.Length); // "foo", "bar" , "baz"
+                    Assert.Equal(3, ts.Length); // "bar" , "baz" , "foo"
                 }
             }
         }
@@ -317,7 +317,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                 using (var session = store.OpenSession())
                 {
                     var ts = session.TimeSeriesFor("users/ayende", "HeartRate").Get(baseline);
-                    Assert.Equal(4, ts.Length); // "Baz", "baz", "foo", "grisha"
+                    Assert.Equal(3, ts.Length); //  "baz", "foo", "grisha"
                 }
             }
         }
@@ -384,6 +384,60 @@ namespace SlowTests.Client.TimeSeries.Issues
                     var sum = ts.Sum(x => x.Value);
 
                     Assert.Equal(200_000, sum);
+                }
+            }
+        }
+
+        [Fact]
+        public void MultiIncrementOperationsOnTimeSeriesShouldWork3()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new { Name = "Oren" }, "users/ayende");
+                    var ts = session.TimeSeriesFor("users/ayende", "HeartRate");
+                    for (int i = 0; i < 100_000; i++)
+                    {
+                        ts.Increment(1);
+                    }
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var ts = session.TimeSeriesFor("users/ayende", "HeartRate").Get();
+                    var sum = ts.Sum(x => x.Value);
+
+                    Assert.Equal(100_000, sum);
+                }
+            }
+        }
+
+        [Fact]
+        public void MultiIncrementOperationsOnTimeSeriesShouldWork4()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new { Name = "Oren" }, "users/ayende");
+                    var ts = session.TimeSeriesFor("users/ayende", "HeartRate");
+                    for (int i = 0; i < 100_000; i++)
+                    {
+                        ts.Increment(new double[]{1,1,1});
+                    }
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var ts = session.TimeSeriesFor("users/ayende", "HeartRate").Get();
+                    var sum = ts.Sum(x => x.Values.Sum());
+
+                    Assert.Equal(300_000, sum);
                 }
             }
         }

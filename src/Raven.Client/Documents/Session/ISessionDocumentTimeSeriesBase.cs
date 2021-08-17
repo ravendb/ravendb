@@ -58,7 +58,13 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Increment the value of the times series at the provided time stamp
         /// </summary>
-        void Increment(DateTime timestamp, long delta);
+        void Increment(DateTime timestamp, IEnumerable<double> values);
+
+        void Increment(IEnumerable<double> values);
+
+        void Increment(DateTime timestamp, double value);
+
+        void Increment(double value);
 
     }
 

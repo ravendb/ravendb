@@ -144,7 +144,7 @@ namespace Raven.Server.Documents.TimeSeries
                 ThrowInvalidDelta();
 
             if (Header->NumberOfEntries == ushort.MaxValue)
-                return false; // TODO check last time-stamp with current and throw if equal
+                return false;
 
             var maximumSize =
                     sizeof(BitsBufferHeader) +

@@ -87,6 +87,22 @@ namespace Sparrow.Json
             }
         }
 
+        public class LazyStringComparer : IComparer<LazyStringValue>
+        {
+            public static LazyStringComparer Instance = new LazyStringComparer();
+
+            public int Compare(LazyStringValue x, LazyStringValue y)
+            {
+                if (ReferenceEquals(x, y))
+                    return 0;
+                if (ReferenceEquals(null, y))
+                    return 1;
+                if (ReferenceEquals(null, x))
+                    return -1;
+                return CompareToOrdinalIgnoreCase(x.Buffer, x.Size, y.Buffer, y.Size);
+            }
+        }
+
         public bool EqualsOrdinalIgnoreCase(LazyStringValue other)
         {
             return CompareToOrdinalIgnoreCase(this.Buffer, Size, other.Buffer, other.Size) == 0;

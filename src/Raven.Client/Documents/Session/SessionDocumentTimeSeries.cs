@@ -98,9 +98,23 @@ namespace Raven.Client.Documents.Session
             _asyncSessionTimeSeries.Delete(at);
         }
 
-        public void Increment(DateTime timestamp, long delta)
+        public void Increment(DateTime timestamp, IEnumerable<double> values)
         {
-            _asyncSessionTimeSeries.Increment(timestamp, delta);
+            _asyncSessionTimeSeries.Increment(timestamp, values);
+        }
+
+        public void Increment(IEnumerable<double> values)
+        {
+            Increment(DateTime.UtcNow, values);
+        }
+
+        public void Increment(DateTime timestamp, double value)
+        {
+            Increment(timestamp, new []{value});
+        }
+        public void Increment(double value)
+        {
+            Increment(DateTime.UtcNow, new [] { value });
         }
 
         IEnumerator<TimeSeriesEntry> ITimeSeriesStreamingBase<TimeSeriesEntry>.Stream(DateTime? @from, DateTime? to, TimeSpan? offset)
