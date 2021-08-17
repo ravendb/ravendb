@@ -100,6 +100,7 @@ namespace FastTests
 
             BackupTask.DateTimeFormat = "yyyy-MM-dd-HH-mm-ss-fffffff";
             RestorePointsBase.BackupFolderRegex = new Regex(@"([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{2}-[0-9]{2}(-[0-9]{2}-[0-9]{7})?).ravendb-(.+)-([A-Za-z]+)-(.+)$", RegexOptions.Compiled);
+            RestorePointsBase.FileNameRegex = new Regex(@"([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{2}-[0-9]{2}(-[0-9]{2}-[0-9]{7})?)", RegexOptions.Compiled);
 
 #if DEBUG2
             TaskScheduler.UnobservedTaskException += (sender, args) =>
