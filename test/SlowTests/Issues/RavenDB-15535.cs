@@ -31,7 +31,7 @@ namespace SlowTests.Issues
         [Fact]
         public async Task MissingRevisions()
         {
-            var (node, leader) = await CreateRaftCluster(3, watcherCluster: true);
+            var (nodes, leader) = await CreateRaftCluster(3, watcherCluster: true);
             var database = GetDatabaseName();
             await CreateDatabaseInClusterInner(new DatabaseRecord(database), 3, leader.WebUrl, null);
             using (var store = new DocumentStore
@@ -88,7 +88,7 @@ namespace SlowTests.Issues
                 {
                     session.Store(new User() { Name = "userT" }, "users/1");
                     session.SaveChanges();
-                    await WaitForDocumentInClusterAsync<User>((DocumentSession)session, "users/1", null, TimeSpan.FromSeconds(15));
+                      await WaitForDocumentInClusterAsync<User>(nodes, database, "users/1", null, TimeSpan.FromSeconds(15));
                 }
 
                 var documentDatabase = await testServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
@@ -108,7 +108,7 @@ namespace SlowTests.Issues
         [Fact]
         public async Task MissingRevisions2()
         {
-            var (node, leader) = await CreateRaftCluster(3, watcherCluster: true);
+            var (nodes, leader) = await CreateRaftCluster(3, watcherCluster: true);
             var database = GetDatabaseName();
             await CreateDatabaseInClusterInner(new DatabaseRecord(database), 3, leader.WebUrl, null);
             using (var store = new DocumentStore
@@ -146,7 +146,7 @@ namespace SlowTests.Issues
                 {
                     session.Store(new User() { Name = "Toli" }, "users/2");
                     session.SaveChanges();
-                    await WaitForDocumentInClusterAsync<User>((DocumentSession)session, "users/2", null, TimeSpan.FromSeconds(15));
+                     await WaitForDocumentInClusterAsync<User>(nodes, database, "users/2", null, TimeSpan.FromSeconds(15));
                 }
 
                 var revisionCountList = new List<long>();
@@ -234,7 +234,7 @@ namespace SlowTests.Issues
         [Fact]
         public async Task MissingRevisions4()
         {
-            var (node, leader) = await CreateRaftCluster(3, watcherCluster: true);
+            var (nodes, leader) = await CreateRaftCluster(3, watcherCluster: true);
             var database = GetDatabaseName();
             await CreateDatabaseInClusterInner(new DatabaseRecord(database), 3, leader.WebUrl, null);
             using (var store = new DocumentStore
@@ -265,7 +265,7 @@ namespace SlowTests.Issues
                     session.Store(new User() { Name = "userT1" }, "users/1");
                     session.Delete("users/2");
                     session.SaveChanges();
-                    await WaitForDocumentInClusterAsync<User>((DocumentSession)session, "users/1", null, TimeSpan.FromSeconds(15));
+                    await WaitForDocumentInClusterAsync<User>(nodes, database, "users/1", null, TimeSpan.FromSeconds(15));
                 }
 
                 var revisionCountList = new List<long>();
@@ -287,7 +287,7 @@ namespace SlowTests.Issues
         [Fact]
         public async Task MissingRevisions5()
         {
-            var (node, leader) = await CreateRaftCluster(3, watcherCluster: true);
+            var (nodes, leader) = await CreateRaftCluster(3, watcherCluster: true);
             var database = GetDatabaseName();
             await CreateDatabaseInClusterInner(new DatabaseRecord(database), 3, leader.WebUrl, null);
             using (var store = new DocumentStore
@@ -325,7 +325,7 @@ namespace SlowTests.Issues
                 {
                     session.Store(new User() { Name = "Toli" }, "users/3");
                     session.SaveChanges();
-                    await WaitForDocumentInClusterAsync<User>((DocumentSession)session, "users/3", null, TimeSpan.FromSeconds(15));
+                    await WaitForDocumentInClusterAsync<User>(nodes, database, "users/3", null, TimeSpan.FromSeconds(15));
                 }
 
                 var revisionCountList = new List<long>();
@@ -361,7 +361,7 @@ namespace SlowTests.Issues
         [Fact]
         public async Task MissingRevisions6()
         {
-            var (node, leader) = await CreateRaftCluster(3, watcherCluster: true);
+            var (nodes, leader) = await CreateRaftCluster(3, watcherCluster: true);
             var database = GetDatabaseName();
             await CreateDatabaseInClusterInner(new DatabaseRecord(database), 3, leader.WebUrl, null);
             using (var store = new DocumentStore
@@ -400,7 +400,7 @@ namespace SlowTests.Issues
                 {
                     session.Store(new User() { Name = "Toli" }, "users/3");
                     session.SaveChanges();
-                    await WaitForDocumentInClusterAsync<User>((DocumentSession)session, "users/3", null, TimeSpan.FromSeconds(15));
+                    await WaitForDocumentInClusterAsync<User>(nodes, database, "users/3", null, TimeSpan.FromSeconds(15));
                 }
 
                 var revisionCountList = new List<long>();

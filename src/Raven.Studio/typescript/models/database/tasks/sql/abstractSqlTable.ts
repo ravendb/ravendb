@@ -33,7 +33,7 @@ abstract class abstractSqlTable {
     }
     
     getColumnsMapping(binaryToAttachment: boolean) {
-        const mapping = {} as dictionary<string>;
+        const mapping: dictionary<string> = {};
         this.documentColumns()
             .filter(x => binaryToAttachment ? x.type !== "Binary" : true)
             .forEach(column => {
@@ -43,7 +43,7 @@ abstract class abstractSqlTable {
     }
     
     getAttachmentsMapping(binaryToAttachment: boolean) {
-        const mapping = {} as dictionary<string>;
+        const mapping: dictionary<string> = {};
         
         if (!binaryToAttachment) {
             return mapping;

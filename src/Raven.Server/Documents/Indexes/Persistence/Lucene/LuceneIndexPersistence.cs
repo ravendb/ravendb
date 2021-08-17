@@ -39,6 +39,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private static readonly StopAnalyzer StopAnalyzer = new StopAnalyzer(Version.LUCENE_30);
 
         private LuceneIndexWriter _indexWriter;
+        public override bool HasWriter => _indexWriter != null;
+
         private Dictionary<string, LuceneSuggestionIndexWriter> _suggestionsIndexWriters;
 
         private SnapshotDeletionPolicy _snapshotter;
@@ -194,10 +196,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         }
 
         private bool _indexWriterCleanupNeeded;
-        
+
         public override void CleanWritersIfNeeded()
         {
-            if(_indexWriterCleanupNeeded == false)
+            if (_indexWriterCleanupNeeded == false)
                 return;
 
             DisposeWriters();
@@ -213,12 +215,16 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             if (mode.HasFlag(IndexCleanup.Writers))
             {
-                _indexWriterCleanupNeeded = true;
-                _index.ScheduleIndexingRun();
+                if (_indexWriter != null)
+                {
+                    // schedule index run only if clean is really needed
+                    _indexWriterCleanupNeeded = true;
+                    _index.ScheduleIndexingRun();
+                }
             }
 
             if (mode.HasFlag(IndexCleanup.Readers))
-                {
+            {
                 lock (_readersLock)
                 {
                     _lastReader?.DecRef(null);

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Indexing;
 using Sparrow.Json;
@@ -19,8 +18,10 @@ namespace Raven.Server.Documents.Indexes.Persistence
             _index = index;
         }
 
+        public abstract bool HasWriter { get; }
+
         public abstract void CleanWritersIfNeeded();
-        
+
         public abstract void Clean(IndexCleanup mode);
 
         public abstract void Initialize(StorageEnvironment environment);
@@ -35,12 +36,12 @@ namespace Raven.Server.Documents.Indexes.Persistence
 
         public abstract bool ContainsField(string field);
         public abstract IndexFacetedReadOperation OpenFacetedIndexReader(Transaction readTransaction);
-        public abstract SuggestionIndexReaderBase OpenSuggestionIndexReader(Transaction readTransaction, string field);        
+        public abstract SuggestionIndexReaderBase OpenSuggestionIndexReader(Transaction readTransaction, string field);
         internal abstract void RecreateSearcher(Transaction asOfTx);
         internal abstract void RecreateSuggestionsSearchers(Transaction asOfTx);
         public abstract void DisposeWriters();
         public abstract void Dispose();
     }
 
-   
+
 }

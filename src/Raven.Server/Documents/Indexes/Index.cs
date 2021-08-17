@@ -142,6 +142,8 @@ namespace Raven.Server.Documents.Indexes
 
         internal PoolOfThreads.LongRunningWork _indexingThread;
 
+        private bool CalledUnderIndexingThread => _indexingThread?.ManagedThreadId == Thread.CurrentThread.ManagedThreadId;
+
         private bool _initialized;
 
         protected UnmanagedBuffersPoolWithLowMemoryHandling _unmanagedBuffersPool;
@@ -1346,10 +1348,14 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
+        private NativeMemory.ThreadStats _indexingThreadStats; 
+
         protected void ExecuteIndexing()
         {
             _priorityChanged.Raise();
             NativeMemory.EnsureRegistered();
+            _indexingThreadStats = NativeMemory.CurrentThreadStats;
+
             using (CultureHelper.EnsureInvariantCulture())
             {
                 // if we are starting indexing e.g. manually after failure
@@ -1890,22 +1896,29 @@ namespace Raven.Server.Documents.Indexes
 
             try
             {
-                var allocatedBeforeCleanup = NativeMemory.CurrentThreadStats.TotalAllocated;
+                var indexingStats = _indexingThreadStats ?? NativeMemory.CurrentThreadStats;
+
+                var allocatedBeforeCleanup = indexingStats.TotalAllocated;
                 if (allocatedBeforeCleanup == _allocatedAfterPreviousCleanup)
                     return;
 
                 DocumentDatabase.DocumentsStorage.ContextPool.Clean();
                 _contextPool.Clean();
+                
+                if (CalledUnderIndexingThread)
+                {
                 ByteStringMemoryCache.CleanForCurrentThread();
+                }
+
                 IndexPersistence.Clean(mode);
                 environment?.Cleanup();
 
                 _currentMaximumAllowedMemory = DefaultMaximumMemoryAllocation;
 
-                _allocatedAfterPreviousCleanup = NativeMemory.CurrentThreadStats.TotalAllocated;
+                _allocatedAfterPreviousCleanup = indexingStats.TotalAllocated;
                 if (_logger.IsInfoEnabled)
                 {
-                    _logger.Info($"Reduced the memory usage of index '{Name}'. " +
+                    _logger.Info($"Reduced the memory usage of index '{Name}' (mode:{mode}). " +
                                  $"Before: {new Size(allocatedBeforeCleanup, SizeUnit.Bytes)}, " +
                                  $"after: {new Size(_allocatedAfterPreviousCleanup, SizeUnit.Bytes)}");
                 }
@@ -2287,10 +2300,10 @@ namespace Raven.Server.Documents.Indexes
         public abstract IIndexedItemEnumerator GetMapEnumerator(IEnumerable<IndexItem> items, string collection, TransactionOperationContext indexContext,
             IndexingStatsScope stats, IndexType type);
 
-        public abstract void HandleDelete(Tombstone tombstone, string collection, IndexWriteOperationBase writer,
+        public abstract void HandleDelete(Tombstone tombstone, string collection, Lazy<IndexWriteOperationBase> writer,
             TransactionOperationContext indexContext, IndexingStatsScope stats);
 
-        public abstract int HandleMap(IndexItem indexItem, IEnumerable mapResults, IndexWriteOperationBase writer,
+        public abstract int HandleMap(IndexItem indexItem, IEnumerable mapResults, Lazy<IndexWriteOperationBase> writer,
             TransactionOperationContext indexContext, IndexingStatsScope stats);
 
         private void HandleIndexChange(IndexChange change)
@@ -4124,7 +4137,7 @@ namespace Raven.Server.Documents.Indexes
         }
 
         public CanContinueBatchResult CanContinueBatch(IndexingStatsScope stats, QueryOperationContext queryContext, TransactionOperationContext indexingContext,
-            IndexWriteOperationBase indexWriteOperationBase, long currentEtag, long maxEtag, long count,
+            Lazy<IndexWriteOperationBase> indexWriteOperation, long currentEtag, long maxEtag, long count,
             Stopwatch sw, ref TimeSpan maxTimeForDocumentTransactionToRemainOpen)
         {
             if (Configuration.MapBatchSize.HasValue && count >= Configuration.MapBatchSize.Value)
@@ -4170,7 +4183,7 @@ namespace Raven.Server.Documents.Indexes
                 return CanContinueBatchResult.False;
             }
 
-            var txAllocationsInBytes = UpdateThreadAllocations(indexingContext, indexWriteOperationBase, stats, updateReduceStats: false);
+            var txAllocationsInBytes = UpdateThreadAllocations(indexingContext, indexWriteOperation, stats, updateReduceStats: false);
 
             // we need to take the read transaction encryption size into account as we might read a lot of documents and produce very little indexing output.
             txAllocationsInBytes += queryContext.Documents.Transaction.InnerTransaction.LowLevelTransaction.AdditionalMemoryUsageSize.GetValue(SizeUnit.Bytes);
@@ -4339,7 +4352,7 @@ namespace Raven.Server.Documents.Indexes
 
         public long UpdateThreadAllocations(
             TransactionOperationContext indexingContext,
-            IndexWriteOperationBase indexWriteOperation,
+            Lazy<IndexWriteOperationBase> indexWriteOperation,
             IndexingStatsScope stats,
             bool updateReduceStats)
         {
@@ -4352,9 +4365,9 @@ namespace Raven.Server.Documents.Indexes
             long indexWriterAllocations = 0;
             long luceneFilesAllocations = 0;
 
-            if (indexWriteOperation != null)
+            if (indexWriteOperation?.IsValueCreated == true)
             {
-                var allocations = indexWriteOperation.GetAllocations();
+                var allocations = indexWriteOperation.Value.GetAllocations();
                 indexWriterAllocations = allocations.RamSizeInBytes;
                 luceneFilesAllocations = allocations.FilesAllocationsInBytes;
             }

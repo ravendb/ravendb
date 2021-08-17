@@ -1,11 +1,10 @@
 <div>
     <div class="cluster-dashboard-item-header">
         <h3> <i class="icon-license-information"></i> <span>License</span></h3>
-        <button class="btn btn-warning btn-sm" data-bind="click: remove">
+        <button class="btn btn-warning btn-sm" data-bind="click: remove" title="Remove widget from board">
             <i class="icon-trash"></i>
         </button>
     </div>
-
     <div class="license-information">
         <div class="license-item">
             <i class="icon-license"></i>
@@ -14,7 +13,6 @@
                 <div class="license-item-value" data-bind="text: licenseTypeText"></div>
             </div>
         </div>
-
         <div class="license-item">
             <i class="icon-calendar"></i>
             <div>
@@ -25,7 +23,6 @@
                 </div>
             </div>
         </div>
-
         <div class="license-item">
             <i class="icon-support"></i>
             <div>
@@ -33,14 +30,11 @@
                 <div class="license-item-value" data-bind="text: supportLabel"></div>
             </div>
         </div>
-
         <div class="license-item" data-bind="visible: canLoadCertificateInfo()">
             <i class="icon-certificate"></i>
             <div>
-                
                 <h4>Server Certificate Expiration</h4>
                 <div class="global-spinner spinner-sm" data-bind="visible: spinners.serverCertificate"></div>
-                
                 <div data-bind="with: serverCertificateInfo">
                     <div class="license-item-value">
                         <span data-bind="text: dateFormatted"></span>
@@ -50,7 +44,6 @@
                 </div>
             </div>
         </div>
-
         <a data-bind="attr: { href: aboutPageUrl }" class="btn btn-sm license-link">License details</a>
     </div>
 </div>

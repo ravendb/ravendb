@@ -726,38 +726,54 @@ namespace Raven.Server.Documents
             return lastEtag;
         }
 
-        public IEnumerable<Document> GetDocumentsStartingWith(DocumentsOperationContext context, string idPrefix, string matches, string exclude, string startAfterId,
-            long start, long take, string collection, DocumentFields fields = DocumentFields.All)
+        public IEnumerable<Document> GetDocumentsStartingWith(DocumentsOperationContext context, string idPrefix,  string startAfterId,
+            long start, long take, string collection, Reference<long> skippedResults, DocumentFields fields = DocumentFields.All)
         {
+            int alreadyReturnedDocumentsCount = 0;
+            int lastLoadedDocumentsCount;
             var isAllDocs = collection == Constants.Documents.Collections.AllDocumentsCollection;
             var requestedDataField = fields.HasFlag(DocumentFields.Data);
             if (isAllDocs == false && requestedDataField == false)
                 fields |= DocumentFields.Data;
-
-            foreach (var doc in GetDocumentsStartingWith(context, idPrefix, matches, exclude, startAfterId, start, take, fields: fields))
+            
+            do
             {
-                if (isAllDocs)
+                lastLoadedDocumentsCount = 0;
+                foreach (var doc in GetDocumentsStartingWith(context, idPrefix, null, null, startAfterId, start, take, fields: fields))
                 {
+                    lastLoadedDocumentsCount++;
+                    if (isAllDocs)
+                    {
+                        yield return doc;
+                        continue;
+                    }
+
+                    if (IsCollectionMatch(doc, collection) == false)
+                    {
+                        skippedResults.Value++;
+                        doc.Dispose();
+                        continue;
+                    }
+
+                    if (requestedDataField == false)
+                    {
+                        doc.Data.Dispose();
+                        doc.Data = null;
+                    }
+
+                    alreadyReturnedDocumentsCount++;
                     yield return doc;
-                    continue;
+
+                    if (alreadyReturnedDocumentsCount >= take)
+                        break;
+
                 }
 
-                if (IsMatch(doc, collection) == false)
-                {
-                    doc.Dispose();
-                    continue;
-                }
-
-                if (requestedDataField == false)
-                {
-                    doc.Data.Dispose();
-                    doc.Data = null;
-                }
-
-                yield return doc;
+                start += take;
             }
+            while (alreadyReturnedDocumentsCount != take && lastLoadedDocumentsCount > 0);
 
-            static bool IsMatch(Document doc, string collection)
+            static bool IsCollectionMatch(Document doc, string collection)
             {
                 if (doc.TryGetMetadata(out var metadata) == false)
                     return false;
@@ -1599,19 +1615,26 @@ namespace Raven.Server.Documents
                 {
                     tombstoneTable.Delete(local.Tombstone.StorageId);
                 }
-
+                DocumentFlags flags;
                 var localFlags = local.Tombstone.Flags.Strip(DocumentFlags.FromClusterTransaction);
-                var flags = localFlags | documentFlags;
-
-                if (collectionName.IsHiLo == false &&
-                    (flags & DocumentFlags.Artificial) != DocumentFlags.Artificial)
+                if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByEnforceRevisionConfiguration))
                 {
-                    var revisionsStorage = DocumentDatabase.DocumentsStorage.RevisionsStorage;
-                    if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) == false &&
-                        (revisionsStorage.Configuration != null || flags.Contain(DocumentFlags.Resolved)))
+                    flags = localFlags.Strip(DocumentFlags.HasRevisions);
+                }
+                else
+                {
+                    flags = localFlags | documentFlags;
+
+                    if (collectionName.IsHiLo == false &&
+                        (flags & DocumentFlags.Artificial) != DocumentFlags.Artificial)
                     {
-                        revisionsStorage.Delete(context, id, lowerId, collectionName, changeVector ?? local.Tombstone.ChangeVector,
-                            modifiedTicks, nonPersistentFlags, documentFlags);
+                        var revisionsStorage = DocumentDatabase.DocumentsStorage.RevisionsStorage;
+                        if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) == false &&
+                            (revisionsStorage.Configuration != null || flags.Contain(DocumentFlags.Resolved)))
+                        {
+                            revisionsStorage.Delete(context, id, lowerId, collectionName, changeVector ?? local.Tombstone.ChangeVector,
+                                modifiedTicks, nonPersistentFlags, documentFlags);
+                        }
                     }
                 }
 

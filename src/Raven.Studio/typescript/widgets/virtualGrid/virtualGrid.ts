@@ -799,7 +799,7 @@ class virtualGrid<T> {
 
     private setSelectedItems(selection: Array<T>) {
         this.inIncludeSelectionMode = true;
-        const selectedIdx = [] as Array<number>;
+        const selectedIdx: number[] = [];
         this.items.forEach((v, i) => {
            if (_.includes(selection, v)) {
                selectedIdx.push(i);

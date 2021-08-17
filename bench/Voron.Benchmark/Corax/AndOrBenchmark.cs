@@ -19,6 +19,7 @@ using Corax.Queries;
 using Raven.Server.Documents.Queries.Parser;
 using Sparrow.Server;
 using Sparrow.Threading;
+using Tryouts;
 
 namespace Voron.Benchmark.Corax
 {

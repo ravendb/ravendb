@@ -64,7 +64,7 @@ class storageReport extends viewModelBase {
         this.currentPath = ko.pureComputed(() => {
             const node = this.node();
 
-            const items = [] as Array<storageReportItem>;
+            const items: storageReportItem[] = [];
 
             let currentItem = node;
             while (currentItem) {
@@ -494,4 +494,4 @@ class storageReport extends viewModelBase {
     }
 }
 
-export = storageReport;    
+export = storageReport;

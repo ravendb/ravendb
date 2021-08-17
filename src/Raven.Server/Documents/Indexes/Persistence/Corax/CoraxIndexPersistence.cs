@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using Lucene.Net.Store;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Indexing;
 using Sparrow.Json;
@@ -16,6 +14,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         }
 
         internal override LuceneVoronDirectory LuceneDirectory { get; }
+        public override bool HasWriter => throw new NotImplementedException();
+
         public override void CleanWritersIfNeeded()
         {
             throw new NotImplementedException();

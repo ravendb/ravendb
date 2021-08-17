@@ -107,7 +107,7 @@ namespace SlowTests.Issues
 
                 indexingDuration.Stop();
 
-                Assert.True(indexingDuration.Elapsed >= TimeSpan.FromSeconds(4)); 
+                Assert.True(indexingDuration.Elapsed >= TimeSpan.FromSeconds(4), $"{indexingDuration.Elapsed} >= {TimeSpan.FromSeconds(4)}"); 
 
                 using (var session = store.OpenSession())
                 {

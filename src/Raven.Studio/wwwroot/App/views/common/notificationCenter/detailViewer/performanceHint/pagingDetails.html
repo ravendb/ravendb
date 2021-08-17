@@ -1,15 +1,12 @@
 <div class="modal-dialog modal-lg pagingDetails" role="document">
-    <div class="modal-content" tabindex="-1">
+    <div class="modal-content force-text-wrap-word" tabindex="-1">
         <div class="modal-header">
-            <div class="flex-horizontal">
-                <div class="flex-grow">
-                    <h3 class="modal-title" id="myModalLabel" data-bind="text: hint.title, attr:{ class: 'modal-title ' + hint.headerClass() }"></h3>
-                </div>
-                <div>
-                    <button type="button" class="close" data-bind="click: $root.close" aria-hidden="true">
-                        <i class="icon-cancel"></i>
-                    </button>
-                </div>
+            <button type="button" class="close" data-bind="click: close" aria-hidden="true">
+                <i class="icon-cancel"></i>
+            </button>
+            <div data-bind="with: hint">
+                <h3 class="modal-title" id="myModalLabel" data-bind="text: title, attr:{ class: 'modal-title ' + headerClass() }"></h3>
+                <div class="notification-time" data-bind="text: displayDate().format('LLL')"></div>
             </div>
         </div>
         <div class="modal-body">

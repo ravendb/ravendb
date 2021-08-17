@@ -7,14 +7,14 @@ import queryUtil = require("common/queryUtil");
 
 class queryCommand extends commandBase {
 
-    private static readonly missingEndOfQuery = "Expected end of query"; 
+    private static readonly missingEndOfQuery = "Expected end of query";
     
     constructor(private db: database, private skip: number, private take: number, private criteria: queryCriteria, private disableCache?: boolean) {
         super();
     }
 
     execute(): JQueryPromise<pagedResultExtended<document>> {
-        const selector = (results: Raven.Client.Documents.Queries.QueryResult<Array<any>, any>) =>
+        const selector = (results: Raven.Client.Documents.Queries.QueryResult<Array<any>, any>): pagedResultExtended<document> =>
             ({
                 items: results.Results.map(d => new document(d)), 
                 totalResultCount: results.CappedMaxResults || results.TotalResults, 
@@ -23,9 +23,10 @@ class queryCommand extends commandBase {
                 highlightings: results.Highlightings,
                 explanations: results.Explanations,
                 timings: results.Timings,
-                includes: results.Includes }) as pagedResultExtended<document>;
+                includes: results.Includes });
         
-        return this.query(this.getUrl(), null, this.db, selector)
+        return this.post<pagedResultExtended<document>>(this.getUrl(), this.getPayload(), this.db)
+            .then((results) => selector(results))
             .fail((response: JQueryXHR) => {
                 if (response.status === 404) {
                     this.reportError("Error querying index", "Index was not found", response.statusText)
@@ -52,13 +53,18 @@ class queryCommand extends commandBase {
 
         if (this.criteria.showFields()) {
             rql = queryUtil.replaceSelectAndIncludeWithFetchAllStoredFields(rql);
-        } 
+        }
         
         return [parameters, rql];
     }
 
     static extractQueryParameters(queryText: string) {
         const arrayOfLines = queryText.match(/[^\r\n]+/g);
+
+        // Check for this params format:
+        // from 'Orders' where (search(Freight, $p0))
+        // { "p0" : "8.53" }
+
         if (arrayOfLines.length > 0) {
             let index = arrayOfLines.length - 1;
             let line = arrayOfLines[index].trim();
@@ -81,6 +87,10 @@ class queryCommand extends commandBase {
             }
         }
 
+        // Check for this params format: 
+        // $p0 = "8.53"
+        // from 'Orders' where (search(Freight, $p0))
+        
         const parametersEndRegex = /^\s*(with|match|from|declare)/mi;
         const match = parametersEndRegex.exec(queryText);
         if (!match) {
@@ -98,26 +108,51 @@ f();
 `;
         let parameters = eval(parametersJs);
         const rql = queryText.substring(match.index);
-        return [parameters, rql];
+        return [JSON.parse(parameters), rql];
+    }
+
+    getPayload() {
+        const [parameters, rql] = this.getQueryText();
+        const payload = {
+            Query: rql,
+            Start: this.skip,
+            PageSize: this.take,
+            DisableCaching: this.disableCache ? Date.now() : undefined,
+            QueryParameters: parameters
+        }
+
+        return JSON.stringify(payload);
     }
     
-    getUrl() {
+    getUrl(method: "POST"|"GET" = "POST") {
         const criteria = this.criteria;
         const url = endpoints.databases.queries.queries;
-        const [parameters, rql] = this.getQueryText();
         
-        const urlArgs = this.urlEncodeArgs({
-            query: rql,
-            parameters: parameters,
-            start: this.skip,
-            pageSize: this.take,
+        const argsForPOST = {
             diagnostics: this.criteria.diagnostics() ? "true" : undefined,
             debug: criteria.indexEntries() ? "entries" : undefined,
-            disableCache: this.disableCache ? Date.now() : undefined,
             addTimeSeriesNames: true,
             addSpatialProperties: true,
-            metadataOnly: typeof(criteria.metadataOnly()) !== 'undefined' ? criteria.metadataOnly() : undefined,
-        });
+            metadataOnly: typeof(criteria.metadataOnly()) !== 'undefined' ? criteria.metadataOnly() : undefined
+        };
+        
+        let urlArgs = this.urlEncodeArgs(argsForPOST);
+        
+        if (method === "GET") {
+            const [parameters, rql] = this.getQueryText();
+            
+            const argsForGET = {
+                ...argsForPOST,
+                query: rql,
+                parameters: JSON.stringify(parameters),
+                start: this.skip,
+                pageSize: this.take,
+                disableCache: this.disableCache ? Date.now() : undefined
+            };
+            
+            urlArgs = this.urlEncodeArgs(argsForGET);
+        }
+        
         return url + urlArgs;
     }
 

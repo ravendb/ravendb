@@ -1,14 +1,14 @@
 <div>
     <div class="cluster-dashboard-item-header">
         <h3> <i class="icon-memory"></i> <span>Memory</span></h3>
-        <button class="btn btn-warning btn-sm" data-bind="click: remove">
+        <button class="btn btn-warning btn-sm" data-bind="click: remove" title="Remove widget from board">
             <i class="icon-trash"></i>
         </button>
         <button class="btn btn-default btn-sm" data-bind="click: toggleFullscreen">
-            <i data-bind="css: { 'icon-fullscreen': !fullscreen(), 'icon-exit-fullscreen': fullscreen }"></i>
+            <i data-bind="css: { 'icon-fullscreen': !fullscreen(), 'icon-exit-fullscreen': fullscreen },
+                          attr: { title: fullscreen() ? 'Minimize widget' : 'Maximize widget' }"></i>
         </button>
     </div>
-
     <div class="property-container" data-bind="css: { 'property-collapse': !showProcessDetails() }">
         <h4>RavenDB Memory usage</h4>
         <div class="property">
@@ -60,9 +60,7 @@
             <div class="graph-container ravendb-line-chart">
             </div>
         </div>
-
     </div>
-
     <div class="property-container" data-bind="css: { 'property-collapse': !showMachineDetails() }">
         <h4>Machine Memory usage</h4>
         <div class="property">
@@ -71,7 +69,6 @@
                     <i class="icon-arrow-down"></i>
                     <i class="icon-arrow-up"></i>
                 </button>
-
                 <div class="nodes-container" data-bind="foreach: nodeStats">
                     <div data-bind="attr: { class: 'nodes-item node-' + tag }, css: { 'no-data': !currentItem(), 'spinner': spinner }">
                         <div class="nodes-item-header">
@@ -81,7 +78,6 @@
                                 <span class="supplementary-info" data-bind="text: machineMemoryUsage"></span>
                             </div>
                         </div>
-
                         <div class="details-list">
                             <div class="details-item">
                                 <div class="details-item-name">Swap</div>
@@ -99,7 +95,6 @@
                     </div>
                 </div>
             </div>
-
             <div class="graph-container machine-line-chart">
             </div>
         </div>

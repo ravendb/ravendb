@@ -13,8 +13,6 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Microsoft.AspNetCore.WebUtilities;
-using Microsoft.Extensions.Primitives;
-using Org.BouncyCastle.Asn1.Cms;
 using Raven.Client;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Cluster;
@@ -24,11 +22,11 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.Util;
-using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Extensions;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.TrafficWatch;
 using Sparrow;
 using Sparrow.Json;
 
@@ -268,6 +266,11 @@ namespace Raven.Server.Web
             _responseStream = new StreamWithTimeout(HttpContext.Response.Body);
 
             _context.HttpContext.Response.RegisterForDispose(_responseStream);
+
+            if (TrafficWatchManager.HasRegisteredClients)
+            {
+                HttpContext.Items["ResponseStream"] = _responseStream;
+            }
 
             return _responseStream;
         }

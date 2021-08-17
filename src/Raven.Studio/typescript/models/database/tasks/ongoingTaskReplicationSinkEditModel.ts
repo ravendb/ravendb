@@ -74,6 +74,7 @@ class ongoingTaskReplicationSinkEditModel extends ongoingTaskEditModel {
             ConnectionStringName: this.connectionStringName(),
             HubName: this.hubName(),
             Mode: this.replicationMode(),
+            Disabled: this.taskState() === "Disabled",
             AccessName: accessInfo.replicationAccessName(),
             CertificatePassword: certificatePassphrase,
             CertificateWithPrivateKey: this.replicationAccess().serverCertificateSelected() ? null : certificate,

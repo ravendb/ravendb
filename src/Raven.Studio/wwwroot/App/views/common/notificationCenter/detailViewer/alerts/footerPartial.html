@@ -12,9 +12,11 @@
     </div>
     <div class="flex-separator"></div>
     <div>
-        <button type="button" class="btn btn-default" data-bind="click: $root.close">Close</button>
-        <button type="button" class="btn btn-primary" data-bind="click: $root.dismiss">
-            <i class="icon-cancel"></i> <span>Dismiss</span>
+        <button type="button" class="btn btn-default" data-bind="click: close" title="Close this dialog">
+            <i class="icon-cancel"></i><span>Close</span>
+        </button>
+        <button type="button" class="btn btn-primary" data-bind="click: dismiss" title="Dismiss this alert">
+            <i class="icon-dismiss-all"></i><span>Dismiss alert</span>
         </button>
     </div>
 </div>

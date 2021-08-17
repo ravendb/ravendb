@@ -231,7 +231,7 @@ class leafPageItem extends pageItem {
 
     nestedSection: boolean;
 
-    entries = [] as Array<entryItem | entryPaddingItem>;
+    entries: Array<entryItem | entryPaddingItem> = [];
 
     constructor(sourceObject: Raven.Server.Documents.Indexes.Debugging.ReduceTreePage, parentPage: branchPageItem, pageNumber: number, aggregationResult: any, nestedSection: boolean, entries: Array<entryItem | entryPaddingItem>) {
         super(sourceObject, parentPage, pageNumber, aggregationResult);
@@ -243,8 +243,8 @@ class leafPageItem extends pageItem {
         super.layout();
 
         const longestTextLength = _.max(this.entries
-            .filter(x => x instanceof entryItem)
-            .map(x => (x as entryItem).dataAsString.length));
+            .filter<entryItem>((x): x is entryItem => x instanceof entryItem)
+            .map(x => x.dataAsString.length));
 
         const longestTextWidth = longestTextLength ? entryItem.estimateTextWidth(longestTextLength) : entryPaddingItem.margins.minWidth;
 
@@ -296,7 +296,7 @@ class leafPageItem extends pageItem {
             }
         }
 
-        const result = [] as Array<entryItem | entryPaddingItem>;
+        const result: Array<entryItem | entryPaddingItem> = [];
         for (let i = 0; i < entries.length; i++) {
             if (entiresToTake[i]) {
                 const entry = new entryItem(entries[i].Source, entries[i].Data);
@@ -431,7 +431,7 @@ class reduceTreeItem {
             .filter((x: leafPageItem) => _.some(x.entries, (e: layoutableItem) => (e instanceof entryItem) && e.source))
             .map((x: leafPageItem) => x.pageNumber);
 
-        const collapsedItems = [] as Array<pageItem | collapsedLeafsItem>;
+        const collapsedItems: Array<pageItem | collapsedLeafsItem> = [];
         let currentAggregation: collapsedLeafsItem = null;
 
         for (let i = 0; i < levelItems.length; i++) {
@@ -548,7 +548,7 @@ class hitTest {
             maxY: item.y + item.height,
             actionType: "pageItemClicked",
             arg: item
-        } as rTreeLeaf);
+        });
     }
 
     reset() {
@@ -631,7 +631,7 @@ class visualizerGraphDetails {
 
     private hitTest = new hitTest();
 
-    private documents = [] as Array<documentItem>;
+    private documents: documentItem[] = [];
 
     private canvas: d3.Selection<void>;
     private svg: d3.Selection<void>;

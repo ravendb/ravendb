@@ -25,6 +25,8 @@ namespace Raven.Server.Documents.Patch
         private readonly bool _debugMode;
         protected readonly bool _returnDocument;
 
+        private bool ModifiedDocumentRequired => _externalContext != null || _returnDocument || _isTest || _debugMode;
+
         protected readonly (PatchRequest Run, BlittableJsonReaderObject Args) _patchIfMissing;
         private readonly BlittableJsonReaderObject _createIfMissing;
         protected readonly (PatchRequest Run, BlittableJsonReaderObject Args) _patch;
@@ -62,7 +64,8 @@ namespace Raven.Server.Documents.Patch
             if (runIfMissing != null)
                 runIfMissing.DebugMode = _debugMode;
 
-            var originalDocument = _database.DocumentsStorage.Get(context, id);
+            var originalDocument = GetCurrentDocument(context, id);
+
             if (expectedChangeVector != null)
             {
                 if (originalDocument == null)
@@ -109,9 +112,8 @@ namespace Raven.Server.Documents.Patch
                     };
                 }
 
-                object documentInstance;
+                object documentInstance = null;
                 var args = _patch.Args;
-                BlittableJsonReaderObject originalDoc = null;
                 if (originalDocument == null)
                 {
                     if (_createIfMissing == null)
@@ -120,16 +122,14 @@ namespace Raven.Server.Documents.Patch
                         args = _patchIfMissing.Args;
                         documentInstance = runIfMissing.CreateEmptyObject();
                     }
-                    else
-                    {
-                        documentInstance = null;
-                    }
                 }
                 else
                 {
                     id = originalDocument.Id; // we want to use the original Id casing
-                    documentInstance = UpdateOriginalDocument();
-                    
+                    if (originalDocument.Data != null)
+                    {
+                        documentInstance = (BlittableObjectInstance)((JsValue)run.Translate(context, originalDocument)).AsObject();
+                    }
                 }
 
                 try
@@ -149,14 +149,15 @@ namespace Raven.Server.Documents.Patch
 
 
                     var modifiedDoc = ExecuteScript(context, id, run, patchContext, documentInstance, args);
-                    var result = new PatchResult 
+
+                    var result = new PatchResult
                     {
                         Status = PatchStatus.NotModified,
-                        OriginalDocument = _isTest == false ? null : originalDoc?.Clone(context),
-                        ModifiedDocument = modifiedDoc
+                        OriginalDocument = _isTest == false ? null : originalDocument?.Data?.Clone(_externalContext ?? context),
+                        ModifiedDocument = ModifiedDocumentRequired == false ? null : modifiedDoc?.Clone(_externalContext ?? context)
                     };
 
-                    if (result.ModifiedDocument == null)
+                    if (modifiedDoc == null)
                     {
                         result.Status = PatchStatus.Skipped;
                         return result;
@@ -165,17 +166,16 @@ namespace Raven.Server.Documents.Patch
                     if (run?.RefreshOriginalDocument == true)
                     {
                         originalDocument?.Dispose();
-                        originalDocument = _database.DocumentsStorage.Get(context, id);
-                        UpdateOriginalDocument();
+                        originalDocument = GetCurrentDocument(context, id);
                     }
 
                     var nonPersistentFlags = HandleMetadataUpdates(context, id, run);
 
                     DocumentsStorage.PutOperationResults? putResult = null;
-                    if (originalDoc == null)
+                    if (originalDocument?.Data == null)
                     {
                         if (_isTest == false || run?.PutOrDeleteCalled == true || _createIfMissing != null)
-                            putResult = _database.DocumentsStorage.Put(context, id, null, result.ModifiedDocument, nonPersistentFlags: nonPersistentFlags);
+                            putResult = _database.DocumentsStorage.Put(context, id, null, modifiedDoc, nonPersistentFlags: nonPersistentFlags);
 
                         result.Status = PatchStatus.Created;
                     }
@@ -189,7 +189,7 @@ namespace Raven.Server.Documents.Patch
                         {
                             try
                             {
-                                compareResult = DocumentCompare.IsEqualTo(originalDoc, result.ModifiedDocument,
+                                compareResult = DocumentCompare.IsEqualTo(originalDocument.Data, modifiedDoc,
                                     DocumentCompare.DocumentCompareOptions.MergeMetadataAndThrowOnAttachmentModification);
                             }
                             catch (InvalidOperationException ioe)
@@ -207,7 +207,7 @@ namespace Raven.Server.Documents.Patch
                                     context,
                                     id,
                                     originalDocument.ChangeVector,
-                                    result.ModifiedDocument,
+                                    modifiedDoc,
                                     lastModifiedTicks: null,
                                     changeVector: null,
                                     oldChangeVectorForClusterTransactionIndexCheck: null,
@@ -228,9 +228,9 @@ namespace Raven.Server.Documents.Patch
 
                     if (_isTest && result.Status == PatchStatus.NotModified)
                     {
-                        using (var old = result.ModifiedDocument)
+                        using (var old = modifiedDoc)
                         {
-                            result.ModifiedDocument = originalDoc?.Clone(_externalContext ?? context);
+                            result.ModifiedDocument =  originalDocument?.Data?.Clone(_externalContext ?? context);
                         }
                     }
 
@@ -243,27 +243,26 @@ namespace Raven.Server.Documents.Patch
 
                     if (run.DebugActions != null)
                         DebugActions = run.DebugActions.GetDebugActions();
-                }
 
-                BlittableObjectInstance UpdateOriginalDocument()
-                {
-                    originalDoc = null;
-
-                    if (originalDocument != null)
-                    {
-                        var translated = (BlittableObjectInstance)((JsValue)run.Translate(context, originalDocument)).AsObject();
-                        // here we need to use the _cloned_ version of the document, since the patch may
-                        // change it
-                        originalDoc = translated.Blittable;
-                        originalDocument.Dispose();
-                        originalDocument.Data = null; // prevent access to this by accident
-                        
-                        return translated;
-                    }
-
-                    return null;
+                    originalDocument?.Dispose();
                 }
             }
+        }
+
+        private Document GetCurrentDocument(DocumentsOperationContext context, string id)
+        {
+            var originalDocument = _database.DocumentsStorage.Get(context, id);
+
+            if (originalDocument != null)
+            {
+                using (var oldData = originalDocument.Data)
+                {
+                    // we clone it, to keep it safe from defrag due to the patch modifications
+                    originalDocument.Data = originalDocument.Data?.CloneOnTheSameContext();
+                }
+            }
+
+            return originalDocument;
         }
 
         private BlittableJsonReaderObject ExecuteScript(DocumentsOperationContext context, string id, ScriptRunner.SingleRun run, JsonOperationContext patchContext,
@@ -274,10 +273,10 @@ namespace Raven.Server.Documents.Patch
                 return _createIfMissing;
             }
 
-            //using() will dispose originalDoc.Dispose is already called at ScriptRunner 
-            var scriptResult = run.Run(patchContext, context, "execute", id, new[] {documentInstance, args});
-            return scriptResult.TranslateToObject(_externalContext ?? context, usageMode: BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-            
+            using (var scriptResult = run.Run(patchContext, context, "execute", id, new[] {documentInstance, args}))
+            {
+                return scriptResult.TranslateToObject(context, usageMode: BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+            }
         }
 
         private NonPersistentDocumentFlags HandleMetadataUpdates(DocumentsOperationContext context, string id, ScriptRunner.SingleRun run)
@@ -336,7 +335,9 @@ namespace Raven.Server.Documents.Patch
             };
 
             if (_returnDocument)
+            {
                 patchReply[nameof(PatchResult.ModifiedDocument)] = patchResult.ModifiedDocument;
+            }
 
             reply.Add(patchReply);
 

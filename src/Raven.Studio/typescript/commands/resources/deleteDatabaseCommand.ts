@@ -11,10 +11,11 @@ class deleteDatabaseCommand extends commandBase {
     execute(): JQueryPromise<updateDatabaseConfigurationsResult> {
         const url = endpoints.global.adminDatabases.adminDatabases;
         
-        const payload = {
+        const payload: Raven.Client.ServerWide.Operations.DeleteDatabasesOperation.Parameters = {
             HardDelete: this.isHardDelete,
-            DatabaseNames: this.databases.map(x => x.name)
-        } as Raven.Client.ServerWide.Operations.DeleteDatabasesOperation.Parameters;
+            DatabaseNames: this.databases.map(x => x.name),
+            FromNodes: undefined
+        };
 
         return this.del<updateDatabaseConfigurationsResult>(url, JSON.stringify(payload), null, null, 9000 * this.databases.length)
             .fail((response: JQueryXHR) => this.reportError("Failed to delete databases", response.responseText, response.statusText));

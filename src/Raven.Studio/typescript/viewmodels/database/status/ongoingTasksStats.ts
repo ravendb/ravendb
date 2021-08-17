@@ -417,7 +417,8 @@ class ongoingTasksStats extends viewModelBase {
             "BatchWaitForAcknowledge": undefined as string,
             "ConnectionAborted": undefined as string,
             "ConnectionRejected": undefined as string,
-            "AggregatedBatchesInfo": undefined as string
+            "AggregatedBatchesInfo": undefined as string,
+            "UnknownOperation": undefined as string
         }
     };
     
@@ -950,8 +951,8 @@ class ongoingTasksStats extends viewModelBase {
 
     private constructYScale() {
         let currentOffset = ongoingTasksStats.axisHeight - this.currentYOffset;
-        const domain = [] as Array<string>;
-        const range = [] as Array<number>;
+        const domain: string[] = [];
+        const range: number[] = [];
 
         const trackNames = this.filteredTrackNames();
 
@@ -1060,7 +1061,7 @@ class ongoingTasksStats extends viewModelBase {
     }
 
     private extractTimeRanges(): Array<[Date, Date]> {
-        const result = [] as Array<[Date, Date]>;
+        const result: Array<[Date, Date]> = [];
         
         const onPerf = (perfStatsWithCache: performanceBaseWithCache) => {
             const start = perfStatsWithCache.StartedAsDate;
@@ -1529,7 +1530,8 @@ class ongoingTasksStats extends viewModelBase {
             return (tracks as dictionary<string>)[operationName];
         }
 
-        throw new Error("Unable to find color for: " + operationName);
+        console.warn(`Operation "${operationName}" is not supported. Using unknown-operation color in ongoing tasks graph.`);
+        return tracks.UnknownOperation;
     }
 
     private getTaskType(taskName: string): ongoingTaskStatType {
@@ -1836,6 +1838,7 @@ class ongoingTasksStats extends viewModelBase {
                         tooltipHtml += `<div class="tooltip-li">Network input count: <div class="value">${elementWithData.Network.InputCount.toLocaleString()} </div></div>`;
                         tooltipHtml += `<div class="tooltip-li">Documents read count: <div class="value">${elementWithData.Network.DocumentReadCount.toLocaleString()} </div></div>`;
                         tooltipHtml += `<div class="tooltip-li">Attachments read count: <div class="value">${elementWithData.Network.AttachmentReadCount.toLocaleString()} </div></div>`;
+                        tooltipHtml += `Counters read count: ${elementWithData.Network.CounterReadCount}<br/>`;
                     }
                         break;
                     case "OutgoingPush":
@@ -1844,8 +1847,8 @@ class ongoingTasksStats extends viewModelBase {
                         tooltipHtml += `<div class="tooltip-li">Sent last Etag: <div class="value">${elementWithData.SendLastEtag}</div></div>`;
                         tooltipHtml += `<div class="tooltip-li">Storage input count: <div class="value">${elementWithData.Storage.InputCount.toLocaleString()}</div></div>`;
                         tooltipHtml += `<div class="tooltip-li">Documents output count: <div class="value">${elementWithData.Network.DocumentOutputCount.toLocaleString()}</div></div>`;
-                        tooltipHtml += `<div class="tooltip-li">Attachments read count: <div class="value">${elementWithData.Network.AttachmentOutputCount.toLocaleString()}</div></div>`;
-                    }
+                        tooltipHtml += `<div class="tooltip-li">Attachments output count: <div class="value">${elementWithData.Network.AttachmentOutputCount.toLocaleString()}</div></div>`;
+                        tooltipHtml += `<div class="tooltip-li">Counters output count: <div class="value">${elementWithData.Network.CounterOutputCount.toLocaleString()}</div></div>`;                    }
                         break;
                     case "Raven":
                     case "Sql":

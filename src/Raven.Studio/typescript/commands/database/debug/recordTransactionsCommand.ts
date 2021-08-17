@@ -10,9 +10,9 @@ class recordTransactionsCommand extends commandBase {
     
     execute(): JQueryPromise<operationIdDto> {
         const url = endpoints.databases.transactionsRecording.adminTransactionsStartRecording;
-        const payload = {
+        const payload: Raven.Client.Documents.Operations.TransactionsRecording.StartTransactionsRecordingOperation.Parameters = {
             File: this.targetPath
-        } as Raven.Client.Documents.Operations.TransactionsRecording.StartTransactionsRecordingOperation.Parameters;
+        };
         
         return this.post<operationIdDto>(url, JSON.stringify(payload), this.db, { dataType: undefined })
             .done(() => this.reportSuccess("Transaction Commands Recoding was started for database: " + this.db.name))

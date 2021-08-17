@@ -1,29 +1,22 @@
 <div class="modal-dialog modal-lg" role="document">
-    <div class="modal-content" tabindex="-1">
+    <div class="modal-content force-text-wrap-word" tabindex="-1">
         <div class="modal-header">
-            <div class="flex-horizontal">
-                <div class="flex-grow">
-                    <h3 class="modal-title" id="myModalLabel" data-bind="text: alert.title, attr:{ class: 'modal-title ' + alert.headerClass() }"></h3>
-                </div>
-                <div>
-                    <button type="button" class="close" data-bind="click: $root.close" aria-hidden="true">
-                        <i class="icon-cancel"></i>
-                    </button>
-                </div>
+            <button type="button" class="close" data-bind="click: close" aria-hidden="true">
+                <i class="icon-cancel"></i>
+            </button>
+            <div data-bind="with: alert">
+                <h3 class="modal-title" id="myModalLabel" data-bind="text: title, attr:{ class: 'modal-title ' + headerClass() }"></h3>
+                <div class="notification-time" data-bind="text: displayDate().format('LLL')"></div>
             </div>
         </div>
         <div class="modal-body">
-            <h3 class="text-center" data-bind="html: alert.message"></h3>
-            
+            <h3 data-bind="html: alert.message"></h3>
             <div data-bind="if: message">
                 <div data-bind="html: message"></div>
             </div>
-            
             <div data-bind="if: exception">
-                <pre class="margin-top error-messages"><code data-bind="text: exception">
-</code></pre>    
+                <pre class="margin-top error-messages"><code data-bind="text: exception"></code></pre>
             </div>
-          
         </div>
         <div class="modal-footer" data-bind="compose: 'common/notificationCenter/detailViewer/alerts/footerPartial.html'">
         </div>

@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using Lucene.Net.Documents;
 using Raven.Client;
@@ -21,6 +22,7 @@ using Sparrow.Json.Parsing;
 using Xunit;
 using Xunit.Abstractions;
 using Document = Raven.Server.Documents.Document;
+using Index = Raven.Server.Documents.Indexes.Index;
 
 namespace FastTests.Server.Documents.Indexing.Lucene
 {
@@ -517,12 +519,12 @@ namespace FastTests.Server.Documents.Indexing.Lucene
                 throw new System.NotImplementedException();
             }
 
-            public override void HandleDelete(Tombstone tombstone, string collection, IndexWriteOperationBase writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+            public override void HandleDelete(Tombstone tombstone, string collection, Lazy<IndexWriteOperationBase> writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
             {
                 throw new System.NotImplementedException();
             }
 
-            public override int HandleMap(IndexItem indexItem, IEnumerable mapResults, IndexWriteOperationBase writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+            public override int HandleMap(IndexItem indexItem, IEnumerable mapResults, Lazy<IndexWriteOperationBase> writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
             {
                 throw new System.NotImplementedException();
             }

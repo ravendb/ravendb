@@ -398,9 +398,9 @@ class certificates extends viewModelBase {
         return new getCertificatesCommand(true)
             .execute()
             .done(certificatesInfo => {
-                let mergedCertificates = [] as Array<unifiedCertificateDefinition>;
+                let mergedCertificates: unifiedCertificateDefinition[] = [];
                 
-                const secondaryCertificates = [] as Array<Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition>;
+                const secondaryCertificates: Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition[] = [];
                 
                 certificatesInfo.Certificates.forEach(cert => {
                     if (cert.CollectionPrimaryKey) {

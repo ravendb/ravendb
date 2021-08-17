@@ -1286,16 +1286,19 @@ namespace Raven.Server.Documents.Revisions
                     changeVector, lastModifiedTicks);
 
                 var currentRevisionsCount = GetRevisionsCount(context, id);
+
                 if (needToDeleteMore && currentRevisionsCount > 0)
                     moreWork = true;
 
                 if (currentRevisionsCount == 0)
                 {
+                    var res = _documentsStorage.GetDocumentOrTombstone(context, lowerId, throwOnConflict: false);
                     // need to strip the HasRevisions flag from the document
-                    var document = _documentsStorage.Get(context, id);
+                    if (res.Tombstone != null)
+                        _documentsStorage.Delete(context, lowerId, id, null, nonPersistentFlags: NonPersistentDocumentFlags.ByEnforceRevisionConfiguration);
 
-                    if (document != null)
-                        _documentsStorage.Put(context, id, null, document.Data.Clone(context),
+                    if (res.Document != null)
+                        _documentsStorage.Put(context, id, null, res.Document.Data.Clone(context),
                             nonPersistentFlags: NonPersistentDocumentFlags.ByEnforceRevisionConfiguration);
                 }
 

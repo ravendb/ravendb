@@ -165,6 +165,7 @@ namespace Raven.Server.Smuggler.Documents
                 if (_batch != null)
                 {
                     _batch.AddIndex(indexDefinition, _source, _database.Time.GetUtcNow(), RaftIdGenerator.DontCareId, _database.Configuration.Indexing.HistoryRevisionsNumber);
+                    AsyncHelpers.RunSync(_batch.SaveIfNeeded);
                     return;
                 }
 
@@ -176,6 +177,7 @@ namespace Raven.Server.Smuggler.Documents
                 if (_batch != null)
                 {
                     _batch.AddIndex(indexDefinition, _source, _database.Time.GetUtcNow(), RaftIdGenerator.DontCareId, _database.Configuration.Indexing.HistoryRevisionsNumber);
+                    AsyncHelpers.RunSync(_batch.SaveIfNeeded);
                     return;
                 }
 
@@ -1417,9 +1419,13 @@ namespace Raven.Server.Smuggler.Documents
                         }
                     }
 
-                    var trxn = ChangeVectorUtils.GetEtagById(oldChangeVector, _database.ClusterTransactionId);
-                    if (trxn > 0)
-                        changeVector += $",TRXN:{trxn}-{_database.ClusterTransactionId}";
+                    //The ClusterTransactionId can be null if the database was migrated from version smaller then v5.2 
+                    if (_database.ClusterTransactionId != null)
+                    {
+                        var trxn = ChangeVectorUtils.GetEtagById(oldChangeVector, _database.ClusterTransactionId);
+                        if (trxn > 0)
+                            changeVector += $",TRXN:{trxn}-{_database.ClusterTransactionId}";
+                    }
                 }
             }
 

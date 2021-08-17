@@ -247,25 +247,28 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                     case EtlItemType.Document:
                         if (_script.HasTransformation)
                         {
-                            DocumentScript.Run(Context, Context, "execute", new object[] { Current.Document }).Dispose();
-                            ApplyDeleteCommands(item, OperationType.Put, out var isLoadedToDefaultCollectionDeleted);
+                            using (DocumentScript.Run(Context, Context, "execute", new object[] {Current.Document}))
+                            {
+                                ApplyDeleteCommands(item, OperationType.Put, out var isLoadedToDefaultCollectionDeleted);
 
-                            if (_currentRun.IsDocumentLoadedToSameCollection(item.DocumentId) == false)
-                                break;
-                            
-                            if (_script.TryGetLoadCounterBehaviorFunctionFor(item.Collection, out var counterFunction))
-                            {
-                                var counterGroups = GetCounterGroupsFor(item);
-                                if (counterGroups != null)
-                                    AddCounters(item.DocumentId, counterGroups, counterFunction);    
-                            }
-                            if (_script.TryGetLoadTimeSeriesBehaviorFunctionFor(item.Collection, out var timeSeriesLoadBehaviorFunc))
-                            {
-                                if (isLoadedToDefaultCollectionDeleted || ShouldLoadTimeSeriesWithDoc(item, state))
+                                if (_currentRun.IsDocumentLoadedToSameCollection(item.DocumentId) == false)
+                                    break;
+
+                                if (_script.TryGetLoadCounterBehaviorFunctionFor(item.Collection, out var counterFunction))
                                 {
-                                    var timeSeriesReaders = GetTimeSeriesFor(item, timeSeriesLoadBehaviorFunc);
-                                    if (timeSeriesReaders != null)
-                                        AddAndRemoveTimeSeries(item.DocumentId, timeSeriesReaders);
+                                    var counterGroups = GetCounterGroupsFor(item);
+                                    if (counterGroups != null)
+                                        AddCounters(item.DocumentId, counterGroups, counterFunction);
+                                }
+
+                                if (_script.TryGetLoadTimeSeriesBehaviorFunctionFor(item.Collection, out var timeSeriesLoadBehaviorFunc))
+                                {
+                                    if (isLoadedToDefaultCollectionDeleted || ShouldLoadTimeSeriesWithDoc(item, state))
+                                    {
+                                        var timeSeriesReaders = GetTimeSeriesFor(item, timeSeriesLoadBehaviorFunc);
+                                        if (timeSeriesReaders != null)
+                                            AddAndRemoveTimeSeries(item.DocumentId, timeSeriesReaders);
+                                    }
                                 }
                             }
                         }
