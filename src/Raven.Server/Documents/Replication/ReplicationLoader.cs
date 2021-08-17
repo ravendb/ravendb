@@ -240,7 +240,7 @@ namespace Raven.Server.Documents.Replication
                 using (tcpConnectionOptions)
                 using (outgoingReplication)
                 {
-                    
+
                 }
                 return;
             }
@@ -254,37 +254,41 @@ namespace Raven.Server.Documents.Replication
         }
 
         public void RunPullReplicationAsSink(
-            TcpConnectionOptions tcpConnectionOptions, 
-            JsonOperationContext.ManagedPinnedBuffer buffer, 
-            PullReplicationAsSink destination, 
+            TcpConnectionOptions tcpConnectionOptions,
+            JsonOperationContext.ManagedPinnedBuffer buffer,
+            PullReplicationAsSink destination,
             OutgoingReplicationHandler source)
         {
-            var newIncoming = CreateIncomingReplicationHandler(tcpConnectionOptions, buffer, destination.HubDefinitionName);
-            newIncoming.Failed += RetryPullReplication;
-            _outgoing.TryRemove(source); // we are pulling and therefore incoming, upon failure 'RetryPullReplication' will put us back as an outgoing
-
-            PoolOfThreads.PooledThread.ResetCurrentThreadName();
-            Thread.CurrentThread.Name = $"Pull Replication as Sink from {destination.Database} at {destination.Url}";
-
-            _incoming[newIncoming.ConnectionInfo.SourceDatabaseId] = newIncoming;
-            IncomingReplicationAdded?.Invoke(newIncoming);
-            newIncoming.DoIncomingReplication();
-
-            void RetryPullReplication(IncomingReplicationHandler instance, Exception e)
+            using (source)
             {
-                using (instance)
+                var newIncoming = CreateIncomingReplicationHandler(tcpConnectionOptions, buffer, destination.HubDefinitionName);
+                newIncoming.Failed += RetryPullReplication;
+
+                _outgoing.TryRemove(source); // we are pulling and therefore incoming, upon failure 'RetryPullReplication' will put us back as an outgoing
+
+                PoolOfThreads.PooledThread.ResetCurrentThreadName();
+                Thread.CurrentThread.Name = $"Pull Replication as Sink from {destination.Database} at {destination.Url}";
+
+                _incoming[newIncoming.ConnectionInfo.SourceDatabaseId] = newIncoming;
+                IncomingReplicationAdded?.Invoke(newIncoming);
+                newIncoming.DoIncomingReplication();
+
+                void RetryPullReplication(IncomingReplicationHandler instance, Exception e)
                 {
-                    if (_incoming.TryRemove(instance.ConnectionInfo.SourceDatabaseId, out _))
-                        IncomingReplicationRemoved?.Invoke(instance);
+                    using (instance)
+                    {
+                        if (_incoming.TryRemove(instance.ConnectionInfo.SourceDatabaseId, out _))
+                            IncomingReplicationRemoved?.Invoke(instance);
 
-                    instance.Failed -= RetryPullReplication;
-                    instance.DocumentsReceived -= OnIncomingReceiveSucceeded;
-                    if (_log.IsInfoEnabled)
-                        _log.Info($"Pull replication Sink handler has thrown an unhandled exception. ({instance.FromToString})", e);
+                        instance.Failed -= RetryPullReplication;
+                        instance.DocumentsReceived -= OnIncomingReceiveSucceeded;
+                        if (_log.IsInfoEnabled)
+                            _log.Info($"Pull replication Sink handler has thrown an unhandled exception. ({instance.FromToString})", e);
+                    }
+
+                    // if the stream closed, it is our duty to reconnect
+                    AddAndStartOutgoingReplication(destination, true);
                 }
-
-                // if the stream closed, it is our duty to reconnect
-                AddAndStartOutgoingReplication(destination, true);
             }
         }
 
