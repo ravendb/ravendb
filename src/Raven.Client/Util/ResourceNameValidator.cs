@@ -96,6 +96,18 @@ namespace Raven.Client.Util
             return true;
         }
         
+        public static bool IsValidFileName(string name, out string errorMessage)
+        {
+            if (name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+            {
+                errorMessage = $"The name '{name}' contains characters that are forbidden for use!";
+                return false;
+            }
+
+            errorMessage = null;
+            return true;
+        }
+        
         public static bool IsDotCharSurroundedByOtherChars(string name)
         {
             return NameStartsOrEndsWithDotOrContainsConsecutiveDotsRegex.IsMatch(name) == false;

@@ -1,6 +1,8 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
 import jsonUtil = require("common/jsonUtil");
+import validateNameCommand = require("commands/resources/validateNameCommand");
+import generalUtils = require("common/generalUtils");
 
 class ongoingTaskOlapEtlTransformationModel {
 
@@ -74,12 +76,27 @@ class ongoingTaskOlapEtlTransformationModel {
             aceValidation: true
         });
 
-        const noWhiteSpaceRegExp = /^\S*$/;
+        const checkScriptName = (val: string,
+                                 params: any,
+                                 callback: (currentValue: string, errorMessageOrValidationResult: string | boolean) => void) => {
+            if (this.name()) {
+                new validateNameCommand('Script', val)
+                    .execute()
+                    .done((result) => {
+                        if (result.IsValid) {
+                            callback(this.name(), true);
+                        } else {
+                            callback(this.name(), result.ErrorMessage);
+                        }
+                    })
+            }
+        };
+        
         this.name.extend({
             validation: [
                 {
-                    validator: (scriptName: string) => noWhiteSpaceRegExp.test(scriptName),
-                    message: "Script name cannot contain any whitespace"
+                    async: true,
+                    validator: generalUtils.debounceAndFunnel(checkScriptName)
                 }
             ]
         });

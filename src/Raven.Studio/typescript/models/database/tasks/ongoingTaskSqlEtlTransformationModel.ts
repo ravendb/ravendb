@@ -49,7 +49,7 @@ class ongoingTaskSqlEtlTransformationModel {
             ApplyToAllDocuments: false,
             Collections: [this.collection()],
             Disabled: false,
-            Name: this.name(),
+            Name: this.name().trim(),
             Script: this.script()
         }
     }
