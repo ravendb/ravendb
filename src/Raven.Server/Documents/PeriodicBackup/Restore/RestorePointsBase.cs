@@ -16,7 +16,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
     public abstract class RestorePointsBase : IDisposable
     {
         public static Regex BackupFolderRegex = new Regex(@"([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{2}-[0-9]{2}(-[0-9]{2})?).ravendb-(.+)-([A-Za-z]+)-(.+)$", RegexOptions.Compiled);
-        protected static readonly Regex FileNameRegex = new Regex(@"([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{2}-[0-9]{2}(-[0-9]{2})?)", RegexOptions.Compiled);
+        public static Regex FileNameRegex = new Regex(@"([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{2}-[0-9]{2}(-[0-9]{2})?)", RegexOptions.Compiled);
 
         private readonly SortedList<DateTime, RestorePoint> _sortedList;
         private readonly TransactionOperationContext _context;
