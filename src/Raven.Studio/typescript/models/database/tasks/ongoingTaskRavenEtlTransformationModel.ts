@@ -58,7 +58,7 @@ class ongoingTaskRavenEtlTransformationModel {
             ApplyToAllDocuments: this.applyScriptForAllCollections(),
             Collections: this.applyScriptForAllCollections() ? null : this.transformScriptCollections(),
             Disabled: false,
-            Name: this.name(),
+            Name: this.name().trim(),
             Script: this.script()
         }
     }
