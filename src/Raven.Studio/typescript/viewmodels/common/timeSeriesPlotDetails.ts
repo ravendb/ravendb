@@ -119,7 +119,7 @@ class groupedTimeSeriesContainer extends timeSeriesContainer<dataRangePoint> {
         const dateFromPoints = groupedValues.map(x => new Date(x.From));
         const dateToPoints = groupedValues.map(x => new Date(x.To));
         
-        const series = [] as Array<graphSeries<dataRangePoint>>;
+        const series: graphSeries<dataRangePoint>[] = [];
         
         seriesPrefixNames.forEach(prefix => {
             seriesValuesName.forEach((valueName, valueIdx) => {

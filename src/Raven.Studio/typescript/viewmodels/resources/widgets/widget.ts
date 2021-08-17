@@ -21,7 +21,7 @@ abstract class widget<TConfig = unknown, TState = unknown> {
     syncUpdatesEnabled = false;
     firstSyncUpdateTaskId: number = -1;
     syncUpdateTaskId: number = -1;
-    pendingUpdates = [] as Array<() => void>;
+    pendingUpdates: Array<() => void> = [];
     
     configuredFor = ko.observableArray<clusterDashboardWebSocketClient>([]);
 

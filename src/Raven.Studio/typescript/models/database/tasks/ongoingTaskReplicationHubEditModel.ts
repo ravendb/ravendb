@@ -6,6 +6,7 @@ class ongoingTaskReplicationHubEditModel {
     taskId: number;
     taskName = ko.observable<string>();
     taskType = ko.observable<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType>();
+    taskState: boolean;
     responsibleNode = ko.observable<Raven.Client.ServerWide.Operations.NodeId>();
     
     manualChooseMentor = ko.observable<boolean>();
@@ -53,6 +54,7 @@ class ongoingTaskReplicationHubEditModel {
     update(dto: Raven.Client.Documents.Operations.Replication.PullReplicationDefinition) {
         this.taskName(dto.Name);
         this.taskId = dto.TaskId;
+        this.taskState = dto.Disabled;
 
         this.manualChooseMentor(!!dto.MentorNode);
         this.mentorNode(dto.MentorNode);
@@ -75,6 +77,7 @@ class ongoingTaskReplicationHubEditModel {
             TaskId: taskId,
             DelayReplicationFor: this.showDelayReplication() ? generalUtils.formatAsTimeSpan(this.delayReplicationTime() * 1000) : null,
             Mode: this.replicationMode(),
+            Disabled: this.taskState,
             PreventDeletionsMode: this.preventDeletions() ? "PreventSinkToHubDeletions" : "None",
             WithFiltering: this.withFiltering()
         } as Raven.Client.Documents.Operations.Replication.PullReplicationDefinition;

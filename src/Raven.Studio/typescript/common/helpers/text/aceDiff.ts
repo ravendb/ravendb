@@ -17,7 +17,7 @@ class aceDiffEditor {
     
     private highlights: number[];
     private hasAnyChange: boolean;
-    private folds = [] as foldItem[];
+    private folds: foldItem[] = [];
     private readonly editor: AceAjax.Editor;
     private readonly mode: "left" | "right";
     private gutterClass: string;
@@ -27,10 +27,10 @@ class aceDiffEditor {
     
     private onScroll: (scroll: any) => void;
     private onFold: (foldEvent: any) => void;
-    private markers = [] as number[];
-    private widgets = [] as any[];
+    private markers: number[] = [];
+    private widgets: any[] = [];
     
-    private gutters = [] as Array<{ row: number, className: string, idx?: number }>;
+    private gutters: Array<{ row: number, className: string, idx?: number }> = [];
     
     constructor(editor: AceAjax.Editor, mode: "left" | "right", gutterClass: string, markerClass: string) {
         this.editor = editor;
@@ -46,7 +46,7 @@ class aceDiffEditor {
     }
 
     private initEditor() {
-        const session = this.getSession() as any;
+        const session = this.getSession();
         if (!session.widgetManager) {
             const LineWidgets = ace.require("ace/line_widgets").LineWidgets;
             session.widgetManager = new LineWidgets(session);
@@ -129,7 +129,7 @@ class aceDiffEditor {
         let inFold = false;
         let foldStart = -1;
         
-        const result = [] as Array<foldItem>;
+        const result: Array<foldItem> = [];
         for (let i = 0; i < totalLines; i++) {
             if (bits[i] === 0 && !inFold) {
                 foldStart = i;
@@ -202,7 +202,7 @@ class aceDiffEditor {
         const ignoreLinesStartsWith = mode === "left" ? "+" : "-";
         const takeLinesStartsWith = mode === "left" ? "-" : "+";
 
-        const result = [] as Array<number>;
+        const result: number[] = [];
         hunks.forEach(hunk => {
             const startLine = mode === "left" ? hunk.oldStart : hunk.newStart;
 
@@ -223,7 +223,7 @@ class aceDiffEditor {
         const lineHeight = editor.renderer.layerConfig.lineHeight;
 
         return gaps.map(gap => {
-            const element = dom.createElement("div") as HTMLElement;
+            const element: HTMLDivElement = dom.createElement("div");
             element.className = "difference_gap";
             element.style.height = gap.emptyLinesCount * lineHeight + "px";
 
@@ -407,19 +407,19 @@ class aceDiff {
                 context: 0
             });
 
-        const leftGaps = patch.hunks
+        const leftGaps: gapItem[] = patch.hunks
             .filter(x => x.oldLines < x.newLines)
             .map(hunk => ({
                 emptyLinesCount: hunk.newLines - hunk.oldLines,
                 firstLine: hunk.oldStart + hunk.oldLines
-            } as gapItem));
+            }));
 
-        const rightGaps = patch.hunks
+        const rightGaps: gapItem[] = patch.hunks
             .filter(x => x.oldLines > x.newLines)
             .map(hunk => ({
                 emptyLinesCount: hunk.oldLines - hunk.newLines,
                 firstLine: hunk.newStart + hunk.newLines
-            } as gapItem));
+            }));
         
         this.leftEditor.update(patch, leftGaps);
         this.rightEditor.update(patch, rightGaps);

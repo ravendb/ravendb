@@ -15,12 +15,12 @@ class getRevisionsBinEntryCommand extends commandBase {
             pageSize: this.take
         };
 
-        const resultsSelector = (dto: resultsDto<documentDto>, xhr: JQueryXHR) => {
+        const resultsSelector = (dto: resultsDto<documentDto>, xhr: JQueryXHR): pagedResult<document> => {
             return {
                 items: dto.Results.map(x => new document(x)),
                 totalResultCount: -1,
                 resultEtag: this.extractEtag(xhr)
-            } as pagedResult<document>;
+            };
         };
         const url = endpoints.databases.revisions.revisionsBin + this.urlEncodeArgs(args);
         return this.query(url, null, this.database, resultsSelector)

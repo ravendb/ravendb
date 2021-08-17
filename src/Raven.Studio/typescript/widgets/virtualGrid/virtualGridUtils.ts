@@ -1,7 +1,6 @@
 ﻿/// <reference path="../../../typings/tsd.d.ts"/>
 
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
-import generalUtils = require("common/generalUtils");
 
 function deselect() {
     try {

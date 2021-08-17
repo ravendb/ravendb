@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Client;
 using FastTests.Client.Subscriptions;
+using Orders;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Subscriptions;
@@ -329,7 +330,7 @@ namespace SlowTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore())
             {
-                string s = store.Subscriptions.Create<Query.Order>();
+                string s = store.Subscriptions.Create<Order>();
                 var ongoingTask = (OngoingTaskSubscription)store.Maintenance.Send(new GetOngoingTaskInfoOperation(s, OngoingTaskType.Subscription));
                 Assert.False(ongoingTask.Disabled);
                 store.Maintenance.Send(new ToggleOngoingTaskStateOperation(ongoingTask.TaskId, OngoingTaskType.Subscription, true));

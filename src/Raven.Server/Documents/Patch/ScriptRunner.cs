@@ -889,10 +889,14 @@ namespace Raven.Server.Documents.Patch
                 }
                 if (obj.IsObject())
                 {
-                    var result = new ScriptRunnerResult(this, obj);
-                    using (var jsonObj = result.TranslateToObject(_jsonCtx))
+                    if (obj is BlittableObjectInstance boi && boi.Changed == false)
                     {
-                        return jsonObj.ToString();
+                        return boi.Blittable.ToString();
+                    }
+
+                    using (var blittable =  JsBlittableBridge.Translate(_jsonCtx, ScriptEngine, obj.AsObject()))
+                    {
+                        return blittable.ToString();
                     }
                 }
                 if (obj.IsBoolean())

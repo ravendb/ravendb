@@ -52,7 +52,7 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
             return workers.ToArray();
         }
 
-        public override void HandleDelete(Tombstone tombstone, string collection, IndexWriteOperationBase writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        public override void HandleDelete(Tombstone tombstone, string collection, Lazy<IndexWriteOperationBase> writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             StaticIndexHelper.HandleDeleteBySourceDocumentId(this, _handleReferences, _handleCompareExchangeReferences, tombstone, collection, writer, indexContext, stats);
         }
@@ -62,7 +62,7 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
             return new StaticIndexItemEnumerator<DynamicCounterEntry>(items, filter: null, _compiled.Maps[collection], collection, stats, type);
         }
 
-        public override int HandleMap(IndexItem indexItem, IEnumerable mapResults, IndexWriteOperationBase writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        public override int HandleMap(IndexItem indexItem, IEnumerable mapResults, Lazy<IndexWriteOperationBase> writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             if (_enumerationWrappers.TryGetValue(CurrentIndexingScope.Current.SourceCollection, out AnonymousObjectToBlittableMapResultsEnumerableWrapper wrapper) == false)
             {

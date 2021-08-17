@@ -1,4 +1,6 @@
-﻿.metricsContainer {
+﻿@default-operation-color: antiquewhite;
+
+.metricsContainer {
     position: relative;
     
     .tooltip-inner {
@@ -121,7 +123,7 @@ rect.pane {
             }
             .storageTombstoneRead {
                 color: @color-3-2;
-            }            
+            }
             .storageCounterRead {
                 color: @color-3-1;
             }
@@ -176,8 +178,11 @@ rect.pane {
             .aggregatedBatchesInfo {
                 color: @color-4-3;
             }
+            .unknownOperation {
+                color: @default-operation-color;
+            }
         }
-    }   
+    }
 }
 
 .io-stats {
@@ -311,7 +316,7 @@ rect.pane {
   font-size: 12px;
   text-align: center;
 
-  &.legend-title {     
+  &.legend-title {
       width: @legend-container-width - 50px;
   }
 }

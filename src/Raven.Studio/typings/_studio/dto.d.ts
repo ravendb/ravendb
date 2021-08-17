@@ -646,6 +646,7 @@ interface textColumnOpts<T> {
     sortable?: "number" | "string" | valueProvider<T>;
     defaultSortOrder?: sortMode;
     customComparator?: (a: any, b: any) => number;
+    transformValue?: (a: any) => any;
 }
 
 interface hypertextColumnOpts<T> extends textColumnOpts<T> {
@@ -661,7 +662,7 @@ interface timeSeriesColumnOpts<T> extends textColumnOpts<T> {
 }
 
 interface virtualColumnDto {
-    type: "flags" | "checkbox" | "text" | "hyperlink" | "custom" | "timeSeries" | "nodeTag";
+    type: "flags" | "checkbox" | "text" | "hyperlink" | "custom" | "timeSeries" | "nodeTag" | "iconsPlusText";
     width: string;
     header: string;
     serializedValue: string;
@@ -833,3 +834,10 @@ type widgetType = Raven.Server.Dashboard.Cluster.ClusterDashboardNotificationTyp
 type databaseAccessLevel = `Database${Raven.Client.ServerWide.Operations.Certificates.DatabaseAccess}`;
 type securityClearance = Raven.Client.ServerWide.Operations.Certificates.SecurityClearance;
 type accessLevel = databaseAccessLevel | securityClearance;
+
+interface iconPlusText {
+    iconClass: string;
+    text: string;
+    textClass: string;
+    title: string;
+}

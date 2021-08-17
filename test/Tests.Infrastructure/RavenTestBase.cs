@@ -198,6 +198,22 @@ namespace FastTests
             }
         }
 
+        protected string GetRaftHistory(RavenServer server)
+        {
+            var sb = new StringBuilder();
+
+            using (server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                foreach (var entry in server.ServerStore.Engine.LogHistory.GetHistoryLogs(context))
+                {
+                    sb.AppendLine(context.ReadObject(entry, "raft-command-history").ToString());
+                }
+            }
+
+            return sb.ToString();
+        }
+
         protected async Task WaitForRaftIndexToBeAppliedInCluster(long index, TimeSpan? timeout = null)
         {
             await WaitForRaftIndexToBeAppliedOnClusterNodes(index, Servers, timeout);
@@ -767,7 +783,7 @@ namespace FastTests
         protected static async Task<T> WaitAndAssertForGreaterThanAsync<T>(Func<Task<T>> act, T expectedVal, int timeout = 15000, int interval = 100) where T : IComparable
         {
             var actualValue = await WaitForGreaterThanAsync(act, expectedVal, timeout, interval);
-            Assert.True(actualValue.CompareTo(expectedVal) > 0);
+            Assert.True(actualValue.CompareTo(expectedVal) > 0, $"expectedVal:{expectedVal}, actualValue: {actualValue}");
             return actualValue;
         }
 
@@ -1148,7 +1164,7 @@ namespace FastTests
             }
         }
 
-        private static string CreateMasterKey(out byte[] masterKey)
+        public static string CreateMasterKey(out byte[] masterKey)
         {
             var buffer = new byte[32];
             using (var rand = RandomNumberGenerator.Create())

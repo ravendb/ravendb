@@ -8,12 +8,12 @@ class deleteDocumentsCommand extends executeBulkDocsCommand {
         super(bulkDocs, db);
     }
 
-    private static createDeleteDocument(id: string): Raven.Server.Documents.Handlers.BatchRequestParser.CommandData {
+    private static createDeleteDocument(id: string): Partial<Raven.Server.Documents.Handlers.BatchRequestParser.CommandData> {
         return {
             Id: id,
             Type: "DELETE",
             ChangeVector: null
-        } as Raven.Server.Documents.Handlers.BatchRequestParser.CommandData;
+        };
     }
 }
 

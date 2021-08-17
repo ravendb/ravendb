@@ -48,7 +48,10 @@ class ongoingTaskReplicationEditModel extends ongoingTaskEditModel {
             ConnectionStringName: this.connectionStringName(),
             TaskId: taskId,
             DelayReplicationFor: this.showDelayReplication() ? generalUtils.formatAsTimeSpan(this.delayReplicationTime() * 1000) : null,
-        } as Raven.Client.Documents.Operations.Replication.ExternalReplication;
+            Url: undefined,
+            Disabled: this.taskState() === "Disabled",
+            Database: undefined
+        };
     }
 
     initValidation() {

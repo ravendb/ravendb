@@ -103,7 +103,7 @@ loadTo(""Orders"", partitionBy(key),
 
                     for (int i = 0; i < numberOfDaysInJanuary; i++)
                     {
-                        await session.StoreAsync(new Query.Order
+                        await session.StoreAsync(new Order
                         {
                             Id = $"orders/{i}",
                             OrderedAt = baseline.AddDays(i),
@@ -115,7 +115,7 @@ loadTo(""Orders"", partitionBy(key),
                     for (int i = 0; i < numberOfDaysInFebruary; i++)
                     {
                         var next = i + numberOfDaysInJanuary;
-                        await session.StoreAsync(new Query.Order
+                        await session.StoreAsync(new Order
                         {
                             Id = $"orders/{next}",
                             OrderedAt = baseline.AddMonths(1).AddDays(i),
@@ -192,7 +192,7 @@ loadTo(""Orders"", partitionBy(key),
                     for (int i = 1; i <= 10; i++)
                     {
                         var orderedAt = baseline.AddDays(i);
-                        var o = new Query.Order
+                        var o = new Order
                         {
                             Id = $"orders/{i}",
                             OrderedAt = orderedAt,
@@ -301,7 +301,7 @@ loadToOrders(partitionBy(key), o);
                     for (int i = 0; i < TimeSpan.FromDays(7).TotalHours; i++)
                     {
                         var orderedAt = baseline.AddHours(i);
-                        var o = new Query.Order
+                        var o = new Order
                         {
                             Id = $"orders/{i}",
                             OrderedAt = orderedAt,
@@ -386,7 +386,7 @@ loadToOrders(partitionBy(key), o);
                     for (int i = 0; i < TimeSpan.FromDays(1).TotalMinutes; i++)
                     {
                         var orderedAt = baseline.AddMinutes(i);
-                        var o = new Query.Order
+                        var o = new Order
                         {
                             Id = $"orders/{i}",
                             OrderedAt = orderedAt,
@@ -474,7 +474,7 @@ loadToOrders(partitionBy(key), o);
                 {
                     for (int i = 1; i <= 10; i++)
                     {
-                        var o = new Query.Order
+                        var o = new Order
                         {
                             Id = $"orders/{i}",
                             OrderedAt = baseline.AddDays(i),
@@ -572,7 +572,7 @@ loadToOrders(partitionBy(key), o);
                 {
                     for (int i = 1; i <= 10; i++)
                     {
-                        var o = new Query.Order
+                        var o = new Order
                         {
                             Id = $"orders/{i}",
                             OrderedAt = baseline.AddDays(i),
@@ -664,7 +664,7 @@ loadToOrders(partitionBy(key), o);
                     for (int i = 1; i <= 10; i++)
                     {
                         var orderedAt = baseline.AddDays(i);
-                        var o = new Query.Order
+                        var o = new Order
                         {
                             Id = $"orders/{i}",
                             OrderedAt = orderedAt,
@@ -765,7 +765,7 @@ loadToOrders(partitionBy(key), o);
                         var orderedAt = baseline.AddDays(i);
                         var id = $"orders/{i}";
                         ids.Add(id);
-                        var o = new Query.Order
+                        var o = new Order
                         {
                             Id = id,
                             OrderedAt = orderedAt,
@@ -879,7 +879,7 @@ loadToOrders(partitionBy(key), o);
                     for (int i = 1; i <= 10; i++)
                     {
                         var orderedAt = baseline.AddDays(i);
-                        var o = new Query.Order
+                        var o = new Order
                         {
                             Id = $"orders/{i}",
                             OrderedAt = orderedAt,
@@ -1013,7 +1013,7 @@ loadToOrders(partitionBy(key), o);
                 {
                     for (int i = 0; i < 100; i++)
                     {
-                        await session.StoreAsync(new Query.Order
+                        await session.StoreAsync(new Order
                         {
                             Id = $"orders/{i}",
                             OrderedAt = baseline.AddDays(i),
@@ -1112,7 +1112,7 @@ loadToOrders(noPartition(),
                     for (int i = 0; i < total; i++)
                     {
                         var orderedAt = baseline.AddDays(i);
-                        await session.StoreAsync(new Query.Order
+                        await session.StoreAsync(new Order
                         {
                             Id = $"orders/{i}",
                             OrderedAt = orderedAt,
@@ -1126,7 +1126,7 @@ loadToOrders(noPartition(),
                     {
                         var index = i + total;
                         var orderedAt = baseline.AddYears(1).AddMonths(1).AddDays(i);
-                        await session.StoreAsync(new Query.Order
+                        await session.StoreAsync(new Order
                         {
                             Id = $"orders/{index}",
                             OrderedAt = orderedAt,
@@ -1618,7 +1618,7 @@ loadToUsers(noPartition(), {
                 {
                     for (int i = 1; i <= 10; i++)
                     {
-                        var o = new Query.Order
+                        var o = new Order
                         {
                             Id = $"orders/{i}",
                             Company = $"companies/{i}",
@@ -1761,7 +1761,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()], ['month', orderDate.
                 {
                     for (int i = 1; i <= 5; i++)
                     {
-                        var o = new Query.Order
+                        var o = new Order
                         {
                             Id = $"orders/{i}",
                             Company = $"companies/{i}",
@@ -1825,7 +1825,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
                 {
                     for (int i = 1; i <= 5; i++)
                     {
-                        var o = new Query.Order
+                        var o = new Order
                         {
                             Id = $"orders/{i}",
                             Company = $"companies/{i}",
@@ -1917,7 +1917,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
                 {
                     for (int i = 6; i <= 10; i++)
                     {
-                        var o = new Query.Order
+                        var o = new Order
                         {
                             Id = $"orders/{i}",
                             Company = $"companies/{i}",
@@ -1972,7 +1972,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
                 {
                     for (int i = 1; i <= 5; i++)
                     {
-                        var o = new Query.Order
+                        var o = new Order
                         {
                             Id = $"orders/{i}",
                             Company = $"companies/{i}",
@@ -2054,7 +2054,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
                 {
                     for (int i = 6; i <= 10; i++)
                     {
-                        var o = new Query.Order
+                        var o = new Order
                         {
                             Id = $"orders/{i}",
                             Company = $"companies/{i}",
@@ -2095,7 +2095,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
                 {
                     for (int i = 1; i <= 5; i++)
                     {
-                        var o = new Query.Order
+                        var o = new Order
                         {
                             Id = $"orders/{i}",
                             Company = $"companies/{i}",
@@ -2179,7 +2179,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()], ['location', $custom
                 {
                     for (int i = 6; i <= 10; i++)
                     {
-                        var o = new Query.Order
+                        var o = new Order
                         {
                             Id = $"orders/{i}",
                             Company = $"companies/{i}",
@@ -2220,7 +2220,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()], ['location', $custom
                 {
                     for (int i = 1; i <= 5; i++)
                     {
-                        var o = new Query.Order
+                        var o = new Order
                         {
                             Id = $"orders/{i}",
                             Company = $"companies/{i}",
@@ -2321,7 +2321,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
                 {
                     for (int i = 6; i <= 10; i++)
                     {
-                        var o = new Query.Order
+                        var o = new Order
                         {
                             Id = $"orders/{i}",
                             Company = $"companies/{i}",
@@ -2361,7 +2361,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new Query.Order
+                    await session.StoreAsync(new Order
                     {
                         Id = "orders/1",
                         Company = "companies/1",

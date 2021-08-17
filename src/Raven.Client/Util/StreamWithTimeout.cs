@@ -18,6 +18,8 @@ namespace Raven.Client.Util
         private CancellationTokenSource _writeCts;
         private CancellationTokenSource _readCts;
 
+        private long _totalWritten = 0;
+
         public StreamWithTimeout(Stream stream)
         {
             _stream = stream;
@@ -158,6 +160,8 @@ namespace Raven.Client.Util
 
         public override void Write(byte[] buffer, int offset, int count)
         {
+            _totalWritten += count;
+
             if (_canBaseStreamTimeoutOnWrite)
             {
                 _stream.Write(buffer, offset, count);
@@ -169,6 +173,8 @@ namespace Raven.Client.Util
 
         public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
+            _totalWritten += count;
+
             if (_canBaseStreamTimeoutOnWrite)
             {
                 return _stream.WriteAsync(buffer, offset, count, cancellationToken);
@@ -190,6 +196,8 @@ namespace Raven.Client.Util
         public override bool CanSeek => _stream.CanSeek;
         public override bool CanWrite => _stream.CanWrite;
         public override long Length => _stream.Length;
+
+        public long TotalWritten => _totalWritten;
 
         public override long Position
         {

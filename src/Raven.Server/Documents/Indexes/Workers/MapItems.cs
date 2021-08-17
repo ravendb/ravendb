@@ -60,7 +60,6 @@ namespace Raven.Server.Documents.Indexes.Workers
                     var pageSize = int.MaxValue;
 
                     var sw = new Stopwatch();
-                    IndexWriteOperationBase indexWriter = null;
                     var keepRunning = true;
                     var lastCollectionEtag = -1L;
                     while (keepRunning)
@@ -90,9 +89,6 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                                     token.ThrowIfCancellationRequested();
 
-                                    if (indexWriter == null)
-                                        indexWriter = writeOperation.Value;
-
                                     var current = itemEnumerator.Current;
 
                                     totalProcessedCount++;
@@ -108,7 +104,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                     {
                                         current.SkipLuceneDelete = _indexStorage.LowerThanLastDatabaseEtagOnIndexCreation(current.Etag);
                                         var numberOfResults = _index.HandleMap(current, mapResults,
-                                            indexWriter, indexContext, collectionStats);
+                                            writeOperation, indexContext, collectionStats);
 
                                         resultsCount += numberOfResults;
                                         collectionStats.RecordMapSuccess();
@@ -127,7 +123,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                                                                 $"Exception: {e}");
                                     }
 
-                                    batchContinuationResult = _index.CanContinueBatch(collectionStats, queryContext, indexContext, indexWriter, 
+                                    batchContinuationResult = _index.CanContinueBatch(collectionStats, queryContext, indexContext, writeOperation, 
                                         lastEtag, lastCollectionEtag, totalProcessedCount, sw, ref maxTimeForDocumentTransactionToRemainOpen);
                                     if (batchContinuationResult != Index.CanContinueBatchResult.True)
                                     {

@@ -55,6 +55,8 @@ namespace RachisTests.DatabaseCluster
                     }
                 };
                 var res = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc));
+
+                Assert.False(res.Topology.Members.Single() == leader.ServerStore.NodeTag, res.Topology.ToString());
                 Assert.NotEqual(res.Topology.Members.First(), leader.ServerStore.NodeTag);
 
                 using (var session = store.OpenAsyncSession())
@@ -884,7 +886,7 @@ namespace RachisTests.DatabaseCluster
         {
             var clusterSize = 3;
             var (_, srcLeader) = await CreateRaftCluster(clusterSize);
-            var (_, dstLeader) = await CreateRaftCluster(clusterSize);
+            var (dstNodes, dstLeader) = await CreateRaftCluster(clusterSize);
 
             var dstDB = GetDatabaseName();
             var srcDB = GetDatabaseName();
@@ -925,7 +927,8 @@ namespace RachisTests.DatabaseCluster
                     {
                         dstSession.Load<User>("Karmel");
                         Assert.True(await WaitForDocumentInClusterAsync<User>(
-                            dstSession as DocumentSession,
+                            dstNodes,
+                            dstDB,
                             "users/1",
                             u => u.Name.Equals("Karmel"),
                             TimeSpan.FromSeconds(60)));

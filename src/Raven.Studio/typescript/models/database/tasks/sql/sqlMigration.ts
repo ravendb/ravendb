@@ -7,7 +7,7 @@ import sqlReference = require("models/database/tasks/sql/sqlReference");
 
 class sqlMigration {
     
-    static possibleProviders = ["MsSQL", "MySQL", "NpgSQL", "Oracle"] as Array<Raven.Server.SqlMigration.MigrationProvider>;
+    static possibleProviders: Raven.Server.SqlMigration.MigrationProvider[] = ["MsSQL", "MySQL", "NpgSQL", "Oracle"];
     
     databaseType = ko.observable<Raven.Server.SqlMigration.MigrationProvider>("MsSQL");
     binaryToAttachment = ko.observable<boolean>(true);
@@ -164,7 +164,7 @@ class sqlMigration {
     }
     
     private findSpecialColumnNames(dbSchema: Raven.Server.SqlMigration.Schema.DatabaseSchema, tableSchema: string, tableName: string): string[] {
-        const result = [] as Array<string>;
+        const result: string[] = [];
         const mainSchema = dbSchema.Tables.find(x => x.Schema === tableSchema && x.TableName === tableName);
         
         result.push(...mainSchema.PrimaryKeyColumns);
@@ -344,7 +344,7 @@ class sqlMigration {
                     .filter(x => x.checked())
                     .map(x => x.toDto(binaryToAttachment))
             }
-        } as Raven.Server.SqlMigration.Model.MigrationRequest;
+        };
     }
     
     toCollectionsMappingDto(): Array<Raven.Server.SqlMigration.Model.CollectionNamesMapping> {
@@ -355,7 +355,7 @@ class sqlMigration {
                     CollectionName: table.collectionName(),
                     TableSchema: table.tableSchema,
                     TableName: table.tableName
-                } as Raven.Server.SqlMigration.Model.CollectionNamesMapping;
+                };
             });
     }
     

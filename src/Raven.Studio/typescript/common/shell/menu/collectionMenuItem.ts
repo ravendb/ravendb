@@ -27,7 +27,7 @@ class collectionMenuItem implements menuItem {
                     if (!instruction || !instruction.params) {
                         return false;
                     }
-                    const param0 = instruction.params[0] as any;
+                    const param0 = instruction.params[0];
                     if (!param0) {
                         return false;
                     }

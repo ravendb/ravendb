@@ -82,7 +82,7 @@ namespace Raven.Server.Documents.Queries.Results
             _blittableTraverser = reduceResults ? BlittableJsonTraverser.FlatMapReduceResults : BlittableJsonTraverser.Default;
         }
 
-    
+
 
         protected virtual void ValidateFieldsToFetch(FieldsToFetch fieldsToFetch)
         {
@@ -138,8 +138,6 @@ namespace Raven.Server.Documents.Queries.Results
                     return GetProjectionFromDocumentInternal(doc, input, scoreDoc, FieldsToFetch, _context, state);
                 }
 
-                var documentLoaded = false;
-
                 var result = new DynamicJsonValue();
 
                 Dictionary<string, FieldsToFetch.FieldToFetch> fields = null;
@@ -182,25 +180,24 @@ namespace Raven.Server.Documents.Queries.Results
                         continue;
                     }
 
-                    if (documentLoaded == false)
+                    if (doc == null)
                     {
                         using (_projectionStorageScope = _projectionStorageScope?.Start() ?? _projectionScope?.For(nameof(QueryTimingsScope.Names.Storage)))
                             doc = DirectGet(input, lowerId, DocumentFields.All, state);
 
-                        documentLoaded = true;
-                    }
-
-                    if (doc == null)
-                    {
-                        if (FieldsToFetch.Projection.MustExtractFromDocument)
+                        if (doc == null)
                         {
-                            if (FieldsToFetch.Projection.MustExtractOrThrow)
-                                FieldsToFetch.Projection.ThrowCouldNotExtractFieldFromDocumentBecauseDocumentDoesNotExistException(lowerId, fieldToFetch.Name.Value);
+                            if (FieldsToFetch.Projection.MustExtractFromDocument)
+                            {
+                                if (FieldsToFetch.Projection.MustExtractOrThrow)
+                                    FieldsToFetch.Projection.ThrowCouldNotExtractFieldFromDocumentBecauseDocumentDoesNotExistException(lowerId, fieldToFetch.Name.Value);
 
-                            break;
+                                break;
+                            }
+
+                            // we don't return partial results
+                            return null;
                         }
-
-                        continue;
                     }
 
                     if (TryGetValue(fieldToFetch, doc, input, state, FieldsToFetch.IndexFields, FieldsToFetch.AnyDynamicIndexFields, out var key, out var fieldVal))
@@ -237,6 +234,7 @@ namespace Raven.Server.Documents.Queries.Results
 
                 if (doc == null)
                 {
+                    // the fields were projected from the index
                     doc = new Document
                     {
                         Id = _context.GetLazyString(lowerId)
@@ -649,11 +647,17 @@ namespace Raven.Server.Documents.Queries.Results
                 {
                     if (luceneDoc != null)
                     {
-                        var field = luceneDoc.GetField(fieldToFetch.QueryField.SourceAlias);
-                        if (field != null)
+                        var fields = luceneDoc.GetFields(fieldToFetch.QueryField.SourceAlias);
+                        if (fields != null && fields.Length > 0)
                         {
-                            var fieldValue = ConvertType(_context, field, GetFieldType(field.Name, luceneDoc), state);
-                            _loadedDocumentIds.Add(fieldValue.ToString());
+                            foreach (var field in fields)
+                            {
+                                if (field == null)
+                                    continue;
+
+                                var fieldValue = ConvertType(_context, field, GetFieldType(field.Name, luceneDoc), state);
+                                _loadedDocumentIds.Add(fieldValue.ToString());
+                            }
                         }
                     }
                 }
@@ -848,7 +852,7 @@ namespace Raven.Server.Documents.Queries.Results
                 _includeRevisionsCommand?.AddRange(run.IncludeRevisionsChangeVectors);
                 _includeRevisionsCommand?.AddRevisionByDateTimeBefore(run.IncludeRevisionByDateTimeBefore, documentId);
                 _includeCompareExchangeValuesCommand?.AddRange(run.CompareExchangeValueIncludes);
-                
+
 
                 if (result.IsNull)
                     return null;

@@ -1625,6 +1625,15 @@ namespace Raven.Server.ServerWide
             return Secrets.Unprotect(protectedData);
         }
 
+        public byte[] GetSecretKey(string databaseName)
+        {
+            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                return GetSecretKey(context, databaseName);
+            }
+        }
+
         public void DeleteSecretKey(string databaseName)
         {
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -2554,6 +2563,7 @@ namespace Raven.Server.ServerWide
             record.Topology.Stamp ??= new LeaderStamp();
             record.Topology.Stamp.Term = _engine.CurrentTerm;
             record.Topology.Stamp.LeadersTicks = _engine.CurrentLeader?.LeaderShipDuration ?? 0;
+            record.Topology.NodesModifiedAt = SystemTime.UtcNow;
 
             var addDatabaseCommand = new AddDatabaseCommand(raftRequestId)
             {

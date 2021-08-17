@@ -12,7 +12,7 @@ class cloneRelatedItemsCommand extends commandBase {
     }
 
     execute(): JQueryPromise<void> {
-        const commands: Array<Raven.Server.Documents.Handlers.BatchRequestParser.CommandData> = [
+        const commands: Array<Partial<Raven.Server.Documents.Handlers.BatchRequestParser.CommandData>> = [
         ];
 
         this.attachmentsToClone.forEach(attachment => {
@@ -24,7 +24,7 @@ class cloneRelatedItemsCommand extends commandBase {
                 Name: attachment,
                 DestinationId: this.targetDocumentId,
                 DestinationName: attachment
-            } as Raven.Server.Documents.Handlers.BatchRequestParser.CommandData);
+            });
         });
 
         this.timeseriesToClone.forEach(timeseries => {
@@ -34,16 +34,16 @@ class cloneRelatedItemsCommand extends commandBase {
                 Name: timeseries,
                 DestinationId: this.targetDocumentId,
                 DestinationName: timeseries
-            } as Raven.Server.Documents.Handlers.BatchRequestParser.CommandData);
+            });
         });
 
         if (this.countersToClone.length) {
-            const operations = this.countersToClone.map(c => {
+            const operations: Raven.Client.Documents.Operations.Counters.CounterOperation[] = this.countersToClone.map(c => {
                 return {
                     Type: "Increment",
                     Delta: c.value,
                     CounterName: c.name
-                } as Raven.Client.Documents.Operations.Counters.CounterOperation;
+                };
             });
 
             commands.push({
@@ -52,7 +52,7 @@ class cloneRelatedItemsCommand extends commandBase {
                     DocumentId: this.targetDocumentId,
                     Operations: operations
                 }
-            } as Raven.Server.Documents.Handlers.BatchRequestParser.CommandData);
+            });
         }
 
         const args = ko.toJSON({ Commands: commands });

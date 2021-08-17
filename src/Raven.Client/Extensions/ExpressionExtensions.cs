@@ -145,6 +145,14 @@ namespace Raven.Client.Extensions
                     return base.VisitMember(node);
                 }
 
+                if (_isFirst == false && node.Expression != null && node.Member.IsField())
+                {
+                    Results.Push(node.Member.Name);
+                    AddPropertySeparator();
+                    Results.Push(node.Expression.ToString());
+                    return base.VisitMember(node);
+                }
+
                 AddPropertySeparator();
                 Results.Push(node.Member.Name);
                 return base.VisitMember(node);

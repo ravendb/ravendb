@@ -19,7 +19,7 @@ namespace FastTests.Client
         }
 
 
-        public class Order
+        private class Order
         {
             public string Id { get; set; }
             public string Company { get; set; }

@@ -5,15 +5,16 @@
                 <div class="flex-grow">
                     <h3 class="modal-title" id="myModalLabel" data-bind="text: op.title, attr:{ class: 'modal-title ' + op.headerClass() }"></h3>
                 </div>
-                <div class="flex-grow text-right">
+                <div class="flex-grow text-right margin-right margin-right-sm">
                     <span class="text-muted">Time elapsed:</span> <span data-bind="text: op.duration"></span>
                 </div>
                 <div>
-                    <button type="button" class="close" data-bind="click: $root.close" aria-hidden="true">
+                    <button type="button" class="close" data-bind="click: close" aria-hidden="true">
                         <i class="icon-cancel"></i>
                     </button>
                 </div>
             </div>
+            <div class="notification-time" data-bind="text: op.displayDate().format('LLL')"></div>
         </div>
         <div class="modal-body">
             <h3 class="text-danger" data-bind="visible: operationFailed">Operation failed!</h3>
@@ -34,7 +35,6 @@
                         errors
                     </div>
                 </div>
-                
                 <div class="items-container" data-bind="foreach: items">
                     <div class="migration-item">
                         <div class="name">
@@ -74,11 +74,7 @@
             </div>
             <pre class="margin-top migration-messages" data-bind="visible: detailsVisible, if: detailsVisible"><code data-bind="text: messagesJoined"></code></pre>
         </div>
-        <div class="modal-footer">
-            <button type="button" class="btn btn-default" data-bind="click: $root.close">Close</button>
-            <button type="button" class="btn btn-danger" data-bind="click: killOperation, visible: killable, css: { 'btn-spinner': spinners.kill }, disable: spinners.kill">
-                <i class="icon-cancel"></i> <span>Abort</span>
-            </button>
+        <div class="modal-footer" data-bind="compose: 'common/notificationCenter/detailViewer/operations/footerPartial.html'">
         </div>
     </div>
 </div>

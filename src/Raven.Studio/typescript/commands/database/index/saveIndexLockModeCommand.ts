@@ -10,10 +10,10 @@ class saveIndexLockModeCommand extends commandBase {
     }
 
     execute(): JQueryPromise<void> {
-        const payload = {
+        const payload: Raven.Client.Documents.Operations.Indexes.SetIndexesLockOperation.Parameters = {
             Mode: this.lockMode,
             IndexNames: this.indexes.map(x => x.name)
-        } as Raven.Client.Documents.Operations.Indexes.SetIndexesLockOperation.Parameters;
+        };
 
         const url = endpoints.databases.index.indexesSetLock;
 

@@ -19,7 +19,7 @@ class notificationCenterOperationsWatch {
         if (onProgress) {
             let progresses = this.watchedProgresses.get(operationId);
             if (!progresses) {
-                progresses = [] as Array<(progress: Raven.Client.Documents.Operations.IOperationProgress) => void>;
+                progresses = [];
                 this.watchedProgresses.set(operationId, progresses);
             }
 

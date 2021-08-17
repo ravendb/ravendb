@@ -4,7 +4,7 @@ import endpoints = require("endpoints");
 import document = require("models/database/documents/document");
 
 class stubsObjectsContainer {
-    private static stubsObjects = {} as dictionary<{}>;
+    private static stubsObjects: dictionary<{}> = {};
   
     static getStubObject(propertiesCount: number) {
         if (propertiesCount in stubsObjectsContainer.stubsObjects) {
@@ -41,14 +41,14 @@ class getDocumentsPreviewCommand extends commandBase {
             fullBinding: this.fullBindings
         };
 
-        const resultsSelector = (dto: resultsWithCountAndAvailableColumns<documentDto>, xhr: JQueryXHR) => {
+        const resultsSelector = (dto: resultsWithCountAndAvailableColumns<documentDto>, xhr: JQueryXHR): pagedResultWithAvailableColumns<document> => {
             dto.AvailableColumns.push("__metadata");
             return {
                 items: dto.Results.map(x => this.mapToDocument(x)),
                 totalResultCount: dto.TotalResults,
                 resultEtag: this.extractEtag(xhr),
                 availableColumns: dto.AvailableColumns
-            } as pagedResultWithAvailableColumns<document>;
+            };
         };
         
         const url = endpoints.databases.studioCollections.studioCollectionsPreview + this.urlEncodeArgs(args);

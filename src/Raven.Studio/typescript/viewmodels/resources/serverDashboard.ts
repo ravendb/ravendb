@@ -711,7 +711,7 @@ class driveUsageSection {
             });
         });
         
-        const result = [] as Array<{ Database: string, Size: number }>;
+        const result: Array<{ Database: string, Size: number }> = [];
         
         cache.forEach((value, key) => {
             result.push({

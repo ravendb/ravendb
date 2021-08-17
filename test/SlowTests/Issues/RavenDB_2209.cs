@@ -63,6 +63,7 @@ namespace SlowTests.Issues
                         });
                         session.SaveChanges();
                     }
+
                     await WaitAndAssertForGreaterThanAsync(() => Task.FromResult(requestExecutor.Cache.Generation), before);
 
                     using (var session = store.OpenSession())

@@ -75,6 +75,9 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
 
             Values = new BlittableJsonReaderObject(mem, sizeOfData, context);
             Values.BlittableValidation();
+
+            if (Values.TryGet(CountersStorage.Values, out BlittableJsonReaderObject counters) && counters != null)
+                stats.RecordCountersRead(counters.Count);
         }
 
         protected override ReplicationBatchItem CloneInternal(JsonOperationContext context)
