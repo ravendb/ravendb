@@ -165,6 +165,7 @@ namespace Raven.Server.Smuggler.Documents
                 if (_batch != null)
                 {
                     _batch.AddIndex(indexDefinition, _source, _database.Time.GetUtcNow(), RaftIdGenerator.DontCareId, _database.Configuration.Indexing.HistoryRevisionsNumber);
+                    AsyncHelpers.RunSync(_batch.SaveIfNeeded);
                     return;
                 }
 
@@ -176,6 +177,7 @@ namespace Raven.Server.Smuggler.Documents
                 if (_batch != null)
                 {
                     _batch.AddIndex(indexDefinition, _source, _database.Time.GetUtcNow(), RaftIdGenerator.DontCareId, _database.Configuration.Indexing.HistoryRevisionsNumber);
+                    AsyncHelpers.RunSync(_batch.SaveIfNeeded);
                     return;
                 }
 

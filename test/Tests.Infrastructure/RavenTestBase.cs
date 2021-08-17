@@ -783,7 +783,7 @@ namespace FastTests
         protected static async Task<T> WaitAndAssertForGreaterThanAsync<T>(Func<Task<T>> act, T expectedVal, int timeout = 15000, int interval = 100) where T : IComparable
         {
             var actualValue = await WaitForGreaterThanAsync(act, expectedVal, timeout, interval);
-            Assert.True(actualValue.CompareTo(expectedVal) > 0);
+            Assert.True(actualValue.CompareTo(expectedVal) > 0, $"expectedVal:{expectedVal}, actualValue: {actualValue}");
             return actualValue;
         }
 
