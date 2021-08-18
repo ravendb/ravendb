@@ -202,7 +202,7 @@ namespace Raven.Server.Documents.Replication
                     if (rawRecord == null)
                         throw new InvalidOperationException($"The database record for {database.Name} does not exist?!");
 
-                    if (rawRecord.IsEncrypted&& Destination.Url.StartsWith("https:", StringComparison.OrdinalIgnoreCase) == false)
+                    if (rawRecord.IsEncrypted && Destination.Url.StartsWith("https:", StringComparison.OrdinalIgnoreCase) == false)
                         throw new InvalidOperationException(
                             $"{database.Name} is encrypted, and require HTTPS for replication, but had endpoint with url {Destination.Url} to database {Destination.Database}");
                 }
@@ -288,10 +288,26 @@ namespace Raven.Server.Documents.Replication
                 ProtocolVersion = supportedFeatures.ProtocolVersion,
             };
 
-            using (_parent._server.Server._tcpContextPool.AllocateOperationContext(out var ctx))
-            using (ctx.GetManagedBuffer(out _buffer))
+            try
             {
-                _parent.RunPullReplicationAsSink(tcpOptions, _buffer, Destination as PullReplicationAsSink, this);
+                using (_parent._server.Server._tcpContextPool.AllocateOperationContext(out var ctx))
+                using (ctx.GetManagedBuffer(out _buffer))
+                {
+                    _parent.RunPullReplicationAsSink(tcpOptions, _buffer, Destination as PullReplicationAsSink, this);
+                }
+            }
+            catch
+            {
+                try
+                {
+                    tcpOptions.Dispose();
+                }
+                catch
+                {
+                    // nothing we can do
+                }
+
+                throw;
             }
         }
 
@@ -859,7 +875,7 @@ namespace Raven.Server.Documents.Replication
                         }
                     };
                 }
-               
+
                 return result.IsValid ? 1 : 0;
             }
 
