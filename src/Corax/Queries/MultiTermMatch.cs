@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
+using Sparrow;
 using Sparrow.Server;
 
 namespace Corax.Queries
@@ -74,19 +75,27 @@ namespace Corax.Queries
             if (requiresSort && count > 1)
             {
                 // We need to sort and remove duplicates.
-                bufferState = buffer.Slice(0, count);
-                MemoryExtensions.Sort(bufferState);
+                var bufferBasePtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(buffer));
+
+                MemoryExtensions.Sort(buffer.Slice(0, count));
 
                 // We need to fill in the gaps left by removing deduplication process.
                 // If there are no duplicated the writes at the architecture level will execute
                 // way faster than if there are.
-                count = 0;
-                for (int i = 1; i < bufferState.Length; i++)
+                
+                var outputBufferPtr = bufferBasePtr;
+
+                var bufferPtr = bufferBasePtr;
+                var bufferEndPtr = bufferBasePtr + count - 1;                
+                while (bufferPtr < bufferEndPtr)
                 {
-                    count += bufferState[i] != bufferState[i - 1] ? 1 : 0;
-                    bufferState[count] = bufferState[i];
+                    outputBufferPtr += bufferPtr[1] != bufferPtr[0] ? 1 : 0;
+                    *outputBufferPtr = bufferPtr[1];
+                    
+                    bufferPtr++;
                 }
-                bufferState[count++] = bufferState[^1];
+
+                count = (int) (outputBufferPtr - bufferBasePtr + 1);
             }
 
             return count;

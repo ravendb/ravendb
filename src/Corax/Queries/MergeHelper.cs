@@ -36,14 +36,14 @@ namespace Corax.Queries
                 long leftValue = *leftPtr;
                 long rightValue = *rightPtr;
 
-                if (leftValue < rightValue)
-                {
-                    leftPtr++;
-                }
-                else if (leftValue > rightValue)
+                if (leftValue > rightValue)
                 {
                     rightPtr++;
                 }
+                else if (leftValue < rightValue)
+                {
+                    leftPtr++;
+                }                
                 else
                 {
                     *dstPtr = leftValue;
@@ -54,26 +54,6 @@ namespace Corax.Queries
             }
 
             return (int)(dstPtr - dst);
-
-            //int dstIdx = 0, leftIdx = 0, rightIdx = 0;
-            //while (leftIdx < leftLength && rightIdx < rightLength)
-            //{
-            //    if (left[leftIdx] < right[rightIdx])
-            //    {
-            //        leftIdx++;
-            //    }
-            //    else if (left[leftIdx] > right[rightIdx])
-            //    {
-            //        rightIdx++;
-            //    }
-            //    else
-            //    {
-            //        dst[dstIdx++] = left[leftIdx];
-            //        leftIdx++;
-            //        rightIdx++;
-            //    }
-            //}
-            //return dstIdx;
         }
 
         /// <summary>
