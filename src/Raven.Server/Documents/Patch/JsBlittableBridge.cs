@@ -39,17 +39,17 @@ namespace Raven.Server.Documents.Patch
             _engine = engine;
         }
 
-        private void WriteInstance(V8NativeObject jsObject, IResultModifier modifier, bool isRoot, bool filterProperties)
+        private void WriteInstance(InternalHandle jsObj, IResultModifier modifier, bool isRoot, bool filterProperties)
         {
             _writer.StartWriteObject();
 
-            modifier?.Modify(jsObject);
+            modifier?.Modify(jsObj);
 
-            object boundObject = jsObject._.BoundObject;
+            object boundObject = jsObj.BoundObject;
             if (boundObject != null && boundObject is BlittableObjectInstance blittableJsObject)
-                WriteBlittableInstance(blittableJsObject, isRoot, filterProperties);
+                WriteBlittableInstance(jsObj, isRoot, filterProperties);
             else
-                WriteJsInstance(jsObject, isRoot, filterProperties);
+                WriteJsInstance(jsObj, isRoot, filterProperties);
 
             _writer.WriteObjectEnd();
         }
@@ -375,9 +375,9 @@ namespace Raven.Server.Documents.Patch
             }
         }
 
-        private void WriteJsInstance(V8NativeObject obj, bool isRoot, bool filterProperties)
+        private void WriteJsInstance(InternalHandle jsObj, bool isRoot, bool filterProperties)
         {
-            var properties = obj is ObjectBinder ob ? GetBoundObjectProperties(ob.Object) : obj.GetOwnProperties(); // TODO GetBoundObjectProperties could be prepaired and written avoiding toJs, fromJs translations
+            var properties = jsObj.Object is ObjectBinder ob ? GetBoundObjectProperties(ob.Object) : jsObj.GetOwnProperties(); // TODO GetBoundObjectProperties could be prepaired and written avoiding toJs, fromJs translations
             foreach (var (propertyName, jsPropertyValue) in properties)
             {
                 using (jsPropertyValue) {
@@ -389,7 +389,7 @@ namespace Raven.Server.Documents.Patch
 
                     _writer.WritePropertyName(propertyName);
 
-                    WriteJsonValue(obj, isRoot, propertyName, jsPropertyValue);
+                    WriteJsonValue(jsObj, isRoot, propertyName, jsPropertyValue);
                 }
             }
         }
@@ -445,8 +445,11 @@ namespace Raven.Server.Documents.Patch
             }
         }
 
-        private unsafe void WriteBlittableInstance(BlittableObjectInstance obj, bool isRoot, bool filterProperties)
+        private unsafe void WriteBlittableInstance(InternalHandle jsObj, bool isRoot, bool filterProperties)
         {
+            object boundObject = jsObj.BoundObject;
+            var obj = boundObject as BlittableObjectInstance;
+
             HashSet<string> modifiedProperties = null;
             if (obj.DocumentId != null &&
                 _usageMode == BlittableJsonDocumentBuilder.UsageMode.None)
@@ -485,7 +488,7 @@ namespace Raven.Server.Documents.Patch
 
                     if (existInObject && modifiedValue.Changed)
                     {
-                        WriteJsonValue(obj, isRoot, prop.Name, modifiedValue.Value);
+                        WriteJsonValue(jsObj, isRoot, prop.Name, modifiedValue.Value);
                     }
                     else
                     {
@@ -512,7 +515,7 @@ namespace Raven.Server.Documents.Patch
 
                 _writer.WritePropertyName(propertyName);
                 var blittableObjectProperty = modificationKvp.Value;
-                WriteJsonValue(obj, isRoot, propertyName, blittableObjectProperty.Value);
+                WriteJsonValue(jsObj, isRoot, propertyName, blittableObjectProperty.Value);
             }
         }
 
