@@ -377,8 +377,8 @@ namespace Raven.Server.Documents.Replication
                     BlittableJsonDocumentBuilder.UsageMode.None, buffer))
                 {
                     initialRequest = JsonDeserializationServer.ReplicationInitialRequest(readerObject);
-                    }
                 }
+            }
 
             string[] allowedPaths = default;
             string pullDefinitionName = null;
@@ -392,15 +392,15 @@ namespace Raven.Server.Documents.Replication
                     if (header.AuthorizeInfo.AuthorizationFor == null)
                         throw new InvalidOperationException("Pull replication requires that the AuthorizationFor field will be set, but it wasn't provided");
 
-            PullReplicationDefinition pullReplicationDefinition;
-            using (_server.Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-            using (ctx.OpenReadTransaction())
-            {
+                    PullReplicationDefinition pullReplicationDefinition;
+                    using (_server.Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                    using (ctx.OpenReadTransaction())
+                    {
                         pullReplicationDefinition = _server.Cluster.ReadPullReplicationDefinition(Database.Name, header.AuthorizeInfo.AuthorizationFor, ctx);
 
                         if (pullReplicationDefinition.Disabled)
                             throw new InvalidOperationException("The replication hub " + pullReplicationDefinition.Name + " is disabled and cannot be used currently");
-            }
+                    }
 
                     pullDefinitionName = header.AuthorizeInfo.AuthorizationFor;
 
@@ -473,7 +473,7 @@ namespace Raven.Server.Documents.Replication
                 using (tcpConnectionOptions)
                 using (outgoingReplication)
                 {
-                    
+
                 }
                 return;
             }
@@ -487,44 +487,48 @@ namespace Raven.Server.Documents.Replication
         }
 
         public void RunPullReplicationAsSink(
-            TcpConnectionOptions tcpConnectionOptions, 
-            JsonOperationContext.MemoryBuffer buffer, 
-            PullReplicationAsSink destination, 
+            TcpConnectionOptions tcpConnectionOptions,
+            JsonOperationContext.MemoryBuffer buffer,
+            PullReplicationAsSink destination,
             OutgoingReplicationHandler source)
         {
-            string[] allowedPaths = DetailedReplicationHubAccess.Preferred(destination.AllowedHubToSinkPaths, destination.AllowedSinkToHubPaths);
-            var pullParams = new IncomingPullReplicationParams
+            using (source)
             {
-                Name = destination.HubName,
-                AllowedPaths = allowedPaths,
-                Mode = PullReplicationMode.HubToSink
-            };
-            var newIncoming = CreateIncomingReplicationHandler(tcpConnectionOptions, buffer, pullParams);
-            newIncoming.Failed += RetryPullReplication;
-            _outgoing.TryRemove(source); // we are pulling and therefore incoming, upon failure 'RetryPullReplication' will put us back as an outgoing
-
-            PoolOfThreads.PooledThread.ResetCurrentThreadName();
-            Thread.CurrentThread.Name = $"Pull Replication as Sink from {destination.Database} at {destination.Url}";
-
-            _incoming[newIncoming.ConnectionInfo.SourceDatabaseId] = newIncoming;
-            IncomingReplicationAdded?.Invoke(newIncoming);
-            newIncoming.DoIncomingReplication();
-
-            void RetryPullReplication(IncomingReplicationHandler instance, Exception e)
-            {
-                using (instance)
+                string[] allowedPaths = DetailedReplicationHubAccess.Preferred(destination.AllowedHubToSinkPaths, destination.AllowedSinkToHubPaths);
+                var pullParams = new IncomingPullReplicationParams
                 {
-                    if (_incoming.TryRemove(instance.ConnectionInfo.SourceDatabaseId, out _))
-                        IncomingReplicationRemoved?.Invoke(instance);
+                    Name = destination.HubName,
+                    AllowedPaths = allowedPaths,
+                    Mode = PullReplicationMode.HubToSink
+                };
+                var newIncoming = CreateIncomingReplicationHandler(tcpConnectionOptions, buffer, pullParams);
+                newIncoming.Failed += RetryPullReplication;
 
-                    instance.Failed -= RetryPullReplication;
-                    instance.DocumentsReceived -= OnIncomingReceiveSucceeded;
-                    if (_log.IsInfoEnabled)
-                        _log.Info($"Pull replication Sink handler has thrown an unhandled exception. ({instance.FromToString})", e);
+                _outgoing.TryRemove(source); // we are pulling and therefore incoming, upon failure 'RetryPullReplication' will put us back as an outgoing
+
+                PoolOfThreads.PooledThread.ResetCurrentThreadName();
+                Thread.CurrentThread.Name = $"Pull Replication as Sink from {destination.Database} at {destination.Url}";
+
+                _incoming[newIncoming.ConnectionInfo.SourceDatabaseId] = newIncoming;
+                IncomingReplicationAdded?.Invoke(newIncoming);
+                newIncoming.DoIncomingReplication();
+
+                void RetryPullReplication(IncomingReplicationHandler instance, Exception e)
+                {
+                    using (instance)
+                    {
+                        if (_incoming.TryRemove(instance.ConnectionInfo.SourceDatabaseId, out _))
+                            IncomingReplicationRemoved?.Invoke(instance);
+
+                        instance.Failed -= RetryPullReplication;
+                        instance.DocumentsReceived -= OnIncomingReceiveSucceeded;
+                        if (_log.IsInfoEnabled)
+                            _log.Info($"Pull replication Sink handler has thrown an unhandled exception. ({instance.FromToString})", e);
+                    }
+
+                    // if the stream closed, it is our duty to reconnect
+                    AddAndStartOutgoingReplication(destination, true);
                 }
-
-                // if the stream closed, it is our duty to reconnect
-                AddAndStartOutgoingReplication(destination, true);
             }
         }
 
@@ -1029,7 +1033,7 @@ namespace Raven.Server.Documents.Replication
                             ex.DelayReplicationFor = newDestinationEx.DelayReplicationFor;
                         }
                     }
-                    
+
                     continue;
                 }
 
@@ -1114,8 +1118,8 @@ namespace Raven.Server.Documents.Replication
 
                     i += 1;
                     externalReplications.Insert(i, other);
+                }
             }
-        }
         }
 
         private List<ExternalReplicationBase> GetMyNewDestinations(DatabaseRecord newRecord, List<ExternalReplicationBase> added)
@@ -1418,29 +1422,29 @@ namespace Raven.Server.Documents.Replication
                 {
                     case ExternalReplicationBase exNode:
                         {
-                    var database = exNode.ConnectionString.Database;
-                    if (node is PullReplicationAsSink sink)
-                    {
-                        return GetPullReplicationTcpInfo(sink, certificate, database);
-                    }
+                            var database = exNode.ConnectionString.Database;
+                            if (node is PullReplicationAsSink sink)
+                            {
+                                return GetPullReplicationTcpInfo(sink, certificate, database);
+                            }
 
-                    // normal external replication
-                    return GetExternalReplicationTcpInfo(exNode as ExternalReplication, certificate, database);
-                }
+                            // normal external replication
+                            return GetExternalReplicationTcpInfo(exNode as ExternalReplication, certificate, database);
+                        }
                     case InternalReplication internalNode:
-                {
-                    using (var cts = CancellationTokenSource.CreateLinkedTokenSource(_shutdownToken))
-                    {
-                        cts.CancelAfter(_server.Engine.TcpConnectionTimeout);
+                        {
+                            using (var cts = CancellationTokenSource.CreateLinkedTokenSource(_shutdownToken))
+                            {
+                                cts.CancelAfter(_server.Engine.TcpConnectionTimeout);
                                 return ReplicationUtils.GetTcpInfo(internalNode.Url, internalNode.Database, Database.DbId.ToString(), Database.ReadLastEtag(),
                                     "Replication",
                             certificate, cts.Token);
-                    }
-                }
+                            }
+                        }
                     default:
-                throw new InvalidOperationException(
-                    $"Unexpected replication node type, Expected to be '{typeof(ExternalReplication)}' or '{typeof(InternalReplication)}', but got '{node.GetType()}'");
-            }
+                        throw new InvalidOperationException(
+                            $"Unexpected replication node type, Expected to be '{typeof(ExternalReplication)}' or '{typeof(InternalReplication)}', but got '{node.GetType()}'");
+                }
             }
             catch (Exception e)
             {
@@ -1470,7 +1474,7 @@ namespace Raven.Server.Documents.Replication
                         AlertType.Replication,
                         NotificationSeverity.Error);
 
-                        _server.NotificationCenter.Add(alert);
+                    _server.NotificationCenter.Add(alert);
                 }
 
                 var replicationPulse = new LiveReplicationPulsesCollector.ReplicationPulse

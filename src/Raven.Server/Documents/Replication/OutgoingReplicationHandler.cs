@@ -104,7 +104,7 @@ namespace Raven.Server.Documents.Replication
             _external = external;
             _log = LoggingSource.Instance.GetLogger<OutgoingReplicationHandler>(_database.Name);
             _tcpConnectionOptions = tcpConnectionOptions ??
-                                    new TcpConnectionOptions {DocumentDatabase = database, Operation = TcpConnectionHeaderMessage.OperationTypes.Replication};
+                                    new TcpConnectionOptions { DocumentDatabase = database, Operation = TcpConnectionHeaderMessage.OperationTypes.Replication };
             _connectionInfo = connectionInfo;
             _database.Changes.OnDocumentChange += OnDocumentChange;
             _database.Changes.OnCounterChange += OnCounterChange;
@@ -119,9 +119,12 @@ namespace Raven.Server.Documents.Replication
 
         public override bool Equals(object obj)
         {
-            if (ReferenceEquals(null, obj)) return false;
-            if (ReferenceEquals(this, obj)) return true;
-            if (obj.GetType() != GetType()) return false;
+            if (ReferenceEquals(null, obj))
+                return false;
+            if (ReferenceEquals(this, obj))
+                return true;
+            if (obj.GetType() != GetType())
+                return false;
             return Equals((OutgoingReplicationHandler)obj);
         }
 
@@ -302,10 +305,26 @@ namespace Raven.Server.Documents.Replication
                 Certificate = certificate
             };
 
-            using (_parent._server.Server._tcpContextPool.AllocateOperationContext(out var ctx))
-            using (ctx.GetMemoryBuffer(out _buffer))
+            try
             {
-                _parent.RunPullReplicationAsSink(tcpOptions, _buffer, Destination as PullReplicationAsSink, this);
+                using (_parent._server.Server._tcpContextPool.AllocateOperationContext(out var ctx))
+                using (ctx.GetMemoryBuffer(out _buffer))
+                {
+                    _parent.RunPullReplicationAsSink(tcpOptions, _buffer, Destination as PullReplicationAsSink, this);
+                }
+            }
+            catch
+            {
+                try
+                {
+                    tcpOptions.Dispose();
+                }
+                catch
+                {
+                    // nothing we can do
+                }
+
+                throw;
             }
         }
 

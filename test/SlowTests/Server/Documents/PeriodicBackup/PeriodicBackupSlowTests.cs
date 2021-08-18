@@ -2308,7 +2308,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             if (incremental)
             {
                 Debug.Assert(status.LastIncrementalBackup.HasValue);
-                datePrefix = status.LastIncrementalBackup.Value.ToLocalTime().ToString("yyyy-MM-dd-HH-mm-ss");
+                datePrefix = status.LastIncrementalBackup.Value.ToLocalTime().ToString(BackupTask.DateTimeFormat);
             }
             else
             {
