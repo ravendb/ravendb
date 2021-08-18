@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net5.0</TargetFramework>
     <RuntimeFrameworkVersion>5.0.9</RuntimeFrameworkVersion>
@@ -21,6 +21,5 @@
     <ProjectReference Include="..\..\src\Corax\Corax.csproj" />
     <ProjectReference Include="..\..\src\Raven.Server\Raven.Server.csproj" />
     <ProjectReference Include="..\..\src\Voron\Voron.csproj" />
-    <ProjectReference Include="..\..\test\Tryouts\Tryouts.csproj" />
   </ItemGroup>
 </Project>

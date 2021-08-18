@@ -15,17 +15,14 @@ using BenchmarkDotNet.Exporters;
 using BenchmarkDotNet.Jobs;
 using BenchmarkDotNet.Validators;
 using Corax;
-using Corax.Queries;
-using Raven.Server.Documents.Queries.Parser;
 using Sparrow.Server;
 using Sparrow.Threading;
-using static Corax.Queries.SortingMatch;
 
 namespace Voron.Benchmark.Corax
 {
 
-    //[DisassemblyDiagnoser]
-    //[InliningDiagnoser(logFailuresOnly: true, filterByNamespace: true)]
+    //[DisassemblyDiagnoser(maxDepth: 900, printSource:true, exportHtml: true, exportDiff: true)]
+    //[InliningDiagnoser(logFailuresOnly: true, allowedNamespaces: new[] { "Corax" })]
     public class OrderByBenchmark
     {
         protected StorageEnvironment Env;
@@ -34,11 +31,12 @@ namespace Voron.Benchmark.Corax
         public virtual bool DeleteBeforeEachBenchmark { get; protected set; } = false;
 
 
-        [Params(1024, 2048, 4096, 16 * 1024)]
+        [Params(1024, 2048, 4096, 16 * 1024)]        
         //[Params(1024)]
         public int BufferSize { get; set; }
 
         [Params(16, 64, 256)]
+        //[Params(16)]
         public int TakeSize { get; set; }
 
 
@@ -177,25 +175,10 @@ namespace Voron.Benchmark.Corax
                 GenerateData(Env);
             }
 
-            var parser = new QueryParser();
-            parser.Init("from Dogs where Type = 'Dog' and (Age = '1' or Age = '10' or Age = '11' or Age = '12' or Age = '13' or Age = '14' or Age = '15' or Age = '16' or Age = '17')");
-            _queryOr = new QueryDefinition("Name", parser.Parse());
-
-            parser = new QueryParser();
-            parser.Init("from Dogs where Type = 'Dog' and Age in ('1', '10', '11', '12', '13', '14', '15', '16', '17')");
-            _queryIn = new QueryDefinition("Name", parser.Parse());
-
-            parser = new QueryParser();
-            parser.Init("from Dogs where Type = 'Dog' and startsWith(Age, '1')");
-            //_queryStartWith = new QueryDefinition("Name", parser.Parse());
-
             _ids = new long[BufferSize];
             _indexSearcher = new IndexSearcher(Env);
         }
 
-        protected QueryDefinition _queryOr;
-        protected QueryDefinition _queryIn;
-        protected QueryDefinition _queryStartWith;
 
         [GlobalCleanup]
         public virtual void Cleanup()

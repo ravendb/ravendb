@@ -1,4 +1,5 @@
-﻿using System;
+﻿//using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -20,10 +21,11 @@ using Lucene.Net.Index;
 using Lucene.Net.QueryParsers;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
+using Lucene.Net.Util;
 using Directory = System.IO.Directory;
 using Version = Lucene.Net.Util.Version;
 
-namespace Voron.Benchmark.Corax
+namespace Voron.Benchmark.Lucene
 {
 
     //[DisassemblyDiagnoser]
@@ -116,7 +118,7 @@ namespace Voron.Benchmark.Corax
             if (directoryInfo.Exists == false)
                 directoryInfo.Create();
             using SimpleFSDirectory dir = new SimpleFSDirectory(directoryInfo);
-            using var writer = new Lucene.Net.Index.IndexWriter(dir,
+            using var writer = new IndexWriter(dir,
                 new StandardAnalyzer(Version.LUCENE_30),
                 true,
                 IndexWriter.MaxFieldLength.UNLIMITED,

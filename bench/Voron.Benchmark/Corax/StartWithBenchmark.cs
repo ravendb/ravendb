@@ -19,7 +19,6 @@ using Corax.Queries;
 using Raven.Server.Documents.Queries.Parser;
 using Sparrow.Server;
 using Sparrow.Threading;
-using Tryouts;
 
 namespace Voron.Benchmark.Corax
 {
@@ -183,7 +182,7 @@ namespace Voron.Benchmark.Corax
 
             parser = new QueryParser();
             parser.Init("from Dogs where Type = 'Dog' and startsWith(Age, '1')");
-            //_queryStartWith = new QueryDefinition("Name", parser.Parse());
+            _queryStartWith = new QueryDefinition("Name", parser.Parse());
 
             _ids = new long[BufferSize];
         }
@@ -243,7 +242,8 @@ namespace Voron.Benchmark.Corax
         public void InParserQuery()
         {
             using var indexSearcher = new IndexSearcher(Env);
-            var query = indexSearcher.Search(_queryIn.Query.Where);
+            var evaluator = new CoraxQueryEvaluator(indexSearcher);
+            var query = evaluator.Search(_queryIn.Query.Where);
 
             Span<long> ids = _ids;
             while (query.Fill(ids) != 0)
@@ -254,22 +254,24 @@ namespace Voron.Benchmark.Corax
         public void OrParserQuery()
         {
             using var indexSearcher = new IndexSearcher(Env);
-            var query = indexSearcher.Search(_queryOr.Query.Where);
+            var evaluator = new CoraxQueryEvaluator(indexSearcher);
+            var query = evaluator.Search(_queryOr.Query.Where);
 
             Span<long> ids = _ids;
             while (query.Fill(ids) != 0)
                 ;
         }
 
-        //[Benchmark]
-        //public void StartsWithParserQuery()
-        //{
-        //    using var indexSearcher = new IndexSearcher(Env);
-        //    var query = indexSearcher.Search(_queryStartWith.Query.Where);
+        [Benchmark]
+        public void StartsWithParserQuery()
+        {
+            using var indexSearcher = new IndexSearcher(Env);
+            var evaluator = new CoraxQueryEvaluator(indexSearcher);
+            var query = evaluator.Search(_queryStartWith.Query.Where);
 
-        //    Span<long> ids = _ids;
-        //    while (query.Fill(ids) != 0)
-        //        ;
-        //}
+            Span<long> ids = _ids;
+            while (query.Fill(ids) != 0)
+                ;
+        }
     }
 }
