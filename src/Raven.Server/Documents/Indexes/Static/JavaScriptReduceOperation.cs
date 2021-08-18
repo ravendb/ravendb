@@ -38,11 +38,11 @@ namespace Raven.Server.Documents.Indexes.Static
 
             if (reduceV8.IsUndefined || reduceV8.IsNull)
                 throw new ArgumentNullException(nameof(reduceV8));
-            ReduceV8.Set(reduceV8);
+            ReduceV8 = new InternalHandle(reduceV8, true);
 
             if (keyV8.IsUndefined || keyV8.IsNull)
                 throw new ArgumentNullException(nameof(keyV8));
-            KeyV8.Set(keyV8);
+            KeyV8 = new InternalHandle(keyV8, true);
 
             JavaScriptIndexUtilsV8 = javaScriptIndexUtilsV8;
             JavaScriptUtilsV8 = JavaScriptIndexUtilsV8.JavaScriptUtils;

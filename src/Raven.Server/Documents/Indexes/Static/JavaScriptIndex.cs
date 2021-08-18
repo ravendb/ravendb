@@ -88,7 +88,8 @@ function map(name, lambda) {
                 ThrowIndexCreationException($"Jint: doesn't contain any map functions or '{GlobalDefinitions}.{Maps}' was modified in the script");
 
 
-            using (var maps = _definitions.GetProperty(MapsProperty)) {
+            using (var maps = _definitions.GetProperty(MapsProperty)) // pure native value
+            {
                 if (maps.IsNull || maps.IsUndefined || maps.IsArray == false)
                     ThrowIndexCreationException($"doesn't contain any map function or '{GlobalDefinitions}.{Maps}' was modified in the script");
 
@@ -109,7 +110,7 @@ function map(name, lambda) {
                     if (funcInstanceJint == null)
                         ThrowIndexCreationException($"Jint: map function #{i} {MethodProperty} property isn't a 'FunctionInstance'");
 
-                    using (var map = maps.GetProperty(i))
+                    using (var map = maps.GetProperty(i)) // pure native value
                     {
                         if (map.IsNull || map.IsUndefined || map.IsObject == false)
                             ThrowIndexCreationException($"map function #{i} is not a valid object");
@@ -129,15 +130,10 @@ function map(name, lambda) {
                             if (map.HasProperty(MethodProperty) == false)
                                 ThrowIndexCreationException($"map function #{i} is missing its {MethodProperty} property");
 
-                            //using (var
-                            Handle func = map.GetProperty(MethodProperty);
+                            var func = map.GetProperty(MethodProperty); // to be saved to map operation
                             {
-                                if (func._.IsFunction == false)
+                                if (func.IsFunction == false)
                                     ThrowIndexCreationException($"map function #{i} {MethodProperty} property isn't a function");
-
-                                /*using (var jsRes = func.StaticCall(InternalHandle.Empty)) {
-                                    jsRes.ThrowOnError();
-                                }*/
 
                                 JavaScriptMapOperation operation = new JavaScriptMapOperation(JavaScriptIndexUtils, funcInstanceJint, func, Definition.Name, mapList[i]);
                                 if (mapJint.HasOwnProperty(MoreArgsProperty))
@@ -171,6 +167,32 @@ function map(name, lambda) {
                     }
                 }
             }
+
+            /*using (var maps = _definitions.GetProperty(MapsProperty)) // pure native value
+            {
+                if (maps.IsNull || maps.IsUndefined || maps.IsArray == false)
+                    ThrowIndexCreationException($"doesn't contain any map function or '{GlobalDefinitions}.{Maps}' was modified in the script");
+
+                int mapCount = maps.ArrayLength;
+                if (mapCount == 0)
+                    ThrowIndexCreationException($"doesn't contain any map functions or '{GlobalDefinitions}.{Maps}' was modified in the script");
+
+                collectionFunctions = new Dictionary<string, Dictionary<string, List<JavaScriptMapOperation>>>();
+                for (int i = 0; i < mapCount; i++)
+                {
+                    var mapObjJint = mapsJint.Get(i.ToString());
+                    if (mapObjJint.IsNull() || mapObjJint.IsUndefined() || mapObjJint.IsObject() == false)
+                        ThrowIndexCreationException($"Jint: map function #{i} is not a valid object");
+                    var mapJint = mapObjJint.AsObject();                        
+                    if (mapJint.HasProperty(MethodProperty) == false)
+                        ThrowIndexCreationException($"Jint: map function #{i} is missing its {MethodProperty} property");
+                    var funcInstanceJint = mapJint.Get(MethodProperty).As<FunctionInstance>();
+                    if (funcInstanceJint == null)
+                        ThrowIndexCreationException($"Jint: map function #{i} {MethodProperty} property isn't a 'FunctionInstance'");
+
+                    var map = maps.GetProperty(i); // pure native value
+                }
+            }*/
         }
 
         private JsValue GetDocumentIdJint(JsValue self, JsValue[] args)
@@ -449,7 +471,7 @@ function map(name, lambda) {
         ~AbstractJavaScriptIndex()
         {
             _engine.Dispose();
-            _definitions.Dispose();
+            _definitions.Dispose(); // pure native value
         }
 
         private void ProcessFields(Dictionary<string, Dictionary<string, List<JavaScriptMapOperation>>> collectionFunctions)
@@ -500,14 +522,16 @@ function map(name, lambda) {
                 var groupByKeyJint = reduceAsObjJint.GetProperty(KeyProperty).Value.As<ScriptFunctionInstance>();
                 var reduceJint = reduceAsObjJint.GetProperty(AggregateByProperty).Value.As<ScriptFunctionInstance>();
 
-                var reduceObj = _definitions.GetProperty(ReduceProperty);
-                if (!reduceObj.IsUndefined && reduceObj.IsObject)
+                using (var reduceObj = _definitions.GetProperty(ReduceProperty)) // pure native value
                 {
-                    using (var groupByKey = reduceObj.GetProperty(KeyProperty))
-                    using (var reduce = reduceObj.GetProperty(AggregateByProperty))
+                    if (!reduceObj.IsUndefined && reduceObj.IsObject)
+                    {
+                        var groupByKey = reduceObj.GetProperty(KeyProperty); // to be saved to reduce operation
+                        var reduce = reduceObj.GetProperty(AggregateByProperty); // to be saved to reduce operation
                         ReduceOperation = new JavaScriptReduceOperation(reduceJint, groupByKeyJint, _engineJint, reduce, groupByKey, JavaScriptIndexUtils) { ReduceString = Definition.Reduce };
-                    GroupByFields = ReduceOperation.GetReduceFieldsNames();
-                    Reduce = ReduceOperation.IndexingFunction;
+                        GroupByFields = ReduceOperation.GetReduceFieldsNames();
+                        Reduce = ReduceOperation.IndexingFunction;
+                    }
                 }
             }
         }

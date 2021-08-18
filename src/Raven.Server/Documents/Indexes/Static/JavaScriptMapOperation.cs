@@ -30,29 +30,22 @@ namespace Raven.Server.Documents.Indexes.Static
         private readonly JavaScriptIndexUtils _javaScriptIndexUtils;
         private readonly V8EngineEx _engine;
         public string IndexName { get; set; }
-        public Handle MapFuncV8;
+        public InternalHandle MapFuncV8;
 
-        public JavaScriptMapOperation(JavaScriptIndexUtils javaScriptIndexUtils, FunctionInstance mapFunc, Handle mapFuncV8, string indexName, string mapString)
+        public JavaScriptMapOperation(JavaScriptIndexUtils javaScriptIndexUtils, FunctionInstance mapFunc, InternalHandle mapFuncV8, string indexName, string mapString)
         {
             _javaScriptIndexUtils = javaScriptIndexUtils;
             _engine = _javaScriptIndexUtils.Engine;
 
-            if (!mapFuncV8._.IsFunction)
-                throw new JavaScriptIndexFuncException($"mapFuncV8 is not a function");
-
             MapFunc = mapFunc;
-            MapFuncV8 = mapFuncV8;
+            MapFuncV8 = new InternalHandle(mapFuncV8, true);
             IndexName = indexName;
             MapString = mapString;
-
-            if (!MapFuncV8._.IsFunction)
-                throw new JavaScriptIndexFuncException($"constructor: MapFuncV8 is not a function");
-
         }
 
         ~JavaScriptMapOperation()
         {
-            //MapFuncV8._.Dispose();
+            MapFuncV8.Dispose();
         }
 
         public IEnumerable<InternalHandle> IndexingFunction(IEnumerable<object> items)
@@ -71,9 +64,9 @@ namespace Raven.Server.Documents.Indexes.Static
                     InternalHandle jsRes = InternalHandle.Empty;
                     try
                     {
-                        if (!MapFuncV8._.IsFunction)
+                        if (!MapFuncV8.IsFunction)
                             throw new JavaScriptIndexFuncException($"MapFuncV8 is not a function");
-                        jsRes = MapFuncV8._.StaticCall(jsItem);
+                        jsRes = MapFuncV8.StaticCall(jsItem);
                         jsRes.ThrowOnError();
                     }
                     catch (V8Exception jse)
@@ -96,16 +89,14 @@ namespace Raven.Server.Documents.Indexes.Static
                             var length = (uint)jsRes.ArrayLength;
                             for (int i = 0; i < length; i++)
                             {
-                                using (var arrItem = jsRes.GetProperty(i))
-                                {
-                                    if (arrItem.IsObject) {
-                                        InternalHandle jRes2 = InternalHandle.Empty;
-                                        yield return jRes2.Set(arrItem);
-                                    }
-                                    else {
-                                        // this check should be to catch map errors
-                                        throw new JavaScriptIndexFuncException($"Failed to execute {MapString}", new Exception($"At leaset one of map results is not object: {jsRes.ToString()}"));
-                                    }
+                                var arrItem = jsRes.GetProperty(i);
+                                if (arrItem.IsObject) {
+                                    yield return arrItem;
+                                }
+                                else {
+                                    arrItem.Dispose();
+                                    // this check should be to catch map errors
+                                    throw new JavaScriptIndexFuncException($"Failed to execute {MapString}", new Exception($"At leaset one of map results is not object: {jsRes.ToString()}"));
                                 }
                             }
                         }
