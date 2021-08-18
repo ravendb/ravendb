@@ -29,10 +29,10 @@ namespace SlowTests.Issues
             var hubSettings = new ConcurrentDictionary<string, string>();
             var sinkSettings = new ConcurrentDictionary<string, string>();
 
-            var hubCertificates = GenerateAndSaveSelfSignedCertificate(createNew: true);
+            var hubCertificates = GenerateAndSaveSelfSignedCertificate(createNew: false);
             SetupServerAuthentication(hubSettings, certificates: hubCertificates);
 
-            var sinkCertificates = GenerateAndSaveSelfSignedCertificate(createNew: true);
+            var sinkCertificates = GenerateAndSaveSelfSignedCertificate(createNew: false);
             var sinkCerts = SetupServerAuthentication(sinkSettings, certificates: sinkCertificates);
 
             var hubDB = GetDatabaseName();
