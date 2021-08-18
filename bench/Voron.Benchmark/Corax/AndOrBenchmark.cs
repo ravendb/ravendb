@@ -19,7 +19,6 @@ using Corax.Queries;
 using Raven.Server.Documents.Queries.Parser;
 using Sparrow.Server;
 using Sparrow.Threading;
-using Tryouts;
 
 namespace Voron.Benchmark.Corax
 {
@@ -249,7 +248,8 @@ namespace Voron.Benchmark.Corax
         public void ParserQuery()
         {
             using var indexSearcher = new IndexSearcher(Env);
-            var query = indexSearcher.Search(_queryDefinition.Query.Where);
+            var evaluator = new CoraxQueryEvaluator(indexSearcher);
+            var query = evaluator.Search(_queryDefinition.Query.Where);
 
             int read = 0;
             Span<long> ids = _ids;
@@ -266,7 +266,8 @@ namespace Voron.Benchmark.Corax
         public void ParserQueryOnlyIteration()
         {
             using var indexSearcher = new IndexSearcher(Env);
-            var query = indexSearcher.Search(_queryDefinition.Query.Where);
+            var evaluator = new CoraxQueryEvaluator(indexSearcher);
+            var query = evaluator.Search(_queryDefinition.Query.Where);
 
             Span<long> ids = _ids;
             while (query.Fill(ids) != 0);

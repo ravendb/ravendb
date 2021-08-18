@@ -19,7 +19,7 @@ using Corax.Queries;
 using Raven.Server.Documents.Queries.Parser;
 using Sparrow.Server;
 using Sparrow.Threading;
-using Tryouts;
+
 
 namespace Voron.Benchmark.Corax
 {
@@ -257,7 +257,8 @@ namespace Voron.Benchmark.Corax
         public void OrFirstParserQuery()
         {
             using var indexSearcher = new IndexSearcher(Env);
-            var query = indexSearcher.Search(_queryOrFirst.Query.Where);
+            var evaluator = new CoraxQueryEvaluator(indexSearcher);
+            var query = evaluator.Search(_queryOrFirst.Query.Where);
 
             Span<long> ids = _ids;
             while (query.Fill(ids) != 0)
@@ -268,7 +269,8 @@ namespace Voron.Benchmark.Corax
         public void OrSecondParserQuery()
         {
             using var indexSearcher = new IndexSearcher(Env);
-            var query = indexSearcher.Search(_queryOrSecond.Query.Where);
+            var evaluator = new CoraxQueryEvaluator(indexSearcher);
+            var query = evaluator.Search(_queryOrSecond.Query.Where);
 
             Span<long> ids = _ids;
             while (query.Fill(ids) != 0)
@@ -279,7 +281,8 @@ namespace Voron.Benchmark.Corax
         public void InFirstParserQuery()
         {
             using var indexSearcher = new IndexSearcher(Env);
-            var query = indexSearcher.Search(_queryInFirst.Query.Where);
+            var evaluator = new CoraxQueryEvaluator(indexSearcher);
+            var query = evaluator.Search(_queryInFirst.Query.Where);
 
             Span<long> ids = _ids;
             while (query.Fill(ids) != 0)
@@ -290,7 +293,8 @@ namespace Voron.Benchmark.Corax
         public void InSecondParserQuery()
         {
             using var indexSearcher = new IndexSearcher(Env);
-            var query = indexSearcher.Search(_queryInSecond.Query.Where);
+            var evaluator = new CoraxQueryEvaluator(indexSearcher);
+            var query = evaluator.Search(_queryInSecond.Query.Where);
 
             Span<long> ids = _ids;
             while (query.Fill(ids) != 0)
