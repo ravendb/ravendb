@@ -1293,7 +1293,7 @@ namespace Raven.Server.Documents.Revisions
                 if (currentRevisionsCount == 0)
                 {
                     var res = _documentsStorage.GetDocumentOrTombstone(context, lowerId, throwOnConflict: false);
-                    // need to strip the HasRevisions flag from the document
+                    // need to strip the HasRevisions flag from the document/tombstone
                     if (res.Tombstone != null)
                         _documentsStorage.Delete(context, lowerId, id, null, nonPersistentFlags: NonPersistentDocumentFlags.ByEnforceRevisionConfiguration);
 
