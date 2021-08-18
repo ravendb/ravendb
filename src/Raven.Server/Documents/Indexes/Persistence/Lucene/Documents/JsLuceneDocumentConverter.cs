@@ -104,7 +104,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                     var isObject = IsObject(jsPropertyValue);
                     if (isObject)
                     {
-                        if (TryGetBoostedValue(jsPropertyValue.Object, out boostedValue, out propertyBoost))
+                        if (TryGetBoostedValue(jsPropertyValue, out boostedValue, out propertyBoost))
                         {
                             using (boostedValue)
                             {
@@ -247,7 +247,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             }
         }
 
-        private static bool TryGetBoostedValue(V8NativeObject valueToCheck, out InternalHandle jsValue, out float? boost)
+        private static bool TryGetBoostedValue(InternalHandle valueToCheck, out InternalHandle jsValue, out float? boost)
         {
             jsValue = InternalHandle.Empty;
             boost = null;
@@ -260,11 +260,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 if (valueToCheck.TryGetValue(ValuePropertyName, out var valueValue) == false)
                     return false;
 
-                if (boostValue.IsNumberOrIntEx() == false)
+                if (boostValue.IsNumberOrIntEx() == false) {
+                    valueValue.Dispose();
                     return false;
+                }
 
                 boost = (float)boostValue.AsDouble;
-                jsValue = valueValue; // just copying without dispose
+                jsValue = valueValue;
             }
             return true;
         }
