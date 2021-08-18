@@ -186,10 +186,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         public object GetValue(string name, object target)
         {
             if (!(target is InternalHandle oi))
-                throw new ArgumentException($"JsPropertyAccessor.GetValue is expecting a target of type V8NativeObject but got one of type {target.GetType().Name}.");
+                throw new ArgumentException($"JsPropertyAccessor.GetValue is expecting a target of type InternalHandle but got one of type {target.GetType().Name}.");
             if (oi.HasOwnProperty(name))
                 throw new MissingFieldException($"The target for 'JsPropertyAccessor.GetValue' doesn't contain the property {name}.");
-            using (var jsValue = oi.GetProperty(name))
+            using (var jsValue = oi.GetProperty(name)) // pure native value
                 return GetValue(jsValue);
         }
 
