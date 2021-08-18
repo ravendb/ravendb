@@ -91,6 +91,11 @@ namespace Raven.Server.Web.System
                                 logs?.Add(result.Error);
                                 await WriteOperationHeaderToRemote(writer, TcpConnectionHeaderMessage.OperationTypes.Drop, database, info.ServerId);
                                 throw new AuthorizationException(result.Error);
+                            case TcpConnectionStatus.InvalidNetoworkTopology:
+                                result.Success = false;
+                                result.Error = $"Connection to {url} failed because of {nameof(TcpConnectionStatus.InvalidNetoworkTopology)} error: {headerResponse.Message}";
+                                logs?.Add(result.Error);
+                                throw new InvalidNetworkTopologyException(result.Error);
                         }
                     }
                 }

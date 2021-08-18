@@ -2089,11 +2089,11 @@ namespace Raven.Server
                         supported);
                 }
 
-                bool authSuccessful = TryAuthorize(Configuration, tcp.Stream, header, tcpClient, out var err);
+                bool authSuccessful = TryAuthorize(Configuration, tcp.Stream, header, tcpClient, out var err, out TcpConnectionStatus statusResult);
                 //At this stage the error is not relevant.
                 
                 await RespondToTcpConnection(stream, context, err,
-                    authSuccessful ? TcpConnectionStatus.Ok : TcpConnectionStatus.AuthorizationFailed,
+                    authSuccessful ? TcpConnectionStatus.Ok : statusResult,
                     supported);
 
                 tcp.ProtocolVersion = supported;
@@ -2406,16 +2406,19 @@ namespace Raven.Server
             return (stream, null);
         }
 
-        private bool TryAuthorize(RavenConfiguration configuration, Stream stream, TcpConnectionHeaderMessage header, TcpClient tcpClient, out string msg)
+        private bool TryAuthorize(RavenConfiguration configuration, Stream stream, TcpConnectionHeaderMessage header, TcpClient tcpClient, out string msg, out TcpConnectionStatus statusResult)
         {
             msg = null;
             if (header.ServerId != null && header.ServerId != ServerStore.ServerId.ToString())
             {
                 msg = $"Tried to connect to server with Id {header.ServerId} at {tcpClient.Client.LocalEndPoint} "+
                       $" but instead reached a server with Id {ServerStore.ServerId}. Check your network configuration.";
+                statusResult = TcpConnectionStatus.InvalidNetoworkTopology;
                 return false;
             }
-            
+
+            statusResult = TcpConnectionStatus.AuthorizationFailed;
+
             if (configuration.Security.AuthenticationEnabled == false)
                 return true;
 

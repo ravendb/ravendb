@@ -279,10 +279,11 @@ namespace Raven.Client.Util
             Stream stream = null;
             TcpConnectionHeaderMessage.SupportedFeatures supportedFeatures = null;
 
-            string[]  infoUrls = info.Urls == null ? new string[] {info.Url} : info.Urls.Append(info.Url).ToArray();
+            string[] infoUrls = info.Urls == null ? new string[] {info.Url} : info.Urls.Append(info.Url).ToArray();
             
             logs?.Add($"Received tcpInfo: {Environment.NewLine}urls: { string.Join(",", infoUrls)} {Environment.NewLine}guid:{ info.ServerId}");
-            
+
+            var exceptions = new List<Exception>();
             for (int i=0; i < infoUrls.Length; i++)
             {
                 string url = infoUrls[i];
@@ -340,9 +341,10 @@ namespace Raven.Client.Util
                 catch (Exception e)
                 {
                     logs?.Add($"Failed to connect to url {url}: {e.Message}");
+                    exceptions.Add(e);
                     if (i == infoUrls.Length - 1)
                     {
-                        throw;
+                        throw new AggregateException($"Failed to connect to url {url}", exceptions);
                     }
                 }
             }

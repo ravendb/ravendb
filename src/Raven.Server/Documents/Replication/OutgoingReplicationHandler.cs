@@ -764,6 +764,8 @@ namespace Raven.Server.Documents.Replication
                         //Kindly request the server to drop the connection
                         SendDropMessage(context, writer, headerResponse);
                         throw new InvalidOperationException($"{Destination.FromString()} replied with failure {headerResponse.Message}");
+                    case TcpConnectionStatus.InvalidNetoworkTopology:
+                        throw new InvalidNetworkTopologyException($"{Destination.FromString()} replied with failure {headerResponse.Message}");
                     default:
                         throw new InvalidOperationException($"{Destination.FromString()} replied with unknown status {headerResponse.Status}, message:{headerResponse.Message}");
                 }

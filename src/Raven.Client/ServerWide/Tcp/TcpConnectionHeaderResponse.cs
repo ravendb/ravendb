@@ -11,6 +11,7 @@
     {
         Ok,
         AuthorizationFailed,
-        TcpVersionMismatch
+        TcpVersionMismatch,
+        InvalidNetoworkTopology
     }
 }

@@ -323,6 +323,7 @@ namespace Raven.Client.Documents.Subscriptions
 
                     case TcpConnectionStatus.AuthorizationFailed:
                         throw new AuthorizationException($"Cannot access database {_dbName} because " + reply.Message);
+
                     case TcpConnectionStatus.TcpVersionMismatch:
                         if (reply.Version != TcpNegotiation.OutOfRangeStatus)
                         {
@@ -331,6 +332,9 @@ namespace Raven.Client.Documents.Subscriptions
                         //Kindly request the server to drop the connection
                         await SendDropMessageAsync(context, writer, reply).ConfigureAwait(false);
                         throw new InvalidOperationException($"Can't connect to database {_dbName} because: {reply.Message}");
+
+                    case TcpConnectionStatus.InvalidNetoworkTopology:
+                        throw new InvalidNetworkTopologyException($"Failed to connect to url {destinationUrl} because: {reply.Message}");
                 }
                 return reply.Version;
             }
@@ -759,6 +763,19 @@ namespace Raven.Client.Documents.Subscriptions
 
         private bool ShouldTryToReconnect(Exception ex)
         {
+            if (ex is AggregateException ae)
+            {
+                foreach (var exception in ae.InnerExceptions)
+                {
+                    if (ShouldTryToReconnect(exception))
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+
             switch (ex)
             {
                 case SubscriptionDoesNotBelongToNodeException se:

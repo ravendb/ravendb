@@ -202,6 +202,12 @@ namespace Raven.Server.Documents.Handlers.Debugging
                                         result.Error = $"Connection to {url} failed because of mismatching tcp version: {response.Message}";
                                         logs?.Add(result.Error);
                                         throw new AuthorizationException(result.Error);
+
+                                    case TcpConnectionStatus.InvalidNetoworkTopology:
+                                        result.Error = $"Connection to {url} failed because of {nameof(TcpConnectionStatus.InvalidNetoworkTopology)} error: {response.Message}";
+                                        logs?.Add(result.Error);
+                                        throw new InvalidNetworkTopologyException(result.Error);
+
                                 }
                             }
                         }
