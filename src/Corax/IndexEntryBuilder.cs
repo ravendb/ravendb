@@ -521,33 +521,38 @@ namespace Corax
 
             int offset;
             bool isTyped;
-            switch (encodeSize)
+
+            if (encodeSize == 1)
             {
-                case 4:
-                    offset = (int)Unsafe.ReadUnaligned<uint>(ref buffer[locationOffset]);
-                    if (offset == unchecked((int)0xFFFF_FFFF)) goto Fail;
-                    isTyped = (offset & unchecked((int)0x80000000)) != 0;
-                    offset &= ~unchecked((int)0x80000000);
-                    break;
-                case 2:
-                    offset = Unsafe.ReadUnaligned<ushort>(ref buffer[locationOffset]);
-                    if (offset == 0xFFFF) goto Fail;
-                    isTyped = (offset & 0x8000) != 0;
-                    offset &= ~0x8000;                    
-                    break;
-                case 1:
-                    offset = Unsafe.ReadUnaligned<byte>(ref buffer[locationOffset]);
-                    if (offset == 0xFF) goto Fail;
-                    isTyped = (offset & 0x80) != 0;
-                    offset &= ~0x80;
-                    break;
-                default:
+                offset = Unsafe.ReadUnaligned<byte>(ref buffer[locationOffset]);
+                if (offset == 0xFF)
                     goto Fail;
+                isTyped = (offset & 0x80) != 0;
+                offset &= ~0x80;
+                goto End;
+            }
+            if (encodeSize == 2)
+            {
+                offset = Unsafe.ReadUnaligned<ushort>(ref buffer[locationOffset]);
+                if (offset == 0xFFFF)
+                    goto Fail;
+                isTyped = (offset & 0x8000) != 0;
+                offset &= ~0x8000;
+                goto End;
+            }
+            if (encodeSize == 4)
+            {
+                offset = (int)Unsafe.ReadUnaligned<uint>(ref buffer[locationOffset]);
+                if (offset == unchecked((int)0xFFFF_FFFF))
+                    goto Fail;
+                isTyped = (offset & unchecked((int)0x80000000)) != 0;
+                offset &= ~unchecked((int)0x80000000);
+                goto End;
             }
 
-            return (offset , isTyped);
-
             Fail: return (Invalid, false);
+
+            End: return (offset , isTyped);            
         }
 
         
