@@ -12,7 +12,7 @@ namespace Raven.Server.Documents.Patch
         public ScriptRunnerResult(ScriptRunner.SingleRun parent, InternalHandle instance)
         {
             _parent = parent;
-            Instance.Set(instance);
+            Instance = new InternalHandle(instance, true);
         }
 
         public readonly InternalHandle Instance;
