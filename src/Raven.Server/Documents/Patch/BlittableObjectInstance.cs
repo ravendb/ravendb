@@ -125,7 +125,7 @@ namespace Raven.Server.Documents.Patch
             {
                 var desc = GetOwnProperty(propertyName);
                 if (desc != null)
-                    return desc.Value;
+                    return new InternalHandle(desc.Value, true);
 
                 return base.NamedPropertyGetter(ref propertyName);
             }
@@ -282,7 +282,7 @@ namespace Raven.Server.Documents.Patch
 
             public JavaScriptUtils JavaScriptUtils;
             public V8EngineEx Engine;
-            private InternalHandle _value;
+            private InternalHandle _value = InternalHandle.Empty;
             public bool Changed;
 
             public string Name

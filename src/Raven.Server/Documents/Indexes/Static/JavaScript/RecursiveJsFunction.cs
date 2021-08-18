@@ -16,11 +16,11 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
         public RecursiveJsFunction(V8Engine engine, InternalHandle item, InternalHandle func)
         {
             _engine = engine ?? throw new ArgumentNullException(nameof(engine));
-            _item.Set(item);
+            _item = new InternalHandle(item, true);
 
             if (func.IsUndefined || func.IsNull)
                 throw new ArgumentNullException(nameof(func));
-            _func.Set(func);
+            _func = new InternalHandle(func, true);
         }
 
         ~RecursiveJsFunction()
