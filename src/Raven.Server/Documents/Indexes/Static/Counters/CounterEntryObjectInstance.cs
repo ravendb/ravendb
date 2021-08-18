@@ -10,7 +10,7 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
     {
         private readonly DynamicCounterEntry _entry;
 
-        public CounterEntryObjectInstance(DynamicCounterEntry entry, JavaScriptUtils javaScriptUtils = null) : base()
+        public CounterEntryObjectInstance(DynamicCounterEntry entry, JavaScriptUtils javaScriptUtils = null) : base(false)
         {
             _entry = entry ?? throw new ArgumentNullException(nameof(entry));
         }
@@ -19,19 +19,7 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
             return engine.CreateObjectBinder<CounterEntryObjectInstance.CustomBinder>(bo, engine.TypeBinderCounterEntryObjectInstance);
         }
 
-        public override InternalHandle NamedPropertyGetter(V8EngineEx engine, ref string propertyName)
-        {
-            if (_properties.TryGetValue(propertyName, out InternalHandle jsValue) == false)
-            {
-                jsValue = GetPropertyValue(engine, ref propertyName);
-                if (jsValue.IsEmpty == false)
-                    _properties.Add(propertyName, jsValue);
-            }
-
-            return jsValue;
-        }
-
-        private InternalHandle GetPropertyValue(V8EngineEx engine, ref string propertyName)
+        public override InternalHandle NamedPropertyGetterOnce(V8EngineEx engine, ref string propertyName)
         {
             if (propertyName == nameof(DynamicCounterEntry.Value))
                 return engine.CreateValue(_entry._value);

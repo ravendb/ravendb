@@ -18,27 +18,21 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
             _attachmentName = attachmentName ?? throw new ArgumentNullException(nameof(attachmentName));
         }
 
-        public override InternalHandle NamedPropertyGetter(V8EngineEx engine, ref string propertyName)
+        public override InternalHandle NamedPropertyGetterOnce(V8EngineEx engine, ref string propertyName)
         {
-            if (_properties.TryGetValue(propertyName, out InternalHandle jsValue) == false)
-            {
-                if (propertyName == nameof(AttachmentName.Name) && _attachmentName.TryGet(nameof(AttachmentName.Name), out string name))
-                    jsValue = engine.CreateValue(name);
-                else if (propertyName == nameof(AttachmentName.ContentType) && _attachmentName.TryGet(nameof(AttachmentName.ContentType), out string contentType))
-                    jsValue = engine.CreateValue(contentType);
-                else if (propertyName == nameof(AttachmentName.Hash) && _attachmentName.TryGet(nameof(AttachmentName.Hash), out string hash))
-                    jsValue = engine.CreateValue(hash);
-                else if (propertyName == nameof(AttachmentName.Size) && _attachmentName.TryGet(nameof(AttachmentName.Size), out long size))
-                    jsValue = engine.CreateValue(size);
+            if (propertyName == nameof(AttachmentName.Name) && _attachmentName.TryGet(nameof(AttachmentName.Name), out string name))
+                return engine.CreateValue(name);
+            
+            if (propertyName == nameof(AttachmentName.ContentType) && _attachmentName.TryGet(nameof(AttachmentName.ContentType), out string contentType))
+                return engine.CreateValue(contentType);
+            
+            if (propertyName == nameof(AttachmentName.Hash) && _attachmentName.TryGet(nameof(AttachmentName.Hash), out string hash))
+                return engine.CreateValue(hash);
+            
+            if (propertyName == nameof(AttachmentName.Size) && _attachmentName.TryGet(nameof(AttachmentName.Size), out long size))
+                return engine.CreateValue(size);
 
-                if (jsValue.IsEmpty == false)
-                    _properties.Add(propertyName, jsValue);
-            }
-
-            if (jsValue.IsEmpty)
-                jsValue.Set(DynamicJsNull.ImplicitNull._);
-
-            return jsValue;
+            return InternalHandle.Empty;
         }
 
         public class CustomBinder : ObjectInstanceBase.CustomBinder<AttachmentNameObjectInstance>

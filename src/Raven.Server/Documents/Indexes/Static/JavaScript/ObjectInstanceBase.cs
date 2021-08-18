@@ -9,13 +9,32 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
 {
     public abstract class ObjectInstanceBase
     {
+        bool IsImplicitNull;
         protected DictionaryDisposeValueIHV8<string> _properties = new DictionaryDisposeValueIHV8<string>();
 
-        public ObjectInstanceBase()
+        public ObjectInstanceBase(bool isImplicitNull = true)
         {
+            IsImplicitNull = isImplicitNull;
         }
 
-        public abstract InternalHandle NamedPropertyGetter(V8EngineEx engine, ref string propertyName);
+        public abstract InternalHandle NamedPropertyGetterOnce(V8EngineEx engine, ref string propertyName);
+
+        public virtual InternalHandle NamedPropertyGetter(V8EngineEx engine, ref string propertyName)
+        {
+            if (!_properties.TryGetValue(propertyName, out InternalHandle jsValue))
+            {
+                jsValue = NamedPropertyGetterOnce((V8EngineEx)engine, ref propertyName);
+                if (!jsValue.IsEmpty)
+                    _properties.Add(propertyName, jsValue);
+            }
+
+            if (jsValue.IsEmpty) {
+                return IsImplicitNull ? DynamicJsNull.ImplicitNull._ : jsValue;
+            }
+
+            return new InternalHandle(jsValue, true);
+        }
+
 
         public abstract class CustomBinder<T> : ObjectBinderEx<T>
         where T : ObjectInstanceBase
@@ -24,6 +43,7 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
             public override InternalHandle NamedPropertyGetter(ref string propertyName)
             {
                 return ObjCLR.NamedPropertyGetter((V8EngineEx)Engine, ref propertyName);
+
             }
 
             public override V8PropertyAttributes? NamedPropertyQuery(ref string propertyName)

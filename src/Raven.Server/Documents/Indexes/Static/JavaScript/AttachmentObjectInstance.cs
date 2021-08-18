@@ -52,30 +52,24 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
             return engine.CreateValue(_attachment.GetContentAsString(encoding));
         }
 
-        public override InternalHandle NamedPropertyGetter(V8EngineEx engine, ref string propertyName)
+        public override InternalHandle NamedPropertyGetterOnce(V8EngineEx engine, ref string propertyName)
         {
-            if (_properties.TryGetValue(propertyName, out InternalHandle jsValue) == false)
-            {
-                if (propertyName == nameof(IAttachmentObject.Name))
-                    jsValue = engine.CreateValue(_attachment.Name);
-                else if (propertyName == nameof(IAttachmentObject.ContentType))
-                    jsValue = engine.CreateValue(_attachment.ContentType);
-                else if (propertyName == nameof(IAttachmentObject.Hash))
-                    jsValue = engine.CreateValue(_attachment.Hash);
-                else if (propertyName == nameof(IAttachmentObject.Size))
-                    jsValue = engine.CreateValue(_attachment.Size);
-                else if (propertyName == GetContentAsStringMethodName) {
-                    jsValue = engine.CreateCLRCallBack(GetContentAsString);
-                }
+            if (propertyName == nameof(IAttachmentObject.Name))
+                return engine.CreateValue(_attachment.Name);
+            
+            if (propertyName == nameof(IAttachmentObject.ContentType))
+                return engine.CreateValue(_attachment.ContentType);
+            
+            if (propertyName == nameof(IAttachmentObject.Hash))
+                return engine.CreateValue(_attachment.Hash);
+            
+            if (propertyName == nameof(IAttachmentObject.Size))
+                return engine.CreateValue(_attachment.Size);
+            
+            if (propertyName == GetContentAsStringMethodName)
+                return engine.CreateCLRCallBack(GetContentAsString);
 
-                if (jsValue.IsEmpty == false)
-                    _properties[propertyName].Set(jsValue);
-            }
-
-            if (jsValue.IsEmpty)
-                jsValue.Set(DynamicJsNull.ImplicitNull._);
-
-            return jsValue;
+            return InternalHandle.Empty;
         }
 
         private static InternalHandle GetContentAsString(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
