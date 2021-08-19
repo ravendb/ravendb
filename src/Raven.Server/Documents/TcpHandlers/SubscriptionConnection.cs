@@ -106,7 +106,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 TcpConnection.Stream,
                 "subscription options",
                 BlittableJsonDocumentBuilder.UsageMode.None,
-                _copiedBuffer.Buffer))
+                _copiedBuffer.Buffer, CancellationTokenSource.Token))
             {
                 _options = JsonDeserializationServer.SubscriptionConnectionOptions(subscriptionCommandOptions);
 
@@ -135,12 +135,11 @@ namespace Raven.Server.Documents.TcpHandlers
             AddToStatusDescription(message);
             if (_logger.IsInfoEnabled)
             {
-                _logger.Info(
-                    message);
+                _logger.Info(message);
             }
 
             // first, validate details and make sure subscription exists
-            SubscriptionState = await TcpConnection.DocumentDatabase.SubscriptionStorage.AssertSubscriptionConnectionDetails(SubscriptionId, _options.SubscriptionName);
+            SubscriptionState = await TcpConnection.DocumentDatabase.SubscriptionStorage.AssertSubscriptionConnectionDetails(SubscriptionId, _options.SubscriptionName, CancellationTokenSource.Token);
 
             if (_supportedFeatures.Subscription.Includes == false)
             {
@@ -158,6 +157,8 @@ namespace Raven.Server.Documents.TcpHandlers
 
             do
             {
+                CancellationTokenSource.Token.ThrowIfCancellationRequested();
+
                 try
                 {
                     DisposeOnDisconnect = await _connectionState.RegisterSubscriptionConnection(this, timeout);
@@ -171,7 +172,7 @@ namespace Raven.Server.Documents.TcpHandlers
                             $"Subscription Id {SubscriptionId} from IP {TcpConnection.TcpClient.Client.RemoteEndPoint} starts to wait until previous connection from {_connectionState.Connection?.TcpConnection.TcpClient.Client.RemoteEndPoint} is released");
                     }
 
-                    timeout = TimeSpan.FromMilliseconds(Math.Max(250, (long)_options.TimeToWaitBeforeConnectionRetry.TotalMilliseconds / 2) + random.Next(15,50));
+                    timeout = TimeSpan.FromMilliseconds(Math.Max(250, (long)_options.TimeToWaitBeforeConnectionRetry.TotalMilliseconds / 2) + random.Next(15, 50));
                     await SendHeartBeat($"Client from IP {TcpConnection.TcpClient.Client.RemoteEndPoint} waiting for subscription that is serving IP {_connectionState.Connection?.TcpConnection.TcpClient.Client.RemoteEndPoint} to be released");
                     shouldRetry = true;
                 }
@@ -180,7 +181,7 @@ namespace Raven.Server.Documents.TcpHandlers
             try
             {
                 // refresh subscription data (change vector may have been updated, because in the meanwhile, another subscription could have just completed a batch)
-                SubscriptionState = await TcpConnection.DocumentDatabase.SubscriptionStorage.AssertSubscriptionConnectionDetails(SubscriptionId, _options.SubscriptionName);
+                SubscriptionState = await TcpConnection.DocumentDatabase.SubscriptionStorage.AssertSubscriptionConnectionDetails(SubscriptionId, _options.SubscriptionName, CancellationTokenSource.Token);
 
                 Subscription = ParseSubscriptionQuery(SubscriptionState.Query);
 
@@ -204,7 +205,6 @@ namespace Raven.Server.Documents.TcpHandlers
 
         private async Task WriteJsonAsync(DynamicJsonValue value)
         {
-
             int writtenBytes;
             using (TcpConnection.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, TcpConnection.Stream))
@@ -230,7 +230,6 @@ namespace Raven.Server.Documents.TcpHandlers
             JsonOperationContext.ManagedPinnedBuffer buffer)
         {
             var remoteEndPoint = tcpConnectionOptions.TcpClient.Client.RemoteEndPoint;
-
 
             var tcpConnectionDisposable = tcpConnectionOptions.ConnectionProcessingInProgress("Subscription");
             try
@@ -272,7 +271,7 @@ namespace Raven.Server.Documents.TcpHandlers
                                 connection.AddToStatusDescription($"Failed to process subscription {connection.SubscriptionId} / from client {remoteEndPoint}; Sending response to client");
                                 if (connection._logger.IsInfoEnabled)
                                 {
-                                    connection._logger.Info(errorMessage,e);
+                                    connection._logger.Info(errorMessage, e);
                                 }
 
                                 try
@@ -402,7 +401,7 @@ namespace Raven.Server.Documents.TcpHandlers
                             [nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.Reasons)] =
                                 new DynamicJsonArray(subscriptionDoesNotBelongException.Reasons.Select(item => new DynamicJsonValue
                                 {
-                                    [item.Key]=item.Value
+                                    [item.Key] = item.Value
                                 }))
                         }
                     });
@@ -554,7 +553,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 {
                     _buffer.SetLength(0);
 
-                    using (this.TcpConnection.DocumentDatabase.DatabaseInUse(false))
+                    using (TcpConnection.DocumentDatabase.DatabaseInUse(false))
                     {
                         using (TcpConnection.DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext docsContext))
                         {
@@ -828,11 +827,11 @@ namespace Raven.Server.Documents.TcpHandlers
         {
             try
             {
-                await TcpConnection.Stream.WriteAsync(Heartbeat, 0, Heartbeat.Length);
+                await TcpConnection.Stream.WriteAsync(Heartbeat, 0, Heartbeat.Length, CancellationTokenSource.Token);
 
                 if (_logger.IsInfoEnabled)
                 {
-                    _logger.Info($"Subscription {Options.SubscriptionName} is sending a Hearbeat message to the client. Reason: {reason}");
+                    _logger.Info($"Subscription {Options.SubscriptionName} is sending a Heartbeat message to the client. Reason: {reason}");
                 }
             }
             catch (Exception ex)
@@ -950,7 +949,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 {
                     // ignored
                 }
-                
+
                 try
                 {
                     CancellationTokenSource.Dispose();
