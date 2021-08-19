@@ -1,8 +1,8 @@
 ﻿using System;
 
-namespace Raven.Client.Exceptions.Security
+namespace Raven.Client.Exceptions
 {
-    public class InvalidNetworkTopologyException : SecurityException
+    public class InvalidNetworkTopologyException : Exception
     {
         public InvalidNetworkTopologyException()
         {
