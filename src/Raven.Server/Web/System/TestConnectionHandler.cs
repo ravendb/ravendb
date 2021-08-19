@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
-using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Http;
 using Raven.Client.ServerWide.Commands;
@@ -91,9 +91,9 @@ namespace Raven.Server.Web.System
                                 logs?.Add(result.Error);
                                 await WriteOperationHeaderToRemote(writer, TcpConnectionHeaderMessage.OperationTypes.Drop, database, info.ServerId);
                                 throw new AuthorizationException(result.Error);
-                            case TcpConnectionStatus.InvalidNetoworkTopology:
+                            case TcpConnectionStatus.InvalidNetworkTopology:
                                 result.Success = false;
-                                result.Error = $"Connection to {url} failed because of {nameof(TcpConnectionStatus.InvalidNetoworkTopology)} error: {headerResponse.Message}";
+                                result.Error = $"Connection to {url} failed because of {nameof(TcpConnectionStatus.InvalidNetworkTopology)} error: {headerResponse.Message}";
                                 logs?.Add(result.Error);
                                 throw new InvalidNetworkTopologyException(result.Error);
                         }

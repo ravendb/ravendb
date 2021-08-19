@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Tcp;
@@ -203,8 +204,8 @@ namespace Raven.Server.Documents.Handlers.Debugging
                                         logs?.Add(result.Error);
                                         throw new AuthorizationException(result.Error);
 
-                                    case TcpConnectionStatus.InvalidNetoworkTopology:
-                                        result.Error = $"Connection to {url} failed because of {nameof(TcpConnectionStatus.InvalidNetoworkTopology)} error: {response.Message}";
+                                    case TcpConnectionStatus.InvalidNetworkTopology:
+                                        result.Error = $"Connection to {url} failed because of {nameof(TcpConnectionStatus.InvalidNetworkTopology)} error: {response.Message}";
                                         logs?.Add(result.Error);
                                         throw new InvalidNetworkTopologyException(result.Error);
 

@@ -1911,17 +1911,17 @@ namespace Raven.Server
                     if (_forTestingPurposes != null && _forTestingPurposes.ThrowExceptionInListenToNewTcpConnection)
                         throw new Exception("Simulated TCP failure.");
 
-                    var tcp = new TcpConnectionOptions
-                    {
-                        ContextPool = _tcpContextPool,
-                        Stream = stream,
-                        TcpClient = tcpClient,
-                        Certificate = cert
-                    };
-
                     using (_tcpContextPool.AllocateOperationContext(out JsonOperationContext context))
                     using (context.GetMemoryBuffer(out JsonOperationContext.MemoryBuffer buffer))
                     {
+                        var tcp = new TcpConnectionOptions
+                        {
+                            ContextPool = _tcpContextPool,
+                            Stream = stream,
+                            TcpClient = tcpClient,
+                            Certificate = cert
+                        };
+
                         try
                         {
                             if (_forTestingPurposes != null && _forTestingPurposes.ThrowExceptionInTrafficWatchTcp)
@@ -2413,7 +2413,7 @@ namespace Raven.Server
             {
                 msg = $"Tried to connect to server with Id {header.ServerId} at {tcpClient.Client.LocalEndPoint} "+
                       $" but instead reached a server with Id {ServerStore.ServerId}. Check your network configuration.";
-                statusResult = TcpConnectionStatus.InvalidNetoworkTopology;
+                statusResult = TcpConnectionStatus.InvalidNetworkTopology;
                 return false;
             }
 

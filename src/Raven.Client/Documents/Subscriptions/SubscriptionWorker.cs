@@ -224,7 +224,7 @@ namespace Raven.Client.Documents.Subscriptions
                     null,
 #endif
                     TcpConnectionHeaderMessage.OperationTypes.Subscription,
-                    NegotiateProtocolVersionAsyncForSubscription,
+                    NegotiateProtocolVersionForSubscriptionAsync,
                     context,
                     requestExecutor.DefaultTimeout, 
                     null
@@ -263,7 +263,7 @@ namespace Raven.Client.Documents.Subscriptions
             }
         }
 
-        private async Task<TcpConnectionHeaderMessage.SupportedFeatures> NegotiateProtocolVersionAsyncForSubscription(string chosenUrl, TcpConnectionInfo tcpInfo, Stream stream, JsonOperationContext context, List<string> _)
+        private async Task<TcpConnectionHeaderMessage.SupportedFeatures> NegotiateProtocolVersionForSubscriptionAsync(string chosenUrl, TcpConnectionInfo tcpInfo, Stream stream, JsonOperationContext context, List<string> _)
         {
             var parameters = new AsyncTcpNegotiateParameters
             {
@@ -337,7 +337,7 @@ namespace Raven.Client.Documents.Subscriptions
                         await SendDropMessageAsync(context, writer, reply).ConfigureAwait(false);
                         throw new InvalidOperationException($"Can't connect to database {_dbName} because: {reply.Message}");
 
-                    case TcpConnectionStatus.InvalidNetoworkTopology:
+                    case TcpConnectionStatus.InvalidNetworkTopology:
                         throw new InvalidNetworkTopologyException($"Failed to connect to url {destinationUrl} because: {reply.Message}");
                 }
                 return reply.Version;

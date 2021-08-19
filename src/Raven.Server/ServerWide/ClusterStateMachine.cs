@@ -3420,7 +3420,7 @@ namespace Raven.Server.ServerWide
                             [nameof(TcpConnectionHeaderMessage.Info)] = $"Couldn't agree on cluster tcp version ours:{TcpConnectionHeaderMessage.ClusterTcpVersion} theirs:{reply.Version}"
                         });
                         throw new InvalidOperationException($"Unable to access  {url} because {reply.Message}");
-                    case TcpConnectionStatus.InvalidNetoworkTopology:
+                    case TcpConnectionStatus.InvalidNetworkTopology:
                         throw new InvalidNetworkTopologyException($"Unable to access {url} because {reply.Message}");
                 }
             }

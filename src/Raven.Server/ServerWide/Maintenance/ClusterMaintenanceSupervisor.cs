@@ -462,9 +462,9 @@ namespace Raven.Server.ServerWide.Maintenance
                             //Kindly request the server to drop the connection
                             await WriteOperationHeaderToRemoteAsync(writer, headerResponse.Version, drop: true);
                             throw new InvalidOperationException($"Node with ClusterTag = {ClusterTag} replied to initial handshake with mismatching tcp version {headerResponse.Message}");
-                        case TcpConnectionStatus.InvalidNetoworkTopology:
+                        case TcpConnectionStatus.InvalidNetworkTopology:
                             throw new AuthorizationException(
-                                $"Node with ClusterTag = {ClusterTag} replied to initial handshake with {nameof(TcpConnectionStatus.InvalidNetoworkTopology)} error {headerResponse.Message}");
+                                $"Node with ClusterTag = {ClusterTag} replied to initial handshake with {nameof(TcpConnectionStatus.InvalidNetworkTopology)} error {headerResponse.Message}");
                         default:
                             throw new InvalidOperationException($"{url} replied with unknown status {headerResponse.Status}, message:{headerResponse.Message}");
                     }
