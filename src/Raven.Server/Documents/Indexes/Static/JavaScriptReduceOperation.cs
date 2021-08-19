@@ -181,10 +181,41 @@ namespace Raven.Server.Documents.Indexes.Static
                     InternalHandle jsRes = InternalHandle.Empty;
                     try
                     {
-                        jsRes = ReduceV8.StaticCall(ConstructGrouping(item));
-                        jsRes.ThrowOnError(); // TODO check if is needed here
-                        if (jsRes.IsObject == false)
-                            throw new JavaScriptIndexFuncException($"Failed to execute {ReduceString}", new Exception($"Reduce result is not object: {jsRes.ToString()}"));
+                        using (var jsGrouping = ConstructGrouping(item))
+                        {
+                            bool res = false;
+                            /*using (var key = jsGrouping.GetProperty("key")) 
+                            {
+                                using (var values = jsGrouping.GetProperty("values")) 
+                                {
+
+                                    using (var jsValue = values.GetProperty(0)) 
+                                    {
+                                        var resStr = EngineV8.Execute("JSON.stringify").StaticCall(jsValue).AsString;
+                                        //if (!jsValue.IsUndefined) 
+                                        {
+                                            using (var ap = jsValue.GetProperty("activenessPeriod")) 
+                                            {
+                                                res = true;
+                                                using (var start = ap.GetProperty("start"))
+                                                    res = res && !start.IsUndefined;
+                                                using (var end = ap.GetProperty("end"))
+                                                    res = res && !end.IsUndefined;
+                                                using (var dummy = ap.GetProperty("dummy"))
+                                                    res = res && dummy.IsUndefined;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            if (!res)
+                                throw new JavaScriptIndexFuncException($"Failed to get activenessPeriod items");*/
+
+                            jsRes = ReduceV8.StaticCall(jsGrouping);
+                            jsRes.ThrowOnError();
+                            if (jsRes.IsObject == false)
+                                throw new JavaScriptIndexFuncException($"Failed to execute {ReduceString}", new Exception($"Reduce result is not object: {jsRes.ToString()}"));
+                        }
                     }
                     catch (V8Exception jse)
                     {
@@ -297,7 +328,22 @@ namespace Raven.Server.Documents.Indexes.Static
                     if (JavaScriptIndexUtilsV8.GetValue(val, out InternalHandle jsValue, isMapReduce: true) == false)
                         continue;
 
-                    jsItems[i] = jsValue; // just copying without dispose
+                    jsItems[i] = jsValue;
+
+                    //var resStr = EngineV8.Execute("JSON.stringify").StaticCall(jsValue).AsString;
+                    /*bool res = false;
+                    using (var ap = jsValue.GetProperty("activenessPeriod")) 
+                    {
+                        res = true;
+                        using (var start = ap.GetProperty("start"))
+                            res = res && !start.IsUndefined;
+                        using (var end = ap.GetProperty("end"))
+                            res = res && !end.IsUndefined;
+                        using (var dummy = ap.GetProperty("dummy"))
+                            res = res && dummy.IsUndefined;
+                    }
+                    if (!res)
+                        throw new JavaScriptIndexFuncException($"Failed to get activenessPeriod items");*/
                 }
 
                 return EngineV8.CreateArrayWithDisposal(jsItems);

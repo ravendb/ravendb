@@ -67,6 +67,35 @@ namespace Raven.Server.Documents.Indexes.Static
                         if (!MapFuncV8.IsFunction)
                             throw new JavaScriptIndexFuncException($"MapFuncV8 is not a function");
                         jsRes = MapFuncV8.StaticCall(jsItem);
+
+                        /*bool isCLRDisposed = jsRes.IsCLRDisposed;
+                        using (var jsRes1 = new InternalHandle(jsRes, true))
+                            var resStr = _engine.Execute("JSON.stringify").StaticCall(jsRes1).AsString;*/
+                        /*jsRes1.TryDispose();
+
+                        using (var jsRes0 = jsRes.GetProperty(0)) 
+                        {
+                            bool res = false;
+                            //if (!jsRes0.IsUndefined) 
+                            {
+                                using (var ap = jsRes0.GetProperty("activenessPeriod")) 
+                                {
+                                    res = true;
+                                    using (var start = ap.GetProperty("start"))
+                                        res = res && !start.IsUndefined;
+                                    using (var end = ap.GetProperty("end"))
+                                        res = res && !end.IsUndefined;
+                                    using (var dummy = ap.GetProperty("dummy"))
+                                        res = res && dummy.IsUndefined;
+                                }
+                            }
+                            if (!res)
+                                throw new JavaScriptIndexFuncException($"Failed to get activenessPeriod items");
+                        }
+
+                        var jsRes3 = new InternalHandle(jsRes, true);
+                        jsRes3.Dispose();*/
+
                         jsRes.ThrowOnError();
                     }
                     catch (V8Exception jse)
@@ -90,20 +119,20 @@ namespace Raven.Server.Documents.Indexes.Static
                             for (int i = 0; i < length; i++)
                             {
                                 var arrItem = jsRes.GetProperty(i);
-                                if (arrItem.IsObject) {
-                                    yield return arrItem;
-                                }
-                                else {
-                                    arrItem.Dispose();
-                                    // this check should be to catch map errors
-                                    throw new JavaScriptIndexFuncException($"Failed to execute {MapString}", new Exception($"At leaset one of map results is not object: {jsRes.ToString()}"));
+                                using (arrItem) { 
+                                    if (arrItem.IsObject) {
+                                        yield return arrItem; // being yield it is converted to blittable object and not disposed - so disposing it here
+                                    }
+                                    else {
+                                        // this check should be to catch map errors
+                                        throw new JavaScriptIndexFuncException($"Failed to execute {MapString}", new Exception($"At leaset one of map results is not object: {jsRes.ToString()}"));
+                                    }
                                 }
                             }
                         }
                         else if (jsRes.IsObject)
                         {
-                            InternalHandle jRes2 = InternalHandle.Empty;
-                            yield return jRes2.Set(jsRes);
+                            yield return jsRes;// being yield it is converted to blittable object and not disposed - so disposing it here
                         }
                         else {
                             // this check should be to catch map errors

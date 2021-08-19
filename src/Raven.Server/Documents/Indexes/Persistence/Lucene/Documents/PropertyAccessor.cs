@@ -7,6 +7,7 @@ using V8.Net;
 using Microsoft.CSharp.RuntimeBinder;
 using Raven.Server.Extensions;
 using Sparrow.Json;
+using Raven.Server.Documents.Indexes.Static;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 {
@@ -148,7 +149,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         internal static IPropertyAccessor CreateMapReduceOutputAccessor(Type type, object instance, Dictionary<string, CompiledIndexField> groupByFields, bool isObjectInstance = false)
         {
-            if (isObjectInstance || type == typeof(InternalHandle) || type == typeof(V8NativeObject) || type.IsSubclassOf(typeof(V8NativeObject)))
+            if (isObjectInstance || (type == typeof(InternalHandle) && instance is InternalHandle jsInstance && jsInstance.IsObject))
                 return new JsPropertyAccessor(groupByFields);
 
             if (instance is Dictionary<string, object> dict)
@@ -190,7 +191,28 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             if (oi.HasOwnProperty(name))
                 throw new MissingFieldException($"The target for 'JsPropertyAccessor.GetValue' doesn't contain the property {name}.");
             using (var jsValue = oi.GetProperty(name)) // pure native value
+            {
+                /*var engine = jsValue.Engine;
+                var resStr = engine.Execute("JSON.stringify").StaticCall(jsValue).AsString;*/
+                /*bool res = false;
+                //if (!jsValue.IsUndefined) 
+                {
+                    using (var ap = jsValue.GetProperty("activenessPeriod")) 
+                    {
+                        res = true;
+                        using (var start = ap.GetProperty("start"))
+                            res = res && !start.IsUndefined;
+                        using (var end = ap.GetProperty("end"))
+                            res = res && !end.IsUndefined;
+                        using (var dummy = ap.GetProperty("dummy"))
+                            res = res && dummy.IsUndefined;
+                    }
+                }
+                if (!res)
+                    throw new JavaScriptIndexFuncException($"Failed to get activenessPeriod items");*/
+
                 return GetValue(jsValue);
+            }
         }
 
         private static object GetValue(InternalHandle jsValue)
@@ -240,7 +262,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                     }
                     ThrowInvalidObject(jsValue);
                 }
-                return jsValue.Object;
+                return jsValue;
             }
 
             if (jsValue.IsUndefined)

@@ -23,6 +23,7 @@ using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron;
+using V8.Net;
 
 namespace Raven.Server.Documents.Indexes.MapReduce.Static
 {
@@ -538,6 +539,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                         return false;
 
                     var output = _enumerator.Current;
+
+                    /*var jsOutput = (InternalHandle)output;
+                    var engine = jsOutput.Engine;
+                    var outputStr = engine.Execute("JSON.stringify").StaticCall(jsOutput).AsString;*/
 
                     using (_createBlittableResult.Start())
                     {

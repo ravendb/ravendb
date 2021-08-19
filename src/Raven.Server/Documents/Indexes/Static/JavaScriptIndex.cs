@@ -50,6 +50,7 @@ function map(name, lambda) {
         moreArgs: Array.prototype.slice.call(arguments, 2)
     };
     globalDefinition.maps.push(map);
+    globalDefinition.desc = 'Descripton is ok';
 }";
         }
 
@@ -88,8 +89,35 @@ function map(name, lambda) {
                 ThrowIndexCreationException($"Jint: doesn't contain any map functions or '{GlobalDefinitions}.{Maps}' was modified in the script");
 
 
+            /*var desc3 = InternalHandle.Empty;
+            using (var desc2 = _engine.CreateValue("desc"))
+            {
+                desc3 = new InternalHandle(desc2, true);
+            }
+            desc3.Dispose();
+            using (var desc2 = _engine.CreateValue("desc"))
+            {
+                desc3.Set(desc2);
+            }
+            desc3.Dispose();
+
+            var desc1 = InternalHandle.Empty;
+            using (var desc = _definitions.GetProperty("desc")) // pure native value
+            {
+                desc1 = new InternalHandle(desc, true);
+            }
+            desc1.Dispose();
+            using (var desc = _definitions.GetProperty("desc")) // pure native value
+            {
+                desc1.Set(desc);
+            }
+            desc1.Dispose();*/
+
+            //var maps1 = InternalHandle.Empty;
+            //var map1 = InternalHandle.Empty;
             using (var maps = _definitions.GetProperty(MapsProperty)) // pure native value
             {
+                //maps1 = new InternalHandle(maps, true);
                 if (maps.IsNull || maps.IsUndefined || maps.IsArray == false)
                     ThrowIndexCreationException($"doesn't contain any map function or '{GlobalDefinitions}.{Maps}' was modified in the script");
 
@@ -112,6 +140,7 @@ function map(name, lambda) {
 
                     using (var map = maps.GetProperty(i)) // pure native value
                     {
+                        //map1.Set(map);
                         if (map.IsNull || map.IsUndefined || map.IsObject == false)
                             ThrowIndexCreationException($"map function #{i} is not a valid object");
                         if (map.HasProperty(CollectionProperty) == false)
@@ -167,32 +196,6 @@ function map(name, lambda) {
                     }
                 }
             }
-
-            /*using (var maps = _definitions.GetProperty(MapsProperty)) // pure native value
-            {
-                if (maps.IsNull || maps.IsUndefined || maps.IsArray == false)
-                    ThrowIndexCreationException($"doesn't contain any map function or '{GlobalDefinitions}.{Maps}' was modified in the script");
-
-                int mapCount = maps.ArrayLength;
-                if (mapCount == 0)
-                    ThrowIndexCreationException($"doesn't contain any map functions or '{GlobalDefinitions}.{Maps}' was modified in the script");
-
-                collectionFunctions = new Dictionary<string, Dictionary<string, List<JavaScriptMapOperation>>>();
-                for (int i = 0; i < mapCount; i++)
-                {
-                    var mapObjJint = mapsJint.Get(i.ToString());
-                    if (mapObjJint.IsNull() || mapObjJint.IsUndefined() || mapObjJint.IsObject() == false)
-                        ThrowIndexCreationException($"Jint: map function #{i} is not a valid object");
-                    var mapJint = mapObjJint.AsObject();                        
-                    if (mapJint.HasProperty(MethodProperty) == false)
-                        ThrowIndexCreationException($"Jint: map function #{i} is missing its {MethodProperty} property");
-                    var funcInstanceJint = mapJint.Get(MethodProperty).As<FunctionInstance>();
-                    if (funcInstanceJint == null)
-                        ThrowIndexCreationException($"Jint: map function #{i} {MethodProperty} property isn't a 'FunctionInstance'");
-
-                    var map = maps.GetProperty(i); // pure native value
-                }
-            }*/
         }
 
         private JsValue GetDocumentIdJint(JsValue self, JsValue[] args)
@@ -754,7 +757,10 @@ function map(name, lambda) {
             }
         }
 
-        private static InternalHandle TryConvertToNumber(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+
+        //public InternalHandle jsTest;
+
+        private InternalHandle TryConvertToNumber(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
             try {
                 if (args.Length != 1)
@@ -762,6 +768,18 @@ function map(name, lambda) {
 
                 InternalHandle value = args[0];
                 InternalHandle jsRes = InternalHandle.Empty;
+
+                /*jsTest = new InternalHandle(value, true);
+                var v1 = InternalHandle.Empty;
+                var v2 = InternalHandle.Empty;
+                var v3 = InternalHandle.Empty;
+                v1.Set(value);
+                v2.Set(value);
+                using (v1) {
+                    v3.Set(v1);
+                }
+                v2.Dispose();
+                v3.Dispose();*/
 
                 if (value.IsNull || value.IsUndefined)
                     return DynamicJsNull.ImplicitNull._;

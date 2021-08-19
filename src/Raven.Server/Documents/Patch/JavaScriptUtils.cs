@@ -368,7 +368,7 @@ namespace Raven.Server.Documents.Patch
             }
             if (o is List<object> list)
             {
-                int arrayLength =  list.Count;
+                int arrayLength = list.Count;
                 var jsItems = new InternalHandle[arrayLength];
                 for (int i = 0; i < arrayLength; ++i)
                 {
