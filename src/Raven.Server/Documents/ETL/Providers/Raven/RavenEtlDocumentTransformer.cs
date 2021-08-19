@@ -370,9 +370,9 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                     object[] parameters;
 
                     if (Transformation.GenericDeleteDocumentsBehaviorFunctionName.Equals(function, StringComparison.OrdinalIgnoreCase))
-                        parameters = new object[] { documentId, collection };
+                        parameters = new object[] { documentId, collection, item.IsDelete};
                     else
-                        parameters = new object[] { documentId };
+                        parameters = new object[] { documentId, item.IsDelete };
 
                     using (var result = BehaviorsScript.Run(Context, Context, function, parameters))
                     {
@@ -796,6 +796,9 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             for (var i = 0; i < _script.LoadToCollections.Length; i++)
             {
                 var collection = _script.LoadToCollections[i];
+
+                if (ShouldFilterOutDeletion(item))
+                    break;
 
                 if (_script.MayLoadToDefaultCollection(item, collection))
                 {
