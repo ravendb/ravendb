@@ -698,7 +698,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 using (docsContext.OpenReadTransaction())
                 {
                     IncludeDocumentsCommand includeCmd = null;
-                    if (_supportedFeatures.Subscription.Includes && Subscription.Includes != null)
+                    if (_supportedFeatures.Subscription.Includes)
                         includeCmd = new IncludeDocumentsCommand(TcpConnection.DocumentDatabase.DocumentsStorage, docsContext, Subscription.Includes, isProjection: _filterAndProjectionScript != null);
 
                     foreach (var result in _documentsFetcher.GetDataToSend(docsContext, includeCmd, _startEtag))
@@ -774,15 +774,18 @@ namespace Raven.Server.Documents.TcpHandlers
                     {
                         if (includeCmd != null)
                         {
-                            writer.WriteStartObject();
-                            writer.WritePropertyName(docsContext.GetLazyStringForFieldWithCaching(TypeSegment));
-                            writer.WriteValue(BlittableJsonToken.String, docsContext.GetLazyStringForFieldWithCaching(IncludesSegment));
-                            writer.WriteComma();
-                            writer.WritePropertyName(docsContext.GetLazyStringForFieldWithCaching(IncludesSegment));
                             var includes = new List<Document>();
                             includeCmd.Fill(includes);
-                            writer.WriteIncludes(docsContext, includes);
-                            writer.WriteEndObject();
+                            if (includeCmd.HasIncludesIds())
+                            {
+                                writer.WriteStartObject();
+                                writer.WritePropertyName(docsContext.GetLazyStringForFieldWithCaching(TypeSegment));
+                                writer.WriteValue(BlittableJsonToken.String, docsContext.GetLazyStringForFieldWithCaching(IncludesSegment));
+                                writer.WriteComma();
+                                writer.WritePropertyName(docsContext.GetLazyStringForFieldWithCaching(IncludesSegment));
+                                writer.WriteIncludes(docsContext, includes);
+                                writer.WriteEndObject();
+                            }
                         }
 
                         writer.WriteStartObject();
