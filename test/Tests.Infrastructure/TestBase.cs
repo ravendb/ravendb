@@ -257,7 +257,7 @@ namespace FastTests
                 }
 
                 SecretProtection.ValidatePrivateKey(serverCertificatePath, null, certBytes, out var pk);
-                SecretProtection.ValidateKeyUsages(serverCertificatePath, serverCertificate);
+                SecretProtection.ValidateKeyUsages(serverCertificatePath, serverCertificate, validateKeyUsages: true);
 
                 var clientCertificate1Path = GenerateClientCertificate(1, serverCertificate, pk);
                 var clientCertificate2Path = GenerateClientCertificate(2, serverCertificate, pk);

@@ -18,6 +18,7 @@ using Org.BouncyCastle.Utilities.Collections;
 using Org.BouncyCastle.Utilities.Encoders;
 using Org.BouncyCastle.X509;
 using Raven.Server.Commercial;
+using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Sparrow.Logging;
 using Sparrow.Platform;
@@ -406,7 +407,7 @@ namespace Raven.Server.ServerWide
                 loadedCertificate = new X509Certificate2(rawData, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
                 ValidateExpiration(executable, loadedCertificate, serverStore);
                 ValidatePrivateKey(executable, null, rawData, out privateKey);
-                ValidateKeyUsages(executable, loadedCertificate);
+                ValidateKeyUsages(executable, loadedCertificate, serverStore.Configuration.Security.CertificateValidationKeyUsages);
             }
             catch (Exception e)
             {
@@ -584,7 +585,7 @@ namespace Raven.Server.ServerWide
 
             ValidatePrivateKey(source, password, rawBytes, out var privateKey);
 
-            ValidateKeyUsages(source, loadedCertificate);
+            ValidateKeyUsages(source, loadedCertificate, serverStore.Configuration.Security.CertificateValidationKeyUsages);
 
             AddCertificateChainToTheUserCertificateAuthorityStoreAndCleanExpiredCerts(loadedCertificate, rawBytes, password);
 
@@ -680,7 +681,7 @@ namespace Raven.Server.ServerWide
 
                 ValidatePrivateKey(path, password, rawData, out var privateKey);
 
-                ValidateKeyUsages(path, loadedCertificate);
+                ValidateKeyUsages(path, loadedCertificate, serverStore.Configuration.Security.CertificateValidationKeyUsages);
 
                 return new RavenServer.CertificateHolder
                 {
@@ -805,7 +806,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public static void ValidateKeyUsages(string source, X509Certificate2 loadedCertificate)
+        public static void ValidateKeyUsages(string source, X509Certificate2 loadedCertificate, bool validateKeyUsages)
         {
             var clientCert = false;
             var serverCert = false;
@@ -815,8 +816,8 @@ namespace Raven.Server.ServerWide
             {
                 if (extension is X509KeyUsageExtension kue)
                 {
-                    keyUsages = kue.KeyUsages.HasFlag(X509KeyUsageFlags.DigitalSignature) &&
-                                kue.KeyUsages.HasFlag(X509KeyUsageFlags.KeyEncipherment);
+                    if (kue.KeyUsages.HasFlag(X509KeyUsageFlags.DigitalSignature) && kue.KeyUsages.HasFlag(X509KeyUsageFlags.KeyEncipherment))
+                        keyUsages = true;
                 }
                 if (extension is X509EnhancedKeyUsageExtension ekue) //Enhanced Key Usage extension
                 {
@@ -833,18 +834,32 @@ namespace Raven.Server.ServerWide
                         }
                     }
                 }
-
-
             }
 
-            if (clientCert == false || serverCert == false || keyUsages == false)
+            var shouldThrow = clientCert == false || serverCert == false;
+            if (validateKeyUsages && keyUsages == false)
+                shouldThrow = true;
+
+            if (shouldThrow == false)
+                return;
+
+            var sb = new StringBuilder($"Server certificate {loadedCertificate.FriendlyName} from {source} must be defined with:");
+
+            if (validateKeyUsages && keyUsages == false)
             {
-                var msg = "Server certificate " + loadedCertificate.FriendlyName + "from " + source +
-                          " must be defined with the 'Key Usages' 'DigitalSignature' and 'KeyEncipherment' as well as  'Enhanced Key Usages': Client Authentication (Oid 1.3.6.1.5.5.7.3.2) & Server Authentication (Oid 1.3.6.1.5.5.7.3.1)";
-                if (Logger.IsOperationsEnabled)
-                    Logger.Operations(msg);
-                throw new EncryptionException(msg);
+                sb.AppendLine("- Key Usage: DigitalSignature");
+                sb.AppendLine("- Key Usage: KeyEncipherment");
             }
+
+            sb.AppendLine("- Enhanced Key Usage: Client Authentication (Oid 1.3.6.1.5.5.7.3.2)");
+            sb.AppendLine("- Enhanced Key Usage: Server Authentication (Oid 1.3.6.1.5.5.7.3.1)");
+
+            var msg = sb.ToString();
+
+            if (Logger.IsOperationsEnabled)
+                Logger.Operations(msg);
+
+            throw new EncryptionException(msg);
         }
 
         private class PkcsStoreWorkaroundFor30946
