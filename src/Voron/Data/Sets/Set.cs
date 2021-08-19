@@ -544,14 +544,78 @@ namespace Voron.Data.Sets
                 return false;
             }
 
+            public bool Fill(Span<long> matches, out int total)
+            {
+                // We will try to fill.
+                total = 0;
+
+                bool result;
+                int read;
+
+                var tmp = matches;
+                while(true)
+                {                    
+                    result = _it.Fill(tmp, out read);                    
+                    if (read == 0)
+                    {
+                        var parent = _parent;
+                        if (parent._pos == 0)
+                            return false;
+
+                        parent.PopPage();
+
+                        var llt = parent._llt;
+
+                        while (true)
+                        {
+                            ref var state = ref parent._stk[_parent._pos];
+                            state.LastSearchPosition++;
+                            Debug.Assert(state.IsLeaf == false);
+                            if (state.LastSearchPosition >= state.BranchHeader->NumberOfEntries)
+                            {
+                                if (parent._pos == 0)
+                                    break;
+
+                                parent.PopPage();
+                                continue;
+                            }
+
+                            var branch = new SetBranchPage(state.Page);
+                            (_, long pageNum) = branch.GetByIndex(state.LastSearchPosition);
+                            var page = llt.GetPage(pageNum);
+                            var header = (SetLeafPageHeader*)page.Pointer;
+
+                            parent.PushPage(pageNum);
+
+                            if (header->SetFlags == ExtendedPageType.SetBranch)
+                            {
+                                // we'll increment on the next
+                                parent._stk[parent._pos].LastSearchPosition = -1;
+                                continue;
+                            }
+                            _it = new SetLeafPage(page).GetIterator(llt);
+                            break;
+                        }
+                    }                        
+
+                    total += read;
+                    tmp = matches.Slice(total);
+
+                    if (total == matches.Length)
+                        break; // We can't continue filling. 
+                }
+
+                //Current = matches[total - 1];
+                return true;
+            }
+
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public bool MoveNext()
-            {                
+            {
                 if (_it.MoveNext(out Current))
                     return true;
 
                 var parent = _parent;
-
                 if (parent._pos == 0)
                     return false;
 

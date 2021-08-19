@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -105,18 +105,19 @@ namespace Corax.Queries
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int AndWith(Span<long> buffer)
         {
-            // TODO: We should consider the policy where it makes sense to actually implement something different to avoid
-            //       the N^2 check here. While could be interesting to do now we still dont know what are the conditions
-            //       that would trigger such optimization or if they are even necessary. The reason why is that buffer size
-            //       may offset some of the requirements for such a scan operation. Interesting approaches to consider include
-            //       evaluating directly, construct temporary data structures like bloom filters on subsequent iterations when
-            //       the statistics guarrant those approaches, etc.
+            // We should consider the policy where it makes sense to actually implement something different to avoid
+            // the N^2 check here. While could be interesting to do now we still dont know what are the conditions
+            // that would trigger such optimization or if they are even necessary. The reason why is that buffer size
+            // may offset some of the requirements for such a scan operation. Interesting approaches to consider include
+            // evaluating directly, construct temporary data structures like bloom filters on subsequent iterations when
+            // the statistics guarrant those approaches, etc. Currently we apply memoization but without any limit to 
+            // size of the result and it's subsequent usage of memory. 
 
             long* resultsPtr = stackalloc long[buffer.Length];
             Span<long> results = new Span<long>(resultsPtr, buffer.Length);
              
-            // TODO: When the fill method is able to perform an internal memoization, just do the AndWith operation with it and
-            //       sidestep everything else.             
+            // When the fill method is able to perform an internal memoization, just do the AndWith operation with it and
+            // sidestep everything else.             
             if (_memoizedCount > 0)
             {
                 if ( !_cachedResult.HasValue )
@@ -144,16 +145,13 @@ namespace Corax.Queries
             Span<long> tmp2 = stackalloc long[buffer.Length];
 
             _inner.Reset();
-
-            // TODO: Do this in terms of the fill method. The rationale is that many optimizations happen at Fill that are not implemented here.
+            
             int totalSize = 0;
-            long totalRead = 0;
 
             bool hasData = _inner.Next(out var current);
+            long totalRead = current.Count;
             while (totalSize < buffer.Length && hasData)
-            {
-                totalRead += current.Count;
-
+            {                
                 buffer.CopyTo(tmp);
                 var read = current.AndWith(tmp);
                 if (read == 0)
@@ -163,8 +161,10 @@ namespace Corax.Queries
                 totalSize = MergeHelper.Or(results, tmp2.Slice(0, totalSize), tmp.Slice(0, read));
 
                 hasData = _inner.Next(out current);
+                totalRead += current.Count;
             }
 
+            // We will check if we can make a better decision next time. 
             if (!hasData)
             {
                 _totalResults = totalRead;

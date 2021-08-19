@@ -212,20 +212,23 @@ namespace FastTests.Corax
                 ids.Fill(-1);
 
                 int read;
+                int total = 0;
                 do
                 {
-                    read = match.Fill(ids);
-
+                    read = match.Fill(ids);                    
                     if (read != 0)
                     {
                         Assert.Equal(1000, read);
                         Assert.False(ids.Contains(-1));
+                        Assert.True(total <= match.Count);
 
                         ids.Fill(-1);
                     }
+                    total += read;
                 }
                 while (read != 0);
 
+                Assert.Equal(match.Count, total);
                 Assert.Equal(0, match.Fill(ids));
             }
         }
