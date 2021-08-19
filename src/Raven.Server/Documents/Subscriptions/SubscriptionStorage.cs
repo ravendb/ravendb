@@ -131,23 +131,23 @@ namespace Raven.Server.Documents.Subscriptions
             return _db.WhoseTaskIsIt(topology, subscription, subscription);
         }
 
-        public async Task<SubscriptionState> AssertSubscriptionConnectionDetails(long id, string name)
+        public async Task<SubscriptionState> AssertSubscriptionConnectionDetails(long id, string name, CancellationToken token)
         {
-            await _serverStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, id);
+            await _serverStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, id, token);
 
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverStoreContext))
             using (serverStoreContext.OpenReadTransaction())
             {
                 var subscription = GetSubscriptionFromServerStore(serverStoreContext, name);
                 var topology = _serverStore.Cluster.ReadDatabaseTopology(serverStoreContext, _db.Name);
-                
+
                 var whoseTaskIsIt = _db.WhoseTaskIsIt(topology, subscription, subscription);
-                
+
                 if (whoseTaskIsIt != _serverStore.NodeTag)
                 {
                     var databaseTopologyAvailabilityExplanation = new Dictionary<string, string>();
 
-                    string generalState = string.Empty;
+                    string generalState;
                     RachisState currentState = _serverStore.Engine.CurrentState;
                     if (currentState == RachisState.Candidate || currentState == RachisState.Passive)
                     {
@@ -157,9 +157,9 @@ namespace Raven.Server.Documents.Subscriptions
                     {
                         generalState = currentState.ToString();
                     }
-                    databaseTopologyAvailabilityExplanation["NodeState"] = generalState;                    
+                    databaseTopologyAvailabilityExplanation["NodeState"] = generalState;
 
-                    FillNodesAvailabilityReportForState(subscription, topology, databaseTopologyAvailabilityExplanation, stateGroup:topology.Rehabs, stateName:"rehab");
+                    FillNodesAvailabilityReportForState(subscription, topology, databaseTopologyAvailabilityExplanation, stateGroup: topology.Rehabs, stateName: "rehab");
                     FillNodesAvailabilityReportForState(subscription, topology, databaseTopologyAvailabilityExplanation, stateGroup: topology.Promotables, stateName: "promotable");
 
                     //whoseTaskIsIt!= null && whoseTaskIsIt == subscription.MentorNode 
@@ -179,14 +179,14 @@ namespace Raven.Server.Documents.Subscriptions
                             {
                                 databaseTopologyAvailabilityExplanation[member] = "Is a valid member of the topology and is chosen to be running the subscription";
                             }
-                        }                        
+                        }
                         else
                         {
                             databaseTopologyAvailabilityExplanation[member] = "Is a valid member of the topology but was not chosen to run the subscription, we didn't find any other match either";
                         }
                     }
                     throw new SubscriptionDoesNotBelongToNodeException(
-                        $"Subscription with id {id} and name {name} can't be processed on current node ({_serverStore.NodeTag}), because it belongs to {whoseTaskIsIt}",                    
+                        $"Subscription with id {id} and name {name} can't be processed on current node ({_serverStore.NodeTag}), because it belongs to {whoseTaskIsIt}",
                         whoseTaskIsIt,
                         databaseTopologyAvailabilityExplanation, id);
                 }
@@ -196,7 +196,7 @@ namespace Raven.Server.Documents.Subscriptions
                 return subscription;
             }
 
-            void FillNodesAvailabilityReportForState(SubscriptionGeneralDataAndStats subscription, DatabaseTopology topology, Dictionary<string, string> databaseTopologyAvailabilityExplenation, List<string> stateGroup, string stateName)
+            static void FillNodesAvailabilityReportForState(SubscriptionGeneralDataAndStats subscription, DatabaseTopology topology, Dictionary<string, string> databaseTopologyAvailabilityExplenation, List<string> stateGroup, string stateName)
             {
                 foreach (var nodeInGroup in stateGroup)
                 {
