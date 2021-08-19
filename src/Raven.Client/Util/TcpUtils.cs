@@ -257,7 +257,7 @@ namespace Raven.Client.Util
             return tcpClient;
         }
 
-        internal class ConnectSecuredTcpSocketResult
+        internal struct ConnectSecuredTcpSocketResult
         {
             public string Url;
             public TcpClient TcpClient;
