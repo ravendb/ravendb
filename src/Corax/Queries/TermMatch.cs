@@ -184,6 +184,8 @@ namespace Corax.Queries
                 // We update the current value we want to work with.
                 var current = it.Current;
 
+                // TODO: Replace with set.Fill( matches, maxValue: matches[^1] )
+
                 // Check if there are matches left to process or is any posibility of a match to be available in this block.
                 int i = 0;                
                 while (i < matches.Length && current <= matches[^1])
@@ -225,10 +227,14 @@ namespace Corax.Queries
             {
                 int i = 0;
                 var set = term._set;
-                while (i < matches.Length && set.MoveNext())
-                {
-                    matches[i++] = set.Current;
-                }
+
+                // Try first to do a bulk insert.
+                set.Fill(matches, out i);
+
+                //while (i < matches.Length && set.MoveNext())
+                //{
+                //    matches[i++] = set.Current;
+                //}
                 term._set = set;
                 return i;
             }

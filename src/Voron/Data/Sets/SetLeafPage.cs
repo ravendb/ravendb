@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Formats.Asn1;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Sparrow.Server;
@@ -152,43 +153,70 @@ namespace Voron.Data.Sets
                 return result;
             }
 
-            [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]            
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]            
             public bool MoveNext(out int i)
             {                
-                var scratchPtr = (int*) _scratchMemory.Ptr;
-                var parentRawValues = _parent.RawValues;
-                var rawValuesIndex = _rawValuesIndex;
                 var compressIndex = _compressIndex;
-                var compressLength = _compressLength;
-                var parent = (SetLeafPage*) Unsafe.AsPointer(ref _parent);
-                var decoderState = (PForDecoder.DecoderState*) Unsafe.AsPointer(ref _decoderState);
+                var compressLength = _compressLength;                               
 
-                TryReadMoreCompressedValues(parent, decoderState, ref _compressedEntry, ref compressIndex, ref compressLength, ref _compressedEntryIndex, ref _hasDecoder, scratchPtr);
+                if (compressIndex == compressLength && _hasDecoder)
+                {
+                    var decoderState = (PForDecoder.DecoderState*)Unsafe.AsPointer(ref _decoderState);
+                    do
+                    {
+                        compressIndex = 0;
+                        compressLength = PForDecoder.Decode(decoderState, _parent.Ptr + _compressedEntry.Position, _compressedEntry.Length, (int*)_scratchMemory.Ptr);
+                        if (compressLength != 0)
+                            break;
+
+                        if (++_compressedEntryIndex >= _parent.Header->NumberOfCompressedPositions)
+                        {
+                            _hasDecoder = false;
+                            break;
+                        }
+                        // PERF: We barely execute this code, therefore no need to squeeze performance out of it. 
+                        _compressedEntry = _parent.PositionsPtr[_compressedEntryIndex];
+                        PForDecoder.Reset(decoderState, _compressedEntry.Length);
+                    }
+                    while (compressIndex == compressLength && _hasDecoder) ;
+
+                    // PERF: The reason why we replicate the code here is that there is a difference between the inlined code and this version. 
+                    //TryReadMoreCompressedValues(parent, decoderState, ref _compressedEntry, ref compressIndex, ref compressLength, ref _compressedEntryIndex, ref _hasDecoder, scratchPtr);
+                }
 
                 bool result;
-                while (rawValuesIndex >= 0)
+
+                var scratchPtr = (int*)_scratchMemory.Ptr;
+                var rawValuesIndex = _rawValuesIndex;
+                if (rawValuesIndex >= 0)
                 {
-                    // note, reading in reverse!
-                    int rawValue = parentRawValues[rawValuesIndex];
-                    int rawValueMasked = rawValue & int.MaxValue;
-                    if (compressIndex < compressLength)
+                    var parentRawValues = _parent.RawValues;
+                    while (rawValuesIndex >= 0)
                     {
-                        if(rawValueMasked > scratchPtr[compressIndex])
-                            break; // need to read from the compressed first
-                        if (rawValueMasked == scratchPtr[compressIndex])
+                        // note, reading in reverse!
+                        int rawValue = parentRawValues[rawValuesIndex];
+                        int rawValueMasked = rawValue & int.MaxValue;
+                        if (compressIndex < compressLength)
                         {
-                            compressIndex++; // skip this one
-                            
-                            TryReadMoreCompressedValues(parent, decoderState, ref _compressedEntry, ref compressIndex, ref compressLength, ref _compressedEntryIndex, ref _hasDecoder, scratchPtr);
+                            if (rawValueMasked > scratchPtr[compressIndex])
+                                break; // need to read from the compressed first
+                            if (rawValueMasked == scratchPtr[compressIndex])
+                            {
+                                compressIndex++; // skip this one
+
+                                var parent = (SetLeafPage*)Unsafe.AsPointer(ref _parent);
+                                var decoderState = (PForDecoder.DecoderState*)Unsafe.AsPointer(ref _decoderState);
+                                TryReadMoreCompressedValues(parent, decoderState, ref _compressedEntry, ref compressIndex, ref compressLength, ref _compressedEntryIndex, ref _hasDecoder, scratchPtr);
+                            }
                         }
+                        rawValuesIndex--;
+                        if (rawValue < 0) // removed, ignore
+                            continue;
+
+                        i = rawValue;
+                        result = true;
+                        goto End;
                     }
-                    rawValuesIndex--;
-                    if (rawValue < 0) // removed, ignore
-                        continue; 
-                    
-                    i = rawValue;
-                    result = true;
-                    goto End;                    
                 }
                 
                 if (compressIndex == compressLength)
@@ -210,6 +238,91 @@ namespace Voron.Data.Sets
 
                 return result;
             }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public bool Fill(Span<long> matches, out int i)
+            {
+                var compressIndex = _compressIndex;
+                var compressLength = _compressLength;
+                var decoderState = (PForDecoder.DecoderState*)Unsafe.AsPointer(ref _decoderState);
+                var parent = (SetLeafPage*)Unsafe.AsPointer(ref _parent);
+                var parentRawValues = parent->RawValues;
+                var scratchPtr = (int*)_scratchMemory.Ptr;
+                var rawValuesIndex = _rawValuesIndex;                
+
+                i = 0;
+                bool result = false;
+                while (i < matches.Length)
+                {
+                    if (compressIndex == compressLength && _hasDecoder)
+                    {
+                        do
+                        {
+                            compressIndex = 0;
+                            compressLength = PForDecoder.Decode(decoderState, parent->Ptr + _compressedEntry.Position, _compressedEntry.Length, (int*)_scratchMemory.Ptr);
+                            if (compressLength != 0)
+                                break;
+
+                            if (++_compressedEntryIndex >= _parent.Header->NumberOfCompressedPositions)
+                            {
+                                _hasDecoder = false;
+                                break;
+                            }
+
+                            // PERF: We barely execute this code, therefore no need to squeeze performance out of it. 
+                            _compressedEntry = parent->PositionsPtr[_compressedEntryIndex];
+                            PForDecoder.Reset(decoderState, _compressedEntry.Length);
+                        }
+                        while (compressIndex == compressLength && _hasDecoder);
+
+                        // PERF: The reason why we replicate the code here is that there is a difference between the inlined code and this version. 
+                        //TryReadMoreCompressedValues(parent, decoderState, ref _compressedEntry, ref compressIndex, ref compressLength, ref _compressedEntryIndex, ref _hasDecoder, scratchPtr);
+                    }
+
+                    while (rawValuesIndex >= 0 && i < matches.Length)
+                    {
+                        // note, reading in reverse!
+                        int rawValue = parentRawValues[rawValuesIndex];
+                        int rawValueMasked = rawValue & int.MaxValue;
+                        if (compressIndex < compressLength)
+                        {
+                            if (rawValueMasked > scratchPtr[compressIndex])
+                                break;
+                            if (rawValueMasked == scratchPtr[compressIndex])
+                            {
+                                compressIndex++; // skip this one
+
+                                TryReadMoreCompressedValues(parent, decoderState, ref _compressedEntry, ref compressIndex, ref compressLength, ref _compressedEntryIndex, ref _hasDecoder, scratchPtr);
+                            }
+                        }
+                        rawValuesIndex--;
+                        if (rawValue < 0) // removed, ignore
+                            continue;
+
+                        matches[i++] = (long)rawValue | _parent.Header->Baseline;                        
+                        result = true;
+                    }
+
+                    if (compressIndex != compressLength)
+                    {
+                        matches[i++] = (long)scratchPtr[compressIndex++] | _parent.Header->Baseline;
+                        result = true;
+                    }
+                    else
+                    {
+                        break;
+                    }                    
+                }
+
+            End:
+
+                _rawValuesIndex = rawValuesIndex;
+                _compressIndex = compressIndex;
+                _compressLength = compressLength;
+
+                return result;
+            }
+
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             private static void TryReadMoreCompressedValues(SetLeafPage* parent, 
