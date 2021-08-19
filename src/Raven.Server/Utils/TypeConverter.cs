@@ -297,12 +297,9 @@ namespace Raven.Server.Utils
                                 case LazyNumberValue lnv:
                                     return lnv; //should be already blittable supported type.
                             }
-                            
-                            ThrowInvalidObject(jsValue);
+                            //ThrowInvalidObject(jsValue);
                         }
-                        else {
-                            return JsBlittableBridge.Translate(context, engine, jsValue);
-                        }
+                        return JsBlittableBridge.Translate(context, engine, jsValue);
                     }
                     ThrowInvalidObject(jsValue);
                     return null;
@@ -690,7 +687,7 @@ namespace Raven.Server.Utils
         {
             var type = value.GetType();
 
-            if (type == typeof(InternalHandle) || type == typeof(V8NativeObject) || type.IsSubclassOf(typeof(V8NativeObject))) // We don't cache JS types
+            if (type == typeof(InternalHandle)) // We don't cache JS types
                 return PropertyAccessor.CreateMapReduceOutputAccessor(type, value, groupByFields, true);
 
             if (value is Dictionary<string, object>) // don't use cache when using dictionaries

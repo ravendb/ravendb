@@ -539,11 +539,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                         return false;
 
                     var output = _enumerator.Current;
-
-                    /*var jsOutput = (InternalHandle)output;
-                    var engine = jsOutput.Engine;
-                    var outputStr = engine.Execute("JSON.stringify").StaticCall(jsOutput).AsString;*/
-
                     using (_createBlittableResult.Start())
                     {
                         IPropertyAccessor accessor;

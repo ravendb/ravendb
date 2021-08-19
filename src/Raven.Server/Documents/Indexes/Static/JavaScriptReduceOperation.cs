@@ -184,33 +184,6 @@ namespace Raven.Server.Documents.Indexes.Static
                         using (var jsGrouping = ConstructGrouping(item))
                         {
                             bool res = false;
-                            /*using (var key = jsGrouping.GetProperty("key")) 
-                            {
-                                using (var values = jsGrouping.GetProperty("values")) 
-                                {
-
-                                    using (var jsValue = values.GetProperty(0)) 
-                                    {
-                                        var resStr = EngineV8.Execute("JSON.stringify").StaticCall(jsValue).AsString;
-                                        //if (!jsValue.IsUndefined) 
-                                        {
-                                            using (var ap = jsValue.GetProperty("activenessPeriod")) 
-                                            {
-                                                res = true;
-                                                using (var start = ap.GetProperty("start"))
-                                                    res = res && !start.IsUndefined;
-                                                using (var end = ap.GetProperty("end"))
-                                                    res = res && !end.IsUndefined;
-                                                using (var dummy = ap.GetProperty("dummy"))
-                                                    res = res && dummy.IsUndefined;
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            if (!res)
-                                throw new JavaScriptIndexFuncException($"Failed to get activenessPeriod items");*/
-
                             jsRes = ReduceV8.StaticCall(jsGrouping);
                             jsRes.ThrowOnError();
                             if (jsRes.IsObject == false)
@@ -329,21 +302,6 @@ namespace Raven.Server.Documents.Indexes.Static
                         continue;
 
                     jsItems[i] = jsValue;
-
-                    //var resStr = EngineV8.Execute("JSON.stringify").StaticCall(jsValue).AsString;
-                    /*bool res = false;
-                    using (var ap = jsValue.GetProperty("activenessPeriod")) 
-                    {
-                        res = true;
-                        using (var start = ap.GetProperty("start"))
-                            res = res && !start.IsUndefined;
-                        using (var end = ap.GetProperty("end"))
-                            res = res && !end.IsUndefined;
-                        using (var dummy = ap.GetProperty("dummy"))
-                            res = res && dummy.IsUndefined;
-                    }
-                    if (!res)
-                        throw new JavaScriptIndexFuncException($"Failed to get activenessPeriod items");*/
                 }
 
                 return EngineV8.CreateArrayWithDisposal(jsItems);

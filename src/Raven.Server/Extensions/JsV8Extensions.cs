@@ -87,9 +87,14 @@ namespace Raven.Server.Extensions
 
         public static bool HasProperty (this InternalHandle value, string name)
         {
-            return value.GetPropertyAttributes(name) != V8PropertyAttributes.Undefined;
-            //using (var jsRes = obj.GetProperty(propertyName));
-            //    return !jsRes.IsUndefined);
+            /*var attr = value.GetPropertyAttributes(name);
+            return attr != V8PropertyAttributes.Undefined;*/
+            /*using (var jsHasOwn = Execute("Object.hasOwn"))
+            {
+                jsHasOwn.StaticCall()
+            }*/
+            using (var jsRes = value.GetProperty(name))
+                return !jsRes.IsUndefined;
         }
 
         public static bool TryGetValue(this InternalHandle obj, string propertyName, out InternalHandle jsRes)

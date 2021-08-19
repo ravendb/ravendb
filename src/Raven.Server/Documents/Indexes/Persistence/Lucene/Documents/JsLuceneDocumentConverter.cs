@@ -117,8 +117,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                         {
                             //In case TryDetectDynamicFieldCreation finds a dynamic field it will populate 'field.Name' with the actual property name
                             //so we must use field.Name and not property from this point on.
-                            InternalHandle jsValue = TryDetectDynamicFieldCreation(propertyName, jsPropertyValue.Object, field);
-                            using (jsValue)
+                            using (InternalHandle jsValue = TryDetectDynamicFieldCreation(propertyName, jsPropertyValue, field))
                             {
                                 if (jsValue.IsEmpty == false)
                                 {
@@ -216,8 +215,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             static bool IsObject(InternalHandle value)
             {
-                using (value)
-                    return value.IsObject && value.IsArray == false;
+                return value.IsObject && value.IsArray == false;
             }
 
             static object CreateValueForIndexing(object value, float? boost)
@@ -271,7 +269,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             return true;
         }
 
-        private static InternalHandle TryDetectDynamicFieldCreation(string property, V8NativeObject valueAsObject, IndexField field)
+        private static InternalHandle TryDetectDynamicFieldCreation(string property, InternalHandle valueAsObject, IndexField field)
         {
             //We have a field creation here _ = {"$value":val, "$name","$options":{...}}
             if (!valueAsObject.HasOwnProperty(ValuePropertyName))
@@ -280,7 +278,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             using (var fieldNameObj = valueAsObject.GetOwnProperty(NamePropertyName))
             {
-                if (fieldNameObj.IsUndefined)
+                if (!fieldNameObj.IsUndefined)
                 {
                     if (fieldNameObj.IsStringEx() == false)
                         throw new ArgumentException($"Dynamic field {property} is expected to have a string {NamePropertyName} property but got {fieldNameObj}");
@@ -293,14 +291,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 }
             }
 
-            if (valueAsObject.HasOwnProperty(OptionsPropertyName))
+            using (var optionObj = valueAsObject.GetOwnProperty(OptionsPropertyName))
             {
-                using (var optionObj = valueAsObject.GetOwnProperty(OptionsPropertyName))
+                if (!optionObj.IsUndefined)
                 {
                     if (optionObj.IsObject == false)
                     {
                         throw new ArgumentException($"Dynamic field {property} is expected to contain an object with three properties " +
-                                                    $"{OptionsPropertyName}, {NamePropertyName} and {OptionsPropertyName} the later should be a valid IndexFieldOptions object.");
+                                                    $"{ValuePropertyName}, {NamePropertyName} and {OptionsPropertyName} the later should be a valid IndexFieldOptions object.");
                     }
 
                     foreach (var (propertyName, jsPropertyValue) in optionObj.GetOwnProperties())

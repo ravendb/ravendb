@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         public static IPropertyAccessor Create(Type type, object instance)
         {
-            if (type == typeof(V8NativeObject))
+            if (type == typeof(InternalHandle))
                 return new JsPropertyAccessor(null);
 
             if (instance is Dictionary<string, object> dict)
@@ -190,27 +190,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 throw new ArgumentException($"JsPropertyAccessor.GetValue is expecting a target of type InternalHandle but got one of type {target.GetType().Name}.");
             if (oi.HasOwnProperty(name))
                 throw new MissingFieldException($"The target for 'JsPropertyAccessor.GetValue' doesn't contain the property {name}.");
-            using (var jsValue = oi.GetProperty(name)) // pure native value
+            using (var jsValue = oi.GetProperty(name))
             {
-                /*var engine = jsValue.Engine;
-                var resStr = engine.Execute("JSON.stringify").StaticCall(jsValue).AsString;*/
-                /*bool res = false;
-                //if (!jsValue.IsUndefined) 
-                {
-                    using (var ap = jsValue.GetProperty("activenessPeriod")) 
-                    {
-                        res = true;
-                        using (var start = ap.GetProperty("start"))
-                            res = res && !start.IsUndefined;
-                        using (var end = ap.GetProperty("end"))
-                            res = res && !end.IsUndefined;
-                        using (var dummy = ap.GetProperty("dummy"))
-                            res = res && dummy.IsUndefined;
-                    }
-                }
-                if (!res)
-                    throw new JavaScriptIndexFuncException($"Failed to get activenessPeriod items");*/
-
                 return GetValue(jsValue);
             }
         }
@@ -260,7 +241,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                         case LazyNumberValue lnv:
                             return lnv; //should be already blittable supported type.
                     }
-                    ThrowInvalidObject(jsValue);
+                    return boundObject;
+                    //ThrowInvalidObject(jsValue);
                 }
                 return jsValue;
             }
