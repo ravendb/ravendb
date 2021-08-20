@@ -4,6 +4,7 @@ using Raven.Client;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Logging;
+using V8.Net;
 
 namespace Raven.Server.Documents.Patch
 {
@@ -55,14 +56,16 @@ namespace Raven.Server.Documents.Patch
                     resolved = null;
                     return true;
                 }
-                var instance = result.GetOrCreate(Constants.Documents.Metadata.Key);
-                // if user didn't specify it, we'll take it from the first doc
-                // we cannot change collections here anyway, anything else, the 
-                // user need to merge on their own
-                if (instance.SetProperty(Constants.Documents.Metadata.Collection, instance.Engine.CreateValue(_fstDocumentConflict.Collection.ToString())) == false)
+                using (InternalHandle instance = result.GetOrCreate(Constants.Documents.Metadata.Key)) // not disposing as we use the cached value
                 {
-                    _logger.Info(
-                        $"Conflict resolution script for {_fstDocumentConflict.Collection} collection failed to set property collection: the conflict for {_fstDocumentConflict.Id ?? _fstDocumentConflict.LowerId}");
+                    // if user didn't specify it, we'll take it from the first doc
+                    // we cannot change collections here anyway, anything else, the 
+                    // user need to merge on their own
+                    if (instance.SetProperty(Constants.Documents.Metadata.Collection, instance.Engine.CreateValue(_fstDocumentConflict.Collection.ToString())) == false)
+                    {
+                        _logger.Info(
+                            $"Conflict resolution script for {_fstDocumentConflict.Collection} collection failed to set property collection: the conflict for {_fstDocumentConflict.Id ?? _fstDocumentConflict.LowerId}");
+                    }
                 }
                 resolved = result.TranslateToObject(context, usageMode: BlittableJsonDocumentBuilder.UsageMode.ToDisk);
                 return true;

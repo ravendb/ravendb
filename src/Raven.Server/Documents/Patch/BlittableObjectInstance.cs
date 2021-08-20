@@ -218,18 +218,21 @@ namespace Raven.Server.Documents.Patch
 
         }
 
-        public V8NativeObject GetOrCreate(InternalHandle key)
+        public InternalHandle GetOrCreate(InternalHandle key)
         {
             return GetOrCreate(key.AsString);
         }
 
-        public V8NativeObject GetOrCreate(string strKey)
+        public InternalHandle GetOrCreate(string strKey)
         {
             BlittableObjectProperty property = null;
             if (OwnValues?.TryGetValue(strKey, out property) == true &&
                 property != null) 
             {
-                return property.Value.Object; // no need to KeepTrack() as we store Object
+                if (property.Value.IsEmpty) {
+                    throw new InvalidOperationException($"property's {property.Name} value has got disposed");
+                }
+                return new InternalHandle(property.Value, true);
             }
 
             property = GenerateProperty(strKey);
@@ -239,7 +242,7 @@ namespace Raven.Server.Documents.Patch
             OwnValues[strKey] = property;
             Deletes?.Remove(strKey);
 
-            return property.Value.Object; // no need to KeepTrack() as we store Object
+            return new InternalHandle(property.Value, true);
 
 
             BlittableObjectProperty GenerateProperty(string propertyName)

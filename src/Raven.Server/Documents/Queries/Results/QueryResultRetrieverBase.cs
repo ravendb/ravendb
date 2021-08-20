@@ -951,7 +951,7 @@ namespace Raven.Server.Documents.Queries.Results
             {
             }
 
-            public void Modify(V8NativeObject json)
+            public void Modify(InternalHandle json)
             {
                 var engine = json.Engine;
 

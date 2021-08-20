@@ -110,7 +110,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 loadedToDifferentCollection = true;
             }
 
-            using (var metadata = document.GetOrCreate(Constants.Documents.Metadata.Key).InternalHandle)
+            using (InternalHandle metadata = document.GetOrCreate(Constants.Documents.Metadata.Key))
             {
                 if (loadedToDifferentCollection || metadata.HasProperty(Constants.Documents.Metadata.Collection) == false)
                     SetPropertyOrThrow(metadata, Constants.Documents.Metadata.Collection, engine.CreateValue(collectionName));

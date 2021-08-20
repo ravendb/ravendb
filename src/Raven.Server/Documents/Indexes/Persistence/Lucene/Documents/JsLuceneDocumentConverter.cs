@@ -121,7 +121,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                             {
                                 if (jsValue.IsEmpty == false)
                                 {
-                                    if (jsValue.IsObject && jsValue.Object.TryGetValue(SpatialPropertyName, out _))
+                                    if (jsValue.IsObject && jsValue.TryGetValue(SpatialPropertyName, out _))
                                     {
                                         jsPropertyValue.Set(jsValue); //Here we populate the dynamic spatial field that will be handled below.
                                     }

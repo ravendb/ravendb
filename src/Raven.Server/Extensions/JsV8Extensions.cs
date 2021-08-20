@@ -25,19 +25,9 @@ namespace Raven.Server.Extensions
             return value.IsString || value.IsStringObject;
         }
 
-        public static InternalHandle GetOwnProperty(this V8NativeObject obj, string name)
-        {
-            return obj._.GetOwnProperty(name);
-        }
-
         public static InternalHandle GetOwnProperty(this InternalHandle obj, string name)
         {
             return obj.GetProperty(name);
-        }
-
-        public static InternalHandle GetOwnProperty(this V8NativeObject obj, Int32 index)
-        {
-            return obj._.GetOwnProperty(index);
         }
 
         public static InternalHandle GetOwnProperty(this InternalHandle obj, Int32 index)
@@ -70,16 +60,6 @@ namespace Raven.Server.Extensions
             }
         }
 
-        public static bool HasOwnProperty (this V8NativeObject obj, string name)
-        {
-            return obj._.HasOwnProperty(name);
-        }
-
-        public static bool HasProperty (this V8NativeObject obj, string name)
-        {
-            return obj._.HasProperty(name);
-        }
-
         public static bool HasOwnProperty (this InternalHandle value, string name)
         {
             return value.HasProperty(name);
@@ -105,16 +85,6 @@ namespace Raven.Server.Extensions
                 return false;
             }
             return true;
-        }
-
-        public static bool TryGetValue(this V8NativeObject obj, string propertyName, out InternalHandle jsRes)
-        {
-            return obj._.TryGetValue(propertyName, out jsRes);
-        }
-
-        public static void FastAddProperty(this V8NativeObject obj, string name, InternalHandle value, bool writable, bool enumerable, bool configurable)
-        {
-            obj._.FastAddProperty(name, value, writable, enumerable, configurable);
         }
 
         public static void FastAddProperty(this InternalHandle obj, string name, InternalHandle value, bool writable, bool enumerable, bool configurable)

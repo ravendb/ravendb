@@ -22,19 +22,18 @@ namespace Raven.Server.Documents.Patch
             Instance.Dispose();
         }
 
-        public V8NativeObject GetOrCreate(string propertyName)
+        public InternalHandle GetOrCreate(string propertyName)
         {
             if (Instance.BoundObject != null && Instance.BoundObject is BlittableObjectInstance b)
                 return b.GetOrCreate(propertyName);
-            using (var o = Instance.GetProperty(propertyName))
+            InternalHandle o = Instance.GetProperty(propertyName);
+            if (o.IsUndefined || o.IsNull)
             {
-                if (o.IsUndefined || o.IsNull)
-                {
-                    o.Set(_parent.ScriptEngine.CreateObject());
-                    Instance.SetProperty(propertyName, o);
-                }
-                return o.Object; // no need to KeepTrack() as we return Handle
+                o.Dispose();
+                o = _parent.ScriptEngine.CreateObject();
+                Instance.SetProperty(propertyName, new InternalHandle(o, true)); // TODO error checking
             }
+            return o;
         }
 
         public bool? BooleanValue => Instance.IsBoolean ? Instance.AsBoolean : (bool?)null;

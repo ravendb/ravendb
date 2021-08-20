@@ -351,7 +351,7 @@ namespace Raven.Server.Documents.TcpHandlers
             {
             }
 
-            public void Modify(V8NativeObject json)
+            public void Modify(InternalHandle json)
             {
                 var engine = json.Engine;
 

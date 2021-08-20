@@ -89,8 +89,8 @@ namespace Raven.Server.Documents.Patch
                 }
                 else if (jsValue.IsObject)
                 {
-                    V8NativeObject jsObj = jsValue.Object;
-                    if (jsObj is ObjectBinder ob)
+                    object boundObject = jsValue.BoundObject;
+                    if (boundObject is ObjectBinder ob)
                     {
                         var target = ob.Object;                
                         if (target is LazyNumberValue)
@@ -113,14 +113,14 @@ namespace Raven.Server.Documents.Patch
                         {
                             var filterProperties = isRoot && string.Equals(propertyName, Constants.Documents.Metadata.Key, StringComparison.Ordinal);
 
-                            WriteNestedObject(jsObj, filterProperties);
+                            WriteNestedObject(jsValue, filterProperties);
                         }
                     }
                     else
                     {
                         var filterProperties = isRoot && string.Equals(propertyName, Constants.Documents.Metadata.Key, StringComparison.Ordinal);
 
-                        WriteNestedObject(jsObj, filterProperties);
+                        WriteNestedObject(jsValue, filterProperties);
                     }
                 }
                 else
@@ -189,7 +189,7 @@ namespace Raven.Server.Documents.Patch
                     else
                     {
                         var filterProperties = isRoot && string.Equals(propertyName, Constants.Documents.Metadata.Key, StringComparison.Ordinal);
-                        WriteNestedObject(jsValue.Object, filterProperties);
+                        WriteNestedObject(jsValue, filterProperties);
                     }
                 }
             }
@@ -200,7 +200,7 @@ namespace Raven.Server.Documents.Patch
                 else
                 {
                     var filterProperties = isRoot && string.Equals(propertyName, Constants.Documents.Metadata.Key, StringComparison.Ordinal);
-                    WriteNestedObject(jsObj, filterProperties);
+                    WriteNestedObject(jsObj._, filterProperties);
                 }
             }
             else if (value is LazyStringValue lsv)
@@ -221,18 +221,18 @@ namespace Raven.Server.Documents.Patch
             }
         }
 
-        private void WriteNestedObject(V8NativeObject obj, bool filterProperties)
+        private void WriteNestedObject(InternalHandle jsObj, bool filterProperties)
         {
             if (_recursive == null)
                 _recursive = new HashSet<object>();
 
-            if (obj is ObjectBinder ob)
+            if (jsObj.BoundObject is ObjectBinder ob)
             {
                 var target = ob.Object;
 
                 if (target is IDictionary)
                 {
-                    WriteValueInternal(target, obj, filterProperties);
+                    WriteValueInternal(target, jsObj, filterProperties);
                 }
                 else if (target is IEnumerable enumerable)
                 {
@@ -265,10 +265,10 @@ namespace Raven.Server.Documents.Patch
                 else
                     WriteObjectType(target);
             }
-            else if (obj is V8Function)
+            else if (jsObj.IsFunction)
                 _writer.WriteValueNull();
             else
-                WriteValueInternal(obj, obj, filterProperties);
+                WriteValueInternal(jsObj, jsObj, filterProperties);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -278,12 +278,12 @@ namespace Raven.Server.Documents.Patch
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void WriteValueInternal(object target, V8NativeObject obj, bool filterProperties)
+        private void WriteValueInternal(object target, InternalHandle jsObj, bool filterProperties)
         {
             try
             {
                 if (_recursive.Add(target))
-                    WriteInstance(obj, modifier: null, isRoot: false, filterProperties: filterProperties);
+                    WriteInstance(jsObj, modifier: null, isRoot: false, filterProperties: filterProperties);
                 else
                     _writer.WriteValueNull();
             }
@@ -377,7 +377,7 @@ namespace Raven.Server.Documents.Patch
 
         private void WriteJsInstance(InternalHandle jsObj, bool isRoot, bool filterProperties)
         {
-            var properties = jsObj.Object is ObjectBinder ob ? GetBoundObjectProperties(ob.Object) : jsObj.GetOwnProperties(); // TODO GetBoundObjectProperties could be prepaired and written avoiding toJs, fromJs translations
+            var properties = jsObj.BoundObject is ObjectBinder ob ? GetBoundObjectProperties(ob.Object) : jsObj.GetOwnProperties(); // TODO GetBoundObjectProperties could be prepaired and written avoiding toJs, fromJs translations
             foreach (var (propertyName, jsPropertyValue) in properties)
             {
                 using (jsPropertyValue) {
@@ -454,8 +454,8 @@ namespace Raven.Server.Documents.Patch
             if (obj.DocumentId != null &&
                 _usageMode == BlittableJsonDocumentBuilder.UsageMode.None)
             {
-                var metadata = obj.GetOrCreate(Constants.Documents.Metadata.Key);
-                metadata.SetProperty(Constants.Documents.Metadata.Id, obj.DocumentId);
+                using (InternalHandle metadata = obj.GetOrCreate(Constants.Documents.Metadata.Key)) // not disposing as we use the cached value
+                    metadata.SetProperty(Constants.Documents.Metadata.Id, obj.DocumentId);
             }
             if (obj.Blittable != null)
             {
@@ -560,7 +560,7 @@ namespace Raven.Server.Documents.Patch
 
         public interface IResultModifier
         {
-            void Modify(V8NativeObject json);
+            void Modify(InternalHandle json);
         }
 
     }
