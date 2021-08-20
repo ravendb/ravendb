@@ -1,4 +1,5 @@
-﻿using Sparrow.Json;
+﻿using System;
+using Sparrow.Json;
 using System.Collections.Generic;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Sparrow.Json.Parsing;
@@ -53,6 +54,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                 _jsons[i].Dispose();
             }
             _jsons.Clear();
+
+            foreach (var output in _outputs) {
+                if (output is IDisposable d)
+                    d.Dispose();
+            }
         }
     }
 }

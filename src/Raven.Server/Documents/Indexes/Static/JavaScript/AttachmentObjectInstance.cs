@@ -67,7 +67,7 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
                 return engine.CreateValue(_attachment.Size);
             
             if (propertyName == GetContentAsStringMethodName)
-                return engine.CreateCLRCallBack(GetContentAsString);
+                return engine.CreateCLRCallBack(GetContentAsString, true)._;
 
             return InternalHandle.Empty;
         }
@@ -75,7 +75,7 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
         private static InternalHandle GetContentAsString(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
             try {
-                var attachment = (AttachmentObjectInstance)self.BoundObject;
+                var attachment = (AttachmentObjectInstance)(self.BoundObject);
                 if (attachment == null)
                     throw new InvalidOperationException($"GetContentAsString: BoundObject is null.");
                 return attachment.GetContentAsString(engine, args);

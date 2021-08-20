@@ -273,6 +273,7 @@ namespace Raven.Server.Documents.Patch
 
             foreach (var val in OwnValues.Values)
             {
+                
                 if (val.Value.BoundObject is BlittableObjectInstance boi)
                     boi.Blittable.Dispose();
             }
@@ -514,7 +515,7 @@ namespace Raven.Server.Documents.Patch
                     case BlittableJsonToken.Integer:
                         // TODO: in the future, add [numeric type]TryFormat, when parsing numbers to strings
                         owner?.RecordNumericFieldType(key, BlittableJsonToken.Integer);
-                        return Engine.CreateValue((Int32)value);
+                        return Engine.CreateValue((double)(Int64)value);
 
                     case BlittableJsonToken.LazyNumber:
                         owner?.RecordNumericFieldType(key, BlittableJsonToken.LazyNumber);

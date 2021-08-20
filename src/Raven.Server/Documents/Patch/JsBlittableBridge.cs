@@ -89,10 +89,9 @@ namespace Raven.Server.Documents.Patch
                 }
                 else if (jsValue.IsObject)
                 {
-                    object boundObject = jsValue.BoundObject;
-                    if (boundObject is ObjectBinder ob)
+                    object target = jsValue.BoundObject;
+                    if (target != null)
                     {
-                        var target = ob.Object;                
                         if (target is LazyNumberValue)
                         {
                             _writer.WriteValue(BlittableJsonToken.LazyNumber, target);
@@ -226,10 +225,9 @@ namespace Raven.Server.Documents.Patch
             if (_recursive == null)
                 _recursive = new HashSet<object>();
 
-            if (jsObj.BoundObject is ObjectBinder ob)
+            var target = jsObj.BoundObject;
+            if (target != null)
             {
-                var target = ob.Object;
-
                 if (target is IDictionary)
                 {
                     WriteValueInternal(target, jsObj, filterProperties);
@@ -377,7 +375,8 @@ namespace Raven.Server.Documents.Patch
 
         private void WriteJsInstance(InternalHandle jsObj, bool isRoot, bool filterProperties)
         {
-            var properties = jsObj.BoundObject is ObjectBinder ob ? GetBoundObjectProperties(ob.Object) : jsObj.GetOwnProperties(); // TODO GetBoundObjectProperties could be prepaired and written avoiding toJs, fromJs translations
+            var bo = jsObj.BoundObject;
+            var properties = (bo != null) ? GetBoundObjectProperties(bo) : jsObj.GetOwnProperties(); // TODO GetBoundObjectProperties could be prepaired and written avoiding toJs, fromJs translations
             foreach (var (propertyName, jsPropertyValue) in properties)
             {
                 using (jsPropertyValue) {

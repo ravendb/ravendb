@@ -28,9 +28,9 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
     {
         private readonly Transformation _transformation;
         private readonly ScriptInput _script;
-        private InternalHandle _addAttachmentMethod;
-        private InternalHandle _addCounterMethod;
-        private InternalHandle _addTimeSeriesMethod;
+        private V8Function _addAttachmentMethod;
+        private V8Function _addCounterMethod;
+        private V8Function _addTimeSeriesMethod;
         private RavenEtlScriptRun _currentRun;
 
         public RavenEtlDocumentTransformer(Transformation transformation, DocumentDatabase database, DocumentsOperationContext context, ScriptInput script)
@@ -40,13 +40,6 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             _script = script;
 
             LoadToDestinations = _script.LoadToCollections;
-        }
-
-        ~RavenEtlDocumentTransformer()
-        {
-            _addAttachmentMethod.Dispose();
-            _addCounterMethod.Dispose();
-            _addTimeSeriesMethod.Dispose();
         }
 
         public override void Initialize(bool debugMode)
@@ -130,17 +123,17 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
             if (_transformation.IsAddingAttachments)
             {
-                document.Instance.SetProperty(Transformation.AddAttachment, new InternalHandle(_addAttachmentMethod, true), V8PropertyAttributes.ReadOnly); // or Locked
+                document.Instance.SetProperty(Transformation.AddAttachment, _addAttachmentMethod._, V8PropertyAttributes.ReadOnly); // or Locked
             }
 
             if (_transformation.Counters.IsAddingCounters)
             {
-                document.Instance.SetProperty(Transformation.CountersTransformation.Add, new InternalHandle(_addCounterMethod, true), V8PropertyAttributes.ReadOnly); // or Locked
+                document.Instance.SetProperty(Transformation.CountersTransformation.Add, _addCounterMethod._, V8PropertyAttributes.ReadOnly); // or Locked
             }
             
             if (_transformation.TimeSeries.IsAddingTimeSeries)
             {
-                document.Instance.SetProperty(Transformation.TimeSeriesTransformation.AddTimeSeries.Name, new InternalHandle(_addTimeSeriesMethod, true), V8PropertyAttributes.ReadOnly); // or Locked
+                document.Instance.SetProperty(Transformation.TimeSeriesTransformation.AddTimeSeries.Name, _addTimeSeriesMethod._, V8PropertyAttributes.ReadOnly); // or Locked
             }
         }
 

@@ -236,26 +236,26 @@ namespace Raven.Server.Documents.Patch
                 //console.log
                 using (var consoleObject = ScriptEngine.CreateObject())
                 {
-                    consoleObject.FastAddProperty("log", ScriptEngine.CreateCLRCallBack(OutputDebug), false, false, false);
+                    consoleObject.FastAddProperty("log", ScriptEngine.CreateCLRCallBack(OutputDebug, true)._, false, false, false);
                     ScriptEngine.GlobalObject.SetProperty("console", consoleObject);
                 }
 
                 //spatial.distance
                 using (var spatialObject = ScriptEngine.CreateObject())
                 {
-                    var spatialFunc = ScriptEngine.CreateCLRCallBack(Spatial_Distance);
-                    spatialObject.FastAddProperty("distance", spatialFunc, false, false, false);
+                    var spatialFunc = ScriptEngine.CreateCLRCallBack(Spatial_Distance, true);
+                    spatialObject.FastAddProperty("distance", spatialFunc._, false, false, false);
                     ScriptEngine.GlobalObject.SetProperty("spatial", spatialObject);
-                    ScriptEngine.GlobalObject.SetProperty("spatial.distance", spatialFunc);
+                    ScriptEngine.GlobalObject.SetProperty("spatial.distance", spatialFunc._);
                 }
 
                 // includes
                 using (var includesObject = ScriptEngine.CreateObject())
                 {
-                    var includeDocumentFunc = ScriptEngine.CreateCLRCallBack(IncludeDoc);
-                    includesObject.FastAddProperty("document", includeDocumentFunc, false, false, false);
-                    includesObject.FastAddProperty("cmpxchg", ScriptEngine.CreateCLRCallBack(IncludeCompareExchangeValue), false, false, false);
-                    includesObject.FastAddProperty("revisions", ScriptEngine.CreateCLRCallBack(IncludeRevisions), false, false, false);
+                    var includeDocumentFunc = ScriptEngine.CreateCLRCallBack(IncludeDoc, true);
+                    includesObject.FastAddProperty("document", includeDocumentFunc._, false, false, false);
+                    includesObject.FastAddProperty("cmpxchg", ScriptEngine.CreateCLRCallBack(IncludeCompareExchangeValue, true)._, false, false, false);
+                    includesObject.FastAddProperty("revisions", ScriptEngine.CreateCLRCallBack(IncludeRevisions, true)._, false, false, false);
                     ScriptEngine.GlobalObject.SetProperty("includes", includesObject);
 
                     // includes - backward compatibility
@@ -384,12 +384,12 @@ namespace Raven.Server.Documents.Patch
                         throw new ArgumentException($"{_timeSeriesSignature}: This method requires 2 arguments but was called with {args.Length}");
 
                     var obj = ScriptEngine.CreateObject();
-                    obj.SetProperty("append", ScriptEngine.CreateCLRCallBack(AppendTimeSeries));
-                    obj.SetProperty("delete", ScriptEngine.CreateCLRCallBack(DeleteRangeTimeSeries));
-                    obj.SetProperty("get", ScriptEngine.CreateCLRCallBack(GetRangeTimeSeries));
+                    obj.SetProperty("append", ScriptEngine.CreateCLRCallBack(AppendTimeSeries, true)._);
+                    obj.SetProperty("delete", ScriptEngine.CreateCLRCallBack(DeleteRangeTimeSeries, true)._);
+                    obj.SetProperty("get", ScriptEngine.CreateCLRCallBack(GetRangeTimeSeries, true)._);
                     obj.SetProperty("doc", args[0]);
                     obj.SetProperty("name", args[1]);
-                    obj.SetProperty("getStats", ScriptEngine.CreateCLRCallBack(GetStatsTimeSeries));
+                    obj.SetProperty("getStats", ScriptEngine.CreateCLRCallBack(GetStatsTimeSeries, true)._);
 
                     return obj;
                 }

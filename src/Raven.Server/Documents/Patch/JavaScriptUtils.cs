@@ -177,11 +177,7 @@ namespace Raven.Server.Documents.Patch
                 if (args[0].IsNull)
                     return DynamicJsNull.ImplicitNull._;
 
-                if (args[0].IsObject == false)
-                    ThrowInvalidParameter();
-
-                var doc = args[0].BoundObject as BlittableObjectInstance;
-                if (doc == null)
+                if (!(args[0].BoundObject is BlittableObjectInstance doc))
                     ThrowInvalidParameter();
 
                 if (CurrentIndexingScope.Current == null)
@@ -465,15 +461,21 @@ namespace Raven.Server.Documents.Patch
 
     public class V8EngineEx : V8Engine
     {
-        public InternalHandle CreateCLRCallBack(JSFunction func)
+        private List<V8Function> _CLRCallBacks;
+
+        public V8Function CreateCLRCallBack(JSFunction func, bool keepAlive = true)
         {
             var jsFunc = CreateFunctionTemplate().GetFunctionObject<V8Function>(func);
-            return new InternalHandle(jsFunc._, true);
+            if (keepAlive)
+                jsFunc._.KeepAlive();
+            return jsFunc;
         }
 
         public void SetGlobalCLRCallBack(string propertyName, JSFunction func)
         {
-            if (!GlobalObject.SetProperty(propertyName, CreateCLRCallBack(func)))
+            V8Function jsFunc = CreateCLRCallBack(func, false);
+            _CLRCallBacks.Add(jsFunc);
+            if (!GlobalObject.SetProperty(propertyName, jsFunc._))
             {
                 throw new InvalidOperationException($"Failed to set CLR callback global property {propertyName}");
             }
@@ -490,26 +492,7 @@ namespace Raven.Server.Documents.Patch
         public InternalHandle CreateArrayWithDisposal(InternalHandle[] jsItems)
         {
             var jsArr = CreateArray(jsItems);
-            //V8EngineEx.Dispose(jsItems);
-
-            /*using (var jsEl01 = jsArr.GetProperty(0)) {
-                if (jsEl01.IsEmpty) {
-                    long c = 0;
-                }
-            }
-
-            using (var jsEl02 = jsArr.GetProperty(0)) {
-                if (jsEl02.IsEmpty) {
-                    long a = 0;
-                }
-            }
-
-            using (var jsEl03 = jsArr.GetProperty(0)) {
-                if (jsEl03.IsEmpty) {
-                    long b = 0;
-                }
-            }*/
-
+            V8EngineEx.Dispose(jsItems);
             return jsArr;
         }
 
@@ -524,6 +507,9 @@ namespace Raven.Server.Documents.Patch
 
         public V8EngineEx(bool autoCreateGlobalContext = true) : base(autoCreateGlobalContext)
         {
+
+            _CLRCallBacks = new List<V8Function>();
+
             TypeMappers = new Dictionary<Type, Func<object, InternalHandle>>()
             {
                 {typeof(bool), (v) => CreateValue((bool) v)},
