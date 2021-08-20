@@ -15,6 +15,10 @@ function BuildUbuntuDockerImage ($version, $arch) {
             $packageFileName = "RavenDB-$version-raspberry-pi.tar.bz2"
             break;
         }
+        "arm64v8" {
+            $packageFileName = "RavenDB-$version-linux-arm64.tar.bz2"
+            break;
+        }
         "x64" {
             $packageFileName = "RavenDB-$version-linux-x64.tar.bz2"
             break;
