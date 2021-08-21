@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Runtime.Intrinsics;
+using System.Runtime.Intrinsics.X86;
 
 namespace Corax.Queries
 {
@@ -23,6 +25,109 @@ namespace Corax.Queries
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe static int And(long* dst, int dstLength, long* left, int leftLength, long* right, int rightLength)
+        {
+            if ( Avx2.IsSupported)
+                return AndVectorized(dst, dstLength, left, leftLength, right, rightLength);
+            return AndScalar(dst, dstLength, left, leftLength, right, rightLength);
+        }
+
+        /// <summary>
+        /// AVX2 implementation of vectorized AND.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal unsafe static int AndVectorized(long* dst, int dstLength, long* left, int leftLength, long* right, int rightLength)
+        {
+            // This is effectively a constant. 
+            int N = Vector256<long>.Count;
+
+            long* dstPtr = dst;
+            long* smallerPtr, largerPtr;
+            long* smallerEndPtr, largerEndPtr;
+            
+            int blocks;
+            if ( leftLength < rightLength)
+            {
+                smallerPtr = left;
+                smallerEndPtr = left + leftLength;
+                largerPtr = right;
+                largerEndPtr = right + rightLength;
+                blocks = rightLength / N;
+            }
+            else
+            {
+                smallerPtr = right;
+                smallerEndPtr = right + rightLength;
+                largerPtr = left;
+                largerEndPtr = left + leftLength;
+                blocks = leftLength / N;
+            }
+
+            while (blocks > 0 && smallerPtr < smallerEndPtr)
+            {
+                // TODO: In here we can do SIMD galloping with gather operations. Therefore we will be able to do
+                //       multiple checks at once and find the right amount of skipping using a table. 
+
+                // If the value to compare is bigger than the biggest element in the block, we advance the block. 
+                if (*smallerPtr > *(largerPtr + N - 1))
+                {
+                    blocks--;
+                    largerPtr += N;
+                    continue;
+                }
+
+                // If the value to compare is smaller than the smallest element in the block, we advance the scalar value.
+                if (*smallerPtr < *largerPtr)
+                {
+                    smallerPtr++;
+                    continue;
+                }
+                                    
+                Vector256<long> value = Vector256.Create(*smallerPtr);
+                Vector256<long> blockValues = Avx.LoadVector256(largerPtr);
+                
+                // We are going to select which direction we are going to be moving forward. 
+                if (!Avx2.CompareEqual(value, blockValues).Equals(Vector256<long>.Zero))
+                {
+                    // We found the value, therefore we need to store this value in the destination.
+                    *dstPtr = *smallerPtr;
+                    dstPtr++;
+                }
+
+                smallerPtr++;
+            }
+
+            // The scalar version. This shouldnt cost much either way. 
+            while (smallerPtr < smallerEndPtr && largerPtr < largerEndPtr)
+            {
+                long leftValue = *smallerPtr;
+                long rightValue = *largerPtr;
+
+                if (leftValue > rightValue)
+                {
+                    largerPtr++;
+                }
+                else if (leftValue < rightValue)
+                {
+                    smallerPtr++;
+                }
+                else
+                {
+                    *dstPtr = leftValue;
+                    dstPtr++;
+                    smallerPtr++;
+                    largerPtr++;
+                }
+            }
+
+            return (int)(dstPtr - dst);
+        }
+
+        /// <summary>
+        /// Scalar CPU fallback implementation in case some CPUs do not support the most advanced versions like AVX2 or SSE2. It
+        /// is also used for testing purposes. 
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal unsafe static int AndScalar(long* dst, int dstLength, long* left, int leftLength, long* right, int rightLength)
         {
             long* dstPtr = dst;
             long* leftPtr = left;
