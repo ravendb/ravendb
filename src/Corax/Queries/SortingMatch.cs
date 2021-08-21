@@ -2,6 +2,7 @@
 using System.Buffers;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using System.Text.RegularExpressions;
 using Sparrow;
 
 namespace Corax.Queries
@@ -35,108 +36,27 @@ namespace Corax.Queries
             }
         }
 
-        private struct HashCacheMatchComparer<T, W> : IComparer<long>, IDisposable
-            where W : struct
+        private struct MatchComparer<T, W> : IComparer<MatchComparer<T, W>.Item>
             where T : IMatchComparer
+            where W : struct
         {
-            private struct Item
+            public struct Item
             {
-                public long Match;
+                public long Key;
                 public W Value;
             }
 
-            private readonly IndexSearcher _searcher;
             private readonly T _comparer;
-            private readonly int _fieldId;
-            private Item[] _hash;
 
-            private const ulong NoMatch = unchecked(1UL << 63);
-            private const ulong MatchMask = unchecked((1UL << 63) - 1);
-            private const int CacheSize = 4096;
-
-            public HashCacheMatchComparer(IndexSearcher searcher, in T comparer)
+            public MatchComparer(in T comparer)
             {
-                _searcher = searcher;
                 _comparer = comparer;
-                _fieldId = comparer.FieldId;
-
-                var hash = ArrayPool<Item>.Shared.Rent(CacheSize);
-                for (int i = 0; i < hash.Length; i++)
-                    hash[i].Match = 0;
-                _hash = hash;
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public int Compare(long x, long y)
+            public int Compare(Item ix, Item iy)
             {
-                // Map into the hash space
-                uint hx = ((uint)Hashing.Mix(x)) % CacheSize;
-                uint hy = ((uint)Hashing.Mix(y)) % CacheSize;
-
-                // Retrieve the potential element
-                ref var ix = ref _hash[hx];
-                ref var iy = ref _hash[hy];
-
-                bool readX;
-                if (ix.Match == ((long)((ulong)x & MatchMask)))
-                {
-                    // Found it, we gonna use it.
-                    readX = ((ulong)ix.Match & NoMatch) == 0;
-                }
-                else
-                {
-                    var reader = _searcher.GetReaderFor(x);
-                    if (typeof(W) == typeof(SequenceItem))
-                    {
-                        readX = reader.Read(_fieldId, out var sv);
-                        ix.Value = (W)(object)new SequenceItem((byte*)Unsafe.AsPointer(ref sv[0]), sv.Length);
-                    }
-                    else if (typeof(W) == typeof(NumericalItem<long>))
-                    {
-                        readX = reader.Read<long>(_fieldId, out var value);
-                        ix.Value = (W)(object)new NumericalItem<long>(value);
-                    }
-                    else if (typeof(W) == typeof(NumericalItem<double>))
-                    {
-                        readX = reader.Read<double>(_fieldId, out var value);
-                        ix.Value = (W)(object)new NumericalItem<double>(value);
-                    }
-                    else return ThrowNotSupportedException();
-
-                    ix.Match = (long)((ulong)x | (readX ? 0 : NoMatch));
-                }
-
-                bool readY;
-                if (iy.Match == ((long)((ulong)y & MatchMask)))
-                {
-                    // Found it, we gonna use it.
-                    readY = ((ulong)iy.Match & NoMatch) == 0;
-                }
-                else
-                {
-                    // Load the value;
-                    var reader = _searcher.GetReaderFor(y);
-                    if (typeof(W) == typeof(SequenceItem))
-                    {
-                        readY = reader.Read(_fieldId, out var sv);
-                        iy.Value = (W)(object)new SequenceItem((byte*)Unsafe.AsPointer(ref sv[0]), sv.Length);
-                    }
-                    else if (typeof(W) == typeof(NumericalItem<long>))
-                    {
-                        readY = reader.Read<long>(_fieldId, out var value);
-                        iy.Value = (W)(object)new NumericalItem<long>(value);
-                    }
-                    else if (typeof(W) == typeof(NumericalItem<double>))
-                    {
-                        readY = reader.Read<double>(_fieldId, out var value);
-                        iy.Value = (W)(object)new NumericalItem<double>(value);
-                    }
-                    else return ThrowNotSupportedException();
-
-                    iy.Match = (long)((ulong)y | (readY ? 0 : NoMatch));
-                }
-
-                if (readX && readY)
+                if (ix.Key > 0 && iy.Key > 0)
                 {
                     if (typeof(W) == typeof(SequenceItem))
                     {
@@ -153,24 +73,15 @@ namespace Corax.Queries
                         return _comparer.CompareNumerical(((NumericalItem<double>)(object)ix.Value).Value, ((NumericalItem<double>)(object)iy.Value).Value);
                     }
                 }
-                else if (readX)
+                else if (ix.Key > 0)
                 {
                     return 1;
                 }
 
                 return -1;
             }
-
-            private int ThrowNotSupportedException()
-            {
-                throw new NotSupportedException("Not supported.");
-            }
-
-            public void Dispose()
-            {
-                ArrayPool<Item>.Shared.Return(_hash);
-            }
         }
+
         public SortingMatch(IndexSearcher searcher, in TInner inner, in TComparer comparer, int take = -1)
         {
             _searcher = searcher;
@@ -199,62 +110,90 @@ namespace Corax.Queries
                 return Fill<NumericalItem<double>>(matches);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool Get<W>(IndexSearcher searcher, int fieldId, long x, out W key) where W : struct
+        {
+            var reader = searcher.GetReaderFor(x);
+            if (typeof(W) == typeof(SequenceItem))
+            {
+                var readX = reader.Read(fieldId, out var sv);
+                key = (W)(object)new SequenceItem((byte*)Unsafe.AsPointer(ref sv[0]), sv.Length);
+                return readX;
+            }
+            else if (typeof(W) == typeof(NumericalItem<long>))
+            {
+                var readX = reader.Read<long>(fieldId, out var value);
+                key = (W)(object)new NumericalItem<long>(value);
+                return readX;
+            }
+            else if (typeof(W) == typeof(NumericalItem<double>))
+            {
+                var readX = reader.Read<double>(fieldId, out var value);
+                key = (W)(object)new NumericalItem<double>(value);
+                return readX;
+            }
+
+            Unsafe.SkipInit(out key);
+            return false;
+        }
+
         [SkipLocalsInit]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private int Fill<W>(Span<long> matches) where W : struct
         {
             int take = _take <= 0 ? matches.Length : _take;
 
+            var matchesKeys = new MatchComparer<TComparer, W>.Item[matches.Length].AsSpan();
             int totalMatches = _inner.Fill(matches);
             if (totalMatches == 0)
                 return 0;
 
-            var tmpMatches = matches.Slice(totalMatches);
+            var searcher = _searcher;
+            var fieldId = _comparer.FieldId;
+            var comparer = new MatchComparer<TComparer, W>(_comparer);
+            for (int i = 0; i < totalMatches; i++)
+            {
+                var read = Get(searcher, fieldId, matches[i], out matchesKeys[i].Value);
+                matchesKeys[i].Key = read ? matches[i] : -matches[i];
+            }
 
             // We sort the first batch
-            using var hashCacheComparer = new HashCacheMatchComparer<TComparer, W>(_searcher, _comparer);
-            var sorter = new Sorter<long, HashCacheMatchComparer<TComparer, W>>(hashCacheComparer);
-            sorter.Sort(matches.Slice(0, totalMatches));
+            var sorter = new Sorter<MatchComparer<TComparer, W>.Item, MatchComparer<TComparer, W>>(comparer);
+            sorter.Sort(matchesKeys[0..totalMatches]);
 
-            Span<long> a = stackalloc long[matches.Length];
-            Span<long> b = stackalloc long[matches.Length];
-
+            Span<long> bValues = stackalloc long[matches.Length];            
+            var bKeys = new MatchComparer<TComparer, W>.Item[matches.Length].AsSpan();
             while (true)
             {
                 // We get a new batch
-                int bTotalMatches = _inner.Fill(b);
+                int bTotalMatches = _inner.Fill(bValues);
 
                 // When we don't have any new batch, we are done.
                 if (bTotalMatches == 0)
                     return totalMatches;
 
-                // If we have already a full set usable for the take. 
-                int bIdx, kIdx;                
-                if (totalMatches >= take)
+                // We get the keys to sort.
+                for (int i = 0; i < bTotalMatches; i++)
                 {
-                    // PERF: Because we know the max value in the 'take' statement so we can actually get rid of a lot of data if there is inbalance.
-                    //       For that we need a custom sorter that uses that information to do early prunning of results before sorting.
-                    //       They key of performance is in being able to do that as much as possible. 
-
-                    bIdx = 0;
-                    kIdx = 0;
-                    long lastElement = matches[take - 1];
-                    while (bIdx < bTotalMatches)
-                    {
-                        if (hashCacheComparer.Compare(lastElement, b[bIdx]) >= 0)
-                            b[kIdx++] = b[bIdx];
-                        bIdx++;
-                    }
-                    bTotalMatches = kIdx;
+                    var read = Get(searcher, fieldId, bValues[i], out bKeys[i].Value);
+                    bKeys[i].Key = read ? bValues[i] : -bValues[i];
                 }
 
-                // When we don't have any new potential match here, we are done.
-                if (bTotalMatches == 0)
-                    continue;
+                int bIdx = 0;
+                int kIdx = 0;
+
+                // Get rid of all the elements that are bigger than the last one.
+                ref var lastElement = ref matchesKeys[take - 1];
+                for (; bIdx < bTotalMatches; bIdx++)
+                {
+                    if (comparer.Compare(lastElement, bKeys[bIdx]) >= 0)
+                        bKeys[kIdx++] = bKeys[bIdx];
+                }
+                bTotalMatches = kIdx;
 
                 // We sort the new batch
-                sorter.Sort(b.Slice(0, bTotalMatches));
-
+                sorter.Sort(bKeys[0..bTotalMatches]);                
+                
                 // We merge both batches. 
                 int aTotalMatches = Math.Min(totalMatches, take);
 
@@ -265,7 +204,7 @@ namespace Corax.Queries
                 while (aIdx > 0 && aIdx >= aTotalMatches / 8)
                 {
                     // If the 'bigger' of what we had is 'bigger than'
-                    if (hashCacheComparer.Compare(matches[aIdx-1], b[0]) <= 0)
+                    if (comparer.Compare(matchesKeys[aIdx-1], bKeys[0]) <= 0)
                         break;
 
                     aIdx /= 2;
@@ -278,16 +217,28 @@ namespace Corax.Queries
                 if (aIdx == aTotalMatches - 1 || kIdx >= take)
                     goto End;
 
-                // We copy the current results into the a array.
-                matches.CopyTo(a);
-
                 // PERF: This can be improved with TimSort like techniques (Galloping) but given the amount of registers and method calls
                 //       involved requires careful timing to understand if we are able to gain vs a more compact code and predictable
                 //       memory access patterns. 
 
                 while (aIdx < aTotalMatches && bIdx < bTotalMatches && kIdx < take)
-                    matches[kIdx++] = hashCacheComparer.Compare(a[aIdx], b[bIdx]) < 0 ? a[aIdx++] : b[bIdx++];
+                {
+                    var result = comparer.Compare(matchesKeys[aIdx], bKeys[bIdx]) < 0;
 
+                    if (result)
+                    {
+                        matches[kIdx] = matchesKeys[aIdx].Key;
+                        aIdx++;
+                    }
+                    else
+                    {
+                        matches[kIdx] = bKeys[bIdx].Key;
+                        matchesKeys[kIdx] = bKeys[bIdx];
+                        bIdx++;
+                    }
+                    kIdx++;
+                }
+                    
                 // If there is no more space in the buffer, discard everything else.
                 if (kIdx >= take)
                     goto End;
@@ -296,11 +247,18 @@ namespace Corax.Queries
 
                 // Copy the rest, given that we have failed on one of the other 2 only a single one will execute.
                 while (aIdx < aTotalMatches && kIdx < take)
-                    matches[kIdx++] = a[aIdx++];
-
+                {
+                    matches[kIdx++] = matchesKeys[aIdx++].Key;
+                }
+                    
                 while (bIdx < bTotalMatches && kIdx < take)
-                    matches[kIdx++] = b[bIdx++];
-
+                {
+                    matches[kIdx] = bKeys[bIdx].Key;
+                    matchesKeys[kIdx] = bKeys[bIdx]; // We are using a new key, therefore we have to update it. 
+                    kIdx++;
+                    bIdx++;
+                }
+                    
                 End:
                 totalMatches = kIdx;
             }
