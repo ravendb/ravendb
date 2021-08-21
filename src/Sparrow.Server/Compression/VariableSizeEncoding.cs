@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using Sparrow.Platform.Posix;
@@ -163,12 +164,12 @@ namespace Sparrow.Server.Compression
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-        public static T Read<T>(ReadOnlySpan<byte> buffer, out int offset, int pos = 0) where T : unmanaged
+        public unsafe static T Read<T>(ReadOnlySpan<byte> input, out int offset, int pos = 0) //where T : unmanaged
         {
             if (typeof(T) == typeof(sbyte) || typeof(T) == typeof(byte) || typeof(T) == typeof(bool))
             {
                 offset = 1;
-                byte b = buffer[pos + 0];
+                byte b = input[pos + 0];
 
                 if (typeof(T) == typeof(bool))
                     return (T)(object)(b == 1);
@@ -181,6 +182,8 @@ namespace Sparrow.Server.Compression
                 typeof(T) == typeof(int) || typeof(T) == typeof(uint) ||
                 typeof(T) == typeof(short) || typeof(T) == typeof(ushort))
             {
+                var buffer = (byte*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(input));
+
                 long ul = 0;
 
                 byte b = buffer[pos + 0];
@@ -235,36 +238,22 @@ namespace Sparrow.Server.Compression
                 if ((b & 0x80) == 0)
                     goto End;
 
-                b = buffer[pos + 5];
-                ul |= (long)(b & 0x7F) << 35;
-                offset++;
-                if ((b & 0x80) == 0)
-                    goto End;
+                // PERF: We need this for the JIT to understand that this can be profitable. 
+                buffer = buffer + 5;
+                int shift = 35;
+                for ( int i = 0; i < 5; i++)
+                {
+                    b = buffer[pos + i];
+                    ul |= (long)(b & 0x7F) << shift;
+                    offset++;
+                    if ((b & 0x80) == 0)
+                        goto End;
+                    shift += 7;
+                }
 
-                b = buffer[pos + 6];
-                ul |= (long)(b & 0x7F) << 42;
-                offset++;
-                if ((b & 0x80) == 0)
-                    goto End;
-
-                b = buffer[pos + 7];
-                ul |= (long)(b & 0x7F) << 49;
-                offset++;
-                if ((b & 0x80) == 0)
-                    goto End;
-
-                b = buffer[pos + 8];
-                ul |= (long)(b & 0x7F) << 56;
-                offset++;
-                if ((b & 0x80) == 0)
-                    goto End;
-
-                b = buffer[pos + 9];
-                ul |= (long)(b & 0x7F) << 63;
-                offset++;
-                if ((b & 0x80) != 0)
+                if (shift > 63)
                     goto Fail;
-
+ 
                 End:
 
                 if (typeof(T) == typeof(short))
