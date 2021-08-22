@@ -48,6 +48,7 @@ namespace Raven.Client.Documents.Subscriptions
         }
 
         public int NumberOfItemsInBatch => Items?.Count ?? 0;
+        internal int NumberOfIncludes => _includes?.Count ?? 0;
 
         private readonly RequestExecutor _requestExecutor;
         private readonly IDocumentStore _store;
@@ -57,7 +58,7 @@ namespace Raven.Client.Documents.Subscriptions
 
         public List<Item> Items { get; } = new List<Item>();
         private List<BlittableJsonReaderObject> _includes;
-
+        
         public IDocumentSession OpenSession()
         {
             return OpenSessionInternal(new SessionOptions
