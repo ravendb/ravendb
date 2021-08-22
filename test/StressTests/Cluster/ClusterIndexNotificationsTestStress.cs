@@ -32,7 +32,7 @@ namespace StressTests.Cluster
                 using (testingStuff.CallDuringDocumentDatabaseInternalDispose(() =>
                 {
                     var sw = Stopwatch.StartNew();
-                    while (sw.Elapsed < TimeSpan.FromSeconds(31))
+                    while (sw.Elapsed < TimeSpan.FromSeconds(18))
                         Thread.Sleep(1000);
                 }))
                 {
