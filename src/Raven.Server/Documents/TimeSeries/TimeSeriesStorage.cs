@@ -11,8 +11,8 @@ using System.Text;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.TimeSeries;
-using Raven.Client.Documents.Session;
 using Raven.Server.Documents.Replication.ReplicationItems;
+using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Utils;
@@ -867,8 +867,6 @@ namespace Raven.Server.Documents.TimeSeries
 
             private AllocatedMemoryData _clonedReadonlySegment;
 
-            private SingleResult _currentResultToAdd;
-
             public TimeSeriesSegmentHolder(
                 TimeSeriesStorage tss,
                 DocumentsOperationContext context,
@@ -1037,9 +1035,7 @@ namespace Raven.Server.Documents.TimeSeries
 
             public void AddNewValue(SingleResult result, ref TimeSeriesValuesSegment segment)
             {
-                _currentResultToAdd = result;
                 AddNewValue(result.Timestamp, result.Values.Span, SliceHolder.TagAsSpan(result.Tag), ref segment, result.Status);
-                _currentResultToAdd = null;
             }
 
             public void AddNewValue(DateTime time, Span<double> values, Span<byte> tagSlice, ref TimeSeriesValuesSegment segment, ulong status)
@@ -1050,7 +1046,6 @@ namespace Raven.Server.Documents.TimeSeries
 
             public void AddExistingValue(DateTime time, Span<double> values, Span<byte> tagSlice, ref TimeSeriesValuesSegment segment, ulong status)
             {
-                _currentResultToAdd = null;
                 AddValueInternal(time, values, tagSlice, ref segment, status);
             }
 
@@ -1068,26 +1063,31 @@ namespace Raven.Server.Documents.TimeSeries
 
                         // not from replication:
                         // we should throw all new entries with this timestamp 
-                        if (!FromReplication)
+                        if (FromReplication == false)
                             throw new InvalidOperationException($"Segment is full. Can't add more values with {time} timestamp");
 
                         // raise alert
+                        var msg = $"Segment reached capacity (> 2KB) and open a new segment unavailable at this point." +
+                                  $"Merge operation has performed for replication on doc: {_docId}, name: {_name}." +
+                                  $"The data after the merge may be inaccurate.";
+                        var alert = AlertRaised.Create(_context.DocumentDatabase.Name, "Time series segment is full - merge operation has performed", msg,
+                            AlertType.Replication, NotificationSeverity.Warning);
+                        _tss._documentDatabase.NotificationCenter.Add(alert);
 
                         // merge all entries to one 
-                        if(TryMergeEntries(ref segment) == false)
-                            throw new InvalidOperationException($"Failed to merge segment values");
+                        if (TryMergeEntries(ref segment) == false)
+                            throw new InvalidOperationException($"Failed to merge segment values. Doc: {_docId}, name: {_name}");
 
                         // retry append
                         var tag = _context.GetLazyString(_tss._documentDatabase.DbBase64Id);
                         segment.Append(_context.Allocator, (int)timestampDiff, values, SliceHolder.TagAsSpan(tag), status);
                         return;
-
                     }
 
                     if (segmentLastTimestamp == time)
                     {
                         // special split segment case 
-                        TrimSegmentToDate(ref segment, values, time);
+                        TrimSegmentToDate(ref segment, values, tagSlice, status, time);
                         UpdateBaseline(timestampDiff);
                         return;
                     }
@@ -1099,6 +1099,8 @@ namespace Raven.Server.Documents.TimeSeries
 
             private void TrimSegmentToDate(ref TimeSeriesValuesSegment timeSeriesSegment,
                 Span<double> newValues,
+                Span<byte> tagSlice,
+                ulong status,
                 DateTime nextSegmentBaseline)
             {
                 // we ran out of space (up to 2KB) and we need to split the segment 
@@ -1128,8 +1130,7 @@ namespace Raven.Server.Documents.TimeSeries
                         Span<double> localValues = newValues;
                         var localState = new Span<TimestampState>(stateBuffer.Ptr, newNumberOfValues);
                         var localTag = new TimeSeriesValuesSegment.TagPointer();
-                        bool isFirst = true;
-
+ 
                         using (var enumerator = readOnlySegment.GetEnumerator(_context.Allocator))
                         {
                             while (enumerator.MoveNext(out var localTimestamp, localValues, localState, ref localTag, out var localStatus))
@@ -1139,55 +1140,73 @@ namespace Raven.Server.Documents.TimeSeries
                                 if (currentLocalTime != nextSegmentBaseline)
                                 {
                                     var timestampDiff = ((currentLocalTime - originalBaseline).Ticks / 10_000);
-                                    splitSegment.Append(_context.Allocator, (int)timestampDiff, localValues, localTag.AsSpan(),
-                                        localStatus);
+                                    splitSegment.Append(_context.Allocator, (int)timestampDiff, localValues, localTag.AsSpan(), localStatus);
                                     continue;
                                 }
-                                if (currentLocalTime == nextSegmentBaseline) 
+
+                                AppendExistingSegment(splitSegment); 
+                                splitSegment.Initialize(localValues.Length);
+                                bool isAppend = false;
+
+                                // add values to the initialized segment by order [timestamps & tags], as in `SplitSegment` 
+                                while (currentLocalTime == nextSegmentBaseline &&
+                                           enumerator.MoveNext(out localTimestamp, localValues, localState, ref localTag, out localStatus))
                                 {
-                                    // append current segment and initialize
-                                    if (isFirst)
+                                    currentLocalTime = originalBaseline.AddMilliseconds(localTimestamp);
+                                    if (isAppend)
                                     {
-                                        AppendExistingSegment(splitSegment);
-                                        splitSegment.Initialize(localValues.Length);
-                                        isFirst = false;
+                                        splitSegment.Append(_context.Allocator, 0, localValues, localTag.AsSpan(), localStatus);
+                                        continue;
                                     }
 
-                                    // add values to the initialized segment by order [timestamps & tags], as in `SplitSegment` 
-                                    switch (CompareByTags(localTag, _currentResultToAdd?.Tag))
-                                    {
-                                        case CompareResult.Local:
-                                            splitSegment.Append(_context.Allocator, 0, localValues, localTag.AsSpan(),
-                                                localStatus);
-                                            break;
-                                        case CompareResult.Equal:
-                                        {
-                                            if (_currentResultToAdd != null &&
-                                                (FromReplication == false|| localValues.SequenceCompareTo(_currentResultToAdd.Values.Span) < 0))
-                                            {
-                                                splitSegment.Append(_context.Allocator, 0, newValues, SliceHolder.TagAsSpan(_currentResultToAdd?.Tag),
-                                                    _currentResultToAdd.Status);
+                                    var compareResult = CompareByTags(localTag, tagSlice);
 
-                                            }
-                                            else
-                                            {
-                                                splitSegment.Append(_context.Allocator, 0, localValues, localTag.AsSpan(),
-                                                    localStatus);
-                                            }
-                                            _currentResultToAdd = null;
-                                            break;
-                                        }
-                                        case CompareResult.Remote:
-                                            splitSegment.Append(_context.Allocator, 0, newValues, SliceHolder.TagAsSpan(_currentResultToAdd?.Tag),
-                                                _currentResultToAdd.Status);
-                                            _currentResultToAdd = null;
-                                            break;
+                                    if (compareResult == CompareResult.Local)
+                                    {
+                                        splitSegment.Append(_context.Allocator, 0, localValues, localTag.AsSpan(), localStatus);
+                                        continue;
                                     }
+                                    if (compareResult == CompareResult.Equal)
+                                    {
+                                        if (FromReplication == false || localValues.SequenceCompareTo(newValues) < 0)
+                                            splitSegment.Append(_context.Allocator, 0, newValues, tagSlice, status);
+                                        else
+                                            splitSegment.Append(_context.Allocator, 0, localValues, localTag.AsSpan(), localStatus);
+                                        
+                                        isAppend = true;
+                                        continue;
+                                    }
+
+                                    splitSegment.Append(_context.Allocator, 0, newValues, tagSlice, status);
+                                    isAppend = true;
                                 }
                             }
-                            _currentResultToAdd = null;
                         }
                     }
+                }
+            }
+
+            private static CompareResult CompareByTags(TimeSeriesValuesSegment.TagPointer localTag, Span<byte> tagSlice)
+            {
+                if ((localTag.Pointer == null || localTag.Size == 0) && (tagSlice.IsEmpty)) // both tags are empty
+                    return CompareResult.Equal;
+
+                if (localTag.Pointer == null || localTag.Size == 0) // local tag is empty and remote not
+                    return CompareResult.Remote;
+
+                if ((tagSlice.IsEmpty)) // remote tag is empty and local not
+                    return CompareResult.Local;
+
+                fixed (byte* pTagSlice = &tagSlice.GetPinnableReference())
+                {
+                    var compare = LazyStringValue.CompareToOrdinalIgnoreCase(localTag.Pointer + 1, localTag.Size, pTagSlice + 1, tagSlice.Length);
+                  
+                    return compare switch
+                    {
+                        0 => CompareResult.Equal,
+                        > 0 => CompareResult.Remote,
+                        _ => CompareResult.Local
+                    };
                 }
             }
 
