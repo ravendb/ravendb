@@ -80,7 +80,7 @@ class sqlMigrationDetails extends abstractOperationDetails {
                 existingItem.updateWith(counts);
             });
         } else {
-            const items = [] as Array<migrationListItem>;
+            const items: migrationListItem[] = [];
             Object.keys(status.PerCollectionCount).forEach(collectionName => {
                 const counts = status.PerCollectionCount[collectionName];
                 

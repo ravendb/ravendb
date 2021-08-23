@@ -811,6 +811,9 @@ namespace Voron
 
         internal ExitWriteLock PreventNewTransactions()
         {
+            if (_txCreation.IsWriteLockHeld)
+                return default;
+            
             _txCreation.EnterWriteLock();
             return new ExitWriteLock(_txCreation);
         }
@@ -831,7 +834,7 @@ namespace Voron
 
         public struct ExitWriteLock : IDisposable
         {
-            readonly ReaderWriterLockSlim _rwls;
+            private readonly ReaderWriterLockSlim _rwls;
 
             public ExitWriteLock(ReaderWriterLockSlim rwls)
             {
@@ -840,7 +843,7 @@ namespace Voron
 
             public void Dispose()
             {
-                _rwls.ExitWriteLock();
+                _rwls?.ExitWriteLock();
             }
         }
 

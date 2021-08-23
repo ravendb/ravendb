@@ -165,14 +165,23 @@ namespace Raven.Client.Documents.Session
         public string Database { get; }
 
         public string Url { get; }
-
         public Exception Exception { get; }
+
+        public HttpResponseMessage Response { get; }
+
+        public HttpRequestMessage Request { get; }
 
         internal FailedRequestEventArgs(string database, string url, Exception exception)
         {
             Database = database;
             Url = url;
             Exception = exception;
+        }
+
+        internal FailedRequestEventArgs(string database, string url, Exception exception, HttpResponseMessage response = null, HttpRequestMessage request = null) : this(database, url, exception)
+        {
+            Response = response;
+            Request = request;
         }
     }
     public class BeforeRequestEventArgs : EventArgs

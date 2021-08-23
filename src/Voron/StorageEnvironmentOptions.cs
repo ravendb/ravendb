@@ -530,6 +530,8 @@ namespace Voron
             public override void TryStoreJournalForReuse(VoronPathSetting filename)
             {
                 var reusedCount = 0;
+                var reusedLimit = Math.Min(_lastReusedJournalCountOnSync, MaxNumberOfRecyclableJournals);
+
                 try
                 {
                     var oldFileName = Path.GetFileName(filename.FullPath);
@@ -544,7 +546,7 @@ namespace Voron
                     {
                         reusedCount = _journalsForReuse.Count;
 
-                        if (reusedCount > _lastReusedJournalCountOnSync)
+                        if (ShouldRemoveJournal())
                         {
                             if (File.Exists(newName))
                                 File.Delete(newName);
@@ -563,7 +565,7 @@ namespace Voron
                 catch (Exception ex)
                 {
                     if (_log.IsInfoEnabled)
-                        _log.Info(reusedCount > _lastReusedJournalCountOnSync ? "Can't remove" : "Can't store" + " journal for reuse : " + filename, ex);
+                        _log.Info(ShouldRemoveJournal() ? "Can't remove" : "Can't store" + " journal for reuse : " + filename, ex);
                     try
                     {
                         if (File.Exists(filename.FullPath))
@@ -573,6 +575,11 @@ namespace Voron
                     {
                         // nothing we can do about it
                     }
+                }
+
+                bool ShouldRemoveJournal()
+                {
+                    return reusedCount >= reusedLimit;
                 }
             }
 
@@ -1216,6 +1223,9 @@ namespace Voron
         public bool IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions { get; set; }
         public bool SkipChecksumValidationOnDatabaseLoading { get; set; }
 
+        public int MaxNumberOfRecyclableJournals { get; set; } = 32;
+        public bool DiscardVirtualMemory { get; set; } = true;
+        
         private readonly Logger _log;
 
         private readonly SortedList<long, string> _journalsForReuse = new SortedList<long, string>();

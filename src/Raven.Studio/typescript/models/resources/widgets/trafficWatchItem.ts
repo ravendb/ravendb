@@ -31,7 +31,6 @@ class trafficWatchItem implements databaseAndNodeAwareStats {
         item.database = database;
         return item;
     }
-    
 }
 
 export = trafficWatchItem;

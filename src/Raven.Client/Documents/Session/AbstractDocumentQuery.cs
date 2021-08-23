@@ -922,17 +922,34 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         /// </summary>
         public void AndAlso()
         {
+            AndAlso(wrapPreviousQueryClauses:false);
+        }
+        
+        /// <summary>
+        ///   Wraps previous query with clauses and adds an AND operator to the given query
+        /// </summary>
+        public void AndAlso(bool wrapPreviousQueryClauses)
+        {
             var tokens = GetCurrentWhereTokens();
-
+            
             if (tokens.Last == null)
                 return;
 
             if (tokens.Last.Value is QueryOperatorToken)
                 throw new InvalidOperationException("Cannot add AND, previous token was already an operator token.");
-
-            tokens.AddLast(QueryOperatorToken.And);
+            
+            if (wrapPreviousQueryClauses == false)
+            {
+                tokens.AddLast(QueryOperatorToken.And);
+            }
+            else
+            { 
+                tokens.AddFirst(OpenSubclauseToken.Create());
+                tokens.AddLast(CloseSubclauseToken.Create());
+                tokens.AddLast(QueryOperatorToken.And);
+            }
         }
-
+        
         /// <summary>
         ///   Add an OR to the query
         /// </summary>
@@ -1234,6 +1251,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                 ExplanationToken == null &&
                 QueryTimings == null &&
                 CounterIncludesTokens == null &&
+                RevisionsIncludesTokens == null &&
                 TimeSeriesIncludesTokens == null &&
                 CompareExchangeValueIncludesTokens == null)
                 return;
@@ -1249,11 +1267,12 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                 if (IncludesUtil.RequiresQuotes(include, out var escapedInclude))
                     queryText.Append("'").Append(escapedInclude).Append("'");
                 else
-                    queryText.Append(include);
+                    QueryToken.WriteField(queryText, include);
             }
 
             WriteIncludeTokens(CounterIncludesTokens);
             WriteIncludeTokens(TimeSeriesIncludesTokens);
+            WriteIncludeTokens(RevisionsIncludesTokens);
             WriteIncludeTokens(CompareExchangeValueIncludesTokens);
             WriteIncludeTokens(HighlightingTokens);
 
@@ -1825,7 +1844,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                     token.AddAliasToPath(fromAlias);
                 }
             }
-
+            
             return fromAlias;
         }
 

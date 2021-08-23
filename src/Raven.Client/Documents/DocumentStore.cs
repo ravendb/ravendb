@@ -369,6 +369,7 @@ namespace Raven.Client.Documents
                     () => new EvictItemsFromCacheBasedOnChanges(this, database)));
             }
             GC.KeepAlive(lazy.Value); // here we force it to be evaluated
+            lazy.Value.EnsureConnected();
         }
 
         private AsyncDocumentSession OpenAsyncSessionInternal(SessionOptions options)
@@ -438,11 +439,21 @@ namespace Raven.Client.Documents
 
         public override BulkInsertOperation BulkInsert(string database = null, CancellationToken token = default)
         {
+            return BulkInsert(database, null, token);
+        }
+
+        public override BulkInsertOperation BulkInsert(string database, BulkInsertOptions options, CancellationToken token = default)
+        {
             AssertInitialized();
 
             database = this.GetDatabase(database);
 
-            return new BulkInsertOperation(database, this, token);
+            return new BulkInsertOperation(database, this, options, token);
+        }
+
+        public override BulkInsertOperation BulkInsert(BulkInsertOptions options, CancellationToken token = default)
+        {
+            return BulkInsert(null, options, token);
         }
     }
 }

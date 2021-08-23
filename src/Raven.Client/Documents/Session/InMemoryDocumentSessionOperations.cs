@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using System.Dynamic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -15,12 +16,14 @@ using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Lambda2Js;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Identity;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Counters;
+using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Client.Documents.Session.Operations;
@@ -34,6 +37,7 @@ using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Serialization;
 using Raven.Client.Util;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -113,7 +117,17 @@ namespace Raven.Client.Documents.Session
         /// Translate between an ID and its associated entity
         /// </summary>
         internal readonly Dictionary<string, DocumentInfo> IncludedDocumentsById = new Dictionary<string, DocumentInfo>(StringComparer.OrdinalIgnoreCase);
-
+        
+        /// <summary>
+        /// Translate between an CV and its associated entity
+        /// </summary>
+        internal Dictionary<string, DocumentInfo> IncludeRevisionsByChangeVector;
+        
+        /// <summary>
+        /// Translate between an ID and its associated entity
+        /// </summary>
+        internal Dictionary<string, Dictionary<DateTime, DocumentInfo>> IncludeRevisionsIdByDateTimeBefore;
+        
         /// <summary>
         /// hold the data required to manage the data for RavenDB's Unit of Work
         /// </summary>
@@ -136,9 +150,9 @@ namespace Raven.Client.Documents.Session
             _timeSeriesByDocId ?? (_timeSeriesByDocId = new Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>>(StringComparer.OrdinalIgnoreCase));
 
         private Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>> _timeSeriesByDocId;
-
+        
         protected readonly DocumentStoreBase _documentStore;
-
+        
         public string DatabaseName { get; }
 
         ///<summary>
@@ -1185,7 +1199,7 @@ more responsive application.
                     }
                 }
 
-                return DeletedEntities.Count > 0;
+                return DeletedEntities.Count > 0 || DeferredCommandsCount > 0;
             }
         }
 
@@ -1443,16 +1457,46 @@ more responsive application.
             {
                 includes.GetPropertyByIndex(i, ref propertyDetails);
 
-                if (propertyDetails.Value == null)
+                if (propertyDetails.Value is not BlittableJsonReaderObject json) 
                     continue;
-
-                var json = (BlittableJsonReaderObject)propertyDetails.Value;
-
+                
                 var newDocumentInfo = DocumentInfo.GetNewDocumentInfo(json);
                 if (newDocumentInfo.Metadata.TryGetConflict(out var conflict) && conflict)
                     continue;
 
                 IncludedDocumentsById[newDocumentInfo.Id] = newDocumentInfo;
+            }
+        }
+        
+        internal void RegisterRevisionIncludes(BlittableJsonReaderArray revisionIncludes)
+        {
+            if (NoTracking)
+                return;
+
+            if (revisionIncludes == null)
+                return;
+            
+            IncludeRevisionsByChangeVector ??= new Dictionary<string, DocumentInfo>(StringComparer.OrdinalIgnoreCase);
+            IncludeRevisionsIdByDateTimeBefore ??= new Dictionary<string, Dictionary<DateTime, DocumentInfo>>(StringComparer.OrdinalIgnoreCase);
+            foreach (var obj in revisionIncludes)
+            {
+                if (obj is not BlittableJsonReaderObject json) 
+                    continue;
+                json = ((BlittableJsonReaderObject)obj);
+                json.TryGet(nameof(RevisionIncludeResult.Id), out string id);
+                json.TryGet(nameof(RevisionIncludeResult.ChangeVector), out string changeVector);
+                json.TryGet(nameof(RevisionIncludeResult.Before), out DateTime dateTime);
+                json.TryGet(nameof(RevisionIncludeResult.Revision), out BlittableJsonReaderObject revision);
+
+                IncludeRevisionsByChangeVector[changeVector] = DocumentInfo.GetNewDocumentInfo(revision);
+
+                if (dateTime != default && string.IsNullOrWhiteSpace(id) == false)
+                {
+                    IncludeRevisionsIdByDateTimeBefore[id] = new Dictionary<DateTime, DocumentInfo>
+                    {
+                        [dateTime] = new() {Document = revision}
+                    };
+                }
             }
         }
 
@@ -2107,12 +2151,35 @@ more responsive application.
             HandleInternalMetadata(document);
             return JsonConverter.FromBlittable(entityType, ref document, id, trackEntity);
         }
-
-        public bool CheckIfIdAlreadyIncluded(string[] ids, KeyValuePair<string, Type>[] includes)
+        
+        internal bool CheckIfAllChangeVectorsAreAlreadyIncluded(IEnumerable<string> changeVectors)
         {
-            return CheckIfIdAlreadyIncluded(ids, includes.Select(x => x.Key));
-        }
+            if (IncludeRevisionsByChangeVector is null) 
+                 return false;
+            
+            foreach (var cv in changeVectors)
+            {
+                if (IncludeRevisionsByChangeVector.ContainsKey(cv)  == false )
+                    return false;
+            }
 
+            return true;
+        }
+        
+        internal bool CheckIfRevisionByDateTimeBeforeAlreadyIncluded(string id, DateTime dateTime)
+        {
+            if (IncludeRevisionsIdByDateTimeBefore is null)
+                return false;
+
+            if (IncludeRevisionsIdByDateTimeBefore.TryGetValue(id, out var dictionaryDateTimeToDocument))
+            {
+                if (dictionaryDateTimeToDocument.ContainsKey(dateTime))
+                    return true;
+            }
+
+            return false;
+        }
+        
         public bool CheckIfIdAlreadyIncluded(string[] ids, IEnumerable<string> includes)
         {
             foreach (var id in ids)

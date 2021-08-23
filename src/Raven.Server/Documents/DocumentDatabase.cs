@@ -44,6 +44,7 @@ using Sparrow;
 using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Json.Sync;
 using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Server;
@@ -328,7 +329,7 @@ namespace Raven.Server.Documents
                 _addToInitLog("Initializing IndexStore (async)");
                 _indexStoreTask = IndexStore.InitializeAsync(record, index, _addToInitLog);
                 _addToInitLog("Initializing Replication");
-                ReplicationLoader?.Initialize(record);
+                ReplicationLoader?.Initialize(record, index);
                 _addToInitLog("Initializing ETL");
                 EtlLoader.Initialize(record);
 
@@ -356,7 +357,7 @@ namespace Raven.Server.Documents
 
                 _serverStore.StorageSpaceMonitor.Subscribe(this);
 
-                ThreadPool.QueueUserWorkItem( _ =>
+                ThreadPool.QueueUserWorkItem(_ =>
                 {
                     try
                     {
@@ -620,6 +621,8 @@ namespace Raven.Server.Documents
 
         private unsafe void DisposeInternal()
         {
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Starting dispose");
+
             _databaseShutdown.Cancel();
 
             ForTestingPurposes?.ActionToCallDuringDocumentDatabaseInternalDispose?.Invoke();
@@ -627,12 +630,18 @@ namespace Raven.Server.Documents
             //before we dispose of the database we take its latest info to be displayed in the studio
             try
             {
+                ForTestingPurposes?.DisposeLog?.Invoke(Name, "Generating offline database info");
+
                 var databaseInfo = GenerateOfflineDatabaseInfo();
                 if (databaseInfo != null)
+                {
+                    ForTestingPurposes?.DisposeLog?.Invoke(Name, "Inserting offline database info");
                     DatabaseInfoCache?.InsertDatabaseInfo(databaseInfo, Name);
+                }
             }
             catch (Exception e)
             {
+                ForTestingPurposes?.DisposeLog?.Invoke(Name, $"Generating offline database info failed: {e}");
                 // if we encountered a catastrophic failure we might not be able to retrieve database info
 
                 if (_logger.IsInfoEnabled)
@@ -641,6 +650,8 @@ namespace Raven.Server.Documents
 
             if (ForTestingPurposes == null || ForTestingPurposes.SkipDrainAllRequests == false)
             {
+                ForTestingPurposes?.DisposeLog?.Invoke(Name, "Draining all requests");
+
                 // we'll wait for 1 minute to drain all the requests
                 // from the database
                 var sp = Stopwatch.StartNew();
@@ -652,21 +663,30 @@ namespace Raven.Server.Documents
                     if (_waitForUsagesOnDisposal.Wait(1000))
                         _waitForUsagesOnDisposal.Reset();
                 }
-            }
 
+                ForTestingPurposes?.DisposeLog?.Invoke(Name, $"Drained all requests. Took: {sp.Elapsed}");
+            }
+            
             var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(DocumentDatabase)} {Name}");
+
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Acquiring cluster lock");
 
             var lockTaken = false;
             Monitor.TryEnter(_clusterLocker, TimeSpan.FromSeconds(5), ref lockTaken);
 
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, $"Acquired cluster lock. Taken: {lockTaken}");
+
             if (lockTaken == false && _logger.IsOperationsEnabled)
                 _logger.Operations("Failed to acquire lock during database dispose for cluster notifications. Will dispose rudely...");
 
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Unsubscribing from storage space monitor");
             exceptionAggregator.Execute(() =>
             {
                 _serverStore.StorageSpaceMonitor.Unsubscribe(this);
             });
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Unsubscribed from storage space monitor");
 
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing all running TCP connections");
             foreach (var connection in RunningTcpConnections)
             {
                 exceptionAggregator.Execute(() =>
@@ -674,19 +694,27 @@ namespace Raven.Server.Documents
                     connection.Dispose();
                 });
             }
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed all running TCP connections");
 
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing TxMerger");
             exceptionAggregator.Execute(() =>
             {
                 TxMerger?.Dispose();
             });
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed TxMerger");
 
             // must acquire the lock in order to prevent concurrent access to index files
             if (lockTaken == false)
+            {
+                ForTestingPurposes?.DisposeLog?.Invoke(Name, "Acquiring cluster lock");
                 Monitor.Enter(_clusterLocker);
+                ForTestingPurposes?.DisposeLog?.Invoke(Name, "Acquired cluster lock");
+            }
 
             var indexStoreTask = _indexStoreTask;
             if (indexStoreTask != null)
             {
+                ForTestingPurposes?.DisposeLog?.Invoke(Name, "Waiting for index store task to complete");
                 exceptionAggregator.Execute(() =>
                 {
                     // we need to wait here for the task to complete
@@ -697,78 +725,106 @@ namespace Raven.Server.Documents
                     // if the cancellation is requested during index store initialization
                     indexStoreTask.Wait();
                 });
+                ForTestingPurposes?.DisposeLog?.Invoke(Name, "Finished waiting for index store task to complete");
             }
 
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing IndexStore");
             exceptionAggregator.Execute(() =>
             {
                 IndexStore?.Dispose();
             });
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed IndexStore");
 
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing ExpiredDocumentsCleaner");
             exceptionAggregator.Execute(() =>
             {
                 ExpiredDocumentsCleaner?.Dispose();
             });
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed ExpiredDocumentsCleaner");
 
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing PeriodicBackupRunner");
             exceptionAggregator.Execute(() =>
             {
                 PeriodicBackupRunner?.Dispose();
             });
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed PeriodicBackupRunner");
 
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing TombstoneCleaner");
             exceptionAggregator.Execute(() =>
             {
                 TombstoneCleaner?.Dispose();
             });
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed TombstoneCleaner");
 
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing ReplicationLoader");
             exceptionAggregator.Execute(() =>
             {
                 ReplicationLoader?.Dispose();
             });
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed ReplicationLoader");
 
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing EtlLoader");
             exceptionAggregator.Execute(() =>
             {
                 EtlLoader?.Dispose();
             });
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed EtlLoader");
 
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing Operations");
             exceptionAggregator.Execute(() =>
             {
                 Operations?.Dispose(exceptionAggregator);
             });
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed Operations");
 
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing HugeDocuments");
             exceptionAggregator.Execute(() =>
             {
                 HugeDocuments?.Dispose();
             });
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed HugeDocuments");
 
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing NotificationCenter");
             exceptionAggregator.Execute(() =>
             {
                 NotificationCenter?.Dispose();
             });
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed NotificationCenter");
 
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing SubscriptionStorage");
             exceptionAggregator.Execute(() =>
             {
                 SubscriptionStorage?.Dispose();
             });
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed SubscriptionStorage");
 
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing ConfigurationStorage");
             exceptionAggregator.Execute(() =>
             {
                 ConfigurationStorage?.Dispose();
             });
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed ConfigurationStorage");
 
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing DocumentsStorage");
             exceptionAggregator.Execute(() =>
             {
                 DocumentsStorage?.Dispose();
             });
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed DocumentsStorage");
 
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing _databaseShutdown");
             exceptionAggregator.Execute(() =>
             {
                 _databaseShutdown.Dispose();
             });
-            
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed _databaseShutdown");
+
             exceptionAggregator.Execute(() =>
             {
                 _serverStore.LicenseManager.LicenseChanged -= LoadTimeSeriesPolicyRunnerConfigurations;
             });
 
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing MasterKey");
             exceptionAggregator.Execute(() =>
             {
                 if (MasterKey == null)
@@ -778,12 +834,21 @@ namespace Raven.Server.Documents
                     Sodium.sodium_memzero(pKey, (UIntPtr)MasterKey.Length);
                 }
             });
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed MasterKey");
 
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing _fileLocker");
             exceptionAggregator.Execute(() => _fileLocker.Dispose());
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed _fileLocker");
 
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing RachisLogIndexNotifications");
             exceptionAggregator.Execute(RachisLogIndexNotifications);
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed RachisLogIndexNotifications");
 
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing _hasClusterTransaction");
             exceptionAggregator.Execute(_hasClusterTransaction);
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed _hasClusterTransaction");
+
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Finished dispose");
 
             exceptionAggregator.ThrowIfNeeded();
         }
@@ -794,7 +859,35 @@ namespace Raven.Server.Documents
             if (envs.Count == 0 || envs.Any(x => x.Environment == null))
                 return null;
 
-            var size = GetSizeOnDisk();
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Generating offline database info: sizeOnDisk.");
+            var sizeOnDisk = GetSizeOnDisk();
+
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Generating offline database info: indexingErrors.");
+            var indexingErrors = IndexStore.GetIndexes().Sum(index => index.GetErrorCount());
+
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Generating offline database info: alertCount.");
+            var alertCount = NotificationCenter.GetAlertCount();
+
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Generating offline database info: performanceHints.");
+            var performanceHints = NotificationCenter.GetPerformanceHintCount();
+
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Generating offline database info: backupInfo.");
+            var backupInfo = PeriodicBackupRunner?.GetBackupInfo();
+
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Generating offline database info: mountPointsUsage.");
+            var mountPointsUsage = GetMountPointsUsage(includeTempBuffers: false)
+                .Select(x => x.ToJson())
+                .ToList();
+
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Generating offline database info: documentsCount.");
+            var documentsCount = DocumentsStorage.GetNumberOfDocuments();
+
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Generating offline database info: indexesCount.");
+            var indexesCount = IndexStore.GetIndexes().Count();
+
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Generating offline database info: indexesStatus.");
+            var indexesStatus = IndexStore.Status.ToString();
+
             var databaseInfo = new DynamicJsonValue
             {
                 [nameof(DatabaseInfo.HasRevisionsConfiguration)] = DocumentsStorage.RevisionsStorage.Configuration != null,
@@ -806,24 +899,24 @@ namespace Raven.Server.Documents
                 [nameof(DatabaseInfo.Disabled)] = false, //TODO: this value should be overwritten by the studio since it is cached
                 [nameof(DatabaseInfo.TotalSize)] = new DynamicJsonValue
                 {
-                    [nameof(Size.HumaneSize)] = size.Data.HumaneSize,
-                    [nameof(Size.SizeInBytes)] = size.Data.SizeInBytes
+                    [nameof(Size.HumaneSize)] = sizeOnDisk.Data.HumaneSize,
+                    [nameof(Size.SizeInBytes)] = sizeOnDisk.Data.SizeInBytes
                 },
                 [nameof(DatabaseInfo.TempBuffersSize)] = new DynamicJsonValue
                 {
                     [nameof(Size.HumaneSize)] = "0 Bytes",
                     [nameof(Size.SizeInBytes)] = 0
                 },
-                [nameof(DatabaseInfo.IndexingErrors)] = IndexStore.GetIndexes().Sum(index => index.GetErrorCount()),
-                [nameof(DatabaseInfo.Alerts)] = NotificationCenter.GetAlertCount(),
-                [nameof(DatabaseInfo.PerformanceHints)] = NotificationCenter.GetPerformanceHintCount(),
+                [nameof(DatabaseInfo.IndexingErrors)] = indexingErrors,
+                [nameof(DatabaseInfo.Alerts)] = alertCount,
+                [nameof(DatabaseInfo.PerformanceHints)] = performanceHints,
                 [nameof(DatabaseInfo.UpTime)] = null, //it is shutting down
-                [nameof(DatabaseInfo.BackupInfo)] = PeriodicBackupRunner?.GetBackupInfo(),
-                [nameof(DatabaseInfo.MountPointsUsage)] = new DynamicJsonArray(GetMountPointsUsage(includeTempBuffers: false).Select(x => x.ToJson())),
-                [nameof(DatabaseInfo.DocumentsCount)] = DocumentsStorage.GetNumberOfDocuments(),
-                [nameof(DatabaseInfo.IndexesCount)] = IndexStore.GetIndexes().Count(),
+                [nameof(DatabaseInfo.BackupInfo)] = backupInfo,
+                [nameof(DatabaseInfo.MountPointsUsage)] = new DynamicJsonArray(mountPointsUsage),
+                [nameof(DatabaseInfo.DocumentsCount)] = documentsCount,
+                [nameof(DatabaseInfo.IndexesCount)] = indexesCount,
                 [nameof(DatabaseInfo.RejectClients)] = false, //TODO: implement me!
-                [nameof(DatabaseInfo.IndexingStatus)] = IndexStore.Status.ToString(),
+                [nameof(DatabaseInfo.IndexingStatus)] = indexesStatus,
                 ["CachedDatabaseInfo"] = true
             };
             return databaseInfo;
@@ -909,7 +1002,7 @@ namespace Raven.Server.Documents
                 }
 
                 if (_logger.IsInfoEnabled)
-                    _logger.Info($"Ran idle operations for database '{Name}', took: {sp.ElapsedMilliseconds}ms");
+                    _logger.Info($"Ran idle operations for database '{Name}' in {mode} mode, took: {sp.ElapsedMilliseconds}ms");
             }
             finally
             {
@@ -1144,6 +1237,7 @@ namespace Raven.Server.Documents
                 StudioConfiguration = record.Studio;
 
                 NotifyFeaturesAboutStateChange(record, index);
+
                 RachisLogIndexNotifications.NotifyListenersAbout(index, null);
             }
             catch (Exception e)
@@ -1171,6 +1265,8 @@ namespace Raven.Server.Documents
                 return;
 
             var taken = false;
+            Stopwatch sp = default;
+
             while (taken == false)
             {
                 Monitor.TryEnter(_clusterLocker, TimeSpan.FromSeconds(5), ref taken);
@@ -1186,6 +1282,8 @@ namespace Raven.Server.Documents
                     if (taken == false)
                         continue;
 
+                    sp = Stopwatch.StartNew();
+
                     Debug.Assert(string.Equals(Name, record.DatabaseName, StringComparison.OrdinalIgnoreCase),
                         $"{Name} != {record.DatabaseName}");
 
@@ -1200,7 +1298,7 @@ namespace Raven.Server.Documents
                         SetUnusedDatabaseIds(record);
                         InitializeFromDatabaseRecord(record);
                         IndexStore.HandleDatabaseRecordChange(record, index);
-                        ReplicationLoader?.HandleDatabaseRecordChange(record);
+                        ReplicationLoader?.HandleDatabaseRecordChange(record, index);
                         EtlLoader?.HandleDatabaseRecordChange(record);
                         SubscriptionStorage?.HandleDatabaseRecordChange(record);
 
@@ -1221,7 +1319,28 @@ namespace Raven.Server.Documents
                 finally
                 {
                     if (taken)
+                    {
                         Monitor.Exit(_clusterLocker);
+
+                        if (sp?.Elapsed > TimeSpan.FromSeconds(10))
+                        {
+                            if (_logger.IsOperationsEnabled)
+                            {
+                                using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
+                                using (ctx.OpenReadTransaction())
+                                {
+                                    var logs = ServerStore.Engine.LogHistory.GetLogByIndex(ctx, index).Select(djv => ctx.ReadObject(djv, "djv").ToString());
+                                    var msg =
+                                        $"Lock held for a very long time {sp.Elapsed} in database {Name} for index {index} ({string.Join(", ", logs)})";
+                                    _logger.Operations(msg);
+
+#if !RELEASE
+                                    Console.WriteLine(msg);   
+#endif
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -1657,8 +1776,12 @@ namespace Raven.Server.Documents
             internal Action ActionToCallDuringDocumentDatabaseInternalDispose;
 
             internal Action CollectionRunnerBeforeOpenReadTransaction;
-
+            
             internal bool SkipDrainAllRequests = false;
+
+            internal Action<string, string> DisposeLog;
+
+            internal bool ForceSendTombstones = false;
 
             internal IDisposable CallDuringDocumentDatabaseInternalDispose(Action action)
             {

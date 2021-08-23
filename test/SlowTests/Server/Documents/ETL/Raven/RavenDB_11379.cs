@@ -66,9 +66,10 @@ for (var i = 0; i < attachments.length; i++) {
 
                 using (var session = dest.OpenSession())
                 {
-                    var attachment = session.Advanced.Attachments.Get("users/1", attachmentDestinationName);
-
-                    Assert.NotNull(attachment);
+                    using (var attachment = session.Advanced.Attachments.Get("users/1", attachmentDestinationName))
+                    {
+                        Assert.NotNull(attachment);
+                    }
                 }
 
                 etlDone.Reset();
@@ -84,9 +85,10 @@ for (var i = 0; i < attachments.length; i++) {
 
                 using (var session = dest.OpenSession())
                 {
-                    var attachment = session.Advanced.Attachments.Get("users/1", attachmentDestinationName);
-
-                    Assert.Null(attachment);
+                    using (var attachment = session.Advanced.Attachments.Get("users/1", attachmentDestinationName))
+                    {
+                        Assert.Null(attachment);
+                    }
                 }
             }
         }
@@ -133,9 +135,10 @@ for (var i = 0; i < attachments.length; i++) {
                 {
                     using (var session = dest.OpenSession())
                     {
-                        var attachment = session.Advanced.Attachments.Get("users/" + i, attachmentDestinationName);
-
-                        Assert.NotNull(attachment);
+                        using (var attachment = session.Advanced.Attachments.Get("users/" + i, attachmentDestinationName))
+                        {
+                            Assert.NotNull(attachment);
+                        }
                     }
                 }
 
@@ -158,9 +161,10 @@ for (var i = 0; i < attachments.length; i++) {
                 {
                     using (var session = dest.OpenSession())
                     {
-                        var attachment = session.Advanced.Attachments.Get("users/"+i, attachmentDestinationName);
-
-                        Assert.Null(attachment);
+                        using (var attachment = session.Advanced.Attachments.Get("users/" + i, attachmentDestinationName))
+                        {
+                            Assert.Null(attachment);
+                        }
                     }
                 }
             }

@@ -5,20 +5,19 @@
                 <div class="flex-grow">
                     <h3 id="myModalLabel" data-bind="text: op.title, attr:{ class: 'modal-title ' + op.headerClass() }"></h3>
                 </div>
-                <div class="flex-grow text-right">
+                <div class="flex-grow text-right margin-right margin-right-sm">
                     <span class="text-muted">Time elapsed:</span> <span data-bind="text: op.duration"></span>
                 </div>
                 <div>
-                    <button type="button" class="close" data-bind="click: $root.close" aria-hidden="true">
+                    <button type="button" class="close" data-bind="click: close" aria-hidden="true">
                         <i class="icon-cancel"></i>
                     </button>
                 </div>
             </div>
+            <div class="notification-time" data-bind="text: op.displayDate().format('LLL')"></div>
         </div>
         <div class="modal-body">
-            
             <p data-bind="html: op.message"></p>
-            
             <div class="modal-details" data-bind="with: progress">
                 <div class="details-item">
                     <div class="row">
@@ -44,16 +43,11 @@
                 <pre class="margin-top error-messages"><code data-bind="foreach: errorMessages"><span data-bind="text: $data"></span>
 </code></pre>
             </div>
-
             <div class="margin-bottom" style="position: relative; height: 300px" data-bind="visible: allWarnings().length">
                 <virtual-grid style="height: 300px" class="resizable flex-window" params="controller: gridController, emptyTemplate: 'empty-revert-revisions-template'"></virtual-grid>
             </div>
         </div>
-        <div class="modal-footer">
-            <button type="button" class="btn btn-default" data-bind="click: $root.close">Close</button>
-            <button type="button" class="btn btn-danger" data-bind="click: killOperation, visible: killable">
-                <i class="icon-cancel"></i> <span>Abort</span>
-            </button>
+        <div class="modal-footer" data-bind="compose: 'common/notificationCenter/detailViewer/operations/footerPartial.html'">
         </div>
     </div>
 </div>

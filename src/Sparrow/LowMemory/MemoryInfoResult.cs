@@ -15,6 +15,7 @@
             public MemoryUsageIntervals Low;
         }
 
+        public string Remarks;
         public Size TotalCommittableMemory;
         public Size CurrentCommitCharge;
 

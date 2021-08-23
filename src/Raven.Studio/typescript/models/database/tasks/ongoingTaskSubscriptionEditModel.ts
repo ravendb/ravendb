@@ -11,7 +11,7 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
     startingPointType = ko.observable<subscriptionStartType>();
     startingChangeVector = ko.observable<string>();
     startingPointChangeVector: KnockoutComputed<boolean>;
-    startingPointLatestDocument: KnockoutComputed<boolean>; 
+    startingPointLatestDocument: KnockoutComputed<boolean>;
     setStartingPoint = ko.observable<boolean>(true);
     
     changeVectorForNextBatchStartingPoint = ko.observable<string>(null); 
@@ -30,11 +30,12 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
         
         this.dirtyFlag = new ko.DirtyFlag([
             this.taskName,
+            this.taskState,
             this.mentorNode,
             this.manualChooseMentor,
             this.query,
             this.startingPointType,
-            this.startingChangeVector, 
+            this.startingChangeVector,
             this.setStartingPoint,
             this.changeVectorForNextBatchStartingPoint
         ], false, jsonUtil.newLineNormalizingHashFunction);
@@ -81,7 +82,7 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
     }
 
     private serializeChangeVector() {
-        let changeVector: Raven.Client.Constants.Documents.SubscriptionChangeVectorSpecialStates | string = this.taskId ? "DoNotChange" : "BeginningOfTime"; 
+        let changeVector: Raven.Client.Constants.Documents.SubscriptionChangeVectorSpecialStates | string = this.taskId ? "DoNotChange" : "BeginningOfTime";
 
         if (this.setStartingPoint()) {
             switch (this.startingPointType()) {
@@ -107,13 +108,12 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
     }
     
     toDto(): Raven.Client.Documents.Subscriptions.SubscriptionCreationOptions {
-        const query = _.trim(this.query()) || null;
-
         return {
             Name: this.taskName(),
-            Query: query,
+            Query: this.query() || null,
             MentorNode: this.manualChooseMentor() ? this.mentorNode() : undefined,
-            ChangeVector: this.serializeChangeVector()
+            ChangeVector: this.serializeChangeVector(),
+            Disabled: this.taskState() === "Disabled"
         }
     }
 

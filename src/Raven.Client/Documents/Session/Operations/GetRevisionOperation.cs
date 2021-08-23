@@ -16,7 +16,6 @@ namespace Raven.Client.Documents.Session.Operations
     internal class GetRevisionOperation
     {
         private readonly InMemoryDocumentSessionOperations _session;
-
         private BlittableArrayResult _result;
         private readonly GetRevisionsCommand _command;
 
@@ -46,7 +45,15 @@ namespace Raven.Client.Documents.Session.Operations
 
         public GetRevisionsCommand CreateRequest()
         {
-            _session.IncrementRequestCount();
+            if (_command.ChangeVectors is not null)
+                return _session.CheckIfAllChangeVectorsAreAlreadyIncluded(_command.ChangeVectors) ? null : _command ;
+            
+            if (_command.ChangeVector is not null)
+                return _session.CheckIfAllChangeVectorsAreAlreadyIncluded(new[] {_command.ChangeVector}) ? null : _command;
+            
+            if (_command.Before is not null)
+                return _session.CheckIfRevisionByDateTimeBeforeAlreadyIncluded(_command.Id, _command.Before.Value) ? null : _command;
+            
             return _command;
         }
 
@@ -102,7 +109,28 @@ namespace Raven.Client.Documents.Session.Operations
         public T GetRevision<T>()
         {
             if (_result == null)
+            {
+                DocumentInfo revision;
+                if (_command.ChangeVectors != null)
+                {
+                    foreach (var changeVector in _command.ChangeVectors) 
+                        if(_session.IncludeRevisionsByChangeVector.TryGetValue(changeVector, out revision))
+                            return GetRevision<T>(revision.Document);
+                }
+                
+                if (_command.ChangeVector != null
+                    && _session.IncludeRevisionsByChangeVector != null
+                    && _session.IncludeRevisionsByChangeVector.TryGetValue(_command.ChangeVector, out revision))
+                    return GetRevision<T>(revision.Document);
+                
+                if (_command.Before != null 
+                    && _session.IncludeRevisionsIdByDateTimeBefore != null
+                    && _session.IncludeRevisionsIdByDateTimeBefore.TryGetValue(_command.Id, out var dictionaryDateTimeToDocument) 
+                    && dictionaryDateTimeToDocument.TryGetValue(_command.Before.Value, out revision)) 
+                    return GetRevision<T>(revision.Document);
+                
                 return default(T);
+            }
 
             var document = (BlittableJsonReaderObject)_result.Results[0];
             return GetRevision<T>(document);
@@ -111,6 +139,15 @@ namespace Raven.Client.Documents.Session.Operations
         public Dictionary<string, T> GetRevisions<T>()
         {
             var results = new Dictionary<string, T>(StringComparer.OrdinalIgnoreCase);
+            if (_result == null)
+            {
+                foreach (var changeVector in _command.ChangeVectors)
+                {
+                    if (_session.IncludeRevisionsByChangeVector.TryGetValue(changeVector, out DocumentInfo revision)) 
+                        results[changeVector] = GetRevision<T>(revision.Document);
+                }
+                return results;
+            }
             for (var i = 0; i < _command.ChangeVectors.Length; i++)
             {
                 var changeVector = _command.ChangeVectors[i];

@@ -126,11 +126,11 @@ namespace Raven.Server.Documents.Expiration
         {
             return CleanupDocs(batchSize ?? BatchSize, forExpiration: false);
         }
-
+        
         private async Task CleanupDocs(int batchSize, bool forExpiration)
         {
             var currentTime = _database.Time.GetUtcNow();
-
+            
             try
             {
                 DatabaseTopology topology;
@@ -151,10 +151,12 @@ namespace Raven.Server.Documents.Expiration
 
                         using (context.OpenReadTransaction())
                         {
+                            var options = new ExpirationStorage.ExpiredDocumentsOptions(context, currentTime, isFirstInTopology, batchSize);
+
                             var expired =
                                 forExpiration ?
-                                    _database.DocumentsStorage.ExpirationStorage.GetExpiredDocuments(context, currentTime, isFirstInTopology, batchSize, out var duration, CancellationToken) :
-                                    _database.DocumentsStorage.ExpirationStorage.GetDocumentsToRefresh(context, currentTime, isFirstInTopology, batchSize, out duration, CancellationToken);
+                                    _database.DocumentsStorage.ExpirationStorage.GetExpiredDocuments(options, out var duration, CancellationToken) :
+                                    _database.DocumentsStorage.ExpirationStorage.GetDocumentsToRefresh(options, out duration, CancellationToken);
 
                             if (expired == null || expired.Count == 0)
                                 return;

@@ -35,7 +35,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 {
     public class BackupTask
     {
-        public const string DateTimeFormat = "yyyy-MM-dd-HH-mm-ss";
+        public static string DateTimeFormat = "yyyy-MM-dd-HH-mm-ss";
         private const string LegacyDateTimeFormat = "yyyy-MM-dd-HH-mm";
         private const string InProgressExtension = ".in-progress";
 
@@ -829,7 +829,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             };
 
             var backupUploader = new BackupUploader(uploaderSettings, _retentionPolicyParameters, _logger, _backupResult, _onProgress, TaskCancelToken);
-            backupUploader.Execute();
+            backupUploader.ExecuteUpload();
         }
 
         private void UpdateOperationId(PeriodicBackupStatus runningBackupStatus)

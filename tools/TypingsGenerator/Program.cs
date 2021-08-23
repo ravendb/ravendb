@@ -324,6 +324,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(IndexingSpeedPayload));
             scripter.AddType(typeof(TrafficWatchPayload));
             scripter.AddType(typeof(DatabaseTrafficWatchPayload));
+            scripter.AddType(typeof(DatabaseOverviewPayload));
 
             // expiration
             scripter.AddType(typeof(ExpirationConfiguration));
@@ -491,6 +492,7 @@ namespace TypingsGenerator
             // request with POST parameters
             scripter.AddType(typeof(DeleteDatabasesOperation.Parameters));
             scripter.AddType(typeof(ToggleDatabasesStateOperation.Parameters));
+            scripter.AddType(typeof(SetDatabasesLockOperation.Parameters));
             scripter.AddType(typeof(SetIndexesLockOperation.Parameters));
             scripter.AddType(typeof(SetIndexesPriorityOperation.Parameters));
             scripter.AddType(typeof(AdminRevisionsHandler.Parameters));

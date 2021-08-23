@@ -9,10 +9,10 @@ class saveDatabaseLockModeCommand extends commandBase {
     }
 
     execute(): JQueryPromise<void> {
-        const payload = {
+        const payload: Raven.Client.ServerWide.Operations.SetDatabasesLockOperation.Parameters = {
             DatabaseNames: this.dbs.map(x => x.name),
             Mode: this.lockMode
-        } as Raven.Client.ServerWide.Operations.ToggleDatabasesStateOperation.Parameters;
+        };
 
         const url = endpoints.global.adminDatabases.adminDatabasesSetLock;
 

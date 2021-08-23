@@ -85,14 +85,14 @@ namespace Raven.Server.Documents.ShardedHandlers
                     await Task.WhenAll(tasks);
 
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
-                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
                         var reply = new object[batch.ParsedCommands.Count];
                         foreach (var command in shardedBatchCommands.Values)
                         {
                             command.AssembleShardedReply(reply);
                         }
-                        context.Write(writer, new DynamicJsonValue {[nameof(BatchCommandResult.Results)] = new DynamicJsonArray(reply)});
+                        context.Write(writer, new DynamicJsonValue { [nameof(BatchCommandResult.Results)] = new DynamicJsonArray(reply) });
                     }
                 }
             }
@@ -240,7 +240,7 @@ namespace Raven.Server.Documents.ShardedHandlers
 
                 if (cmd.Type == CommandType.BatchPATCH)
                 {
-                    var idsByShard = new Dictionary<int, List<(string Id,string ChangeVector)>>();
+                    var idsByShard = new Dictionary<int, List<(string Id, string ChangeVector)>>();
                     foreach (var cmdId in cmd.Ids)
                     {
                         if (!(cmdId is BlittableJsonReaderObject bjro))
@@ -254,10 +254,10 @@ namespace Raven.Server.Documents.ShardedHandlers
                         var shardId = _shardedContext.GetShardIndex(_context, id);
                         if (idsByShard.TryGetValue(shardId, out var list) == false)
                         {
-                            list = new List<(string Id,string ChangeVector)>();
+                            list = new List<(string Id, string ChangeVector)>();
                             idsByShard.Add(shardId, list);
                         }
-                        list.Add((id,expectedChangeVector));
+                        list.Add((id, expectedChangeVector));
                     }
 
                     foreach (var kvp in idsByShard)
@@ -331,22 +331,22 @@ namespace Raven.Server.Documents.ShardedHandlers
         {
             var name = $"{_shardedContext.DatabaseName}.attachment.{Guid.NewGuid():N}.{prefix}";
             var tempPath = ServerStore._env.Options.DataPager.Options.TempPath.Combine(name);
-            
+
             return new StreamsTempFile(tempPath.FullPath, _encrypted);
         }
 
         public override async Task<BatchRequestParser.CommandData> ReadCommand(
-            JsonOperationContext ctx, 
-            Stream stream, JsonParserState state, 
-            UnmanagedJsonParser parser, 
-            JsonOperationContext.MemoryBuffer buffer, 
+            JsonOperationContext ctx,
+            Stream stream, JsonParserState state,
+            UnmanagedJsonParser parser,
+            JsonOperationContext.MemoryBuffer buffer,
             BlittableMetadataModifier modifier,
             CancellationToken token)
         {
             var ms = new MemoryStream();
             try
             {
-                var bufferedCommand = new BufferedCommand {CommandStream = ms};
+                var bufferedCommand = new BufferedCommand { CommandStream = ms };
                 var result = await BatchRequestParser.ReadAndCopySingleCommand(ctx, stream, state, parser, buffer, bufferedCommand, token);
                 bufferedCommand.IsIdentity = IsIdentityCommand(ref result);
                 BufferedCommands.Add(bufferedCommand);
@@ -364,9 +364,9 @@ namespace Raven.Server.Documents.ShardedHandlers
             await ExecuteGetIdentities();
             return new ShardedBatchCommand(ctx, _shardedContext)
             {
-                ParsedCommands = Commands, 
+                ParsedCommands = Commands,
                 BufferedCommands = BufferedCommands,
-                AttachmentStreams = Streams, 
+                AttachmentStreams = Streams,
                 IsClusterTransaction = IsClusterTransactionRequest
             };
         }
@@ -378,12 +378,12 @@ namespace Raven.Server.Documents.ShardedHandlers
             public bool IsBatchPatch;
 
             // for identities we should replace the id and the change vector
-            public int IdStartPosition; 
-            public int ChangeVectorPosition; 
+            public int IdStartPosition;
+            public int ChangeVectorPosition;
             public int IdLength;
 
             // for batch patch command we need to replace on to the relevant ids
-            public int IdsStartPosition; 
+            public int IdsStartPosition;
             public int IdsEndPosition;
 
             public MemoryStream ModifyIdentityStream(string newId)
@@ -398,7 +398,7 @@ namespace Raven.Server.Documents.ShardedHandlers
                 }
             }
 
-            public MemoryStream ModifyBatchPatchStream(List<(string Id,string ChangeVector)> list)
+            public MemoryStream ModifyBatchPatchStream(List<(string Id, string ChangeVector)> list)
             {
                 if (IsBatchPatch == false)
                     throw new InvalidOperationException("Must be batch patch");
@@ -417,19 +417,19 @@ namespace Raven.Server.Documents.ShardedHandlers
 
             public class PatchModifier : IItemModifier
             {
-                public List<(string Id,string ChangeVector)> List;
+                public List<(string Id, string ChangeVector)> List;
                 public int IdsStartPosition;
                 public int IdsLength;
 
                 public void Validate()
                 {
-                    if(List == null || List.Count == 0)
+                    if (List == null || List.Count == 0)
                         BufferedCommandModifier.ThrowArgumentMustBePositive("Ids");
 
-                    if(IdsStartPosition <= 0)
+                    if (IdsStartPosition <= 0)
                         BufferedCommandModifier.ThrowArgumentMustBePositive("Ids position");
 
-                    if(IdsLength <= 0)
+                    if (IdsLength <= 0)
                         BufferedCommandModifier.ThrowArgumentMustBePositive("Ids length");
                 }
 
@@ -507,7 +507,7 @@ namespace Raven.Server.Documents.ShardedHandlers
 
             public class PatchCommandModifier : BufferedCommandModifier
             {
-                public PatchCommandModifier(int idsStartPosition, int idsLength, List<(string Id,string ChangeVector)> list)
+                public PatchCommandModifier(int idsStartPosition, int idsLength, List<(string Id, string ChangeVector)> list)
                 {
                     Items = new IItemModifier[1];
                     Items[0] = new PatchModifier
@@ -552,12 +552,12 @@ namespace Raven.Server.Documents.ShardedHandlers
             public abstract class BufferedCommandModifier
             {
                 protected IItemModifier[] Items;
-               
+
 
                 public MemoryStream Rewrite(MemoryStream source)
                 {
                     EnsureInitialized();
-                    
+
                     var offset = 0;
                     var dest = new MemoryStream();
                     try
@@ -572,7 +572,7 @@ namespace Raven.Server.Documents.ShardedHandlers
                             dest.Write(item.NewValue());
                             offset += item.GetLength();
                         }
-                
+
                         // copy the rest
                         source.Position = offset;
                         source.CopyTo(dest);

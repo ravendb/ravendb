@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
@@ -536,18 +537,32 @@ namespace SlowTests.Issues
 
                 documentDatabase = await Servers[0].ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
                 var index0 = documentDatabase.IndexStore.GetIndex(indexName);
+
                 index0.SetState(IndexState.Idle);
-
                 var count = 0;
-
-                foreach (var server in Servers)
+                string info = "";
+                await WaitForValueAsync(async () =>
                 {
-                    documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
-                    if (documentDatabase.IndexStore.GetIndex(indexName).State == IndexState.Idle)
-                        count++;
-                }
+                    info = "";
+                    count = 0;
+                    foreach (var server in Servers)
+                    {
+                        documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
+                        var index = documentDatabase.IndexStore.GetIndex(indexName);
+                        var state = index.State;
+                        info += $"Index state for node {server.ServerStore.NodeTag} is {state} in definition {index.Definition.State}, ";
+                        foreach (var error in index.GetErrors())
+                        {
+                            info += $"{error.Error} , ";
+                        }
+                        if (state == IndexState.Idle)
+                            count++;
+                    }
 
-                Assert.Equal(1, count);
+                    return count;
+                }, 1);
+
+                Assert.True(1 == count, info);
 
                 await ActionWithLeader((l) => l.ServerStore.Engine.PutAsync(new SetIndexStateCommand(indexName, IndexState.Disabled, database, Guid.NewGuid().ToString())),
                     Servers);
@@ -564,22 +579,32 @@ namespace SlowTests.Issues
 
 
                 index0 = documentDatabase.IndexStore.GetIndex(indexName);
-                index0.SetState(IndexState.Idle);
+                index0.SetState(IndexState.Normal);
 
                 count = 0;
 
-                foreach (var server in Servers)
+                await WaitForValueAsync(async () =>
                 {
-                    await WaitForValueAsync(async () =>
+                    count = 0;
+                    info = "";
+                    foreach (var server in Servers)
                     {
                         documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
-                        return documentDatabase.IndexStore.GetIndex(indexName).State;
-                    }, IndexState.Idle, 3000);
-                    if (documentDatabase.IndexStore.GetIndex(indexName).State == IndexState.Idle)
-                        count++;
-                }
+                        var index = documentDatabase.IndexStore.GetIndex(indexName);
+                        var state = index.State;
+                        info += $"Index state for node {server.ServerStore.NodeTag} is {state} in definition {index.Definition.State}.  ";
+                        foreach (var error in index.GetErrors())
+                        {
+                            info += $"{error.Error} , ";
+                        }
+                        if ( state == IndexState.Normal)
+                            count++;
+                    }
 
-                Assert.Equal(1, count);
+                    return count;
+                }, 1);
+
+                Assert.True(1 == count, info);
             }
         }
 
@@ -637,6 +662,24 @@ namespace SlowTests.Issues
                 }
             }
         }
+
+        [Fact]
+        public async Task IndexDefinitionCompareState_RavenDB_16982()
+        {
+            var indexName = "SimpleIndex";
+            using (var store = GetDocumentStore())
+            {
+                await new SimpleIndex().ExecuteAsync(store);
+
+                var documentDatabase = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                var definition = documentDatabase.IndexStore.GetIndex(indexName).Definition;
+                Assert.Equal(definition.State, IndexState.Normal);
+
+                var compare = definition.Compare(new IndexDefinition() {Name = definition.Name, State = null, Maps = new HashSet<string>(){ "docs.Users.Select(user => new {\r\n    Name = user.Name\r\n})" } });
+                Assert.Equal(compare, IndexDefinitionCompareDifferences.None);
+            }
+        }
+
 
         private class SimpleIndex : AbstractIndexCreationTask<User>
         {

@@ -56,6 +56,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Server;
+using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron;
 using Voron.Data;
@@ -1538,11 +1539,10 @@ namespace Raven.Server.ServerWide
                     }
 
                     bool shouldSetClientConfigEtag;
-                    var dbId = Constants.Documents.Prefix + addDatabaseCommand.Name;
-                    using (var oldDatabaseRecord = Read(context, dbId, out _))
+                    using (var oldDatabaseRecord = ReadRawDatabaseRecord(context, addDatabaseCommand.Name))
                     {
-                        VerifyUnchangedTasks(oldDatabaseRecord);
-                        shouldSetClientConfigEtag = ShouldSetClientConfigEtag(newDatabaseRecord, oldDatabaseRecord);
+                        VerifyUnchangedTasks(oldDatabaseRecord?.Raw);
+                        shouldSetClientConfigEtag = ShouldSetClientConfigEtag(newDatabaseRecord, oldDatabaseRecord?.Raw);
                     }
 
                     using (var databaseRecordAsJson = UpdateDatabaseRecordIfNeeded(databaseExists, shouldSetClientConfigEtag, index, addDatabaseCommand, newDatabaseRecord, context))
@@ -1642,9 +1642,33 @@ namespace Raven.Server.ServerWide
                 UpdateExternalReplications();
             }
 
+            if (TopologyChanged())
+            {
+                addDatabaseCommand.Record.Topology.Stamp = new LeaderStamp
+                {
+                    Index = index,
+                    LeadersTicks = -2,
+                    Term = _parent.CurrentTerm
+                };
+                hasChanges = true;
+            }
+
             return hasChanges
                 ? DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(addDatabaseCommand.Record, context)
                 : newDatabaseRecord;
+
+            bool TopologyChanged()
+            {
+                if (databaseExists == false)
+                    return true;
+
+                if (addDatabaseCommand.Record.Topology.Stamp == null)
+                    return true;
+
+                var topology = ReadDatabaseTopology(context, addDatabaseCommand.Name);
+
+                return topology.AllNodes.SequenceEqual(addDatabaseCommand.Record.Topology.AllNodes) == false;
+            }
 
             void UpdatePeriodicBackups()
             {
@@ -1724,15 +1748,23 @@ namespace Raven.Server.ServerWide
         {
             const string clientPropName = nameof(DatabaseRecord.Client);
             var hasNewConfiguration = newDatabaseRecord.TryGet(clientPropName, out BlittableJsonReaderObject newDbClientConfig) && newDbClientConfig != null;
+
             if (oldDatabaseRecord == null)
                 return hasNewConfiguration;
+
+            var hasOldConfiguration = oldDatabaseRecord.TryGet(clientPropName, out BlittableJsonReaderObject oldDbClientConfig)
+                && oldDbClientConfig != null;
+
+            if (hasNewConfiguration != hasOldConfiguration)
+                return true;
+
+            if (oldDbClientConfig == null && newDbClientConfig == null)
+                return false;
 
             if (hasNewConfiguration == false)
                 return true;
 
-            return oldDatabaseRecord.TryGet(clientPropName, out BlittableJsonReaderObject oldDbClientConfig) == false
-                   || oldDbClientConfig == null
-                   || oldDbClientConfig.Equals(newDbClientConfig) == false;
+            return oldDbClientConfig.Equals(newDbClientConfig) == false;
         }
 
         private static void SetDatabaseValues(
@@ -1838,7 +1870,7 @@ namespace Raven.Server.ServerWide
             {
                 certs.DeleteByKey(thumbprintSlice);
             }
-            
+
             if (_clusterAuditLog.IsInfoEnabled)
                 _clusterAuditLog.Info($"Deleted certificate '{thumbprint}' from the cluster.");
         }
@@ -3190,7 +3222,8 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public DatabaseTopology ReadDatabaseTopology(TransactionOperationContext context, string name)
+        public DatabaseTopology ReadDatabaseTopology<TTransaction>(TransactionOperationContext<TTransaction> context, string name)
+            where TTransaction : RavenTransaction
         {
             using (var databaseRecord = ReadRawDatabaseRecord(context, name))
             {
@@ -3451,7 +3484,7 @@ namespace Raven.Server.ServerWide
             return TcpConnectionHeaderMessage.ClusterTcpVersion;
         }
 
-        public override async Task<RachisConnection> ConnectToPeer(string url, string tag, X509Certificate2 certificate)
+        public override async Task<RachisConnection> ConnectToPeer(string url, string tag, X509Certificate2 certificate, CancellationToken token)
         {
             if (url == null)
                 throw new ArgumentNullException(nameof(url));
@@ -3461,18 +3494,20 @@ namespace Raven.Server.ServerWide
                 throw new InvalidOperationException($"Failed to connect to node {url}. Connections from encrypted store must use HTTPS.");
 
             TcpConnectionInfo info;
-            using (var cts = new CancellationTokenSource(_parent.TcpConnectionTimeout))
+            using (var cts = CancellationTokenSource.CreateLinkedTokenSource(token))
             {
+                cts.CancelAfter(_parent.TcpConnectionTimeout);
+
                 info = await ReplicationUtils.GetTcpInfoAsync(url, null, "Cluster", certificate, cts.Token);
             }
 
             TcpClient tcpClient = null;
-            string choosenUrl = null;
             Stream stream = null;
             try
             {
-                (tcpClient, choosenUrl) = await TcpUtils.ConnectAsyncWithPriority(info, _parent.TcpConnectionTimeout).ConfigureAwait(false);
-                stream = await TcpUtils.WrapStreamWithSslAsync(tcpClient, info, _parent.ClusterCertificate, _parent.CipherSuitesPolicy, _parent.TcpConnectionTimeout);
+                string choosenUrl = null;
+                (tcpClient, choosenUrl) = await TcpUtils.ConnectAsyncWithPriority(info, _parent.TcpConnectionTimeout, token).ConfigureAwait(false);
+                stream = await TcpUtils.WrapStreamWithSslAsync(tcpClient, info, _parent.ClusterCertificate, _parent.CipherSuitesPolicy, _parent.TcpConnectionTimeout, token);
 
                 var parameters = new AsyncTcpNegotiateParameters
                 {
@@ -4251,7 +4286,7 @@ namespace Raven.Server.ServerWide
 
         public readonly Queue<RecentLogIndexNotification> RecentNotifications = new Queue<RecentLogIndexNotification>();
         internal Logger Log;
-
+        private SingleUseFlag _isDisposed = new SingleUseFlag();
         private class ErrorHolder
         {
             public long Index;
@@ -4265,7 +4300,12 @@ namespace Raven.Server.ServerWide
 
         public void Dispose()
         {
+            _isDisposed.Raise();
             _notifiedListeners.Dispose();
+            foreach (var task in _tasksDictionary.Values)
+            {
+                task.TrySetCanceled();
+            }
         }
 
         public async Task WaitForIndexNotification(long index, CancellationToken token)
@@ -4364,8 +4404,12 @@ namespace Raven.Server.ServerWide
             if (result.IsFaulted)
                 await result; // will throw
 
+            if (task.IsCanceled)
+                ThrowCanceledException(index, LastModifiedIndex);
+
             if (result == task)
                 return true;
+
             return false;
         }
 
@@ -4456,7 +4500,7 @@ namespace Raven.Server.ServerWide
                 }
             }
 
-            InterlockedExchangeMax(ref LastModifiedIndex, index);
+            ThreadingHelper.InterlockedExchangeMax(ref LastModifiedIndex, index);
             _notifiedListeners.SetAndResetAtomically();
         }
 
@@ -4486,21 +4530,11 @@ namespace Raven.Server.ServerWide
             _tasksDictionary.TryRemove(index, out _);
         }
 
-        private static void InterlockedExchangeMax(ref long location, long newValue)
-        {
-            long initialValue;
-
-            do
-            {
-                initialValue = location;
-                if (initialValue >= newValue)
-                    return;
-            } while (Interlocked.CompareExchange(ref location, newValue, initialValue) != initialValue);
-        }
-
         public void AddTask(long index)
         {
             Debug.Assert(_tasksDictionary.TryGetValue(index, out _) == false, $"{nameof(_tasksDictionary)} should not contain task with key {index}");
+            if (_isDisposed.IsRaised())
+                throw new ObjectDisposedException(nameof(RachisLogIndexNotifications));
 
             _tasksDictionary.TryAdd(index, new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously));
         }

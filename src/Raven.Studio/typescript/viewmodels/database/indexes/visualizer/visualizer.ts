@@ -35,7 +35,7 @@ class visualizer extends viewModelBase {
         documentIdsSearchResults: ko.observableArray<autoCompleteItem>()
     };
 
-    private trees = [] as Raven.Server.Documents.Indexes.Debugging.ReduceTree[];
+    private trees: Raven.Server.Documents.Indexes.Debugging.ReduceTree[] = [];
 
     private globalGraph = new visualizerGraphGlobal();
     private detailsGraph = new visualizerGraphDetails();
@@ -187,7 +187,7 @@ class visualizer extends viewModelBase {
         this.globalGraph.removeDocument(documentName);
         this.detailsGraph.removeDocument(documentName);
 
-        const toDelete = [] as Raven.Server.Documents.Indexes.Debugging.ReduceTree[];
+        const toDelete: Raven.Server.Documents.Indexes.Debugging.ReduceTree[] = [];
 
         for (let i = 0; i < this.trees.length; i++) {
             const tree = this.trees[i];
@@ -218,7 +218,7 @@ class visualizer extends viewModelBase {
     }
 
     private addTrees(result: Raven.Server.Documents.Indexes.Debugging.ReduceTree[]) {
-        const treesToAdd = [] as Raven.Server.Documents.Indexes.Debugging.ReduceTree[];
+        const treesToAdd: Raven.Server.Documents.Indexes.Debugging.ReduceTree[] = [];
 
         for (let i = 0; i < result.length; i++) {
             const incomingTree = result[i];

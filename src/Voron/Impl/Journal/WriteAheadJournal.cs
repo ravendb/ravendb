@@ -314,15 +314,7 @@ namespace Voron.Impl.Journal
                 }
                 else
                 {
-                    if (RuntimeInformation.OSArchitecture == Architecture.Arm || RuntimeInformation.OSArchitecture == Architecture.Arm64)
-                    {
-                        addToInitLog?.Invoke($"SkipChecksumValidationOnDbLoading set to true. Skipping checksum validation of {modifiedPages.Count} pages.");
-                    }
-                    else
-                    {
-                        throw new InvalidDataException( // RavenDB-13017
-                            $"{nameof(_env.Options.SkipChecksumValidationOnDatabaseLoading)} set to true is not allowed on non ARM architecture. This instance running on {RuntimeInformation.OSArchitecture}");
-                    }
+                    addToInitLog?.Invoke($"SkipChecksumValidationOnDbLoading set to true. Skipping checksum validation of {modifiedPages.Count} pages.");
                 }
             }
 
@@ -1835,10 +1827,10 @@ namespace Voron.Impl.Journal
         /// <returns></returns>
         private static int AdjustPagesRequiredFor32Bits(int pagesRequired)
         {
-            var bytes = pagesRequired * Constants.Storage.PageSize;
+            var bytes = (long)pagesRequired * Constants.Storage.PageSize;
             if (bytes < Constants.Size.Megabyte / 2)
             {
-                pagesRequired = Bits.PowerOf2(bytes) / Constants.Storage.PageSize;
+                pagesRequired = (int)Bits.PowerOf2(bytes) / Constants.Storage.PageSize;
             }
             else
             {
@@ -1953,7 +1945,7 @@ namespace Voron.Impl.Journal
         private CompressionAccelerationStats _lastCompressionAccelerationInfo = new CompressionAccelerationStats();
         private readonly bool _is32Bit;
 
-        public void ReduceSizeOfCompressionBufferIfNeeded(bool forceReduce = false)
+        private void ReduceSizeOfCompressionBufferIfNeeded(bool forceReduce = false)
         {
             var maxSize = _env.Options.MaxScratchBufferSize;
             if (ShouldReduceSizeOfCompressionPager(maxSize, forceReduce) == false)
@@ -1980,16 +1972,32 @@ namespace Voron.Impl.Journal
             _lastCompressionBufferReduceCheck = DateTime.UtcNow;
 
             _compressionPager.Dispose();
+           
+            _forTestingPurposes?.OnReduceSizeOfCompressionBufferIfNeeded_RightAfterDisposingCompressionPager?.Invoke();
+
             _compressionPager = CreateCompressionPager(maxSize);
         }
 
         public void ZeroCompressionBuffer(IPagerLevelTransactionState tx)
         {
-            var compressionBufferSize = _compressionPager.NumberOfAllocatedPages * Constants.Storage.PageSize;
-            _compressionPager.EnsureMapped(tx, 0, checked((int)_compressionPager.NumberOfAllocatedPages));
-            var pagePointer = _compressionPager.AcquirePagePointer(tx, 0);
+            var lockTaken = false;
 
-            Sodium.sodium_memzero(pagePointer, (UIntPtr)compressionBufferSize);
+            if (Monitor.IsEntered(_writeLock) == false) 
+                Monitor.Enter(_writeLock, ref lockTaken);
+
+            try
+            {
+                var compressionBufferSize = _compressionPager.NumberOfAllocatedPages * Constants.Storage.PageSize;
+                _compressionPager.EnsureMapped(tx, 0, checked((int)_compressionPager.NumberOfAllocatedPages));
+                var pagePointer = _compressionPager.AcquirePagePointer(tx, 0);
+
+                Sodium.sodium_memzero(pagePointer, (UIntPtr)compressionBufferSize);
+            }
+            finally
+            {
+                if (lockTaken)
+                    Monitor.Exit(_writeLock);
+            }
         }
 
         private bool ShouldReduceSizeOfCompressionPager(long maxSize, bool forceReduce)
@@ -2027,6 +2035,21 @@ namespace Voron.Impl.Journal
             {
                 Monitor.Exit(_writeLock);
             }
+        }
+
+        private TestingStuff _forTestingPurposes;
+
+        internal TestingStuff ForTestingPurposesOnly()
+        {
+            if (_forTestingPurposes != null)
+                return _forTestingPurposes;
+
+            return _forTestingPurposes = new TestingStuff();
+        }
+
+        internal class TestingStuff
+        {
+            internal Action OnReduceSizeOfCompressionBufferIfNeeded_RightAfterDisposingCompressionPager;
         }
     }
 

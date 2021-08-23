@@ -11,11 +11,11 @@ class getConflictsCommand extends commandBase {
     execute(): JQueryPromise<pagedResult<replicationConflictListItemDto>> {
         const url = endpoints.databases.replication.replicationConflicts;
 
-        const transformer = (result: resultsWithTotalCountDto<replicationConflictListItemDto>) => {
+        const transformer = (result: resultsWithTotalCountDto<replicationConflictListItemDto>): pagedResult<replicationConflictListItemDto> => {
             return {
                 items: result.Results,
                 totalResultCount: result.TotalResults
-            } as pagedResult<replicationConflictListItemDto>;
+            };
         }
 
         return this.query<pagedResult<replicationConflictListItemDto>>(url, null, this.ownerDb, transformer);

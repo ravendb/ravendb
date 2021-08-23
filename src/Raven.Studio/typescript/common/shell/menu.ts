@@ -54,9 +54,9 @@ class menu {
 
                 let route = (next as leafMenuItem).route;
                 if (typeof(route) === 'string') {
-                    cacheItem(route as string, next as leafMenuItem);
+                    cacheItem(route, next as leafMenuItem);
                 } else if (Array.isArray(route)) {
-                    (route as string[]).filter(x => !!x)
+                    route.filter(x => !!x)
                         .forEach(r => cacheItem(r, next as leafMenuItem));
                 } else {
                     throw new Error(`Unknown route type: ${ route } ${ typeof(route) }`);

@@ -44,37 +44,37 @@ class hitTest {
     }
 
     registerTrackItem(x: number, y: number, width: number, height: number, element: Raven.Server.Utils.IoMetrics.IOMetricsRecentStats) {
-        const data = {
+        const data : rTreeLeaf= {
             minX: x,
             minY: y,
             maxX: x + width,
             maxY: y + height,
             actionType: "trackItem",
             arg: element
-        } as rTreeLeaf;
+        };
         this.rTree.insert(data);
     }
 
     registerIndexToggle(x: number, y: number, width: number, height: number) {
-        const data = {
+        const data: rTreeLeaf = {
             minX: x,
             minY: y,
             maxX: x + width,
             maxY: y + height,
             actionType: "toggleIndexes"
-        } as rTreeLeaf;
+        };
         this.rTree.insert(data);
     }
 
     registerGapItem(x: number, y: number, width: number, height: number, element: timeGapInfo) {
-        const data = {
+        const data: rTreeLeaf = {
             minX: x,
             minY: y,
             maxX: x + width,
             maxY: y + height,
             actionType: "gapItem",
             arg: element
-        } as rTreeLeaf;
+        };
         this.rTree.insert(data);
     }
 
@@ -303,16 +303,16 @@ class ioStatsGraph {
 
     private eventsColors: { [typeName in Sparrow.Server.Meters.IoMetrics.MeterType]: { low: string; high: string } } = {
         "Compression": {
-            low: undefined as string, high: undefined as string
+            low: undefined, high: undefined
         },
         "DataFlush": {
-            low: undefined as string, high: undefined as string
+            low: undefined, high: undefined
         },
         "DataSync": {
-            low: undefined as string, high: undefined as string
+            low: undefined, high: undefined
         },
         "JournalWrite": {
-            low: undefined as string, high: undefined as string
+            low: undefined, high: undefined
         }
     };
 
@@ -357,6 +357,10 @@ class ioStatsGraph {
         if (this.liveViewClient) {
             this.cancelLiveView();
         }
+    }
+
+    isConnectedToWebSocket() {
+        return this.liveViewClient() && this.liveViewClient().isConnected();
     }
 
     init(width: number, height: number) {
@@ -761,8 +765,8 @@ class ioStatsGraph {
     private constructYScale() {
         let currentOffset = ioStatsGraph.axisHeight - this.currentYOffset;
 
-        const domain = [] as Array<string>;
-        const range = [] as Array<number>;
+        const domain: string[] = [];
+        const range: number[] = [];
         let firstIndex = true;
 
         for (let trackIdx = 0; trackIdx < this.tracksOrder.length; trackIdx++) {
@@ -1174,7 +1178,7 @@ class ioStatsGraph {
         const indexesItemsStartEnds = new Map<Sparrow.Server.Meters.IoMetrics.MeterType, Array<[Date, Date]>>();
         ioStatsGraph.meterTypes.forEach(type => indexesItemsStartEnds.set(type, []));
 
-        const closedIndexesItemsCache = [] as Array<IOMetricsRecentStatsWithCache>;
+        const closedIndexesItemsCache: IOMetricsRecentStatsWithCache[] = [];
 
         for (let envIdx = 0; envIdx < this.data.Environments.length; envIdx++) {
             const env = this.data.Environments[envIdx];
@@ -1461,7 +1465,7 @@ class ioStatsGraph {
     }
 
     private extractTimeRanges(): Array<[Date, Date]>{
-        const result = [] as Array<[Date, Date]>;
+        const result: Array<[Date, Date]> = [];
         this.data.Environments.forEach(env => {
             env.Files.forEach(file => {
                 file.Recent.forEach((recentItem: IOMetricsRecentStatsWithCache) => {

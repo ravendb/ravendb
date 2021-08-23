@@ -11,7 +11,7 @@ type itemTypeDto = {
 
 class deleteCompareExchangeProgress extends dialogViewModelBase {
 
-    private items = [] as Array<itemTypeDto>;
+    private items: itemTypeDto[] = [];
     private db: database;
     
     private dialogOpened = false;

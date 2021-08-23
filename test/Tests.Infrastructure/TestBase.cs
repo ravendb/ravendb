@@ -9,11 +9,14 @@ using System.Runtime.Loader;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using Raven.Client;
+using Raven.Client.Extensions;
 using Raven.Client.Http;
+using Raven.Client.Properties;
 using Raven.Client.Util;
 using Raven.Debug.StackTrace;
 using Raven.Server;
@@ -23,6 +26,8 @@ using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes.Static.NuGet;
+using Raven.Server.Documents.PeriodicBackup;
+using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -93,6 +98,10 @@ namespace FastTests
             NativeMemory.GetCurrentUnmanagedThreadId = () => (ulong)Pal.rvn_get_current_thread_id();
             Lucene.Net.Util.UnmanagedStringArray.Segment.AllocateMemory = NativeMemory.AllocateMemory;
             Lucene.Net.Util.UnmanagedStringArray.Segment.FreeMemory = NativeMemory.Free;
+
+            BackupTask.DateTimeFormat = "yyyy-MM-dd-HH-mm-ss-fffffff";
+            RestorePointsBase.BackupFolderRegex = new Regex(@"([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{2}-[0-9]{2}(-[0-9]{2}-[0-9]{7})?).ravendb-(.+)-([A-Za-z]+)-(.+)$", RegexOptions.Compiled);
+            RestorePointsBase.FileNameRegex = new Regex(@"([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{2}-[0-9]{2}(-[0-9]{2}-[0-9]{7})?)", RegexOptions.Compiled);
 
             var packagesPath = new PathSetting(RavenTestHelper.NewDataPath("NuGetPackages", 0, forceCreateDir: true));
             GlobalPathsToDelete.Add(packagesPath.FullPath);
@@ -206,7 +215,7 @@ namespace FastTests
                 var log = new StringBuilder();
                 byte[] certBytes;
                 string serverCertificatePath = null;
-                serverCertificatePath = Path.Combine(Path.GetTempPath(), "Server-" + DateTime.Today.ToString("yyyy-MM-dd") + ".pfx");
+                serverCertificatePath = Path.Combine(Path.GetTempPath(), $"Server-{RavenVersionAttribute.Instance.Build}-{DateTime.Today:yyyy-MM-dd}.pfx");
                 if (File.Exists(serverCertificatePath) == false)
                 {
                     try
@@ -248,6 +257,7 @@ namespace FastTests
                 }
 
                 SecretProtection.ValidatePrivateKey(serverCertificatePath, null, certBytes, out var pk);
+                SecretProtection.ValidateKeyUsages(serverCertificatePath, serverCertificate);
 
                 var clientCertificate1Path = GenerateClientCertificate(1, serverCertificate, pk);
                 var clientCertificate2Path = GenerateClientCertificate(2, serverCertificate, pk);
@@ -258,7 +268,7 @@ namespace FastTests
 
             string GenerateClientCertificate(int index, X509Certificate2 serverCertificate, Org.BouncyCastle.Pkcs.AsymmetricKeyEntry pk)
             {
-                string name = $"{Environment.MachineName}_CC_{index}_{DateTime.Today:yyyy-MM-dd}";
+                string name = $"{Environment.MachineName}_CC_{RavenVersionAttribute.Instance.Build}_{index}_{DateTime.Today:yyyy-MM-dd}";
                 string clientCertificatePath = Path.Combine(Path.GetTempPath(), name + ".pfx");
 
                 if (File.Exists(clientCertificatePath) == false)
@@ -811,6 +821,7 @@ namespace FastTests
             var debugTag = server.DebugTag;
             var timeout = TimeSpan.FromMilliseconds(timeoutInMs);
 
+            using (DebugHelper.GatherVerboseDatabaseDisposeInformation(server, timeoutInMs))
             using (var mre = new ManualResetEventSlim())
             {
                 server.AfterDisposal += () => mre.Set();
@@ -835,6 +846,7 @@ namespace FastTests
             var debugTag = server.DebugTag;
             var timeout = TimeSpan.FromMilliseconds(timeoutInMs);
 
+            using (await DebugHelper.GatherVerboseDatabaseDisposeInformationAsync(server, timeoutInMs))
             using (var mre = new AsyncManualResetEvent())
             {
                 server.AfterDisposal += () => mre.Set();
@@ -866,7 +878,6 @@ namespace FastTests
 
                     throw new InvalidOperationException($"Could not dispose server with URL '{url}' and DebugTag: '{debugTag}' in '{timeout}'. StackTraces available at: '{tempPath}'");
                 }
-
             }
         }
     }

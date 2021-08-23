@@ -28,18 +28,18 @@ class changeVectorUtils {
         const tokens = changeVectorUtils.parse(input);
        
         if (useLongChangeVectorFormat) {
-            return tokens.map(x => {
+            return tokens.map((x): changeVectorItem => {
                 return {
                     fullFormat: x.original,
                     shortFormat: `${x.tag}:${x.etag}-${x.dbId.substring(0, 4)}...`
-                } as changeVectorItem;
+                };
             });
         } else {
-            return tokens.map(x => {
+            return tokens.map((x): changeVectorItem => {
                 return {
                     fullFormat: x.original,
                     shortFormat: `${x.tag}:${x.etag}`
-                } as changeVectorItem;
+                };
             });
         }
     }

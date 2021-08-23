@@ -17,7 +17,7 @@ namespace Raven.Client.Documents.Session
         {
             using (AsyncTaskHolder())
             {
-                if (id == null)
+                if (string.IsNullOrWhiteSpace(id))
                     return default;
 
                 var loadOperation = new LoadOperation(this);
@@ -76,11 +76,13 @@ namespace Raven.Client.Documents.Session
                 includeBuilder.AllCounters,
                 includeBuilder.TimeSeriesToInclude,
                 includeBuilder.CompareExchangeValuesToInclude?.ToArray(),
+                includeBuilder.RevisionsToIncludeByChangeVector?.ToArray(),
+                includeBuilder.RevisionsToIncludeByDateTime,
                 token);
         }
 
         /// <inheritdoc />
-        public async Task<Dictionary<string, T>> LoadAsyncInternal<T>(string[] ids, string[] includes, string[] counterIncludes = null, bool includeAllCounters = false, IEnumerable<AbstractTimeSeriesRange> timeSeriesIncludes = null, string[] compareExchangeValueIncludes = null, CancellationToken token = default)
+        public async Task<Dictionary<string, T>> LoadAsyncInternal<T>(string[] ids, string[] includes, string[] counterIncludes = null, bool includeAllCounters = false, IEnumerable<AbstractTimeSeriesRange> timeSeriesIncludes = null, string[] compareExchangeValueIncludes = null, string[] revisionIncludesByChangeVector = null, DateTime? revisionsToIncludeByDateTime = null, CancellationToken token = default)
         {
             using (AsyncTaskHolder())
             {
@@ -99,7 +101,9 @@ namespace Raven.Client.Documents.Session
                 {
                     loadOperation.WithCounters(counterIncludes);
                 }
-
+                
+                loadOperation.WithRevisions(revisionIncludesByChangeVector);
+                loadOperation.WithRevisions(revisionsToIncludeByDateTime);
                 loadOperation.WithTimeSeries(timeSeriesIncludes);
                 loadOperation.WithCompareExchange(compareExchangeValueIncludes);
 
@@ -211,5 +215,7 @@ namespace Raven.Client.Documents.Session
                 }
             }
         }
+
+
     }
 }

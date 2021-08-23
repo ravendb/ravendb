@@ -248,6 +248,7 @@ declare namespace AceAjax {
     export interface WidgetManager {
         addLineWidget: (widget: any) => void;
         removeLineWidget: (wigdet: any) => void;
+        attach: (editor: AceAjax.Editor) => void;
     }
     
     export interface VirtualRenderer {

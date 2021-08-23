@@ -30,6 +30,7 @@ using Raven.Client.Http;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Configuration;
+using Raven.Client.ServerWide.Operations.DocumentsCompression;
 using Raven.Client.ServerWide.Operations.Logs;
 using Raven.Client.ServerWide.Operations.OngoingTasks;
 using Raven.Client.ServerWide.Tcp;
@@ -161,6 +162,8 @@ namespace Raven.Client.Json.Serialization
 
         internal static readonly Func<BlittableJsonReaderObject, ConfigureExpirationOperationResult> ConfigureExpirationOperationResult = GenerateJsonDeserializationRoutine<ConfigureExpirationOperationResult>();
 
+        internal static readonly Func<BlittableJsonReaderObject, DocumentCompressionConfigurationResult> DocumentCompressionConfigurationOperationResult = GenerateJsonDeserializationRoutine<DocumentCompressionConfigurationResult>();
+
         internal static readonly Func<BlittableJsonReaderObject, ConfigureRevisionsForConflictsResult> ConfigRevisionsOnConflictOperationResult = GenerateJsonDeserializationRoutine<ConfigureRevisionsForConflictsResult>();
 
         internal static readonly Func<BlittableJsonReaderObject, ConfigureRefreshOperationResult> ConfigureRefreshOperationResult = GenerateJsonDeserializationRoutine<ConfigureRefreshOperationResult>();
@@ -242,6 +245,6 @@ namespace Raven.Client.Json.Serialization
 
         internal static readonly Func<BlittableJsonReaderObject, GetRevisionsCountOperation.DocumentRevisionsCount> DocumentRevisionsCount = GenerateJsonDeserializationRoutine<GetRevisionsCountOperation.DocumentRevisionsCount>();
 
-
+        internal static readonly Func<BlittableJsonReaderObject, DatabaseSettings> DatabaseSettings = GenerateJsonDeserializationRoutine<DatabaseSettings>();
     }
 }

@@ -223,7 +223,8 @@ class editSqlEtlTask extends viewModelBase {
                                    "toggleAdvancedArea",
                                    "toggleTestArea",
                                    "deleteSqlTable",
-                                   "editSqlTable");
+                                   "editSqlTable",
+                                   "setState");
 
         aceEditorBindingHandler.install();
     }
@@ -773,6 +774,10 @@ class editSqlEtlTask extends viewModelBase {
     editSqlTable(sqlTableModel: ongoingTaskSqlEtlTableModel) {
         this.sqlTableSelectedForEdit(sqlTableModel);
         this.editedSqlTableSandbox(new ongoingTaskSqlEtlTableModel(sqlTableModel.toDto(), false));
+    }
+
+    setState(state: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskState): void {
+        this.editedSqlEtl().taskState(state);
     }
 }
 

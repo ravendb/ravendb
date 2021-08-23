@@ -8,11 +8,8 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Json;
-using Raven.Server.Json.Sync;
 using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Json;
-using Sparrow.Server.Json.Sync;
-using Index = Raven.Server.Documents.Indexes.Index;
 
 namespace Raven.Server.Smuggler.Documents.Processors
 {
@@ -91,36 +88,6 @@ namespace Raven.Server.Smuggler.Documents.Processors
                 default:
                     throw new NotSupportedException(indexType.ToString());
             }
-        }
-
-        public static void Export(BlittableJsonTextWriter writer, Index index, JsonOperationContext context, bool removeAnalyzers)
-        {
-            if (index.Type == IndexType.Faulty)
-                return;
-
-            writer.WriteStartObject();
-
-            writer.WritePropertyName(nameof(IndexDefinition.Type));
-            writer.WriteString(index.Type.ToString());
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(IndexDefinition));
-
-            if (index.Type == IndexType.Map || index.Type == IndexType.MapReduce || index.Type == IndexType.JavaScriptMap || index.Type == IndexType.JavaScriptMapReduce)
-            {
-                var indexDefinition = index.GetIndexDefinition();
-                writer.WriteIndexDefinition(context, indexDefinition, removeAnalyzers);
-            }
-            else if (index.Type == IndexType.AutoMap || index.Type == IndexType.AutoMapReduce)
-            {
-                index.Definition.Persist(context, writer);
-            }
-            else
-            {
-                throw new NotSupportedException(index.Type.ToString());
-            }
-
-            writer.WriteEndObject();
         }
 
         private static IndexType ReadIndexType(BlittableJsonReaderObject reader, out BlittableJsonReaderObject indexDef)

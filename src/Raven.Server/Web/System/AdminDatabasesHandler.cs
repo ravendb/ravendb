@@ -53,7 +53,6 @@ using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Server;
 using Voron.Util.Settings;
-using Constants = Raven.Client.Constants;
 using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
 using Index = Raven.Server.Documents.Indexes.Index;
 using Size = Sparrow.Size;
@@ -68,44 +67,7 @@ namespace Raven.Server.Web.System
         public async Task Get()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            {
-                var dbId = Constants.Documents.Prefix + name;
-                using (context.OpenReadTransaction())
-                using (var dbDoc = ServerStore.Cluster.Read(context, dbId, out long etag))
-                {
-                    if (dbDoc == null)
-                    {
-                        HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                        HttpContext.Response.Headers["Database-Missing"] = name;
-                        await using (var writer = new AsyncBlittableJsonTextWriter(context, HttpContext.Response.Body))
-                        {
-                            context.Write(writer,
-                                new DynamicJsonValue
-                                {
-                                    ["Type"] = "Error",
-                                    ["Message"] = "Database " + name + " wasn't found"
-                                });
-                        }
-
-                        return;
-                    }
-
-                    await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                    {
-                        writer.WriteStartObject();
-                        writer.WriteDocumentPropertiesWithoutMetadata(context, new Document
-                        {
-                            Data = dbDoc
-                        });
-                        writer.WriteComma();
-                        writer.WritePropertyName("Etag");
-                        writer.WriteInteger(etag);
-                        writer.WriteEndObject();
-                    }
-                }
-            }
+            await Documents.Handlers.Admin.AdminConfigurationHandler.SendDatabaseRecord(name, ServerStore, HttpContext, ResponseBodyStream());
         }
 
         // add database to already existing database group
@@ -119,120 +81,107 @@ namespace Raven.Server.Web.System
 
             await ServerStore.EnsureNotPassiveAsync();
 
-            ConcurrencyException ce = null;
-
-            for (int i = 0; i < 5; i++)
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
             {
-                using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                using (context.OpenReadTransaction())
+                var databaseRecord = ServerStore.Cluster.ReadDatabase(context, name, out var index);
+                if (databaseRecord == null)
                 {
-                    var databaseRecord = ServerStore.Cluster.ReadDatabase(context, name, out var index);
-                    if (databaseRecord == null)
+                    throw new DatabaseDoesNotExistException("Database Record not found when trying to add a node to the database topology");
+                }
+
+                var clusterTopology = ServerStore.GetClusterTopology(context);
+
+                if (databaseRecord.Encrypted)
+                    ServerStore.LicenseManager.AssertCanCreateEncryptedDatabase();
+
+                Server.ServerStore.LicenseManager.AssertCanUseDocumentsCompression(databaseRecord.DocumentsCompression);
+
+                // the case where an explicit node was requested
+                if (string.IsNullOrEmpty(node) == false)
+                {
+                    if (databaseRecord.Topology.RelevantFor(node))
+                        throw new InvalidOperationException($"Can't add node {node} to {name} topology because it is already part of it");
+
+                    var databaseIsBeenDeleted = databaseRecord.DeletionInProgress != null &&
+                                                databaseRecord.DeletionInProgress.TryGetValue(node, out var deletionInProgress) &&
+                                                deletionInProgress != DeletionInProgressStatus.No;
+                    if (databaseIsBeenDeleted)
+                        throw new InvalidOperationException($"Can't add node {node} to database '{name}' topology because it is currently being deleted from node '{node}'");
+
+                    var url = clusterTopology.GetUrlFromTag(node);
+                    if (url == null)
+                        throw new InvalidOperationException($"Can't add node {node} to database '{name}' topology because node {node} is not part of the cluster");
+
+                    if (databaseRecord.Encrypted && NotUsingHttps(url))
+                        throw new InvalidOperationException($"Can't add node {node} to database '{name}' topology because database {name} is encrypted but node {node} doesn't have an SSL certificate.");
+                }
+
+                //The case were we don't care where the database will be added to
+                else
+                {
+                    var allNodes = clusterTopology.Members.Keys
+                        .Concat(clusterTopology.Promotables.Keys)
+                        .Concat(clusterTopology.Watchers.Keys)
+                        .ToList();
+
+                    allNodes.RemoveAll(n => databaseRecord.Topology.AllNodes.Contains(n) || (databaseRecord.Encrypted && NotUsingHttps(clusterTopology.GetUrlFromTag(n))));
+
+                    if (databaseRecord.Encrypted && allNodes.Count == 0)
+                        throw new InvalidOperationException($"Database {name} is encrypted and requires a node which supports SSL. There is no such node available in the cluster.");
+
+                    if (allNodes.Count == 0)
+                        throw new InvalidOperationException($"Database {name} already exists on all the nodes of the cluster");
+
+                    var rand = new Random().Next();
+                    node = allNodes[rand % allNodes.Count];
+                }
+
+                databaseRecord.Topology.Promotables.Add(node);
+                databaseRecord.Topology.DemotionReasons[node] = "Joined the DB-Group as a new promotable node";
+                databaseRecord.Topology.PromotablesStatus[node] = DatabasePromotionStatus.WaitingForFirstPromotion;
+
+                if (mentor != null)
+                {
+                    if (databaseRecord.Topology.RelevantFor(mentor) == false)
+                        throw new ArgumentException($"The node {mentor} is not part of the database group");
+                    if (databaseRecord.Topology.Members.Contains(mentor) == false)
+                        throw new ArgumentException($"The node {mentor} is not valid for the operation because it is not a member");
+                    databaseRecord.Topology.PredefinedMentors.Add(node, mentor);
+                }
+
+                databaseRecord.Topology.ReplicationFactor++;
+
+                var update = new UpdateTopologyCommand(name, SystemTime.UtcNow, raftRequestId)
+                {
+                    Topology = databaseRecord.Topology
+                };
+
+                var (newIndex, _) = await ServerStore.SendToLeaderAsync(update);
+
+                try
+                {
+                    await WaitForExecutionOnSpecificNode(context, clusterTopology, node, newIndex);
+                }
+                catch (DatabaseLoadFailureException e)
+                {
+                    // the node was added successfully, but failed to start
+                    // in this case we don't want the request executor of the client to fail-over (so we wouldn't create an additional node)
+                    throw new InvalidOperationException(e.Message, e);
+                }
+
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
+
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    context.Write(writer, new DynamicJsonValue
                     {
-                        throw new DatabaseDoesNotExistException("Database Record not found when trying to add a node to the database topology");
-                    }
-
-                    var clusterTopology = ServerStore.GetClusterTopology(context);
-
-                    if (databaseRecord.Encrypted)
-                        ServerStore.LicenseManager.AssertCanCreateEncryptedDatabase();
-
-                    Server.ServerStore.LicenseManager.AssertCanUseDocumentsCompression(databaseRecord.DocumentsCompression);
-
-                    // the case where an explicit node was requested
-                    if (string.IsNullOrEmpty(node) == false)
-                    {
-                        if (databaseRecord.Topology.RelevantFor(node))
-                            throw new InvalidOperationException($"Can't add node {node} to {name} topology because it is already part of it");
-
-                        var databaseIsBeenDeleted = databaseRecord.DeletionInProgress != null &&
-                                                    databaseRecord.DeletionInProgress.TryGetValue(node, out var deletionInProgress) &&
-                                                    deletionInProgress != DeletionInProgressStatus.No;
-                        if (databaseIsBeenDeleted)
-                            throw new InvalidOperationException($"Can't add node {node} to database '{name}' topology because it is currently being deleted from node '{node}'");
-
-                        var url = clusterTopology.GetUrlFromTag(node);
-                        if (url == null)
-                            throw new InvalidOperationException($"Can't add node {node} to database '{name}' topology because node {node} is not part of the cluster");
-
-                        if (databaseRecord.Encrypted && NotUsingHttps(url))
-                            throw new InvalidOperationException($"Can't add node {node} to database '{name}' topology because database {name} is encrypted but node {node} doesn't have an SSL certificate.");
-                    }
-
-                    //The case were we don't care where the database will be added to
-                    else
-                    {
-                        var allNodes = clusterTopology.Members.Keys
-                            .Concat(clusterTopology.Promotables.Keys)
-                            .Concat(clusterTopology.Watchers.Keys)
-                            .ToList();
-
-                        allNodes.RemoveAll(n => databaseRecord.Topology.AllNodes.Contains(n) || (databaseRecord.Encrypted && NotUsingHttps(clusterTopology.GetUrlFromTag(n))));
-
-                        if (databaseRecord.Encrypted && allNodes.Count == 0)
-                            throw new InvalidOperationException($"Database {name} is encrypted and requires a node which supports SSL. There is no such node available in the cluster.");
-
-                        if (allNodes.Count == 0)
-                            throw new InvalidOperationException($"Database {name} already exists on all the nodes of the cluster");
-
-                        var rand = new Random().Next();
-                        node = allNodes[rand % allNodes.Count];
-                    }
-
-                    databaseRecord.Topology.Promotables.Add(node);
-                    databaseRecord.Topology.DemotionReasons[node] = "Joined the DB-Group as a new promotable node";
-                    databaseRecord.Topology.PromotablesStatus[node] = DatabasePromotionStatus.WaitingForFirstPromotion;
-
-                    if (mentor != null)
-                    {
-                        if (databaseRecord.Topology.RelevantFor(mentor) == false)
-                            throw new ArgumentException($"The node {mentor} is not part of the database group");
-                        if (databaseRecord.Topology.Members.Contains(mentor) == false)
-                            throw new ArgumentException($"The node {mentor} is not valid for the operation because it is not a member");
-                        databaseRecord.Topology.PredefinedMentors.Add(node, mentor);
-                    }
-
-                    databaseRecord.Topology.ReplicationFactor++;
-                    long newIndex;
-                    try
-                    {
-                        newIndex = (await ServerStore.WriteDatabaseRecordAsync(name, databaseRecord, index, raftRequestId)).Index;
-                    }
-                    catch (ConcurrencyException e)
-                    {
-                        // something changed the database record while we were reading it? Let's try again
-                        ce = e;
-                        await Task.Delay(5 * i);
-                        continue;
-                    }
-
-                    try
-                    {
-                        await WaitForExecutionOnSpecificNode(context, clusterTopology, node, newIndex);
-                    }
-                    catch (DatabaseLoadFailureException e)
-                    {
-                        // the node was added successfully, but failed to start
-                        // in this case we don't want the request executor of the client to fail-over (so we wouldn't create an additional node)
-                        throw new InvalidOperationException(e.Message, e);
-                    }
-
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
-
-                    await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                    {
-                        context.Write(writer, new DynamicJsonValue
-                        {
-                            [nameof(DatabasePutResult.RaftCommandIndex)] = newIndex,
-                            [nameof(DatabasePutResult.Name)] = name,
-                            [nameof(DatabasePutResult.Topology)] = databaseRecord.Topology.ToJson()
-                        });
-                    }
-
-                    return;
+                        [nameof(DatabasePutResult.RaftCommandIndex)] = newIndex,
+                        [nameof(DatabasePutResult.Name)] = name,
+                        [nameof(DatabasePutResult.Topology)] = databaseRecord.Topology.ToJson()
+                    });
                 }
             }
-            throw new ConcurrencyException("Failed to update database record after 5 tries", ce);
         }
 
         public static bool NotUsingHttps(string url)
@@ -265,7 +214,7 @@ namespace Raven.Server.Web.System
                 if (ServerStore.LicenseManager.LicenseStatus.HasDocumentsCompression && databaseRecord.DocumentsCompression == null)
                 {
                     databaseRecord.DocumentsCompression = new DocumentsCompressionConfiguration(
-                        Server.Configuration.Databases.CompressRevisionsDefault);
+                        Server.Configuration.Databases.CompressRevisionsDefault, Server.Configuration.Databases.CompressAllCollectionsDefault);
                 }
 
                 if (databaseRecord.Encrypted)
@@ -531,7 +480,7 @@ namespace Raven.Server.Web.System
                 topology.Rehabs = reorderedTopology.Rehabs;
                 topology.PriorityOrder = parameters.Fixed ? parameters.MembersOrder : null;
 
-                var reorder = new UpdateTopologyCommand(name, GetRaftRequestIdFromQuery())
+                var reorder = new UpdateTopologyCommand(name, SystemTime.UtcNow, GetRaftRequestIdFromQuery())
                 {
                     Topology = topology
                 };

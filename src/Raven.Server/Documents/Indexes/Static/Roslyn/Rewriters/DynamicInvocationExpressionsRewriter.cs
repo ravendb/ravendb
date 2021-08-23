@@ -21,9 +21,19 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                     return HandleEnumerableRange(node);
                 case "Enumerable.Distinct":
                     return HandleEnumerableDistinct(node);
+                case "Enumerable.Count":
+                    return HandleEnumerableCount(node);
             }
 
             return base.VisitInvocationExpression(node);
+        }
+
+        private SyntaxNode HandleEnumerableCount(InvocationExpressionSyntax node)
+        {
+            if (node.ArgumentList.Arguments.Count != 1)
+                return node;
+            var n = node.WithArgumentList(SyntaxFactory.ParseArgumentList($"((IEnumerable<dynamic>){node.ArgumentList})"));
+            return n;
         }
 
         private SyntaxNode HandleEnumerableDistinct(InvocationExpressionSyntax node)

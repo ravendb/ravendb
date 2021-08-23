@@ -65,7 +65,8 @@ namespace Raven.Server.Documents.Replication
                     AttachmentReadCount = Stats.AttachmentReadCount,
                     DocumentReadCount = Stats.DocumentReadCount,
                     DocumentTombstoneReadCount = Stats.DocumentTombstoneReadCount,
-                    AttachmentTombstoneReadCount = Stats.AttachmentTombstoneReadCount
+                    AttachmentTombstoneReadCount = Stats.AttachmentTombstoneReadCount,
+                    CounterReadCount = Stats.CounterReadCount
                 },
                 Errors = Stats.Errors
             };
@@ -128,6 +129,11 @@ namespace Raven.Server.Documents.Replication
         {
             _stats.AttachmentReadCount++;
         }
+        
+        public void RecordCountersRead(int numberOfCounters)
+        {
+            _stats.CounterReadCount += numberOfCounters;
+        }
 
         public void RecordInputAttempt()
         {
@@ -156,5 +162,6 @@ namespace Raven.Server.Documents.Replication
         public int AttachmentTombstoneReadCount;
         public int AttachmentReadCount;
         public int RevisionTombstoneReadCount;
+        public int CounterReadCount;
     }
 }

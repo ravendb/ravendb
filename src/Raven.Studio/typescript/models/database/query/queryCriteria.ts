@@ -16,8 +16,7 @@ class queryCriteria {
     validationGroup: KnockoutValidationGroup;
 
     static empty() {
-        const criteria = new queryCriteria();
-        return criteria;
+        return new queryCriteria();
     }
 
     constructor() {
@@ -64,7 +63,8 @@ class queryCriteria {
             queryText: queryText,
             recentQuery: this.recentQuery(),
             modificationDate: moment().format("YYYY-MM-DD HH:mm"),
-            hash: genUtils.hashCode(name + (queryText || "")) } as storedQueryDto;
+            hash: genUtils.hashCode(name + (queryText || "")) 
+        };
     }
 
     setSelectedIndex(indexName: string) {
@@ -83,6 +83,21 @@ class queryCriteria {
         this.name("");
         this.queryText(incoming.queryText);
         this.recentQuery(incoming.recentQuery);
+    }
+    
+    clone(): queryCriteria {
+        const clonedItem = new queryCriteria();
+
+        clonedItem.name(this.name());
+        clonedItem.queryText(this.queryText());
+        clonedItem.showFields(this.showFields());
+        clonedItem.indexEntries(this.indexEntries());
+        clonedItem.metadataOnly(this.metadataOnly());
+        clonedItem.graphOutput(this.graphOutput());
+        clonedItem.recentQuery(this.recentQuery());
+        clonedItem.diagnostics(this.diagnostics());
+        
+        return clonedItem;
     }
 }
 

@@ -631,6 +631,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         protected Field GetOrCreateField(string name, string value, LazyStringValue lazyValue, Stream streamValue, BlittableJsonReaderObject blittableValue, Field.Store store, Field.Index index, Field.TermVector termVector)
         {
+            RuntimeHelpers.EnsureSufficientExecutionStack();
+            
             int cacheKey = FieldCacheKey.GetHashCode(name, index, store, termVector, _multipleItemsSameFieldCount);
 
             Field field;

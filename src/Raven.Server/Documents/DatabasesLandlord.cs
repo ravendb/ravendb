@@ -319,7 +319,7 @@ namespace Raven.Server.Documents
             DatabasesCache.RemoveLockAndReturn(databaseName, CompleteDatabaseUnloading, out _, caller).Dispose();
         }
 
-        public bool ShouldDeleteDatabase(TransactionOperationContext context, string dbName, RawDatabaseRecord rawRecord)
+        public bool ShouldDeleteDatabase(TransactionOperationContext context, string dbName, RawDatabaseRecord rawRecord, bool fromReplication = false)
         {
             var index = ShardHelper.TryGetShardIndex(dbName);
             var tag = index == -1 ? _serverStore.NodeTag : $"{_serverStore.NodeTag}${index}";
@@ -331,7 +331,7 @@ namespace Raven.Server.Documents
             if (directDelete == false)
                 return false;
 
-            if (rawRecord.Topology.Rehabs.Contains(_serverStore.NodeTag))
+            if (rawRecord.Topology.Rehabs.Contains(_serverStore.NodeTag) && fromReplication == false)
                 // If the deletion was issued from the cluster observer to maintain the replication factor we need to make sure
                 // that all the documents were replicated from this node, therefore the deletion will be called from the replication code.
                 return false;
@@ -467,6 +467,17 @@ namespace Raven.Server.Documents
             {
                 var exceptionAggregator = new ExceptionAggregator(_logger, "Failure to dispose landlord");
 
+                try
+                {
+                    // prevent creating new databases
+                    _databaseSemaphore.Dispose();
+                }
+                catch (Exception e)
+                {
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info("Failed to dispose resource semaphore", e);
+                }
+
                 // we don't want to wake up database during dispose.
                 var handles = new List<WaitHandle>();
                 foreach (var timer in _wakeupTimers.Values)
@@ -528,15 +539,7 @@ namespace Raven.Server.Documents
                 });
                 DatabasesCache.Clear();
 
-                try
-                {
-                    _databaseSemaphore.Dispose();
-                }
-                catch (Exception e)
-                {
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info("Failed to dispose resource semaphore", e);
-                }
+
 
                 exceptionAggregator.ThrowIfNeeded();
             }
@@ -743,7 +746,11 @@ namespace Raven.Server.Documents
                 var database = DatabasesCache.GetOrAdd(databaseName, task);
                 if (database == task)
                 {
-                    DeleteIfNeeded(databaseName, task);
+                    // This is in case when an deletion request was issued prior to the actual loading of the database.
+                    task.ContinueWith(t =>
+                    {
+                        DeleteIfNeeded(databaseName);
+                    });
                     task.Start(); // the semaphore will be released here at the end of the task
                     task.ContinueWith(t =>
                     {
@@ -805,11 +812,8 @@ namespace Raven.Server.Documents
             }
         }
 
-        private void DeleteIfNeeded(StringSegment databaseName, Task<DocumentDatabase> database)
+        public void DeleteIfNeeded(StringSegment databaseName, bool fromReplication = false)
         {
-            database.ContinueWith(t =>
-            {
-                // This is in case when an deletion request was issued prior to the actual loading of the database.
                 try
                 {
                     using (_disposing.ReaderLock(_serverStore.ServerShutdown))
@@ -824,7 +828,7 @@ namespace Raven.Server.Documents
                             if (rawRecord == null)
                                 return;
 
-                            ShouldDeleteDatabase(context, databaseName.Value, rawRecord);
+                        ShouldDeleteDatabase(context, databaseName.Value, rawRecord, fromReplication);
                         }
                     }
                 }
@@ -832,7 +836,6 @@ namespace Raven.Server.Documents
                 {
                     // nothing we can do here
                 }
-            });
         }
 
         public ConcurrentDictionary<string, ConcurrentQueue<string>> InitLog =

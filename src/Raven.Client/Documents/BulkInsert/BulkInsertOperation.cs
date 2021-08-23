@@ -31,6 +31,7 @@ namespace Raven.Client.Documents.BulkInsert
 {
     public class BulkInsertOperation : IDisposable, IAsyncDisposable
     {
+        private readonly BulkInsertOptions _options;
         private readonly CancellationToken _token;
         private readonly GenerateEntityIdOnTheClient _generateEntityIdOnTheClient;
 
@@ -94,19 +95,21 @@ namespace Raven.Client.Documents.BulkInsert
         {
             public override bool IsReadRequest => false;
             private readonly StreamExposerContent _stream;
+            private readonly bool _skipOverwriteIfUnchanged;
             private readonly long _id;
 
-            public BulkInsertCommand(long id, StreamExposerContent stream, string nodeTag)
+            public BulkInsertCommand(long id, StreamExposerContent stream, string nodeTag, bool skipOverwriteIfUnchanged)
             {
-                _stream = stream;
                 _id = id;
+                _stream = stream;
                 SelectedNodeTag = nodeTag;
+                _skipOverwriteIfUnchanged = skipOverwriteIfUnchanged;
                 Timeout = TimeSpan.FromHours(12); // global max timeout
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/bulk_insert?id={_id}";
+                url = $"{node.Url}/databases/{node.Database}/bulk_insert?id={_id}&skipOverwriteIfUnchanged={_skipOverwriteIfUnchanged}";
                 var message = new HttpRequestMessage
                 {
                     Method = HttpMethod.Post,
@@ -154,13 +157,14 @@ namespace Raven.Client.Documents.BulkInsert
         private long _operationId = -1;
         private string _nodeTag;
 
-        public CompressionLevel CompressionLevel = CompressionLevel.NoCompression;
         private readonly IJsonSerializer _defaultSerializer;
         private readonly Func<object, IMetadataDictionary, StreamWriter, bool> _customEntitySerializer;
         private readonly int _timeSeriesBatchSize;
         private long _concurrentCheck;
 
-        public BulkInsertOperation(string database, IDocumentStore store, CancellationToken token = default)
+        public CompressionLevel CompressionLevel = CompressionLevel.NoCompression;
+
+        public BulkInsertOperation(string database, IDocumentStore store, BulkInsertOptions options, CancellationToken token = default)
         {
             _disposeOnce = new DisposeOnceAsync<SingleAttempt>(async () =>
             {
@@ -218,6 +222,8 @@ namespace Raven.Client.Documents.BulkInsert
                 }
             });
 
+            CompressionLevel = options?.CompressionLevel ?? CompressionLevel.NoCompression;
+            _options = options ?? new BulkInsertOptions();
             _token = token;
             _conventions = store.Conventions;
             if (string.IsNullOrWhiteSpace(database))
@@ -238,14 +244,26 @@ namespace Raven.Client.Documents.BulkInsert
                 entity => AsyncHelpers.RunSync(() => _requestExecutor.Conventions.GenerateDocumentIdAsync(database, entity)));
         }
 
+        public BulkInsertOperation(string database, IDocumentStore store, CancellationToken token = default) : this(database, store, null, token)
+        {
+            
+        }
+
         private async Task ThrowBulkInsertAborted(Exception e, Exception flushEx = null)
         {
             var errors = new List<Exception>(3);
 
-            var error = await GetExceptionFromOperation().ConfigureAwait(false);
+            try
+            {
+                var error = await GetExceptionFromOperation().ConfigureAwait(false);
 
-            if (error != null)
-                errors.Add(error);
+                if (error != null)
+                    errors.Add(error);
+            }
+            catch (Exception exceptionFromOperation)
+            {
+                errors.Add(exceptionFromOperation);
+            }
 
             if (flushEx != null)
                 errors.Add(flushEx);
@@ -268,7 +286,7 @@ namespace Raven.Client.Documents.BulkInsert
                 return;
 
             var bulkInsertGetIdRequest = new GetNextOperationIdCommand();
-            await _requestExecutor.ExecuteAsync(bulkInsertGetIdRequest, _context, sessionInfo: null, token: _token).ConfigureAwait(false);
+            await ExecuteAsync(bulkInsertGetIdRequest, token: _token).ConfigureAwait(false);
             _operationId = bulkInsertGetIdRequest.Result;
             _nodeTag = bulkInsertGetIdRequest.NodeTag;
         }
@@ -464,7 +482,7 @@ namespace Raven.Client.Documents.BulkInsert
         private async Task<BulkInsertAbortedException> GetExceptionFromOperation()
         {
             var stateRequest = new GetOperationStateOperation.GetOperationStateCommand(_operationId, _nodeTag);
-            await _requestExecutor.ExecuteAsync(stateRequest, _context, sessionInfo: null, token: _token).ConfigureAwait(false);
+            await ExecuteAsync(stateRequest, token: _token).ConfigureAwait(false);
 
             if (!(stateRequest.Result?.Result is OperationExceptionResult error))
                 return null;
@@ -486,9 +504,10 @@ namespace Raven.Client.Documents.BulkInsert
             var bulkCommand = new BulkInsertCommand(
                 _operationId,
                 _streamExposerContent,
-                _nodeTag);
+                _nodeTag,
+                _options.SkipOverwriteIfUnchanged);
 
-            _bulkInsertExecuteTask = _requestExecutor.ExecuteAsync(bulkCommand, _context, sessionInfo: null, token: _token);
+            _bulkInsertExecuteTask = ExecuteAsync(bulkCommand);
 
             _stream = await _streamExposerContent.OutputStream.ConfigureAwait(false);
 
@@ -501,6 +520,30 @@ namespace Raven.Client.Documents.BulkInsert
 
             _currentWriter.Write('[');
         }
+
+        private async Task ExecuteAsync(BulkInsertCommand cmd)
+        {
+            try
+            {
+                await ExecuteAsync(cmd, token: _token).ConfigureAwait(false);
+            }
+            catch (Exception e)
+            {
+                _streamExposerContent.ErrorOnRequestStart(e);
+                throw;
+            }
+        }
+
+        private async Task ExecuteAsync<TResult>(
+            RavenCommand<TResult> command,
+            CancellationToken token = default)
+        {
+            using (_requestExecutor.ContextPool.AllocateOperationContext(out var context))
+            {
+                await _requestExecutor.ExecuteAsync(command, context, token: token).ConfigureAwait(false);
+            }
+        }
+
 
         private async Task ThrowOnUnavailableStream(string id, Exception innerEx)
         {
@@ -516,7 +559,7 @@ namespace Raven.Client.Documents.BulkInsert
             await WaitForId().ConfigureAwait(false);
             try
             {
-                await _requestExecutor.ExecuteAsync(new KillOperationCommand(_operationId, _nodeTag), _context, sessionInfo: null, token: _token).ConfigureAwait(false);
+                await ExecuteAsync(new KillOperationCommand(_operationId, _nodeTag), token: _token).ConfigureAwait(false);
             }
             catch (RavenException)
             {

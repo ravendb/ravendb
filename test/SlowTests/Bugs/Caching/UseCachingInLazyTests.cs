@@ -12,6 +12,7 @@ using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Sparrow;
 using Sparrow.Json;
+using Sparrow.LowMemory;
 using Sparrow.Server;
 using Xunit;
 using Xunit.Abstractions;
@@ -473,6 +474,78 @@ namespace SlowTests.Bugs.Caching
                 //Should use the cache here and release it in after that
                 await requestExecutor.ExecuteAsync(multiGetCommand, context).ConfigureAwait(false);
                 Assert.Equal(HttpStatusCode.NotModified, multiGetCommand.Result.First().StatusCode);
+            }
+        }
+
+        [Fact]
+        public async Task LazilyLoad_WhenUsed_ShouldNotUseFreedMemory()
+        {
+            const int cacheSize = 10000;
+            const string notCachedId = "TestObj/notCached";
+
+            using var store = GetDocumentStore();
+            var ids = new List<string>();
+            await using (var bulk = store.BulkInsert())
+            {
+                await bulk.StoreAsync(new TestObj(), notCachedId);
+
+                for (int i = 0; i < 2 * cacheSize + 1; i++)
+                {
+                    string id = $"TestObj/{i}";
+                    ids.Add(id);
+                    await bulk.StoreAsync(new TestObj(), id);
+                }
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                for (int i = 0; i < cacheSize; i++)
+                {
+                    session.Advanced.Lazily.LoadAsync<TestObj>(ids[i]);
+                }
+                await session.Advanced.Eagerly.ExecuteAllPendingLazyOperationsAsync();
+            }
+
+            var requestExecutor = store.GetRequestExecutor();
+            using (var session = store.OpenAsyncSession())
+            using (session.Advanced.DocumentStore.AggressivelyCacheFor(TimeSpan.FromMinutes(5), AggressiveCacheMode.DoNotTrackChanges))
+            using (requestExecutor.ContextPool.AllocateOperationContext(out var context))
+            {
+                var result = new List<Lazy<Task<BlittableJsonReaderObject>>>();
+                result.Add(session.Advanced.Lazily.LoadAsync<BlittableJsonReaderObject>(notCachedId));
+                for (int i = 0; i < cacheSize; i++)
+                {
+                    result.Add(session.Advanced.Lazily.LoadAsync<BlittableJsonReaderObject>(ids[i]));
+                }
+
+                var task2 = Task.Run(async () =>
+                {
+                    await session.Advanced.Eagerly.ExecuteAllPendingLazyOperationsAsync();
+                });
+                var task1 = Task.Run(async () =>
+                {
+                    //Cache the not cached document
+                    using var session2 = store.OpenAsyncSession();
+                    _ = await session2.LoadAsync<TestObj>(notCachedId);
+                    Console.WriteLine("Finished");
+                });
+                await Task.WhenAll(task1, task2);
+
+                //Release the cache memory
+                store.GetRequestExecutor().Cache.LowMemory(LowMemorySeverity.ExtremelyLow);
+
+                //Reuse the released cache memory
+                for (int i = cacheSize; i < ids.Count; i++)
+                {
+                    session.Advanced.Lazily.LoadAsync<TestObj>(ids[i]);
+                }
+
+                await session.Advanced.Eagerly.ExecuteAllPendingLazyOperationsAsync();
+                foreach (var lazy in result)
+                {
+                    var blittable = await lazy.Value;
+                    blittable.BlittableValidation();
+                }
             }
         }
 

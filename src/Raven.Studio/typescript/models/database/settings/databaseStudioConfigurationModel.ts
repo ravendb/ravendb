@@ -3,7 +3,7 @@ import jsonUtil = require("common/jsonUtil");
 
 class databaseStudioConfigurationModel {
 
-    static readonly environments = ["None", "Development", "Testing", "Production"] as Array<Raven.Client.Documents.Operations.Configuration.StudioConfiguration.StudioEnvironment>;
+    static readonly environments: Array<Raven.Client.Documents.Operations.Configuration.StudioConfiguration.StudioEnvironment> = ["None", "Development", "Testing", "Production"];
     
     environment = ko.observable<Raven.Client.Documents.Operations.Configuration.StudioConfiguration.StudioEnvironment>();
     disabled = ko.observable<boolean>();

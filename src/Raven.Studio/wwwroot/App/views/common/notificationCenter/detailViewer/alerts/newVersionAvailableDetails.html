@@ -1,20 +1,16 @@
 <div class="modal-dialog" role="document">
-    <div class="modal-content" tabindex="-1">
+    <div class="modal-content force-text-wrap-word" tabindex="-1">
         <div class="modal-header">
-            <div class="flex-horizontal">
-                <div class="flex-grow">
-                    <h3 class="modal-title" id="myModalLabel" data-bind="text: alert.title, attr:{ class: 'modal-title ' + alert.headerClass() }"></h3>
-                </div>
-                <div>
-                    <button type="button" class="close" data-bind="click: $root.close" aria-hidden="true">
-                        <i class="icon-cancel"></i>
-                    </button>
-                </div>
+            <button type="button" class="close" data-bind="click: close" aria-hidden="true">
+                <i class="icon-cancel"></i>
+            </button>
+            <div data-bind="with: alert">
+                <h3 class="modal-title" id="myModalLabel" data-bind="text: title, attr:{ class: 'modal-title ' + headerClass() }"></h3>
+                <div class="notification-time" data-bind="text: displayDate().format('LLL')"></div>
             </div>
         </div>
         <div class="modal-body">
-            <h3 class="text-center" data-bind="html: alert.message"></h3>
-
+            <h3 data-bind="html: alert.message"></h3>
             <div class="modal-details" data-bind="with: alert.details">
                 <div class="details-item">
                     <div class="row">
@@ -22,7 +18,6 @@
                         <div class="col-md-8 details-value" data-bind="text: VersionInfo.BuildType"></div>
                     </div>
                 </div>
-
                 <div class="details-item">
                     <div class="row">
                         <div class="col-md-4 text-right">Release date</div>
@@ -30,12 +25,10 @@
                     </div>
                 </div>
             </div>
-
             <div class="text-center">
                 <a target="_blank" class="btn btn-primary" href="https://ravendb.net/downloads">
                     <i class="icon-export"></i> <span>Download</span>
                 </a>
-                
                 <a target="_blank" class="btn btn-info" data-bind="attr: { href: 'https://ravendb.net/whats-new?buildNumber=' + alert.details().VersionInfo.BuildNumber }">
                     <i class="icon-info"></i> <span>What's New</span>
                 </a>

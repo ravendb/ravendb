@@ -12,12 +12,13 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Revisions;
-using Raven.Client.Documents.Session;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
+using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
+using Raven.Server.Documents;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
@@ -279,6 +280,9 @@ namespace RachisTests.DatabaseCluster
                 [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "5",
             };
             var cluster = await CreateRaftCluster(clusterSize, false, 0, watcherCluster: true, customSettings: settings);
+
+            Servers.ForEach(x => x.ForTestingPurposesOnly().GatherVerboseDatabaseDisposeInformation = true);
+
             using (var store = new DocumentStore { Urls = new[] { cluster.Leader.WebUrl } }.Initialize())
             {
                 var names = new List<string>();
@@ -312,6 +316,8 @@ namespace RachisTests.DatabaseCluster
                     CustomSettings = settings
                 });
 
+                cluster.Nodes[2].ForTestingPurposesOnly().GatherVerboseDatabaseDisposeInformation = true;
+
                 var preferredCount = new Dictionary<string, int> { ["A"] = 0, ["B"] = 0, ["C"] = 0 };
 
                 // wait for recovery of all of the nodes back to member
@@ -331,6 +337,77 @@ namespace RachisTests.DatabaseCluster
                 Assert.True(preferredCount["A"] > 1);
                 Assert.True(preferredCount["B"] > 1);
                 Assert.True(preferredCount["C"] > 1);
+            }
+        }
+
+        [Fact]
+        public async Task MoveLoadingNodeToLastAndRestoreToFixedOrder()
+        {
+            var clusterSize = 3;
+            var settings = new Dictionary<string, string>()
+            {
+                [RavenConfiguration.GetKey(x => x.Cluster.ElectionTimeout)] = 300.ToString(),
+                [RavenConfiguration.GetKey(x => x.Cluster.StabilizationTime)] = "1",
+                [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "5",
+                [RavenConfiguration.GetKey(x => x.Cluster.RotatePreferredNodeGraceTime)] = "1",
+                [RavenConfiguration.GetKey(x => x.Replication.ReplicationMinimalHeartbeat)] = "15",
+            };
+
+            var cluster = await CreateRaftCluster(clusterSize, false, 0, watcherCluster: true, customSettings: settings);
+            using (var store = GetDocumentStore(new Options
+            {
+                Server = cluster.Leader,
+                ReplicationFactor = clusterSize
+            }))
+            {
+                var tcs = new TaskCompletionSource<DocumentDatabase>();
+
+                var databaseName = store.Database;
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Karmel" }, "users/1");
+                    session.SaveChanges();
+
+                    Assert.True(await WaitForDocumentInClusterAsync<User>(cluster.Nodes, databaseName, "users/1", _ => true, TimeSpan.FromSeconds(5)));
+                }
+
+                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                var fixedOrder = record.Topology.AllNodes.ToList();
+                await store.Maintenance.Server.SendAsync(new ReorderDatabaseMembersOperation(store.Database, fixedOrder, fixedTopology: true));
+
+                var preferred = Servers.Single(s => s.ServerStore.NodeTag == record.Topology.Members[0]);
+
+                int val;
+                using (new DisposableAction(() =>
+                {
+                    preferred.ServerStore.DatabasesLandlord.DatabasesCache.TryRemove(databaseName, out var t);
+                    if (t == tcs.Task)
+                        tcs.SetCanceled();
+                }))
+                {
+                    var t = preferred.ServerStore.DatabasesLandlord.DatabasesCache.Replace(databaseName, tcs.Task);
+                    t.Result.Dispose();
+
+                    Assert.True(await WaitForValueAsync(async () =>
+                    {
+                        record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                        return record.Topology.Members[0] != preferred.ServerStore.NodeTag;
+                    }, true));
+
+                    val = await WaitForValueAsync(async () => await GetRehabCount(store, databaseName), 1);
+                    Assert.Equal(1, val);
+                    val = await WaitForValueAsync(async () => await GetMembersCount(store, databaseName), clusterSize - 1);
+                    Assert.Equal(clusterSize - 1, val);
+                }
+
+                val = await WaitForValueAsync(async () => await GetRehabCount(store, databaseName), 0);
+                Assert.Equal(0, val);
+                val = await WaitForValueAsync(async () => await GetMembersCount(store, databaseName), 2);
+                Assert.Equal(clusterSize, val);
+
+                record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+
+                Assert.Equal(fixedOrder, record.Topology.Members);
             }
         }
 
@@ -609,7 +686,7 @@ namespace RachisTests.DatabaseCluster
                 doc.Topology.Members.Add("B");
                 doc.Topology.Members.Add("C");
                 var databaseResult = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc, dbGroupSize));
-                Assert.Equal(dbGroupSize, databaseResult.Topology.Members.Count);
+                Assert.True(dbGroupSize == databaseResult.Topology.Members.Count, databaseResult.Topology.ToString());
                 await WaitForRaftIndexToBeAppliedInCluster(databaseResult.RaftCommandIndex, TimeSpan.FromSeconds(10));
                 using (var session = store.OpenAsyncSession())
                 {
@@ -617,8 +694,8 @@ namespace RachisTests.DatabaseCluster
                     await session.SaveChangesAsync();
                 }
                 Assert.True(await WaitForDocumentInClusterAsync<User>(doc.Topology, databaseName, "users/1", u => u.Name == "Karmel", TimeSpan.FromSeconds(5)));
-                DisposeServerAndWaitForFinishOfDisposal(Servers[1]);
-                DisposeServerAndWaitForFinishOfDisposal(Servers[2]);
+                await DisposeServerAndWaitForFinishOfDisposalAsync(Servers[1]);
+                await DisposeServerAndWaitForFinishOfDisposalAsync(Servers[2]);
 
                 // the db should move to D & E
                 var newTopology = new DatabaseTopology();
@@ -1351,7 +1428,7 @@ namespace RachisTests.DatabaseCluster
 
                 using (var session = toBeDeletedStore.OpenSession())
                 {
-                    var t = WaitForDocumentInClusterAsync<User>((DocumentSession)session, "foo/bar", u => u.Name == "Karmel", TimeSpan.FromSeconds(15));
+                    var t = WaitForDocumentInClusterAsync<User>(cluster.Nodes, database, "foo/bar", u => u.Name == "Karmel", TimeSpan.FromSeconds(15));
 
                     while (t.IsCompleted == false)
                     {
@@ -1451,7 +1528,7 @@ namespace RachisTests.DatabaseCluster
 
             using (var session = toBeDeletedStore.OpenSession())
             {
-                var t = await WaitForDocumentInClusterAsync<User>((DocumentSession)session, "foo/bar", u => u.Name == "Karmel2", TimeSpan.FromSeconds(15));
+                var t = await WaitForDocumentInClusterAsync<User>(cluster.Nodes, database, "foo/bar", u => u.Name == "Karmel2", TimeSpan.FromSeconds(15));
                 Assert.True(t);
             }
 
@@ -1475,7 +1552,7 @@ namespace RachisTests.DatabaseCluster
 
             using (var session = toBeDeletedStore.OpenSession())
             {
-                var t = await WaitForDocumentInClusterAsync<User>((DocumentSession)session, "foo/bar", u => u.Name == "Karmel3", TimeSpan.FromSeconds(15));
+                var t = await WaitForDocumentInClusterAsync<User>(cluster.Nodes, database, "foo/bar", u => u.Name == "Karmel3", TimeSpan.FromSeconds(15));
                 Assert.True(t);
             }
 
@@ -1602,7 +1679,7 @@ namespace RachisTests.DatabaseCluster
                 var node = cluster.Nodes.Single(n => n.ServerStore.NodeTag == "B");
                 await DisposeServerAndWaitForFinishOfDisposalAsync(node);
 
-                cluster.Leader.ServerStore.Engine.CurrentLeader.StepDown();
+                await ActionWithLeader(l => l.ServerStore.Engine.CurrentLeader.StepDown());
 
                 await Task.Delay(3_000);
 

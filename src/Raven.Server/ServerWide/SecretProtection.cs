@@ -756,14 +756,10 @@ namespace Raven.Server.ServerWide
 
         internal static void ValidatePrivateKey(string source, string certificatePassword, byte[] rawData, out AsymmetricKeyEntry pk)
         {
-            // Using a partial copy of the Pkcs12Store class
-            // Workaround for https://github.com/dotnet/corefx/issues/30946
-            var store = new PkcsStoreWorkaroundFor30946();
-            store.Load(new MemoryStream(rawData), certificatePassword?.ToCharArray() ?? Array.Empty<char>());
             pk = null;
-            foreach (string alias in store.Aliases)
+            foreach (string alias in GetAliases(certificatePassword, rawData, out var getKey))
             {
-                pk = store.GetKey(alias);
+                pk = getKey(alias);
                 if (pk != null)
                     break;
             }
@@ -775,36 +771,76 @@ namespace Raven.Server.ServerWide
                     Logger.Operations(msg);
                 throw new EncryptionException(msg);
             }
+
+            static IEnumerable GetAliases(string certificatePassword, byte[] rawData, out Func<string, AsymmetricKeyEntry> getKey)
+            {
+                try
+                {
+                    var store = new Pkcs12Store();
+                    store.Load(new MemoryStream(rawData), certificatePassword?.ToCharArray() ?? Array.Empty<char>());
+
+                    getKey = store.GetKey;
+                    return store.Aliases;
+                }
+                catch (Exception)
+                {
+                    try
+                    {
+                        // Using a partial copy of the Pkcs12Store class
+                        // Workaround for https://github.com/dotnet/corefx/issues/30946
+
+                        var store = new PkcsStoreWorkaroundFor30946();
+                        store.Load(new MemoryStream(rawData), certificatePassword?.ToCharArray() ?? Array.Empty<char>());
+
+                        getKey = store.GetKey;
+                        return store.Aliases;
+                    }
+                    catch
+                    {
+                        // ignore - we prefer the original exception
+                    }
+
+                    throw;
+                }
+            }
         }
 
         public static void ValidateKeyUsages(string source, X509Certificate2 loadedCertificate)
         {
-            var supported = false;
+            var clientCert = false;
+            var serverCert = false;
+            var keyUsages = false;
+
             foreach (var extension in loadedCertificate.Extensions)
             {
-                if (!(extension is X509EnhancedKeyUsageExtension e)) //Enhanced Key Usage extension
-                    continue;
-
-                var clientCert = false;
-                var serverCert = false;
-
-                foreach (var usage in e.EnhancedKeyUsages)
+                if (extension is X509KeyUsageExtension kue)
                 {
-                    if (usage.Value == "1.3.6.1.5.5.7.3.2")
-                        clientCert = true;
-                    if (usage.Value == "1.3.6.1.5.5.7.3.1")
-                        serverCert = true;
+                    keyUsages = kue.KeyUsages.HasFlag(X509KeyUsageFlags.DigitalSignature) &&
+                                kue.KeyUsages.HasFlag(X509KeyUsageFlags.KeyEncipherment);
+                }
+                if (extension is X509EnhancedKeyUsageExtension ekue) //Enhanced Key Usage extension
+                {
+                    foreach (var usage in ekue.EnhancedKeyUsages)
+                    {
+                        switch (usage.Value)
+                        {
+                            case "1.3.6.1.5.5.7.3.2":
+                                clientCert = true;
+                                break;
+                            case "1.3.6.1.5.5.7.3.1":
+                                serverCert = true;
+                                break;
+                        }
+                    }
                 }
 
-                supported = clientCert && serverCert;
-                if (supported)
-                    break;
+
             }
 
-            if (supported == false)
+            if (clientCert == false || serverCert == false || keyUsages == false)
             {
                 var msg = "Server certificate " + loadedCertificate.FriendlyName + "from " + source +
-                          " must be defined with the following 'Enhanced Key Usages': Client Authentication (Oid 1.3.6.1.5.5.7.3.2) & Server Authentication (Oid 1.3.6.1.5.5.7.3.1)";
+                          " must be defined with the 'Key Usages' 'DigitalSignature' and 'KeyEncipherment' as well as  'Enhanced Key Usages': Client Authentication (Oid 1.3.6.1.5.5.7.3.2) & Server Authentication (Oid 1.3.6.1.5.5.7.3.1)";
                 if (Logger.IsOperationsEnabled)
                     Logger.Operations(msg);
                 throw new EncryptionException(msg);

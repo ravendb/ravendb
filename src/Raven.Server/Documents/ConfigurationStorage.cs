@@ -48,6 +48,7 @@ namespace Raven.Server.Documents
             options.SchemaUpgrader = SchemaUpgrader.Upgrader(SchemaUpgrader.StorageType.Configuration, this, null, null);
             options.ForceUsing32BitsPager = db.Configuration.Storage.ForceUsing32BitsPager;
             options.EnablePrefetching = db.Configuration.Storage.EnablePrefetching;
+            options.DiscardVirtualMemory = db.Configuration.Storage.DiscardVirtualMemory;
             options.TimeToSyncAfterFlushInSec = (int)db.Configuration.Storage.TimeToSyncAfterFlush.AsTimeSpan.TotalSeconds;
             options.Encryption.MasterKey = db.MasterKey?.ToArray();
 
@@ -60,6 +61,7 @@ namespace Raven.Server.Documents
             options.IgnoreInvalidJournalErrors = db.Configuration.Storage.IgnoreInvalidJournalErrors;
             options.SkipChecksumValidationOnDatabaseLoading = db.Configuration.Storage.SkipChecksumValidationOnDatabaseLoading;
             options.IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions = db.Configuration.Storage.IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions;
+            options.MaxNumberOfRecyclableJournals = db.Configuration.Storage.MaxNumberOfRecyclableJournals;
 
             DirectoryExecUtils.SubscribeToOnDirectoryInitializeExec(options, db.Configuration.Storage, db.Name, DirectoryExecUtils.EnvironmentType.Configuration, Logger);
 

@@ -1,4 +1,12 @@
-﻿using System;
+﻿#if !(NETSTANDARD2_0 || NETSTANDARD2_1 || NETCOREAPP2_1 || NETCOREAPP3_1)
+#define TCP_CLIENT_CANCELLATIONTOKEN_SUPPORT
+#endif
+
+#if !(NETSTANDARD2_0 || NETSTANDARD2_1 || NETCOREAPP2_1)
+#define SSL_STREAM_CIPHERSUITESPOLICY_SUPPORT
+#endif
+
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Net;
@@ -6,6 +14,7 @@ using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.ServerWide.Commands;
 using Sparrow.Logging;
@@ -15,7 +24,7 @@ namespace Raven.Client.Util
     internal static class TcpUtils
     {
         internal const SslProtocols SupportedSslProtocols =
-#if NETSTANDARD2_0 || NETSTANDARD2_1 ||  NETCOREAPP2_1
+#if NETSTANDARD2_0 || NETSTANDARD2_1 || NETCOREAPP2_1
             SslProtocols.Tls12;
 #else
             SslProtocols.Tls13 | SslProtocols.Tls12;
@@ -28,11 +37,27 @@ namespace Raven.Client.Util
             client.ReceiveTimeout = (int)timeout.TotalMilliseconds;
         }
 
-        internal static async Task<(TcpClient Client, string Url)> ConnectSocketAsync(TcpConnectionInfo connection, TimeSpan timeout, Logger log)
+        internal static async Task<(TcpClient Client, string Url)> ConnectSocketAsync(
+            TcpConnectionInfo connection,
+            TimeSpan timeout,
+            Logger log
+#if TCP_CLIENT_CANCELLATIONTOKEN_SUPPORT
+            ,
+            CancellationToken token = default
+#endif
+            )
         {
             try
             {
-                return await ConnectAsyncWithPriority(connection, timeout).ConfigureAwait(false);
+                return await ConnectAsyncWithPriority(
+                    connection,
+                    timeout
+#if TCP_CLIENT_CANCELLATIONTOKEN_SUPPORT
+                    ,
+                    token
+#endif
+                    )
+                    .ConfigureAwait(false);
             }
             catch (AggregateException ae) when (ae.InnerException is SocketException)
             {
@@ -70,7 +95,15 @@ namespace Raven.Client.Util
             }
         }
 
-        public static async Task<TcpClient> ConnectAsync(string url, TimeSpan? timeout = null, bool useIPv6 = false)
+        public static async Task<TcpClient> ConnectAsync(
+            string url,
+            TimeSpan? timeout = null,
+            bool useIPv6 = false
+#if TCP_CLIENT_CANCELLATIONTOKEN_SUPPORT
+            ,
+            CancellationToken token = default
+#endif
+            )
         {
             var uri = new Uri(url);
 
@@ -82,11 +115,27 @@ namespace Raven.Client.Util
                 if (isIPv6)
                 {
                     var ipAddress = IPAddress.Parse(uri.Host);
-                    await tcpClient.ConnectAsync(ipAddress, uri.Port).ConfigureAwait(false);
+                    await tcpClient.ConnectAsync(
+                        ipAddress,
+                        uri.Port
+#if TCP_CLIENT_CANCELLATIONTOKEN_SUPPORT
+                        ,
+                        token
+#endif
+                        )
+                        .ConfigureAwait(false);
                 }
                 else
                 {
-                    await tcpClient.ConnectAsync(uri.Host, uri.Port).ConfigureAwait(false);
+                    await tcpClient.ConnectAsync(
+                        uri.Host,
+                        uri.Port
+#if TCP_CLIENT_CANCELLATIONTOKEN_SUPPORT
+                        ,
+                        token
+#endif
+                        )
+                        .ConfigureAwait(false);
                 }
             }
             catch (NotSupportedException)
@@ -96,7 +145,15 @@ namespace Raven.Client.Util
                 if (useIPv6)
                     throw;
 
-                return await ConnectAsync(url, timeout, true).ConfigureAwait(false);
+                return await ConnectAsync(
+                    url,
+                    timeout,
+                    useIPv6: true
+#if TCP_CLIENT_CANCELLATIONTOKEN_SUPPORT
+                    ,
+                    token
+#endif
+                    ).ConfigureAwait(false);
             }
             catch
             {
@@ -111,10 +168,15 @@ namespace Raven.Client.Util
             TcpClient tcpClient,
             TcpConnectionInfo info,
             X509Certificate2 storeCertificate,
-#if !(NETSTANDARD2_0 || NETSTANDARD2_1 || NETCOREAPP2_1)
+#if SSL_STREAM_CIPHERSUITESPOLICY_SUPPORT
             CipherSuitesPolicy cipherSuitesPolicy,
 #endif
-            TimeSpan? timeout)
+            TimeSpan? timeout
+#if TCP_CLIENT_CANCELLATIONTOKEN_SUPPORT
+            ,
+            CancellationToken token = default
+#endif
+            )
         {
             var networkStream = tcpClient.GetStream();
             if (timeout != null)
@@ -132,7 +194,7 @@ namespace Raven.Client.Util
             var targetHost = new Uri(info.Url).Host;
             var clientCertificates = new X509CertificateCollection(new X509Certificate[] { storeCertificate });
 
-#if !(NETSTANDARD2_0 || NETSTANDARD2_1 || NETCOREAPP2_1)
+#if SSL_STREAM_CIPHERSUITESPOLICY_SUPPORT
             await sslStream.AuthenticateAsClientAsync(new SslClientAuthenticationOptions
             {
                 TargetHost = targetHost,
@@ -140,7 +202,12 @@ namespace Raven.Client.Util
                 EnabledSslProtocols = SupportedSslProtocols,
                 CertificateRevocationCheckMode = X509RevocationMode.NoCheck,
                 CipherSuitesPolicy = cipherSuitesPolicy
-            }).ConfigureAwait(false);
+            }
+#if TCP_CLIENT_CANCELLATIONTOKEN_SUPPORT
+                ,
+                token
+#endif
+            ).ConfigureAwait(false);
 #else
             await sslStream.AuthenticateAsClientAsync(targetHost, clientCertificates, SupportedSslProtocols, checkCertificateRevocation: false).ConfigureAwait(false);
 #endif
@@ -174,7 +241,14 @@ namespace Raven.Client.Util
             return tcpClient;
         }
 
-        internal static async Task<(TcpClient Client, string Url)> ConnectAsyncWithPriority(TcpConnectionInfo info, TimeSpan? tcpConnectionTimeout)
+        internal static async Task<(TcpClient Client, string Url)> ConnectAsyncWithPriority(
+            TcpConnectionInfo info,
+            TimeSpan? tcpConnectionTimeout
+#if TCP_CLIENT_CANCELLATIONTOKEN_SUPPORT
+            ,
+            CancellationToken token = default
+#endif
+            )
         {
             TcpClient tcpClient;
 
@@ -184,7 +258,14 @@ namespace Raven.Client.Util
                 {
                     try
                     {
-                        tcpClient = await ConnectAsync(url, tcpConnectionTimeout).ConfigureAwait(false);
+                        tcpClient = await ConnectAsync(
+                            url,
+                            tcpConnectionTimeout
+#if TCP_CLIENT_CANCELLATIONTOKEN_SUPPORT
+                            ,
+                            token: token
+#endif
+                            ).ConfigureAwait(false);
                         return (tcpClient, url);
                     }
                     catch
@@ -194,7 +275,15 @@ namespace Raven.Client.Util
                 }
             }
 
-            tcpClient = await ConnectAsync(info.Url, tcpConnectionTimeout).ConfigureAwait(false);
+            tcpClient = await ConnectAsync(
+                info.Url,
+                tcpConnectionTimeout
+#if TCP_CLIENT_CANCELLATIONTOKEN_SUPPORT
+                ,
+                token: token
+#endif
+                )
+                .ConfigureAwait(false);
 
             return (tcpClient, info.Url);
         }

@@ -53,6 +53,14 @@ namespace Raven.Client.Documents.Session.Loaders
         TBuilder IncludeAllTimeSeries(TimeSeriesRangeType type, int count);
     }
 
+    public interface IRevisionIncludeBuilder<T, out TBuilder> 
+    {
+        TBuilder IncludeRevisions(Expression<Func<T, string>> path);
+        TBuilder IncludeRevisions(Expression<Func<T, IEnumerable<string>>> path);
+        TBuilder IncludeRevisions(DateTime before);
+
+    }
+    
     public interface ITimeSeriesIncludeBuilder<T, out TBuilder> : IAbstractTimeSeriesIncludeBuilder<T, TBuilder>
     {
         TBuilder IncludeTimeSeries(string name, DateTime? from = null, DateTime? to = null);
@@ -69,9 +77,10 @@ namespace Raven.Client.Documents.Session.Loaders
         TBuilder IncludeCompareExchangeValue(Expression<Func<T, string>> path);
 
         TBuilder IncludeCompareExchangeValue(Expression<Func<T, IEnumerable<string>>> path);
+        
     }
 
-    public interface IIncludeBuilder<T, out TBuilder> : IDocumentIncludeBuilder<T, TBuilder>, ICounterIncludeBuilder<T, TBuilder>, ITimeSeriesIncludeBuilder<T, TBuilder>, ICompareExchangeValueIncludeBuilder<T, TBuilder>
+    public interface IIncludeBuilder<T, out TBuilder> : IDocumentIncludeBuilder<T, TBuilder>, ICounterIncludeBuilder<T, TBuilder>, ITimeSeriesIncludeBuilder<T, TBuilder>, ICompareExchangeValueIncludeBuilder<T, TBuilder>, IRevisionIncludeBuilder<T, TBuilder>
     {
     }
 
@@ -90,8 +99,9 @@ namespace Raven.Client.Documents.Session.Loaders
         IQueryIncludeBuilder<T> IncludeCounters(Expression<Func<T, string>> path, string[] names);
 
         IQueryIncludeBuilder<T> IncludeAllCounters(Expression<Func<T, string>> path);
-
+        
         IQueryIncludeBuilder<T> IncludeTimeSeries(Expression<Func<T, string>> path, string name, DateTime from, DateTime to);
+        
     }
 
     public class IncludeBuilder
@@ -140,6 +150,8 @@ namespace Raven.Client.Documents.Session.Loaders
 
         internal Dictionary<string, HashSet<AbstractTimeSeriesRange>> TimeSeriesToIncludeBySourceAlias;
         internal HashSet<string> CompareExchangeValuesToInclude;
+        internal HashSet<string> RevisionsToIncludeByChangeVector;
+        internal DateTime? RevisionsToIncludeByDateTime;
 
         internal bool IncludeTimeSeriesTags;
         internal bool IncludeTimeSeriesDocument;
@@ -334,7 +346,6 @@ namespace Raven.Client.Documents.Session.Loaders
             IncludeTimeSeriesFromTo(path.ToPropertyPath(), name, from, to);
             return this;
         }
-
         IQueryIncludeBuilder<T> ICompareExchangeValueIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeCompareExchangeValue(string path)
         {
             IncludeCompareExchangeValue(path);
@@ -370,7 +381,7 @@ namespace Raven.Client.Documents.Session.Loaders
             IncludeCompareExchangeValue(path.ToPropertyPath());
             return this;
         }
-
+        
         ITimeSeriesIncludeBuilder ITimeSeriesIncludeBuilder.IncludeTags()
         {
             IncludeTimeSeriesTags = true;
@@ -512,7 +523,7 @@ namespace Raven.Client.Documents.Session.Loaders
 
             CompareExchangeValuesToInclude.Add(path);
         }
-
+        
         private void IncludeCounterWithAlias(Expression<Func<T, string>> path, string name)
         {
             WithAlias(path);
@@ -523,6 +534,21 @@ namespace Raven.Client.Documents.Session.Loaders
         {
             WithAlias(path);
             IncludeCounters(path.ToPropertyPath(), names);
+        }
+
+        private void IncludeRevisionsBefore(DateTime dateTime)
+        {
+            RevisionsToIncludeByDateTime ??= new DateTime();
+            RevisionsToIncludeByDateTime = dateTime.ToUniversalTime();
+        }
+
+        private void IncludeRevisionsByChangeVectors(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+                throw new ArgumentNullException(nameof(path));
+            
+            RevisionsToIncludeByChangeVector ??= new HashSet<string>();
+            RevisionsToIncludeByChangeVector.Add(path);
         }
 
         private void IncludeCounter(string path, string name)
@@ -596,6 +622,10 @@ namespace Raven.Client.Documents.Session.Loaders
         {
             if (Alias == null)
                 Alias = path.Parameters[0].Name;
+        }
+        private void WithAlias(Expression<Func<T, IEnumerable<string>>> path)
+        {
+            Alias ??= path.Parameters[0].Name;
         }
 
         private void IncludeTimeSeriesFromTo(string alias, string name, DateTime? from, DateTime? to)
@@ -735,6 +765,46 @@ namespace Raven.Client.Documents.Session.Loaders
             }
         }
 
+        IQueryIncludeBuilder<T> IRevisionIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeRevisions(Expression<Func<T, string>> changeVectorPath)
+        {
+            WithAlias(changeVectorPath);
+            IncludeRevisionsByChangeVectors(changeVectorPath.ToPropertyPath());
+            return this;
+        }
+
+        IIncludeBuilder<T> IRevisionIncludeBuilder<T, IIncludeBuilder<T>>.IncludeRevisions(Expression<Func<T, string>> changeVectorPath)
+        {
+            WithAlias(changeVectorPath);
+            IncludeRevisionsByChangeVectors(changeVectorPath.ToPropertyPath());
+            return this;
+        }
+
+        IIncludeBuilder<T> IRevisionIncludeBuilder<T, IIncludeBuilder<T>>.IncludeRevisions(Expression<Func<T, IEnumerable<string>>> changeVectorPaths)
+        {
+            WithAlias(changeVectorPaths);
+            IncludeRevisionsByChangeVectors(changeVectorPaths.ToPropertyPath());
+            return this;
+        }
+        
+        IQueryIncludeBuilder<T> IRevisionIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeRevisions(DateTime before)
+        {
+            IncludeRevisionsBefore(before);
+            return this;
+        }     
+        
+        IIncludeBuilder<T> IRevisionIncludeBuilder<T, IIncludeBuilder<T>>.IncludeRevisions(DateTime before)
+        {
+            IncludeRevisionsBefore(before);
+            return this;
+            
+        }       
+
+        IQueryIncludeBuilder<T> IRevisionIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeRevisions(Expression<Func<T, IEnumerable<string>>> changeVectorPaths)
+        {
+            WithAlias(changeVectorPaths);
+            IncludeRevisionsByChangeVectors(changeVectorPaths.ToPropertyPath());
+            return this;
+        }
     }
 
     internal class AbstractTimeSeriesRangeComparer : IEqualityComparer<AbstractTimeSeriesRange>

@@ -260,13 +260,21 @@ namespace FastTests.Server.Replication
             return await store.Maintenance.Server.SendAsync(op);
         }
 
-        public async Task<List<ModifyOngoingTaskResult>> SetupReplicationAsync(IDocumentStore fromStore, params IDocumentStore[] toStores)
+        public Task<List<ModifyOngoingTaskResult>> SetupReplicationAsync(IDocumentStore fromStore, params IDocumentStore[] toStores)
+        {
+            return SetupReplicationAsync(fromStore, responsibleNode: null, toStores);
+        }
+
+        public async Task<List<ModifyOngoingTaskResult>> SetupReplicationAsync(IDocumentStore fromStore, string responsibleNode = null, params IDocumentStore[] toStores)
         {
             var tasks = new List<Task<ModifyOngoingTaskResult>>();
             var resList = new List<ModifyOngoingTaskResult>();
             foreach (var store in toStores)
             {
-                var databaseWatcher = new ExternalReplication(store.Database, $"ConnectionString-{store.Identifier}");
+                var databaseWatcher = new ExternalReplication(store.Database, $"ConnectionString-{store.Identifier}")
+                {
+                    MentorNode = responsibleNode
+                };
                 ModifyReplicationDestination(databaseWatcher);
                 tasks.Add(AddWatcherToReplicationTopology(fromStore, databaseWatcher, store.Urls));
             }

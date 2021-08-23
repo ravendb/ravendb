@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
-using Raven.Client.Documents.Session;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Config;
@@ -34,7 +33,7 @@ namespace StressTests.Rachis.DatabaseCluster
             {
                 [RavenConfiguration.GetKey(x => x.Cluster.ElectionTimeout)] = 300.ToString(),
                 [RavenConfiguration.GetKey(x => x.Cluster.StabilizationTime)] = "1",
-                [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "10",
+                [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "5",
                 [RavenConfiguration.GetKey(x => x.Cluster.RotatePreferredNodeGraceTime)] = "1",
                 [RavenConfiguration.GetKey(x => x.Replication.ReplicationMinimalHeartbeat)] = "15",
             };
@@ -54,7 +53,7 @@ namespace StressTests.Rachis.DatabaseCluster
                     session.Store(new User { Name = "Karmel" }, "users/1");
                     session.SaveChanges();
 
-                    Assert.True(await WaitForDocumentInClusterAsync<User>((DocumentSession)session, "users/1", _ => true, TimeSpan.FromSeconds(5)));
+                    Assert.True(await WaitForDocumentInClusterAsync<User>(cluster.Nodes, databaseName, "users/1", _ => true, TimeSpan.FromSeconds(5)));
                 }
 
                 var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
@@ -118,7 +117,7 @@ namespace StressTests.Rachis.DatabaseCluster
                     session.Store(new User { Name = "Karmel" }, "users/1");
                     session.SaveChanges();
 
-                    Assert.True(await WaitForDocumentInClusterAsync<User>((DocumentSession)session, "users/1", _ => true, TimeSpan.FromSeconds(5)));
+                    Assert.True(await WaitForDocumentInClusterAsync<User>(cluster.Nodes, databaseName, "users/1", _ => true, TimeSpan.FromSeconds(5)));
                 }
 
                 var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));

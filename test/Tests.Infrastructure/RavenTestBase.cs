@@ -40,6 +40,7 @@ using Raven.Server.Utils;
 using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Json.Sync;
 using Sparrow.Platform;
 using Sparrow.Server.Json.Sync;
 using Tests.Infrastructure;
@@ -197,6 +198,22 @@ namespace FastTests
             }
         }
 
+        protected string GetRaftHistory(RavenServer server)
+        {
+            var sb = new StringBuilder();
+
+            using (server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                foreach (var entry in server.ServerStore.Engine.LogHistory.GetHistoryLogs(context))
+                {
+                    sb.AppendLine(context.ReadObject(entry, "raft-command-history").ToString());
+                }
+            }
+
+            return sb.ToString();
+        }
+
         protected async Task WaitForRaftIndexToBeAppliedInCluster(long index, TimeSpan? timeout = null)
         {
             await WaitForRaftIndexToBeAppliedOnClusterNodes(index, Servers, timeout);
@@ -240,6 +257,24 @@ namespace FastTests
             }
 
             throw new TimeoutException(message);
+        }
+
+        public static string CollectLogsFromNodes(List<RavenServer> nodes)
+        {
+            var message = "";
+            for (var i = 0; i < nodes.Count; i++)
+            {
+                message += $"{Environment.NewLine}Url: {nodes[i].WebUrl}.";
+                using (nodes[i].ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    message +=
+                        $"{Environment.NewLine}Log for server '{nodes[i].ServerStore.NodeTag}':" +
+                        $"{Environment.NewLine}{context.ReadObject(nodes[i].ServerStore.GetLogDetails(context), "LogSummary/" + i)}";
+                }
+            }
+
+            return message;
         }
 
         protected virtual DocumentStore GetDocumentStore(Options options = null, [CallerMemberName] string caller = null)
@@ -428,11 +463,12 @@ namespace FastTests
             }
         }
 
-        private static void ApplySkipDrainAllRequestsToDatabase(RavenServer serverToUse, string name)
+        private void ApplySkipDrainAllRequestsToDatabase(RavenServer serverToUse, string name)
         {
             try
             {
                 var documentDatabase = AsyncHelpers.RunSync(async () => await serverToUse.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(name));
+                Assert.True(documentDatabase != null, $"(RavenDB-16924) documentDatabase is null on '{serverToUse.ServerStore.NodeTag}' {Environment.NewLine}{CollectLogsFromNodes(Servers)}");
                 documentDatabase.ForTestingPurposesOnly().SkipDrainAllRequests = true;
             }
             catch (InvalidOperationException)
@@ -751,8 +787,14 @@ namespace FastTests
         protected static async Task<T> WaitAndAssertForGreaterThanAsync<T>(Func<Task<T>> act, T expectedVal, int timeout = 15000, int interval = 100) where T : IComparable
         {
             var actualValue = await WaitForGreaterThanAsync(act, expectedVal, timeout, interval);
-            Assert.True(actualValue.CompareTo(expectedVal) > 0);
+            Assert.True(actualValue.CompareTo(expectedVal) > 0, $"expectedVal:{expectedVal}, actualValue: {actualValue}");
             return actualValue;
+        }
+
+        protected async Task WaitAndAssertForValueAsync<T>(Func<T> act, T expectedVal, int timeout = 15000, int interval = 100)
+        {
+            var val = await WaitForPredicateAsync(t => t.Equals(expectedVal), () => Task.FromResult(act.Invoke()), timeout, interval);
+            Assert.Equal(expectedVal, val);
         }
 
         private static async Task<T> WaitForPredicateAsync<T>(Predicate<T> predicate, Func<Task<T>> act, int timeout = 15000, int interval = 100)
@@ -843,19 +885,42 @@ namespace FastTests
             } while (true);
         }
 
-        public static void WaitForUserToContinueTheTest(string url, bool debug = true)
+        public static void WaitForUserToContinueTheTest(string url, bool debug = true, X509Certificate2 clientCert = null)
         {
             if (debug && Debugger.IsAttached == false)
                 return;
 
-            var documentsPage = url + "/studio/index.html";
-
-            OpenBrowser(documentsPage);// start the server
-
-            do
+            if (clientCert != null && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                Thread.Sleep(500);
-            } while (debug == false || Debugger.IsAttached);
+                using (var userPersonalStore = new X509Store(StoreName.My, StoreLocation.CurrentUser))
+                {
+                    userPersonalStore.Open(OpenFlags.ReadWrite);
+                    userPersonalStore.Add(clientCert);
+                }
+            }
+
+            try
+            {
+                var documentsPage = url + "/studio/index.html";
+
+                OpenBrowser(documentsPage);// start the server
+
+                do
+                {
+                    Thread.Sleep(500);
+                } while (debug == false || Debugger.IsAttached);
+            }
+            finally
+            {
+                if (clientCert != null && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    using (var userPersonalStore = new X509Store(StoreName.My, StoreLocation.CurrentUser))
+                    {
+                        userPersonalStore.Open(OpenFlags.ReadWrite);
+                        userPersonalStore.Remove(clientCert);
+                    }
+                }
+            }
         }
 
         public static void WaitForUserToContinueTheTest(IDocumentStore documentStore, bool debug = true, string database = null, X509Certificate2 clientCert = null)
@@ -1103,7 +1168,7 @@ namespace FastTests
             }
         }
 
-        private static string CreateMasterKey(out byte[] masterKey)
+        public static string CreateMasterKey(out byte[] masterKey)
         {
             var buffer = new byte[32];
             using (var rand = RandomNumberGenerator.Create())

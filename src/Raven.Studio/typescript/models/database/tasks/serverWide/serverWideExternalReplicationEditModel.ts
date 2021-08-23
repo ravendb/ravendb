@@ -41,6 +41,7 @@ class serverWideExternalReplicationEditModel extends serverWideConfigurationMode
         
         this.dirtyFlag = new ko.DirtyFlag([
             this.taskName,
+            this.disabled,
             this.delayTime,
             this.showDelayTime,
             this.manualChooseMentor,

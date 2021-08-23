@@ -1011,6 +1011,15 @@ namespace Raven.Client.Documents.Indexes
         {
             if (_insideWellKnownType)
                 return true;
+            
+            if (type.IsGenericType)
+            {
+                foreach (Type genericArgument in type.GetGenericArguments())
+                {
+                    if (TypeExistsOnServer(genericArgument) == false)
+                        return false;
+                }
+            }
 
             if (type.Assembly == typeof(object).Assembly) // mscorlib
                 return true;

@@ -45,8 +45,6 @@ namespace Raven.Server.Documents.PeriodicBackup
         private const string GoogleCloudName = "Google Cloud";
         private const string FtpName = "FTP";
 
-        private readonly bool _useSafeFolderName;
-
         public BackupUploader(UploaderSettings uploaderSettings, RetentionPolicyBaseParameters retentionPolicyParameters, Logger logger, BackupResult backupResult, Action<IOperationProgress> onProgress, OperationCancelToken taskCancelToken)
         {
             _uploaderSettings = uploaderSettings;
@@ -55,7 +53,6 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             _retentionPolicyParameters = retentionPolicyParameters;
             _isFullBackup = retentionPolicyParameters?.IsFullBackup ?? false;
-            _useSafeFolderName = _uploaderSettings.BackupType.HasValue == false;
 
             TaskCancelToken = taskCancelToken;
             _logger = logger;
@@ -69,7 +66,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                                    || BackupConfiguration.CanBackupUsing(_uploaderSettings.GoogleCloudSettings)
                                    || BackupConfiguration.CanBackupUsing(_uploaderSettings.FtpSettings);
 
-        public void Execute()
+        public void ExecuteUpload()
         {
             CreateUploadTaskIfNeeded(_uploaderSettings.S3Settings, UploadToS3, _backupResult.S3Backup, S3Name);
             CreateUploadTaskIfNeeded(_uploaderSettings.GlacierSettings, UploadToGlacier, _backupResult.GlacierBackup, GlacierName);
@@ -77,6 +74,11 @@ namespace Raven.Server.Documents.PeriodicBackup
             CreateUploadTaskIfNeeded(_uploaderSettings.GoogleCloudSettings, UploadToGoogleCloud, _backupResult.GoogleCloudBackup, GoogleCloudName);
             CreateUploadTaskIfNeeded(_uploaderSettings.FtpSettings, UploadToFtp, _backupResult.FtpBackup, FtpName);
 
+            Execute();
+        }
+
+        private void Execute()
+        {
             _threads.ForEach(x => x.Join(int.MaxValue));
 
             if (_exceptions.Count > 0)
@@ -91,11 +93,22 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
+        public void ExecuteDelete()
+        {
+            CreateDeletionTaskIfNeeded(_uploaderSettings.S3Settings, DeleteFromS3, S3Name);
+            CreateDeletionTaskIfNeeded(_uploaderSettings.AzureSettings, DeleteFromAzure, AzureName);
+            CreateDeletionTaskIfNeeded(_uploaderSettings.GoogleCloudSettings, DeleteFromGoogleCloud, GoogleCloudName);
+
+            // deletion from Glacier and FTP destinations is not supported
+
+            Execute();
+        }
+
         private void UploadToS3(S3Settings settings, Stream stream, Progress progress)
         {
-            using (var client = new RavenAwsS3Client(settings, progress, _logger, TaskCancelToken.Token))
+            using (var client = new RavenAwsS3Client(settings, progress, TaskCancelToken.Token))
             {
-                var key = CombinePathAndKey(settings.RemoteFolderName, useSafeFolderName: _useSafeFolderName);
+                var key = CombinePathAndKey(settings.RemoteFolderName);
                 client.PutObject(key, stream, new Dictionary<string, string>
                 {
                     { "Description", GetArchiveDescription() }
@@ -114,9 +127,9 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private void UploadToGlacier(GlacierSettings settings, Stream stream, Progress progress)
         {
-            using (var client = new RavenAwsGlacierClient(settings, progress, _logger, TaskCancelToken.Token))
+            using (var client = new RavenAwsGlacierClient(settings, progress, TaskCancelToken.Token))
             {
-                var key = CombinePathAndKey(settings.RemoteFolderName ?? _uploaderSettings.DatabaseName, useSafeFolderName: _useSafeFolderName);
+                var key = CombinePathAndKey(settings.RemoteFolderName ?? _uploaderSettings.DatabaseName);
                 var archiveId = client.UploadArchive(stream, key);
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"{ReportSuccess(GlacierName)}, archive ID: {archiveId}");
@@ -148,9 +161,9 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private void UploadToAzure(AzureSettings settings, Stream stream, Progress progress)
         {
-            using (var client = new RavenAzureClient(settings, progress, _logger, TaskCancelToken.Token))
+            using (var client = new RavenAzureClient(settings, progress, TaskCancelToken.Token))
             {
-                var key = CombinePathAndKey(settings.RemoteFolderName, useSafeFolderName: _useSafeFolderName);
+                var key = CombinePathAndKey(settings.RemoteFolderName);
                 client.PutBlob(key, stream, new Dictionary<string, string>
                 {
                     { "Description", GetArchiveDescription() }
@@ -188,17 +201,50 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
-        private string CombinePathAndKey(string path, bool useSafeFolderName = false)
+        private void DeleteFromS3(S3Settings settings)
+        {
+            using (var client = new RavenAwsS3Client(settings, progress: null, TaskCancelToken.Token))
+            {
+                var key = CombinePathAndKey(settings.RemoteFolderName);
+                client.DeleteObject(key);
+
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"{ReportDeletion(S3Name)} bucket named: {settings.BucketName}, with key: {key}");
+            }
+        }
+
+        private void DeleteFromAzure(AzureSettings settings)
+        {
+            using (var client = new RavenAzureClient(settings, progress : null, TaskCancelToken.Token))
+            {
+                var key = CombinePathAndKey(settings.RemoteFolderName);
+                client.DeleteBlobs(new List<string>{ key });
+
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"{ReportDeletion(AzureName)} container: {settings.StorageContainer}, with key: {key}");
+            }
+        }
+
+        private void DeleteFromGoogleCloud(GoogleCloudSettings settings)
+        {
+            using (var client = new RavenGoogleCloudClient(settings, progress: null, TaskCancelToken.Token))
+            {
+                var key = CombinePathAndKey(settings.RemoteFolderName);
+                client.DeleteObject(key);
+
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"{ReportDeletion(GoogleCloudName)} storage bucket: {settings.BucketName}");
+            }
+        }
+
+        private string CombinePathAndKey(string path)
         {
             if (path?.EndsWith('/') == true)
                 path = path[..^1];
 
             var prefix = string.IsNullOrWhiteSpace(path) == false ? $"{path}/" : string.Empty;
-            var folderName = useSafeFolderName
-                ? _uploaderSettings.SafeFolderName
-                : _uploaderSettings.FolderName;
-            
-            return $"{prefix}{folderName}/{_uploaderSettings.FileName}";
+
+            return $"{prefix}{_uploaderSettings.FolderName}/{_uploaderSettings.FileName}";
         }
 
         private void CreateUploadTaskIfNeeded<S, T>(S settings, Action<S, FileStream, Progress> uploadToServer, T uploadStatus, string targetName)
@@ -283,6 +329,40 @@ namespace Raven.Server.Documents.PeriodicBackup
             _threads.Add(thread);
         }
 
+        private void CreateDeletionTaskIfNeeded<T>(T settings, Action<T> deleteFromServer, string targetName)
+            where T : BackupSettings
+        {
+            if (BackupConfiguration.CanBackupUsing(settings) == false)
+                return;
+
+            var thread = PoolOfThreads.GlobalRavenThreadPool.LongRunning(_ =>
+            {
+                try
+                {
+                    Thread.CurrentThread.Priority = ThreadPriority.BelowNormal;
+                    NativeMemory.EnsureRegistered();
+
+                    AddInfo($"Starting the delete of backup file from {targetName}.");
+                    deleteFromServer(settings);
+                }
+                catch (Exception e)
+                {
+                    var extracted = e.ExtractSingleInnerException();
+                    var error = $"Failed to delete the backup file from {targetName}.";
+                    Exception exception = null;
+                    if (extracted is OperationCanceledException)
+                    {
+                        // shutting down or HttpClient timeout
+                        exception = TaskCancelToken.Token.IsCancellationRequested ? extracted : new TimeoutException(error, e);
+                    }
+
+                    _exceptions.Add(exception ?? new InvalidOperationException(error, e));
+                }
+            }, null, $"Delete backup file of database '{_uploaderSettings.DatabaseName}' from {targetName} (task: '{_uploaderSettings.TaskName}')");
+
+            _threads.Add(thread);
+        }
+
         private void AddInfo(string message)
         {
             _backupResult.AddInfo(message);
@@ -357,6 +437,11 @@ namespace Raven.Server.Documents.PeriodicBackup
         {
             return $"Successfully uploaded backup file '{_uploaderSettings.FileName}' to {name}";
         }
+
+        private string ReportDeletion(string name)
+        {
+            return $"Successfully deleted backup file '{_uploaderSettings.FileName}' to {name}";
+        }
     }
 
     public class UploaderSettings
@@ -374,7 +459,5 @@ namespace Raven.Server.Documents.PeriodicBackup
         public string TaskName;
 
         public BackupType? BackupType;
-
-        public string SafeFolderName;
     }
 }

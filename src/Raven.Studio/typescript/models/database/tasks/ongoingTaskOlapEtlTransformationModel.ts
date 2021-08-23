@@ -39,7 +39,7 @@ class ongoingTaskOlapEtlTransformationModel {
         });
         
         this.dirtyFlag = new ko.DirtyFlag([
-            this.name, 
+            this.name,
             this.script,
             this.resetScript,
             this.applyScriptForAllCollections,

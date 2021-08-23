@@ -453,7 +453,7 @@ class databaseGroupGraph {
 
     // link used in forge graph simulation
     private findLinksForCola(dbNodes: Array<databaseNode>, tasks: Array<taskNode>): Array<cola.Link<databaseNode | taskNode>> {
-        const links = [] as Array<cola.Link<databaseNode | taskNode>>;
+        const links: Array<cola.Link<databaseNode | taskNode>> = [];
 
         for (let i = 0; i < dbNodes.length; i++) {
             links.push({
@@ -476,7 +476,7 @@ class databaseGroupGraph {
 
     // link displayed on scroon
     private findVisibleLinks(dbNodes: Array<databaseNode>, tasks: Array<taskNode>): Array<cola.Link<databaseNode | taskNode>> {
-        const links = [] as Array<cola.Link<databaseNode | taskNode>>;
+        const links: Array<cola.Link<databaseNode | taskNode>> = [];
 
         // find member - member connections
 
@@ -650,7 +650,7 @@ class databaseGroupGraph {
     }
 
     private updateDatabaseNodes() {
-        const newDbTags = [] as Array<string>;
+        const newDbTags: string[] = [];
         
         const merge = (nodes: Array<Raven.Client.ServerWide.Operations.NodeId>, type: databaseGroupNodeType) => {
             nodes.forEach(node => {
@@ -757,7 +757,7 @@ class databaseGroupGraph {
     }
     
     private getLinksEncoded(links: Array<cola.Link<databaseNode | taskNode>>) {
-        const result = [] as Array<string>;
+        const result: string[] = [];
         links.forEach(link => {
             const linkEndpoints = [link.source.getId(), link.target.getId()];
             linkEndpoints.sort();
