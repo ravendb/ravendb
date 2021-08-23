@@ -33,13 +33,13 @@ class ongoingTaskSqlEtlTransformationModel {
         ], false, jsonUtil.newLineNormalizingHashFunction);
     }
    
-    static empty(): ongoingTaskSqlEtlTransformationModel {
+    static empty(suggestedName: string): ongoingTaskSqlEtlTransformationModel {
         return new ongoingTaskSqlEtlTransformationModel(
             {
                 ApplyToAllDocuments: false, 
                 Collections: [],
                 Disabled: false,
-                Name: "",
+                Name: suggestedName,
                 Script: ""
             }, true, false);
     }
@@ -49,7 +49,7 @@ class ongoingTaskSqlEtlTransformationModel {
             ApplyToAllDocuments: false,
             Collections: [this.collection()],
             Disabled: false,
-            Name: this.name().trim(),
+            Name: this.name(),
             Script: this.script()
         }
     }

@@ -229,7 +229,7 @@ class editRavenEtlTask extends viewModelBase {
             // 2. Creating a New task
             this.isAddingNewRavenEtlTask(true);
             this.editedRavenEtl(ongoingTaskRavenEtlEditModel.empty());
-            this.editedRavenEtl().editedTransformationScriptSandbox(ongoingTaskRavenEtlTransformationModel.empty());
+            this.editedRavenEtl().editedTransformationScriptSandbox(ongoingTaskRavenEtlTransformationModel.empty(this.findNameForNewTransformation()));
             deferred.resolve();
         }
 
@@ -421,7 +421,7 @@ class editRavenEtlTask extends viewModelBase {
 
     addNewTransformation() {
         this.editedRavenEtl().transformationScriptSelectedForEdit(null);
-        this.editedRavenEtl().editedTransformationScriptSandbox(ongoingTaskRavenEtlTransformationModel.empty());
+        this.editedRavenEtl().editedTransformationScriptSandbox(ongoingTaskRavenEtlTransformationModel.empty(this.findNameForNewTransformation()));
     }
 
     cancelEditedTransformation() {

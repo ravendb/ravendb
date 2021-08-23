@@ -42,13 +42,13 @@ class ongoingTaskRavenEtlTransformationModel {
         return collectionsTracker.default.getCollectionColorIndex(collectionName);
     }
 
-    static empty(): ongoingTaskRavenEtlTransformationModel {
+    static empty(suggestedName: string): ongoingTaskRavenEtlTransformationModel {
         return new ongoingTaskRavenEtlTransformationModel(
             {
                 ApplyToAllDocuments: false, 
                 Collections: [],
                 Disabled: false,
-                Name: "",
+                Name: suggestedName,
                 Script: ""
             }, true, false);
     }
@@ -58,7 +58,7 @@ class ongoingTaskRavenEtlTransformationModel {
             ApplyToAllDocuments: this.applyScriptForAllCollections(),
             Collections: this.applyScriptForAllCollections() ? null : this.transformScriptCollections(),
             Disabled: false,
-            Name: this.name().trim(),
+            Name: this.name(),
             Script: this.script()
         }
     }

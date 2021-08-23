@@ -49,13 +49,13 @@ class ongoingTaskOlapEtlTransformationModel {
        ], false, jsonUtil.newLineNormalizingHashFunction);
     }
    
-    static empty(): ongoingTaskOlapEtlTransformationModel {
+    static empty(suggestedName: string): ongoingTaskOlapEtlTransformationModel {
         return new ongoingTaskOlapEtlTransformationModel(
             {
                 ApplyToAllDocuments: false, 
                 Collections: [],
                 Disabled: false,
-                Name: "",
+                Name: suggestedName,
                 Script: ""
             }, true, false);
     }
@@ -65,7 +65,7 @@ class ongoingTaskOlapEtlTransformationModel {
             ApplyToAllDocuments: this.applyScriptForAllCollections(),
             Collections: this.applyScriptForAllCollections() ? null : this.transformScriptCollections(),
             Disabled: false,
-            Name: this.name().trim(),
+            Name: this.name(),
             Script: this.script()
         }
     }
