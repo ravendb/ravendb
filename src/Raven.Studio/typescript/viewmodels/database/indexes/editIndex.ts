@@ -174,6 +174,10 @@ class editIndex extends viewModelBase {
             this.$previewEditor = $(editIndex.previewEditorSelector);
             this.previewEditor = aceEditorBindingHandler.getEditorBySelection(this.$previewEditor);
             this.previewEditor.setOption("wrap", true);
+
+            $('.deployment-time [data-toggle="tooltip"]').tooltip({
+                html: true
+            });
         })
     }
 
@@ -325,8 +329,31 @@ class editIndex extends viewModelBase {
             .done((indexHistory) => this.indexHistory(indexHistory.History));
     }
     
-    createdAtFormatted(indexHistoryEntry: Raven.Client.ServerWide.IndexHistoryEntry) {
-        return ko.pureComputed(() => generalUtils.formatUtcDateAsLocal(indexHistoryEntry.CreatedAt));
+    getLocalTime(utcTime: string) {
+        if (utcTime) {
+            return ko.pureComputed(() => generalUtils.formatUtcDateAsLocal(utcTime));
+        }
+        
+        return "N/A";
+    }
+
+    getDeploymentDuration(item: Raven.Client.ServerWide.IndexHistoryEntry, nodeTag: string): string {
+        if (Object.keys(item.RollingDeployment).length) {
+            const startedUtc = item.RollingDeployment[nodeTag].StartedAt;
+            const finishedUtc = item.RollingDeployment[nodeTag].FinishedAt;
+            
+            if (!startedUtc || !finishedUtc) {
+                return "N/A";
+            }
+
+            const started = moment.utc(startedUtc);
+            const finished = moment.utc(finishedUtc);
+            const diff = finished.diff(started);
+            
+            return generalUtils.formatDuration(moment.duration(diff), true);
+        }
+        
+        return "N/A";
     }
 
     useIndexRevisionItem(item: Raven.Client.ServerWide.IndexHistoryEntry) {
@@ -373,18 +400,21 @@ class editIndex extends viewModelBase {
         this.previewItem(item);
     }
 
-    creationTimeTooltip(item: Raven.Client.ServerWide.IndexHistoryEntry) {
+    getTimeTooltip(utcTime: string, isRevisionTime: boolean = false) {
         return ko.pureComputed(() => {
-            if (item) {
+            if (utcTime) {
+                const clickInfo = `<div class="margin-top margin-top-sm">Click to load this index revision</div>`;
+                
                 return `<div class="data-container">
                             <div>
                                 <div class="data-label">UTC:</div>
-                                <div class="data-value">${item.CreatedAt}</div>
+                                <div class="data-value">${utcTime}</div>
                             </div>
                             <div>
                                 <div class="data-label">Relative:</div>
-                                <div class="data-value">${generalUtils.formatDurationByDate(moment.utc(item.CreatedAt), true)}</div>
+                                <div class="data-value">${generalUtils.formatDurationByDate(moment.utc(utcTime), true)}</div>
                             </div>
+                            ${isRevisionTime ? clickInfo : ''}
                         </div>`;
             }
 
