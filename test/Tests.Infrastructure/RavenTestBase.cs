@@ -654,14 +654,14 @@ namespace FastTests
             throw new TimeoutException(msg);
         }
 
-        public static int WaitForEntriesCount(IDocumentStore store, string indexName, int minEntriesCount, string databaseName = null, TimeSpan? timeout = null, bool throwOnTimeout = true)
+        public static long WaitForEntriesCount(IDocumentStore store, string indexName, int minEntriesCount, string databaseName = null, TimeSpan? timeout = null, bool throwOnTimeout = true)
         {
             timeout ??= (Debugger.IsAttached
                 ? TimeSpan.FromMinutes(15)
                 : TimeSpan.FromMinutes(1));
 
             var sp = Stopwatch.StartNew();
-            var entriesCount = -1;
+            long entriesCount = -1;
 
             while (sp.Elapsed < timeout.Value)
             {

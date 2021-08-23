@@ -79,9 +79,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _releaseSearcher = searcherHolder.GetSearcher(readTransaction, _state, out _searcher);
         }
 
-        public override int EntriesCount()
+        public override long EntriesCount()
         {
-            return _searcher.IndexReader.NumDocs();
+            return Convert.ToInt64(_searcher.IndexReader.NumDocs());
         }
 
         public override IEnumerable<QueryResult> Query(IndexQueryServerSide query, QueryTimingsScope queryTimings, FieldsToFetch fieldsToFetch, Reference<int> totalResults, Reference<int> skippedResults, IQueryResultRetriever retriever, DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField, CancellationToken token)
@@ -147,14 +147,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         global::Lucene.Net.Documents.Document document;
                         using (luceneScope?.Start())
                             document = _searcher.Doc(scoreDoc.Doc, _state);
-
-                        if (retriever.TryGetKey(document, _state, out string key) && scope.WillProbablyIncludeInResults(key) == false)
+                        var retrieverInput = new RetrieverInput(document, scoreDoc, _state);
+                        if (retriever.TryGetKey(ref retrieverInput, out string key) && scope.WillProbablyIncludeInResults(key) == false)
                         {
                             skippedResults.Value++;
                             continue;
                         }
 
-                        var result = retriever.Get(document, scoreDoc, _state);
+                        var result = retriever.Get(ref retrieverInput);
                         if (scope.TryIncludeInResults(result) == false)
                         {
                             result?.Dispose();
@@ -389,14 +389,15 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     var indexResult = intersectResults[i];
                     var document = _searcher.Doc(indexResult.LuceneId, _state);
 
-                    if (retriever.TryGetKey(document, _state, out string key) && scope.WillProbablyIncludeInResults(key) == false)
+                    var retrieverInput = new RetrieverInput(document, new ScoreDoc(indexResult.LuceneId, indexResult.Score), _state);
+                    if (retriever.TryGetKey(ref retrieverInput, out string key) && scope.WillProbablyIncludeInResults(key) == false)
                     {
                         skippedResults.Value++;
                         skippedResultsInCurrentLoop++;
                         continue;
                     }
 
-                    var result = retriever.Get(document, new ScoreDoc(indexResult.LuceneId, indexResult.Score), _state);
+                    var result = retriever.Get(ref retrieverInput);
                     if (scope.TryIncludeInResults(result) == false)
                     {
                         result?.Dispose();
@@ -777,9 +778,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 if (ids.Add(id) == false)
                     continue;
 
+                var retrieverInput = new RetrieverInput(doc, hit, _state);
                 yield return new QueryResult
                 {
-                    Result = retriever.Get(doc, hit, _state)
+                    Result = retriever.Get(ref retrieverInput)
                 };
             }
         }

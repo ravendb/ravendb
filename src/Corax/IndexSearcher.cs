@@ -11,6 +11,7 @@ using Corax.Queries;
 using System.Collections.Generic;
 using Voron.Data.CompactTrees;
 using Sparrow;
+using Voron.Debugging;
 using static Corax.Queries.SortingMatch;
 using System.Runtime.Intrinsics.X86;
 
@@ -18,7 +19,6 @@ namespace Corax
 {
     public sealed unsafe class IndexSearcher : IDisposable
     {
-        private readonly StorageEnvironment _environment;
         private readonly Transaction _transaction;
 
         private Page _lastPage = default;
@@ -31,12 +31,12 @@ namespace Corax
 
         public bool IsAccelerated => Avx2.IsSupported && !ForceNonAccelerated;
 
+        private readonly bool _transactionInjected = false;
         // The reason why we want to have the transaction open for us is so that we avoid having
         // to explicitly provide the index searcher with opening semantics and also every new
         // searcher becomes essentially a unit of work which makes reusing assets tracking more explicit.
         public IndexSearcher(StorageEnvironment environment)
         {
-            _environment = environment;
             _transaction = environment.ReadTransaction();
         }
 
@@ -45,6 +45,13 @@ namespace Corax
             var data = Container.MaybeGetFromSamePage(_transaction.LowLevelTransaction, ref _lastPage, id);
             int size = ZigZagEncoding.Decode<int>(data.ToSpan(), out var len);
             return data.ToUnmanagedSpan().Slice(size + len);
+        }
+
+        // _transactionInjected disable transaction commit in instance of IndexWriter because it's done by Server. 
+        public IndexSearcher(Transaction tx)
+        {
+            _transactionInjected = true;
+            _transaction = tx;
         }
 
         public IndexEntryReader GetReaderFor(long id)
@@ -150,7 +157,7 @@ namespace Corax
 
             return MultiTermMatch.Create(new MultiTermMatch<InTermProvider>(_transaction.Allocator, new InTermProvider(this, field, 0, inTerms)));
         }
-
+        
         public MultiTermMatch StartWithQuery(string field, string startWith)
         {
             // TODO: The IEnumerable<string> will die eventually, this is for prototyping only. 
@@ -432,7 +439,8 @@ namespace Corax
 
         public void Dispose()
         {
-            _transaction?.Dispose();
+            if(_transactionInjected == false)
+                _transaction?.Dispose();
         }
     }
 }

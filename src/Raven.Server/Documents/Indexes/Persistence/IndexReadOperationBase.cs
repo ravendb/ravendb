@@ -25,7 +25,7 @@ namespace Raven.Server.Documents.Indexes.Persistence
         {
         }
 
-        public abstract int EntriesCount();
+        public abstract long EntriesCount();
 
         public abstract IEnumerable<QueryResult> Query(IndexQueryServerSide query, QueryTimingsScope queryTimings, FieldsToFetch fieldsToFetch,
             Reference<int> totalResults, Reference<int> skippedResults, IQueryResultRetriever retriever, DocumentsOperationContext documentsContext,

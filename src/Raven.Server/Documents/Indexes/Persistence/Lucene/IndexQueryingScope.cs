@@ -93,7 +93,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             for (; _alreadyScannedForDuplicates < _query.Start; _alreadyScannedForDuplicates++)
             {
                 var scoreDoc = search.ScoreDocs[_alreadyScannedForDuplicates];
-                var document = _retriever.Get(_searcher.Doc(scoreDoc.Doc, _state), scoreDoc, _state);
+                var retrieverInput = new RetrieverInput(_searcher.Doc(scoreDoc.Doc, _state), scoreDoc, _state);
+                var document = _retriever.Get(ref retrieverInput);
 
                 if (document.Data.Count > 0) // we don't consider empty projections to be relevant for distinct operations
                     _alreadySeenProjections.Add(document.DataHash);

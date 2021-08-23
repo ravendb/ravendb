@@ -1,10 +1,16 @@
-﻿using Sparrow.Json;
+﻿using System.Buffers;
+using Raven.Server.Documents.Indexes.Persistence.Lucene;
+using Sparrow.Json;
 using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Indexes.Persistence
 {
     public abstract class IndexWriteOperationBase : IndexOperationBase
     {
+        protected byte[] _buffer;
+        protected IndexingStatsScope _statsInstance;
+        protected readonly IndexWriteOperationStats Stats = new IndexWriteOperationStats();
+
         protected IndexWriteOperationBase(Index index, Logger logger) : base(index, logger)
         {
         }
@@ -25,5 +31,14 @@ namespace Raven.Server.Documents.Indexes.Persistence
         public abstract void DeleteBySourceDocument(LazyStringValue sourceDocumentId, IndexingStatsScope stats);
 
         public abstract void DeleteReduceResult(LazyStringValue reduceKeyHash, IndexingStatsScope stats);
+
+        protected class IndexWriteOperationStats
+        {
+            public IndexingStatsScope DeleteStats;
+            public IndexingStatsScope ConvertStats;
+            public IndexingStatsScope AddStats;
+            public IndexingStatsScope SuggestionStats;
+        }
     }
+
 }

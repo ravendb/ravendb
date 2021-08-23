@@ -25,6 +25,8 @@ namespace Raven.Client.Documents.Indexes
             public const string Bloom = "Bloom";
         }
 
+
+        //todo maciej statistics
         internal static class Lucene
         {
             public const string Delete = "Lucene/Delete";
@@ -35,6 +37,17 @@ namespace Raven.Client.Documents.Indexes
             public const string Merge = "Lucene/Merge";
             public const string ApplyDeletes = "Lucene/ApplyDeletes";
             public const string RecreateSearcher = "Lucene/RecreateSearcher";
+        }
+
+        internal static class Corax
+        {
+            public const string Delete = "Corax/Delete";
+            public const string Convert = "Corax/Convert";
+            public const string AddDocument = "Corax/AddDocument";
+            public const string Commit = "Corax/Commit";
+            public const string Merge = "Corax/Merge";
+            public const string ApplyDeletes = "Corax/ApplyDeletes";
+            public const string RecreateSearcher = "Corax/RecreateSearcher";
         }
 
         internal static class Storage
