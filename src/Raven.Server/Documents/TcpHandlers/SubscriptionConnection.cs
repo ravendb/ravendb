@@ -772,20 +772,17 @@ namespace Raven.Server.Documents.TcpHandlers
 
                     if (anyDocumentsSentInCurrentIteration)
                     {
-                        if (includeCmd != null)
+                        if (includeCmd != null && includeCmd.HasIncludesIds())
                         {
                             var includes = new List<Document>();
                             includeCmd.Fill(includes);
-                            if (includeCmd.HasIncludesIds())
-                            {
-                                writer.WriteStartObject();
-                                writer.WritePropertyName(docsContext.GetLazyStringForFieldWithCaching(TypeSegment));
-                                writer.WriteValue(BlittableJsonToken.String, docsContext.GetLazyStringForFieldWithCaching(IncludesSegment));
-                                writer.WriteComma();
-                                writer.WritePropertyName(docsContext.GetLazyStringForFieldWithCaching(IncludesSegment));
-                                writer.WriteIncludes(docsContext, includes);
-                                writer.WriteEndObject();
-                            }
+                            writer.WriteStartObject();
+                            writer.WritePropertyName(docsContext.GetLazyStringForFieldWithCaching(TypeSegment));
+                            writer.WriteValue(BlittableJsonToken.String, docsContext.GetLazyStringForFieldWithCaching(IncludesSegment));
+                            writer.WriteComma();
+                            writer.WritePropertyName(docsContext.GetLazyStringForFieldWithCaching(IncludesSegment));
+                            writer.WriteIncludes(docsContext, includes);
+                            writer.WriteEndObject();
                         }
 
                         writer.WriteStartObject();
