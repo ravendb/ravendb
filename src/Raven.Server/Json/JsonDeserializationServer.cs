@@ -22,7 +22,7 @@ using Raven.Client.ServerWide.Operations.Logs;
 using Raven.Client.ServerWide.Operations.Migration;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Server.Commercial;
-using Raven.Server.Documents.ETL.Providers.Elasticsearch.Test;
+using Raven.Server.Documents.ETL.Providers.ElasticSearch.Test;
 using Raven.Server.Documents.ETL.Providers.Raven.Test;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
 using Raven.Server.Documents.Handlers;
@@ -84,7 +84,7 @@ namespace Raven.Server.Json
         
         public static readonly Func<BlittableJsonReaderObject, TestOlapEtlScript> TestOlapEtlScript = GenerateJsonDeserializationRoutine<TestOlapEtlScript>();
 
-        public static readonly Func<BlittableJsonReaderObject, TestElasticsearchEtlScript> TestElasticsearchEtlScript = GenerateJsonDeserializationRoutine<TestElasticsearchEtlScript>();
+        public static readonly Func<BlittableJsonReaderObject, TestElasticSearchEtlScript> TestElasticSearchEtlScript = GenerateJsonDeserializationRoutine<TestElasticSearchEtlScript>();
 
         public static readonly Func<BlittableJsonReaderObject, SubscriptionCreationOptions> SubscriptionCreationParams = GenerateJsonDeserializationRoutine<SubscriptionCreationOptions>();
         

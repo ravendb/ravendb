@@ -272,9 +272,9 @@ namespace Raven.Client.Documents.Smuggler
 
             public bool OlapConnectionStringsUpdated { get; set; }
             
-            public bool ElasticsearchEtlsUpdated { get; set; }
+            public bool ElasticSearchEtlsUpdated { get; set; }
 
-            public bool ElasticsearchConnectionStringsUpdated { get; set; }
+            public bool ElasticSearchConnectionStringsUpdated { get; set; }
 
             public override DynamicJsonValue ToJson()
             {
@@ -343,11 +343,11 @@ namespace Raven.Client.Documents.Smuggler
                 if (OlapEtlsUpdated)
                     json[nameof(OlapEtlsUpdated)] = OlapEtlsUpdated;
                 
-                if (ElasticsearchConnectionStringsUpdated)
-                    json[nameof(ElasticsearchConnectionStringsUpdated)] = ElasticsearchConnectionStringsUpdated;
+                if (ElasticSearchConnectionStringsUpdated)
+                    json[nameof(ElasticSearchConnectionStringsUpdated)] = ElasticSearchConnectionStringsUpdated;
 
-                if (ElasticsearchEtlsUpdated)
-                    json[nameof(ElasticsearchEtlsUpdated)] = ElasticsearchEtlsUpdated;
+                if (ElasticSearchEtlsUpdated)
+                    json[nameof(ElasticSearchEtlsUpdated)] = ElasticSearchEtlsUpdated;
 
                 return json;
             }
@@ -418,11 +418,11 @@ namespace Raven.Client.Documents.Smuggler
                 if (OlapEtlsUpdated)
                     sb.AppendLine("- OLAP ETLs");
                 
-                if (ElasticsearchConnectionStringsUpdated)
-                    sb.AppendLine("- ELASTICSEARCH Connection Strings");
+                if (ElasticSearchConnectionStringsUpdated)
+                    sb.AppendLine("- ElasticSearch Connection Strings");
 
-                if (ElasticsearchEtlsUpdated)
-                    sb.AppendLine("- ELASTICSEARCH ETLs");
+                if (ElasticSearchEtlsUpdated)
+                    sb.AppendLine("- ElasticSearch ETLs");
 
                 if (sb.Length == 0)
                     return string.Empty;

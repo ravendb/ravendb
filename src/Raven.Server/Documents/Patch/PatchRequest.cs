@@ -13,7 +13,7 @@ namespace Raven.Server.Documents.Patch
         Patch,
         Conflict,        
         SqlEtl,
-        ElasticsearchEtl,
+        ElasticSearchEtl,
         RavenEtl,
         OlapEtl,
         Smuggler,
@@ -78,7 +78,7 @@ namespace Raven.Server.Documents.Patch
             {
                 case PatchRequestType.None:
                 case PatchRequestType.SqlEtl:
-                case PatchRequestType.ElasticsearchEtl:
+                case PatchRequestType.ElasticSearchEtl:
                 case PatchRequestType.Smuggler:
                 case PatchRequestType.RavenEtl:
                 case PatchRequestType.OlapEtl:

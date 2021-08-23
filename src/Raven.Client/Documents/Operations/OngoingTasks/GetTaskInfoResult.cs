@@ -16,7 +16,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
         RavenEtl,
         SqlEtl,
         OlapEtl,
-        ElasticsearchEtl,
+        ElasticSearchEtl,
         Backup,
         Subscription,
         PullReplicationAsHub,

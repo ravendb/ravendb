@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.ETL;
-using Raven.Client.Documents.Operations.ETL.Elasticsearch;
+using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Http;
@@ -81,7 +81,7 @@ namespace Raven.Client.Documents.Operations.ConnectionStrings
         public Dictionary<string, RavenConnectionString> RavenConnectionStrings { get; set; }
         public Dictionary<string, SqlConnectionString> SqlConnectionStrings { get; set; }
         public Dictionary<string, OlapConnectionString> OlapConnectionStrings { get; set; }
-        public Dictionary<string, ElasticsearchConnectionString> ElasticsearchConnectionStrings { get; set; }
+        public Dictionary<string, ElasticSearchConnectionString> ElasticSearchConnectionStrings { get; set; }
 
         public DynamicJsonValue ToJson()
         {
@@ -98,7 +98,7 @@ namespace Raven.Client.Documents.Operations.ConnectionStrings
             {
                 sqlConnections[kvp.Key] = kvp.Value.ToJson();
             }
-            foreach (var kvp in ElasticsearchConnectionStrings)
+            foreach (var kvp in ElasticSearchConnectionStrings)
             {
                 elasticsearchConnections[kvp.Key] = kvp.Value.ToJson();
             }
@@ -112,7 +112,7 @@ namespace Raven.Client.Documents.Operations.ConnectionStrings
                 [nameof(RavenConnectionStrings)] = ravenConnections,
                 [nameof(SqlConnectionStrings)] = sqlConnections,
                 [nameof(OlapConnectionStrings)] = olapConnections,
-                [nameof(ElasticsearchConnectionStrings)] = elasticsearchConnections
+                [nameof(ElasticSearchConnectionStrings)] = elasticsearchConnections
             };
         }
     }

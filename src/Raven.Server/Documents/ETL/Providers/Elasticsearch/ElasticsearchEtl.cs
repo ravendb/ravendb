@@ -6,27 +6,27 @@ using Elasticsearch.Net;
 using Nest;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
-using Raven.Client.Documents.Operations.ETL.Elasticsearch;
-using Raven.Server.Documents.ETL.Providers.Elasticsearch.Enumerators;
-using Raven.Server.Documents.ETL.Providers.Elasticsearch.Test;
+using Raven.Client.Documents.Operations.ETL.ElasticSearch;
+using Raven.Server.Documents.ETL.Providers.ElasticSearch.Enumerators;
+using Raven.Server.Documents.ETL.Providers.ElasticSearch.Test;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 
-namespace Raven.Server.Documents.ETL.Providers.Elasticsearch
+namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
 {
-    public class ElasticsearchEtl : EtlProcess<ElasticsearchItem, ElasticsearchIndexWithRecords, ElasticsearchEtlConfiguration, ElasticsearchConnectionString, EtlStatsScope, EtlPerformanceOperation>
+    public class ElasticSearchEtl : EtlProcess<ElasticSearchItem, ElasticSearchIndexWithRecords, ElasticSearchEtlConfiguration, ElasticSearchConnectionString, EtlStatsScope, EtlPerformanceOperation>
     {
-        public ElasticsearchEtl(Transformation transformation, ElasticsearchEtlConfiguration configuration, DocumentDatabase database, ServerStore serverStore)
-            : base(transformation, configuration, database, serverStore, ElasticsearchEtlTag)
+        public ElasticSearchEtl(Transformation transformation, ElasticSearchEtlConfiguration configuration, DocumentDatabase database, ServerStore serverStore)
+            : base(transformation, configuration, database, serverStore, ElasticSearchEtlTag)
         {
         }
 
-        public const string ElasticsearchEtlTag = "ELASTICSEARCH ETL";
+        public const string ElasticSearchEtlTag = "ElasticSearch ETL";
 
-        public override EtlType EtlType => EtlType.Elasticsearch;
+        public override EtlType EtlType => EtlType.ElasticSearch;
 
         public override bool ShouldTrackCounters() => false;
 
@@ -41,47 +41,47 @@ namespace Raven.Server.Documents.ETL.Providers.Elasticsearch
 
         protected override bool ShouldFilterOutHiLoDocument() => true;
 
-        protected override IEnumerator<ElasticsearchItem> ConvertDocsEnumerator(DocumentsOperationContext context, IEnumerator<Document> docs, string collection)
+        protected override IEnumerator<ElasticSearchItem> ConvertDocsEnumerator(DocumentsOperationContext context, IEnumerator<Document> docs, string collection)
         {
-            return new DocumentsToElasticsearchItems(docs, collection);
+            return new DocumentsToElasticSearchItems(docs, collection);
         }
 
-        protected override IEnumerator<ElasticsearchItem> ConvertTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, string collection,
+        protected override IEnumerator<ElasticSearchItem> ConvertTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, string collection,
             bool trackAttachments)
         {
-            return new TombstonesToElasticsearchItems(tombstones, collection);
+            return new TombstonesToElasticSearchItems(tombstones, collection);
         }
 
-        protected override IEnumerator<ElasticsearchItem> ConvertAttachmentTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones,
+        protected override IEnumerator<ElasticSearchItem> ConvertAttachmentTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones,
             List<string> collections)
         {
-            throw new NotSupportedException("Attachment tombstones aren't supported by ELASTICSEARCH ETL");
+            throw new NotSupportedException("Attachment tombstones aren't supported by ElasticSearch ETL");
         }
 
-        protected override IEnumerator<ElasticsearchItem> ConvertCountersEnumerator(DocumentsOperationContext context, IEnumerator<CounterGroupDetail> counters,
+        protected override IEnumerator<ElasticSearchItem> ConvertCountersEnumerator(DocumentsOperationContext context, IEnumerator<CounterGroupDetail> counters,
             string collection)
         {
-            throw new NotSupportedException("Counters aren't supported by ELASTICSEARCH ETL");
+            throw new NotSupportedException("Counters aren't supported by ElasticSearch ETL");
         }
 
-        protected override IEnumerator<ElasticsearchItem> ConvertTimeSeriesEnumerator(DocumentsOperationContext context, IEnumerator<TimeSeriesSegmentEntry> timeSeries,
+        protected override IEnumerator<ElasticSearchItem> ConvertTimeSeriesEnumerator(DocumentsOperationContext context, IEnumerator<TimeSeriesSegmentEntry> timeSeries,
             string collection)
         {
-            throw new NotSupportedException("Time series aren't supported by ELASTICSEARCH ETL");
+            throw new NotSupportedException("Time series aren't supported by ElasticSearch ETL");
         }
 
-        protected override IEnumerator<ElasticsearchItem> ConvertTimeSeriesDeletedRangeEnumerator(DocumentsOperationContext context,
+        protected override IEnumerator<ElasticSearchItem> ConvertTimeSeriesDeletedRangeEnumerator(DocumentsOperationContext context,
             IEnumerator<TimeSeriesDeletedRangeItem> timeSeries, string collection)
         {
-            throw new NotSupportedException("Time series aren't supported by ELASTICSEARCH ETL");
+            throw new NotSupportedException("Time series aren't supported by ElasticSearch ETL");
         }
 
-        protected override EtlTransformer<ElasticsearchItem, ElasticsearchIndexWithRecords, EtlStatsScope, EtlPerformanceOperation> GetTransformer(DocumentsOperationContext context)
+        protected override EtlTransformer<ElasticSearchItem, ElasticSearchIndexWithRecords, EtlStatsScope, EtlPerformanceOperation> GetTransformer(DocumentsOperationContext context)
         {
-            return new ElasticsearchDocumentTransformer(Transformation, Database, context, Configuration);
+            return new ElasticSearchDocumentTransformer(Transformation, Database, context, Configuration);
         }
 
-        protected override int LoadInternal(IEnumerable<ElasticsearchIndexWithRecords> records, DocumentsOperationContext context, EtlStatsScope scope)
+        protected override int LoadInternal(IEnumerable<ElasticSearchIndexWithRecords> records, DocumentsOperationContext context, EtlStatsScope scope)
         {
             Uri[] nodes = Configuration.Connection.Nodes.Select(x => new Uri(x)).ToArray();
             var pool = new StaticConnectionPool(nodes);
@@ -89,11 +89,13 @@ namespace Raven.Server.Documents.ETL.Providers.Elasticsearch
             var client = new ElasticClient(settings);
             int statsCounter = 0;
             
+            StringBuilder deleteQuery = new StringBuilder();
+            
             foreach (var index in records)
             {
-                StringBuilder deleteQuery = new StringBuilder();
+                deleteQuery.Clear();
                 
-                foreach (ElasticsearchItem delete in index.Deletes)
+                foreach (ElasticSearchItem delete in index.Deletes)
                 {
                     deleteQuery.Append($"{delete.DocumentId},");
                 }
@@ -103,12 +105,13 @@ namespace Raven.Server.Documents.ETL.Providers.Elasticsearch
                     .Query(q => q
                         .Match(p => p
                             .Field(index.IndexIdProperty)
-                            .Query($"{deleteQuery}"))
+                            .Query(deleteQuery.ToString()))
                     )
                 );
                 
                 if (deleteResponse.ServerError != null)
                 {
+                    // ElasticSearchLoadFailureException, index name, ids, deleteQuery
                     throw new Exception($"ServerError: {deleteResponse.ServerError.Error}");
                 }
                 
@@ -119,7 +122,7 @@ namespace Raven.Server.Documents.ETL.Providers.Elasticsearch
 
                 statsCounter += (int)deleteResponse.Deleted;
 
-                foreach (ElasticsearchItem insert in index.Inserts)
+                foreach (ElasticSearchItem insert in index.Inserts)
                 {
                     if (insert.Property == null) continue;
 
@@ -139,9 +142,9 @@ namespace Raven.Server.Documents.ETL.Providers.Elasticsearch
             return statsCounter;
         }
         
-        public ElasticsearchEtlTestScriptResult RunTest(IEnumerable<ElasticsearchIndexWithRecords> records)
+        public ElasticSearchEtlTestScriptResult RunTest(IEnumerable<ElasticSearchIndexWithRecords> records)
         {
-            var simulatedWriter = new ElasticsearchIndexWriterSimulator();
+            var simulatedWriter = new ElasticSearchIndexWriterSimulator();
             var summaries = new List<IndexSummary>();
             
             foreach (var record in records)
@@ -155,7 +158,7 @@ namespace Raven.Server.Documents.ETL.Providers.Elasticsearch
                 });
             }
             
-            return new ElasticsearchEtlTestScriptResult
+            return new ElasticSearchEtlTestScriptResult
             {
                 TransformationErrors = Statistics.TransformationErrorsInCurrentBatch.Errors.ToList(),
                 Summary = summaries

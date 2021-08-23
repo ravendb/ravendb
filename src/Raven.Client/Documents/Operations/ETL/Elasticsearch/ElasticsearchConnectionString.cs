@@ -3,13 +3,13 @@ using System.Linq;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Sparrow.Json.Parsing;
 
-namespace Raven.Client.Documents.Operations.ETL.Elasticsearch
+namespace Raven.Client.Documents.Operations.ETL.ElasticSearch
 {
-    public class ElasticsearchConnectionString : ConnectionString
+    public class ElasticSearchConnectionString : ConnectionString
     {
         public string[] Nodes;
 
-        public override ConnectionStringType Type => ConnectionStringType.Elasticsearch;
+        public override ConnectionStringType Type => ConnectionStringType.ElasticSearch;
 
         protected override void ValidateImpl(ref List<string> errors)
         {
@@ -33,7 +33,7 @@ namespace Raven.Client.Documents.Operations.ETL.Elasticsearch
 
         public override bool IsEqual(ConnectionString connectionString)
         {
-            if (connectionString is ElasticsearchConnectionString elasticConnection)
+            if (connectionString is ElasticSearchConnectionString elasticConnection)
             {
                 if (Nodes.Length != elasticConnection.Nodes.Length)
                     return false;

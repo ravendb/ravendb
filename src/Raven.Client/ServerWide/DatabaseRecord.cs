@@ -8,7 +8,7 @@ using Raven.Client.Documents.Indexes.Analysis;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.ETL;
-using Raven.Client.Documents.Operations.ETL.Elasticsearch;
+using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Expiration;
@@ -102,13 +102,13 @@ namespace Raven.Client.ServerWide
         
         public Dictionary<string, OlapConnectionString> OlapConnectionStrings = new Dictionary<string, OlapConnectionString>();
 
-        public Dictionary<string, ElasticsearchConnectionString> ElasticsearchConnectionStrings = new Dictionary<string, ElasticsearchConnectionString>();
+        public Dictionary<string, ElasticSearchConnectionString> ElasticSearchConnectionStrings = new Dictionary<string, ElasticSearchConnectionString>();
 
         public List<RavenEtlConfiguration> RavenEtls = new List<RavenEtlConfiguration>();
 
         public List<SqlEtlConfiguration> SqlEtls = new List<SqlEtlConfiguration>();
         
-        public List<ElasticsearchEtlConfiguration> ElasticsearchEtls = new List<ElasticsearchEtlConfiguration>();
+        public List<ElasticSearchEtlConfiguration> ElasticSearchEtls = new List<ElasticSearchEtlConfiguration>();
 
         public List<OlapEtlConfiguration> OlapEtls = new List<OlapEtlConfiguration>();
 

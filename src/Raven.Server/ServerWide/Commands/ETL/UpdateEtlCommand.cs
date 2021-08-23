@@ -1,6 +1,6 @@
 ﻿using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
-using Raven.Client.Documents.Operations.ETL.Elasticsearch;
+using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.OngoingTasks;
@@ -97,22 +97,22 @@ namespace Raven.Server.ServerWide.Commands.ETL
         }
     }
     
-    public class UpdateElasticsearchEtlCommand : UpdateEtlCommand<ElasticsearchEtlConfiguration, ElasticsearchConnectionString>
+    public class UpdateElasticSearchEtlCommand : UpdateEtlCommand<ElasticSearchEtlConfiguration, ElasticSearchConnectionString>
     {
-        public UpdateElasticsearchEtlCommand()
+        public UpdateElasticSearchEtlCommand()
         {
             // for deserialization
         }
 
-        public UpdateElasticsearchEtlCommand(long taskId, ElasticsearchEtlConfiguration configuration, string databaseName, string uniqueRequestId) : base(taskId, configuration, EtlType.Elasticsearch, databaseName, uniqueRequestId)
+        public UpdateElasticSearchEtlCommand(long taskId, ElasticSearchEtlConfiguration configuration, string databaseName, string uniqueRequestId) : base(taskId, configuration, EtlType.ElasticSearch, databaseName, uniqueRequestId)
         {
 
         }
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
-            new DeleteOngoingTaskCommand(TaskId, OngoingTaskType.ElasticsearchEtl, DatabaseName, null).UpdateDatabaseRecord(record, etag);
-            new AddElasticsearchEtlCommand(Configuration, DatabaseName, null).UpdateDatabaseRecord(record, etag);
+            new DeleteOngoingTaskCommand(TaskId, OngoingTaskType.ElasticSearchEtl, DatabaseName, null).UpdateDatabaseRecord(record, etag);
+            new AddElasticSearchEtlCommand(Configuration, DatabaseName, null).UpdateDatabaseRecord(record, etag);
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿namespace Raven.Server.Documents.ETL.Providers.Elasticsearch.Test
+﻿namespace Raven.Server.Documents.ETL.Providers.ElasticSearch.Test
 {
     public class IndexSummary
     {

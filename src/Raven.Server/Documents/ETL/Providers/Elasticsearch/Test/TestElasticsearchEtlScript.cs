@@ -1,9 +1,9 @@
-﻿using Raven.Client.Documents.Operations.ETL.Elasticsearch;
+﻿using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Server.Documents.ETL.Test;
 
-namespace Raven.Server.Documents.ETL.Providers.Elasticsearch.Test
+namespace Raven.Server.Documents.ETL.Providers.ElasticSearch.Test
 {
-    public class TestElasticsearchEtlScript : TestEtlScript<ElasticsearchEtlConfiguration, ElasticsearchConnectionString>
+    public class TestElasticSearchEtlScript : TestEtlScript<ElasticSearchEtlConfiguration, ElasticSearchConnectionString>
     {
         
     }

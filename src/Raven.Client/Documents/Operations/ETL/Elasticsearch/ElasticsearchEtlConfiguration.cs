@@ -2,25 +2,25 @@
 using System.Collections.Generic;
 using Sparrow.Json.Parsing;
 
-namespace Raven.Client.Documents.Operations.ETL.Elasticsearch
+namespace Raven.Client.Documents.Operations.ETL.ElasticSearch
 {
-    public class ElasticsearchEtlConfiguration : EtlConfiguration<ElasticsearchConnectionString>
+    public class ElasticSearchEtlConfiguration : EtlConfiguration<ElasticSearchConnectionString>
     {
         private string _destination;
         
-        public ElasticsearchEtlConfiguration()
+        public ElasticSearchEtlConfiguration()
         {
-            ElasticIndexes = new List<ElasticsearchIndex>();
+            ElasticIndexes = new List<ElasticSearchIndex>();
         }
         
-        public List<ElasticsearchIndex> ElasticIndexes { get; set; }
+        public List<ElasticSearchIndex> ElasticIndexes { get; set; }
         
         public override string GetDestination()
         {
             return _destination ??= $"@{string.Join(",",Connection.Nodes)}";
         }
 
-        public override EtlType EtlType => EtlType.Elasticsearch;
+        public override EtlType EtlType => EtlType.ElasticSearch;
         
         public override bool UsingEncryptedCommunicationChannel()
         {
@@ -36,19 +36,24 @@ namespace Raven.Client.Documents.Operations.ETL.Elasticsearch
 
         public override string GetDefaultTaskName()
         {
-            return $"Elasticsearch ETL to {ConnectionStringName}";
+            return $"ElasticSearch ETL to {ConnectionStringName}";
         }
     }
     
-    public class ElasticsearchIndex
+    public class ElasticSearchIndex
     {
         public string IndexName { get; set; }
         public string IndexIdProperty { get; set; }
 
-        protected bool Equals(ElasticsearchIndex other)
+        protected bool Equals(ElasticSearchIndex other)
         {
             return string.Equals(IndexName, other.IndexName, StringComparison.OrdinalIgnoreCase) &&
                    string.Equals(IndexIdProperty, other.IndexIdProperty, StringComparison.OrdinalIgnoreCase);
+        }
+        
+        public override int GetHashCode()
+        {
+            return base.GetHashCode();
         }
 
         public DynamicJsonValue ToJson()

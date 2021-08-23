@@ -1,8 +1,8 @@
-﻿namespace Raven.Server.Documents.ETL.Providers.Elasticsearch
+﻿namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
 {
-    public class ElasticsearchItem : ExtractedItem
+    public class ElasticSearchItem : ExtractedItem
     {
-        public ElasticsearchItem(ElasticsearchItem item)
+        public ElasticSearchItem(ElasticSearchItem item)
         {
             Etag = item.Etag;
             DocumentId = item.DocumentId;
@@ -12,14 +12,14 @@
             ChangeVector = item.ChangeVector;
         }
 
-        public ElasticsearchItem(Document document, string collection) : base(document, collection, EtlItemType.Document)
+        public ElasticSearchItem(Document document, string collection) : base(document, collection, EtlItemType.Document)
         {
         }
 
-        public ElasticsearchItem(Tombstone tombstone, string collection) : base(tombstone, collection, EtlItemType.Document)
+        public ElasticSearchItem(Tombstone tombstone, string collection) : base(tombstone, collection, EtlItemType.Document)
         {
         }
         
-        public ElasticsearchProperty Property { get; set; }
+        public ElasticSearchProperty Property { get; set; }
     }
 }

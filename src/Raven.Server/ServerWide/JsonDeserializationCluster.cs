@@ -4,7 +4,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.ETL;
-using Raven.Client.Documents.Operations.ETL.Elasticsearch;
+using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Expiration;
@@ -102,7 +102,7 @@ namespace Raven.Server.ServerWide
 
         public static Func<BlittableJsonReaderObject, OlapEtlConfiguration> OlapEtlConfiguration = GenerateJsonDeserializationRoutine<OlapEtlConfiguration>();
 
-        public static Func<BlittableJsonReaderObject, ElasticsearchEtlConfiguration> ElasticsearchEtlConfiguration = GenerateJsonDeserializationRoutine<ElasticsearchEtlConfiguration>();
+        public static Func<BlittableJsonReaderObject, ElasticSearchEtlConfiguration> ElasticSearchEtlConfiguration = GenerateJsonDeserializationRoutine<ElasticSearchEtlConfiguration>();
 
         public static readonly Func<BlittableJsonReaderObject, ServerStore.PutRaftCommandResult> PutRaftCommandResult = GenerateJsonDeserializationRoutine<ServerStore.PutRaftCommandResult>();
 
@@ -115,7 +115,7 @@ namespace Raven.Server.ServerWide
         public static readonly Func<BlittableJsonReaderObject, SqlConnectionString> SqlConnectionString = GenerateJsonDeserializationRoutine<SqlConnectionString>();
 
         public static readonly Func<BlittableJsonReaderObject, OlapConnectionString> OlapConnectionString = GenerateJsonDeserializationRoutine<OlapConnectionString>();
-        public static readonly Func<BlittableJsonReaderObject, ElasticsearchConnectionString> ElasticsearchConnectionString = GenerateJsonDeserializationRoutine<ElasticsearchConnectionString>();
+        public static readonly Func<BlittableJsonReaderObject, ElasticSearchConnectionString> ElasticSearchConnectionString = GenerateJsonDeserializationRoutine<ElasticSearchConnectionString>();
 
         public static readonly Func<BlittableJsonReaderObject, ClientConfiguration> ClientConfiguration = GenerateJsonDeserializationRoutine<ClientConfiguration>();
 
@@ -200,22 +200,22 @@ namespace Raven.Server.ServerWide
             [nameof(AddRavenEtlCommand)] = GenerateJsonDeserializationRoutine<AddRavenEtlCommand>(),
             [nameof(AddSqlEtlCommand)] = GenerateJsonDeserializationRoutine<AddSqlEtlCommand>(),
             [nameof(AddOlapEtlCommand)] = GenerateJsonDeserializationRoutine<AddOlapEtlCommand>(),
-            [nameof(AddElasticsearchEtlCommand)] = GenerateJsonDeserializationRoutine<AddElasticsearchEtlCommand>(),
+            [nameof(AddElasticSearchEtlCommand)] = GenerateJsonDeserializationRoutine<AddElasticSearchEtlCommand>(),
             [nameof(UpdateRavenEtlCommand)] = GenerateJsonDeserializationRoutine<UpdateRavenEtlCommand>(),
             [nameof(UpdateSqlEtlCommand)] = GenerateJsonDeserializationRoutine<UpdateSqlEtlCommand>(),
             [nameof(UpdateOlapEtlCommand)] = GenerateJsonDeserializationRoutine<UpdateOlapEtlCommand>(),
-            [nameof(UpdateElasticsearchEtlCommand)] = GenerateJsonDeserializationRoutine<UpdateElasticsearchEtlCommand>(),
+            [nameof(UpdateElasticSearchEtlCommand)] = GenerateJsonDeserializationRoutine<UpdateElasticSearchEtlCommand>(),
             [nameof(UpdateEtlProcessStateCommand)] = GenerateJsonDeserializationRoutine<UpdateEtlProcessStateCommand>(),
             [nameof(UpdateExternalReplicationStateCommand)] = GenerateJsonDeserializationRoutine<UpdateExternalReplicationStateCommand>(),
             [nameof(DeleteOngoingTaskCommand)] = GenerateJsonDeserializationRoutine<DeleteOngoingTaskCommand>(),
             [nameof(PutRavenConnectionStringCommand)] = GenerateJsonDeserializationRoutine<PutRavenConnectionStringCommand>(),
             [nameof(PutSqlConnectionStringCommand)] = GenerateJsonDeserializationRoutine<PutSqlConnectionStringCommand>(),
             [nameof(PutOlapConnectionStringCommand)] = GenerateJsonDeserializationRoutine<PutOlapConnectionStringCommand>(),
-            [nameof(PutElasticsearchConnectionStringCommand)] = GenerateJsonDeserializationRoutine<PutElasticsearchConnectionStringCommand>(),
+            [nameof(PutElasticSearchConnectionStringCommand)] = GenerateJsonDeserializationRoutine<PutElasticSearchConnectionStringCommand>(),
             [nameof(RemoveRavenConnectionStringCommand)] = GenerateJsonDeserializationRoutine<RemoveRavenConnectionStringCommand>(),
             [nameof(RemoveSqlConnectionStringCommand)] = GenerateJsonDeserializationRoutine<RemoveSqlConnectionStringCommand>(),
             [nameof(RemoveOlapConnectionStringCommand)] = GenerateJsonDeserializationRoutine<RemoveOlapConnectionStringCommand>(),
-            [nameof(RemoveElasticsearchConnectionStringCommand)] = GenerateJsonDeserializationRoutine<RemoveElasticsearchConnectionStringCommand>(),
+            [nameof(RemoveElasticSearchConnectionStringCommand)] = GenerateJsonDeserializationRoutine<RemoveElasticSearchConnectionStringCommand>(),
             [nameof(RemoveNodeFromClusterCommand)] = GenerateJsonDeserializationRoutine<RemoveNodeFromClusterCommand>(),
             [nameof(UpdateSubscriptionClientConnectionTime)] = GenerateJsonDeserializationRoutine<UpdateSubscriptionClientConnectionTime>(),
             [nameof(UpdateSnmpDatabasesMappingCommand)] = GenerateJsonDeserializationRoutine<UpdateSnmpDatabasesMappingCommand>(),

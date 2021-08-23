@@ -2,14 +2,14 @@
 using System.Collections;
 using System.Collections.Generic;
 
-namespace Raven.Server.Documents.ETL.Providers.Elasticsearch.Enumerators
+namespace Raven.Server.Documents.ETL.Providers.ElasticSearch.Enumerators
 {
-    public class DocumentsToElasticsearchItems : IEnumerator<ElasticsearchItem>
+    public class DocumentsToElasticSearchItems : IEnumerator<ElasticSearchItem>
     {
         private readonly string _collection;
         private readonly IEnumerator<Document> _docs;
 
-        public DocumentsToElasticsearchItems(IEnumerator<Document> docs, string collection)
+        public DocumentsToElasticSearchItems(IEnumerator<Document> docs, string collection)
         {
             _docs = docs;
             _collection = collection;
@@ -20,7 +20,7 @@ namespace Raven.Server.Documents.ETL.Providers.Elasticsearch.Enumerators
             if (_docs.MoveNext() == false)
                 return false;
 
-            Current = new ElasticsearchItem(_docs.Current, _collection);
+            Current = new ElasticSearchItem(_docs.Current, _collection);
 
             return true;
         }
@@ -36,6 +36,6 @@ namespace Raven.Server.Documents.ETL.Providers.Elasticsearch.Enumerators
         {
         }
 
-        public ElasticsearchItem Current { get; private set; }
+        public ElasticSearchItem Current { get; private set; }
     }
 }

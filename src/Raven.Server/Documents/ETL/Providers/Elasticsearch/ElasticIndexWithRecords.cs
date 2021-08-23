@@ -1,15 +1,15 @@
 ﻿using System.Collections.Generic;
-using Raven.Client.Documents.Operations.ETL.Elasticsearch;
+using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 
-namespace Raven.Server.Documents.ETL.Providers.Elasticsearch
+namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
 {
-    public class ElasticsearchIndexWithRecords : ElasticsearchIndex
+    public class ElasticSearchIndexWithRecords : ElasticSearchIndex
     {
-        public readonly List<ElasticsearchItem> Deletes = new List<ElasticsearchItem>();
+        public readonly List<ElasticSearchItem> Deletes = new List<ElasticSearchItem>();
 
-        public readonly List<ElasticsearchItem> Inserts = new List<ElasticsearchItem>();
+        public readonly List<ElasticSearchItem> Inserts = new List<ElasticSearchItem>();
 
-        public ElasticsearchIndexWithRecords(ElasticsearchIndex index)
+        public ElasticSearchIndexWithRecords(ElasticSearchIndex index)
         {
             IndexName = index.IndexName;
             IndexIdProperty = index.IndexIdProperty;

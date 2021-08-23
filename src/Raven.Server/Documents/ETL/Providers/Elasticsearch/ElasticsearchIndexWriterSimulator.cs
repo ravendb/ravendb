@@ -1,11 +1,11 @@
 ﻿using System.Collections.Generic;
 using System.Text;
 
-namespace Raven.Server.Documents.ETL.Providers.Elasticsearch
+namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
 {
-    public class ElasticsearchIndexWriterSimulator
+    public class ElasticSearchIndexWriterSimulator
     {
-        public IEnumerable<string> SimulateExecuteCommandText(ElasticsearchIndexWithRecords records)
+        public IEnumerable<string> SimulateExecuteCommandText(ElasticSearchIndexWithRecords records)
         {
             var result = new List<string>();
 
@@ -18,7 +18,7 @@ namespace Raven.Server.Documents.ETL.Providers.Elasticsearch
             return result;
         }
 
-        private string GenerateDeleteItemsCommandText(string indexName, string idField, List<ElasticsearchItem> elasticItems)
+        private string GenerateDeleteItemsCommandText(string indexName, string idField, List<ElasticSearchItem> elasticItems)
         {
             StringBuilder deleteQuery = new StringBuilder();
 
@@ -27,6 +27,7 @@ namespace Raven.Server.Documents.ETL.Providers.Elasticsearch
                 deleteQuery.Append($"{t.DocumentId},");
             }
 
+            // arek will sent example
             var sb = new StringBuilder("POST ")
                 .Append(indexName)
                 .AppendLine("/_delete_by_query")
@@ -47,7 +48,7 @@ namespace Raven.Server.Documents.ETL.Providers.Elasticsearch
             return sb.ToString();
         }
 
-        private IEnumerable<string> GenerateInsertItemsCommandText(string indexName, List<ElasticsearchItem> elasticsearchItems)
+        private IEnumerable<string> GenerateInsertItemsCommandText(string indexName, List<ElasticSearchItem> elasticsearchItems)
         {
             var result = new List<string>();
 

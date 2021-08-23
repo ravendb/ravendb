@@ -11,7 +11,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
-using Raven.Client.Documents.Operations.ETL.Elasticsearch;
+using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.OngoingTasks;
@@ -644,7 +644,7 @@ namespace Raven.Server.Web.System
                 Dictionary<string, RavenConnectionString> ravenConnectionStrings;
                 Dictionary<string, SqlConnectionString> sqlConnectionStrings;
                 Dictionary<string, OlapConnectionString> olapConnectionStrings;
-                Dictionary<string, ElasticsearchConnectionString> elasticsearchConnectionStrings;
+                Dictionary<string, ElasticSearchConnectionString> elasticsearchConnectionStrings;
 
                 using (context.OpenReadTransaction())
                 using (var rawRecord = ServerStore.Cluster.ReadRawDatabaseRecord(context, Database.Name))
@@ -665,7 +665,7 @@ namespace Raven.Server.Web.System
                         ravenConnectionStrings = rawRecord.RavenConnectionStrings;
                         sqlConnectionStrings = rawRecord.SqlConnectionStrings;
                         olapConnectionStrings = rawRecord.OlapConnectionString;
-                        elasticsearchConnectionStrings = rawRecord.ElasticsearchConnectionStrings;
+                        elasticsearchConnectionStrings = rawRecord.ElasticSearchConnectionStrings;
                     }
                 }
 
@@ -676,20 +676,20 @@ namespace Raven.Server.Web.System
                         RavenConnectionStrings = ravenConnectionStrings,
                         SqlConnectionStrings = sqlConnectionStrings,
                         OlapConnectionStrings = olapConnectionStrings,
-                        ElasticsearchConnectionStrings = elasticsearchConnectionStrings
+                        ElasticSearchConnectionStrings = elasticsearchConnectionStrings
                     };
                     context.Write(writer, result.ToJson());
                 }
             }
         }
 
-        private static (Dictionary<string, RavenConnectionString>, Dictionary<string, SqlConnectionString>, Dictionary<string, OlapConnectionString>, Dictionary<string, ElasticsearchConnectionString>)
+        private static (Dictionary<string, RavenConnectionString>, Dictionary<string, SqlConnectionString>, Dictionary<string, OlapConnectionString>, Dictionary<string, ElasticSearchConnectionString>)
             GetConnectionString(RawDatabaseRecord rawRecord, string connectionStringName, ConnectionStringType connectionStringType)
         {
             var ravenConnectionStrings = new Dictionary<string, RavenConnectionString>();
             var sqlConnectionStrings = new Dictionary<string, SqlConnectionString>();
             var olapConnectionStrings = new Dictionary<string, OlapConnectionString>();
-            var elasticsearchConnectionStrings = new Dictionary<string, ElasticsearchConnectionString>();
+            var elasticsearchConnectionStrings = new Dictionary<string, ElasticSearchConnectionString>();
 
             switch (connectionStringType)
             {
@@ -720,8 +720,8 @@ namespace Raven.Server.Web.System
 
                     break;
                 
-                case ConnectionStringType.Elasticsearch:
-                    var recordElasticConnectionStrings = rawRecord.ElasticsearchConnectionStrings;
+                case ConnectionStringType.ElasticSearch:
+                    var recordElasticConnectionStrings = rawRecord.ElasticSearchConnectionStrings;
                     if (recordElasticConnectionStrings != null && recordElasticConnectionStrings.TryGetValue(connectionStringName, out var elasticConnectionString))
                     {
                         elasticsearchConnectionStrings.TryAdd(connectionStringName, elasticConnectionString);
@@ -806,8 +806,8 @@ namespace Raven.Server.Web.System
                 case EtlType.Olap:
                     ServerStore.LicenseManager.AssertCanAddOlapEtl();
                     break;
-                case EtlType.Elasticsearch:
-                    ServerStore.LicenseManager.AssertCanAddElasticsearchEtl();
+                case EtlType.ElasticSearch:
+                    ServerStore.LicenseManager.AssertCanAddElasticSearchEtl();
                     break;
                 default:
                     throw new NotSupportedException($"Unknown ETL configuration type. Configuration: {etlConfiguration}");

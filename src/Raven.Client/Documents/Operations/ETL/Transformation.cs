@@ -387,7 +387,7 @@ namespace Raven.Client.Documents.Operations.ETL
                             case EtlType.Olap:
                                 targetName = "Table";
                                 break;
-                            case EtlType.Elasticsearch:
+                            case EtlType.ElasticSearch:
                                 targetName = "Index";
                                 break;
                             default:

@@ -9,7 +9,7 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
-using Raven.Client.Documents.Operations.ETL.Elasticsearch;
+using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.OngoingTasks;
@@ -18,7 +18,7 @@ using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents.ETL.Metrics;
-using Raven.Server.Documents.ETL.Providers.Elasticsearch;
+using Raven.Server.Documents.ETL.Providers.ElasticSearch;
 using Raven.Server.Documents.ETL.Providers.OLAP;
 using Raven.Server.Documents.ETL.Providers.OLAP.Test;
 using Raven.Server.Documents.ETL.Providers.Raven;
@@ -1139,13 +1139,13 @@ namespace Raven.Server.Documents.ETL
 
                         }
 
-                    case EtlType.Elasticsearch:
-                        using (var elasticsearchEtl = new ElasticsearchEtl(testScript.Configuration.Transforms[0], testScript.Configuration as ElasticsearchEtlConfiguration, database, database.ServerStore))
+                    case EtlType.ElasticSearch:
+                        using (var elasticsearchEtl = new ElasticSearchEtl(testScript.Configuration.Transforms[0], testScript.Configuration as ElasticSearchEtlConfiguration, database, database.ServerStore))
                         using (elasticsearchEtl.EnterTestMode(out debugOutput))
                         {
                             elasticsearchEtl.EnsureThreadAllocationStats();
 
-                            var elasticsearchItem = testScript.IsDelete ? new ElasticsearchItem(tombstone, docCollection) : new ElasticsearchItem(document, docCollection);
+                            var elasticsearchItem = testScript.IsDelete ? new ElasticSearchItem(tombstone, docCollection) : new ElasticSearchItem(document, docCollection);
 
                             var results = elasticsearchEtl.Transform(new[] { elasticsearchItem }, context, new EtlStatsScope(new EtlRunStats()),
                                 new EtlProcessState());

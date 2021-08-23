@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
-using Raven.Client.Documents.Operations.ETL.Elasticsearch;
+using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.ServerWide;
@@ -83,21 +83,21 @@ namespace Raven.Server.ServerWide.Commands.ETL
         }
     }
 
-    public class AddElasticsearchEtlCommand : AddEtlCommand<ElasticsearchEtlConfiguration, ElasticsearchConnectionString>
+    public class AddElasticSearchEtlCommand : AddEtlCommand<ElasticSearchEtlConfiguration, ElasticSearchConnectionString>
     {
-        public AddElasticsearchEtlCommand()
+        public AddElasticSearchEtlCommand()
         {
             // for deserialization
         }
 
-        public AddElasticsearchEtlCommand(ElasticsearchEtlConfiguration configuration, string databaseName, string uniqueRequestId) : base(configuration, databaseName, uniqueRequestId)
+        public AddElasticSearchEtlCommand(ElasticSearchEtlConfiguration configuration, string databaseName, string uniqueRequestId) : base(configuration, databaseName, uniqueRequestId)
         {
 
         }
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
-            Add(ref record.ElasticsearchEtls, record, etag);
+            Add(ref record.ElasticSearchEtls, record, etag);
         }
     }
 

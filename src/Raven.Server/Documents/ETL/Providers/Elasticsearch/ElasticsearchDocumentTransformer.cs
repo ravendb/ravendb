@@ -3,22 +3,22 @@ using System.Collections.Generic;
 using System.Linq;
 using Jint.Native;
 using Raven.Client.Documents.Operations.ETL;
-using Raven.Client.Documents.Operations.ETL.Elasticsearch;
+using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
 
-namespace Raven.Server.Documents.ETL.Providers.Elasticsearch
+namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
 {
-    internal class ElasticsearchDocumentTransformer : EtlTransformer<ElasticsearchItem, ElasticsearchIndexWithRecords, EtlStatsScope, EtlPerformanceOperation>
+    internal class ElasticSearchDocumentTransformer : EtlTransformer<ElasticSearchItem, ElasticSearchIndexWithRecords, EtlStatsScope, EtlPerformanceOperation>
     {
-        private readonly ElasticsearchEtlConfiguration _config;
-        private readonly Dictionary<string, ElasticsearchIndexWithRecords> _indexes;
-        private readonly List<ElasticsearchIndex> _indexesForScript;
+        private readonly ElasticSearchEtlConfiguration _config;
+        private readonly Dictionary<string, ElasticSearchIndexWithRecords> _indexes;
+        private readonly List<ElasticSearchIndex> _indexesForScript;
 
-        public ElasticsearchDocumentTransformer(Transformation transformation, DocumentDatabase database, DocumentsOperationContext context, ElasticsearchEtlConfiguration config)
-            : base(database, context, new PatchRequest(transformation.Script, PatchRequestType.ElasticsearchEtl), null)
+        public ElasticSearchDocumentTransformer(Transformation transformation, DocumentDatabase database, DocumentsOperationContext context, ElasticSearchEtlConfiguration config)
+            : base(database, context, new PatchRequest(transformation.Script, PatchRequestType.ElasticSearchEtl), null)
         {
             _config = config;
 
@@ -26,8 +26,8 @@ namespace Raven.Server.Documents.ETL.Providers.Elasticsearch
 
             LoadToDestinations = destinationIndexes;
 
-            _indexes = new Dictionary<string, ElasticsearchIndexWithRecords>(destinationIndexes.Length);
-            _indexesForScript = new List<ElasticsearchIndex>(destinationIndexes.Length);
+            _indexes = new Dictionary<string, ElasticSearchIndexWithRecords>(destinationIndexes.Length);
+            _indexesForScript = new List<ElasticSearchIndex>(destinationIndexes.Length);
 
             for (var i = 0; i < _config.ElasticIndexes.Count; i++)
             {
@@ -48,17 +48,17 @@ namespace Raven.Server.Documents.ETL.Providers.Elasticsearch
 
         protected override void AddLoadedAttachment(JsValue reference, string name, Attachment attachment)
         {
-            throw new NotSupportedException("Attachments aren't supported by ELASTICSEARCH ETL");
+            throw new NotSupportedException("Attachments aren't supported by ElasticSearch ETL");
         }
 
         protected override void AddLoadedCounter(JsValue reference, string name, long value)
         {
-            throw new NotSupportedException("Counters aren't supported by ELASTICSEARCH ETL");
+            throw new NotSupportedException("Counters aren't supported by ElasticSearch ETL");
         }
 
         protected override void AddLoadedTimeSeries(JsValue reference, string name, IEnumerable<SingleResult> entries)
         {
-            throw new NotSupportedException("Time series aren't supported by ELASTICSEARCH ETL");
+            throw new NotSupportedException("Time series aren't supported by ElasticSearch ETL");
         }
 
         protected override string[] LoadToDestinations { get; }
@@ -69,17 +69,17 @@ namespace Raven.Server.Documents.ETL.Providers.Elasticsearch
                 ThrowLoadParameterIsMandatory(nameof(indexName));
 
             var result = document.TranslateToObject(Context);
-            var property = new ElasticsearchProperty {RawValue = result};
+            var property = new ElasticSearchProperty {RawValue = result};
 
-            GetOrAdd(indexName).Inserts.Add(new ElasticsearchItem(Current) {Property = property});
+            GetOrAdd(indexName).Inserts.Add(new ElasticSearchItem(Current) {Property = property});
         }
 
-        public override List<ElasticsearchIndexWithRecords> GetTransformedResults()
+        public override List<ElasticSearchIndexWithRecords> GetTransformedResults()
         {
             return _indexes.Values.ToList();
         }
 
-        public override void Transform(ElasticsearchItem item, EtlStatsScope stats, EtlProcessState state)
+        public override void Transform(ElasticSearchItem item, EtlStatsScope stats, EtlProcessState state)
         {
             if (item.IsDelete == false)
             {
@@ -96,9 +96,9 @@ namespace Raven.Server.Documents.ETL.Providers.Elasticsearch
             }
         }
 
-        private ElasticsearchIndexWithRecords GetOrAdd(string indexName)
+        private ElasticSearchIndexWithRecords GetOrAdd(string indexName)
         {
-            if (_indexes.TryGetValue(indexName, out ElasticsearchIndexWithRecords index) == false)
+            if (_indexes.TryGetValue(indexName, out ElasticSearchIndexWithRecords index) == false)
             {
                 var elasticIndex = _config.ElasticIndexes.Find(x => x.IndexName.Equals(indexName, StringComparison.OrdinalIgnoreCase));
 
@@ -106,7 +106,7 @@ namespace Raven.Server.Documents.ETL.Providers.Elasticsearch
                     ThrowIndexNotDefinedInConfig(indexName);
 
                 _indexes[indexName] =
-                    index = new ElasticsearchIndexWithRecords(elasticIndex);
+                    index = new ElasticSearchIndexWithRecords(elasticIndex);
             }
 
             return index;
@@ -114,7 +114,7 @@ namespace Raven.Server.Documents.ETL.Providers.Elasticsearch
 
         private static void ThrowIndexNotDefinedInConfig(string indexName)
         {
-            throw new InvalidOperationException($"Index '{indexName}' was not defined in the configuration of ELASTICSEARCH ETL task");
+            throw new InvalidOperationException($"Index '{indexName}' was not defined in the configuration of ElasticSearch ETL task");
         }
     }
 }
