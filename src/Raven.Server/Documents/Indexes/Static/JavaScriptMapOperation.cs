@@ -67,6 +67,7 @@ namespace Raven.Server.Documents.Indexes.Static
                         if (!MapFuncV8.IsFunction)
                             throw new JavaScriptIndexFuncException($"MapFuncV8 is not a function");
                         jsRes = MapFuncV8.StaticCall(jsItem);
+                        //var resStr = _engine.Execute("JSON.stringify").StaticCall(new InternalHandle(jsRes, true)).AsString;
                         jsRes.ThrowOnError();
                     }
                     catch (V8Exception jse)

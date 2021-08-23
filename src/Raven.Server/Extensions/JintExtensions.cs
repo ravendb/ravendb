@@ -6,6 +6,7 @@ using Jint;
 using Jint.Constraints;
 using Jint.Native;
 using Jint.Native.Array;
+using Jint.Runtime;
 using Jint.Runtime.Descriptors;
 using Raven.Client.Util;
 
@@ -47,6 +48,9 @@ namespace Raven.Server.Extensions
             {
                 engine.Execute(source);
             }
+            catch (JintException e) 
+            {
+            }
             finally
             {
                 engine.ResetCallStack();
@@ -59,6 +63,9 @@ namespace Raven.Server.Extensions
             try
             {
                 engine.Execute(script);
+            }
+            catch (JintException e) 
+            {
             }
             finally
             {

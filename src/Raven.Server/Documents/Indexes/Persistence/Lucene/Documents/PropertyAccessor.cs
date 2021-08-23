@@ -176,6 +176,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             {
                 using (jsPropertyValue)
                 {
+                    //var resStr = jsPropertyValue.Engine.Execute("JSON.stringify").StaticCall(new InternalHandle(jsPropertyValue, true)).AsString;
                     CompiledIndexField field = null;
                     var isGroupByField = _groupByFields?.TryGetValue(propertyName, out field) ?? false;
 
@@ -198,6 +199,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         private static object GetValue(InternalHandle jsValue)
         {
+            //var resStr = jsValue.Engine.Execute("JSON.stringify").StaticCall(new InternalHandle(jsValue, true)).AsString;
             if (jsValue.IsNull) {
                 jsValue.Dispose();
                 return null;
@@ -241,7 +243,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                         case LazyNumberValue lnv:
                             return lnv; //should be already blittable supported type.
                     }
-                    return boundObject;
                     //ThrowInvalidObject(jsValue);
                 }
                 return jsValue;

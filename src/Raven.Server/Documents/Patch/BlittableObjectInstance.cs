@@ -44,6 +44,8 @@ namespace Raven.Server.Documents.Patch
         public SpatialResult? Distance => _doc?.Distance;
         public float? IndexScore => _doc?.IndexScore;
 
+        private int HandleID; // just for debugging
+        private Int32 ObjectID; // just for debugging
 
         public InternalHandle CreateObjectBinder() {
             return BlittableObjectInstance.CreateObjectBinder(Engine, this);
@@ -85,29 +87,44 @@ namespace Raven.Server.Documents.Patch
             _doc = doc;
         }
 
+        ~BlittableObjectInstance()
+        {            
+        }
+
+
         public class CustomBinder : ObjectBinderEx<BlittableObjectInstance>
         {
+            public CustomBinder() : base()
+            {
+            }
+
+            ~CustomBinder() {
+            }
+
             private BlittableObjectProperty GetOwnProperty(string propertyName)
             {
-                /*if (propertyName == Constants.Documents.Metadata.Key)
-                { 
-                    using (var jsValue = ObjCLR.JavaScriptUtils.GetMetadata((V8EngineEx)Engine, false, InternalHandle.Empty, this))
-                    {
-                        jsValue.ThrowOnError(); // TODO check if is needed here
-                        return new BlittableObjectProperty(ObjCLR, propertyName, jsValue);
-                    }
-                }*/
+                ObjCLR.HandleID = this._.ID;
+                ObjCLR.ObjectID = this.ID;
 
                 BlittableObjectProperty val = null;
                 if (ObjCLR.OwnValues?.TryGetValue(propertyName, out val) == true &&
                     val != null)
+                {
                     return val;
+                }
 
                 ObjCLR.Deletes?.Remove(propertyName);
 
                 val = new BlittableObjectProperty(ObjCLR, propertyName);
 
-                if (val.Value.IsUndefined &&
+                /*if (val.Value.IsEmpty) {
+                    InternalHandle jsValue = base.NamedPropertyGetter(ref propertyName);
+                    if (!jsValue.IsEmpty) {
+                        val = new BlittableObjectProperty(ObjCLR, propertyName, jsValue);
+                    }
+                }*/
+
+                if (val.Value.IsEmpty &&
                     ObjCLR.DocumentId == null &&
                     ObjCLR._set == false)
                 {
@@ -126,8 +143,7 @@ namespace Raven.Server.Documents.Patch
                 var desc = GetOwnProperty(propertyName);
                 if (desc != null)
                     return new InternalHandle(desc.Value, true);
-
-                return base.NamedPropertyGetter(ref propertyName);
+                return InternalHandle.Empty;
             }
 
             public override InternalHandle NamedPropertySetter(ref string propertyName, InternalHandle value, V8PropertyAttributes attributes = V8PropertyAttributes.Undefined)
@@ -140,7 +156,26 @@ namespace Raven.Server.Documents.Patch
                 ObjCLR._set = true;
                 try
                 {
-                    return base.NamedPropertySetter(ref propertyName, value, attributes);
+                    BlittableObjectProperty val = null;
+                    if (ObjCLR.OwnValues?.TryGetValue(propertyName, out val) == true &&
+                        val != null)
+                    {
+                        val.Value = value;
+                        return value;
+                    }
+                    
+                    InternalHandle jsRes = InternalHandle.Empty; //base.NamedPropertySetter(ref propertyName, value, attributes);
+                    if (jsRes.IsEmpty) {
+                        ObjCLR.Deletes?.Remove(propertyName);
+
+                        jsRes = new InternalHandle(value, true);
+                        val = new BlittableObjectProperty(ObjCLR, propertyName, jsRes);
+                        val.Changed = true;
+                        ObjCLR.MarkChanged();
+                        ObjCLR.OwnValues ??= new Dictionary<string, BlittableObjectProperty>(ObjCLR.Blittable.Count);
+                        ObjCLR.OwnValues[propertyName] = val;
+                    }
+                    return jsRes;
                 }
                 finally
                 {
@@ -150,10 +185,6 @@ namespace Raven.Server.Documents.Patch
 
             public override bool? NamedPropertyDeleter(ref string propertyName)
             {
-                bool? res = base.NamedPropertyDeleter(ref propertyName);
-                if (res == true)
-                    return res;
-
                 if (propertyName == Constants.Documents.Metadata.Key) {
                     return false;
                 }
@@ -162,9 +193,8 @@ namespace Raven.Server.Documents.Patch
                     ObjCLR.Deletes = new HashSet<string>();
 
                 var desc = GetOwnProperty(propertyName);
-
                 if (desc == null)
-                    return InternalHandle.Empty;
+                    return InternalHandle.Empty; //base.NamedPropertyDeleter(ref propertyName);
 
                 ObjCLR.MarkChanged();
                 ObjCLR.Deletes.Add(propertyName);
@@ -173,11 +203,11 @@ namespace Raven.Server.Documents.Patch
 
             public override V8PropertyAttributes? NamedPropertyQuery(ref string propertyName)
             {
-                V8PropertyAttributes? res = base.NamedPropertyQuery(ref propertyName);
+                /*V8PropertyAttributes? res = base.NamedPropertyQuery(ref propertyName);
                 if (res != null)
-                    return res;
+                    return res;*/
 
-                if (Array.IndexOf(ObjCLR.Blittable.GetPropertyNames(), propertyName) >= 0)
+                if (ObjCLR.OwnValues?.ContainsKey(propertyName) == true || Array.IndexOf(ObjCLR.Blittable.GetPropertyNames(), propertyName) >= 0)
                     return V8PropertyAttributes.None;
 
                 return null;
@@ -185,11 +215,10 @@ namespace Raven.Server.Documents.Patch
 
             public override InternalHandle NamedPropertyEnumerator()
             {
-                var list = base.NamedPropertyEnumerator();
+                var list = Engine.CreateArray(Array.Empty<InternalHandle>()); //base.NamedPropertyEnumerator();
                 void pushKey(string value) {
-                    using (var jsValue = Engine.CreateValue(value))
-                    using (var jsResPush = list.Call("push", InternalHandle.Empty, jsValue))
-                        jsResPush.ThrowOnError(); // TODO check if is needed here
+                    using (var jsResPush = list.StaticCall("push", Engine.CreateValue(value)))
+                        jsResPush.ThrowOnError();
                 }
 
                 if (ObjCLR.OwnValues != null)
@@ -198,8 +227,10 @@ namespace Raven.Server.Documents.Patch
                         pushKey(value.Key);
                 }
 
-                if (ObjCLR.Blittable == null)
+                if (ObjCLR.Blittable == null) {
+                    //var listStr1 = Engine.Execute("JSON.stringify").StaticCall(new InternalHandle(list, true)).AsString;
                     return list;
+                }
 
                 foreach (var key in ObjCLR.Blittable.GetPropertyNames())
                 {
@@ -211,8 +242,7 @@ namespace Raven.Server.Documents.Patch
                     pushKey(key);
                 }
 
-                //pushKey(Constants.Documents.Metadata.Key);
-
+                //var listStr = Engine.Execute("JSON.stringify").StaticCall(new InternalHandle(list, true)).AsString;
                 return list;
             }
 
@@ -288,6 +318,7 @@ namespace Raven.Server.Documents.Patch
             public V8EngineEx Engine;
             private InternalHandle _value = InternalHandle.Empty;
             public bool Changed;
+            private int HandleID; // just for debugging
 
             public string Name
             {
@@ -304,6 +335,7 @@ namespace Raven.Server.Documents.Patch
                     _value.Set(value);
                     _parent.MarkChanged();
                     Changed = true;
+                    HandleID = _value.ID;
                 }
             }
 
@@ -320,6 +352,7 @@ namespace Raven.Server.Documents.Patch
             {
                 Init(parent, propertyName);
                 _value = jsValue;
+                HandleID = _value.ID;
             }
 
             public BlittableObjectProperty(BlittableObjectInstance parent, string propertyName)

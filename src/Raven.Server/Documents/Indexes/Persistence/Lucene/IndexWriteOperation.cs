@@ -14,6 +14,7 @@ using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Voron.Impl;
+//using V8.Net;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
@@ -144,6 +145,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             bool shouldSkip;
             IDisposable setDocument;
             using (Stats.ConvertStats.Start())
+                /*if (document is InternalHandle jsDoc) {
+                    var resStr = jsDoc.Engine.Execute("JSON.stringify").StaticCall(new InternalHandle(jsDoc, true)).AsString;
+                }*/
                 setDocument = _converter.SetDocument(key, sourceDocumentId, document, indexContext, this, out shouldSkip);
 
             using (setDocument)

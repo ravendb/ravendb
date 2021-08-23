@@ -942,10 +942,20 @@ function map(name, lambda) {
             var javascriptParser = new JavaScriptParser(code, DefaultParserOptions);
             var program = javascriptParser.ParseScript();
             var loadVisitor = new EsprimaReferencedCollectionVisitor();
-            if (string.IsNullOrEmpty(additionalSources) == false)
-                loadVisitor.Visit(new JavaScriptParser(additionalSources, DefaultParserOptions).ParseScript());
+            if (string.IsNullOrEmpty(additionalSources) == false) {
+                try {
+                    loadVisitor.Visit(new JavaScriptParser(additionalSources, DefaultParserOptions).ParseScript());
+                }
+                catch {
+                }
+            }
 
-            loadVisitor.Visit(program);
+            try {
+                loadVisitor.Visit(program);
+            }
+            catch {
+            }
+
             return new MapMetadata
             {
                 ReferencedCollections = loadVisitor.ReferencedCollection,

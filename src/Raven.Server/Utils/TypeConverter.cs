@@ -256,6 +256,7 @@ namespace Raven.Server.Utils
                 case BlittableSupportedReturnType.Javascript:
                 {
                     var jsValue = (InternalHandle)value;
+                    //var resStr = jsValue.Engine.Execute("JSON.stringify").StaticCall(new InternalHandle(jsValue, true)).AsString;
                     if (jsValue.IsNull)
                     {
                         if (forIndexing && jsValue.BoundObject is DynamicJsNull dynamicJsNull)

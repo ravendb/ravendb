@@ -35,16 +35,6 @@ namespace Raven.Server.Extensions
             return obj.GetProperty(index);
         }
 
-        public static IEnumerable<KeyValuePair<string, InternalHandle>> GetProperties(this V8NativeObject obj)
-        {
-            return obj._.GetProperties();
-        }
-
-        public static IEnumerable<KeyValuePair<string, InternalHandle>> GetOwnProperties(this V8NativeObject obj)
-        {
-            return obj._.GetOwnProperties();
-        }
-
         public static IEnumerable<KeyValuePair<string, InternalHandle>> GetOwnProperties(this InternalHandle value)
         {
             return value.GetProperties();

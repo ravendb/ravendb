@@ -54,7 +54,7 @@ namespace Raven.Server.Documents.Patch
             _writer.WriteObjectEnd();
         }
 
-        private void WriteJsonValue(object parent, bool isRoot, string propertyName, object value)
+        private void WriteJsonValue(object parent, bool isRoot, bool filterProperties, string propertyName, object value)
         {
             if (value is InternalHandle jsValue)
             {
@@ -89,6 +89,10 @@ namespace Raven.Server.Documents.Patch
                 }
                 else if (jsValue.IsObject)
                 {
+                    if (isRoot) {
+                        filterProperties = string.Equals(propertyName, Constants.Documents.Metadata.Key, StringComparison.Ordinal);
+                    }
+
                     object target = jsValue.BoundObject;
                     if (target != null)
                     {
@@ -110,15 +114,11 @@ namespace Raven.Server.Documents.Patch
                         }
                         else
                         {
-                            var filterProperties = isRoot && string.Equals(propertyName, Constants.Documents.Metadata.Key, StringComparison.Ordinal);
-
                             WriteNestedObject(jsValue, filterProperties);
                         }
                     }
                     else
                     {
-                        var filterProperties = isRoot && string.Equals(propertyName, Constants.Documents.Metadata.Key, StringComparison.Ordinal);
-
                         WriteNestedObject(jsValue, filterProperties);
                     }
                 }
@@ -138,7 +138,7 @@ namespace Raven.Server.Documents.Patch
             {
                 using (var value = jsArr.GetProperty(i))
                 {
-                    WriteJsonValue(jsArr, false, i.ToString(), value);
+                    WriteJsonValue(jsArr, false, false, i.ToString(), value);
                 }
             }
             _writer.WriteArrayEnd();
@@ -228,7 +228,7 @@ namespace Raven.Server.Documents.Patch
             var target = jsObj.BoundObject;
             if (target != null)
             {
-                if (target is IDictionary)
+                if (target is IDictionary || target is BlittableObjectInstance blittableJsObject)
                 {
                     WriteValueInternal(target, jsObj, filterProperties);
                 }
@@ -240,7 +240,7 @@ namespace Raven.Server.Documents.Patch
                     {
                         using (var jsItem = _engine.FromObject(item))
                         {
-                            WriteJsonValue(jsItem, false, i.ToString(), jsItem);
+                            WriteJsonValue(jsItem, false, filterProperties, i.ToString(), jsItem);
                         }
                         i++;
                     }
@@ -376,6 +376,7 @@ namespace Raven.Server.Documents.Patch
         private void WriteJsInstance(InternalHandle jsObj, bool isRoot, bool filterProperties)
         {
             var bo = jsObj.BoundObject;
+            //var jsResStr = jsObj.Engine.Execute("JSON.stringify").StaticCall(new InternalHandle(jsObj, true)).AsString;
             var properties = (bo != null) ? GetBoundObjectProperties(bo) : jsObj.GetOwnProperties(); // TODO GetBoundObjectProperties could be prepaired and written avoiding toJs, fromJs translations
             foreach (var (propertyName, jsPropertyValue) in properties)
             {
@@ -383,12 +384,12 @@ namespace Raven.Server.Documents.Patch
                     if (ShouldFilterProperty(filterProperties, propertyName))
                         continue;
 
-                    if (jsPropertyValue.IsUndefined | jsPropertyValue.IsNull)
-                        return;
+                    if (jsPropertyValue.IsEmpty)
+                        continue;
 
                     _writer.WritePropertyName(propertyName);
 
-                    WriteJsonValue(jsObj, isRoot, propertyName, jsPropertyValue);
+                    WriteJsonValue(jsObj, isRoot, filterProperties, propertyName, jsPropertyValue);
                 }
             }
         }
@@ -487,7 +488,7 @@ namespace Raven.Server.Documents.Patch
 
                     if (existInObject && modifiedValue.Changed)
                     {
-                        WriteJsonValue(jsObj, isRoot, prop.Name, modifiedValue.Value);
+                        WriteJsonValue(jsObj, isRoot, filterProperties, prop.Name, modifiedValue.Value);
                     }
                     else
                     {
@@ -514,7 +515,7 @@ namespace Raven.Server.Documents.Patch
 
                 _writer.WritePropertyName(propertyName);
                 var blittableObjectProperty = modificationKvp.Value;
-                WriteJsonValue(jsObj, isRoot, propertyName, blittableObjectProperty.Value);
+                WriteJsonValue(jsObj, isRoot, filterProperties, propertyName, blittableObjectProperty.Value);
             }
         }
 
@@ -539,6 +540,7 @@ namespace Raven.Server.Documents.Patch
             if (objectInstance.IsUndefined || objectInstance.IsNull)
                 return null;
 
+            //var resStr = objectInstance.Engine.Execute("JSON.stringify").StaticCall(new InternalHandle(objectInstance, true)).AsString;
             object boundObject = objectInstance.BoundObject;
             if (boundObject != null && boundObject is BlittableObjectInstance boi && boi.Changed == false)
                 return boi.Blittable.Clone(context);
