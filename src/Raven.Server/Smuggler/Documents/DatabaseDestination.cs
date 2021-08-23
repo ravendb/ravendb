@@ -807,6 +807,17 @@ namespace Raven.Server.Smuggler.Documents
                     progress.ExternalReplicationsUpdated = true;
                 }
 
+                if (databaseRecord.RavenConnectionStrings.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.RavenConnectionStrings))
+                {
+                    if (_log.IsInfoEnabled)
+                        _log.Info("Configuring Raven connection strings configuration from smuggler");
+                    foreach (var connectionString in databaseRecord.RavenConnectionStrings)
+                    {
+                        tasks.Add(_database.ServerStore.SendToLeaderAsync(new PutRavenConnectionStringCommand(connectionString.Value, _database.Name, RaftIdGenerator.DontCareId)));
+                    }
+                    progress.RavenConnectionStringsUpdated = true;
+                }
+                
                 if (databaseRecord.RavenEtls.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.RavenEtls))
                 {
                     if (_log.IsInfoEnabled)
@@ -827,6 +838,17 @@ namespace Raven.Server.Smuggler.Documents
                     progress.RavenEtlsUpdated = true;
                 }
 
+                if (databaseRecord.SqlConnectionStrings.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.SqlConnectionStrings))
+                {
+                    if (_log.IsInfoEnabled)
+                        _log.Info("Configuring SQL connection strings from smuggler");
+                    foreach (var connectionString in databaseRecord.SqlConnectionStrings)
+                    {
+                        tasks.Add(_database.ServerStore.SendToLeaderAsync(new PutSqlConnectionStringCommand(connectionString.Value, _database.Name, RaftIdGenerator.DontCareId)));
+                    }
+                    progress.SqlConnectionStringsUpdated = true;
+                }
+                
                 if (databaseRecord.SqlEtls.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.SqlEtls))
                 {
                     if (_log.IsInfoEnabled)
@@ -932,28 +954,6 @@ namespace Raven.Server.Smuggler.Documents
                     progress.RefreshConfigurationUpdated = true;
                 }
 
-                if (databaseRecord.RavenConnectionStrings.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.RavenConnectionStrings))
-                {
-                    if (_log.IsInfoEnabled)
-                        _log.Info("Configuring Raven connection strings configuration from smuggler");
-                    foreach (var connectionString in databaseRecord.RavenConnectionStrings)
-                    {
-                        tasks.Add(_database.ServerStore.SendToLeaderAsync(new PutRavenConnectionStringCommand(connectionString.Value, _database.Name, RaftIdGenerator.DontCareId)));
-                    }
-                    progress.RavenConnectionStringsUpdated = true;
-                }
-
-                if (databaseRecord.SqlConnectionStrings.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.SqlConnectionStrings))
-                {
-                    if (_log.IsInfoEnabled)
-                        _log.Info("Configuring SQL connection strings from smuggler");
-                    foreach (var connectionString in databaseRecord.SqlConnectionStrings)
-                    {
-                        tasks.Add(_database.ServerStore.SendToLeaderAsync(new PutSqlConnectionStringCommand(connectionString.Value, _database.Name, RaftIdGenerator.DontCareId)));
-                    }
-                    progress.SqlConnectionStringsUpdated = true;
-                }
-
                 if (databaseRecord.Client != null && databaseRecordItemType.HasFlag(DatabaseRecordItemType.Client))
                 {
                     if (_log.IsInfoEnabled)
@@ -982,6 +982,17 @@ namespace Raven.Server.Smuggler.Documents
 
                     progress.LockModeUpdated = true;
                 }
+                
+                if (databaseRecord.OlapConnectionStrings.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.OlapConnectionStrings))
+                {
+                    if (_log.IsInfoEnabled)
+                        _log.Info("Configuring OLAP connection strings from smuggler");
+                    foreach (var connectionString in databaseRecord.OlapConnectionStrings)
+                    {
+                        tasks.Add(_database.ServerStore.SendToLeaderAsync(new PutOlapConnectionStringCommand(connectionString.Value, _database.Name, RaftIdGenerator.DontCareId)));
+                    }
+                    progress.OlapConnectionStringsUpdated = true;
+                }
 
                 if (databaseRecord.OlapEtls.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.OlapEtls))
                 {
@@ -1002,22 +1013,22 @@ namespace Raven.Server.Smuggler.Documents
                     }
                     progress.OlapEtlsUpdated = true;
                 }
-
-                if (databaseRecord.OlapConnectionStrings.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.OlapConnectionStrings))
+                
+                if (databaseRecord.ElasticSearchConnectionStrings.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.ElasticSearchConnectionStrings))
                 {
                     if (_log.IsInfoEnabled)
-                        _log.Info("Configuring OLAP connection strings from smuggler");
-                    foreach (var connectionString in databaseRecord.OlapConnectionStrings)
+                        _log.Info("Configuring ElasticSearch connection strings from smuggler");
+                    foreach (var connectionString in databaseRecord.ElasticSearchConnectionStrings)
                     {
-                        tasks.Add(_database.ServerStore.SendToLeaderAsync(new PutOlapConnectionStringCommand(connectionString.Value, _database.Name, RaftIdGenerator.DontCareId)));
+                        tasks.Add(_database.ServerStore.SendToLeaderAsync(new PutElasticSearchConnectionStringCommand(connectionString.Value, _database.Name, RaftIdGenerator.DontCareId)));
                     }
-                    progress.OlapConnectionStringsUpdated = true;
+                    progress.ElasticSearchConnectionStringsUpdated = true;
                 }
                 
                 if (databaseRecord.ElasticSearchEtls.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.ElasticSearchEtls))
                 {
                     if (_log.IsInfoEnabled)
-                        _log.Info("Configuring sql etls configuration from smuggler");
+                        _log.Info("Configuring ElasticSearch etls configuration from smuggler");
                     foreach (var etl in databaseRecord.ElasticSearchEtls)
                     {
                         currentDatabaseRecord?.ElasticSearchEtls.ForEach(x =>
@@ -1032,17 +1043,6 @@ namespace Raven.Server.Smuggler.Documents
                         tasks.Add(_database.ServerStore.SendToLeaderAsync(new AddElasticSearchEtlCommand(etl, _database.Name, RaftIdGenerator.DontCareId)));
                     }
                     progress.ElasticSearchEtlsUpdated = true;
-                }
-                
-                if (databaseRecord.ElasticSearchConnectionStrings.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.ElasticSearchConnectionStrings))
-                {
-                    if (_log.IsInfoEnabled)
-                        _log.Info("Configuring ElasticSearch connection strings from smuggler");
-                    foreach (var connectionString in databaseRecord.ElasticSearchConnectionStrings)
-                    {
-                        tasks.Add(_database.ServerStore.SendToLeaderAsync(new PutElasticSearchConnectionStringCommand(connectionString.Value, _database.Name, RaftIdGenerator.DontCareId)));
-                    }
-                    progress.ElasticSearchConnectionStringsUpdated = true;
                 }
 
                 if (tasks.Count == 0)
