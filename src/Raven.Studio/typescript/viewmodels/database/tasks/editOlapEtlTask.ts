@@ -294,7 +294,7 @@ class editOlapEtlTask extends viewModelBase {
             this.isAddingNewOlapEtlTask(true);
             this.editedOlapEtl(ongoingTaskOlapEtlEditModel.empty());
             
-            this.editedTransformationScriptSandbox(ongoingTaskOlapEtlTransformationModel.empty());
+            this.editedTransformationScriptSandbox(ongoingTaskOlapEtlTransformationModel.empty(this.findNameForNewTransformation()));
             
             deferred.resolve();
         }
@@ -637,7 +637,7 @@ class editOlapEtlTask extends viewModelBase {
     
     addNewTransformation() {
         this.transformationScriptSelectedForEdit(null);
-        this.editedTransformationScriptSandbox(ongoingTaskOlapEtlTransformationModel.empty());
+        this.editedTransformationScriptSandbox(ongoingTaskOlapEtlTransformationModel.empty(this.findNameForNewTransformation()));
     }
 
     cancelEditedTransformation() {

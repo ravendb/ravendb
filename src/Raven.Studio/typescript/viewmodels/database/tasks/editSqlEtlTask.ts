@@ -252,7 +252,7 @@ class editSqlEtlTask extends viewModelBase {
             this.isAddingNewSqlEtlTask(true);
             this.editedSqlEtl(ongoingTaskSqlEtlEditModel.empty());
             
-            this.editedTransformationScriptSandbox(ongoingTaskSqlEtlTransformationModel.empty());
+            this.editedTransformationScriptSandbox(ongoingTaskSqlEtlTransformationModel.empty(this.findNameForNewTransformation()));
             this.editedSqlTableSandbox(ongoingTaskSqlEtlTableModel.empty());
             
             deferred.resolve();
@@ -605,7 +605,7 @@ class editSqlEtlTask extends viewModelBase {
     
     addNewTransformation() {
         this.transformationScriptSelectedForEdit(null);
-        this.editedTransformationScriptSandbox(ongoingTaskSqlEtlTransformationModel.empty());
+        this.editedTransformationScriptSandbox(ongoingTaskSqlEtlTransformationModel.empty(this.findNameForNewTransformation()));
     }
 
     cancelEditedTransformation() {
