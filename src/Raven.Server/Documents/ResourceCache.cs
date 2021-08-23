@@ -40,6 +40,8 @@ namespace Raven.Server.Documents
 
         public int Count => _caseInsensitive.Count;
 
+        internal int DetailsCount => _resourceDetails.Count;
+
         public void Clear()
         {
             _caseSensitive.Clear();
@@ -193,6 +195,7 @@ namespace Raven.Server.Documents
                 if (current.IsCompletedSuccessfully)
                 {
                     _caseInsensitive.TryUpdate(databaseName, task, current);
+                    _resourceDetails.TryRemove(current, out _);
                     RemoveCaseSensitive(databaseName);
                 }
             }
