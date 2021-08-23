@@ -1,7 +1,12 @@
 ﻿using System;
+using Corax;
+using Raven.Client;
+using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Indexing;
 using Sparrow.Json;
+using Sparrow.Logging;
+using Sparrow.Threading;
 using Voron;
 using Voron.Impl;
 
@@ -9,51 +14,35 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 {
     public class CoraxIndexPersistence : IndexPersistenceBase
     {
+        private readonly Logger _logger;
+        private readonly CoraxDocumentConverter _converter;
+
         public CoraxIndexPersistence(Index index) : base(index)
         {
+            _logger = LoggingSource.Instance.GetLogger<CoraxIndexPersistence>(index.DocumentDatabase.Name);
+            _converter = new CoraxDocumentConverter(index);
         }
 
-        internal override LuceneVoronDirectory LuceneDirectory { get; }
-        public override bool HasWriter => throw new NotImplementedException();
-
-        public override void CleanWritersIfNeeded()
-        {
-            throw new NotImplementedException();
-        }
-
-        public override void Clean(IndexCleanup mode)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override void Initialize(StorageEnvironment environment)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override void PublishIndexCacheToNewTransactions(IndexTransactionCache transactionCache)
-        {
-            throw new NotImplementedException();
-        }
-
-        internal override IndexTransactionCache BuildStreamCacheAfterTx(Transaction tx)
-        {
-            throw new NotImplementedException();
-        }
+        
 
         public override IndexWriteOperationBase OpenIndexWriter(Transaction writeTransaction, JsonOperationContext indexContext)
         {
-            throw new NotImplementedException();
+            return new CoraxIndexWriteOperation(
+                _index,
+                writeTransaction,
+                _converter, 
+                _logger
+            );
         }
 
-        public override IndexReadOperationBase OpenIndexReader(Transaction readTransaction)
-        {
-            throw new NotImplementedException();
-        }
+        public override IndexReadOperationBase OpenIndexReader(Transaction readTransaction) => new CoraxIndexReadOperation(_index, _logger, readTransaction);
 
         public override bool ContainsField(string field)
         {
-            throw new NotImplementedException();
+            if (field == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
+                return _index.Type.IsMap();
+
+            return _index.Definition.IndexFields.ContainsKey(field);
         }
 
         public override IndexFacetedReadOperation OpenFacetedIndexReader(Transaction readTransaction)
@@ -66,24 +55,57 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             throw new NotImplementedException();
         }
 
+        public override void Dispose()
+        {
+            _converter?.Dispose();
+        }
+
+        #region LuceneMethods
+
+        internal override LuceneVoronDirectory LuceneDirectory { get; }
+        public override bool HasWriter { get; }
+
+        public override void CleanWritersIfNeeded()
+        {
+            // lucene method
+        }
+
+        public override void Clean(IndexCleanup mode)
+        {
+            // lucene method
+        }
+
+        public override void Initialize(StorageEnvironment environment)
+        {
+            // lucene method
+        }
+
+        public override void PublishIndexCacheToNewTransactions(IndexTransactionCache transactionCache)
+        {
+            _streamsCache = transactionCache;
+        }
+
+        internal override IndexTransactionCache BuildStreamCacheAfterTx(Transaction tx)
+        {
+            //lucene method
+
+            return null;
+        }
+
         internal override void RecreateSearcher(Transaction asOfTx)
         {
-            throw new NotImplementedException();
+            //lucene method
         }
 
         internal override void RecreateSuggestionsSearchers(Transaction asOfTx)
         {
-            throw new NotImplementedException();
+            //lucene method
         }
 
         public override void DisposeWriters()
         {
-            throw new NotImplementedException();
+            //lucene method
         }
-
-        public override void Dispose()
-        {
-            throw new NotImplementedException();
-        }
+        #endregion
     }
 }

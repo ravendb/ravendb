@@ -50,6 +50,10 @@ namespace Raven.Server.Documents.Indexes.Auto
 
                 writer.WritePropertyName(nameof(field.HasSuggestions));
                 writer.WriteBool(field.HasSuggestions);
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(field.Id));
+                writer.WriteInteger(field.Id);
 
                 writer.WriteEndObject();
 

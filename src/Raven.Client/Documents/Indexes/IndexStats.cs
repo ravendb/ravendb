@@ -139,7 +139,7 @@ namespace Raven.Client.Documents.Indexes
         /// <summary>
         /// Total number of entries in this index.
         /// </summary>
-        public int EntriesCount { get; set; }
+        public long EntriesCount { get; set; }
 
         public int ErrorsCount { get; set; }
         

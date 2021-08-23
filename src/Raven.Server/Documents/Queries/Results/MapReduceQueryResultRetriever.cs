@@ -17,6 +17,9 @@ namespace Raven.Server.Documents.Queries.Results
             : base(Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName, database, query, queryTimings, documentsStorage, context, fieldsToFetch, includeDocumentsCommand, includeCompareExchangeValuesCommand, includeRevisionsCommand)
         {
         }
+
+        //todo maciej: this should be done in other way
+        internal Document GetDocumentById(string id) => LoadDocument(id);
     }
 
     public abstract class StoredValueQueryResultRetriever : QueryResultRetrieverBase
@@ -92,8 +95,11 @@ namespace Raven.Server.Documents.Queries.Results
             };
         }
 
-        public override Document Get(Lucene.Net.Documents.Document input, ScoreDoc scoreDoc, IState state)
+        public override Document Get(ref RetrieverInput retrieverInput)
         {
+            var input = retrieverInput.LuceneDocument;
+            var state = retrieverInput.State;
+            var scoreDoc = retrieverInput.Score;
             if (FieldsToFetch.IsProjection)
                 return GetProjection(input, scoreDoc, null, state);
 
@@ -107,7 +113,7 @@ namespace Raven.Server.Documents.Queries.Results
             }
         }
 
-        public override bool TryGetKey(Lucene.Net.Documents.Document document, IState state, out string key)
+        public override bool TryGetKey(ref RetrieverInput retrieverInput, out string key)
         {
             key = null;
             return false;

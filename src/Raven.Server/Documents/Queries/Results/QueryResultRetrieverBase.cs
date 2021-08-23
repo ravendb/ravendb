@@ -102,9 +102,9 @@ namespace Raven.Server.Documents.Queries.Results
             }
         }
 
-        public abstract Document Get(Lucene.Net.Documents.Document input, Lucene.Net.Search.ScoreDoc scoreDoc, IState state);
+        public abstract Document Get(ref RetrieverInput retrieverInput);
 
-        public abstract bool TryGetKey(Lucene.Net.Documents.Document document, IState state, out string key);
+        public abstract bool TryGetKey(ref RetrieverInput retrieverInput, out string key);
 
         protected abstract Document DirectGet(Lucene.Net.Documents.Document input, string id, DocumentFields fields, IState state);
 

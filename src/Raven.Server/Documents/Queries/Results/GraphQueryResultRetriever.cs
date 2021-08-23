@@ -45,12 +45,12 @@ namespace Raven.Server.Documents.Queries.Results
             throw new InvalidQueryException($"Invalid projection behavior '{_query.ProjectionBehavior}'.Only default projection behavior can be used for graph queries.", _query.Query, _query.QueryParameters);
         }
 
-        public override Document Get(Lucene.Net.Documents.Document input, Lucene.Net.Search.ScoreDoc scoreDoc, IState state)
+        public override Document Get(ref RetrieverInput retrieverInput)
         {
             throw new NotSupportedException("Graph Queries do not deal with Lucene indexes.");
         }
 
-        public override bool TryGetKey(Lucene.Net.Documents.Document document, IState state, out string key)
+        public override bool TryGetKey(ref RetrieverInput retrieverInput, out string key)
         {
             throw new NotSupportedException("Graph Queries do not deal with Lucene indexes.");
         }

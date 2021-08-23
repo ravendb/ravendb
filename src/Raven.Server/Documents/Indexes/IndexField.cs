@@ -5,6 +5,7 @@ using Raven.Client.Documents.Indexes.Spatial;
 
 namespace Raven.Server.Documents.Indexes
 {
+    //todo maciej
     public abstract class IndexFieldBase
     {
         public string Name { get; set; }
@@ -22,6 +23,8 @@ namespace Raven.Server.Documents.Indexes
     public class IndexField : IndexFieldBase
     {
         internal string OriginalName { get; set; }
+
+        public int Id { get; set; }
 
         public string Analyzer { get; set; }
 
@@ -75,7 +78,8 @@ namespace Raven.Server.Documents.Indexes
 
         protected bool Equals(IndexField other)
         {
-            return string.Equals(Name, other.Name, StringComparison.Ordinal)
+            return Id == other.Id
+                && string.Equals(Name, other.Name, StringComparison.Ordinal)
                 && string.Equals(Analyzer, other.Analyzer, StringComparison.Ordinal)
                 && Storage == other.Storage
                 && Indexing == other.Indexing
@@ -106,6 +110,7 @@ namespace Raven.Server.Documents.Indexes
                 var hashCode = (Name != null ? StringComparer.Ordinal.GetHashCode(Name) : 0);
                 hashCode = (hashCode * 397) ^ (Analyzer != null ? StringComparer.Ordinal.GetHashCode(Analyzer) : 0);
                 hashCode = (hashCode * 397) ^ (int)Storage;
+                hashCode = (hashCode * 397) ^ Id;
                 hashCode = (hashCode * 397) ^ (int)Indexing;
                 hashCode = (hashCode * 397) ^ (int)TermVector;
                 hashCode = (hashCode * 397) ^ (HasSuggestions ? 233 : 343);
@@ -149,6 +154,8 @@ namespace Raven.Server.Documents.Indexes
 
         public AutoFieldIndexing Indexing { get; set; }
 
+        public int Id { get; set; }
+
         public AutoSpatialOptions Spatial { get; set; }
 
         public static AutoIndexField Create(string name, AutoIndexDefinition.AutoIndexFieldOptions options)
@@ -156,7 +163,8 @@ namespace Raven.Server.Documents.Indexes
             var field = new AutoIndexField
             {
                 Name = name,
-                HasQuotedName = options.IsNameQuoted
+                HasQuotedName = options.IsNameQuoted,
+                Id = options.Id
             };
 
             if (options.Indexing.HasValue)
@@ -170,6 +178,7 @@ namespace Raven.Server.Documents.Indexes
 
             if (options.Suggestions.HasValue)
                 field.HasSuggestions = options.Suggestions.Value;
+
 
             field.Aggregation = options.Aggregation;
             field.GroupByArrayBehavior = options.GroupByArrayBehavior;
@@ -189,7 +198,8 @@ namespace Raven.Server.Documents.Indexes
                     Name = Name,
                     Storage = Storage,
                     HasSuggestions = HasSuggestions,
-                    Spatial = new AutoSpatialOptions(Spatial)
+                    Spatial = new AutoSpatialOptions(Spatial),
+                    Id = Id
                 });
 
                 return fields;
@@ -206,7 +216,8 @@ namespace Raven.Server.Documents.Indexes
                 Name = Name,
                 OriginalName = HasQuotedName ? originalName : null,
                 Storage = Storage,
-                HasSuggestions = HasSuggestions
+                HasSuggestions = HasSuggestions,
+                Id = Id
             });
 
             if (Indexing == AutoFieldIndexing.Default)
@@ -222,7 +233,8 @@ namespace Raven.Server.Documents.Indexes
                     Name = GetSearchAutoIndexFieldName(Name),
                     OriginalName = originalName,
                     Storage = hasHighlighting ? FieldStorage.Yes : Storage,
-                    TermVector = hasHighlighting ? FieldTermVector.WithPositionsAndOffsets : FieldTermVector.No
+                    TermVector = hasHighlighting ? FieldTermVector.WithPositionsAndOffsets : FieldTermVector.No,
+                    Id = Id
                 });
             }
 
@@ -233,7 +245,8 @@ namespace Raven.Server.Documents.Indexes
                     Indexing = FieldIndexing.Exact,
                     Name = GetExactAutoIndexFieldName(Name),
                     OriginalName = originalName,
-                    Storage = Storage
+                    Storage = Storage,
+                    Id = Id
                 });
             }
 
@@ -243,6 +256,7 @@ namespace Raven.Server.Documents.Indexes
         protected bool Equals(AutoIndexField other)
         {
             return string.Equals(Name, other.Name, StringComparison.Ordinal)
+                   && Id == other.Id
                    && Storage == other.Storage
                    && Indexing == other.Indexing
                    && Aggregation == other.Aggregation;
@@ -270,6 +284,7 @@ namespace Raven.Server.Documents.Indexes
             unchecked
             {
                 var hashCode = (Name != null ? StringComparer.Ordinal.GetHashCode(Name) : 0);
+                hashCode = (hashCode * 397) ^ Id;
                 hashCode = (hashCode * 397) ^ (int)Storage;
                 hashCode = (hashCode * 397) ^ (int)Indexing;
                 hashCode = (hashCode * 397) ^ (int)Aggregation;

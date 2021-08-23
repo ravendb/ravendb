@@ -31,7 +31,7 @@ namespace Corax
     {
         private readonly StorageEnvironment _environment;
         private readonly TransactionPersistentContext _transactionPersistentContext;
-
+        private readonly bool _transactionInjected;
         public readonly Transaction Transaction;        
 
         public static readonly Slice PostingListsSlice, EntriesContainerSlice, FieldsSlice, NumberOfEntriesSlice;
@@ -57,11 +57,20 @@ namespace Corax
             _environment = environment;
             _transactionPersistentContext = new TransactionPersistentContext(true);
             Transaction = _environment.WriteTransaction(_transactionPersistentContext);
-
+            _transactionInjected = false;
             _postingListContainerId = Transaction.OpenContainer(PostingListsSlice);
             _entriesContainerId = Transaction.OpenContainer(EntriesContainerSlice);
         }
         
+        // _transactionInjected disable transaction commit in instance of IndexWriter because it's done by Server. 
+        public IndexWriter([NotNull] Transaction tx)
+        {
+            Transaction = tx;
+            _transactionInjected = true;
+            _postingListContainerId = Transaction.OpenContainer(PostingListsSlice);
+            _entriesContainerId = Transaction.OpenContainer(EntriesContainerSlice);
+        }
+
         // CPU bound - embarassingly parallel
         // 
         // private readonly ConcurrentDictionary<Slice, Dictionary<Slice, ConcurrentQueue<long>>> _bufferConcurrent =
@@ -245,7 +254,8 @@ namespace Corax
                     }
                 }
             }
-            Transaction.Commit();
+            if(_transactionInjected == false)
+                Transaction.Commit();
         }
         
         private unsafe void AddNewTerm(List<long> entries, CompactTree fieldTree, ReadOnlySpan<byte> termsSpan, Span<byte> tmpBuf)
@@ -298,7 +308,8 @@ namespace Corax
 
         public void Dispose()
         {
-            Transaction?.Dispose();
+            if (_transactionInjected == false)
+                Transaction?.Dispose();
         }
     }
 }

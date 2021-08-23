@@ -47,11 +47,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         internal TempFileCache TempFileCache;
 
-        // this is used to remember the positions of files in the database
-        // always points to the latest valid transaction and is updated by
-        // the write tx on commit, thread safety is inherited from the voron
-        // transaction
-        private IndexTransactionCache _streamsCache = new IndexTransactionCache();
 
         private LuceneVoronDirectory _directory;
         private readonly Dictionary<string, LuceneVoronDirectory> _suggestionsDirectories;
@@ -235,7 +230,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 }
             }
         }
-
         public override void Initialize(StorageEnvironment environment)
         {
             if (_initialized)
@@ -259,6 +253,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             _initialized = true;
         }
+        
 
         public override void PublishIndexCacheToNewTransactions(IndexTransactionCache transactionCache)
         {
@@ -376,12 +371,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 }
             }
         }
-
-        private void SetStreamCacheInTx(LowLevelTransaction tx)
-        {
-            tx.ImmutableExternalState = _streamsCache;
-        }
-
+        
         private void InitializeSuggestionsIndexStorage(Transaction tx, StorageEnvironment environment)
         {
             foreach (var field in _fields)

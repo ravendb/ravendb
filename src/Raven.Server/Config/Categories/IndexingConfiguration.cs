@@ -7,6 +7,7 @@ using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
+using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Analysis;
 using Raven.Server.Documents.Indexes.Configuration;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
@@ -333,6 +334,12 @@ namespace Raven.Server.Config.Categories
         [IndexUpdateType(IndexUpdateType.Refresh)]
         [ConfigurationEntry("Indexing.Throttling.TimeIntervalInMs", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public TimeSetting? ThrottlingTimeInterval { get; protected set; }
+
+        [Description("Index engine for AutoIndexes")]
+        [DefaultValue(Documents.Indexes.AutoIndexingEngine.Corax)]
+        [IndexUpdateType(IndexUpdateType.Refresh)]
+        [ConfigurationEntry("Indexing.Auto.Engine", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
+        public AutoIndexingEngine? AutoIndexingEngine { get; protected set; }
 
         public Lazy<AnalyzerFactory> DefaultAnalyzerType { get; private set; }
 

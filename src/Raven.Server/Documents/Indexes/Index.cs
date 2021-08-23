@@ -30,6 +30,7 @@ using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Exceptions;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence;
+using Raven.Server.Documents.Indexes.Persistence.Corax;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Static.Counters;
@@ -736,6 +737,7 @@ namespace Raven.Server.Documents.Indexes
         private void InitializeInternal(StorageEnvironment environment, DocumentDatabase documentDatabase, IndexingConfiguration configuration,
             PerformanceHintsConfiguration performanceHints)
         {
+            //todo maciej: corex
             try
             {
                 Debug.Assert(Definition != null);
@@ -793,8 +795,12 @@ namespace Raven.Server.Documents.Indexes
             _indexStorage.Initialize(environment);
 
             IndexPersistence?.Dispose();
-
-            IndexPersistence = new LuceneIndexPersistence(this);
+          
+            // place where we switch corax / lucene engine for now
+            if (SourceType == IndexSourceType.Documents && Type == IndexType.AutoMap)
+                IndexPersistence = new CoraxIndexPersistence(this);
+            else
+                IndexPersistence = new LuceneIndexPersistence(this);
             IndexPersistence.Initialize(environment);
 
             IndexFieldsPersistence = new IndexFieldsPersistence(this);
@@ -3153,7 +3159,7 @@ namespace Raven.Server.Documents.Indexes
                                     {
                                         var originalEnumerator = enumerator;
 
-                                        enumerator = new PulsedTransactionEnumerator<LuceneIndexReadOperation.QueryResult, QueryResultsIterationState>(queryContext.Documents,
+                                        enumerator = new PulsedTransactionEnumerator<IndexReadOperationBase.QueryResult, QueryResultsIterationState>(queryContext.Documents,
                                             state => originalEnumerator,
                                             new QueryResultsIterationState(queryContext.Documents, DocumentDatabase.Configuration.Databases.PulseReadTransactionLimit));
                                     }
@@ -4900,6 +4906,11 @@ namespace Raven.Server.Documents.Indexes
 
         public int Dump(string path, Action<IOperationProgress> onProgress)
         {
+            if (IndexPersistence is CoraxIndexPersistence)
+            {
+                //todo maciej
+                return 0;
+            }
             if (Directory.Exists(path) == false)
                 Directory.CreateDirectory(path);
 

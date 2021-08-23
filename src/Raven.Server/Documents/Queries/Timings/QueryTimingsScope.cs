@@ -14,6 +14,7 @@ namespace Raven.Server.Documents.Queries.Timings
             public static string Staleness;
             public static string Query;
             public static string Lucene;
+            public static string Corax;
             public static string Highlightings;
             public static string Explanations;
             public static string JavaScript;

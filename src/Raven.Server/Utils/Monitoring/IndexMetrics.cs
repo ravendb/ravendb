@@ -25,7 +25,7 @@ namespace Raven.Server.Utils.Monitoring
         public double MappedPerSec { get; set; }
         public double ReducedPerSec { get; set; }
         public IndexType Type { get; set; }
-        public int EntriesCount { get; set; }
+        public long EntriesCount { get; set; }
 
         public DynamicJsonValue ToJson()
         {

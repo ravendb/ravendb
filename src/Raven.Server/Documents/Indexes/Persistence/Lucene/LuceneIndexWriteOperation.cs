@@ -33,13 +33,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private readonly Lock _locker;
         private readonly IDisposable _releaseWriteTransaction;
 
-        private IndexingStatsScope _statsInstance;
         protected readonly IndexWriteOperationStats Stats = new IndexWriteOperationStats();
 
         private readonly IState _state;
         private readonly LuceneVoronDirectory _directory;
 
-        private byte[] _buffer;
 
         public LuceneIndexWriteOperation(Index index, LuceneVoronDirectory directory, LuceneDocumentConverterBase converter, Transaction writeTransaction, LuceneIndexPersistence persistence)
             : base(index, LoggingSource.Instance.GetLogger<LuceneIndexWriteOperation>(index._indexStorage.DocumentDatabase.Name))
@@ -233,13 +231,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             Stats.SuggestionStats = stats.For(IndexingOperation.Lucene.Suggestion, start: false);
         }
 
-        protected class IndexWriteOperationStats
-        {
-            public IndexingStatsScope DeleteStats;
-            public IndexingStatsScope ConvertStats;
-            public IndexingStatsScope AddStats;
-            public IndexingStatsScope SuggestionStats;
-        }
 
         public byte[] GetBuffer(int necessarySize)
         {

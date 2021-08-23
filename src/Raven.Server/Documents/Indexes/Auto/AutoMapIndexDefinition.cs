@@ -127,7 +127,6 @@ namespace Raven.Server.Documents.Indexes.Auto
                 throw new InvalidOperationException("No persisted lock mode");
 
             var fields = new AutoIndexField[jsonArray.Length];
-
             for (var i = 0; i < jsonArray.Length; i++)
             {
                 var json = jsonArray.GetByIndex<BlittableJsonReaderObject>(i);
@@ -135,13 +134,15 @@ namespace Raven.Server.Documents.Indexes.Auto
                 json.TryGet(nameof(AutoIndexField.Name), out string name);
                 json.TryGet(nameof(AutoIndexField.Indexing), out string indexing);
                 json.TryGet(nameof(AutoIndexField.HasSuggestions), out bool hasSuggestions);
+                json.TryGet(nameof(AutoIndexField.Id), out int id);
 
                 var field = new AutoIndexField
                 {
                     Name = name,
                     Storage = FieldStorage.No,
                     Indexing = (AutoFieldIndexing)Enum.Parse(typeof(AutoFieldIndexing), indexing),
-                    HasSuggestions = hasSuggestions
+                    HasSuggestions = hasSuggestions,
+                    Id = id
                 };
 
                 fields[i] = field;
