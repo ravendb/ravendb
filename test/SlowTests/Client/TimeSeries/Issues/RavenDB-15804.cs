@@ -317,7 +317,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                 using (var session = store.OpenSession())
                 {
                     var ts = session.TimeSeriesFor("users/ayende", "HeartRate").Get(baseline);
-                    Assert.Equal(3, ts.Length); //  "baz", "foo", "grisha"
+                    Assert.Equal(4, ts.Length); //  "baz", "foo", "grisha"
                 }
             }
         }

@@ -1061,32 +1061,49 @@ namespace Raven.Server.Documents.TimeSeries
                     {
                         // full segment (segment size reach to capacity/number of entries >= 65,535)
 
-                        // not from replication:
-                        // we should throw all new entries with this timestamp 
                         if (FromReplication == false)
-                            throw new InvalidOperationException($"Segment is full. Can't add more values with {time} timestamp");
+                        {
+                            // not from replication:
+                            // we first try to merge entries
+                            // if it fails - we should throw all new entries with this timestamp 
+                            if (TryMergeIncrementResults(_context, this) == false)
+                                throw new InvalidOperationException($"Segment is full. Can't add more values with {time} timestamp");
+                        }
+                        else
+                        {
+                            // raise alert
+                            var msg = $"Segment reached capacity (> 2KB) and open a new segment unavailable at this point." +
+                                      $"Merge operation has performed for replication on doc: {_docId}, name: {_name}." +
+                                      $"The data after the merge may be inaccurate.";
+                            var alert = AlertRaised.Create(_context.DocumentDatabase.Name, "Time series segment is full - merge operation has performed", msg,
+                                AlertType.Replication, NotificationSeverity.Warning);
+                            _tss._documentDatabase.NotificationCenter.Add(alert);
 
-                        // raise alert
-                        var msg = $"Segment reached capacity (> 2KB) and open a new segment unavailable at this point." +
-                                  $"Merge operation has performed for replication on doc: {_docId}, name: {_name}." +
-                                  $"The data after the merge may be inaccurate.";
-                        var alert = AlertRaised.Create(_context.DocumentDatabase.Name, "Time series segment is full - merge operation has performed", msg,
-                            AlertType.Replication, NotificationSeverity.Warning);
-                        _tss._documentDatabase.NotificationCenter.Add(alert);
-
-                        // merge all entries to one 
-                        if (TryMergeEntries(ref segment) == false)
+                            // merge all entries to one 
+                            if (TryMergeEntries(ref segment) == false)
+                                throw new InvalidOperationException($"Failed to merge segment values. Doc: {_docId}, name: {_name}");
+                        }
+                        
+                        ReloadCurrentSegment();
+                        // retry append
+                        var tag = FromReplication ? SliceHolder.TagAsSpan(_context.GetLazyString(_tss._documentDatabase.DbBase64Id)) : tagSlice;
+                        if (segment.Append(_context.Allocator, (int)timestampDiff, values, tag, status) == false)
                             throw new InvalidOperationException($"Failed to merge segment values. Doc: {_docId}, name: {_name}");
 
-                        // retry append
-                        var tag = _context.GetLazyString(_tss._documentDatabase.DbBase64Id);
-                        segment.Append(_context.Allocator, (int)timestampDiff, values, SliceHolder.TagAsSpan(tag), status);
                         return;
                     }
 
                     if (segmentLastTimestamp == time)
                     {
-                        // special split segment case 
+                        // special split segment case
+
+                        if (FromReplication == false && TryMergeIncrementResults(_context, this))
+                        {
+                            ReloadCurrentSegment();
+                            if(segment.Append(_context.Allocator, (int)timestampDiff, values, tagSlice, status))
+                                return;
+                        }
+
                         TrimSegmentToDate(ref segment, values, tagSlice, status, time);
                         UpdateBaseline(timestampDiff);
                         return;
@@ -1186,29 +1203,6 @@ namespace Raven.Server.Documents.TimeSeries
                 }
             }
 
-            private static CompareResult CompareByTags(TimeSeriesValuesSegment.TagPointer localTag, Span<byte> tagSlice)
-            {
-                if ((localTag.Pointer == null || localTag.Size == 0) && (tagSlice.IsEmpty)) // both tags are empty
-                    return CompareResult.Equal;
-
-                if (localTag.Pointer == null || localTag.Size == 0) // local tag is empty and remote not
-                    return CompareResult.Remote;
-
-                if ((tagSlice.IsEmpty)) // remote tag is empty and local not
-                    return CompareResult.Local;
-
-                fixed (byte* pTagSlice = &tagSlice.GetPinnableReference())
-                {
-                    var compare = LazyStringValue.CompareToOrdinalIgnoreCase(localTag.Pointer + 1, localTag.Size, pTagSlice + 1, tagSlice.Length);
-                  
-                    return compare switch
-                    {
-                        0 => CompareResult.Equal,
-                        > 0 => CompareResult.Remote,
-                        _ => CompareResult.Local
-                    };
-                }
-            }
 
             private bool TryMergeEntries(ref TimeSeriesValuesSegment timeSeriesSegment)
             {
@@ -1339,6 +1333,8 @@ namespace Raven.Server.Documents.TimeSeries
             string name,
             IEnumerable<TimeSeriesOperation.IncrementOperation> toIncrement)
         {
+            var dbBase64Id = context.GetLazyString(_documentDatabase.DbBase64Id);
+
             var holder = new SingleResult();
 
             return AppendTimestamp(context, documentId, collection, name, toIncrement.Select(ToResult), 
@@ -1347,7 +1343,7 @@ namespace Raven.Server.Documents.TimeSeries
             SingleResult ToResult(TimeSeriesOperation.IncrementOperation element)
             {
                 holder.Values = element.Values;
-                holder.Tag = context.GetLazyString(_documentDatabase.DbBase64Id);
+                holder.Tag = dbBase64Id;
                 holder.Timestamp = element.Timestamp.EnsureUtc().EnsureMilliseconds();
                 holder.Status = TimeSeriesValuesSegment.Live;
                 return holder;
@@ -1549,7 +1545,7 @@ namespace Raven.Server.Documents.TimeSeries
 
             foreach (var segmentValue in segmentHolder.ReadOnlySegment.YieldAllValues(context, segmentHolder.BaselineDate, includeDead: true))
             {
-                valuesByTag ??= new SortedDictionary<LazyStringValue, double[]>(LazyStringValue.LazyStringComparer.Instance);
+                valuesByTag ??= new SortedDictionary<LazyStringValue, double[]>(LazyStringValue.LazyStringCaseSensitiveComparer.Instance);
                 var key = segmentValue.Tag;
 
                 if (currentTime != segmentValue.Timestamp)
@@ -1836,7 +1832,7 @@ namespace Raven.Server.Documents.TimeSeries
                                     break;
                                 }
 
-                                var compare = Compare(currentTime, currentValues, currentTag, localStatus, current, nextSegmentBaseline, timeSeriesSegment);
+                                var compare = Compare(currentTime, currentValues, currentTag, current, nextSegmentBaseline, timeSeriesSegment);
 
                                 if (compare != CompareResult.Remote)
                                 {
@@ -1906,30 +1902,7 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        private static CompareResult CompareByTags(TimeSeriesValuesSegment.TagPointer localTag, LazyStringValue remoteTag)
-        {
-            if ((localTag.Pointer == null || localTag.Size == 0) && 
-                (remoteTag == null || remoteTag.Size == 0)) // both tags are empty
-                return CompareResult.Equal;
-
-            if (localTag.Pointer == null || localTag.Size == 0) // local tag is empty and remote not
-                return CompareResult.Remote;
-
-            if (remoteTag == null || remoteTag.Size == 0) // remote tag is empty and local not
-                return CompareResult.Local;
-
-
-            var compare = LazyStringValue.CompareToOrdinalIgnoreCase(localTag.Pointer + 1, localTag.Size, remoteTag.Buffer, remoteTag.Size);
-
-            return compare switch
-            {
-                0 => CompareResult.Equal,
-                > 0 => CompareResult.Remote,
-                _ => CompareResult.Local
-            };
-        }
-
-        private enum CompareResult
+        internal enum CompareResult
         {
             Local,
             Equal,
@@ -1937,7 +1910,7 @@ namespace Raven.Server.Documents.TimeSeries
         }
 
         private static CompareResult Compare(DateTime localTime, Span<double> localValues, TimeSeriesValuesSegment.TagPointer localTag,
-            ulong localStatus, SingleResult remote, DateTime? nextSegmentBaseline, TimeSeriesSegmentHolder holder)
+             SingleResult remote, DateTime? nextSegmentBaseline, TimeSeriesSegmentHolder holder)
         {
             if (remote == null)
                 return CompareResult.Local;
@@ -1949,9 +1922,30 @@ namespace Raven.Server.Documents.TimeSeries
                 return CompareResult.Local;
 
             if (localTime == remote.Timestamp)
-                return CompareByTags(localTag, remote.Tag);
+                return CompareByTags(localTag, holder.SliceHolder.TagAsSpan(remote.Tag));
 
             return CompareResult.Remote;
+        }
+
+        internal static CompareResult CompareByTags(TimeSeriesValuesSegment.TagPointer localTag, Span<byte> tagSlice)
+        {
+            if ((localTag.Pointer == null || localTag.Size == 0) && (tagSlice.IsEmpty)) // both tags are empty
+                return CompareResult.Equal;
+
+            if (localTag.Pointer == null || localTag.Size == 0) // local tag is empty and remote not
+                return CompareResult.Remote;
+
+            if ((tagSlice.IsEmpty)) // remote tag is empty and local not
+                return CompareResult.Local;
+
+            var localTagSpan = localTag.AsSpan();
+
+            return localTagSpan.SequenceCompareTo(tagSlice) switch
+            {
+                0 => CompareResult.Equal,
+                > 0 => CompareResult.Remote,
+                _ => CompareResult.Local
+            };
         }
 
         public void ReplaceTimeSeriesNameInMetadata(DocumentsOperationContext ctx, string docId, string oldName, string newName)

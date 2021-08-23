@@ -613,7 +613,8 @@ namespace Raven.Server.Documents.TimeSeries
                     if (MoveNextInternal(out timestamp, values, state, ref tag, out status) == false)
                         return false;
 
-                    if (_parent.Version == SegmentVersion.V50000) // fix legacy issue RavenDB-15617
+                    if (_parent.Version == SegmentVersion.V50000 &&  // fix legacy issue RavenDB-15617
+                        previousTimestamp == timestamp) 
                         continue;
 
                     return true;
