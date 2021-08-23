@@ -113,7 +113,8 @@ namespace Raven.Server.Documents.TcpHandlers
                 TcpConnection.Stream,
                 "subscription options",
                 BlittableJsonDocumentBuilder.UsageMode.None,
-                _copiedBuffer.Buffer))
+                _copiedBuffer.Buffer,
+                token: CancellationTokenSource.Token))
             {
                 _options = JsonDeserializationServer.SubscriptionConnectionOptions(subscriptionCommandOptions);
 
@@ -142,12 +143,11 @@ namespace Raven.Server.Documents.TcpHandlers
             AddToStatusDescription(message);
             if (_logger.IsInfoEnabled)
             {
-                _logger.Info(
-                    message);
+                _logger.Info(message);
             }
 
             // first, validate details and make sure subscription exists
-            SubscriptionState = await TcpConnection.DocumentDatabase.SubscriptionStorage.AssertSubscriptionConnectionDetails(SubscriptionId, _options.SubscriptionName);
+            SubscriptionState = await TcpConnection.DocumentDatabase.SubscriptionStorage.AssertSubscriptionConnectionDetails(SubscriptionId, _options.SubscriptionName, CancellationTokenSource.Token);
             Subscription = ParseSubscriptionQuery(SubscriptionState.Query);
 
             if (_supportedFeatures.Subscription.Includes == false)
@@ -177,6 +177,8 @@ namespace Raven.Server.Documents.TcpHandlers
 
             do
             {
+                CancellationTokenSource.Token.ThrowIfCancellationRequested();
+
                 try
                 {
                     DisposeOnDisconnect = await _connectionState.RegisterSubscriptionConnection(this, timeout);
@@ -199,7 +201,7 @@ namespace Raven.Server.Documents.TcpHandlers
             try
             {
                 // refresh subscription data (change vector may have been updated, because in the meanwhile, another subscription could have just completed a batch)
-                SubscriptionState = await TcpConnection.DocumentDatabase.SubscriptionStorage.AssertSubscriptionConnectionDetails(SubscriptionId, _options.SubscriptionName);
+                SubscriptionState = await TcpConnection.DocumentDatabase.SubscriptionStorage.AssertSubscriptionConnectionDetails(SubscriptionId, _options.SubscriptionName, CancellationTokenSource.Token);
 
                 Subscription = ParseSubscriptionQuery(SubscriptionState.Query);
 
@@ -795,8 +797,10 @@ namespace Raven.Server.Documents.TcpHandlers
 
                     if (anyDocumentsSentInCurrentIteration)
                     {
-                        if (includeDocumentsCommand != null)
+                        if (includeDocumentsCommand != null && includeDocumentsCommand.HasIncludesIds())
                         {
+                            var includes = new List<Document>();
+                            includeDocumentsCommand.Fill(includes);
                             writer.WriteStartObject();
 
                             writer.WritePropertyName(docsContext.GetLazyStringForFieldWithCaching(TypeSegment));
@@ -804,8 +808,7 @@ namespace Raven.Server.Documents.TcpHandlers
                             writer.WriteComma();
 
                             writer.WritePropertyName(docsContext.GetLazyStringForFieldWithCaching(IncludesSegment));
-                            var includes = new List<Document>();
-                            includeDocumentsCommand.Fill(includes);
+
                             await writer.WriteIncludesAsync(docsContext, includes);
 
                             writer.WriteEndObject();
@@ -886,11 +889,11 @@ namespace Raven.Server.Documents.TcpHandlers
         {
             try
             {
-                await TcpConnection.Stream.WriteAsync(Heartbeat, 0, Heartbeat.Length);
+                await TcpConnection.Stream.WriteAsync(Heartbeat, 0, Heartbeat.Length, CancellationTokenSource.Token);
 
                 if (_logger.IsInfoEnabled)
                 {
-                    _logger.Info($"Subscription {Options.SubscriptionName} is sending a Hearbeat message to the client. Reason: {reason}");
+                    _logger.Info($"Subscription {Options.SubscriptionName} is sending a Heartbeat message to the client. Reason: {reason}");
                 }
             }
             catch (Exception ex)

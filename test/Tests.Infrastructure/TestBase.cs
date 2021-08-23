@@ -863,19 +863,30 @@ namespace FastTests
             using (var ms = new MemoryStream())
             using (var outputWriter = new StreamWriter(ms, leaveOpen: true))
             {
-                StackTracer.ShowStackTraceWithSnapshot(process.Id, outputWriter);
-                ms.Position = 0;
+                var sb = new StringBuilder($"Could not dispose server with URL '{url}' and DebugTag: '{debugTag}' in '{timeout}'.");
 
-                using (var outputReader = new StreamReader(ms, leaveOpen: true))
+                try
                 {
-                    var stackTraces = outputReader.ReadToEnd();
-                    var tempPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.stacks.json");
+                    StackTracer.ShowStackTraceWithSnapshot(process.Id, outputWriter);
+                    ms.Position = 0;
 
-                    File.WriteAllText(tempPath, stackTraces);
-                    Console.WriteLine(stackTraces);
+                    using (var outputReader = new StreamReader(ms, leaveOpen: true))
+                    {
+                        var stackTraces = outputReader.ReadToEnd();
+                        var tempPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.stacks.json");
 
-                    throw new InvalidOperationException($"Could not dispose server with URL '{url}' and DebugTag: '{debugTag}' in '{timeout}'. StackTraces available at: '{tempPath}'");
+                        File.WriteAllText(tempPath, stackTraces);
+                        Console.WriteLine(stackTraces);
+
+                        sb.Append($" StackTraces available at: '{tempPath}'");
+                    }
                 }
+                catch (Exception e)
+                {
+                    sb.Append($" Failed to retrieve StackTraces: {e}");
+                }
+
+                throw new InvalidOperationException(sb.ToString());
             }
         }
     }
