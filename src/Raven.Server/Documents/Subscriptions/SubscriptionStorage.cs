@@ -150,9 +150,9 @@ namespace Raven.Server.Documents.Subscriptions
             return _db.WhoseTaskIsIt(topology, subscription, subscription);
         }
 
-        public async Task<SubscriptionState> AssertSubscriptionConnectionDetails(long id, string name)
+        public async Task<SubscriptionState> AssertSubscriptionConnectionDetails(long id, string name, CancellationToken token)
         {
-            await _serverStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, id);
+            await _serverStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, id, token);
 
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverStoreContext))
             using (serverStoreContext.OpenReadTransaction())
@@ -169,7 +169,7 @@ namespace Raven.Server.Documents.Subscriptions
                 {
                     var databaseTopologyAvailabilityExplanation = new Dictionary<string, string>();
 
-                    string generalState = string.Empty;
+                    string generalState;
                     RachisState currentState = _serverStore.Engine.CurrentState;
                     if (currentState == RachisState.Candidate || currentState == RachisState.Passive)
                     {
@@ -218,7 +218,7 @@ namespace Raven.Server.Documents.Subscriptions
                 return subscription;
             }
 
-            void FillNodesAvailabilityReportForState(SubscriptionGeneralDataAndStats subscription, DatabaseTopology topology, Dictionary<string, string> databaseTopologyAvailabilityExplenation, List<string> stateGroup, string stateName)
+            static void FillNodesAvailabilityReportForState(SubscriptionGeneralDataAndStats subscription, DatabaseTopology topology, Dictionary<string, string> databaseTopologyAvailabilityExplenation, List<string> stateGroup, string stateName)
             {
                 foreach (var nodeInGroup in stateGroup)
                 {

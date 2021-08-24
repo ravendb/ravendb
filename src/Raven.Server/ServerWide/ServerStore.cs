@@ -2987,9 +2987,9 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public async Task WaitForCommitIndexChange(RachisConsensus.CommitIndexModification modification, long value)
+        public async Task WaitForCommitIndexChange(RachisConsensus.CommitIndexModification modification, long value, CancellationToken token = default)
         {
-            await _engine.WaitForCommitIndexChange(modification, value);
+            await _engine.WaitForCommitIndexChange(modification, value, token);
         }
 
         public string LastStateChangeReason()
