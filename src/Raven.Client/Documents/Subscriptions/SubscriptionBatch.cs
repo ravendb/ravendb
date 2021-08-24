@@ -49,6 +49,7 @@ namespace Raven.Client.Documents.Subscriptions
         }
 
         public int NumberOfItemsInBatch => Items?.Count ?? 0;
+        internal int NumberOfIncludes => _includes?.Count ?? 0;
 
         private readonly RequestExecutor _requestExecutor;
         private readonly IDocumentStore _store;

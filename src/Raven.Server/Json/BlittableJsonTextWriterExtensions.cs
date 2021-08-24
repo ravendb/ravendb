@@ -1454,13 +1454,18 @@ namespace Raven.Server.Json
             }
         }
 
-        public static async Task WriteIncludesAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<Document> includes, CancellationToken token = default)
+        public static async Task<(long Count, long SizeInBytes)> WriteIncludesAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<Document> includes, CancellationToken token = default)
         {
             writer.WriteStartObject();
+
+            long count = 0, sizeInBytes = 0;
 
             var first = true;
             foreach (var document in includes)
             {
+                count++;
+                sizeInBytes += document.Data?.Size ?? 0;
+
                 if (first == false)
                     writer.WriteComma();
                 first = false;
@@ -1479,6 +1484,8 @@ namespace Raven.Server.Json
             }
 
             writer.WriteEndObject();
+
+            return (count, sizeInBytes);
         }
 
         internal static async Task WriteRevisionIncludes(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, Dictionary<string,Document> revisionsByChangeVector, Dictionary<string, Dictionary<DateTime, Document>> revisionsByDateTime, CancellationToken token = default)

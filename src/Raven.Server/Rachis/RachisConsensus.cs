@@ -1682,11 +1682,13 @@ namespace Raven.Server.Rachis
             context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += _ => TaskExecutor.CompleteAndReplace(ref _commitIndexChanged);
         }
 
-        public async Task WaitForCommitIndexChange(CommitIndexModification modification, long value)
+        public async Task WaitForCommitIndexChange(CommitIndexModification modification, long value, CancellationToken token = default)
         {
-            var timeoutTask = TimeoutManager.WaitFor(OperationTimeout);
+            var timeoutTask = TimeoutManager.WaitFor(OperationTimeout, token);
             while (timeoutTask.IsCompleted == false)
             {
+                token.ThrowIfCancellationRequested();
+
                 var task = _commitIndexChanged.Task;
                 using (ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                 using (context.OpenReadTransaction())
