@@ -13,7 +13,7 @@ namespace Raven.Server.Documents.Handlers
 {
     public class JsonPatchHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/json-patch", "PATCH", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/json-patch", "PATCH", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public async Task DocOperations()
         {
             var id = GetStringQueryString("id");
