@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Net;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Server.Commercial;
 using Raven.Server.Config.Categories;
@@ -136,26 +137,29 @@ namespace Raven.Server.Web.Studio
             }
         }
 
-        [RavenAction("/license-server/connectivity", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/license-server/connectivity", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
         public async Task CheckConnectivityToLicenseServer()
         {
             var result = new ConnectivityToLicenseServer();
 
-            try
+            using (var cts = new CancellationTokenSource(5000))
             {
-                var response = await ApiHttpClient.Instance.GetAsync("/Subscription.svc");
-                result.StatusCode = response.StatusCode;
-            }
-            catch (Exception e)
-            {
-                result.StatusCode = HttpStatusCode.BadRequest;
-                result.Exception = e.Message;
-            }
+                try
+                {
+                    var response = await ApiHttpClient.Instance.GetAsync("/alive", cts.Token);
+                    result.StatusCode = response.StatusCode;
+                }
+                catch (Exception e)
+                {
+                    result.StatusCode = HttpStatusCode.BadRequest;
+                    result.Exception = e.Message;
+                }
 
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                context.Write(writer, result.ToJson());
+                using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    context.Write(writer, result.ToJson());
+                }
             }
         }
 
