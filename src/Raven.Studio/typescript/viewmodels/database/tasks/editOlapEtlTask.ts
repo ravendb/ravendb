@@ -657,7 +657,7 @@ class editOlapEtlTask extends viewModelBase {
         if (transformation.isNew()) {
             const newTransformationItem = new ongoingTaskOlapEtlTransformationModel(transformation.toDto(), false, false);
             
-            newTransformationItem.name(transformation.name() || this.findNameForNewTransformation());
+            newTransformationItem.name(transformation.name());
             newTransformationItem.dirtyFlag().forceDirty();
             
             this.editedOlapEtl().transformationScripts.push(newTransformationItem);

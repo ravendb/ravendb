@@ -42,13 +42,13 @@ class ongoingTaskRavenEtlTransformationModel {
         return collectionsTracker.default.getCollectionColorIndex(collectionName);
     }
 
-    static empty(suggestedName: string): ongoingTaskRavenEtlTransformationModel {
+    static empty(name?: string): ongoingTaskRavenEtlTransformationModel {
         return new ongoingTaskRavenEtlTransformationModel(
             {
                 ApplyToAllDocuments: false, 
                 Collections: [],
                 Disabled: false,
-                Name: suggestedName,
+                Name: name || "",
                 Script: ""
             }, true, false);
     }
@@ -71,6 +71,10 @@ class ongoingTaskRavenEtlTransformationModel {
     }
 
     private initValidation() {
+        this.name.extend({
+            required: true
+        });
+        
         this.transformScriptCollections.extend({
             validation: [
                 {
@@ -85,6 +89,7 @@ class ongoingTaskRavenEtlTransformationModel {
         });
 
         this.validationGroup = ko.validatedObservable({
+            name: this.name,
             transformScriptCollections: this.transformScriptCollections,
             script: this.script
         });

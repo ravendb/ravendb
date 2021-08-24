@@ -49,13 +49,13 @@ class ongoingTaskOlapEtlTransformationModel {
        ], false, jsonUtil.newLineNormalizingHashFunction);
     }
    
-    static empty(suggestedName: string): ongoingTaskOlapEtlTransformationModel {
+    static empty(name?: string): ongoingTaskOlapEtlTransformationModel {
         return new ongoingTaskOlapEtlTransformationModel(
             {
                 ApplyToAllDocuments: false, 
                 Collections: [],
                 Disabled: false,
-                Name: suggestedName,
+                Name: name || "",
                 Script: ""
             }, true, false);
     }
@@ -79,20 +79,19 @@ class ongoingTaskOlapEtlTransformationModel {
         const checkScriptName = (val: string,
                                  params: any,
                                  callback: (currentValue: string, errorMessageOrValidationResult: string | boolean) => void) => {
-            if (this.name()) {
-                new validateNameCommand('Script', val)
-                    .execute()
-                    .done((result) => {
-                        if (result.IsValid) {
-                            callback(this.name(), true);
-                        } else {
-                            callback(this.name(), result.ErrorMessage);
-                        }
-                    })
-            }
+            new validateNameCommand('Script', val)
+                .execute()
+                .done((result) => {
+                    if (result.IsValid) {
+                        callback(this.name(), true);
+                    } else {
+                        callback(this.name(), result.ErrorMessage);
+                    }
+                })
         };
         
         this.name.extend({
+            required: true,
             validation: [
                 {
                     async: true,
