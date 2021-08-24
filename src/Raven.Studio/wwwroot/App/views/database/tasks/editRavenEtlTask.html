@@ -222,7 +222,7 @@
             <div class="flex-grow">
                 <div id="editTransform" class="panel padding" data-bind="if: showEditTransformationArea">
                     <div data-bind="with: editedTransformationScriptSandbox">
-                        <div class="flex-horizontal margin-bottom">
+                        <div class="flex-horizontal margin-bottom" data-bind="validationElement: name">
                             <label class="control-label"><strong>Name:</strong></label>
                             <div class="flex-grow margin-left">
                                 <input type="text" class="form-control" placeholder="Enter script name" autocomplete="off"

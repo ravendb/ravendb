@@ -439,7 +439,7 @@ class editRavenEtlTask extends viewModelBase {
         
         if (transformation.isNew()) {
             const newTransformationItem = new ongoingTaskRavenEtlTransformationModel(transformation.toDto(), true, false); 
-            newTransformationItem.name(transformation.name() || this.findNameForNewTransformation());
+            newTransformationItem.name(transformation.name());
             newTransformationItem.dirtyFlag().forceDirty();
             this.editedRavenEtl().transformationScripts.push(newTransformationItem);
         } else {

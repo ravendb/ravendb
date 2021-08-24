@@ -271,7 +271,7 @@
         <div class="col-xs-12 col-lg-6 flex-vertical" data-bind="with: editedTransformationScriptSandbox()">
             <div class="flex-grow">
                 <div class="panel padding" data-bind="if: $root.showEditTransformationArea">
-                    <div class="flex-horizontal margin-bottom">
+                    <div class="flex-horizontal margin-bottom" data-bind="validationElement: name">
                         <label class="control-label"><strong>Name:</strong></label>
                         <div class="flex-grow margin-left">
                             <input type="text" class="form-control" placeholder="Enter script name" autocomplete="off"
