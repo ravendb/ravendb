@@ -53,6 +53,13 @@ function GetUbuntuImageTags($repo, $version, $arch) {
             )
             break;
         }
+        "arm64v8" {
+            return @(
+                "$($repo):$($version)-ubuntu.18.04-arm64v8",
+                "$($repo):4.2-ubuntu-arm64v8-latest"
+                )
+                break;
+        }
         Default {
             throw "Arch not supported."
         }
