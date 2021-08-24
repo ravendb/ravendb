@@ -1326,6 +1326,9 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
+        private const string PositivePrefix = "TC:INC-";
+        private const string NegativePrefix = "TC:DEC-";
+
         public string IncrementTimestamp(
             DocumentsOperationContext context,
             string documentId,
@@ -1333,17 +1336,28 @@ namespace Raven.Server.Documents.TimeSeries
             string name,
             IEnumerable<TimeSeriesOperation.IncrementOperation> toIncrement)
         {
-            var dbBase64Id = context.GetLazyString(_documentDatabase.DbBase64Id);
+            foreach (var operation in toIncrement) 
+            {
+                var sign = operation.Values[0] > 0;
+
+                for (int i = 1; i < operation.Values.Length; i++)
+                {
+                    if (operation.Values[i] > 0 == sign)
+                        continue;
+
+                    throw new InvalidDataException("Increment operation element cannot contain both positive and negative values.");
+                }
+            }
 
             var holder = new SingleResult();
 
-            return AppendTimestamp(context, documentId, collection, name, toIncrement.Select(ToResult), 
-                changeVectorFromReplication: null, verifyName: true, incrementResults: true, addNewNameToMetadata: true);
+            return AppendTimestamp(context, documentId, collection, name, toIncrement.Select(ToResult),
+                    changeVectorFromReplication: null, verifyName: true, incrementResults: true, addNewNameToMetadata: true);
 
             SingleResult ToResult(TimeSeriesOperation.IncrementOperation element)
             {
                 holder.Values = element.Values;
-                holder.Tag = dbBase64Id;
+                holder.Tag = context.GetLazyString((element.Values[0] > 0 ? PositivePrefix: NegativePrefix) + _documentDatabase.DbBase64Id);
                 holder.Timestamp = element.Timestamp.EnsureUtc().EnsureMilliseconds();
                 holder.Status = TimeSeriesValuesSegment.Live;
                 return holder;

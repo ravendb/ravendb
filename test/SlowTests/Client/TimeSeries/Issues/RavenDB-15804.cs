@@ -1,10 +1,12 @@
 ﻿using System;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using FastTests.Server.Replication;
 using Raven.Client.Documents.Session.TimeSeries;
+using Raven.Client.Exceptions;
 using Raven.Server.Config;
 using Xunit;
 using Xunit.Abstractions;
@@ -438,6 +440,25 @@ namespace SlowTests.Client.TimeSeries.Issues
                     var sum = ts.Sum(x => x.Values.Sum());
 
                     Assert.Equal(300_000, sum);
+                }
+            }
+        }
+
+        [Fact]
+        public void ShouldThrowIfIncrementContainBothPositiveNegativeValues()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    var e = Assert.Throws<RavenException>(() =>
+                    {
+                        session.Store(new {Name = "Oren"}, "users/ayende");
+                        var ts = session.TimeSeriesFor("users/ayende", "HeartRate");
+                        ts.Increment(new double[] {1, -2, 3});
+                        session.SaveChanges();
+                    });
+                    Assert.True(e.Message.Contains("Increment operation element cannot contain both positive and negative values"));
                 }
             }
         }
