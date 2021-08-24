@@ -124,8 +124,27 @@ namespace Raven.Client.ServerWide
         public long TruncatedClusterTransactionCommandsCount;
 
         public HashSet<string> UnusedDatabaseIds = new HashSet<string>();
+
         [JsonIgnore]
         public bool IsSharded => Shards?.Length > 0;
+
+        [JsonIgnore]
+        internal IEnumerable<(string Name, DatabaseTopology Topology)> Topologies
+        {
+            get
+            {
+                if (IsSharded)
+                {
+                    for (int i = 0; i < Shards.Length; i++)
+                    {
+                        yield return ($"{DatabaseName}${i}", Shards[i]);
+                    }
+                    yield break;
+                }
+
+                yield return (DatabaseName, Topology);
+            }
+        }
 
         public void AddSorter(SorterDefinition definition)
         {

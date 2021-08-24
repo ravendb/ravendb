@@ -11,6 +11,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.CodeAnalysis.CSharp;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes.Analysis;
 using Raven.Client.Documents.Operations.Backups;
@@ -1644,12 +1645,6 @@ namespace Raven.Server.ServerWide
 
             if (TopologyChanged())
             {
-                addDatabaseCommand.Record.Topology.Stamp = new LeaderStamp
-                {
-                    Index = index,
-                    LeadersTicks = -2,
-                    Term = _parent.CurrentTerm
-                };
                 hasChanges = true;
             }
 
@@ -1659,15 +1654,42 @@ namespace Raven.Server.ServerWide
 
             bool TopologyChanged()
             {
+                var remote = addDatabaseCommand.Record.Topologies.ToArray();
                 if (databaseExists == false)
+                {
+                    AddStampToAllRemotes(index, remote);
                     return true;
+                }
 
-                if (addDatabaseCommand.Record.Topology.Stamp == null)
+                var local = ReadRawDatabaseRecord(context, addDatabaseCommand.Name).Topologies.ToArray();
+
+                if (remote.Length != local.Length)
+                {
+                    AddStampToAllRemotes(index, remote);
                     return true;
+                }
 
-                var topology = ReadDatabaseTopology(context, addDatabaseCommand.Name);
+                var changed = false;
+                for (int i = 0; i < remote.Length; i++)
+                {
+                    var remoteTopology = remote[i];
+                    var localTopology = local[i];
 
-                return topology.AllNodes.SequenceEqual(addDatabaseCommand.Record.Topology.AllNodes) == false;
+                    if (remoteTopology.Name != localTopology.Name)
+                    {
+                        Debug.Assert(false,$"Same number of topologies {remote.Length}, but has different name at i={i}, remote: {remoteTopology.Name}, local: {localTopology.Name}");
+                        AddStampToAllRemotes(index, remote);
+                        return true;
+                    }
+
+                    if (remoteTopology.Topology.AllNodes.SequenceEqual(localTopology.Topology.AllNodes) == false)
+                    {
+                        AddStampToRemote(index, remoteTopology.Topology);
+                        changed = true;
+                    }
+                }
+
+                return changed;
             }
 
             void UpdatePeriodicBackups()
@@ -1725,6 +1747,24 @@ namespace Raven.Server.ServerWide
                     hasChanges = true;
                 }
             }
+        }
+
+        private void AddStampToAllRemotes(long index, (string Name, DatabaseTopology Topology)[] remote)
+        {
+            foreach (var (name, topology) in remote)
+            {
+                AddStampToRemote(index, topology);
+            }
+        }
+
+        private void AddStampToRemote(long index, DatabaseTopology topology)
+        {
+            topology.Stamp = new LeaderStamp
+            {
+                Index = index,
+                LeadersTicks = -2,
+                Term = _parent.CurrentTerm
+            };
         }
 
         private static bool IsExcluded(BlittableJsonReaderObject configurationBlittable, string databaseName)
@@ -3227,6 +3267,9 @@ namespace Raven.Server.ServerWide
         {
             using (var databaseRecord = ReadRawDatabaseRecord(context, name))
             {
+                if (databaseRecord.IsSharded())
+                    throw new InvalidOperationException($"The database record '{name}' is sharded and doesn't contain topology directly.");
+
                 var topology = databaseRecord.Topology;
                 if (topology == null)
                     throw new InvalidOperationException($"The database record '{name}' doesn't contain topology.");

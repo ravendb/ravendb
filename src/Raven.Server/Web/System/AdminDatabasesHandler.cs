@@ -363,7 +363,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        private async Task<(long, DatabaseTopology, List<string>)> CreateDatabase(string name, DatabaseRecord databaseRecord, TransactionOperationContext context, int replicationFactor, long? index, string raftRequestId)
+        private async Task<(long Index, DatabaseTopology Topology, List<string> Urls)> CreateDatabase(string name, DatabaseRecord databaseRecord, TransactionOperationContext context, int replicationFactor, long? index, string raftRequestId)
         {
             var dbRecordExist = ServerStore.Cluster.DatabaseExists(context, name);
             if (index.HasValue && dbRecordExist == false)
