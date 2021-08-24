@@ -28,7 +28,7 @@ import generalUtils = require("common/generalUtils");
 class createDatabase extends dialogViewModelBase {
     
     static readonly legacyKeySizes = [128, 192, 256];
-    static readonly legacyEncryptionAlgorithms = ['DES', 'RC2', 'Rijndael', 'Triple DES'] as legacyEncryptionAlgorithms[];
+    static readonly legacyEncryptionAlgorithms: legacyEncryptionAlgorithms[] = ['DES', 'RC2', 'Rijndael', 'Triple DES'];
 
     static readonly defaultSection = "replication";
     
@@ -40,7 +40,7 @@ class createDatabase extends dialogViewModelBase {
     };
 
     databaseModel: databaseCreationModel;
-    clusterNodes = [] as clusterNode[];
+    clusterNodes: clusterNode[] = [];
     
     encryptionSection: setupEncryptionKey;
     usingHttps = location.protocol === "https:"; 
@@ -68,7 +68,7 @@ class createDatabase extends dialogViewModelBase {
     backupFolderPathOptions = ko.observableArray<string>([]);
     sourceJournalsPathOptions = ko.observableArray<string>([]);
     
-    allAutoCompleteOptions: KnockoutComputed<{ path: string, isRecent: boolean }[]>;
+    pathOptions = ko.observableArray<{ path: string, isRecent: boolean }>([]);
     allDataExporterAutoCompleteOptions: KnockoutComputed<{ path: string, isRecent: boolean }[]>;
 
     legacyMigrationDataDirectoryPathOptions = ko.observableArray<string>([]);
@@ -134,6 +134,7 @@ class createDatabase extends dialogViewModelBase {
         this.updateDatabaseLocationInfo(this.databaseModel.name(), dataPath);
         
         this.updateBackupDirectoryPathOptions();
+        this.updatePathOptions(this.databaseModel.path.dataPath());
         
         if (this.databaseModel.creationMode === "legacyMigration") {
             this.updateLegacyMigrationDataDirectoryPathOptions(this.databaseModel.legacyMigration.dataDirectory());
@@ -283,6 +284,7 @@ class createDatabase extends dialogViewModelBase {
         this.databaseModel.path.dataPath.throttle(300).subscribe(newPath => {
             if (this.databaseModel.path.dataPath.isValid()) {
                 this.updateDatabaseLocationInfo(this.databaseModel.name(), newPath);
+                this.updatePathOptions(this.databaseModel.path.dataPath());
             } else {
                 this.databaseLocationInfo([]);
                 this.spinners.databaseLocationInfoLoading(false);
@@ -380,22 +382,6 @@ class createDatabase extends dialogViewModelBase {
             return `${message} ${replicationFactor} of the ${numberOfClusterNodes} nodes:`;
         });
 
-        this.allAutoCompleteOptions = ko.pureComputed(() => {
-            const result: { path: string, isRecent: boolean }[] = [];
-
-            const autoComplete = this.recentPathsAutocomplete.createCompleter();
-            autoComplete().forEach(p => {
-                result.push({ path: p, isRecent: true });
-            });
-
-            const pathOptions = this.backupFolderPathOptions();
-            pathOptions.forEach(p => {
-                result.push({ path: p, isRecent: false });
-            });
-
-            return result;
-        });
-
         this.allDataExporterAutoCompleteOptions = ko.pureComputed(() => {
             const result: { path: string, isRecent: boolean }[] = [];
 
@@ -427,30 +413,49 @@ class createDatabase extends dialogViewModelBase {
             });
         
         generalUtils.delayedSpinner(this.spinners.databaseLocationInfoLoading, task);
-    }  
+    }
+    
+    updatePathOptions(dataPath: string) {
+        const result: { path: string, isRecent: boolean }[] = [];
+        
+        this.getLocalFolderPaths(dataPath)
+            .done((localFolderPaths: Raven.Server.Web.Studio.FolderPathOptions) => {
 
+                const recentPaths = this.recentPathsAutocomplete.createCompleter();
+                recentPaths().forEach(p => {
+                    result.push({ path: p, isRecent: true });
+                });
+
+                localFolderPaths.List.forEach((p: string) => {
+                    result.push({ path: p, isRecent: false });
+                });
+                
+                this.pathOptions(result);
+            });
+    }
+    
     updateBackupDirectoryPathOptions() {
         this.databaseModel.restoreSourceObject().getFolderPathOptions()
             .done((optionsList: string[]) => this.backupFolderPathOptions(optionsList));
     }
 
-    private updateLocalFolderPath(path: string, backupFolder = false): JQueryPromise<Raven.Server.Web.Studio.FolderPathOptions> {
+    private getLocalFolderPaths(path: string, backupFolder = false): JQueryPromise<Raven.Server.Web.Studio.FolderPathOptions> {
         return getFolderPathOptionsCommand.forServerLocal(path, backupFolder)
             .execute();
     }
     
     updateLegacyMigrationDataDirectoryPathOptions(path: string) {
-        this.updateLocalFolderPath(path)
+        this.getLocalFolderPaths(path)
             .done(result => this.legacyMigrationDataDirectoryPathOptions(result.List));
     }
     
     updateLegacyDataExporterPath(path: string) {
-        this.updateLocalFolderPath(path)
+        this.getLocalFolderPaths(path)
             .done(result => this.dataExporterDirectoryPathOptions(result.List));
     }
 
     updateSourceJournalsPathOptions(path: string) {
-        this.updateLocalFolderPath(path)
+        this.getLocalFolderPaths(path)
             .done(result => this.sourceJournalsPathOptions(result.List));
     }
 
@@ -535,7 +540,7 @@ class createDatabase extends dialogViewModelBase {
         const replicationFactor = this.databaseModel.replication.replicationFactor();
 
         if (shouldActive) {
-            databasesManager.default.activateAfterCreation(databaseDocument.DatabaseName);    
+            databasesManager.default.activateAfterCreation(databaseDocument.DatabaseName);
         }
 
         const encryptionTask = $.Deferred<void>();
@@ -545,7 +550,7 @@ class createDatabase extends dialogViewModelBase {
             const nodeTags = this.databaseModel.replication.nodes().map(x => x.tag());
             this.encryptionSection.configureEncryption(this.databaseModel.encryption.key(), nodeTags)
                 .done(() => encryptionTask.resolve())
-                .fail(() => this.spinners.create(false));                
+                .fail(() => this.spinners.create(false));
         } else {
             encryptionTask.resolve();
         }
@@ -567,7 +572,7 @@ class createDatabase extends dialogViewModelBase {
             });
     }
 
-    private createDatabaseFromLegacyDatafiles(): JQueryPromise<operationIdDto> {  
+    private createDatabaseFromLegacyDatafiles(): JQueryPromise<operationIdDto> {
 
         const restoreDocument = this.databaseModel.toOfflineMigrationDto();
         return new migrateLegacyDatabaseFromDatafilesCommand(restoreDocument)
@@ -616,7 +621,7 @@ class createDatabase extends dialogViewModelBase {
 
     redirectToCertificates(){
         dialog.close(this);
-        router.navigate(appUrl.forCertificates());       
+        router.navigate(appUrl.forCertificates());
     }
 }
 

@@ -1288,8 +1288,9 @@ namespace SlowTests.Client.TimeSeries.BulkInsert
 
                         while (attachmentsEnumerator.MoveNext())
                         {
-                            Assert.NotNull(attachmentsEnumerator.Current != null);
+                            Assert.NotNull(attachmentsEnumerator.Current);
                             Assert.True(AttachmentsStreamTests.CompareStreams(attachmentsEnumerator.Current.Stream, streams[id][attachmentsEnumerator.Current.Details.Name]));
+                            attachmentsEnumerator.Current.Stream?.Dispose();
                         }
                     }
 

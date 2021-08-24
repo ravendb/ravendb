@@ -3,6 +3,7 @@ using System.IO;
 using Raven.Client.ServerWide.Tcp;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Json.Sync;
 using Sparrow.Logging;
 using Sparrow.Server.Json.Sync;
 

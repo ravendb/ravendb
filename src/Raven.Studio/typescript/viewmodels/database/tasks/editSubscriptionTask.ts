@@ -69,7 +69,7 @@ class editSubscriptionTask extends viewModelBase {
 
     constructor() {
         super();
-        this.bindToCurrentInstance("setStartingPointType", "goToTab");
+        this.bindToCurrentInstance("setStartingPointType", "goToTab", "setState");
         aceEditorBindingHandler.install();
     }
 
@@ -145,7 +145,7 @@ class editSubscriptionTask extends viewModelBase {
         // 2. Create/add the new replication task
         const dto = this.editedSubscription().toDto();
 
-        new saveSubscriptionTaskCommand(this.activeDatabase(), dto, this.editedSubscription().taskId, this.editedSubscription().taskState()) 
+        new saveSubscriptionTaskCommand(this.activeDatabase(), dto, this.editedSubscription().taskId)
             .execute()
             .done(() => {
                 this.dirtyFlag().reset();
@@ -323,7 +323,11 @@ class editSubscriptionTask extends viewModelBase {
     syntaxHelp() {
         const viewModel = new subscriptionRqlSyntax();
             app.showBootstrapDialog(viewModel);
-        }
+    }
+
+    setState(state: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskState): void {
+        this.editedSubscription().taskState(state);
+    }
 }
 
 export = editSubscriptionTask;

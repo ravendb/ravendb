@@ -204,7 +204,7 @@ class editRavenEtlTask extends viewModelBase {
         aceEditorBindingHandler.install();
         this.bindToCurrentInstance("useConnectionString", "onTestConnectionRaven", "removeTransformationScript",
                                    "cancelEditedTransformation", "saveEditedTransformation", "syntaxHelp",
-                                   "toggleTestArea", "toggleAdvancedArea");
+                                   "toggleTestArea", "toggleAdvancedArea", "setState");
     }
 
     activate(args: any) {
@@ -522,6 +522,10 @@ class editRavenEtlTask extends viewModelBase {
     
     toggleAdvancedArea() {
         this.showAdvancedOptions.toggle();
+    }
+
+    setState(state: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskState): void {
+        this.editedRavenEtl().taskState(state);
     }
 }
 

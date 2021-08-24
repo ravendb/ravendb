@@ -81,6 +81,7 @@ namespace Raven.Client.Extensions
 
             return expression.ToPropertyPath(propertySeparator, collectionSeparator);
         }
+        
 
         public static string ToPropertyPath(this Expression expression, char propertySeparator = '.', string collectionSeparator = "[].")
         {
@@ -141,6 +142,14 @@ namespace Raven.Client.Extensions
                         Results.Push("$" + node.Member.Name);
                     }
 
+                    return base.VisitMember(node);
+                }
+
+                if (_isFirst == false && node.Expression != null && node.Member.IsField())
+                {
+                    Results.Push(node.Member.Name);
+                    AddPropertySeparator();
+                    Results.Push(node.Expression.ToString());
                     return base.VisitMember(node);
                 }
 

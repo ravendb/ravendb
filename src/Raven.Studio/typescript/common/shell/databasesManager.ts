@@ -26,11 +26,11 @@ class databasesManager {
 
     databases = ko.observableArray<database>([]);
 
-    onDatabaseDeletedCallbacks = [
+    onDatabaseDeletedCallbacks: Array<(qualifier: string, name: string) => void> = [
         (q, n) => recentQueriesStorage.onDatabaseDeleted(q, n),
         (q, n) => starredDocumentsStorage.onDatabaseDeleted(q, n),
         (q, n) => savedPatchesStorage.onDatabaseDeleted(q, n)
-    ] as Array<(qualifier: string, name: string) => void>;
+    ];
 
     getDatabaseByName(name: string): database {
         if (!name) {
@@ -136,7 +136,7 @@ class databasesManager {
     private deleteRemovedDatabases(incomingData: Raven.Client.ServerWide.Operations.DatabasesInfo) {
         const existingDatabase = this.databases;
 
-        const toDelete = [] as database[];
+        const toDelete: database[] = [];
 
         this.databases().forEach(db => {
             const matchedDb = incomingData.Databases.find(x => x.Name.toLowerCase() === db.name.toLowerCase());

@@ -4,18 +4,18 @@
         margin-bottom: @grid-gutter-width/2;
     }
 
+    .has-info-icon {
+        i::before {
+            .text-emphasis-variant(@state-info-text);
+        }
+    }
     
     .identities {
         .identities-header {
             margin-bottom: @grid-gutter-width/2;
             margin-left: @grid-gutter-width/4;
-
-            i::before {
-                .text-emphasis-variant(@state-info-text);
-            }
         }
     }
-
 
     .stats-list {
         padding: @grid-gutter-width/2;

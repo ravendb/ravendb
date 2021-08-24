@@ -1,0 +1,14 @@
+﻿<Project>
+    <Target Name="AddPackageAliases" BeforeTargets="ResolveReferences" Outputs="%(PackageReference.Identity)">
+        <PropertyGroup>
+            <AliasPackageReference>@(PackageReference->'%(Identity)')</AliasPackageReference>
+            <AliasName>@(PackageReference->'%(Alias)')</AliasName>
+        </PropertyGroup>
+
+        <ItemGroup>
+            <ReferencePath Condition="'%(FileName)'=='$(AliasPackageReference)'">
+                <Aliases>$(AliasName)</Aliases>
+            </ReferencePath>
+        </ItemGroup>
+    </Target>
+</Project>

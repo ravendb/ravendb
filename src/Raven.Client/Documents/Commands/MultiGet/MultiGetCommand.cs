@@ -43,39 +43,6 @@ namespace Raven.Client.Documents.Commands.MultiGet
                 return null;// aggressively cached
             }
 
-            var aggressiveCacheOptions = _requestExecutor.AggressiveCaching.Value;
-            if (aggressiveCacheOptions != null)
-            {
-                Result = new List<GetResponse>();
-                foreach (var command in _commands)
-                {
-                    if (command.CanCacheAggressively == false)
-                        break;
-                    var cacheKey = GetCacheKey(command, out string _);
-                    using (var cachedItem = _httpCache.Get(ctx, cacheKey, out _, out var cached))
-                    {
-                        if (cached == null ||
-                            cachedItem.Age > aggressiveCacheOptions.Duration ||
-                            aggressiveCacheOptions.Mode == AggressiveCacheMode.TrackChanges && cachedItem.MightHaveBeenModified)
-                            break;
-
-                        Result.Add(new GetResponse
-                        {
-                            Result = cached,
-                            StatusCode = HttpStatusCode.NotModified,
-                        });
-                    }
-                }
-
-                if (Result.Count == _commands.Count)
-                {
-                    AggressivelyCached = true;
-                    return null;// aggressively cached
-                }
-                // not all of it is cached, might as well read it all
-                Result = null;
-            }
-
             var request = new HttpRequestMessage
             {
                 Method = HttpMethod.Post,

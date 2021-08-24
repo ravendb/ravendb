@@ -1134,6 +1134,7 @@ namespace Raven.Server.Commercial
         private static bool HasDocumentsCompression(DocumentsCompressionConfiguration documentsCompression)
         {
             return documentsCompression?.CompressRevisions == true ||
+                   documentsCompression?.CompressAllCollections == true ||
                    documentsCompression?.Collections?.Length > 0;
         }
 

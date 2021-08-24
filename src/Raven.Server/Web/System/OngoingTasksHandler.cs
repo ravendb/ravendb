@@ -131,7 +131,7 @@ namespace Raven.Server.Web.System
             {
                 foreach (var incoming in handlers)
                 {
-                    if (incoming.PullReplicationName == sinkReplication.HubName)
+                    if (incoming._incomingPullReplicationParams?.Name == sinkReplication.HubName)
                     {
                         handler = incoming;
                         res = (incoming.ConnectionInfo.SourceUrl, OngoingTaskConnectionStatus.Active);

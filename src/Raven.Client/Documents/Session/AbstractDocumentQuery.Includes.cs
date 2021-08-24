@@ -15,6 +15,8 @@ namespace Raven.Client.Documents.Session
         protected List<CounterIncludesToken> CounterIncludesTokens;
 
         internal List<CompareExchangeValueIncludesToken> CompareExchangeValueIncludesTokens;
+        
+        internal List<RevisionIncludesToken> RevisionsIncludesTokens;
 
         /// <summary>
         /// The paths to include when loading the query
@@ -58,7 +60,17 @@ namespace Raven.Client.Documents.Session
             {
                 IncludeTimeSeries(includes.Alias, includes.TimeSeriesToIncludeBySourceAlias);
             }
-
+            
+            if (includes.RevisionsToIncludeByDateTime != null)
+            {
+                IncludeRevisions(includes.RevisionsToIncludeByDateTime.Value);
+            }
+            
+            if (includes.RevisionsToIncludeByChangeVector != null)
+            {
+                IncludeRevisions(includes.RevisionsToIncludeByChangeVector);
+            }
+            
             if (includes.CompareExchangeValuesToInclude != null)
             {
                 CompareExchangeValueIncludesTokens = new List<CompareExchangeValueIncludesToken>();
@@ -108,6 +120,21 @@ namespace Raven.Client.Documents.Session
                 {
                     TimeSeriesIncludesTokens.Add(TimeSeriesIncludesToken.Create(kvp.Key, range));
                 }
+            }
+        }
+        
+        private void IncludeRevisions(DateTime dateTime)
+        {
+            RevisionsIncludesTokens ??= new List<RevisionIncludesToken>();
+            RevisionsIncludesTokens.Add(RevisionIncludesToken.Create(dateTime));
+        }
+        
+        private void IncludeRevisions(HashSet<string> revisionsToIncludeByChangeVector)
+        {
+            RevisionsIncludesTokens ??= new List<RevisionIncludesToken>();
+            foreach (var changeVector in revisionsToIncludeByChangeVector)
+            {
+                RevisionsIncludesTokens.Add(RevisionIncludesToken.Create(changeVector));
             }
         }
     }

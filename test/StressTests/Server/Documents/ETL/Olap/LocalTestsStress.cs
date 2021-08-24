@@ -5,6 +5,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Client;
+using Orders;
 using Parquet;
 using Parquet.Data;
 using Raven.Client.Documents;
@@ -43,7 +44,7 @@ namespace StressTests.Server.Documents.ETL.Olap
                 {
                     for (int i = 1; i <= 10; i++)
                     {
-                        var o = new Query.Order
+                        var o = new Order
                         {
                             Id = $"orders/{i}",
                             OrderedAt = baseline.AddDays(i),
@@ -130,7 +131,7 @@ loadToOrders(partitionBy(key), o);
                 {
                     for (int i = 20; i <= 30; i++)
                     {
-                        var o = new Query.Order
+                        var o = new Order
                         {
                             Id = $"orders/{i}",
                             OrderedAt = baseline.AddDays(i),
@@ -166,7 +167,7 @@ loadToOrders(partitionBy(key), o);
                 {
                     for (int i = 1; i <= 10; i++)
                     {
-                        var o = new Query.Order
+                        var o = new Order
                         {
                             Id = $"orders/{i}",
                             OrderedAt = baseline.AddDays(i),
@@ -229,7 +230,7 @@ loadToOrders(partitionBy(key), o);
                 {
                     for (int i = 20; i <= 30; i++)
                     {
-                        var o = new Query.Order
+                        var o = new Order
                         {
                             Id = $"orders/{i}",
                             OrderedAt = baseline.AddDays(i),

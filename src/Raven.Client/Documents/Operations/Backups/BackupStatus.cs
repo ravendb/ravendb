@@ -171,6 +171,11 @@ namespace Raven.Client.Documents.Operations.Backups
             UploadedInBytes += length;
         }
 
+        public void SetUploaded(long length)
+        {
+            UploadedInBytes = length;
+        }
+
         public void ChangeType(UploadType newType)
         {
             UploadType = newType;

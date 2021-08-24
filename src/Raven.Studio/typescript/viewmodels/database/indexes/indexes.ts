@@ -47,6 +47,7 @@ class indexes extends viewModelBase {
     requestedIndexingInProgress = false;
     indexesCount: KnockoutComputed<number>;
     searchCriteriaDescription: KnockoutComputed<string>;
+    indexNameToHighlight = ko.observable<string>(null);
 
     private clusterManager = clusterTopologyManager.default;
     localNodeTag = ko.observable<string>();
@@ -76,7 +77,7 @@ class indexes extends viewModelBase {
         this.bindToCurrentInstance(
             "lowPriority", "highPriority", "normalPriority",
             "openFaultyIndex", "resetIndex", "deleteIndex",
-            "forceSideBySide",
+            "swapSideBySide",
             "forceParallelDeployment",
             "showStaleReasons",
             "unlockIndex", "lockIndex", "lockErrorIndex",
@@ -239,6 +240,7 @@ class indexes extends viewModelBase {
             }
             return firstLockMode;
         });
+        
         this.indexesSelectionState = ko.pureComputed<checkbox>(() => {
             const selectedCount = this.selectedIndexesName().length;
             const indexesCount = this.getAllIndexes().length;
@@ -248,6 +250,9 @@ class indexes extends viewModelBase {
                 return "some_checked";
             return "unchecked";
         });
+        
+        this.searchText.subscribe(() => this.highlightIndex(this.indexNameToHighlight(), false));
+        this.hasAnyStateFilter.subscribe(() => this.highlightIndex(this.indexNameToHighlight(), false));
     }
 
     activate(args: any) {
@@ -256,6 +261,10 @@ class indexes extends viewModelBase {
         
         if (args && args.stale) {
             this.indexStatusFilter(["Stale"]);
+        }
+        
+        if (args && args.indexName) {
+            this.indexNameToHighlight(args.indexName);
         }
 
         return this.fetchIndexes();
@@ -271,6 +280,35 @@ class indexes extends viewModelBase {
         super.compositionComplete();
 
         $('.index-info [data-toggle="tooltip"]').tooltip();
+        
+        this.scrollToIndex();
+    }
+
+    private scrollToIndex(): void {
+        const indexToHighlight = this.indexNameToHighlight();
+
+        if (indexToHighlight) {
+            const indexId = `index_${indexToHighlight}`;
+            
+            const indexElement = document.getElementById(indexId);
+            generalUtils.scrollToElement(indexElement);
+            
+            this.highlightIndexElement(indexElement);
+        }
+    }
+    
+    private highlightIndex(indexName: string, highlight: boolean = true): void {
+        const indexId = "index_" + indexName;
+        const indexElement = document.getElementById(indexId);
+        this.highlightIndexElement(indexElement, highlight);
+    }
+
+    private highlightIndexElement(indexElement: HTMLElement, highlight: boolean = true): void {
+        if (highlight) {
+            indexElement.classList.add("blink-style-basic");
+        } else {
+            indexElement.classList.remove("blink-style-basic");
+        }
     }
     
     private fetchIndexes(forceRefresh: boolean = false): JQueryPromise<void> {
@@ -585,7 +623,7 @@ class indexes extends viewModelBase {
     }
 
     private findIndexesByName(indexName: string): index[] {
-        const result = [] as Array<index>;
+        const result: Array<index> = [];
         this.indexGroups().forEach(g => {
             g.indexes().forEach(i => {
                 if (i.name === indexName) {
@@ -674,14 +712,21 @@ class indexes extends viewModelBase {
         this.addNotification(changesApi.watchAllIndexes(e => this.processIndexEvent(e)));
     }
 
-    forceSideBySide(idx: index) {
-        this.confirmationMessage("Are you sure?", `Do you want to <strong>force swapping</strong> the side-by-side index: ${generalUtils.escapeHtml(idx.name)}?`, {
-            html: true
-        })
+    swapSideBySide(idx: index) {
+        const margin = `class="margin-bottom"`;
+        let text = `<li ${margin}>Index: <strong>${generalUtils.escapeHtml(idx.name)}</strong></li>`;
+        text += `<li ${margin}>Clicking <strong>Swap Now</strong> will immediately replace the current index definition with the replacement index.</li>`;
+
+        const replacementIndex = idx.replacement();
+        if (replacementIndex.progress() && replacementIndex.progress().rollingProgress().length) {
+            text += `<li ${margin}>Actual indexing will occur once the node reaches its turn in the rolling deployment process.</li>`;
+        }
+
+        this.confirmationMessage("Are you sure?", `<ul>${text}</ul>`, { buttons: ["Cancel", "Swap Now"], html: true })
             .done((result: canActivateResultDto) => {
                 if (result.can) {
                     this.spinners.swapNow.push(idx.name);
-                    eventsCollector.default.reportEvent("index", "force-side-by-side");
+                    eventsCollector.default.reportEvent("index", "swap-side-by-side");
                     new forceIndexReplace(idx.name, this.activeDatabase())
                         .execute()
                         .always(() => this.spinners.swapNow.remove(idx.name));
@@ -905,7 +950,7 @@ class indexes extends viewModelBase {
         if (selectedIndexesCount > 0) {
             this.selectedIndexesName([]);
         } else {
-            const namesToSelect = [] as Array<string>;
+            const namesToSelect: string[] = [];
 
             this.indexGroups().forEach(indexGroup => {
                 if (!indexGroup.groupHidden()) {

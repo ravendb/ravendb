@@ -208,8 +208,8 @@ class listView<T> {
         
         const [firstVisibleIdx, lastVisibleIdx] = this.visibleItemsRange(scrollTop, scrollBottom);
 
-        let usedRows = [] as virtualListRow<T>[];
-        let missingIdx = [] as number[];
+        let usedRows: virtualListRow<T>[] = [];
+        let missingIdx: number[] = [];
         
         // first try to reuse existing row - useful when user uses mouse scroll
         
@@ -256,7 +256,7 @@ class listView<T> {
         const parent = this.$viewportElement
             .find(listView.viewportScrollerSelector)[0];
 
-        let children = [] as HTMLElement[];            
+        let children: HTMLElement[] = [];            
             
         for (let i = parent.children.length - 1; i >= 0; i--) {
             children.push(parent.children.item(i) as HTMLElement);

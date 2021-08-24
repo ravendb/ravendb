@@ -1,18 +1,19 @@
 <div>
     <div class="cluster-dashboard-item-header">
         <h3> <i class="icon-storage"></i> <span>Storage</span></h3>
-        <button class="btn btn-warning btn-sm" data-bind="click: remove">
+        <button class="btn btn-warning btn-sm" data-bind="click: remove" title="Remove widget from board">
             <i class="icon-trash"></i>
         </button>
         <button class="btn btn-default btn-sm" data-bind="click: toggleFullscreen">
-            <i data-bind="css: { 'icon-fullscreen': !fullscreen(), 'icon-exit-fullscreen': fullscreen }"></i>
+            <i data-bind="css: { 'icon-fullscreen': !fullscreen(), 'icon-exit-fullscreen': fullscreen },
+                          attr: { title: fullscreen() ? 'Minimize widget' : 'Maximize widget' }"></i>
         </button>
     </div>
     <div class="property-container">
         <div class="property">
             <div class="flex-horizontal">
                 <div class="nodes-container nodes-storage" data-bind="foreach: nodeStats">
-                    <div data-bind="attr: { class: 'nodes-item node-' + tag } ">
+                    <div data-bind="attr: { class: 'nodes-item node-' + tag }">
                         <div class="nodes-item-header">
                             <div class="node-label" data-bind="text: tag"></div>
                         </div>

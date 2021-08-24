@@ -399,7 +399,10 @@ namespace SlowTests.Issues
                 Assert.Null(await s.Advanced.Revisions.GetAsync<object>("users/pheobe", RavenTestHelper.UtcToday.AddDays(1)));
                 Assert.Null(await s.CountersFor("users/pheobe").GetAsync("test"));
                 Assert.Null(await s.TimeSeriesFor<HeartRateMeasure>("users/pheobe").GetAsync());
-                Assert.Null(await s.Advanced.Attachments.GetAsync("users/pheobe", "test.bin"));
+                using (var attachment = await s.Advanced.Attachments.GetAsync("users/pheobe", "test.bin"))
+                {
+                    Assert.Null(attachment);
+                }
 
                 WaitForUserToContinueTheTest(storeA);
 
@@ -410,7 +413,11 @@ namespace SlowTests.Issues
                 Assert.NotNull(await s.Advanced.Revisions.GetAsync<object>("users/ayende", RavenTestHelper.UtcToday.AddDays(1)));
                 Assert.NotNull(await s.CountersFor("users/ayende").GetAsync("test"));
                 Assert.NotEmpty(await s.TimeSeriesFor<HeartRateMeasure>("users/ayende").GetAsync());
-                Assert.NotNull(await s.Advanced.Attachments.GetAsync("users/ayende", "test.bin"));
+                using (var attachment = await s.Advanced.Attachments.GetAsync("users/ayende", "test.bin"))
+                {
+                    Assert.NotNull(attachment);
+                }
+
             }
 
             using (var s = storeA.OpenAsyncSession())
@@ -431,7 +438,10 @@ namespace SlowTests.Issues
                 Assert.NotNull(await s.Advanced.Revisions.GetAsync<object>("users/ayende", RavenTestHelper.UtcToday.AddDays(1)));
                 Assert.NotNull(await s.CountersFor("users/ayende").GetAsync("test"));
                 Assert.NotEmpty(await s.TimeSeriesFor<HeartRateMeasure>("users/ayende").GetAsync());
-                Assert.NotNull(await s.Advanced.Attachments.GetAsync("users/ayende", "test.bin"));
+                using (var attachment = await s.Advanced.Attachments.GetAsync("users/ayende", "test.bin"))
+                {
+                    Assert.NotNull(attachment);
+                }
             }
         }
 
@@ -543,7 +553,10 @@ namespace SlowTests.Issues
                 Assert.Null(await s.Advanced.Revisions.GetAsync<object>("users/pheobe", RavenTestHelper.UtcToday.AddDays(1)));
                 Assert.Null(await s.CountersFor("users/pheobe").GetAsync("test"));
                 Assert.Null(await s.TimeSeriesFor<HeartRateMeasure>("users/pheobe").GetAsync());
-                Assert.Null(await s.Advanced.Attachments.GetAsync("users/pheobe", "test.bin"));
+                using (var attachment = await s.Advanced.Attachments.GetAsync("users/pheobe", "test.bin"))
+                {
+                    Assert.Null(attachment);
+                }
 
                 Assert.NotNull(await s.LoadAsync<object>("users/ayende/dogs/arava"));
                 Assert.NotNull(await s.LoadAsync<object>("users/ayende"));
@@ -552,7 +565,10 @@ namespace SlowTests.Issues
                 Assert.NotNull(await s.Advanced.Revisions.GetAsync<object>("users/ayende", RavenTestHelper.UtcToday.AddDays(1)));
                 Assert.NotNull(await s.CountersFor("users/ayende").GetAsync("test"));
                 Assert.NotEmpty(await s.TimeSeriesFor<HeartRateMeasure>("users/ayende").GetAsync());
-                Assert.NotNull(await s.Advanced.Attachments.GetAsync("users/ayende", "test.bin"));
+                using (var attachment = await s.Advanced.Attachments.GetAsync("users/ayende", "test.bin"))
+                {
+                    Assert.NotNull(attachment);
+                }
             }
 
             using (var s = storeA.OpenAsyncSession())
@@ -573,7 +589,10 @@ namespace SlowTests.Issues
                 Assert.NotNull(await s.Advanced.Revisions.GetAsync<object>("users/ayende", RavenTestHelper.UtcToday.AddDays(1)));
                 Assert.NotNull(await s.CountersFor("users/ayende").GetAsync("test"));
                 Assert.NotEmpty(await s.TimeSeriesFor<HeartRateMeasure>("users/ayende").GetAsync());
-                Assert.NotNull(await s.Advanced.Attachments.GetAsync("users/ayende", "test.bin"));
+                using (var attachment = await s.Advanced.Attachments.GetAsync("users/ayende", "test.bin"))
+                {
+                    Assert.NotNull(attachment);
+                }
             }
         }
 

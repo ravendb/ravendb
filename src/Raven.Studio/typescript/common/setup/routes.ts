@@ -3,7 +3,7 @@
 class routes {
 
     static get(): Array<DurandalRouteConfiguration> {
-        let routes = [
+        let routes: DurandalRouteConfiguration[] = [
             {
                 route: ["", "welcome"],
                 title: "RavenDB setup wizard",
@@ -45,7 +45,7 @@ class routes {
                 moduleId: "viewmodels/wizard/certificate",
                 nav: false
             }
-        ] as Array<DurandalRouteConfiguration>;
+        ];
 
         return routes;
     }

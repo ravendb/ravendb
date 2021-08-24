@@ -38,9 +38,12 @@ namespace Raven.Client.Documents.Session
 
         protected SessionTimeSeriesBase(InMemoryDocumentSessionOperations session, object entity, string name)
         {
+            if (entity == null)
+                throw new ArgumentNullException(nameof(entity));
+
             if (session.DocumentsByEntity.TryGetValue(entity, out DocumentInfo document) == false || document == null)
             {
-                ThrowEntityNotInSession(entity);
+                ThrowEntityNotInSession();
                 return;
             }
 
@@ -127,9 +130,9 @@ namespace Raven.Client.Documents.Session
         }
 
 
-        protected void ThrowEntityNotInSession(object entity)
+        protected static void ThrowEntityNotInSession()
         {
-            throw new ArgumentException("entity is not associated with the session, cannot add timeseries to it. " +
+            throw new ArgumentException("entity is not associated with the session, cannot perform timeseries operations on it. " +
                                         "Use documentId instead or track the entity in the session.");
         }
 

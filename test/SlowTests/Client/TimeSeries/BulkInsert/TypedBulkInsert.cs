@@ -959,6 +959,7 @@ namespace SlowTests.Client.TimeSeries.BulkInsert
                         {
                             Assert.NotNull(attachmentsEnumerator.Current);
                             Assert.True(AttachmentsStreamTests.CompareStreams(attachmentsEnumerator.Current.Stream, streams[id][attachmentsEnumerator.Current.Details.Name]));
+                            attachmentsEnumerator.Current.Stream?.Dispose();
                         }
                     }
                 

@@ -8,6 +8,7 @@ using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
+using JetBrains.Annotations;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Replication;
@@ -30,6 +31,7 @@ using Raven.Server.ServerWide.Tcp.Sync;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Json.Sync;
 using Sparrow.Logging;
 using Sparrow.Server;
 using Sparrow.Server.Json.Sync;
@@ -78,7 +80,7 @@ namespace Raven.Server.Documents.Replication
 
         public event Action<OutgoingReplicationHandler> SuccessfulReplication;
 
-        public ReplicationNode Destination;
+        public readonly ReplicationNode Destination;
         private readonly bool _external;
 
         private readonly ConcurrentQueue<OutgoingReplicationStatsAggregator> _lastReplicationStats = new ConcurrentQueue<OutgoingReplicationStatsAggregator>();
@@ -90,6 +92,9 @@ namespace Raven.Server.Documents.Replication
         // In case this is an outgoing pull replication from the hub
         // we need to associate this instance to the replication definition.
         public string PullReplicationDefinitionName;
+
+        [CanBeNull]
+        public ReplicationLoader.PullReplicationParams _outgoingPullReplicationParams;
 
         public OutgoingReplicationHandler(TcpConnectionOptions tcpConnectionOptions, ReplicationLoader parent, DocumentDatabase database, ReplicationNode node, bool external, TcpConnectionInfo connectionInfo)
         {
@@ -103,12 +108,33 @@ namespace Raven.Server.Documents.Replication
             _external = external;
             _log = LoggingSource.Instance.GetLogger<OutgoingReplicationHandler>(_database.Name);
             _tcpConnectionOptions = tcpConnectionOptions ??
-                                    new TcpConnectionOptions() { DocumentDatabase = database, Operation = TcpConnectionHeaderMessage.OperationTypes.Replication, };
+                                    new TcpConnectionOptions { DocumentDatabase = database, Operation = TcpConnectionHeaderMessage.OperationTypes.Replication };
             _connectionInfo = connectionInfo;
             _database.Changes.OnDocumentChange += OnDocumentChange;
             _database.Changes.OnCounterChange += OnCounterChange;
             _database.Changes.OnTimeSeriesChange += OnTimeSeriesChange;
             _cts = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
+        }
+
+        public override int GetHashCode()
+        {
+            return Destination.GetHashCode();
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj))
+                return false;
+            if (ReferenceEquals(this, obj))
+                return true;
+            if (obj.GetType() != GetType())
+                return false;
+            return Equals((OutgoingReplicationHandler)obj);
+        }
+
+        public bool Equals(OutgoingReplicationHandler other)
+        {
+            return Destination.Equals(other.Destination);
         }
 
         public OutgoingReplicationPerformanceStats[] GetReplicationPerformance()
@@ -199,15 +225,14 @@ namespace Raven.Server.Documents.Replication
                 }
             }
 
-            var task = TcpUtils.ConnectSocketAsync(_connectionInfo, _parent._server.Engine.TcpConnectionTimeout, _log);
+            var task = TcpUtils.ConnectSocketAsync(_connectionInfo, _parent._server.Engine.TcpConnectionTimeout, _log, CancellationToken);
             task.Wait(CancellationToken);
             TcpClient tcpClient;
             string url;
             (tcpClient, url) = task.Result;
             using (Interlocked.Exchange(ref _tcpClient, tcpClient))
             {
-                var wrapSsl = TcpUtils.WrapStreamWithSslAsync(_tcpClient, _connectionInfo, certificate, _parent._server.Server.CipherSuitesPolicy,
-                    _parent._server.Engine.TcpConnectionTimeout);
+                var wrapSsl = TcpUtils.WrapStreamWithSslAsync(_tcpClient, _connectionInfo, certificate, _parent._server.Server.CipherSuitesPolicy, _parent._server.Engine.TcpConnectionTimeout, CancellationToken);
                 wrapSsl.Wait(CancellationToken);
 
                 _stream = wrapSsl.Result;
@@ -222,13 +247,13 @@ namespace Raven.Server.Documents.Replication
                         SendPreliminaryData();
                         if (Destination is PullReplicationAsSink sink && (sink.Mode & PullReplicationMode.HubToSink) == PullReplicationMode.HubToSink)
                         {
-                            if(supportedFeatures.Replication.PullReplication == false)
+                            if (supportedFeatures.Replication.PullReplication == false)
                                 throw new InvalidOperationException("Other side does not support pull replication " + Destination);
                             InitiatePullReplicationAsSink(supportedFeatures, certificate);
                             return;
                         }
                     }
-
+                    
                     AddReplicationPulse(ReplicationPulseDirection.OutgoingInitiate);
                     if (_log.IsInfoEnabled)
                         _log.Info($"Will replicate to {Destination.FromString()} via {url}");
@@ -284,10 +309,26 @@ namespace Raven.Server.Documents.Replication
                 Certificate = certificate
             };
 
-            using (_parent._server.Server._tcpContextPool.AllocateOperationContext(out var ctx))
-            using (ctx.GetMemoryBuffer(out _buffer))
+            try
             {
-                _parent.RunPullReplicationAsSink(tcpOptions, _buffer, (PullReplicationAsSink)Destination);
+                using (_parent._server.Server._tcpContextPool.AllocateOperationContext(out var ctx))
+                using (ctx.GetMemoryBuffer(out _buffer))
+                {
+                    _parent.RunPullReplicationAsSink(tcpOptions, _buffer, Destination as PullReplicationAsSink, this);
+                }
+            }
+            catch
+            {
+                try
+                {
+                    tcpOptions.Dispose();
+                }
+                catch
+                {
+                    // nothing we can do
+                }
+
+                throw;
             }
         }
 
@@ -295,6 +336,7 @@ namespace Raven.Server.Documents.Replication
         {
             try
             {
+                _parent.ForTestingPurposes?.OnOutgoingReplicationStart?.Invoke(this);
                 replicationAction();
             }
             catch (AggregateException e)
@@ -541,6 +583,15 @@ namespace Raven.Server.Documents.Replication
                         // this is used when the other side lets us know what paths it is going to accept from us
                         // it supplements (but does not extend) what we are willing to send out 
                         _destinationAcceptablePaths = response.Reply.AcceptablePaths;
+                        if (Destination is PullReplicationAsSink)
+                        {
+                            _outgoingPullReplicationParams = new ReplicationLoader.PullReplicationParams
+                            {
+                                PreventDeletionsMode = response.Reply.PreventDeletionsMode,
+                                Type = ReplicationLoader.PullReplicationParams.ConnectionType.Outgoing
+                            };
+                        }
+                        
                         break;
 
                     case ReplicationMessageReply.ReplyType.Error:
@@ -860,7 +911,7 @@ namespace Raven.Server.Documents.Replication
                         }
                     };
                 }
-               
+
                 return result.IsValid ? 1 : 0;
             }
 
@@ -888,14 +939,15 @@ namespace Raven.Server.Documents.Replication
                     {
                         if (update.DryRun(ctx))
                         {
-                    // we intentionally not waiting here, there is nothing that depends on the timing on this, since this
-                    // is purely advisory. We just want to have the information up to date at some point, and we won't
-                    // miss anything much if this isn't there.
-                    _database.TxMerger.Enqueue(update).IgnoreUnobservedExceptions();
+                            // we intentionally not waiting here, there is nothing that depends on the timing on this, since this
+                            // is purely advisory. We just want to have the information up to date at some point, and we won't
+                            // miss anything much if this isn't there.
+                            _database.TxMerger.Enqueue(update).IgnoreUnobservedExceptions();
+                        }
+                    }
                 }
             }
-                }
-            }
+
             _lastDestinationEtag = replicationBatchReply.CurrentEtag;
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
             using (documentsContext.OpenReadTransaction())
@@ -1004,7 +1056,7 @@ namespace Raven.Server.Documents.Replication
                     var replicationBatchReply = HandleServerResponse(replicationBatchReplyMessage.Document, allowNotify: false);
                     if (replicationBatchReply == null)
                         continue;
-
+                    
                     LastHeartbeatTicks = _database.Time.GetUtcNow().Ticks;
 
                     var sendFullReply = replicationBatchReply.Type == ReplicationMessageReply.ReplyType.Error ||
@@ -1176,6 +1228,21 @@ namespace Raven.Server.Documents.Replication
         private void OnSuccessfulTwoWaysCommunication() => SuccessfulTwoWaysCommunication?.Invoke(this);
 
         private void OnSuccessfulReplication() => SuccessfulReplication?.Invoke(this);
+
+        internal TestingStuff ForTestingPurposes;
+
+        internal TestingStuff ForTestingPurposesOnly()
+        {
+            if (ForTestingPurposes != null)
+                return ForTestingPurposes;
+
+            return ForTestingPurposes = new TestingStuff();
+        }
+
+        internal class TestingStuff
+        {
+            public Action OnDocumentSenderFetchNewItem;
+        }
     }
 
     public interface IReportOutgoingReplicationPerformance

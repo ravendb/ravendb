@@ -21,7 +21,7 @@ class studioSettings {
     private databaseRemoteSettingsSaver: (settings: Raven.Client.Documents.Operations.Configuration.StudioConfiguration, db: database) => JQueryPromise<void>;
     
     private globalSettingsCached: JQueryPromise<globalSettings>;
-    private readonly onSettingChangedHandlers = [] as Array<handlerItem>;
+    private readonly onSettingChangedHandlers: handlerItem[] = [];
 
     
     configureLoaders(globalLoader:  () => JQueryPromise<Raven.Client.ServerWide.Operations.Configuration.ServerWideStudioConfiguration>, 
@@ -89,10 +89,10 @@ class studioSettings {
     }
 
     registerOnSettingChangedHandler<T extends studioSetting<any>>(nameCondition: (name: string) => boolean, handler: (name: string, setting: T) => void): disposable {
-        const entry = {
+        const entry: handlerItem = {
             nameCondition,
             handler
-        } as handlerItem;
+        };
 
         this.onSettingChangedHandlers.push(entry);
 

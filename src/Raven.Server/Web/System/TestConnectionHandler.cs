@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Net.Http;
 using System.Net.Sockets;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Http;
 using Raven.Client.ServerWide.Commands;
@@ -44,12 +45,12 @@ namespace Raven.Server.Web.System
             }
         }
 
-        public static async Task ConnectToClientNodeAsync(RavenServer server, TcpConnectionInfo tcpConnectionInfo, TimeSpan timeout, Logger log, string database, NodeConnectionTestResult result)
+        public static async Task ConnectToClientNodeAsync(RavenServer server, TcpConnectionInfo tcpConnectionInfo, TimeSpan timeout, Logger log, string database, NodeConnectionTestResult result, CancellationToken token = default)
         {
             TcpClient tcpClient;
             string url;
-            (tcpClient, url) = await TcpUtils.ConnectSocketAsync(tcpConnectionInfo, timeout, log);
-            var connection = await TcpUtils.WrapStreamWithSslAsync(tcpClient, tcpConnectionInfo, server.Certificate.Certificate, server.CipherSuitesPolicy, timeout);
+            (tcpClient, url) =  await TcpUtils.ConnectSocketAsync(tcpConnectionInfo, timeout, log, token);
+            var connection = await TcpUtils.WrapStreamWithSslAsync(tcpClient, tcpConnectionInfo, server.Certificate.Certificate, server.CipherSuitesPolicy, timeout, token);
             using (tcpClient)
             {
                 using (server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext ctx))

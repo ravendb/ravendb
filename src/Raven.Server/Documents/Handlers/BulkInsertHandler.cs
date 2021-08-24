@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Numerics;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -27,15 +28,16 @@ namespace Raven.Server.Documents.Handlers
         {
             var operationCancelToken = CreateOperationToken();
             var id = GetLongQueryString("id");
+            var skipOverwriteIfUnchanged = GetBoolValueQueryString("skipOverwriteIfUnchanged", required: false) ?? false;
 
             await Database.Operations.AddOperation(Database, "Bulk Insert", Operations.Operations.OperationType.BulkInsert,
-                progress => DoBulkInsert(progress, operationCancelToken.Token),
+                progress => DoBulkInsert(progress, skipOverwriteIfUnchanged, operationCancelToken.Token),
                 id,
                 token: operationCancelToken
             );
         }
 
-        private async Task<IOperationResult> DoBulkInsert(Action<IOperationProgress> onProgress, CancellationToken token)
+        private async Task<IOperationResult> DoBulkInsert(Action<IOperationProgress> onProgress, bool skipOverwriteIfUnchanged, CancellationToken token)
         {
             var progress = new BulkInsertProgress();
             try
@@ -83,7 +85,8 @@ namespace Raven.Server.Documents.Handlers
                                                 NumberOfCommands = numberOfCommands,
                                                 Database = Database,
                                                 Logger = logger,
-                                                TotalSize = totalSize
+                                                TotalSize = totalSize,
+                                                SkipOverwriteIfUnchanged = skipOverwriteIfUnchanged
                                             });
                                         }
 
@@ -149,7 +152,8 @@ namespace Raven.Server.Documents.Handlers
                                     NumberOfCommands = numberOfCommands,
                                     Database = Database,
                                     Logger = logger,
-                                    TotalSize = totalSize
+                                    TotalSize = totalSize,
+                                    SkipOverwriteIfUnchanged = skipOverwriteIfUnchanged
                                 });
 
                                 progress.BatchCount++;
@@ -320,6 +324,7 @@ namespace Raven.Server.Documents.Handlers
             public BatchRequestParser.CommandData[] Commands;
             public int NumberOfCommands;
             public long TotalSize;
+            public bool SkipOverwriteIfUnchanged;
 
             private readonly Dictionary<string, DocumentUpdates> _documentsToUpdate = new Dictionary<string, DocumentUpdates>(StringComparer.OrdinalIgnoreCase);
 
@@ -336,6 +341,25 @@ namespace Raven.Server.Documents.Handlers
                         case CommandType.PUT:
                             try
                             {
+                                if (SkipOverwriteIfUnchanged)
+                                {
+                                     var existingDoc = Database.DocumentsStorage.Get(context, cmd.Id, DocumentFields.Data, throwOnConflict: false);
+                                     if (existingDoc != null)
+                                     {
+                                         var compareResult = DocumentCompare.IsEqualTo(existingDoc.Data, cmd.Document,
+                                             DocumentCompare.DocumentCompareOptions.MergeMetadata);
+
+                                         if (compareResult.HasFlag(DocumentCompareResult.Equal))
+                                         {
+                                             Debug.Assert(BitOperations.PopCount((ulong)compareResult) == 1 ||
+                                                          compareResult.HasFlag(DocumentCompareResult.AttachmentsNotEqual) ||
+                                                          compareResult.HasFlag(DocumentCompareResult.CountersNotEqual) ||
+                                                          compareResult.HasFlag(DocumentCompareResult.TimeSeriesNotEqual));
+                                             continue;
+                                         }
+                                     }
+                                }
+
                                 Database.DocumentsStorage.Put(context, cmd.Id, null, cmd.Document);
                             }
                             catch (VoronConcurrencyErrorException)

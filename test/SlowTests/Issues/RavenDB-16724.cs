@@ -60,17 +60,19 @@ namespace SlowTests.Issues
                 { 
                     session.Advanced.MaxNumberOfRequestsPerSession = int.MaxValue;
 
-                    var attachment = await session.Advanced.Attachments.GetAsync("users/Hibernating",
-                        "invoice.pdf");
-
-                    var revision1 = await session.Advanced.Revisions.GetAsync<User>(id,DateTime.Now);
+                    var revision1 = await session.Advanced.Revisions.GetAsync<User>(id, DateTime.Now);
                     var revision2 = await session.Advanced.Revisions.GetAsync<User>(changeVector:changeVector);
                     var revision3 = await session.Advanced.Revisions.GetAsync<User>(new[]{changeVector});
                     
                     Assert.NotNull(revision1);
                     Assert.NotNull(revision2);
                     Assert.NotNull(revision3);
-                    Assert.NotNull(attachment);
+
+                    using (var attachment = await session.Advanced.Attachments.GetAsync("users/Hibernating",
+                        "invoice.pdf"))
+                    {
+                        Assert.NotNull(attachment);
+                    }
 
                     Assert.Equal(4, session.Advanced.NumberOfRequests);
                 }   

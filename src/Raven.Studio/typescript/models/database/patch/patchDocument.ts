@@ -43,7 +43,7 @@ class patchDocument {
                 (name || "") +
                 query
             )
-        } as storedPatchDto;
+        };
     }
     
     copyFrom(dto: patchDto) {

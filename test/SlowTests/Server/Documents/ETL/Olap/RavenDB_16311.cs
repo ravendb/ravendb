@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Client;
+using Orders;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Server.Documents.ETL.Providers.OLAP;
@@ -29,7 +30,7 @@ namespace SlowTests.Server.Documents.ETL.Olap
                 {
                     for (int i = 0; i < 31; i++)
                     {
-                        await session.StoreAsync(new Query.Order
+                        await session.StoreAsync(new Order
                         {
                             Id = $"orders/{i}",
                             OrderedAt = baseline.AddDays(i),
@@ -40,7 +41,7 @@ namespace SlowTests.Server.Documents.ETL.Olap
 
                     for (int i = 0; i < 28; i++)
                     {
-                        await session.StoreAsync(new Query.Order
+                        await session.StoreAsync(new Order
                         {
                             Id = $"orders/{i + 31}",
                             OrderedAt = baseline.AddMonths(1).AddDays(i),

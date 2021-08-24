@@ -49,6 +49,9 @@ namespace Raven.Server.Documents.Patch
 
         public void Dispose()
         {
+            if (Instance is BlittableObjectInstance boi)
+                boi.Reset();
+
             _parent?.JavaScriptUtils.Clear();
         }
     }

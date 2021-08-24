@@ -197,10 +197,10 @@ class aceEditorBindingHandler {
         });
         
         aceEditor.getSession().on("changeAnnotation", () => {
-            const annotations = aceEditor.getSession().getAnnotations() as Array<AceAjax.Annotation>;
+            const annotations: Array<AceAjax.Annotation> = aceEditor.getSession().getAnnotations();
             
             if ('rules' in code && ko.isObservable(code.rules)) {
-                const rules = ko.unwrap(code.rules) as KnockoutValidationRule[];
+                const rules = ko.unwrap<KnockoutValidationRule[]>(code.rules);
                 if (_.some(rules, x => x.rule === "aceValidation")) {
                     const firstError = annotations.find(x => x.type === "error");
                     

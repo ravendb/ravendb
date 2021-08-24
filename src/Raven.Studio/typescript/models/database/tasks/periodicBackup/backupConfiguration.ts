@@ -39,6 +39,7 @@ abstract class backupConfiguration {
     googleCloudSettings = ko.observable<googleCloudSettings>();
     ftpSettings = ko.observable<ftpSettings>();
     
+    hasDestination: KnockoutComputed<boolean>;
     validationGroup: KnockoutValidationGroup;
     
     locationInfo = ko.observableArray<Raven.Server.Web.Studio.SingleNodeDataDirectoryResult>([]);
@@ -82,7 +83,7 @@ abstract class backupConfiguration {
     initObservables() {
         this.anyBackupTypeIsDirty = ko.pureComputed(() => {
             let anyDirty = false;
-            const backupTypes = [this.localSettings(), this.s3Settings(), this.glacierSettings(), this.azureSettings(), this.googleCloudSettings(), this.ftpSettings()] as backupSettings[];
+            const backupTypes: backupSettings[] = [this.localSettings(), this.s3Settings(), this.glacierSettings(), this.azureSettings(), this.googleCloudSettings(), this.ftpSettings()];
 
             backupTypes.forEach(type => {
                 if (type.dirtyFlag().isDirty()) {
@@ -103,11 +104,29 @@ abstract class backupConfiguration {
                 this.spinners.locationInfoLoading(false);
             }
         });
+
+        this.hasDestination = ko.pureComputed(() => {
+            return this.localSettings().enabled() ||
+                this.s3Settings().enabled() ||
+                this.glacierSettings().enabled() ||
+                this.azureSettings().enabled() ||
+                this.googleCloudSettings().enabled() ||
+                this.ftpSettings().enabled();
+        })
     }
 
     initValidation() {
         this.backupType.extend({
             required: true
+        });
+
+        this.hasDestination.extend({
+            validation: [
+                {
+                    validator: () => this.hasDestination(),
+                    message: "No destination is defined"
+                }
+            ]
         });
     }
 

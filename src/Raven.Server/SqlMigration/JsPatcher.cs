@@ -27,8 +27,11 @@ namespace Raven.Server.SqlMigration
         {
             if (_runner == null)
                 return document;
-            
-            return _runner.Run(_context, _context, "execute", new object[] { document }).TranslateToObject(_context);
+
+            using (var runner = _runner.Run(_context, _context, "execute", new object[] {document}))
+            {
+                return runner.TranslateToObject(_context);
+            }
         }
         
         public void Dispose()

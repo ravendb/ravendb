@@ -2,12 +2,15 @@
     <div class="cluster-dashboard-container masonry-grid" data-bind="css: { initialized: initialized }">
         <div class="grid-sizer"></div>
         <div class="gutter-sizer"></div>
-        
         <div data-bind="foreach: widgets">
-            <div class="cluster-dashboard-item" data-bind="compose: $data, attr: { 'data-widget-id': id }, css: { 'fullscreen': fullscreen }"></div>    
+            <div class="cluster-dashboard-item" data-bind="compose: $data, attr: { 'data-widget-id': id }, css: { 'fullscreen': fullscreen }"></div>
         </div>
-
-        <button class="add-widget" data-bind="click: addWidgetModal, visible: initialized() && bootstrapped()">
+        <div class="text-center text-muted margin-top margin-top-lg" data-bind="visible: !widgets().length">
+            <i class="icon-xl icon-empty-set"></i>
+            <h2 class="margin-top margin-top-sm">No widgets added</h2> 
+            <h2>Go ahead and click <a href="#" data-bind="click: addWidgetModal">here</a> to add</h2>
+        </div>
+        <button class="add-widget" data-bind="click: addWidgetModal, visible: initialized() && bootstrapped()" title="Add widget to board">
             <i class="icon-plus"></i>
         </button>
     </div>

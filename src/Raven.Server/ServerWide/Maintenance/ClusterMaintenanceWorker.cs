@@ -5,6 +5,7 @@ using Raven.Client;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Tcp;
+using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers.Debugging;
 using Raven.Server.Documents.Indexes;
@@ -13,6 +14,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Json.Sync;
 using Sparrow.Logging;
 using Index = Raven.Server.Documents.Indexes.Index;
 using Sparrow.LowMemory;
@@ -176,10 +178,10 @@ namespace Raven.Server.ServerWide.Maintenance
 
                         var report = new DatabaseStatusReport
                         {
-                            Name = dbName, 
+                            Name = dbName,
                             NodeName = _server.NodeTag
                         };
-                        
+
                         if (topology == null)
                         {
                             continue;
@@ -190,12 +192,14 @@ namespace Raven.Server.ServerWide.Maintenance
                             continue;
                         }
 
-                        if (_server.DatabasesLandlord.DatabasesCache.TryGetValue(dbName, out var dbTask) == false)
+                        if (_server.DatabasesLandlord.DatabasesCache.TryGetValue(dbName, out var dbTask, out var details) == false)
                         {
                             report.Status = DatabaseStatus.Unloaded;
                             result[dbName] = report;
                             continue;
                         }
+
+                        report.UpTime = SystemTime.UtcNow - details.InCacheSince;
 
                         if (dbTask.IsFaulted)
                         {
@@ -219,10 +223,6 @@ namespace Raven.Server.ServerWide.Maintenance
                         if (dbTask.IsCompleted == false)
                         {
                             report.Status = DatabaseStatus.Loading;
-
-                            if (_server.IdleDatabases.ContainsKey(dbName))
-                                report.UpTime = TimeSpan.MinValue;
-
                             result[dbName] = report;
                             continue;
                         }
@@ -245,8 +245,6 @@ namespace Raven.Server.ServerWide.Maintenance
                         try
                         {
                             var now = dbInstance.Time.GetUtcNow();
-                            report.UpTime = now - dbInstance.StartTime;
-
                             FillReplicationInfo(dbInstance, report);
 
                             prevReport.TryGetValue(dbName, out var prevDatabaseReport);

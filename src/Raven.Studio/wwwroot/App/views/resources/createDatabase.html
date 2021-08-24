@@ -170,7 +170,6 @@
                             <input id="isCompressed" type="checkbox" data-bind="checked: isCompressed">
                             <label for="isCompressed">Compression</label>
                         </div>
-
                     </div>
                 </div>
                 <div class="form-group row">
@@ -330,7 +329,6 @@
                     </div>
                 </div>
             </div>
-
             <div data-bind="if: !$root.databaseModel.spinners.backupCredentialsLoading() && ravenCloudCredentials().isValid()">
                 <div data-bind="with: ravenCloudCredentials">
                     <div class="form-group row">
@@ -595,7 +593,6 @@
                 </div>
             </div>
         </div>
-        
         <div class="toggle">
             <input class="styled" type="checkbox" id="disable-ongoing-tasks" data-bind="checked: disableOngoingTasks">
             <label for="disable-ongoing-tasks">Disable ongoing tasks after restore</label>
@@ -604,7 +601,6 @@
             <input class="styled" type="checkbox" id="skip-indexes-import" data-bind="checked: skipIndexes">
             <label for="skip-indexes-import">Skip indexes</label>
         </div>
-        
         <div class="form-group row" data-bind="validationOptions: { insertMessages: false }, validationElement: selectedRestorePoint">
             <div class="col-md-4">
                 <label class="control-label">Restore Point</label>
@@ -681,18 +677,19 @@
 <script type="text/html" id="create-db-path">
     <div data-bind="with: databaseModel.path">
         <h3>Path Configuration</h3>
-        <div class="form-group row margin-top margin-top-lg" data-bind="validationElement: dataPath">
+        
+        <div class="form-group row" data-bind="validationElement: dataPath">
             <div class="col-md-4">
                 <label class="control-label">Path</label>
             </div>
             <div class="col-md-8 dropdown" style="display: block">
                 <input type="text" class="form-control" id="dataPath"
                        data-bind="textInput: dataPath, attr: { placeholder: $root.databaseModel.name() || 'Enter database path (optional)' }, hasFocus: dataPathHasFocus"
-                       title="Enter location for the database files."/>
-                
+                       title="Enter location for the database files"/>
                 <ul class="dropdown-menu" role="menu"
-                    data-bind="autoComplete: '#dataPath', foreach: $root.allAutoCompleteOptions">
-                    <li role="presentation" data-bind="click: $data.isRecent ? _.partial($root.recentPathsAutocomplete.complete, $data.path) : _.partial($root.databaseModel.dataPathHasChanged, $data.path)">
+                    data-bind="foreach: $root.pathOptions, autoComplete: '#dataPath'">
+                    <li role="presentation"
+                        data-bind="click: $data.isRecent ? _.partial($root.recentPathsAutocomplete.complete, $data.path) : _.partial($root.databaseModel.dataPathHasChanged, $data.path)">
                         <a role="menuitem" tabindex="-1" href="#">
                             <!-- ko if: isRecent -->
                             <strong data-bind="text: path"></strong>
@@ -719,11 +716,9 @@
                                     Node Tag: <strong data-bind="text: NodeTag"></strong>
                                     <br />
                                     Path: <strong data-bind="text: FullPath"></strong><br />
-                                    
                                     <!-- ko if: Error -->
                                     Error: <strong data-bind="text: Error"></strong>
                                     <!-- /ko -->
-
                                     <!-- ko ifnot: Error -->
                                     Free Disk Space:
                                     <span data-bind="if: FreeSpaceHumane">

@@ -154,6 +154,14 @@ namespace Raven.Server.Documents.PeriodicBackup.GoogleCloud
             );
         }
 
+        public void DeleteObject(string fileName)
+        {
+            _client.DeleteObject(
+                _bucketName,
+                fileName
+            );
+        }
+
         public PagedEnumerable<Buckets, Bucket> ListBuckets()
         {
             if (_projectId == null)

@@ -1,26 +1,23 @@
 <div class="modal-dialog" role="document">
-    <div class="modal-content">
+    <div class="modal-content force-text-wrap-word">
         <div class="modal-header">
-            <div class="flex-horizontal">
-                <div class="flex-grow">
-                    <h3 class="modal-title" data-bind="text: licenseLimitNotification.title"></h3>
-                </div>
-                
-                <button type="button" class="close" data-bind="click: $root.close" aria-hidden="true">
-                    <i class="icon-cancel"></i>
-                </button>
+            <button type="button" class="close" data-bind="click: close" aria-hidden="true">
+                <i class="icon-cancel"></i>
+            </button>
+            <div data-bind="with: licenseLimitNotification">
+                <h3 class="modal-title" data-bind="text: title"></h3>
+                <div class="notification-time" data-bind="text: displayDate().format('LLL')"></div>
             </div>
         </div>
-
         <img src="Content/img/license_multiple.png" class="img-responsive"/>
         <div class="modal-body">
-            <p class="text-center" data-bind="html: licenseLimitNotification.message">
-            </p>
+            <p data-bind="html: licenseLimitNotification.message"></p>
         </div>
-
         <div class="modal-footer">
-            <button type="button" class="btn btn-default" data-bind="click: $root.close">Close</button>
-            <a target="_blank" data-bind="click: $root.register, attr: { 'href': requestLicenseUrl }" class="btn btn-primary">
+            <button type="button" class="btn btn-default" data-bind="click: close">
+                <i class="icon-cancel"></i><span>Close</span>
+            </button>
+            <a target="_blank" data-bind="click: register, attr: { 'href': requestLicenseUrl }" class="btn btn-primary">
                 <i class="icon-raven"></i>
                 <span><span data-bind="text: licenseRequestType"></span> license</span>
             </a>

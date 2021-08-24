@@ -33,6 +33,7 @@ class ongoingTaskSqlEtlEditModel extends ongoingTaskEditModel {
         
         this.dirtyFlag = new ko.DirtyFlag([
             this.taskName,
+            this.taskState,
             this.connectionStringName,
             this.mentorNode,
             this.manualChooseMentor,
@@ -111,7 +112,7 @@ class ongoingTaskSqlEtlEditModel extends ongoingTaskEditModel {
             EtlType: "Sql",
             ConnectionStringName: this.connectionStringName(),
             AllowEtlOnNonEncryptedChannel: this.allowEtlOnNonEncryptedChannel(),
-            Disabled: false,
+            Disabled: this.taskState() === "Disabled",
             MentorNode: this.manualChooseMentor() ? this.mentorNode() : undefined, 
             FactoryName: "System.Data.SqlClient",
             ForceQueryRecompile: this.forceRecompileQuery(),

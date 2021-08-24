@@ -198,6 +198,20 @@ namespace Sparrow.Server
             }
         }
 
+        public int Size
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get
+            {
+                if (_pointer == null)
+                    return 0;
+
+                EnsureIsNotBadPointer();
+
+                return _pointer->Size;
+            }
+        }
+
         public bool HasValue
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -715,7 +729,7 @@ namespace Sparrow.Server
         private readonly List<SegmentInformation> _wholeSegments;
         private int _allocationBlockSize;
 
-        private long _totalAllocated, _currentlyAllocated;
+        internal long _totalAllocated, _currentlyAllocated;
 
         /// <summary>
         /// This list keeps the hot segments released for use. It is important to note that we will never put into this list
@@ -896,17 +910,24 @@ namespace Sparrow.Server
             type &= ~ByteStringType.External; // We are allocating internal, so we will force it (even if we are checking for it in debug).
 
             int allocationSize = length + sizeof(ByteStringStorage);
-
-           
+            int allocationUnit = Bits.PowerOf2(allocationSize);
 
             // This is even bigger than the configured allocation block size. There is no reason why we shouldn't
             // allocate it directly. When released (if released) this will be reused as a segment, ensuring that the context
             // could handle that.
             if (allocationSize > _allocationBlockSize)
+            {
+                var segment = GetFromReadyToUseMemorySegments(allocationUnit);
+                if (segment != null)
+                {
+                    _currentlyAllocated += allocationUnit;
+                    return Create(segment.Current, length, allocationUnit, type);
+                }
+
                 goto AllocateWhole;
+            }
 
             int reusablePoolIndex = GetPoolIndexForReuse(allocationSize);
-            int allocationUnit = Bits.PowerOf2(allocationSize);
 
             // The allocation unit is bigger than MinBlockSize (therefore it wont be 2^n aligned).
             // Then we will 64bits align the allocation.
@@ -945,10 +966,8 @@ namespace Sparrow.Server
             return AllocateWholeSegment(length, type); // We will pass the length because this is a whole allocated segment able to hold a length size ByteString.
         }
 
-        private ByteString AllocateInternalUnlikely(int length, int allocationUnit, ByteStringType type)
+        private SegmentInformation GetFromReadyToUseMemorySegments(int allocationUnit)
         {
-            SegmentInformation segment = null;
-
             // We will try to find a hot segment with enough space if available.
             // Older (colder) segments are at the front of the list. That's why we would start scanning backwards.
             for (int i = _internalReadyToUseMemorySegments.Count - 1; i >= 0; i--)
@@ -957,13 +976,19 @@ namespace Sparrow.Server
                 if (segmentValue.SizeLeft >= allocationUnit)
                 {
                     // Put the last where this one is (if it is the same, this is a no-op) and remove it from the list.
-                    _internalReadyToUseMemorySegments[i] = _internalReadyToUseMemorySegments[_internalReadyToUseMemorySegments.Count - 1];
+                    _internalReadyToUseMemorySegments[i] = _internalReadyToUseMemorySegments[^1];
                     _internalReadyToUseMemorySegments.RemoveAt(_internalReadyToUseMemorySegments.Count - 1);
 
-                    segment = segmentValue;
-                    break;
+                    return segmentValue;
                 }
             }
+
+            return null;
+        }
+
+        private ByteString AllocateInternalUnlikely(int length, int allocationUnit, ByteStringType type)
+        {
+            var segment = GetFromReadyToUseMemorySegments(allocationUnit);
 
             // If the size left is bigger than MinBlockSize, we release current as a reusable segment
             int currentSizeLeft = _internalCurrent.SizeLeft;

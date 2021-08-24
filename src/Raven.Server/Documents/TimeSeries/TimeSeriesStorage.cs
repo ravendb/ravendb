@@ -235,6 +235,31 @@ namespace Raven.Server.Documents.TimeSeries
             return deletedCount;
         }
 
+        public long GetNumberOfTimeSeriesDeletedRanges(DocumentsOperationContext context)
+        {
+            var fstIndex = DeleteRangesSchema.FixedSizeIndexes[AllDeletedRangesEtagSlice];
+            var fst = context.Transaction.InnerTransaction.FixedTreeFor(fstIndex.Name, sizeof(long));
+            return fst.NumberOfEntries;
+        }
+
+        public long GetNumberOfTimeSeriesPendingDeletionSegments(DocumentsOperationContext context)
+        {
+            var timeSeriesPurgeSegments = 0L;
+            foreach (DocumentsStorage.CollectionStats collection in _documentsStorage.GetCollections(context))
+            {
+                var pendingDeletion = context.Transaction.InnerTransaction.ReadTree(PendingDeletionSegments);
+                if (pendingDeletion == null)
+                    continue;
+
+                using (Slice.From(context.Allocator, collection.Name, ByteStringType.Immutable, out var keySlice))
+                {
+                    timeSeriesPurgeSegments += pendingDeletion.MultiCount(keySlice);
+                }
+            }
+
+            return timeSeriesPurgeSegments;
+        }
+
         public class DeletionRangeRequest
         {
             public string DocumentId;

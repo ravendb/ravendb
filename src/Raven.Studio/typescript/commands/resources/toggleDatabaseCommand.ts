@@ -13,9 +13,9 @@ class toggleDatabaseCommand extends commandBase {
     }
 
     execute(): JQueryPromise<statusDto<disableDatabaseResult>> {
-        const payload = {
+        const payload: Raven.Client.ServerWide.Operations.ToggleDatabasesStateOperation.Parameters = {
             DatabaseNames: this.dbs.map(x => x.name)
-        } as Raven.Client.ServerWide.Operations.ToggleDatabasesStateOperation.Parameters;
+        };
 
         const url = this.disable ?
             endpoints.global.adminDatabases.adminDatabasesDisable :

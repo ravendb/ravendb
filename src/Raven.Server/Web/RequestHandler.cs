@@ -27,6 +27,7 @@ using Raven.Server.Extensions;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.TrafficWatch;
 using Sparrow;
 using Sparrow.Json;
 
@@ -283,6 +284,11 @@ namespace Raven.Server.Web
             _responseStream = new StreamWithTimeout(HttpContext.Response.Body);
 
             _context.HttpContext.Response.RegisterForDispose(_responseStream);
+
+            if (TrafficWatchManager.HasRegisteredClients)
+            {
+                HttpContext.Items["ResponseStream"] = _responseStream;
+            }
 
             return _responseStream;
         }

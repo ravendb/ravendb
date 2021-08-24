@@ -48,6 +48,7 @@ class ongoingTaskRavenEtlEditModel extends ongoingTaskEditModel {
         this.dirtyFlag = new ko.DirtyFlag([
                 innerDirtyFlag,
                 this.taskName,
+                this.taskState,
                 this.mentorNode,
                 this.manualChooseMentor,
                 this.connectionStringName,
@@ -103,13 +104,13 @@ class ongoingTaskRavenEtlEditModel extends ongoingTaskEditModel {
             Name: this.taskName(),
             ConnectionStringName: this.connectionStringName(),
             AllowEtlOnNonEncryptedChannel: this.allowEtlOnNonEncryptedChannel(),
-            Disabled: false,
+            Disabled: this.taskState() === "Disabled",
             Transforms: this.transformationScripts().map(x => x.toDto()),
             EtlType: "Raven",
             MentorNode: this.manualChooseMentor() ? this.mentorNode() : undefined,
             TaskId: this.taskId,
             LoadRequestTimeoutInSec: this.loadRequestTimeout() || null,
-        } as Raven.Client.Documents.Operations.ETL.RavenEtlConfiguration;
+        };
     }
 
     deleteTransformationScript(transformationScript: ongoingTaskRavenEtlTransformationModel) { 

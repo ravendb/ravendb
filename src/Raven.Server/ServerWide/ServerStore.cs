@@ -661,6 +661,7 @@ namespace Raven.Server.ServerWide
             options.BeforeSchemaUpgrade = _server.BeforeSchemaUpgrade;
             options.ForceUsing32BitsPager = Configuration.Storage.ForceUsing32BitsPager;
             options.EnablePrefetching = Configuration.Storage.EnablePrefetching;
+            options.DiscardVirtualMemory = Configuration.Storage.DiscardVirtualMemory;
 
             if (Configuration.Storage.MaxScratchBufferSize.HasValue)
                 options.MaxScratchBufferSize = Configuration.Storage.MaxScratchBufferSize.Value.GetValue(SizeUnit.Bytes);
@@ -1661,6 +1662,15 @@ namespace Raven.Server.ServerWide
             return Secrets.Unprotect(protectedData);
         }
 
+        public byte[] GetSecretKey(string databaseName)
+        {
+            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                return GetSecretKey(context, databaseName);
+            }
+        }
+
         public void DeleteSecretKey(string databaseName)
         {
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -2613,6 +2623,7 @@ namespace Raven.Server.ServerWide
                 topology.Stamp ??= new LeaderStamp();
                 topology.Stamp.Term = _engine.CurrentTerm;
                 topology.Stamp.LeadersTicks = _engine.CurrentLeader?.LeaderShipDuration ?? 0;
+                topology.NodesModifiedAt = SystemTime.UtcNow;
             }
         }
 
@@ -3188,7 +3199,7 @@ namespace Raven.Server.ServerWide
             try
             {
                 await TestConnectionHandler.ConnectToClientNodeAsync(_server, connectionInfo.Result, Engine.TcpConnectionTimeout,
-                    LoggingSource.Instance.GetLogger("testing-connection", "testing-connection"), database, result);
+                    LoggingSource.Instance.GetLogger("testing-connection", "testing-connection"), database, result, ServerShutdown);
             }
             catch (Exception e)
             {

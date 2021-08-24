@@ -52,8 +52,9 @@ namespace StressTests.Client.Attachments
                     var attachmentsEnumerator = session.Advanced.Attachments.Get(attachmentsNames);
                     while (attachmentsEnumerator.MoveNext())
                     {
-                        Assert.NotNull(attachmentsEnumerator.Current != null);
+                        Assert.NotNull(attachmentsEnumerator.Current);
                         Assert.True(AttachmentsStreamTests.CompareStreams(attachmentsEnumerator.Current.Stream, attachmentDictionary[$"{attachmentsEnumerator.Current.Details.Name}"]));
+                        attachmentsEnumerator.Current.Stream?.Dispose();
                     }
                 }
             }
@@ -105,19 +106,22 @@ namespace StressTests.Client.Attachments
                     {
                         var size = factorials[i];
 
-                        var memoryStream = new MemoryStream();
-                        var attachmentResult = attachmentsEnumerator.Current;
+                        using (var memoryStream = new MemoryStream())
+                        {
+                            var attachmentResult = attachmentsEnumerator.Current;
 
-                        Assert.NotNull(attachmentsEnumerator.Current != null);
-                        attachmentResult.Stream.CopyTo(memoryStream);
-                        memoryStream.Position = 0;
+                            Assert.NotNull(attachmentResult);
+                            attachmentResult.Stream.CopyTo(memoryStream);
+                            memoryStream.Position = 0;
 
-                        var buffer1 = new byte[size];
-                        var buffer2 = new byte[size];
+                            var buffer1 = new byte[size];
+                            var buffer2 = new byte[size];
 
-                        Assert.Equal(attachmentDictionary[$"{attachmentResult.Details.Name}"].Read(buffer1, 0, size), memoryStream.Read(buffer2, 0, size));
-                        Assert.True(buffer1.SequenceEqual(buffer2));
-                        i++;
+                            Assert.Equal(attachmentDictionary[$"{attachmentResult.Details.Name}"].Read(buffer1, 0, size), memoryStream.Read(buffer2, 0, size));
+                            Assert.True(buffer1.SequenceEqual(buffer2));
+                            attachmentResult.Stream?.Dispose();
+                            i++;
+                        }
                     }
                 }
             }

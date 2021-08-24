@@ -95,6 +95,8 @@ namespace Raven.Server.Documents
                     }
 
                     var revisionsPrefix = CollectionName.GetTablePrefix(CollectionTableType.Revisions);
+                    var collectionsPrefix = CollectionName.GetTablePrefix(CollectionTableType.Documents);
+
                     var compressedCollectionsTableNames = databaseRecord.DocumentsCompression?.Collections
                         .Select(name => new CollectionName(name).GetTableName(CollectionTableType.Documents))
                         .ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -121,8 +123,10 @@ namespace Raven.Server.Documents
                         }, (name, schema) =>
                         {
                             bool isRevision = name.StartsWith(revisionsPrefix,StringComparison.OrdinalIgnoreCase);
+                            bool isCollection = name.StartsWith(collectionsPrefix, StringComparison.OrdinalIgnoreCase);
                             schema.Compressed = 
                                 (isRevision && databaseRecord.DocumentsCompression?.CompressRevisions == true) ||
+                                (isCollection && databaseRecord.DocumentsCompression?.CompressAllCollections == true) ||
                                 compressedCollectionsTableNames?.Contains(name) == true;
                         },_token);
                     }
@@ -181,6 +185,7 @@ namespace Raven.Server.Documents
         {
             options.ForceUsing32BitsPager = configuration.Storage.ForceUsing32BitsPager;
             options.EnablePrefetching = documentDatabase.Configuration.Storage.EnablePrefetching;
+            options.DiscardVirtualMemory = documentDatabase.Configuration.Storage.DiscardVirtualMemory;
             options.OnNonDurableFileSystemError += documentDatabase.HandleNonDurableFileSystemError;
             options.OnRecoverableFailure += documentDatabase.HandleRecoverableFailure;
             options.OnRecoveryError += documentDatabase.HandleOnDatabaseRecoveryError;
@@ -195,6 +200,7 @@ namespace Raven.Server.Documents
             options.PrefetchResetThreshold = configuration.Storage.PrefetchResetThreshold.GetValue(SizeUnit.Bytes);
             options.SyncJournalsCountThreshold = documentDatabase.Configuration.Storage.SyncJournalsCountThreshold;
             options.SkipChecksumValidationOnDatabaseLoading = documentDatabase.Configuration.Storage.SkipChecksumValidationOnDatabaseLoading;
+            options.MaxNumberOfRecyclableJournals = documentDatabase.Configuration.Storage.MaxNumberOfRecyclableJournals;
         }
 
         private static void SwitchDatabaseDirectories(string basePath, string backupDirectory, string compactDirectory)

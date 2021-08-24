@@ -5,6 +5,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Logging;
 
@@ -18,6 +19,7 @@ namespace Raven.Server.NotificationCenter.Handlers
         private readonly Uri _remoteWebSocketUri;
         private readonly ClientWebSocket _remoteWebSocket;
         private readonly WebSocket _localWebSocket;
+        private readonly string _nodeUrl;
         private readonly IMemoryContextPool _contextPool;
         private Task _localToRemote;
         private Task _remoteToLocal;
@@ -34,6 +36,7 @@ namespace Raven.Server.NotificationCenter.Handlers
                 throw new ArgumentException("Endpoint must starts with '/' character", nameof(websocketEndpoint));
 
             _localWebSocket = localWebSocket;
+            _nodeUrl = nodeUrl;
             _contextPool = contextPool;
             _cts = CancellationTokenSource.CreateLinkedTokenSource(token);
             _remoteWebSocketUri = new Uri($"{nodeUrl.Replace("http", "ws", StringComparison.OrdinalIgnoreCase)}{websocketEndpoint}");
@@ -42,9 +45,17 @@ namespace Raven.Server.NotificationCenter.Handlers
 
         public Task Establish(X509Certificate2 certificate)
         {
-            if (certificate != null) 
+            if (certificate != null)
+            {
+                var tcpConnection = ReplicationUtils.GetTcpInfo(_nodeUrl, null, $"{nameof(ProxyWebSocketConnection)} to {_nodeUrl}", certificate, _cts.Token);
+
+                var expectedCert = new X509Certificate2(Convert.FromBase64String(tcpConnection.Certificate), (string)null, X509KeyStorageFlags.MachineKeySet);
+
                 _remoteWebSocket.Options.ClientCertificates.Add(certificate);
-            
+
+                _remoteWebSocket.Options.RemoteCertificateValidationCallback += (sender, actualCert, chain, errors) => expectedCert.Equals(actualCert);
+            }
+
             return _remoteWebSocket.ConnectAsync(_remoteWebSocketUri, _cts.Token);
         }
 

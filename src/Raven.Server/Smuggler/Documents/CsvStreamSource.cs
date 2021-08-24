@@ -120,11 +120,11 @@ namespace Raven.Server.Smuggler.Documents
             if (_csvReader.ReadHeader() == false)
                 throw new InvalidOperationException("CSV file must contain a header row.");
 
-            for (var i = 0; i < _csvReader.Context.HeaderRecord.Length; i++)
+            for (var i = 0; i < _csvReader.Context.Reader.HeaderRecord.Length; i++)
             {
-                var property = _csvReader.Context.HeaderRecord[i];
+                var property = _csvReader.Context.Reader.HeaderRecord[i];
 
-                if (_csvReader.Context.HeaderRecord[i][0] == '@')
+                if (_csvReader.Context.Reader.HeaderRecord[i][0] == '@')
                 {
                     if (property == Constants.Documents.Metadata.Id)
                     {
@@ -149,22 +149,22 @@ namespace Raven.Server.Smuggler.Documents
                     }
                 }
 
-                var indexOfDot = _csvReader.Context.HeaderRecord[i].IndexOf('.');
+                var indexOfDot = _csvReader.Context.Reader.HeaderRecord[i].IndexOf('.');
                 //We probably have a nested property
                 if (indexOfDot >= 0)
                 {
                     if (_nestedPropertyDictionary == null)
                         _nestedPropertyDictionary = new Dictionary<int, string[]>();
 
-                    var (arr, hasSegments) = SplitByDotWhileIgnoringEscapedDot(_csvReader.Context.HeaderRecord[i]);
+                    var (arr, hasSegments) = SplitByDotWhileIgnoringEscapedDot(_csvReader.Context.Reader.HeaderRecord[i]);
                     //May be false if all dots are escaped
                     if (hasSegments)
                         _nestedPropertyDictionary[i] = arr;
                 }
             }
 
-            _csvReaderFieldHeaders = new string[_csvReader.Context.HeaderRecord.Length];
-            _csvReader.Context.HeaderRecord.CopyTo(_csvReaderFieldHeaders, 0);
+            _csvReaderFieldHeaders = new string[_csvReader.Context.Reader.HeaderRecord.Length];
+            _csvReader.Context.Reader.HeaderRecord.CopyTo(_csvReaderFieldHeaders, 0);
 
             _headersProcessed = true;
             return true;
@@ -226,7 +226,7 @@ namespace Raven.Server.Smuggler.Documents
                 DocumentItem item;
                 try
                 {
-                    item = ConvertRecordToDocumentItem(context, _csvReader.Context.Record, _csvReaderFieldHeaders, _collection);
+                    item = ConvertRecordToDocumentItem(context, _csvReader.Context.Parser.Record, _csvReaderFieldHeaders, _collection);
                 }
                 catch (Exception e)
                 {

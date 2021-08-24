@@ -8,6 +8,7 @@ using System.Text;
 using Esprima;
 using Esprima.Ast;
 using Raven.Client;
+using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Operations.TimeSeries;
@@ -23,10 +24,13 @@ using Raven.Server.Documents.Queries.Explanation;
 using Raven.Server.Documents.Queries.Facets;
 using Raven.Server.Documents.Queries.Highlightings;
 using Raven.Server.Documents.Queries.Parser;
+using Raven.Server.Documents.Queries.Revisions;
 using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.Documents.Queries.TimeSeries;
 using Raven.Server.Extensions;
+using Raven.Server.Documents.ETL.Providers.OLAP;
 using Sparrow;
+using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Utils;
 using Spatial4n.Core.Shapes;
@@ -163,6 +167,8 @@ namespace Raven.Server.Documents.Queries
         public ExplanationField Explanation;
 
         public CounterIncludesField CounterIncludes;
+        
+        public RevisionIncludeField RevisionIncludes;
 
         public TimeSeriesIncludesField TimeSeriesIncludes;
 
@@ -546,6 +552,17 @@ namespace Raven.Server.Documents.Queries
 
                                 AddInclude(include, fieldName.Value, ref compareExchangeValueIncludes);
                                 break;
+                            
+                            case MethodType.Revisions: 
+                                 QueryValidator.ValidateRevisions(me.Arguments, QueryText, parameters);
+                                
+                                RevisionIncludes ??= new RevisionIncludeField();
+                                
+                                HasIncludeOrLoad = true;
+                                
+                                AddToRevisionsInclude(RevisionIncludes, me, parameters);
+                                
+                                break;
 
                             default:
                                 throw new InvalidQueryException($"Unable to figure out how to deal with include method '{methodType}'", QueryText, parameters);
@@ -567,8 +584,42 @@ namespace Raven.Server.Documents.Queries
                 CompareExchangeValueIncludes = compareExchangeValueIncludes?.ToArray();
         }
 
-        private static ExplanationField CreateExplanationField(MethodExpression expression)
+        private void AddToRevisionsInclude(RevisionIncludeField revisionIncludes, MethodExpression expression, BlittableJsonReaderObject parameters)
         {
+            foreach (var queryExpression in expression.Arguments)
+            {
+                switch (queryExpression)
+                {
+                    case FieldExpression fe:
+                        if (Query.From.Alias!= null)
+                            throw new InvalidOperationException($"Alias is not supported `include revisions(..)`.");
+
+                        revisionIncludes.AddRevision(fe.FieldValue);
+                        break;
+                    
+                    case ValueExpression ve:
+                        foreach ((object value, _)  in QueryBuilder.GetValues(Query, this, parameters, ve))
+                        {
+                            string path = value.ToString();
+                            if (string.IsNullOrEmpty(path))
+                                return;
+                              
+                            if (Query.From.Alias != null)
+                                throw new InvalidOperationException($"Alias is not supported `include revisions(..)`.");
+
+                            if (ParquetTransformedItems.TryParseDate(path, out var dateTimeOffset))
+                                revisionIncludes.AddRevision(dateTimeOffset.DateTime);
+                            else
+                                revisionIncludes.AddRevision(path);
+                            break;
+                        }
+                        break;
+                }
+            }
+        }
+        
+        private static ExplanationField CreateExplanationField(MethodExpression expression)
+            {
             var result = new ExplanationField();
 
             if (expression.Arguments.Count == 1)
@@ -740,7 +791,7 @@ namespace Raven.Server.Documents.Queries
                 AddCounterToInclude(counterIncludes, parameters, value, sourcePath);
             }
         }
-
+        
         private void AddCounterToInclude(CounterIncludesField counterIncludes, BlittableJsonReaderObject parameters,
             (object Value, ValueTokenType Type) parameterValue, string sourcePath)
         {
@@ -750,7 +801,7 @@ namespace Raven.Server.Documents.Queries
 
             counterIncludes.AddCounter(parameterValue.Value.ToString(), sourcePath);
         }
-
+        
         private void AddToTimeSeriesIncludes(TimeSeriesIncludesField timeSeriesIncludes, MethodExpression expression, BlittableJsonReaderObject parameters)
         {
             string alias = null;

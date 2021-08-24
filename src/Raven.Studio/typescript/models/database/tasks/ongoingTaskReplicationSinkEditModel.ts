@@ -74,6 +74,7 @@ class ongoingTaskReplicationSinkEditModel extends ongoingTaskEditModel {
             ConnectionStringName: this.connectionStringName(),
             HubName: this.hubName(),
             Mode: this.replicationMode(),
+            Disabled: this.taskState() === "Disabled",
             AccessName: accessInfo.replicationAccessName(),
             CertificatePassword: certificatePassphrase,
             CertificateWithPrivateKey: this.replicationAccess().serverCertificateSelected() ? null : certificate,
@@ -113,6 +114,7 @@ class ongoingTaskReplicationSinkEditModel extends ongoingTaskEditModel {
         return new ongoingTaskReplicationSinkEditModel({
             TaskType: "ReplicationAsSink" as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType,
             TaskName: "",
+            TaskState: "Enabled",
             AccessName: "",
             AllowedHubToSinkPaths: null,
             AllowedSinkToHubPaths: null,
