@@ -18,7 +18,8 @@ namespace SlowTests.Issues
         [Fact]
         public async Task EnsureDatabasesCacheNotLeaking()
         {
-            using (var store = GetDocumentStore(new RavenTestBase.Options{RunInMemory = false}))
+            UseNewLocalServer();
+            using (var store = GetDocumentStore(new Options{RunInMemory = false}))
             {
                 for (int i = 0; i < 100; i++)
                 {
