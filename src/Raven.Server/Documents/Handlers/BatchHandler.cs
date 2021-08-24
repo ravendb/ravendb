@@ -848,15 +848,9 @@ namespace Raven.Server.Documents.Handlers
                             break;
 
                         case CommandType.JsonPatch:
-                            try
-                            {
-                                cmd.JsonPatchCommand.ExecuteDirectly(context);
-                            }
-                            catch (ConcurrencyException e) when (CanAvoidThrowingToMerger(e, i))
-                            {
-                                return 0;
-                            }
                             
+                            cmd.JsonPatchCommand.ExecuteDirectly(context);
+
                             var lastChangeVectorJsonPatch = cmd.JsonPatchCommand.HandleReply(Reply, ModifiedCollections, Database);
 
                             if (lastChangeVectorJsonPatch != null)
