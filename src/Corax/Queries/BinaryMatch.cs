@@ -1,7 +1,7 @@
-﻿using System;
+using System;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Security.Cryptography;
 
 namespace Corax.Queries
 {
@@ -114,6 +114,8 @@ namespace Corax.Queries
             {
                 ref var inner = ref match._inner;
                 ref var outer = ref match._outer;
+
+                //Debug.Assert(matches.Length > 4);
 
                 // need to be ready to put both outputs to the matches
                 Span<long> innerMatches = stackalloc long[matches.Length / 2];

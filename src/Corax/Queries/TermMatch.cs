@@ -4,6 +4,9 @@ using Voron.Data.Sets;
 using Voron.Data.Containers;
 using System;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
+using System.Runtime.Intrinsics;
+using System.Runtime.Intrinsics.X86;
 
 namespace Corax.Queries
 {
@@ -170,7 +173,7 @@ namespace Corax.Queries
             };
         }
 
-        public static TermMatch YieldSet(Set set)
+        public static TermMatch YieldSet(Set set, bool useAccelerated = true)
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             static int AndWithFunc(ref TermMatch term, Span<long> matches)
@@ -184,10 +187,8 @@ namespace Corax.Queries
                 // We update the current value we want to work with.
                 var current = it.Current;
 
-                // TODO: Replace with set.Fill( matches, maxValue: matches[^1] )
-
                 // Check if there are matches left to process or is any posibility of a match to be available in this block.
-                int i = 0;                
+                int i = 0;
                 while (i < matches.Length && current <= matches[^1])
                 {
                     // While the current match is smaller we advance.
@@ -212,13 +213,115 @@ namespace Corax.Queries
                     if (it.MoveNext() == false)
                         goto End;
 
-                    current = it.Current;                    
+                    current = it.Current;
                 }
 
             End:
                 term._set = it;
                 term._current = current;
                 return matchedIdx;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            static int AndWithVectorizedFunc(ref TermMatch term, Span<long> matches)
+            {
+                const int BlockSize = 4096;
+
+                term._set.MaybeSeek(matches[0] - 1);
+
+                // This is effectively a constant. 
+                int N = Vector256<long>.Count;                
+
+                long* dstStartPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(matches));                
+                long* blockStartPtr = stackalloc long[BlockSize]; // The size of this array is fixed to improve cache locality. 
+                long* inputStartPtr = stackalloc long[matches.Length];
+                long* inputEndPtr = inputStartPtr + matches.Length;                
+
+                // Copy array to temporary memory.
+                Unsafe.CopyBlockUnaligned(
+                    ref Unsafe.AsRef<byte>(inputStartPtr),
+                    ref Unsafe.AsRef<byte>(dstStartPtr),
+                    (uint)(matches.Length * sizeof(long)));
+
+                int i = 0;
+                long* inputPtr = inputStartPtr;
+                long* dstPtr = dstStartPtr;
+                Span<long> tmpMatches = new Span<long>(blockStartPtr, BlockSize);
+
+                long maxMatchNumber = matches[^1];
+                while (inputPtr < inputEndPtr)
+                {
+                    var result = term._set.Fill(tmpMatches, out int read, pruneGreaterThan: maxMatchNumber);
+                    if (result == false)
+                        break;
+
+                    if (read == 0)
+                        continue;
+
+                    // Console.WriteLine($"Read: {read}|[{tmpMatches[0]},{tmpMatches[read-1]}], Matches: [{matches[0]},{matches[^1]}]");
+
+                    int blocks = read / N;
+                    long* blockPtr = blockStartPtr;
+                    long* blockEndPtr = blockStartPtr + read;
+                    while (blocks > 0 && inputPtr < inputEndPtr)
+                    {
+                        // TODO: In here we can do SIMD galloping with gather operations. Therefore we will be able to do
+                        //       multiple checks at once and find the right amount of skipping using a table. 
+
+                        // If the value to compare is bigger than the biggest element in the block, we advance the block. 
+                        if (*inputPtr > *(blockPtr + N - 1))
+                        {
+                            blocks--;
+                            blockPtr += N;
+                            continue;
+                        }
+
+                        // If the value to compare is smaller than the smallest element in the block, we advance the scalar value.
+                        if (*inputPtr < *blockPtr)
+                        {
+                            inputPtr++;
+                            continue;
+                        }
+
+                        Vector256<long> value = Vector256.Create(*inputPtr);
+                        Vector256<long> blockValues = Avx.LoadVector256(blockPtr);
+
+                        // We are going to select which direction we are going to be moving forward. 
+                        if (!Avx2.CompareEqual(value, blockValues).Equals(Vector256<long>.Zero))
+                        {
+                            // We found the value, therefore we need to store this value in the destination.
+                            *dstPtr = *inputPtr;
+                            dstPtr++;
+                        }
+
+                        inputPtr++;
+                    }
+
+                    // The scalar version. This shouldnt cost much either way. 
+                    while (inputPtr < inputEndPtr && blockPtr < blockEndPtr)
+                    {
+                        long leftValue = *inputPtr;
+                        long rightValue = *blockPtr;
+
+                        if (leftValue > rightValue)
+                        {
+                            blockPtr++;
+                        }
+                        else if (leftValue < rightValue)
+                        {
+                            inputPtr++;
+                        }
+                        else
+                        {
+                            *dstPtr = leftValue;
+                            dstPtr++;
+                            inputPtr++;
+                            blockPtr++;
+                        }
+                    }
+                }
+
+                return (int)( dstPtr - dstStartPtr );
             }
 
 
@@ -228,19 +331,19 @@ namespace Corax.Queries
                 int i = 0;
                 var set = term._set;
 
-                // Try first to do a bulk insert.
                 set.Fill(matches, out i);
 
-                //while (i < matches.Length && set.MoveNext())
-                //{
-                //    matches[i++] = set.Current;
-                //}
                 term._set = set;
                 return i;
             }
 
+            if (!Avx2.IsSupported)
+                useAccelerated = false;
 
-            return new TermMatch(&FillFunc, &AndWithFunc, set.State.NumberOfEntries)
+            useAccelerated = false;
+
+            // We will select the AVX version if supported.             
+            return new TermMatch(&FillFunc, useAccelerated ? &AndWithVectorizedFunc : &AndWithFunc, set.State.NumberOfEntries)
             {
                 _set = set.Iterate(),
                 _current = long.MinValue

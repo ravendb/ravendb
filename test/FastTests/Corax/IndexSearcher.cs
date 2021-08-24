@@ -474,7 +474,7 @@ namespace FastTests.Corax
                 var orMatch = searcher.Or(in andMatch, in match3);
 
 
-                Span<long> ids = stackalloc long[2];
+                Span<long> ids = stackalloc long[8];
                 Assert.Equal(2, orMatch.Fill(ids));
                 Assert.Equal(0, orMatch.Fill(ids));
             }
@@ -487,7 +487,7 @@ namespace FastTests.Corax
                 var match3 = searcher.TermQuery("Id", "entry/3");
                 var orMatch = searcher.Or(in match3, in andMatch);
 
-                Span<long> ids = stackalloc long[2];
+                Span<long> ids = stackalloc long[8];
                 Assert.Equal(2, orMatch.Fill(ids));
                 Assert.Equal(0, orMatch.Fill(ids));
             }
@@ -600,8 +600,10 @@ namespace FastTests.Corax
 
         [Theory]
         [InlineData(new object[] { 100000, 128 })]
-        [InlineData(new object[] { 100000, 18 })]
+        [InlineData(new object[] { 100000, 2046 })]
         [InlineData(new object[] { 1000, 8 })]
+        [InlineData(new object[] { 11700, 18 })]
+        [InlineData(new object[] { 11859, 18 })]
         public void AndInStatement(int setSize, int stackSize)
         {
             setSize = setSize - (setSize % 3);
@@ -627,6 +629,7 @@ namespace FastTests.Corax
 
             using var searcher = new IndexSearcher(Env);
             {
+                
                 var match1 = searcher.InQuery("Content", new() { "lake", "mountain" });
                 var match2 = searcher.TermQuery("Content", "sky");
                 var andMatch = searcher.And(in match1, in match2);
