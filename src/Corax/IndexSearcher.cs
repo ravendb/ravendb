@@ -59,17 +59,17 @@ namespace Corax
         // foo = bar and published = true
 
         // foo = bar
-        public TermMatch TermQuery(string field, string term)
+        public TermMatch TermQuery(string field, string term, bool useAccelerated = false)
         {
             var fields = _transaction.ReadTree(IndexWriter.FieldsSlice);
             var terms = fields.CompactTreeFor(field);
             if (terms == null)
                 return TermMatch.CreateEmpty();
 
-            return TermQuery(terms, term);
+            return TermQuery(terms, term, useAccelerated);
         }
 
-        private TermMatch TermQuery(CompactTree tree, string term)
+        private TermMatch TermQuery(CompactTree tree, string term, bool useAccelerated = false)
         {
             if (tree.TryGetValue(term, out var value) == false)
                 return TermMatch.CreateEmpty();
@@ -81,7 +81,7 @@ namespace Corax
                 var setStateSpan = Container.Get(_transaction.LowLevelTransaction, setId).ToSpan();
                 ref readonly var setState = ref MemoryMarshal.AsRef<SetState>(setStateSpan);
                 var set = new Set(_transaction.LowLevelTransaction, Slices.Empty, setState);
-                matches = TermMatch.YieldSet(set);
+                matches = TermMatch.YieldSet(set, useAccelerated);
             }
             else if ((value & (long)TermIdMask.Small) != 0)
             {

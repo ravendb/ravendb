@@ -240,7 +240,7 @@ namespace Voron.Data.Sets
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public bool Fill(Span<long> matches, out int i)
+            public bool Fill(Span<long> matches, out int i, long pruneGreaterThan = long.MaxValue)
             {
                 var compressIndex = _compressIndex;
                 var compressLength = _compressLength;
@@ -251,7 +251,7 @@ namespace Voron.Data.Sets
                 var rawValuesIndex = _rawValuesIndex;                
 
                 i = 0;
-                bool result = false;
+                bool result = true;
                 while (i < matches.Length)
                 {
                     if (compressIndex == compressLength && _hasDecoder)
@@ -295,18 +295,41 @@ namespace Voron.Data.Sets
                                 TryReadMoreCompressedValues(parent, decoderState, ref _compressedEntry, ref compressIndex, ref compressLength, ref _compressedEntryIndex, ref _hasDecoder, scratchPtr);
                             }
                         }
-                        rawValuesIndex--;
-                        if (rawValue < 0) // removed, ignore
-                            continue;
 
-                        matches[i++] = (long)rawValue | _parent.Header->Baseline;                        
-                        result = true;
+                        if (rawValue < 0)
+                        {
+                            // removed, ignore
+                            rawValuesIndex--;
+                            continue;
+                        }
+                        else
+                        {
+                            long value = (long)rawValue | _parent.Header->Baseline;
+                            if (value > pruneGreaterThan)
+                            {
+                                // We are pruning, we are done. 
+                                result = false;
+                                break;
+                            }
+
+                            rawValuesIndex--;
+                            matches[i++] = value;                            
+                        }
                     }
 
                     if (compressIndex != compressLength)
                     {
-                        matches[i++] = (long)scratchPtr[compressIndex++] | _parent.Header->Baseline;
-                        result = true;
+                        long value = (long)scratchPtr[compressIndex] | _parent.Header->Baseline;
+                        if (value > pruneGreaterThan)
+                        {
+                            // We are pruning, we are done. 
+                            result = false;
+                            break;
+                        }
+
+                        // We advance now that we know we are going to use the value;
+                        compressIndex++;
+                        matches[i++] = value;
                     }
                     else
                     {

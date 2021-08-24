@@ -504,10 +504,12 @@ namespace Voron.Data.Sets
             private SetLeafPage.Iterator _it;
 
             public long Current;
+            private bool _hasSeek;
 
             public Iterator(Set parent)
             {
                 _parent = parent;
+                _hasSeek = false;
                 Current = default;
                 _parent.FindPageFor(long.MinValue);
                 ref var state = ref _parent._stk[_parent._pos];
@@ -539,12 +541,13 @@ namespace Voron.Data.Sets
                     if (v < from)
                         continue;
                     Current = v;
+                    _hasSeek = true; // TODO: Fix this, we shouldn't have to do this. 
                     return true;
                 }
                 return false;
             }
 
-            public bool Fill(Span<long> matches, out int total)
+            public bool Fill(Span<long> matches, out int total, long pruneGreaterThan = long.MaxValue)
             {
                 // We will try to fill.
                 total = 0;
@@ -553,14 +556,28 @@ namespace Voron.Data.Sets
                 int read;
 
                 var tmp = matches;
+
+                // FIXME: This is a hack, we shouldnt be doing this but I need to understand if we can make this format
+                //        high performance enough before even start thinking about consistency of usage patterns. 
+                if (_hasSeek)
+                {
+                    // We have seek so we are past one and we need to add it. 
+                    _hasSeek = false;
+                    matches[0] = Current;
+                    total++;
+                }                
+
                 while(true)
-                {                    
-                    result = _it.Fill(tmp, out read);                    
+                {
+                    tmp = matches.Slice(total);
+                    result = _it.Fill(tmp, out read, pruneGreaterThan);                                                                                      
+
+                    // We havent read anything, because we may have gotten a pruned result.
                     if (read == 0)
                     {
                         var parent = _parent;
                         if (parent._pos == 0)
-                            return false;
+                            break;
 
                         parent.PopPage();
 
@@ -599,14 +616,18 @@ namespace Voron.Data.Sets
                     }                        
 
                     total += read;
-                    tmp = matches.Slice(total);
-
                     if (total == matches.Length)
-                        break; // We can't continue filling. 
+                        break; // We are done.  
+
+                    // We have reached the end by prunning.
+                    if (result == false)
+                        break; // We are done.
                 }
 
-                //Current = matches[total - 1];
-                return true;
+                if (total != 0)
+                    Current = matches[total - 1];
+
+                return total != 0;
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
