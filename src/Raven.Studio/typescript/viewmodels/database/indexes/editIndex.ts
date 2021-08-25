@@ -78,6 +78,7 @@ class editIndex extends viewModelBase {
     
     previewItem = ko.observable<Raven.Client.ServerWide.IndexHistoryEntry>();
     previewDefinition = ko.observable<string>();
+    previewItemNodes: KnockoutComputed<string[]>;
     
     defaultDeploymentMode = ko.observable<Raven.Client.Documents.Indexes.IndexDeploymentMode>();
     defaultDeploymentModeFormatted = ko.pureComputed(() => {
@@ -175,9 +176,12 @@ class editIndex extends viewModelBase {
             this.previewEditor = aceEditorBindingHandler.getEditorBySelection(this.$previewEditor);
             this.previewEditor.setOption("wrap", true);
 
-            $('.deployment-time [data-toggle="tooltip"]').tooltip({
-                html: true
-            });
+            setTimeout(() => this.initRollingTooltip(), 0);
+            setTimeout(() => this.previewEditor.resize(), 0);
+        })
+        
+        this.previewItemNodes = ko.pureComputed<string[]>(() => {
+            return this.previewItem() ? Object.keys(this.previewItem().RollingDeployment).reverse() : [];
         })
     }
 
@@ -398,6 +402,12 @@ class editIndex extends viewModelBase {
 
     previewIndex(item: Raven.Client.ServerWide.IndexHistoryEntry) {
         this.previewItem(item);
+    }
+
+    initRollingTooltip() {
+        $('.history-rolling-deployment-area [data-toggle="tooltip"]').tooltip({
+            html: true
+        });
     }
 
     getTimeTooltip(utcTime: string, isRevisionTime: boolean = false) {
