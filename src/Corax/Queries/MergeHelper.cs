@@ -38,20 +38,18 @@ namespace Corax.Queries
         internal unsafe static int AndVectorized(long* dst, int dstLength, long* left, int leftLength, long* right, int rightLength)
         {
             // This is effectively a constant. 
-            int N = Vector256<long>.Count;
+            uint N = (uint)Vector256<ulong>.Count;
 
             long* dstPtr = dst;
             long* smallerPtr, largerPtr;
             long* smallerEndPtr, largerEndPtr;
             
-            int blocks;
             if ( leftLength < rightLength)
             {
                 smallerPtr = left;
                 smallerEndPtr = left + leftLength;
                 largerPtr = right;
                 largerEndPtr = right + rightLength;
-                blocks = rightLength / N;
             }
             else
             {
@@ -59,34 +57,38 @@ namespace Corax.Queries
                 smallerEndPtr = right + rightLength;
                 largerPtr = left;
                 largerEndPtr = left + leftLength;
-                blocks = leftLength / N;
             }
 
-            while (blocks > 0 && smallerPtr < smallerEndPtr)
+            while (true)
             {
                 // TODO: In here we can do SIMD galloping with gather operations. Therefore we will be able to do
                 //       multiple checks at once and find the right amount of skipping using a table. 
 
                 // If the value to compare is bigger than the biggest element in the block, we advance the block. 
-                if (*smallerPtr > *(largerPtr + N - 1))
+                if ((ulong)*smallerPtr > (ulong)*(largerPtr + N - 1))
                 {
-                    blocks--;
+                    if (largerPtr + N >= largerEndPtr)
+                        break;
+
                     largerPtr += N;
                     continue;
                 }
 
                 // If the value to compare is smaller than the smallest element in the block, we advance the scalar value.
-                if (*smallerPtr < *largerPtr)
+                if ((ulong)*smallerPtr < (ulong)*largerPtr)
                 {
                     smallerPtr++;
+                    if (smallerPtr >= smallerEndPtr)
+                        break;
+
                     continue;
                 }
-                                    
-                Vector256<long> value = Vector256.Create(*smallerPtr);
-                Vector256<long> blockValues = Avx.LoadVector256(largerPtr);
-                
+
+                Vector256<ulong> value = Vector256.Create((ulong)*smallerPtr);
+                Vector256<ulong> blockValues = Avx.LoadVector256((ulong*)largerPtr);
+
                 // We are going to select which direction we are going to be moving forward. 
-                if (!Avx2.CompareEqual(value, blockValues).Equals(Vector256<long>.Zero))
+                if (!Avx2.CompareEqual(value, blockValues).Equals(Vector256<ulong>.Zero))
                 {
                     // We found the value, therefore we need to store this value in the destination.
                     *dstPtr = *smallerPtr;
@@ -94,13 +96,15 @@ namespace Corax.Queries
                 }
 
                 smallerPtr++;
+                if (smallerPtr >= smallerEndPtr)
+                    break;
             }
 
             // The scalar version. This shouldnt cost much either way. 
             while (smallerPtr < smallerEndPtr && largerPtr < largerEndPtr)
             {
-                long leftValue = *smallerPtr;
-                long rightValue = *largerPtr;
+                ulong leftValue = (ulong)*smallerPtr;
+                ulong rightValue = (ulong)*largerPtr;
 
                 if (leftValue > rightValue)
                 {
@@ -112,14 +116,14 @@ namespace Corax.Queries
                 }
                 else
                 {
-                    *dstPtr = leftValue;
+                    *dstPtr = (long)leftValue;
                     dstPtr++;
                     smallerPtr++;
                     largerPtr++;
                 }
             }
 
-            return (int)(dstPtr - dst);
+            return (int)((ulong*)dstPtr - (ulong*)dst);
         }
 
         /// <summary>
