@@ -258,7 +258,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                                         $"Failed to execute mapping function on {current.Id}. Exception: {e}");
                                                 }
 
-                                                _index.UpdateThreadAllocations(indexContext, writeOperation, stats, updateReduceStats: false);
+                                                _index.UpdateThreadAllocations(indexContext, writeOperation, stats, IndexingWorkType.References);
                                             }
                                         }
 
@@ -279,7 +279,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                             bool CanContinueReferenceBatch()
                             {
-                                batchContinuationResult = _index.CanContinueBatch(stats, queryContext, indexContext, writeOperation, 
+                                batchContinuationResult = _index.CanContinueBatch(stats, IndexingWorkType.References, queryContext, indexContext, writeOperation, 
                                     lastEtag, lastCollectionEtag, totalProcessedCount, sw, ref maxTimeForDocumentTransactionToRemainOpen);
                                 if (batchContinuationResult != Index.CanContinueBatchResult.True)
                                 {

@@ -206,7 +206,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                 stats.RecordReduceSuccesses(numberOfEntriesToReduce);
 
-                _index.UpdateThreadAllocations(indexContext, writer, stats, updateReduceStats: true);
+                _index.UpdateThreadAllocations(indexContext, writer, stats, IndexingWorkType.Reduce);
                 
             }
             catch (Exception e) when (e.IsIndexError())
@@ -399,7 +399,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     parentPagesToAggregate.Add(branchesToAggregate.First());
                 }
 
-                _index.UpdateThreadAllocations(indexContext, writer, stats, updateReduceStats: true);
+                _index.UpdateThreadAllocations(indexContext, writer, stats, IndexingWorkType.Reduce);
             }
 
             if (compressedEmptyLeafs != null && compressedEmptyLeafs.Count > 0)

@@ -122,7 +122,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                                                                 $"Exception: {e}");
                                     }
 
-                                    batchContinuationResult = _index.CanContinueBatch(collectionStats, queryContext, indexContext, writeOperation, 
+                                    batchContinuationResult = _index.CanContinueBatch(collectionStats, IndexingWorkType.Map, queryContext, indexContext, writeOperation, 
                                         lastEtag, lastCollectionEtag, totalProcessedCount, sw, ref maxTimeForDocumentTransactionToRemainOpen);
                                     if (batchContinuationResult != Index.CanContinueBatchResult.True)
                                     {
