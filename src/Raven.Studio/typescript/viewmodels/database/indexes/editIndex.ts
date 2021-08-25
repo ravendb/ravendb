@@ -176,8 +176,7 @@ class editIndex extends viewModelBase {
             this.previewEditor = aceEditorBindingHandler.getEditorBySelection(this.$previewEditor);
             this.previewEditor.setOption("wrap", true);
 
-            setTimeout(() => this.initRollingTooltip(), 0);
-            setTimeout(() => this.previewEditor.resize(), 0);
+            setTimeout(() => this.onPreviewItemChange(), 0);
         })
         
         this.previewItemNodes = ko.pureComputed<string[]>(() => {
@@ -404,10 +403,12 @@ class editIndex extends viewModelBase {
         this.previewItem(item);
     }
 
-    initRollingTooltip() {
+    onPreviewItemChange() {
         $('.history-rolling-deployment-area [data-toggle="tooltip"]').tooltip({
             html: true
         });
+        
+        this.previewEditor.resize();
     }
 
     getTimeTooltip(utcTime: string, isRevisionTime: boolean = false) {
