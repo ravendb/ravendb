@@ -55,8 +55,10 @@ function GetUbuntuImageTags($repo, $version, $arch) {
         }
         "arm64v8" {
             return @(
-                "$($repo):$($version)-ubuntu.18.04-arm64v8",
-                "$($repo):4.2-ubuntu-arm64v8-latest"
+                "$($repo):ubuntu-arm64v8-latest",
+                "$($repo):ubuntu-arm64v8-latest-lts",
+                "$($repo):5.2-ubuntu-arm64v8-latest",
+                "$($repo):$($version)-ubuntu.20.04-arm64v8"
                 )
                 break;
         }
