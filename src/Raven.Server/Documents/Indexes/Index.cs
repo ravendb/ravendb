@@ -2228,7 +2228,7 @@ namespace Raven.Server.Documents.Indexes
                                     entriesCount = writeOperation.Value.EntriesCount();
                                 }
 
-                                UpdateThreadAllocations(indexContext, null, null, false);
+                                UpdateThreadAllocations(indexContext, null, null, IndexingWorkType.None);
                             }
 
                             IndexFieldsPersistence.Persist(indexContext);
@@ -4135,7 +4135,7 @@ namespace Raven.Server.Documents.Indexes
             RenewTransaction
         }
 
-        public CanContinueBatchResult CanContinueBatch(IndexingStatsScope stats, QueryOperationContext queryContext, TransactionOperationContext indexingContext,
+        public CanContinueBatchResult CanContinueBatch(IndexingStatsScope stats, IndexingWorkType workType, QueryOperationContext queryContext, TransactionOperationContext indexingContext,
             Lazy<IndexWriteOperation> indexWriteOperation, long currentEtag, long maxEtag, long count,
             Stopwatch sw, ref TimeSpan maxTimeForDocumentTransactionToRemainOpen)
         {
@@ -4182,7 +4182,7 @@ namespace Raven.Server.Documents.Indexes
                 return CanContinueBatchResult.False;
             }
 
-            var txAllocationsInBytes = UpdateThreadAllocations(indexingContext, indexWriteOperation, stats, updateReduceStats: false);
+            var txAllocationsInBytes = UpdateThreadAllocations(indexingContext, indexWriteOperation, stats, workType);
 
             // we need to take the read transaction encryption size into account as we might read a lot of documents and produce very little indexing output.
             txAllocationsInBytes += queryContext.Documents.Transaction.InnerTransaction.LowLevelTransaction.AdditionalMemoryUsageSize.GetValue(SizeUnit.Bytes);
@@ -4341,7 +4341,17 @@ namespace Raven.Server.Documents.Indexes
                 }
 
                 if (memoryUsage != null)
-                    stats.RecordMapMemoryStats(memoryUsage.WorkingSet, memoryUsage.PrivateMemory, _currentMaximumAllowedMemory.GetValue(SizeUnit.Bytes));
+                {
+                    switch (workType)
+                    {
+                        case IndexingWorkType.Map:
+                            stats.RecordMapMemoryStats(memoryUsage.WorkingSet, memoryUsage.PrivateMemory, _currentMaximumAllowedMemory.GetValue(SizeUnit.Bytes));
+                            break;
+                        case IndexingWorkType.References:
+                            stats.RecordReferenceMemoryStats(memoryUsage.WorkingSet, memoryUsage.PrivateMemory, _currentMaximumAllowedMemory.GetValue(SizeUnit.Bytes));
+                            break;
+                    }
+                }
 
                 return canContinue ? CanContinueBatchResult.True : CanContinueBatchResult.False;
             }
@@ -4353,7 +4363,7 @@ namespace Raven.Server.Documents.Indexes
             TransactionOperationContext indexingContext,
             Lazy<IndexWriteOperation> indexWriteOperation,
             IndexingStatsScope stats,
-            bool updateReduceStats)
+            IndexingWorkType workType)
         {
             var threadAllocations = _threadAllocations.TotalAllocated;
             var txAllocations = indexingContext.Transaction.InnerTransaction.LowLevelTransaction.NumberOfModifiedPages
@@ -4376,13 +4386,18 @@ namespace Raven.Server.Documents.Indexes
             if (stats != null)
             {
                 var allocatedForStats = threadAllocations + totalTxAllocations + indexWriterAllocations;
-                if (updateReduceStats)
+
+                switch (workType)
                 {
-                    stats.RecordReduceAllocations(allocatedForStats);
-                }
-                else
-                {
-                    stats.RecordMapAllocations(allocatedForStats);
+                    case IndexingWorkType.References:
+                        stats.RecordReferenceAllocations(allocatedForStats);
+                        break;
+                    case IndexingWorkType.Map:
+                        stats.RecordMapAllocations(allocatedForStats);
+                        break;
+                    case IndexingWorkType.Reduce:
+                        stats.RecordReduceAllocations(allocatedForStats);
+                        break;
                 }
             }
 

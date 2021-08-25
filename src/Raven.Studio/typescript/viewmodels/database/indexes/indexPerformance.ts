@@ -1266,6 +1266,19 @@ class indexPerformance extends viewModelBase {
                 tooltipHtml += mapDetails;
             }
 
+            if (element.ReferenceDetails) {
+                let referenceDetails: string;
+                referenceDetails = `<div class="tooltip-header">Reference details</div>`;
+                referenceDetails += `<div class="tooltip-li">Reference attempts: <div class="value">${element.ReferenceDetails.ReferenceAttempts.toLocaleString()} </div></div>`;
+                referenceDetails += `<div class="tooltip-li">Reference successes: <div class="value">${element.ReferenceDetails.ReferenceSuccesses.toLocaleString()} </div></div>`;
+                referenceDetails += `<div class="tooltip-li">Reference errors: <div class="value">${element.ReferenceDetails.ReferenceErrors.toLocaleString()} </div></div>`;
+                referenceDetails += `<div class="tooltip-li">Allocation budget: <div class="value">${generalUtils.formatBytesToSize(element.ReferenceDetails.AllocationBudget)}</div></div>`;
+                referenceDetails += `<div class="tooltip-li">Currently allocated: <div class="value">${generalUtils.formatBytesToSize(element.ReferenceDetails.CurrentlyAllocated)} </div></div>`;
+                referenceDetails += `<div class="tooltip-li">Process private memory: <div class="value">${generalUtils.formatBytesToSize(element.ReferenceDetails.ProcessPrivateMemory)}</div></div>`;
+                referenceDetails += `<div class="tooltip-li">Process working set: <div class="value">${generalUtils.formatBytesToSize(element.ReferenceDetails.ProcessWorkingSet)}</div></div>`;
+                tooltipHtml += referenceDetails;
+            }
+
             if (element.ReduceDetails) {
                 let reduceDetails: string;
 
