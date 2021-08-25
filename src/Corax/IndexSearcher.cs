@@ -12,6 +12,7 @@ using System.Collections.Generic;
 using Voron.Data.CompactTrees;
 using Sparrow;
 using static Corax.Queries.SortingMatch;
+using System.Runtime.Intrinsics.X86;
 
 namespace Corax
 {
@@ -21,6 +22,14 @@ namespace Corax
         private readonly Transaction _transaction;
 
         private Page _lastPage = default;
+
+        /// <summary>
+        /// When true no SIMD instruction will be used. Useful for checking that optimized algorithms behave in the same
+        /// way than reference algorithms. 
+        /// </summary>
+        public bool ForceNonAccelerated { get; set; }
+
+        public bool IsAccelerated => Avx2.IsSupported && !ForceNonAccelerated;
 
         // The reason why we want to have the transaction open for us is so that we avoid having
         // to explicitly provide the index searcher with opening semantics and also every new
@@ -59,17 +68,17 @@ namespace Corax
         // foo = bar and published = true
 
         // foo = bar
-        public TermMatch TermQuery(string field, string term, bool useAccelerated = false)
+        public TermMatch TermQuery(string field, string term)
         {
             var fields = _transaction.ReadTree(IndexWriter.FieldsSlice);
             var terms = fields.CompactTreeFor(field);
             if (terms == null)
                 return TermMatch.CreateEmpty();
 
-            return TermQuery(terms, term, useAccelerated);
+            return TermQuery(terms, term);
         }
 
-        private TermMatch TermQuery(CompactTree tree, string term, bool useAccelerated = false)
+        private TermMatch TermQuery(CompactTree tree, string term)
         {
             if (tree.TryGetValue(term, out var value) == false)
                 return TermMatch.CreateEmpty();
@@ -81,7 +90,7 @@ namespace Corax
                 var setStateSpan = Container.Get(_transaction.LowLevelTransaction, setId).ToSpan();
                 ref readonly var setState = ref MemoryMarshal.AsRef<SetState>(setStateSpan);
                 var set = new Set(_transaction.LowLevelTransaction, Slices.Empty, setState);
-                matches = TermMatch.YieldSet(set, useAccelerated);
+                matches = TermMatch.YieldSet(set, IsAccelerated);
             }
             else if ((value & (long)TermIdMask.Small) != 0)
             {

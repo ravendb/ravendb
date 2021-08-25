@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Text;
 using Sparrow;
 using Sparrow.Server;
 
@@ -41,6 +40,7 @@ namespace Corax.Queries
             _inner.Next(out _currentTerm);
         }
 
+        [SkipLocalsInit]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int Fill(Span<long> buffer)
         {
@@ -112,10 +112,7 @@ namespace Corax.Queries
             // evaluating directly, construct temporary data structures like bloom filters on subsequent iterations when
             // the statistics guarrant those approaches, etc. Currently we apply memoization but without any limit to 
             // size of the result and it's subsequent usage of memory. 
-
-            long* resultsPtr = stackalloc long[buffer.Length];
-            Span<long> results = new Span<long>(resultsPtr, buffer.Length);
-             
+            
             // When the fill method is able to perform an internal memoization, just do the AndWith operation with it and
             // sidestep everything else.             
             if (_memoizedCount > 0)
@@ -128,19 +125,17 @@ namespace Corax.Queries
                     _memoizedCount = Fill(new Span<long>(_cachedResult.Ptr, _memoizedCount));                    
                 }
 
-                int totals = MergeHelper.And(resultsPtr, buffer.Length,
-                    (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(buffer)), buffer.Length,
-                    (long*)_cachedResult.Ptr, _memoizedCount);
-
-                // Copy array to cache.
-                Unsafe.CopyBlockUnaligned(
-                    ref Unsafe.As<long, byte>(ref MemoryMarshal.GetReference(buffer)),
-                    ref Unsafe.AsRef<byte>(resultsPtr),
-                    (uint)(totals * sizeof(long)));
+                // PERF: Because in the worst case scenario the AND will just overwrite the current element,
+                //       we can actually avoid the copy and reuse the destination pointer. 
+                long* ptr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(buffer));
+                int totals = MergeHelper.And(ptr, buffer.Length,
+                                             ptr, buffer.Length,
+                                             (long*)_cachedResult.Ptr, _memoizedCount);
 
                 return totals;
             }
 
+            Span<long> results = stackalloc long[buffer.Length];
             Span<long> tmp = stackalloc long[buffer.Length];
             Span<long> tmp2 = stackalloc long[buffer.Length];
 

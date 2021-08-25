@@ -96,6 +96,7 @@ namespace Corax.Queries
 
         public static BinaryMatch<TInner, TOuter> YieldOr(in TInner inner, in TOuter outer)
         {
+            [SkipLocalsInit]
             static int AndWith(ref BinaryMatch<TInner, TOuter> match, Span<long> matches)
             {
                 Span<long> orMatches = stackalloc long[matches.Length];

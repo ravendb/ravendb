@@ -552,11 +552,6 @@ namespace Voron.Data.Sets
                 // We will try to fill.
                 total = 0;
 
-                bool result;
-                int read;
-
-                var tmp = matches;
-
                 // FIXME: This is a hack, we shouldnt be doing this but I need to understand if we can make this format
                 //        high performance enough before even start thinking about consistency of usage patterns. 
                 if (_hasSeek)
@@ -569,11 +564,11 @@ namespace Voron.Data.Sets
 
                 while(true)
                 {
-                    tmp = matches.Slice(total);
-                    result = _it.Fill(tmp, out read, pruneGreaterThan);                                                                                      
+                    var tmp = matches.Slice(total);
+                    var result = _it.Fill(tmp, out var read, pruneGreaterThan);                                                                                      
 
-                    // We havent read anything, because we may have gotten a pruned result.
-                    if (read == 0)
+                    // We havent read anything, but we are not getting a pruned result.
+                    if (read == 0 && result == true)
                     {
                         var parent = _parent;
                         if (parent._pos == 0)

@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
+using System.Security.Cryptography;
 
 namespace Corax.Queries
 {
@@ -175,6 +176,7 @@ namespace Corax.Queries
 
         public static TermMatch YieldSet(Set set, bool useAccelerated = true)
         {
+            [SkipLocalsInit]
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             static int AndWithFunc(ref TermMatch term, Span<long> matches)
             {
@@ -222,108 +224,124 @@ namespace Corax.Queries
                 return matchedIdx;
             }
 
+            [SkipLocalsInit]
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             static int AndWithVectorizedFunc(ref TermMatch term, Span<long> matches)
             {
                 const int BlockSize = 4096;
+                uint N = (uint) Vector256<long>.Count;
+
+                Debug.Assert(Vector256<long>.Count == 4);
 
                 term._set.MaybeSeek(matches[0] - 1);
 
-                // This is effectively a constant. 
-                int N = Vector256<long>.Count;                
-
-                long* dstStartPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(matches));                
-                long* blockStartPtr = stackalloc long[BlockSize]; // The size of this array is fixed to improve cache locality. 
-                long* inputStartPtr = stackalloc long[matches.Length];
-                long* inputEndPtr = inputStartPtr + matches.Length;                
-
-                // Copy array to temporary memory.
-                Unsafe.CopyBlockUnaligned(
-                    ref Unsafe.AsRef<byte>(inputStartPtr),
-                    ref Unsafe.AsRef<byte>(dstStartPtr),
-                    (uint)(matches.Length * sizeof(long)));
-
-                int i = 0;
-                long* inputPtr = inputStartPtr;
-                long* dstPtr = dstStartPtr;
+                // PERF: The AND operation can be performed in place, because we end up writing the same value that we already read. 
+                long* inputPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(matches));
+                long* inputEndPtr = inputPtr + matches.Length;                
+               
+                long* blockStartPtr = stackalloc long[BlockSize]; // The size of this array is fixed to improve cache locality.
                 Span<long> tmpMatches = new Span<long>(blockStartPtr, BlockSize);
 
-                long maxMatchNumber = matches[^1];
+                int matchesLength = matches.Length;
+                long* dstPtr = inputPtr;
                 while (inputPtr < inputEndPtr)
                 {
-                    var result = term._set.Fill(tmpMatches, out int read, pruneGreaterThan: maxMatchNumber);
+                    var result = term._set.Fill(tmpMatches, out int read, pruneGreaterThan: matches[^1]);
                     if (result == false)
                         break;
 
                     if (read == 0)
                         continue;
 
-                    // Console.WriteLine($"Read: {read}|[{tmpMatches[0]},{tmpMatches[read-1]}], Matches: [{matches[0]},{matches[^1]}]");
+                    long* smallerPtr, largerPtr;
+                    long* smallerEndPtr, largerEndPtr;
 
-                    int blocks = read / N;
-                    long* blockPtr = blockStartPtr;
-                    long* blockEndPtr = blockStartPtr + read;
-                    while (blocks > 0 && inputPtr < inputEndPtr)
+                    if (read < matches.Length)
+                    {
+                        smallerPtr = blockStartPtr;
+                        smallerEndPtr = blockStartPtr + read;
+                        largerPtr = inputPtr;
+                        largerEndPtr = inputEndPtr;                       
+                    }
+                    else
+                    {
+                        smallerPtr = inputPtr;
+                        smallerEndPtr = inputEndPtr;
+                        largerPtr = blockStartPtr;
+                        largerEndPtr = blockStartPtr + read;
+                    }
+
+                    while (true)
                     {
                         // TODO: In here we can do SIMD galloping with gather operations. Therefore we will be able to do
                         //       multiple checks at once and find the right amount of skipping using a table. 
 
                         // If the value to compare is bigger than the biggest element in the block, we advance the block. 
-                        if (*inputPtr > *(blockPtr + N - 1))
+                        if ((ulong)*smallerPtr > (ulong)*(largerPtr + N - 1))
                         {
-                            blocks--;
-                            blockPtr += N;
+                            if (largerPtr + N >= largerEndPtr)
+                                break;
+
+                            largerPtr += N;
                             continue;
                         }
 
                         // If the value to compare is smaller than the smallest element in the block, we advance the scalar value.
-                        if (*inputPtr < *blockPtr)
+                        if ((ulong)*smallerPtr < (ulong)*largerPtr)
                         {
-                            inputPtr++;
+                            smallerPtr++;
+                            if (smallerPtr >= smallerEndPtr)
+                                break;
+
                             continue;
                         }
 
-                        Vector256<long> value = Vector256.Create(*inputPtr);
-                        Vector256<long> blockValues = Avx.LoadVector256(blockPtr);
+                        Vector256<ulong> value = Vector256.Create((ulong)*smallerPtr);
+                        Vector256<ulong> blockValues = Avx.LoadVector256((ulong*)largerPtr);
 
                         // We are going to select which direction we are going to be moving forward. 
-                        if (!Avx2.CompareEqual(value, blockValues).Equals(Vector256<long>.Zero))
+                        if (!Avx2.CompareEqual(value, blockValues).Equals(Vector256<ulong>.Zero))
                         {
                             // We found the value, therefore we need to store this value in the destination.
-                            *dstPtr = *inputPtr;
+                            *dstPtr = *smallerPtr;
                             dstPtr++;
                         }
 
-                        inputPtr++;
+                        smallerPtr++;
+                        if (smallerPtr >= smallerEndPtr)
+                            break;
                     }
 
                     // The scalar version. This shouldnt cost much either way. 
-                    while (inputPtr < inputEndPtr && blockPtr < blockEndPtr)
+                    while (smallerPtr < smallerEndPtr && largerPtr < largerEndPtr)
                     {
-                        long leftValue = *inputPtr;
-                        long rightValue = *blockPtr;
+                        ulong leftValue = (ulong)*smallerPtr;
+                        ulong rightValue = (ulong)*largerPtr;
 
                         if (leftValue > rightValue)
                         {
-                            blockPtr++;
+                            largerPtr++;
                         }
                         else if (leftValue < rightValue)
                         {
-                            inputPtr++;
+                            smallerPtr++;
                         }
                         else
                         {
-                            *dstPtr = leftValue;
+                            *dstPtr = (long)leftValue;
                             dstPtr++;
-                            inputPtr++;
-                            blockPtr++;
+                            smallerPtr++;
+                            largerPtr++;
                         }
                     }
+
+                    inputPtr = read < matches.Length ? largerPtr : smallerPtr;
+
+                    Debug.Assert(inputPtr >= dstPtr);
                 }
 
-                return (int)( dstPtr - dstStartPtr );
-            }
-
+                return (int)((ulong)dstPtr - (ulong)Unsafe.AsPointer(ref MemoryMarshal.GetReference(matches))) / sizeof(ulong);
+            }            
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             static int FillFunc(ref TermMatch term, Span<long> matches)
@@ -339,8 +357,6 @@ namespace Corax.Queries
 
             if (!Avx2.IsSupported)
                 useAccelerated = false;
-
-            useAccelerated = false;
 
             // We will select the AVX version if supported.             
             return new TermMatch(&FillFunc, useAccelerated ? &AndWithVectorizedFunc : &AndWithFunc, set.State.NumberOfEntries)
