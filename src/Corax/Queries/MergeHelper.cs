@@ -26,7 +26,7 @@ namespace Corax.Queries
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe static int And(long* dst, int dstLength, long* left, int leftLength, long* right, int rightLength)
         {
-            if ( Avx2.IsSupported)
+            if (Avx2.IsSupported)
                 return AndVectorized(dst, dstLength, left, leftLength, right, rightLength);
             return AndScalar(dst, dstLength, left, leftLength, right, rightLength);
         }
