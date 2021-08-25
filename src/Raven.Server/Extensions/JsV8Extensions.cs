@@ -42,11 +42,13 @@ namespace Raven.Server.Extensions
 
         public static IEnumerable<KeyValuePair<string, InternalHandle>> GetProperties(this InternalHandle value)
         {
-            var propertyNames = value.GetPropertyNames();
-
-            foreach (var propertyName in propertyNames)
-            {
-                yield return new KeyValuePair<string, InternalHandle>(propertyName, value.GetProperty(propertyName));
+            if (value.IsObject) {
+                var propertyNames = value.GetPropertyNames();
+                foreach (var propertyName in propertyNames)
+                {
+                    InternalHandle jsProp = value.GetProperty(propertyName);
+                    yield return new KeyValuePair<string, InternalHandle>(propertyName, jsProp);
+                }
             }
         }
 

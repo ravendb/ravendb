@@ -58,6 +58,8 @@ namespace Raven.Server.Documents.Patch
         {
             if (value is InternalHandle jsValue)
             {
+                jsValue.ThrowOnError();
+
                 if (jsValue.IsBoolean) {
                     _writer.WriteValue(jsValue.AsBoolean);
                 }
