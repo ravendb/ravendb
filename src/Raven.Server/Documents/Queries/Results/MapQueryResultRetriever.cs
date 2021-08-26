@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Lucene.Net.Store;
 using Raven.Client;
 using Raven.Server.Documents.Includes;
@@ -20,7 +21,7 @@ namespace Raven.Server.Documents.Queries.Results
             _context = context;
         }
 
-        public override Document Get(Lucene.Net.Documents.Document input, Lucene.Net.Search.ScoreDoc scoreDoc, IState state)
+        public override (Document Document, List<Document> List) Get(Lucene.Net.Documents.Document input, Lucene.Net.Search.ScoreDoc scoreDoc, IState state)
         {
             using (RetrieverScope?.Start())
             {
@@ -35,7 +36,7 @@ namespace Raven.Server.Documents.Queries.Results
                     var doc = DirectGet(null, id, DocumentFields, state);
 
                     FinishDocumentSetup(doc, scoreDoc);
-                    return doc;
+                    return (doc, null);
                 }
             }
         }
