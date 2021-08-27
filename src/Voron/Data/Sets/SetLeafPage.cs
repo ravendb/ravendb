@@ -252,7 +252,8 @@ namespace Voron.Data.Sets
 
                 i = 0;
                 bool result = true;
-                while (i < matches.Length)
+                int matchesLength = matches.Length;
+                while (i < matchesLength && result == true)
                 {
                     if (compressIndex == compressLength && _hasDecoder)
                     {
@@ -279,7 +280,7 @@ namespace Voron.Data.Sets
                         //TryReadMoreCompressedValues(parent, decoderState, ref _compressedEntry, ref compressIndex, ref compressLength, ref _compressedEntryIndex, ref _hasDecoder, scratchPtr);
                     }
 
-                    while (rawValuesIndex >= 0 && i < matches.Length)
+                    while (rawValuesIndex >= 0 && i < matchesLength)
                     {
                         // note, reading in reverse!
                         int rawValue = parentRawValues[rawValuesIndex];
@@ -317,9 +318,10 @@ namespace Voron.Data.Sets
                         }
                     }
 
-                    if (compressIndex != compressLength)
+                    long baseline = _parent.Header->Baseline;
+                    while (compressIndex != compressLength && i < matchesLength)
                     {
-                        long value = (long)scratchPtr[compressIndex] | _parent.Header->Baseline;
+                        long value = (long)scratchPtr[compressIndex] | baseline;
                         if (value > pruneGreaterThan)
                         {
                             // We are pruning, we are done. 
@@ -331,10 +333,12 @@ namespace Voron.Data.Sets
                         compressIndex++;
                         matches[i++] = value;
                     }
-                    else
+
+                    if (_compressedEntryIndex >= _parent.Header->NumberOfCompressedPositions)
                     {
+                        _hasDecoder = false;
                         break;
-                    }                    
+                    }                
                 }
 
             End:
