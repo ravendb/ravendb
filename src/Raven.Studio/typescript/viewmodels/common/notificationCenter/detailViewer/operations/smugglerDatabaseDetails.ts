@@ -260,7 +260,7 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
         items.push({
             name: `Upload to ${backupType}`,
             uploadProgress: uploadProgress
-        } as uploadListItem);
+        });
     }
 
     private scrollDown() {
@@ -329,7 +329,7 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
             erroredCount: item.ErroredCount.toLocaleString(),
             processingSpeedText: processingSpeedText,
             isNested: isNested
-        } as smugglerListItem;
+        };
     }
 
     private showSpeed(name: string) {

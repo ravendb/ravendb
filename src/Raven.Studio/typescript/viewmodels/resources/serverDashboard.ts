@@ -111,7 +111,7 @@ class indexingSpeedSection {
     indexingChart: dashboardChart;
     reduceChart: dashboardChart;
     
-    private table = [] as indexingSpeed[];
+    private table: indexingSpeed[] = [];
     private gridController = ko.observable<virtualGridController<indexingSpeed>>();
 
     totalIndexedPerSecond = ko.observable<number>(0);
@@ -246,7 +246,7 @@ class indexingSpeedSection {
 }
 
 class databasesSection {
-    private table = [] as databaseItem[];
+    private table: databaseItem[] = [];
     private gridController = ko.observable<virtualGridController<databaseItem>>();
     
     databasesViewUrl = appUrl.forDatabases();
@@ -368,7 +368,7 @@ class databasesSection {
 class trafficSection {
     private sizeFormatter = generalUtils.formatBytesToSize;
     
-    private table = [] as trafficItem[];
+    private table: trafficItem[] = [];
     private trafficChart: dashboardChart;
     
     trafficViewUrl = appUrl.forTrafficWatch();

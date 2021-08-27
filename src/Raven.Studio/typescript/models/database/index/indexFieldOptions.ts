@@ -445,7 +445,7 @@ class indexFieldOptions {
     }
 
     private extractEffectiveValue<T>(extractor: (field: indexFieldOptions) => T, wrapWithDefault: boolean, labelProvider?: (arg: T) => string): string {
-        const candidates = [] as T[];
+        const candidates: T[] = [];
 
         let field = this as indexFieldOptions;
 
@@ -505,16 +505,15 @@ class indexFieldOptions {
         return field;
     }
 
-    private static getDefaultDto() {
+    private static getDefaultDto(): Raven.Client.Documents.Indexes.IndexFieldOptions {
         return {
             Storage: null,
             Indexing: null,
-            Sort: null,
             Analyzer: null,
             Suggestions: null,
             Spatial: null as Raven.Client.Documents.Indexes.Spatial.SpatialOptions,
             TermVector: null
-        } as Raven.Client.Documents.Indexes.IndexFieldOptions;
+        };
     }
 
     toggleAdvancedOptions() {

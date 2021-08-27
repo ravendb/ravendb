@@ -9,7 +9,7 @@ import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBinding
 
 class visualizerTreeExplorer extends dialogViewModelBase {
 
-    private tableItems = [] as Raven.Server.Documents.Indexes.Debugging.MapResultInLeaf[];
+    private tableItems: Raven.Server.Documents.Indexes.Debugging.MapResultInLeaf[] = [];
     private gridController = ko.observable<virtualGridController<Raven.Server.Documents.Indexes.Debugging.MapResultInLeaf>>();
     private columnPreview = new columnPreviewPlugin<Raven.Server.Documents.Indexes.Debugging.MapResultInLeaf>();
 

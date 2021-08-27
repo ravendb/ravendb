@@ -85,8 +85,8 @@ export class serverWideOnlyEntry extends settingsEntry {
         }
     }
 
-    getTemplateType() {
-        return "ServerWide" as settingsTemplateType;
+    getTemplateType(): settingsTemplateType {
+        return "ServerWide";
     }
 }
 

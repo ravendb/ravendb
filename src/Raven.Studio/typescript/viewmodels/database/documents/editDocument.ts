@@ -1156,7 +1156,7 @@ class editDocument extends viewModelBase {
             name: file.Name,
             contentType: file.ContentType,
             size: file.Size
-        } as attachmentItem;
+        };
     }
 
     private renderDifferences() {
@@ -1384,7 +1384,7 @@ class normalCrudActions implements editDocumentCrudActions {
                         counterName: x.name,
                         totalCounterValue: x.value,
                         counterValuesPerNode: []
-                    } as counterItem;
+                    };
                 }),
                 totalResultCount: counters.length
             });

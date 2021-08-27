@@ -13,7 +13,7 @@ class slowSqlDetails extends abstractPerformanceHintDetails {
 
     currentDetails = ko.observable<Raven.Server.NotificationCenter.Notifications.Details.SlowSqlStatementInfo>();
     
-    tableItems = [] as Raven.Server.NotificationCenter.Notifications.Details.SlowSqlStatementInfo[];
+    tableItems: Raven.Server.NotificationCenter.Notifications.Details.SlowSqlStatementInfo[] = [];
     private gridController = ko.observable<virtualGridController<Raven.Server.NotificationCenter.Notifications.Details.SlowSqlStatementInfo>>();
     private columnPreview = new columnPreviewPlugin<Raven.Server.NotificationCenter.Notifications.Details.SlowSqlStatementInfo>();
 

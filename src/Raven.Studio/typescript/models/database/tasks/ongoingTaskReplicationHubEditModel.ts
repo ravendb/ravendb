@@ -90,8 +90,9 @@ class ongoingTaskReplicationHubEditModel {
             Mode: this.replicationMode(),
             Disabled: this.disabled(),
             PreventDeletionsMode: this.preventDeletions() ? "PreventSinkToHubDeletions" : "None",
-            WithFiltering: this.withFiltering()
-        } as Raven.Client.Documents.Operations.Replication.PullReplicationDefinition;
+            WithFiltering: this.withFiltering(),
+            Certificates: undefined
+        };
     }
     
     initValidation() {

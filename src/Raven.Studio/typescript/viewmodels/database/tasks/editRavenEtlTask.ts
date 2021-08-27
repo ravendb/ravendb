@@ -131,16 +131,16 @@ class ravenTaskTestMode {
         if (testValid && parentValid) {
             this.spinners.test(true);
 
-            const dto = {
+            const dto: Raven.Server.Documents.ETL.Providers.Raven.Test.TestRavenEtlScript = {
                 DocumentId: this.documentId(),
                 IsDelete: this.testDelete(),
                 Configuration: this.configurationProvider()
-            } as Raven.Server.Documents.ETL.Providers.Raven.Test.TestRavenEtlScript;
+            };
 
             new testRavenEtlCommand(this.db(), dto)
                 .execute()
                 .done(simulationResult => {
-                    this.testResults(simulationResult.Commands.map((command: Raven.Client.Documents.Commands.Batches.ICommandData) => {
+                    this.testResults(simulationResult.Commands.map((command: Raven.Client.Documents.Commands.Batches.ICommandData): resultItem => {
 
                         const json = JSON.stringify(command, null, 4);
                         const html = Prism.highlight(json, (Prism.languages as any).javascript);
@@ -148,7 +148,7 @@ class ravenTaskTestMode {
                         return {
                             header: command.Type + " " + command.Id,
                             payload: html
-                        } as resultItem;
+                        };
                     }));
                     this.debugOutput(simulationResult.DebugOutput);
                     this.transformationErrors(simulationResult.TransformationErrors);
