@@ -19,7 +19,6 @@ namespace Corax.Queries
         private TermMatch _currentTerm;        
         private readonly ByteStringContext _context;
         private ByteString _cachedResult;
-        private int _memoizedCount;
 
         public long Count => _totalResults;
         public long Current => _currentIdx <= QueryMatch.Start ? _currentIdx : _current;
@@ -35,7 +34,6 @@ namespace Corax.Queries
             _currentIdx = QueryMatch.Start;
             _totalResults = totalResults;
             _confidence = confidence;
-            _memoizedCount = 0;
 
             _inner.Next(out _currentTerm);
         }
@@ -112,28 +110,6 @@ namespace Corax.Queries
             // evaluating directly, construct temporary data structures like bloom filters on subsequent iterations when
             // the statistics guarrant those approaches, etc. Currently we apply memoization but without any limit to 
             // size of the result and it's subsequent usage of memory. 
-            
-            // When the fill method is able to perform an internal memoization, just do the AndWith operation with it and
-            // sidestep everything else.             
-            if (_memoizedCount > 0)
-            {
-                if ( !_cachedResult.HasValue )
-                {
-                    _context.Allocate(_memoizedCount * sizeof(long), out _cachedResult);
-                    
-                    _inner.Reset();
-                    _memoizedCount = Fill(new Span<long>(_cachedResult.Ptr, _memoizedCount));                    
-                }
-
-                // PERF: Because in the worst case scenario the AND will just overwrite the current element,
-                //       we can actually avoid the copy and reuse the destination pointer. 
-                long* ptr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(buffer));
-                int totals = MergeHelper.And(ptr, buffer.Length,
-                                             ptr, buffer.Length,
-                                             (long*)_cachedResult.Ptr, _memoizedCount);
-
-                return totals;
-            }
 
             Span<long> results = stackalloc long[buffer.Length];
             Span<long> tmp = stackalloc long[buffer.Length];
@@ -164,7 +140,6 @@ namespace Corax.Queries
             {
                 _totalResults = totalRead;
                 _confidence = QueryCountConfidence.High;
-                _memoizedCount = (int)totalRead;
             }                
 
             results.Slice(0, totalSize).CopyTo(buffer);
