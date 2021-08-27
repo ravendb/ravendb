@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
@@ -43,13 +43,15 @@ namespace Corax.Queries
             long* dstPtr = dst;
             long* smallerPtr, largerPtr;
             long* smallerEndPtr, largerEndPtr;
-            
+
+            bool applyVectorization;
             if ( leftLength < rightLength)
             {
                 smallerPtr = left;
                 smallerEndPtr = left + leftLength;
                 largerPtr = right;
                 largerEndPtr = right + rightLength;
+                applyVectorization = rightLength > N;
             }
             else
             {
@@ -57,49 +59,53 @@ namespace Corax.Queries
                 smallerEndPtr = right + rightLength;
                 largerPtr = left;
                 largerEndPtr = left + leftLength;
+                applyVectorization = leftLength > N;
             }
-
-            while (true)
+            
+            if (applyVectorization)
             {
-                // TODO: In here we can do SIMD galloping with gather operations. Therefore we will be able to do
-                //       multiple checks at once and find the right amount of skipping using a table. 
-
-                // If the value to compare is bigger than the biggest element in the block, we advance the block. 
-                if ((ulong)*smallerPtr > (ulong)*(largerPtr + N - 1))
+                while (true)
                 {
-                    if (largerPtr + N >= largerEndPtr)
-                        break;
+                    // TODO: In here we can do SIMD galloping with gather operations. Therefore we will be able to do
+                    //       multiple checks at once and find the right amount of skipping using a table. 
 
-                    largerPtr += N;
-                    continue;
-                }
+                    // If the value to compare is bigger than the biggest element in the block, we advance the block. 
+                    if ((ulong)*smallerPtr > (ulong)*(largerPtr + N - 1))
+                    {
+                        if (largerPtr + N >= largerEndPtr)
+                            break;
 
-                // If the value to compare is smaller than the smallest element in the block, we advance the scalar value.
-                if ((ulong)*smallerPtr < (ulong)*largerPtr)
-                {
+                        largerPtr += N;
+                        continue;
+                    }
+
+                    // If the value to compare is smaller than the smallest element in the block, we advance the scalar value.
+                    if ((ulong)*smallerPtr < (ulong)*largerPtr)
+                    {
+                        smallerPtr++;
+                        if (smallerPtr >= smallerEndPtr)
+                            break;
+
+                        continue;
+                    }
+
+                    Vector256<ulong> value = Vector256.Create((ulong)*smallerPtr);
+                    Vector256<ulong> blockValues = Avx.LoadVector256((ulong*)largerPtr);
+
+                    // We are going to select which direction we are going to be moving forward. 
+                    if (!Avx2.CompareEqual(value, blockValues).Equals(Vector256<ulong>.Zero))
+                    {
+                        // We found the value, therefore we need to store this value in the destination.
+                        *dstPtr = *smallerPtr;
+                        dstPtr++;
+                    }
+
                     smallerPtr++;
                     if (smallerPtr >= smallerEndPtr)
                         break;
-
-                    continue;
                 }
-
-                Vector256<ulong> value = Vector256.Create((ulong)*smallerPtr);
-                Vector256<ulong> blockValues = Avx.LoadVector256((ulong*)largerPtr);
-
-                // We are going to select which direction we are going to be moving forward. 
-                if (!Avx2.CompareEqual(value, blockValues).Equals(Vector256<ulong>.Zero))
-                {
-                    // We found the value, therefore we need to store this value in the destination.
-                    *dstPtr = *smallerPtr;
-                    dstPtr++;
-                }
-
-                smallerPtr++;
-                if (smallerPtr >= smallerEndPtr)
-                    break;
             }
-
+            
             // The scalar version. This shouldnt cost much either way. 
             while (smallerPtr < smallerEndPtr && largerPtr < largerEndPtr)
             {
