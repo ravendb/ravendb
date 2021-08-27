@@ -24,8 +24,8 @@ namespace Raven.Server.Documents.Patch
 
         public InternalHandle GetOrCreate(string propertyName)
         {
-            if (Instance.BoundObject != null && Instance.BoundObject is BlittableObjectInstance b)
-                return b.GetOrCreate(propertyName);
+            if (Instance.BoundObject is BlittableObjectInstance boi)
+                return boi.GetOrCreate(propertyName);
             InternalHandle o = Instance.GetProperty(propertyName);
             if (o.IsUndefined || o.IsNull)
             {
@@ -52,7 +52,7 @@ namespace Raven.Server.Documents.Patch
 
         public void Dispose()
         {
-            if (Instance.BoundObject != null && Instance.BoundObject is BlittableObjectInstance boi)
+            if (Instance.BoundObject is BlittableObjectInstance boi)
                 boi.Reset();
 
             _parent?.JavaScriptUtils.Clear();

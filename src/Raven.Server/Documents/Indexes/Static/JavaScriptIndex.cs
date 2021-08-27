@@ -102,12 +102,12 @@ function map(name, lambda) {
             desc3.Dispose();
 
             var desc1 = InternalHandle.Empty;
-            using (var desc = _definitions.GetProperty("desc")) // pure native value
+            using (var desc = _definitions.GetProperty("desc")) 
             {
                 desc1 = new InternalHandle(desc, true);
             }
             desc1.Dispose();
-            using (var desc = _definitions.GetProperty("desc")) // pure native value
+            using (var desc = _definitions.GetProperty("desc")) 
             {
                 desc1.Set(desc);
             }
@@ -115,7 +115,7 @@ function map(name, lambda) {
 
             //var maps1 = InternalHandle.Empty;
             //var map1 = InternalHandle.Empty;
-            using (var maps = _definitions.GetProperty(MapsProperty)) // pure native value
+            using (var maps = _definitions.GetProperty(MapsProperty)) 
             {
                 //maps1 = new InternalHandle(maps, true);
                 if (maps.IsNull || maps.IsUndefined || maps.IsArray == false)
@@ -138,7 +138,7 @@ function map(name, lambda) {
                     if (funcInstanceJint == null)
                         ThrowIndexCreationException($"Jint: map function #{i} {MethodProperty} property isn't a 'FunctionInstance'");
 
-                    using (var map = maps.GetProperty(i)) // pure native value
+                    using (var map = maps.GetProperty(i)) 
                     {
                         //map1.Set(map);
                         if (map.IsNull || map.IsUndefined || map.IsObject == false)
@@ -159,7 +159,7 @@ function map(name, lambda) {
                             if (map.HasProperty(MethodProperty) == false)
                                 ThrowIndexCreationException($"map function #{i} is missing its {MethodProperty} property");
 
-                            var func = map.GetProperty(MethodProperty); // to be saved to map operation
+                            using (var func = map.GetProperty(MethodProperty))
                             {
                                 if (func.IsFunction == false)
                                     ThrowIndexCreationException($"map function #{i} {MethodProperty} property isn't a function");
@@ -474,7 +474,7 @@ function map(name, lambda) {
         ~AbstractJavaScriptIndex()
         {
             _engine.Dispose();
-            _definitions.Dispose(); // pure native value
+            _definitions.Dispose(); 
         }
 
         private void ProcessFields(Dictionary<string, Dictionary<string, List<JavaScriptMapOperation>>> collectionFunctions)
@@ -525,13 +525,13 @@ function map(name, lambda) {
                 var groupByKeyJint = reduceAsObjJint.GetProperty(KeyProperty).Value.As<ScriptFunctionInstance>();
                 var reduceJint = reduceAsObjJint.GetProperty(AggregateByProperty).Value.As<ScriptFunctionInstance>();
 
-                using (var reduceObj = _definitions.GetProperty(ReduceProperty)) // pure native value
+                using (var reduceObj = _definitions.GetProperty(ReduceProperty)) 
                 {
                     if (!reduceObj.IsUndefined && reduceObj.IsObject)
                     {
-                        var groupByKey = reduceObj.GetProperty(KeyProperty); // to be saved to reduce operation
-                        var reduce = reduceObj.GetProperty(AggregateByProperty); // to be saved to reduce operation
-                        ReduceOperation = new JavaScriptReduceOperation(reduceJint, groupByKeyJint, _engineJint, reduce, groupByKey, JavaScriptIndexUtils) { ReduceString = Definition.Reduce };
+                        using (var groupByKey = reduceObj.GetProperty(KeyProperty))
+                        using (var reduce = reduceObj.GetProperty(AggregateByProperty))
+                            ReduceOperation = new JavaScriptReduceOperation(reduceJint, groupByKeyJint, _engineJint, reduce, groupByKey, JavaScriptIndexUtils) { ReduceString = Definition.Reduce };
                         GroupByFields = ReduceOperation.GetReduceFieldsNames();
                         Reduce = ReduceOperation.IndexingFunction;
                     }

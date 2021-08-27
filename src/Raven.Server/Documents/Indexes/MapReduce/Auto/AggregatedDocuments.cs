@@ -35,11 +35,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                 _outputs[i].Data.Dispose();
             }
             _outputs.Clear();
-
-            foreach (var output in _outputs) {
-                if (output is IDisposable d)
-                    d.Dispose();
-            }
         }
     }
 

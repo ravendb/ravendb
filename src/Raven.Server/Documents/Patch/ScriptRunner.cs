@@ -324,7 +324,7 @@ namespace Raven.Server.Documents.Patch
 
             private (string Id, BlittableJsonReaderObject Doc) GetIdAndDocFromArg(InternalHandle docArg, string signature)
             {
-                if (docArg.BoundObject != null && docArg.BoundObject is BlittableObjectInstance doc)
+                if (docArg.BoundObject is BlittableObjectInstance doc)
                     return (doc.DocumentId, doc.Blittable);
 
                 if (docArg.IsStringEx())
@@ -342,7 +342,7 @@ namespace Raven.Server.Documents.Patch
 
             private string GetIdFromArg(InternalHandle docArg, string signature)
             {
-                if (docArg.BoundObject != null && docArg.BoundObject is BlittableObjectInstance doc)
+                if (docArg.BoundObject is BlittableObjectInstance doc)
                     return doc.DocumentId;
 
                 if (docArg.IsStringEx())
@@ -1290,7 +1290,7 @@ namespace Raven.Server.Documents.Patch
                     throw new InvalidOperationException($"{signature} must be called with exactly 2 arguments");
 
                 string id;
-                if (args[0].BoundObject != null && args[0].BoundObject is BlittableObjectInstance doc)
+                if (args[0].BoundObject is BlittableObjectInstance doc)
                 {
                     id = doc.DocumentId;
                 }
@@ -1356,7 +1356,7 @@ namespace Raven.Server.Documents.Patch
                     BlittableJsonReaderObject docBlittable = null;
                     string id = null;
 
-                    if (args[0].BoundObject != null && args[0].BoundObject is BlittableObjectInstance doc)
+                    if (args[0].BoundObject is BlittableObjectInstance doc)
                     {
                         id = doc.DocumentId;
                         docBlittable = doc.Blittable;
@@ -1444,7 +1444,7 @@ namespace Raven.Server.Documents.Patch
                     string id = null;
                     BlittableJsonReaderObject docBlittable = null;
 
-                    if (args[0].BoundObject != null && args[0].BoundObject is BlittableObjectInstance doc)
+                    if (args[0].BoundObject is BlittableObjectInstance doc)
                     {
                         id = doc.DocumentId;
                         docBlittable = doc.Blittable;
@@ -1525,7 +1525,7 @@ namespace Raven.Server.Documents.Patch
 
                 for (var index = 0; index < args.Length; index++)
                 {
-                    if (args[index].BoundObject != null && args[index].BoundObject is BlittableObjectInstance boi)
+                    if (args[index].BoundObject is BlittableObjectInstance boi)
                     {
                         var lazyId = _docsCtx.GetLazyString(boi.DocumentId);
                         lazyIds.Add(lazyId);
@@ -2076,7 +2076,6 @@ namespace Raven.Server.Documents.Patch
 
                 /*if (method != QueryMetadata.SelectOutput &&
                     _args.Length == 2 &&
-                    _args[1].BoundObject != null &&
                     _args[1].BoundObject is BlittableObjectInstance boi)
                 {
                     _refResolver.ExplodeArgsOn(null, boi);

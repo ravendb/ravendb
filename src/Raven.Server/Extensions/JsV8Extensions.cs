@@ -37,7 +37,14 @@ namespace Raven.Server.Extensions
 
         public static IEnumerable<KeyValuePair<string, InternalHandle>> GetOwnProperties(this InternalHandle value)
         {
-            return value.GetProperties();
+            if (value.IsObject) {
+                var propertyNames = value.GetOwnPropertyNames();
+                foreach (var propertyName in propertyNames)
+                {
+                    InternalHandle jsProp = value.GetProperty(propertyName);
+                    yield return new KeyValuePair<string, InternalHandle>(propertyName, jsProp);
+                }
+            }
         }
 
         public static IEnumerable<KeyValuePair<string, InternalHandle>> GetProperties(this InternalHandle value)
@@ -121,31 +128,31 @@ namespace Raven.Server.Extensions
             // TODO
         }
 
-        public static void ExecuteWithReset(this V8Engine engine, string source, string sourceName = "V8.NET", bool throwExceptionOnError = true, int timeout = 0)
+        public static void ExecuteWithReset(this V8Engine engine, string source, string sourceName = "V8.NET", bool throwExceptionOnError = true, int timeout = 0, bool trackReturn = false)
         {
-            using (engine.ExecuteExprWithReset(source, sourceName, throwExceptionOnError, timeout))
+            using (engine.ExecuteExprWithReset(source, sourceName, throwExceptionOnError, timeout, trackReturn))
             {}
         }
 
-        public static void ExecuteWithReset(this V8Engine engine, InternalHandle script, bool throwExceptionOnError = true, int timeout = 0)
+        public static void ExecuteWithReset(this V8Engine engine, InternalHandle script, string sourceName = "V8.NET", bool throwExceptionOnError = true, int timeout = 0, bool trackReturn = false)
         {
-            using (engine.ExecuteExprWithReset(script, throwExceptionOnError, timeout))
+            using (engine.ExecuteExprWithReset(script, sourceName, throwExceptionOnError, timeout, trackReturn))
             {}
         }
 
-        public static InternalHandle ExecuteExprWithReset(this V8Engine engine, string source, string sourceName = "V8.NET", bool throwExceptionOnError = true, int timeout = 0)
+        public static InternalHandle ExecuteExprWithReset(this V8Engine engine, string source, string sourceName = "V8.NET", bool throwExceptionOnError = true, int timeout = 0, bool trackReturn = false)
         {
             using (var script = engine.Compile(source, sourceName, throwExceptionOnError))
             {
-                return ExecuteExprWithReset(engine, script, throwExceptionOnError, timeout);
+                return ExecuteExprWithReset(engine, script, sourceName, throwExceptionOnError, timeout, trackReturn);
             }
         }
 
-        public static InternalHandle ExecuteExprWithReset(this V8Engine engine, InternalHandle script, bool throwExceptionOnError = true, int timeout = 0)
+        public static InternalHandle ExecuteExprWithReset(this V8Engine engine, InternalHandle script, string sourceName = "V8.NET", bool throwExceptionOnError = true, int timeout = 0, bool trackReturn = false)
         {
             try
             {
-                return engine.Execute(script, throwExceptionOnError, timeout);
+                return engine.Execute(script, sourceName, throwExceptionOnError, timeout, trackReturn);
             }
             finally
             {

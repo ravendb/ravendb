@@ -170,13 +170,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         public IEnumerable<(string Key, object Value, CompiledIndexField GroupByField, bool IsGroupByField)> GetPropertiesInOrder(object target)
         {
-            if (!(target is InternalHandle oi))
+            if (!(target is InternalHandle jsValue && jsValue.IsObject))
                 throw new ArgumentException($"JsPropertyAccessor.GetPropertiesInOrder is expecting a target of type V8NativeObject but got one of type {target.GetType().Name}.");
-            foreach (var (propertyName, jsPropertyValue) in oi.GetOwnProperties())
+            foreach (var (propertyName, jsPropertyValue) in jsValue.GetOwnProperties())
             {
                 using (jsPropertyValue)
                 {
-                    //var resStr = jsPropertyValue.Engine.Execute("JSON.stringify").StaticCall(new InternalHandle(jsPropertyValue, true)).AsString;
+                    //using (var jsStrRes = jsPropertyValue.Engine.Execute("JSON.stringify").StaticCall(new InternalHandle(jsPropertyValue, true))) var strRes = jsStrRes.AsString;
                     CompiledIndexField field = null;
                     var isGroupByField = _groupByFields?.TryGetValue(propertyName, out field) ?? false;
 
@@ -199,7 +199,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         private static object GetValue(InternalHandle jsValue)
         {
-            //var resStr = jsValue.Engine.Execute("JSON.stringify").StaticCall(new InternalHandle(jsValue, true)).AsString;
+            //using (var jsStrRes = jsValue.Engine.Execute("JSON.stringify").StaticCall(new InternalHandle(jsValue, true))) var strRes = jsStrRes.AsString;
             if (jsValue.IsNull) {
                 jsValue.Dispose();
                 return null;

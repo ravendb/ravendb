@@ -64,10 +64,15 @@ namespace Raven.Server.Documents.Indexes.Static
                     InternalHandle jsRes = InternalHandle.Empty;
                     try
                     {
-                        if (!MapFuncV8.IsFunction)
+                        if (!MapFuncV8.IsFunction) {
                             throw new JavaScriptIndexFuncException($"MapFuncV8 is not a function");
+                        }
                         jsRes = MapFuncV8.StaticCall(jsItem);
-                        //var resStr = _engine.Execute("JSON.stringify").StaticCall(new InternalHandle(jsRes, true)).AsString;
+
+                        //using (var jsRes1 = new InternalHandle(jsRes, true)) {}
+                        /*using (var jsStrRes = _engine.JsonStringify.StaticCall(new InternalHandle(jsRes, true))) {
+                            var strRes = jsStrRes.AsString; // for debugging 
+                        }*/
                         jsRes.ThrowOnError();
                     }
                     catch (V8Exception jse)

@@ -55,9 +55,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             }
             _jsons.Clear();
 
-            foreach (var output in _outputs) {
-                if (output is IDisposable d)
-                    d.Dispose();
+            for (int i = _outputs.Count - 1; i >= 0; i--)
+            {
+                if (_outputs[i] is IDisposable o)
+                    o.Dispose();
             }
         }
     }

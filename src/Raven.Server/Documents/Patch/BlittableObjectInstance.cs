@@ -128,6 +128,7 @@ namespace Raven.Server.Documents.Patch
                     ObjCLR.DocumentId == null &&
                     ObjCLR._set == false)
                 {
+                    val.Dispose();
                     return null;
                 }
 
@@ -141,8 +142,9 @@ namespace Raven.Server.Documents.Patch
             public override InternalHandle NamedPropertyGetter(ref string propertyName)
             {
                 var desc = GetOwnProperty(propertyName);
-                if (desc != null)
+                if (desc != null && !desc.Value.IsEmpty) {
                     return new InternalHandle(desc.Value, true);
+                }
                 return InternalHandle.Empty;
             }
 
@@ -228,7 +230,7 @@ namespace Raven.Server.Documents.Patch
                 }
 
                 if (ObjCLR.Blittable == null) {
-                    //var listStr1 = Engine.Execute("JSON.stringify").StaticCall(new InternalHandle(list, true)).AsString;
+                    //using (var jsStrList1 = Engine.Execute("JSON.stringify").StaticCall(new InternalHandle(list, true))) var strList1 = jsStrList1.AsString;
                     return list;
                 }
 
@@ -242,7 +244,7 @@ namespace Raven.Server.Documents.Patch
                     pushKey(key);
                 }
 
-                //var listStr = Engine.Execute("JSON.stringify").StaticCall(new InternalHandle(list, true)).AsString;
+                //using (var jsStrList2 = Engine.Execute("JSON.stringify").StaticCall(new InternalHandle(list, true))) var strList1 = jsStrList2.AsString;
                 return list;
             }
 
@@ -309,7 +311,7 @@ namespace Raven.Server.Documents.Patch
             }
         }
 
-        public sealed class BlittableObjectProperty
+        public sealed class BlittableObjectProperty : IDisposable
         {
             private BlittableObjectInstance _parent;
             private string _propertyName;
@@ -318,7 +320,9 @@ namespace Raven.Server.Documents.Patch
             public V8EngineEx Engine;
             private InternalHandle _value = InternalHandle.Empty;
             public bool Changed;
+            ObjectBinder ObjectBinder; // this is to store the ref
             private int HandleID; // just for debugging
+            private int ObjectID; // just for debugging
 
             public string Name
             {
@@ -327,18 +331,32 @@ namespace Raven.Server.Documents.Patch
 
             public InternalHandle Value
             {
-                get => _value;
+                get 
+                {
+                    return _value;
+                }
+
                 set
                 {
                     if (_value.Equals(value))
                         return;
                     _value.Set(value);
+                    OnSetValue();
                     _parent.MarkChanged();
                     Changed = true;
-                    HandleID = _value.ID;
                 }
             }
 
+            private void OnSetValue()
+            {
+                if (!_value.IsEmpty) {
+                    HandleID = _value.ID;
+                    ObjectID = _value.ObjectID;
+                    if (_value.Object is ObjectBinder ob) {
+                        ObjectBinder = ob;
+                    }
+                }
+            }
 
             private void Init(BlittableObjectInstance parent, string propertyName)
             {
@@ -352,7 +370,7 @@ namespace Raven.Server.Documents.Patch
             {
                 Init(parent, propertyName);
                 _value = jsValue;
-                HandleID = _value.ID;
+                OnSetValue();
             }
 
             public BlittableObjectProperty(BlittableObjectInstance parent, string propertyName)
@@ -381,9 +399,21 @@ namespace Raven.Server.Documents.Patch
                         _value = InternalHandle.Empty;
                     }
                 }
+                OnSetValue();
             }
 
             ~BlittableObjectProperty()
+            {
+                Dispose(false);
+            }
+
+            public void Dispose()
+            {  
+                Dispose(true);
+                GC.SuppressFinalize(this);
+            }
+
+            protected void Dispose(bool disposing)
             {
                 _value.Dispose();
             }

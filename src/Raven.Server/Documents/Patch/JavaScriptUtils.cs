@@ -283,7 +283,7 @@ namespace Raven.Server.Documents.Patch
                 if (jsDoc.IsObject == false)
                     throw new InvalidOperationException("id(doc) must be called with an object argument");
 
-                if (jsDoc.BoundObject != null && jsDoc.BoundObject is BlittableObjectInstance doc && doc.DocumentId != null)
+                if (jsDoc.BoundObject is BlittableObjectInstance doc && doc.DocumentId != null)
                     return engine.CreateValue(doc.DocumentId);
 
                 //throw new InvalidOperationException("jsDoc is not BoundObject");
@@ -505,6 +505,8 @@ namespace Raven.Server.Documents.Patch
         public readonly TypeBinder TypeBinderAttachmentNameObjectInstance;
         public readonly TypeBinder TypeBinderAttachmentObjectInstance;
 
+        public readonly InternalHandle JsonStringify;
+
         public V8EngineEx(bool autoCreateGlobalContext = true) : base(autoCreateGlobalContext)
         {
 
@@ -580,7 +582,15 @@ namespace Raven.Server.Documents.Patch
             GlobalObject.SetProperty(typeof(AttachmentObjectInstance));
 
             //GlobalObject.SetProperty(typeof(Hash<Handle>));
+
+            JsonStringify = this.Execute("JSON.stringify", "JSON.stringify", true, 0, false);
         }
+
+        ~V8EngineEx() 
+        {
+            JsonStringify.Dispose();
+        }
+
 
         private static string ArrayExtensionCode=  @"
             Array.prototype.orig = {}
@@ -655,14 +665,7 @@ namespace Raven.Server.Documents.Patch
 
         public InternalHandle CreateObjectBinder(object obj, TypeBinder tb = null)
         {
-            if (obj == null) {
-                return null;
-            }
-            if (tb == null) {
-                var type = obj.GetType();
-                tb = GetTypeBinder(type);
-            }
-            return new InternalHandle(tb.CreateObjectBinder<ObjectBinder, object>(obj)._, true);
+            return CreateObjectBinder<ObjectBinder>(obj, tb);
         }
 
         public InternalHandle CreateObjectBinder<TObjectBinder>(object obj, TypeBinder tb = null)
@@ -675,7 +678,10 @@ namespace Raven.Server.Documents.Patch
                 var type = obj.GetType();
                 tb = GetTypeBinder(type);
             }
-            return new InternalHandle(tb.CreateObjectBinder<TObjectBinder, object>(obj)._, true);
+
+            ObjectBinder binder = tb.CreateObjectBinder<TObjectBinder, object>(obj);
+            bool isLocked = binder._.IsLocked;
+            return binder._; //new InternalHandle(binder._, true);
         }
 
         public InternalHandle FromObject(object obj)
