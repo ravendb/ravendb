@@ -1317,7 +1317,7 @@ class query extends viewModelBase {
     plotTimeSeries() {
         const selection = this.gridController().getSelectedItems();
         
-        const timeSeries = [] as timeSeriesPlotItem[];
+        const timeSeries: timeSeriesPlotItem[] = [];
         
         selection.forEach((item: document) => {
             const documentId = item.getId();

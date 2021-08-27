@@ -478,12 +478,12 @@ class editTimeSeries extends viewModelBase {
             }
         });
         
-        this.deleteCriteria = ko.pureComputed(() => {
+        this.deleteCriteria = ko.pureComputed<timeSeriesDeleteCriteria>(() => {
             const controller = this.gridController();
             if (!controller) {
                 return {
                     mode: "all"
-                } as timeSeriesDeleteCriteria;
+                };
             }
             const selection = controller.selection();
             
@@ -491,23 +491,23 @@ class editTimeSeries extends viewModelBase {
                 if (selection.excluded.length === 0) {
                     return {
                         mode: "all",
-                    } as timeSeriesDeleteCriteria;
+                    };
                 } else {
                     return {
                         mode: "selection",
                         selection: controller.getSelectedItems()
-                    } as timeSeriesDeleteCriteria;
+                    };
                 }
             } else {
                 if (selection.included.length === 0) {
                     return {
                         mode: "range"
-                    } as timeSeriesDeleteCriteria;
+                    };
                 } else {
                     return {
                         mode: "selection",
                         selection: selection.included
-                    } as timeSeriesDeleteCriteria;
+                    };
                 }
             }
         });

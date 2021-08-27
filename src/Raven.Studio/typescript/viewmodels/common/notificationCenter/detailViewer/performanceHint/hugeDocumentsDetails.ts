@@ -14,7 +14,7 @@ interface hugeDocumentsDetailsItemDto extends Raven.Server.NotificationCenter.No
 
 class hugeDocumentsDetails extends abstractPerformanceHintDetails {
 
-    tableItems = [] as hugeDocumentsDetailsItemDto[];
+    tableItems: hugeDocumentsDetailsItemDto[] = [];
     private gridController = ko.observable<virtualGridController<hugeDocumentsDetailsItemDto>>();
     private columnPreview = new columnPreviewPlugin<hugeDocumentsDetailsItemDto>();
 

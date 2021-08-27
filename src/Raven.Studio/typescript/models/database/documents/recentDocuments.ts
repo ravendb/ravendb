@@ -27,10 +27,10 @@ class recentDocuments {
                 .recentDocuments()
                 .filter((x: string) => includeThisDocument ? x : x !== documentId)
                 .slice(0, recentDocuments.maxRecentItems)
-                .map((docId: string) => ({
+                .map((docId: string): connectedDocument => ({
                         id: docId,
                         href: appUrl.forEditDoc(docId, activeDatabase)
-                    }) as connectedDocument);
+                    }));
             return value;
         } else {
             return [];

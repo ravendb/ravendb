@@ -20,7 +20,7 @@ abstract class abstractSettings {
     }
     
     private serializeSettings(location: studio.settings.saveLocation) {
-        const settings = {} as any;
+        const settings: any = {};
         
         _.forIn(this, (value, name) => {
             if (value instanceof studioSetting && value.saveLocation === location) {

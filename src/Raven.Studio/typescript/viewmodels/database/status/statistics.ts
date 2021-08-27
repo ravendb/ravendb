@@ -121,11 +121,11 @@ class statistics extends viewModelBase {
                 this.processStatsResults(dbStats, indexesStats);
                 this.dataLocation(dbLocation.BasePath);
                 
-                const mappedIdentities = _.map(identities, (value, key) => {
+                const mappedIdentities = _.map(identities, (value, key): identityItem => {
                     return {
                         Prefix: key,
                         Value: value
-                    } as identityItem;
+                    };
                 });
                 
                 this.identities(_.sortBy(mappedIdentities, x => x.Prefix.toLocaleLowerCase()));

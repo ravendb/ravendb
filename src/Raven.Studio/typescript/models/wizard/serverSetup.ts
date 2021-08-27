@@ -114,12 +114,12 @@ class serverSetup {
         return port && port !== "443" ? ":" + port : "";
     }
 
-    toContinueSetupDto() {
+    toContinueSetupDto(): Raven.Server.Commercial.ContinueSetupInfo {
         return {
             NodeTag: this.continueSetup().nodeTag(),
             Zip: this.continueSetup().zipFile(),
             RegisterClientCert: this.registerClientCertificate()
-        } as Raven.Server.Commercial.ContinueSetupInfo;
+        };
     }
 
     toUnsecuredDto() : Raven.Server.Commercial.UnsecuredSetupInfo {

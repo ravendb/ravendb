@@ -19,7 +19,7 @@ class revertRevisions extends viewModelBase {
         revert: ko.observable<boolean>(false)
     };
     
-    static magnitudes = ["minutes", "hours", "days"] as Array<timeMagnitude>;
+    static magnitudes: timeMagnitude[] = ["minutes", "hours", "days"];
 
     constructor() {
         super();

@@ -195,7 +195,7 @@ class clusterObserverLog extends viewModelBase {
     
     exportToFile() {
         const items = this.decisions().ObserverLog;
-        const lines = [] as string[];
+        const lines: string[] = [];
         items.forEach(v => {
             lines.push(v.Date + "," + (v.Database || "") + "," + v.Iteration + "," + v.Message);
         });

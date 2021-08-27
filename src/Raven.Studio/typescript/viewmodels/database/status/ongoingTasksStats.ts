@@ -140,14 +140,14 @@ class hitTest {
     }
 
     private insertItem(x: number, y: number, width: number, height: number, action: treeActionType, args: any) {
-        const item =  {
+        const item: rTreeLeaf = {
             minX: x,
             minY: y,
             maxX: x + width,
             maxY: y + height,
             actionType: action,
             arg: args
-        } as rTreeLeaf;
+        };
         
         this.rTree.insert(item);
     }
@@ -898,7 +898,7 @@ class ongoingTasksStats extends viewModelBase {
             etl.Stats = _.orderBy(etl.Stats, [x => x.TransformationName], ["asc"]);
         });
         
-        const trackInfos = [] as trackInfo[];
+        const trackInfos: trackInfo[] = [];
         
         this.replicationData.forEach(replicationTask => {
             trackInfos.push({
