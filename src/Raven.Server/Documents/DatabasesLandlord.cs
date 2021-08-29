@@ -286,9 +286,12 @@ namespace Raven.Server.Documents
             return disabled || isRestoring;
         }
 
-        private void UnloadDatabaseInternal(string databaseName, string caller = null)
+        private void UnloadDatabaseInternal(string databaseName,[CallerMemberName] string caller = null)
         {
-            DatabasesCache.RemoveLockAndReturn(databaseName, CompleteDatabaseUnloading, out _, caller).Dispose();
+            using (DatabasesCache.RemoveLockAndReturn(databaseName, CompleteDatabaseUnloading, out _, caller))
+            {
+                
+            }
         }
 
         public bool ShouldDeleteDatabase(TransactionOperationContext context, string dbName, RawDatabaseRecord rawRecord, bool fromReplication = false)
@@ -321,6 +324,8 @@ namespace Raven.Server.Documents
                 try
                 {
                     removeLockAndReturn = DatabasesCache.RemoveLockAndReturn(dbName, CompleteDatabaseUnloading, out var database);
+                    if (removeLockAndReturn == null)
+                        return; // database already removed
                     databaseId = database?.DbBase64Id;
                 }
                 catch (AggregateException ae) when (nameof(DeleteDatabase).Equals(ae.InnerException.Data["Source"]))
