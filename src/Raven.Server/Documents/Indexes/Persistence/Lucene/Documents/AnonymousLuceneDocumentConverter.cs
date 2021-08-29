@@ -99,9 +99,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
                 if (storedValue != null && shouldSkip == false)
                 {
-                    var blittableValue = TypeConverter.ToBlittableSupportedType(value, flattenArrays: true);
+                    var blittableValue = TypeConverter.ToBlittableSupportedType(value, out TypeConverter.BlittableSupportedReturnType blittableSupportedReturnType, flattenArrays: true);
 
-                    if (blittableValue is string && blittableValue.Equals("__ignored"))
+                    if (blittableSupportedReturnType == TypeConverter.BlittableSupportedReturnType.Ignored)
                         continue;
 
                     storedValue[property.Key] = blittableValue;
