@@ -184,8 +184,18 @@ namespace Raven.Server.Utils
             return ToBlittableSupportedType(value, value, flattenArrays, forIndexing, 0, engine, context);
         }
 
+        public static object ToBlittableSupportedType(object value, out BlittableSupportedReturnType blittableSupportedReturnType, bool flattenArrays = false, bool forIndexing = false, Engine engine = null, JsonOperationContext context = null)
+        {
+            var blittableSupportedType = ToBlittableSupportedType(value, value, flattenArrays, forIndexing, 0, engine, context);
 
-        private enum BlittableSupportedReturnType : int
+            _supportedTypeCache.TryGet(value.GetType(), out BlittableSupportedReturnType returnType);
+            blittableSupportedReturnType = returnType;
+
+            return blittableSupportedType;
+        }
+
+
+        public enum BlittableSupportedReturnType : int
         {
             Null = 0,
             Same = 1,
