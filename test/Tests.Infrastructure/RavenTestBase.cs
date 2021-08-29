@@ -230,7 +230,7 @@ namespace FastTests
                     using (nodes[i].ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                     {
                         context.OpenReadTransaction();
-                        message += $"{Environment.NewLine}Log state for non responsing server:{Environment.NewLine}{context.ReadObject(nodes[i].ServerStore.GetLogDetails(context), "LogSummary/" + i)}";
+                        message += $"{Environment.NewLine}Log state for non responsing server:{Environment.NewLine}{nodes[i].ServerStore.Engine.LogHistory.GetHistoryLogsAsString(context)}";
                     }
                 }
             }
