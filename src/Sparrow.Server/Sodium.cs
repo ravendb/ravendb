@@ -1,6 +1,8 @@
 ﻿using System;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Threading;
 using Sparrow.Server.Platform;
 using Sparrow.Server.Utils;
 
@@ -270,5 +272,31 @@ namespace Sparrow.Server
 
         [DllImport(LIBSODIUM)]
         public static extern int sodium_mlock(byte* addr, UIntPtr len);
+
+        private static long _lockedBytes;
+
+        public static Size LockedMemory => new Size(_lockedBytes, SizeUnit.Bytes);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int Lock(byte* addr, UIntPtr len)
+        {
+            var r = sodium_mlock(addr, len);
+            if (r != 0)
+                return r;
+
+            Interlocked.Add(ref _lockedBytes, (long)len);
+            return 0;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int Unlock(byte* addr, UIntPtr len)
+        {
+            var r = sodium_munlock(addr, len);
+            if (r != 0)
+                return r;
+
+            Interlocked.Add(ref _lockedBytes, -(long)len);
+            return 0;
+        }
     }
 }

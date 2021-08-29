@@ -14,6 +14,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.LowMemory;
 using Sparrow.Platform;
 using Sparrow.Platform.Posix;
+using Sparrow.Server;
 using Sparrow.Server.Platform.Win32;
 using Sparrow.Utils;
 using Size = Raven.Client.Util.Size;
@@ -271,6 +272,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 [nameof(MemoryInfo.LowMemLastFiveMinute)] = memoryUsageRecords.Low.LastFiveMinutes.ToString(),
                 [nameof(MemoryInfo.HighMemSinceStartup)] = memoryUsageRecords.High.SinceStartup.ToString(),
                 [nameof(MemoryInfo.LowMemSinceStartup)] = memoryUsageRecords.Low.SinceStartup.ToString(),
+                [nameof(MemoryInfo.LockedMemory)] = Sodium.LockedMemory.ToString(),
             };
 
             writer.WritePropertyName(nameof(MemoryInformation));
@@ -475,6 +477,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             public string LowMemLastFiveMinute { get; set; }
             public string HighMemSinceStartup { get; set; }
             public string LowMemSinceStartup { get; set; }
+            public string LockedMemory { get; set; }
             public MemoryInfoMappingItem[] Mappings { get; set; }
         }
 
