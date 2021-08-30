@@ -53,5 +53,10 @@ namespace Raven.Server.Config.Categories
         [SizeUnit(SizeUnit.Megabytes)]
         [ConfigurationEntry("PerformanceHints.Memory.MinSwapSizeInMb", ConfigurationEntryScope.ServerWideOnly)]
         public Size MinSwapSize { get; set; }
+
+        [Description("The maximum number of LoadDocument()/LoadCompareExchangeValue() calls per a reference document/compare exchange value after which we will create a performance hint")]
+        [DefaultValue(1024)]
+        [ConfigurationEntry("PerformanceHints.Indexing.MaxNumberOfLoadsPerReference", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public int MaxNumberOfLoadsPerReference { get; set; }
     }
 }
