@@ -285,6 +285,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             if (_indexWriter == null)
                 return;
 
+            _alreadySeen.Clear();
+
             var searcher = _indexSearcher;
             _indexSearcher = null;
 
