@@ -180,7 +180,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         public void CleanWritersIfNeeded()
         {
-            if(_indexWriterCleanupNeeded == false)
+            if (_indexWriterCleanupNeeded == false)
                 return;
 
             DisposeWriters();
