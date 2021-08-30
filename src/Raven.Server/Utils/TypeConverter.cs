@@ -181,18 +181,15 @@ namespace Raven.Server.Utils
 
         public static object ToBlittableSupportedType(object value, bool flattenArrays = false, bool forIndexing = false, Engine engine = null, JsonOperationContext context = null)
         {
-            return ToBlittableSupportedType(value, value, flattenArrays, forIndexing, 0, engine, context);
+            return ToBlittableSupportedType(value, value, flattenArrays, forIndexing, 0, engine, context, out _);
         }
 
-        public static object ToBlittableSupportedType(object value, out bool ignoredReturnType, bool flattenArrays = false, bool forIndexing = false, Engine engine = null, JsonOperationContext context = null)
+        public static object ToBlittableSupportedType(object value, out BlittableSupportedReturnType returnType, bool flattenArrays = false, bool forIndexing = false, Engine engine = null, JsonOperationContext context = null)
         {
-            ignoredReturnType = false || (value is IEnumerable<IFieldable> || value is IFieldable);
-
-            return ToBlittableSupportedType(value, value, flattenArrays, forIndexing, 0, engine, context);
+            return ToBlittableSupportedType(value, value, flattenArrays, forIndexing, 0, engine, context, out returnType);
         }
 
-
-        private enum BlittableSupportedReturnType : int
+        public enum BlittableSupportedReturnType : int
         {
             Null = 0,
             Same = 1,
@@ -240,15 +237,18 @@ namespace Raven.Server.Utils
             return BlittableSupportedReturnType.Runtime;
         }
 
-        private static object ToBlittableSupportedType(object root, object value, bool flattenArrays, bool forIndexing, int recursiveLevel, Engine engine, JsonOperationContext context)
+        private static object ToBlittableSupportedType(object root, object value, bool flattenArrays, bool forIndexing, int recursiveLevel, Engine engine, JsonOperationContext context, out BlittableSupportedReturnType blittableSupportedReturnType)
         {
             RuntimeHelpers.EnsureSufficientExecutionStack();
             if (recursiveLevel > MaxAllowedRecursiveLevelForType)
                 NestingLevelTooDeep(root);
 
             if (value == null)
+            {
+                blittableSupportedReturnType = BlittableSupportedReturnType.Null;
                 return null;
-
+            }
+            
             // We cache the return type.
             var type = value.GetType();
             if (!_supportedTypeCache.TryGet(type, out BlittableSupportedReturnType returnType))
@@ -256,6 +256,8 @@ namespace Raven.Server.Utils
                 returnType = DoBlittableSupportedTypeInternal(type, value);
                 _supportedTypeCache.Put(type, returnType);
             }
+
+            blittableSupportedReturnType = returnType;
 
             if (returnType == BlittableSupportedReturnType.Same)
                 return value;
@@ -340,8 +342,8 @@ namespace Raven.Server.Utils
                     var dictionary = (IDictionary)value;
                     foreach (var key in dictionary.Keys)
                     {
-                        var keyAsString = KeyAsString(key: ToBlittableSupportedType(root, key, flattenArrays, forIndexing, recursiveLevel: recursiveLevel + 1, engine: engine, context: context));
-                        @object[keyAsString] = ToBlittableSupportedType(root, dictionary[key], flattenArrays, forIndexing, recursiveLevel: recursiveLevel + 1, engine: engine, context: context);
+                        var keyAsString = KeyAsString(key: ToBlittableSupportedType(root, key, flattenArrays, forIndexing, recursiveLevel: recursiveLevel + 1, engine: engine, context: context, out _));
+                        @object[keyAsString] = ToBlittableSupportedType(root, dictionary[key], flattenArrays, forIndexing, recursiveLevel: recursiveLevel + 1, engine: engine, context: context, out _);
                     }
 
                     return @object;
@@ -353,8 +355,8 @@ namespace Raven.Server.Utils
                     var dDictionary = (IDictionary<object, object>)value;
                     foreach (var key in dDictionary.Keys)
                     {
-                        var keyAsString = KeyAsString(key: ToBlittableSupportedType(root, key, flattenArrays, forIndexing, recursiveLevel: recursiveLevel + 1, engine: engine, context: context));
-                        @object[keyAsString] = ToBlittableSupportedType(root, dDictionary[key], flattenArrays, forIndexing, recursiveLevel: recursiveLevel + 1, engine: engine, context: context);
+                        var keyAsString = KeyAsString(key: ToBlittableSupportedType(root, key, flattenArrays, forIndexing, recursiveLevel: recursiveLevel + 1, engine: engine, context: context, out _));
+                        @object[keyAsString] = ToBlittableSupportedType(root, dDictionary[key], flattenArrays, forIndexing, recursiveLevel: recursiveLevel + 1, engine: engine, context: context, out _);
                     }
 
                     return @object;
@@ -379,7 +381,7 @@ namespace Raven.Server.Utils
                     continue;
                 }
 
-                inner[property.Key] = ToBlittableSupportedType(root, propertyValue, flattenArrays, forIndexing, recursiveLevel + 1, engine, context);
+                inner[property.Key] = ToBlittableSupportedType(root, propertyValue, flattenArrays, forIndexing, recursiveLevel + 1, engine, context, out _);
             }
 
             return inner;
@@ -425,7 +427,7 @@ namespace Raven.Server.Utils
         {
             foreach (var (key, val) in arr.GetOwnPropertiesWithoutLength())
             {
-                yield return ToBlittableSupportedType(root, val.Value, flattenArrays, forIndexing, recursiveLevel, engine, context);
+                yield return ToBlittableSupportedType(root, val.Value, flattenArrays, forIndexing, recursiveLevel, engine, context, out _);
             }
         }
 
@@ -437,7 +439,7 @@ namespace Raven.Server.Utils
 
             foreach (var x in propertyEnumerable)
             {
-                dja.Add(ToBlittableSupportedType(root, x, flattenArrays, forIndexing, recursiveLevel + 1, engine, context));
+                dja.Add(ToBlittableSupportedType(root, x, flattenArrays, forIndexing, recursiveLevel + 1, engine, context, out _));
             }
 
             return dja;
