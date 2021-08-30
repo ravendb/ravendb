@@ -2,7 +2,7 @@ FROM mcr.microsoft.com/dotnet/runtime-deps:3.1-bionic-arm64v8
 
 RUN apt-get update \
     && apt-get install -y \
-    && apt-get install --no-install-recommends bzip2 jq curl net-tools -y
+    && apt-get install --no-install-recommends openssl bzip2 jq curl -y
 
 ENV RAVEN_ARGS='' RAVEN_SETTINGS='' RAVEN_Setup_Mode='Initial' RAVEN_DataDir='RavenData' RAVEN_ServerUrl_Tcp='38888' RAVEN_AUTO_INSTALL_CA='true' RAVEN_IN_DOCKER='true'
 
@@ -18,7 +18,7 @@ RUN cd /opt \
     && rm -rf /var/lib/apt/lists/*
 
 COPY run-raven.sh healthcheck.sh /opt/RavenDB/
-COPY settings.json putdb.sh /opt/RavenDB/Server/
+COPY settings.json putdb.sh get-server-var.sh wait-for-server.sh get-server-url.sh cleave-cert.sh /opt/RavenDB/Server/
 
 HEALTHCHECK --start-period=60s CMD /opt/RavenDB/healthcheck.sh
 
