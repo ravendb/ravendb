@@ -131,12 +131,12 @@ namespace Raven.Server.Documents.Queries.Results
                 else
                 {
                     var val = match.GetResult(fieldToFetch.QueryField.ExpressionField.Compound[0].Value);
-
+                    var retriverInput = new RetrieverInput(null, null, null);
                     switch (val)
                     {
                         case Document d:
                             {
-                                if (TryGetValue(fieldToFetch, d, null, null, null, null, out key, out fieldVal) == false)
+                                if (TryGetValue(fieldToFetch, d, ref retriverInput, null,null, out key, out fieldVal) == false)
                                     continue;
                                 d.EnsureMetadata();
                                 var immediateResult = AddProjectionToResult(d, OneScore, FieldsToFetch, result, key, fieldVal);
@@ -147,7 +147,7 @@ namespace Raven.Server.Documents.Queries.Results
                         case BlittableJsonReaderObject bjro:
                             {
                                 var doc = new Document { Data = bjro };
-                                if (TryGetValue(fieldToFetch, doc, null, null, null, null, out key, out fieldVal) == false)
+                                if (TryGetValue(fieldToFetch, doc, ref retriverInput,  null, null, out key, out fieldVal) == false)
                                     continue;
                                 doc.EnsureMetadata();
                                 var immediateResult = AddProjectionToResult(doc, OneScore, FieldsToFetch, result, key, fieldVal);
@@ -169,7 +169,7 @@ namespace Raven.Server.Documents.Queries.Results
 
                                 var doc = new Document { Data = matchJson };
 
-                                if (TryGetValue(fieldToFetch, doc, null, null, null, null, out key, out fieldVal) == false)
+                                if (TryGetValue(fieldToFetch, doc, ref retriverInput, null, null, out key, out fieldVal) == false)
                                     continue;
                                 doc.EnsureMetadata();
                                 if (ReferenceEquals(doc, fieldVal))

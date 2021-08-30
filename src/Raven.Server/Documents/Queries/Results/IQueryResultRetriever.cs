@@ -13,14 +13,28 @@ namespace Raven.Server.Documents.Queries.Results
 
     public ref struct RetrieverInput
     {
-        private readonly IndexEntryReader _coraxEntry;
-        private readonly Lucene.Net.Documents.Document _luceneDocument;
-        private readonly IState _state;
-        public IndexEntryReader CoraxEntry => _coraxEntry;
-        public IState State => _state;  
-        public Lucene.Net.Documents.Document LuceneDocument => _luceneDocument;
+        public IndexEntryReader CoraxEntry
+        {
+            get;
+            set;
+        }
 
-        public string DocumentId { get; set; }
+        public IState State
+        {
+            get; 
+            set;
+        }
+        public Lucene.Net.Documents.Document LuceneDocument 
+        { 
+            get; 
+            set;
+        }
+
+        public string DocumentId
+        {
+            get; 
+            set;
+        }
 
         public ScoreDoc Score
         {
@@ -28,24 +42,22 @@ namespace Raven.Server.Documents.Queries.Results
             set;
         }
 
-
         public RetrieverInput(Lucene.Net.Documents.Document luceneDocument, ScoreDoc score, IState state)
         {
-            _luceneDocument = luceneDocument;
-            _coraxEntry = default;
-            _state = state;
+            LuceneDocument = luceneDocument;
+            CoraxEntry = default;
+            State = state;
             Score = score;
             DocumentId = string.Empty;
         }
 
-
-        public RetrieverInput(IndexEntryReader coraxEntry)
+        public RetrieverInput(IndexEntryReader coraxEntry, string id)
         {
-            _coraxEntry = coraxEntry;
-            _luceneDocument = null;
-            _state = null;
+            CoraxEntry = coraxEntry;
+            LuceneDocument= null;
+            State = null;
             Score = null;
-            DocumentId = string.Empty;
+            DocumentId = id;
         }
     }
 }
