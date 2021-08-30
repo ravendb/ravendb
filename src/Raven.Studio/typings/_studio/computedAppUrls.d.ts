@@ -23,6 +23,7 @@ interface computedAppUrls {
     editRavenEtl: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
     editSqlEtl: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
     editOlapEtl: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
+    editElasticSearchEtl: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
     query: (indexName?: string) => KnockoutComputed<string>;
     terms: (indexName?: string) => KnockoutComputed<string>;
     importDatabaseFromFileUrl: KnockoutComputed<string>;
@@ -41,6 +42,7 @@ interface computedAppUrls {
     editRavenEtlTaskUrl: KnockoutComputed<string>;
     editSqlEtlTaskUrl: KnockoutComputed<string>;
     editOlapEtlTaskUrl: KnockoutComputed<string>;
+    editElasticSearchEtlTaskUrl: KnockoutComputed<string>;
     csvImportUrl: KnockoutComputed<string>;
     status: KnockoutComputed<string>;
     indexPerformance: KnockoutComputed<string>;
