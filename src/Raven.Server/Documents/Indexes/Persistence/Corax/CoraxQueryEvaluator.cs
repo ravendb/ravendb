@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Corax;
 using Corax.Queries;
+using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Parser;
 
@@ -26,13 +28,29 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             return Evaluate(@where);
         }
 
+        //When we are using aliases we need to escape it.
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private string GetField(FieldExpression f)
+        {
+            return f.FieldValue.Length != 0 ? f.FieldValue : f.FieldValueWithoutAlias;
+        }
+
         private IQueryMatch Evaluate(QueryExpression where)
         {
             switch (@where)
             {
+                case MethodExpression me:
+                    var exprssionType = QueryMethod.GetMethodType(me.Name.Value);
+                    switch (exprssionType)
+                    {
+                        case MethodType.StartsWith:
+                            return _searcher.StartWithQuery(GetField((FieldExpression)me.Arguments[0]), ((ValueExpression)me.Arguments[1]).Token.Value);
+                        default:
+                            return null;
+                    }
                 case TrueExpression _:
                 case null:
-                    return null; // all docs here
+                    return null;
                 case InExpression ie:
                     return (ie.Source, ie.Values) switch
                     {
@@ -42,7 +60,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 case BinaryExpression be:
                     return (be.Operator, be.Left, be.Right) switch
                     {
-                        (OperatorType.Equal, FieldExpression f, ValueExpression v) => _searcher.TermQuery(f.FieldValue, v.Token.Value),
+                        (OperatorType.Equal, FieldExpression f, ValueExpression v) => _searcher.TermQuery(GetField(f), v.Token.Value),
                         (OperatorType.And, QueryExpression q1, QueryExpression q2) => _searcher.And(Evaluate(q1), Evaluate(q2)),
                         (OperatorType.Or, QueryExpression q1, QueryExpression q2) => _searcher.Or(Evaluate(q1), Evaluate(q2)),
                         _ => throw new NotSupportedException()

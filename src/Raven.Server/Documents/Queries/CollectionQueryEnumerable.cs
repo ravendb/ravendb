@@ -185,9 +185,9 @@ namespace Raven.Server.Documents.Queries
                     }
 
                     _innerCount++;
-
+                    RetrieverInput retrieverInput = new(null, QueryResultRetrieverBase.ZeroScore, null);
                     var doc = _fieldsToFetch.IsProjection
-                        ? _resultsRetriever.GetProjectionFromDocument(_inner.Current, null, QueryResultRetrieverBase.ZeroScore, _fieldsToFetch, _context, null)
+                        ? _resultsRetriever.GetProjectionFromDocument(_inner.Current, ref retrieverInput, _fieldsToFetch, _context)
                         : _inner.Current;
 
                     if (_query.SkipDuplicateChecking || _fieldsToFetch.IsDistinct == false)
@@ -305,9 +305,9 @@ namespace Raven.Server.Documents.Queries
                     foreach (var document in _documents.GetDocumentsFrom(_context, _collection, 0, start, _query.PageSize))
                     {
                         count++;
-
+                        RetrieverInput retrieverInput = new(null, QueryResultRetrieverBase.ZeroScore, null);
                         var doc = _fieldsToFetch.IsProjection
-                            ? _resultsRetriever.GetProjectionFromDocument(document, null, QueryResultRetrieverBase.ZeroScore, _fieldsToFetch, _context, null)
+                            ? _resultsRetriever.GetProjectionFromDocument(document, ref retrieverInput, _fieldsToFetch, _context)
                             : _inner.Current;
 
                         if (doc.Data.Count <= 0)

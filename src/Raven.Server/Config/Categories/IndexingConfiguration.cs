@@ -336,10 +336,10 @@ namespace Raven.Server.Config.Categories
         public TimeSetting? ThrottlingTimeInterval { get; protected set; }
 
         [Description("Index engine for AutoIndexes")]
-        [DefaultValue(Documents.Indexes.AutoIndexingEngine.Corax)]
-        [IndexUpdateType(IndexUpdateType.Refresh)]
+        [DefaultValue(Documents.Indexes.IndexingEngine.Corax)]
+        [IndexUpdateType(IndexUpdateType.Reset)]
         [ConfigurationEntry("Indexing.Auto.Engine", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
-        public AutoIndexingEngine? AutoIndexingEngine { get; protected set; }
+        public IndexingEngine? AutoIndexingEngine { get; protected set; }
 
         public Lazy<AnalyzerFactory> DefaultAnalyzerType { get; private set; }
 

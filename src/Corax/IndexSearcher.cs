@@ -9,6 +9,7 @@ using Voron.Data.Sets;
 using Voron.Data.Containers;
 using Corax.Queries;
 using System.Collections.Generic;
+using System.Linq;
 using Voron.Data.CompactTrees;
 using Sparrow;
 using Voron.Debugging;
@@ -31,7 +32,7 @@ namespace Corax
 
         public bool IsAccelerated => Avx2.IsSupported && !ForceNonAccelerated;
 
-        private readonly bool _transactionInjected = false;
+        private readonly bool _ownsTransaction = true;
         // The reason why we want to have the transaction open for us is so that we avoid having
         // to explicitly provide the index searcher with opening semantics and also every new
         // searcher becomes essentially a unit of work which makes reusing assets tracking more explicit.
@@ -47,10 +48,9 @@ namespace Corax
             return data.ToUnmanagedSpan().Slice(size + len);
         }
 
-        // _transactionInjected disable transaction commit in instance of IndexWriter because it's done by Server. 
         public IndexSearcher(Transaction tx)
         {
-            _transactionInjected = true;
+            _ownsTransaction = false;
             _transaction = tx;
         }
 
@@ -439,7 +439,7 @@ namespace Corax
 
         public void Dispose()
         {
-            if(_transactionInjected == false)
+            if(_ownsTransaction)
                 _transaction?.Dispose();
         }
     }

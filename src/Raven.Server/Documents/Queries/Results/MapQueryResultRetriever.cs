@@ -22,28 +22,18 @@ namespace Raven.Server.Documents.Queries.Results
 
         public override Document Get(ref RetrieverInput retrieverInput)
         {
-            if (retrieverInput.LuceneDocument != null)
-                return GetForLucene(ref retrieverInput);
-            return GetForCorax(ref retrieverInput);
-        }
-
-        private Document GetForCorax(ref RetrieverInput retrieverInput)
-        {
-            throw new NotImplementedException();
-        }
-
-        private Document GetForLucene(ref RetrieverInput retrieverInput)
-        {
             var input = retrieverInput.LuceneDocument;
             var state = retrieverInput.State;
             var scoreDoc = retrieverInput.Score;
             using (RetrieverScope?.Start())
             {
-                if (TryGetKey(ref retrieverInput, out string id) == false)
+                if (retrieverInput.LuceneDocument != null && TryGetKey(ref retrieverInput, out string id) == false)
                     throw new InvalidOperationException($"Could not extract '{Constants.Documents.Indexing.Fields.DocumentIdFieldName}' from index.");
+                else
+                    id = retrieverInput.DocumentId;
 
                 if (FieldsToFetch.IsProjection)
-                    return GetProjection(input, scoreDoc, id, state);
+                    return GetProjection(ref retrieverInput, id);
 
                 using (_storageScope = _storageScope?.Start() ?? RetrieverScope?.For(nameof(QueryTimingsScope.Names.Storage)))
                 {
@@ -55,9 +45,9 @@ namespace Raven.Server.Documents.Queries.Results
             }
         }
 
-
         public override bool TryGetKey(ref RetrieverInput retrieverInput, out string key)
         {
+            //Lucene method
             key = retrieverInput.LuceneDocument.Get(Constants.Documents.Indexing.Fields.DocumentIdFieldName, retrieverInput.State);
             return key != null;
         }
@@ -66,8 +56,6 @@ namespace Raven.Server.Documents.Queries.Results
         {
             return DocumentsStorage.Get(_context, id, fields);
         }
-
-        internal Document GetDocumentById(string id) => LoadDocument(id);
 
         protected override Document LoadDocument(string id)
         {

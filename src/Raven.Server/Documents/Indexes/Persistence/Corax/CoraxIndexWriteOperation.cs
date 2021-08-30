@@ -15,16 +15,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
     public class CoraxIndexWriteOperation : IndexWriteOperationBase
     {
         private readonly IndexWriter _indexWriter;
-        private CoraxDocumentConverter _converter;
+        private readonly CoraxDocumentConverter _converter;
         private readonly Dictionary<Slice, int> _knownFields;
         private int _entriesCount = 0;
-        private readonly IDisposable _releaseWriteTransaction;
 
         public CoraxIndexWriteOperation(Index index, Transaction writeTransaction, CoraxDocumentConverter converter, Logger logger) : base(index, logger)
         {
             _converter = converter;
             _knownFields = _converter.GetKnownFields();
-            _releaseWriteTransaction = writeTransaction;
             try
             { 
                 _indexWriter = new IndexWriter(writeTransaction);
@@ -48,17 +46,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         {
             if (_indexWriter != null)
             {
-                using (var commitStats = stats.For(IndexingOperation.Corax.Commit))
-                {
+                using (stats.For(IndexingOperation.Corax.Commit))
                     _indexWriter.Commit();
-                }
             }
-        }
-
-        public override void Optimize()
-        {
-            //Lucene method, not used (for now?) in Corax.
-            //throw new NotImplementedException();
         }
 
         public override void IndexDocument(LazyStringValue key, LazyStringValue sourceDocumentId, object document, IndexingStatsScope stats, JsonOperationContext indexContext)
@@ -69,7 +59,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             string id;
 
             using (Stats.ConvertStats.Start())
-                data = _converter.GetFields(key, sourceDocumentId, document, indexContext, out id);
+                data = _converter.InsertDocumentFields(key, sourceDocumentId, document, indexContext, out id);
 
             _indexWriter.Index(id, data, _knownFields);
             stats.RecordIndexingOutput();
@@ -80,9 +70,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
         public override (long RamSizeInBytes, long FilesAllocationsInBytes) GetAllocations()
         {
-            //tududu
             return (1024 * 1024, 1024 * 1024);
             //throw new NotImplementedException();
+        }
+
+        public override void Optimize()
+        {
+            // Lucene method
         }
 
         public override void Delete(LazyStringValue key, IndexingStatsScope stats)

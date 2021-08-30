@@ -97,17 +97,14 @@ namespace Raven.Server.Documents.Queries.Results
 
         public override Document Get(ref RetrieverInput retrieverInput)
         {
-            var input = retrieverInput.LuceneDocument;
-            var state = retrieverInput.State;
-            var scoreDoc = retrieverInput.Score;
             if (FieldsToFetch.IsProjection)
-                return GetProjection(input, scoreDoc, null, state);
+                return GetProjection( ref retrieverInput, null);
 
             using (_storageScope = _storageScope?.Start() ?? RetrieverScope?.For(nameof(QueryTimingsScope.Names.Storage)))
             {
-                var doc = DirectGet(input, null, DocumentFields.All, state);
+                var doc = DirectGet(retrieverInput.LuceneDocument, null, DocumentFields.All, retrieverInput.State);
 
-                FinishDocumentSetup(doc, scoreDoc);
+                FinishDocumentSetup(doc, retrieverInput.Score);
 
                 return doc;
             }

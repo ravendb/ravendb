@@ -31,7 +31,7 @@ namespace Corax
     {
         private readonly StorageEnvironment _environment;
         private readonly TransactionPersistentContext _transactionPersistentContext;
-        private readonly bool _transactionInjected;
+        private readonly bool _ownsTransaction;
         public readonly Transaction Transaction;        
 
         public static readonly Slice PostingListsSlice, EntriesContainerSlice, FieldsSlice, NumberOfEntriesSlice;
@@ -57,7 +57,7 @@ namespace Corax
             _environment = environment;
             _transactionPersistentContext = new TransactionPersistentContext(true);
             Transaction = _environment.WriteTransaction(_transactionPersistentContext);
-            _transactionInjected = false;
+            _ownsTransaction = true;
             _postingListContainerId = Transaction.OpenContainer(PostingListsSlice);
             _entriesContainerId = Transaction.OpenContainer(EntriesContainerSlice);
         }
@@ -66,7 +66,7 @@ namespace Corax
         public IndexWriter([NotNull] Transaction tx)
         {
             Transaction = tx;
-            _transactionInjected = true;
+            _ownsTransaction = false;
             _postingListContainerId = Transaction.OpenContainer(PostingListsSlice);
             _entriesContainerId = Transaction.OpenContainer(EntriesContainerSlice);
         }
@@ -254,7 +254,7 @@ namespace Corax
                     }
                 }
             }
-            if(_transactionInjected == false)
+            if(_ownsTransaction)
                 Transaction.Commit();
         }
         
@@ -308,7 +308,7 @@ namespace Corax
 
         public void Dispose()
         {
-            if (_transactionInjected == false)
+            if (_ownsTransaction)
                 Transaction?.Dispose();
         }
     }
