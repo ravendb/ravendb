@@ -30,7 +30,7 @@ namespace Raven.Server.ServerWide.Commands.ETL
         }
 
         public UpdateEtlProcessStateCommand(string databaseName, string configurationName, string transformationName, long lastProcessedEtag, string changeVector,
-            string nodeTag, bool hasHighlyAvailableTasks, string uniqueRequestId, string dbId) : base(databaseName, uniqueRequestId)
+            string nodeTag, bool hasHighlyAvailableTasks, string dbId, string uniqueRequestId) : base(databaseName, uniqueRequestId)
         {
             ConfigurationName = configurationName;
             TransformationName = transformationName;

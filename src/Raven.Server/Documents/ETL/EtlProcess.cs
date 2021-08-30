@@ -705,7 +705,7 @@ namespace Raven.Server.Documents.ETL
                     {
                         var command = new UpdateEtlProcessStateCommand(Database.Name, Configuration.Name, Transformation.Name, Statistics.LastProcessedEtag,
                             ChangeVectorUtils.MergeVectors(Statistics.LastChangeVector, state.ChangeVector), _serverStore.NodeTag,
-                            _serverStore.LicenseManager.HasHighlyAvailableTasks(), RaftIdGenerator.NewId(), Database.DbBase64Id);
+                            _serverStore.LicenseManager.HasHighlyAvailableTasks(), Database.DbBase64Id, RaftIdGenerator.NewId());
 
                         try
                         {
