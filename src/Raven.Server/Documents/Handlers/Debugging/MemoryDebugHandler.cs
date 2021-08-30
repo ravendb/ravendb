@@ -260,6 +260,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 [nameof(MemoryInfo.UnmanagedAllocations)] = Size.Humane(totalUnmanagedAllocations),
                 [nameof(MemoryInfo.EncryptionBuffersInUse)] = Size.Humane(encryptionBuffers.CurrentlyInUseSize),
                 [nameof(MemoryInfo.EncryptionBuffersPool)] = Size.Humane(encryptionBuffers.TotalPoolSize),
+                [nameof(MemoryInfo.EncryptionLockedMemory)] = Sodium.LockedMemory.ToString(),
                 [nameof(MemoryInfo.MemoryMapped)] = Size.Humane(totalMapping),
                 [nameof(MemoryInfo.ScratchDirtyMemory)] = memInfo.TotalScratchDirtyMemory.ToString(),
                 [nameof(MemoryInfo.IsHighDirty)] = dirtyMemoryState.IsHighDirty,
@@ -272,7 +273,6 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 [nameof(MemoryInfo.LowMemLastFiveMinute)] = memoryUsageRecords.Low.LastFiveMinutes.ToString(),
                 [nameof(MemoryInfo.HighMemSinceStartup)] = memoryUsageRecords.High.SinceStartup.ToString(),
                 [nameof(MemoryInfo.LowMemSinceStartup)] = memoryUsageRecords.Low.SinceStartup.ToString(),
-                [nameof(MemoryInfo.LockedMemory)] = Sodium.LockedMemory.ToString(),
             };
 
             writer.WritePropertyName(nameof(MemoryInformation));
@@ -465,6 +465,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             public string UnmanagedAllocations { get; set; }
             public string EncryptionBuffersInUse { get; set; }
             public string EncryptionBuffersPool { get; set; }
+            public string EncryptionLockedMemory { get; set; }
             public string MemoryMapped { get; set; }
             public string ScratchDirtyMemory { get; set; }
             public bool IsHighDirty { get; set; }
@@ -477,7 +478,6 @@ namespace Raven.Server.Documents.Handlers.Debugging
             public string LowMemLastFiveMinute { get; set; }
             public string HighMemSinceStartup { get; set; }
             public string LowMemSinceStartup { get; set; }
-            public string LockedMemory { get; set; }
             public MemoryInfoMappingItem[] Mappings { get; set; }
         }
 
