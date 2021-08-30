@@ -216,6 +216,9 @@ namespace Raven.Server.Documents.Indexes.Workers
                                         }
 
                                         var items = GetItemsFromCollectionThatReference(queryContext, indexContext, collection, referencedItem, lastIndexedEtag, indexed, referenceState);
+
+                                        var numberOfReferencedItemLoad = 0;
+
                                         using (var itemsEnumerator = _index.GetMapEnumerator(items, collection, indexContext, collectionStats, _index.Type))
                                         {
                                             long lastIndexedParentEtag = 0;
@@ -236,6 +239,8 @@ namespace Raven.Server.Documents.Indexes.Workers
                                                 totalProcessedCount++;
                                                 collectionStats.RecordMapReferenceAttempt();
                                                 stats.RecordDocumentSize(current.Size);
+
+                                                numberOfReferencedItemLoad++;
 
                                                 try
                                                 {
@@ -261,6 +266,9 @@ namespace Raven.Server.Documents.Indexes.Workers
                                                 _index.UpdateThreadAllocations(indexContext, writeOperation, stats, IndexingWorkType.References);
                                             }
                                         }
+
+                                        if (numberOfReferencedItemLoad > 0) 
+                                            _index.CheckReferenceLoadsPerformanceHintLimit(referencedItem, numberOfReferencedItemLoad);
 
                                         if (earlyExit)
                                             break;

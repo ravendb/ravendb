@@ -241,6 +241,10 @@ namespace Raven.Server.Documents.Indexes
             Suggestion = "Please verify index definitions and consider a re-design of your entities or indexes for better indexing performance."
         };
 
+        private IndexingReferenceLoadWarning.WarningDetails _referenceLoadWarning;
+
+        private bool _updateReferenceLoadWarning;
+
         private static readonly Size DefaultMaximumMemoryAllocation = new Size(32, SizeUnit.Megabytes);
 
         public long? LastTransactionId => _environment?.CurrentReadTransactionId;
@@ -2232,7 +2236,7 @@ namespace Raven.Server.Documents.Indexes
                             }
 
                             IndexFieldsPersistence.Persist(indexContext);
-                            _indexStorage.WriteReferences(CurrentIndexingScope.Current, tx);
+                            HandleReferences(tx);
                         }
 
                         using (stats.For(IndexingOperation.Storage.Commit))
@@ -2281,6 +2285,18 @@ namespace Raven.Server.Documents.Indexes
                     return mightBeMore;
                 }
             }
+        }
+
+        private void HandleReferences(RavenTransaction tx)
+        {
+            _indexStorage.WriteReferences(CurrentIndexingScope.Current, tx);
+
+            if (_updateReferenceLoadWarning == false)
+                return;
+            
+            DocumentDatabase.NotificationCenter.Indexing.AddWarning(Name, _referenceLoadWarning);
+
+            _updateReferenceLoadWarning = false;
         }
 
         private void DisposeIndexWriterOnError(Lazy<IndexWriteOperation> writeOperation)
@@ -4027,6 +4043,17 @@ namespace Raven.Server.Documents.Indexes
             }
             
             DocumentDatabase.NotificationCenter.Indexing.AddWarning(Name, _indexOutputsPerDocumentWarning);
+        }
+
+        public void CheckReferenceLoadsPerformanceHintLimit(HandleReferencesBase.Reference reference, int numberOfLoads)
+        {
+            if (numberOfLoads < PerformanceHintsConfig.MaxNumberOfLoadsPerReference)
+                return;
+
+            _referenceLoadWarning ??= new IndexingReferenceLoadWarning.WarningDetails();
+
+            if (_referenceLoadWarning.Add(reference, numberOfLoads))
+                _updateReferenceLoadWarning = true;
         }
 
         public virtual Dictionary<string, HashSet<CollectionName>> GetReferencedCollections()
