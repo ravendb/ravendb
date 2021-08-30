@@ -1,5 +1,5 @@
 [Unit]
-Description=RavenDB v5.1
+Description=RavenDB NoSQL Database
 After=network.target
 
 [Service]
@@ -8,6 +8,7 @@ LimitNOFILE=65535
 LimitRSS=infinity
 LimitAS=infinity
 LimitMEMLOCK=infinity
+TasksMax=infinity
 User=RAVENDB_USERNAME
 StartLimitBurst=0
 Restart=on-failure
