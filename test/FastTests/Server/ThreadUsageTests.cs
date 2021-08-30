@@ -1,4 +1,6 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
+using System.Threading;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Utils;
@@ -26,16 +28,30 @@ namespace FastTests.Server
             index2.Start();
             index3.Start();
 
-            var threadsUsage = new ThreadsUsage();
-            var threadsInfo = threadsUsage.Calculate();
-            var threadNames = threadsInfo.List.Select(ti => ti.Name).OrderBy(n => n).ToArray();
 
-            RavenTestHelper.AssertAll(() => string.Join('\n', threadNames.Select(s => $"\"{s}\"")),
-                () => AssertContains(index1._indexingThread.Name),
-                () => AssertContains(index2._indexingThread.Name),
-                () => AssertContains(index3._indexingThread.Name));
+            for (int i = 0;; i++)
+            {
+                try
+                {
+                    var threadsUsage = new ThreadsUsage();
+                    var threadsInfo = threadsUsage.Calculate();
+                    var threadNames = threadsInfo.List.Select(ti => ti.Name).OrderBy(n => n).ToArray();
 
-            void AssertContains(string threadName) => Assert.True(threadNames.Contains(threadName), $"Not found : {threadName}");
+                    RavenTestHelper.AssertAll(() => string.Join('\n', threadNames.Select(s => $"\"{s}\"")),
+                        () => AssertContains(index1._indexingThread.Name),
+                        () => AssertContains(index2._indexingThread.Name),
+                        () => AssertContains(index3._indexingThread.Name));
+
+                    break;
+                    void AssertContains(string threadName) => Assert.True(threadNames.Contains(threadName), $"Not found : {threadName}");
+                }
+                catch
+                {
+                    if(i >= 5)
+                        throw;
+                    Thread.Sleep(100);
+                }
+            }
         }
     }
 }
