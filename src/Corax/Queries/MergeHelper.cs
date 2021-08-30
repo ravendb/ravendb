@@ -184,11 +184,80 @@ namespace Corax.Queries
             return Or(dstPtr, dst.Length, leftPtr, left.Length, rightPtr, right.Length);
         }
 
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe static int Or(long* dst, int dstLength, long* left, int leftLength, long* right, int rightLength)
+        {
+            if (Sse2.IsSupported)
+                return OrNonTemporal(dst, dstLength, left, leftLength, right, rightLength);
+            return OrScalar(dst, dstLength, left, leftLength, right, rightLength);
+        }
+
         /// <summary>
         /// dst and left may *not* be the same buffer
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe static int Or(long* dst, int dstLength, long* left, int leftLength, long* right, int rightLength)
+        public unsafe static int OrNonTemporal(long* dst, int dstLength, long* left, int leftLength, long* right, int rightLength)
+        {
+            long* dstPtr = dst;
+            long* dstEndPtr = dst + dstLength;
+
+            long* leftPtr = left;
+            long* leftEndPtr = left + leftLength;
+
+            long* rightPtr = left;
+            long* rightEndPtr = left + leftLength;
+
+            while (leftPtr < leftEndPtr && rightPtr < rightEndPtr)
+            {
+                long leftValue = *leftPtr;
+                long rightValue = *rightPtr;
+
+                if (leftValue < rightValue)
+                {
+                    Sse2.StoreNonTemporal((uint*)dstPtr, ((uint*)leftPtr)[0]);
+                    Sse2.StoreNonTemporal(((uint*)dstPtr) + 1, ((uint*)leftPtr)[1]);
+                    leftPtr++;
+                }
+                else if (leftValue > rightValue)
+                {
+                    Sse2.StoreNonTemporal((uint*)dstPtr, ((uint*)rightValue)[0]);
+                    Sse2.StoreNonTemporal(((uint*)dstPtr) + 1, ((uint*)rightValue)[1]);
+                    rightPtr++;
+                }
+                else
+                {
+                    Sse2.StoreNonTemporal((uint*)dstPtr, ((uint*)leftPtr)[0]);
+                    Sse2.StoreNonTemporal(((uint*)dstPtr) + 1, ((uint*)leftPtr)[1]);
+                    rightPtr++;
+                    leftPtr++;
+                }
+
+                dstPtr++;
+            }
+
+            long values = 0;
+            if (leftPtr != leftEndPtr)
+            {
+                // We have items still available in the left arm                
+                values = leftEndPtr - leftPtr;
+                Unsafe.CopyBlockUnaligned(ref Unsafe.AsRef<byte>(dstPtr), ref Unsafe.AsRef<byte>(leftPtr), (uint)values * sizeof(long));
+            }
+            else if (rightPtr != rightEndPtr)
+            {
+                // We have items still available in the left arm
+                values = rightEndPtr - rightPtr;
+                Unsafe.CopyBlockUnaligned(ref Unsafe.AsRef<byte>(dstPtr), ref Unsafe.AsRef<byte>(rightPtr), (uint)values * sizeof(long));
+            }
+
+            return (int)(dstPtr + values - dst);
+        }
+
+        /// <summary>
+        /// dst and left may *not* be the same buffer
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe static int OrScalar(long* dst, int dstLength, long* left, int leftLength, long* right, int rightLength)
         {
             long* dstPtr = dst;
             long* dstEndPtr = dst + dstLength;
@@ -218,6 +287,7 @@ namespace Corax.Queries
                 {
                     *dstPtr = leftValue;
                     rightPtr++;
+                    leftPtr++;
                 }
 
                 dstPtr++;
@@ -237,7 +307,7 @@ namespace Corax.Queries
                 Unsafe.CopyBlockUnaligned(ref Unsafe.AsRef<byte>(dstPtr), ref Unsafe.AsRef<byte>(rightPtr), (uint)values * sizeof(long));
             }
 
-            return (int) (dstPtr + values - dst);
+            return (int)(dstPtr + values - dst);
         }
     }
 }
