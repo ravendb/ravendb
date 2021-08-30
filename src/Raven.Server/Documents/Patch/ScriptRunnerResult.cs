@@ -12,10 +12,10 @@ namespace Raven.Server.Documents.Patch
         public ScriptRunnerResult(ScriptRunner.SingleRun parent, InternalHandle instance)
         {
             _parent = parent;
-            Instance = new InternalHandle(instance, true);
+            Instance = new InternalHandle(ref instance, true);
         }
 
-        public readonly InternalHandle Instance;
+        public InternalHandle Instance;
 
         ~ScriptRunnerResult()
         {
@@ -31,7 +31,7 @@ namespace Raven.Server.Documents.Patch
             {
                 o.Dispose();
                 o = _parent.ScriptEngine.CreateObject();
-                Instance.SetProperty(propertyName, new InternalHandle(o, true)); // TODO error checking
+                Instance.SetProperty(propertyName, new InternalHandle(ref o, true)); // TODO error checking
             }
             return o;
         }

@@ -556,18 +556,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                         foreach (var property in accessor.GetPropertiesInOrder(output))
                         {
                             var value = property.Value;
-
-                            if (property.Key == "periodNew") {
-                                var jsValue = (InternalHandle)value;
-                                var kind = "kind";
-                                var jsKind1 = jsValue.GetProperty(kind);                                
-                                var jsKind2 = jsValue.GetProperty(kind);                                
-                                var names = jsValue.GetPropertyNames();                                
-                                var jsKind3 = jsValue.GetProperty(kind);                                
-                            }
-
                             var blittableValue = TypeConverter.ToBlittableSupportedType(value, context: _parent._indexContext);
-
                             _propertyQueue.Enqueue((property.Key, blittableValue));
 
                             if (property.IsGroupByField)

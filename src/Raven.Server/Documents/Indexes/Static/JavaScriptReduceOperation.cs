@@ -38,11 +38,13 @@ namespace Raven.Server.Documents.Indexes.Static
 
             if (reduceV8.IsUndefined || reduceV8.IsNull)
                 throw new ArgumentNullException(nameof(reduceV8));
-            ReduceV8 = new InternalHandle(reduceV8, true);
+            InternalHandle reduceV8Aux = reduceV8; // it is using in the caller so there is no neither need nor possibility to modify its _Object and we can modify it just for the aux value
+            ReduceV8 = new InternalHandle(ref reduceV8Aux, true);
 
             if (keyV8.IsUndefined || keyV8.IsNull)
                 throw new ArgumentNullException(nameof(keyV8));
-            KeyV8 = new InternalHandle(keyV8, true);
+            InternalHandle keyV8Aux = keyV8; // it is using in the caller so there is no neither need nor possibility to modify its _Object and we can modify it just for the aux value
+            KeyV8 = new InternalHandle(ref keyV8Aux, true);
 
             JavaScriptIndexUtilsV8 = javaScriptIndexUtilsV8;
             JavaScriptUtilsV8 = JavaScriptIndexUtilsV8.JavaScriptUtils;
@@ -184,9 +186,9 @@ namespace Raven.Server.Documents.Indexes.Static
                         using (var jsGrouping = ConstructGrouping(item))
                         {
                             bool res = false;
-                            //using (var jsStrGrouping = EngineV8.Execute("JSON.stringify").StaticCall(new InternalHandle(jsGrouping, true))) var strGrouping = jsStrGrouping.AsString;
+                            //using (var jsStrGrouping = EngineV8.Execute("JSON.stringify").StaticCall(new InternalHandle(ref jsGrouping, true))) var strGrouping = jsStrGrouping.AsString;
                             jsRes = ReduceV8.StaticCall(jsGrouping);
-                            //using (var jsStrRes = EngineV8.Execute("JSON.stringify").StaticCall(new InternalHandle(jsRes, true))) var strRes = jsStrRes.AsString;
+                            //using (var jsStrRes = EngineV8.Execute("JSON.stringify").StaticCall(new InternalHandle(ref jsRes, true))) var strRes = jsStrRes.AsString;
                             jsRes.ThrowOnError();
                             if (jsRes.IsObject == false)
                                 throw new JavaScriptIndexFuncException($"Failed to execute {ReduceString}", new Exception($"Reduce result is not object: {jsRes.ToString()}"));

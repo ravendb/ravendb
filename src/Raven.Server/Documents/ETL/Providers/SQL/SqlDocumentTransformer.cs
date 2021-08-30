@@ -60,10 +60,10 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             base.Initialize(debugMode);
             
             DocumentScript.ScriptEngine.SetGlobalCLRCallBack("varchar",
-                (engine, isConstructCall, self, args) => ToVarcharTranslator(engine.CreateValue(VarcharFunctionCall.AnsiStringType), args));
+                (engine, isConstructCall, self, args) => ToVarcharTranslator(VarcharFunctionCall.AnsiStringType, args));
 
             DocumentScript.ScriptEngine.SetGlobalCLRCallBack("nvarchar",
-                (engine, isConstructCall, self, args) => ToVarcharTranslator(engine.CreateValue(VarcharFunctionCall.StringType), args));
+                (engine, isConstructCall, self, args) => ToVarcharTranslator(VarcharFunctionCall.StringType, args));
         }
 
         protected override string[] LoadToDestinations { get; }
@@ -204,7 +204,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             }
         }
 
-        private InternalHandle ToVarcharTranslator(InternalHandle type, InternalHandle[] args)
+        private InternalHandle ToVarcharTranslator(string type, InternalHandle[] args)
         {
             var engine = DocumentScript.ScriptEngine;
 
@@ -218,11 +218,11 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
 
             InternalHandle item = engine.CreateObject();
             {
-                if (item.SetProperty(nameof(VarcharFunctionCall.Type), new InternalHandle(type, true)) == false)
+                if (item.SetProperty(nameof(VarcharFunctionCall.Type), engine.CreateValue(type)) == false)
                     throw new InvalidOperationException($"Failed to set {nameof(VarcharFunctionCall.Type)} on item");
-                if (item.SetProperty(nameof(VarcharFunctionCall.Value), new InternalHandle(args[0], true)) == false)
+                if (item.SetProperty(nameof(VarcharFunctionCall.Value), new InternalHandle(ref args[0], true)) == false)
                     throw new InvalidOperationException($"Failed to set {nameof(VarcharFunctionCall.Value)} on item");
-                if (item.SetProperty(nameof(VarcharFunctionCall.Size), sizeSpecified ? new InternalHandle(args[1], true) : engine.CreateValue(DefaultVarCharSize)) == false)
+                if (item.SetProperty(nameof(VarcharFunctionCall.Size), sizeSpecified ? new InternalHandle(ref args[1], true) : engine.CreateValue(DefaultVarCharSize)) == false)
                     throw new InvalidOperationException($"Failed to set {nameof(VarcharFunctionCall.Size)} on item");
             }
             return item;

@@ -38,7 +38,8 @@ namespace Raven.Server.Documents.Indexes.Static
             _engine = _javaScriptIndexUtils.Engine;
 
             MapFunc = mapFunc;
-            MapFuncV8 = new InternalHandle(mapFuncV8, true);
+            InternalHandle mapFuncV8Aux = mapFuncV8; // it is using in the caller so there is no neither need nor possibility to modify its _Object and we can modify it just for the aux value
+            MapFuncV8 = new InternalHandle(ref mapFuncV8Aux, true);
             IndexName = indexName;
             MapString = mapString;
         }
@@ -59,65 +60,71 @@ namespace Raven.Server.Documents.Indexes.Static
                     continue;
                 }
 
-                using (jsItem)
+                if (jsItem.IsBinder)
                 {
-                    InternalHandle jsRes = InternalHandle.Empty;
-                    try
+                    using (jsItem.Object) // here the whole BOI objects tree is disposed without GC involvement
                     {
-                        if (!MapFuncV8.IsFunction) {
-                            throw new JavaScriptIndexFuncException($"MapFuncV8 is not a function");
-                        }
-                        jsRes = MapFuncV8.StaticCall(jsItem);
-
-                        //using (var jsRes1 = new InternalHandle(jsRes, true)) {}
-                        /*using (var jsStrRes = _engine.JsonStringify.StaticCall(new InternalHandle(jsRes, true))) {
-                            var strRes = jsStrRes.AsString; // for debugging 
-                        }*/
-                        jsRes.ThrowOnError();
-                    }
-                    catch (V8Exception jse)
-                    {
-                        var (message, success) = JavaScriptIndexFuncException.PrepareErrorMessageForJavaScriptIndexFuncException(MapString, jse);
-                        if (success == false)
-                            throw new JavaScriptIndexFuncException($"Failed to execute {MapString}", jse);
-                        throw new JavaScriptIndexFuncException($"Failed to execute map script, {message}", jse);
-                    }
-                    catch (Exception e)
-                    {
-                        jsRes.Dispose();
-                        throw new JavaScriptIndexFuncException($"Failed to execute {MapString}", e);
-                    }
-
-                    using (jsRes)
-                    {
-                        if (jsRes.IsArray)
+                        InternalHandle jsRes = InternalHandle.Empty;
+                        try
                         {
-                            var length = (uint)jsRes.ArrayLength;
-                            for (int i = 0; i < length; i++)
+                            if (!MapFuncV8.IsFunction) {
+                                throw new JavaScriptIndexFuncException($"MapFuncV8 is not a function");
+                            }
+                            jsRes = MapFuncV8.StaticCall(jsItem);
+
+                            //using (var jsRes1 = new InternalHandle(ref jsRes, true)) {}
+                            /*using (var jsStrRes = _engine.JsonStringify.StaticCall(new InternalHandle(ref jsRes, true))) {
+                                var strRes = jsStrRes.AsString; // for debugging 
+                            }*/
+                            jsRes.ThrowOnError();
+                        }
+                        catch (V8Exception jse)
+                        {
+                            var (message, success) = JavaScriptIndexFuncException.PrepareErrorMessageForJavaScriptIndexFuncException(MapString, jse);
+                            if (success == false)
+                                throw new JavaScriptIndexFuncException($"Failed to execute {MapString}", jse);
+                            throw new JavaScriptIndexFuncException($"Failed to execute map script, {message}", jse);
+                        }
+                        catch (Exception e)
+                        {
+                            jsRes.Dispose();
+                            throw new JavaScriptIndexFuncException($"Failed to execute {MapString}", e);
+                        }
+
+                        using (jsRes) // the parts of the doc (objects and arrays) that are contained in the map result won't be disposed here, but in the outer using block)
+                        {
+                            if (jsRes.IsArray)
                             {
-                                var arrItem = jsRes.GetProperty(i);
-                                using (arrItem) { 
-                                    if (arrItem.IsObject) {
-                                        yield return arrItem; // being yield it is converted to blittable object and not disposed - so disposing it here
-                                    }
-                                    else {
-                                        // this check should be to catch map errors
-                                        throw new JavaScriptIndexFuncException($"Failed to execute {MapString}", new Exception($"At least one of map results is not object: {jsRes.ToString()}"));
+                                var length = (uint)jsRes.ArrayLength;
+                                for (int i = 0; i < length; i++)
+                                {
+                                    var arrItem = jsRes.GetProperty(i);
+                                    using (arrItem) { 
+                                        if (arrItem.IsObject) {
+                                            yield return arrItem; // being yield it is converted to blittable object and not disposed - so disposing it here
+                                        }
+                                        else {
+                                            // this check should be to catch map errors
+                                            throw new JavaScriptIndexFuncException($"Failed to execute {MapString}", new Exception($"At least one of map results is not object: {jsRes.ToString()}"));
+                                        }
                                     }
                                 }
                             }
+                            else if (jsRes.IsObject)
+                            {
+                                yield return jsRes;// being yield it is converted to blittable object and not disposed - so disposing it here
+                            }
+                            else {
+                                // this check should be to catch map errors
+                                throw new JavaScriptIndexFuncException($"Failed to execute {MapString}", new Exception($"Map result is not object: {jsRes.ToString()}"));
+                            }
                         }
-                        else if (jsRes.IsObject)
-                        {
-                            yield return jsRes;// being yield it is converted to blittable object and not disposed - so disposing it here
-                        }
-                        else {
-                            // this check should be to catch map errors
-                            throw new JavaScriptIndexFuncException($"Failed to execute {MapString}", new Exception($"Map result is not object: {jsRes.ToString()}"));
-                        }
+                        // we ignore everything else by design, we support only
+                        // objects and arrays, anything else is discarded
                     }
-                    // we ignore everything else by design, we support only
-                    // objects and arrays, anything else is discarded
+                }
+                else {
+                    throw new JavaScriptIndexFuncException($"Failed to execute {MapString}", new Exception($"Entry item is not document: {jsItem.ToString()}"));
                 }
             }
         }

@@ -153,7 +153,7 @@ function map() {{
                                         var moreArgsObjJint = mapJint.Get(MoreArgsProperty);
                                         if (moreArgsObjJint.IsArray())
                                         {
-                                            var arrayJint = moreArgsObjJint.AsArray();
+                                            var arrayJint = moreArgsObjJint.AsArray();  
                                             if (arrayJint.Length > 0)
                                             {
                                                 operation.MoreArguments = arrayJint;

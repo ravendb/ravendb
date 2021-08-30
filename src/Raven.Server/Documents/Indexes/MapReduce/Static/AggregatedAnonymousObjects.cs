@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Sparrow.Json.Parsing;
 using Raven.Server.Utils;
+using V8.Net;
 
 namespace Raven.Server.Documents.Indexes.MapReduce.Static
 {
@@ -57,9 +58,14 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
             for (int i = _outputs.Count - 1; i >= 0; i--)
             {
-                if (_outputs[i] is IDisposable o)
-                    o.Dispose();
+                if (_outputs[i] is InternalHandle h) {
+                    if (h.IsBinder)
+                        h.Object.Dispose();
+                    else
+                        h.Dispose();
+                }
             }
+            _outputs.Clear();
         }
     }
 }

@@ -107,7 +107,7 @@ namespace Raven.Server.Documents.ETL
                 // already be calling that.
                 var result = new ScriptRunnerResult(DocumentScript, args[1]);
                 LoadToFunction(args[0].AsString, result);
-                return new InternalHandle(result.Instance, true);
+                return new InternalHandle(ref result.Instance, true);
             }
             catch (Exception e) 
             {
@@ -128,7 +128,7 @@ namespace Raven.Server.Documents.ETL
             // already be calling that.
             var result = new ScriptRunnerResult(DocumentScript, args[0]);
             LoadToFunction(name, result);
-            return new InternalHandle(result.Instance, true);
+            return new InternalHandle(ref result.Instance, true);
         }
 
         protected abstract void AddLoadedAttachment(InternalHandle reference, string name, Attachment attachment);

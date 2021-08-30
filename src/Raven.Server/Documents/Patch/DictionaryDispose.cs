@@ -10,9 +10,9 @@ namespace Raven.Server.Documents.Patch
         {
         }
 
-        new public void Add(InternalHandle key, TValue value)
+        new public void Add(ref InternalHandle key, TValue value)
         {
-            var keyNew = new InternalHandle(key, true);
+            var keyNew = new InternalHandle(ref key, true);
             try
             {
                 base.Add(keyNew, value);
@@ -24,9 +24,9 @@ namespace Raven.Server.Documents.Patch
             }
         }
 
-        new public bool TryAdd(InternalHandle key, TValue value)
+        new public bool TryAdd(ref InternalHandle key, TValue value)
         {
-            var keyNew = new InternalHandle(key, true);
+            var keyNew = new InternalHandle(ref key, true);
             var res = base.TryAdd(keyNew, value);
             if (!res)
             {
@@ -43,9 +43,9 @@ namespace Raven.Server.Documents.Patch
         {
         }
 
-        new public void Add(TKey key, InternalHandle value)
+        new public void Add(TKey key, ref InternalHandle value)
         {
-            var valueNew = new InternalHandle(value, true);
+            var valueNew = new InternalHandle(ref value, true);
             try
             {
                 base.Add(key, valueNew);
@@ -57,9 +57,9 @@ namespace Raven.Server.Documents.Patch
             }
         }
 
-        new public bool TryAdd(TKey key, InternalHandle value)
+        new public bool TryAdd(TKey key, ref InternalHandle value)
         {
-            var valueNew = new InternalHandle(value, true);
+            var valueNew = new InternalHandle(ref value, true);
             var res = base.TryAdd(key, valueNew);
             if (!res)
             {
@@ -72,7 +72,7 @@ namespace Raven.Server.Documents.Patch
         {
             var res = base.TryGetValue(key, out jsValue);
             if (res) {
-                jsValue = new InternalHandle(jsValue, true);
+                jsValue = new InternalHandle(ref jsValue, true);
             }
             return res;
         }

@@ -394,7 +394,7 @@ namespace Raven.Server.Documents.Patch
                 return Engine.FromObject(o);
             }
             if (o is V8NativeObject j) {
-                return new InternalHandle(j._, true);
+                return j._;
             }
             if (o is bool b)
                 return Engine.CreateValue(b);
@@ -663,12 +663,12 @@ namespace Raven.Server.Documents.Patch
             return v < int.MaxValue && v > int.MinValue ? CreateValue((Int32) v) : CreateValue((double) v);
         }
 
-        public InternalHandle CreateObjectBinder(object obj, TypeBinder tb = null)
+        public InternalHandle CreateObjectBinder(object obj, TypeBinder tb = null, bool keepAlive = false)
         {
-            return CreateObjectBinder<ObjectBinder>(obj, tb);
+            return CreateObjectBinder<ObjectBinder>(obj, tb, keepAlive);
         }
 
-        public InternalHandle CreateObjectBinder<TObjectBinder>(object obj, TypeBinder tb = null)
+        public InternalHandle CreateObjectBinder<TObjectBinder>(object obj, TypeBinder tb = null, bool keepAlive = false)
         where TObjectBinder : ObjectBinder, new()
         {
             if (obj == null) {
@@ -679,9 +679,9 @@ namespace Raven.Server.Documents.Patch
                 tb = GetTypeBinder(type);
             }
 
-            ObjectBinder binder = tb.CreateObjectBinder<TObjectBinder, object>(obj);
-            bool isLocked = binder._.IsLocked;
-            return binder._; //new InternalHandle(binder._, true);
+            ObjectBinder binder = tb.CreateObjectBinder<TObjectBinder, object>(obj, true, keepAlive);
+            bool isLocked = binder._.IsLocked; // for debugging
+            return binder._; //new InternalHandle(ref binder._, true);
         }
 
         public InternalHandle FromObject(object obj)
@@ -756,8 +756,8 @@ namespace Raven.Server.Documents.Patch
                 return Convert(a);
             }
 
-            if (obj is JSFunction d)
-                return new InternalHandle(this.CreateFunctionTemplate().GetFunctionObject<V8Function>(d)._, true);
+            if (obj is JSFunction f)
+                return this.CreateFunctionTemplate().GetFunctionObject<V8Function>(f)._;
 
             // if no known type could be guessed, wrap it as an ObjectBinder
             return CreateObjectBinder(obj);

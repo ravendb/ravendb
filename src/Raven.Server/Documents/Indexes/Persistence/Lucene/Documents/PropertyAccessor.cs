@@ -176,7 +176,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             {
                 using (jsPropertyValue)
                 {
-                    //using (var jsStrRes = jsPropertyValue.Engine.Execute("JSON.stringify").StaticCall(new InternalHandle(jsPropertyValue, true))) var strRes = jsStrRes.AsString;
+                    //using (var jsStrRes = jsPropertyValue.Engine.Execute("JSON.stringify").StaticCall(new InternalHandle(ref jsPropertyValue, true))) var strRes = jsStrRes.AsString;
                     CompiledIndexField field = null;
                     var isGroupByField = _groupByFields?.TryGetValue(propertyName, out field) ?? false;
 
@@ -199,7 +199,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         private static object GetValue(InternalHandle jsValue)
         {
-            //using (var jsStrRes = jsValue.Engine.Execute("JSON.stringify").StaticCall(new InternalHandle(jsValue, true))) var strRes = jsStrRes.AsString;
+            //using (var jsStrRes = jsValue.Engine.Execute("JSON.stringify").StaticCall(new InternalHandle(ref jsValue, true))) var strRes = jsStrRes.AsString;
             if (jsValue.IsNull) {
                 jsValue.Dispose();
                 return null;

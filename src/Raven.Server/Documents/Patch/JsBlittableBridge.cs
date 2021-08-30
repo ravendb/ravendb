@@ -378,7 +378,7 @@ namespace Raven.Server.Documents.Patch
         private void WriteJsInstance(InternalHandle jsObj, bool isRoot, bool filterProperties)
         {
             var bo = jsObj.BoundObject;
-            //using (var jsStrRes = jsObj.Engine.Execute("JSON.stringify").StaticCall(new InternalHandle(jsObj, true))) var strRes = jsStrRes.AsString;
+            //using (var jsStrRes = jsObj.Engine.Execute("JSON.stringify").StaticCall(new InternalHandle(ref jsObj, true))) var strRes = jsStrRes.AsString;
             var properties = (bo != null) ? GetBoundObjectProperties(bo) : jsObj.GetOwnProperties(); // TODO GetBoundObjectProperties could be prepaired and written avoiding toJs, fromJs translations
             foreach (var (propertyName, jsPropertyValue) in properties)
             {
@@ -542,7 +542,7 @@ namespace Raven.Server.Documents.Patch
             if (objectInstance.IsUndefined || objectInstance.IsNull)
                 return null;
 
-            //using (var jsStrRes = objectInstance.Engine.Execute("JSON.stringify").StaticCall(new InternalHandle(objectInstance, true))) var strRes = jsStrRes.AsString;
+            //using (var jsStrRes = objectInstance.Engine.Execute("JSON.stringify").StaticCall(new InternalHandle(ref objectInstance, true))) var strRes = jsStrRes.AsString;
             object boundObject = objectInstance.BoundObject;
             if (boundObject != null && boundObject is BlittableObjectInstance boi && boi.Changed == false)
                 return boi.Blittable.Clone(context);

@@ -32,7 +32,7 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
                 return IsImplicitNull ? DynamicJsNull.ImplicitNull._ : jsValue;
             }
 
-            return new InternalHandle(jsValue, true);
+            return new InternalHandle(ref jsValue, true);
         }
 
 

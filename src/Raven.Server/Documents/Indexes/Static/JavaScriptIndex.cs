@@ -92,7 +92,7 @@ function map(name, lambda) {
             /*var desc3 = InternalHandle.Empty;
             using (var desc2 = _engine.CreateValue("desc"))
             {
-                desc3 = new InternalHandle(desc2, true);
+                desc3 = new InternalHandle(ref desc2, true);
             }
             desc3.Dispose();
             using (var desc2 = _engine.CreateValue("desc"))
@@ -104,7 +104,7 @@ function map(name, lambda) {
             var desc1 = InternalHandle.Empty;
             using (var desc = _definitions.GetProperty("desc")) 
             {
-                desc1 = new InternalHandle(desc, true);
+                desc1 = new InternalHandle(ref desc, true);
             }
             desc1.Dispose();
             using (var desc = _definitions.GetProperty("desc")) 
@@ -117,7 +117,7 @@ function map(name, lambda) {
             //var map1 = InternalHandle.Empty;
             using (var maps = _definitions.GetProperty(MapsProperty)) 
             {
-                //maps1 = new InternalHandle(maps, true);
+                //maps1 = new InternalHandle(ref maps, true);
                 if (maps.IsNull || maps.IsUndefined || maps.IsArray == false)
                     ThrowIndexCreationException($"doesn't contain any map function or '{GlobalDefinitions}.{Maps}' was modified in the script");
 
@@ -744,12 +744,13 @@ function map(name, lambda) {
                 }
 
                 var item = args[0];
-                var func = args[1].Object as V8Function;
+                var func = args[1];
 
-                if (func == null)
+                if (!func.IsFunction)
                     throw new ArgumentException("The second argument in recurse(item, func) must be an arrow function.");
 
-                return new RecursiveJsFunction(_engine, item, func).Execute();
+                using (var rf = new RecursiveJsFunction(_engine, item, func))
+                    return rf.Execute();
             }
             catch (Exception e) 
             {
@@ -769,7 +770,7 @@ function map(name, lambda) {
                 InternalHandle value = args[0];
                 InternalHandle jsRes = InternalHandle.Empty;
 
-                /*jsTest = new InternalHandle(value, true);
+                /*jsTest = new InternalHandle(ref value, true);
                 var v1 = InternalHandle.Empty;
                 var v2 = InternalHandle.Empty;
                 var v3 = InternalHandle.Empty;

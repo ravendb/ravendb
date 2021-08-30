@@ -197,7 +197,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                 {
                     // no partition
                     LoadToFunction(name, key: name, result);
-                    return new InternalHandle(result.Instance, true);
+                    return new InternalHandle(ref result.Instance, true);
                 }
 
                 if (partitionBy.IsArray == false)
@@ -233,7 +233,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                     }
                 }
                 LoadToFunction(name, sb.ToString(), result, partitions);
-                return new InternalHandle(result.Instance, true);
+                return new InternalHandle(ref result.Instance, true);
             }
         }
 

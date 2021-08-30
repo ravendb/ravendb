@@ -15,6 +15,15 @@ namespace Raven.Server.Documents.Patch
             get { return base.Object as T; }
         }
 
+        public override void OnDispose()
+        {
+            if (base.Object is IDisposable r) {
+                r.Dispose();
+            }
+
+            base.OnDispose();
+        }
+
     }
 
 }
