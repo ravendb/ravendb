@@ -484,20 +484,19 @@ namespace Raven.Server.Documents.Patch
                     return;
 
                 if (disposing) {
+                    // releasing managed resources
                     _parent = null;
 
                     JavaScriptUtils = null;
                     Engine = null;
 
+                    _value.ForceDispose(); // we forcely dispose of all the child nodes and leaves, so they are not to be used on the native side any more 
+
                     GC.SuppressFinalize(this);
                 }
-
-                if (_value.IsBinder) { // here we forcely dispose of all the child nodes and leaves, so they are not to be used on the native side any more
-                    _value.Object.Dispose();
-                }
-                else {
-                    _value.ForceDispose();
-                }
+                
+                // releasing unmanaged resources
+                // ...
 
                 _disposed = true;
             }

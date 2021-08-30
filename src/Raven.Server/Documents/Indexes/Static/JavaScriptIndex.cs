@@ -11,14 +11,14 @@ using Raven.Server.Documents.Indexes.Configuration;
 using Raven.Server.ServerWide;
 using Sparrow.Server;
 
-using Esprima;
-using Jint;
+using Jint; // actually we need Esprima for analyzing groupings, but for now we use it in the old way by means of Jint (having the outdated Esprima parser version not supporting some new features like optional chaining operator '?.')
 using Jint.Native;
 using Jint.Native.Function;
 using Jint.Native.Object;
 using Jint.Runtime;
 //using Jint.Runtime.Interop;
 using JintClrFunctionInstance = Jint.Runtime.Interop.ClrFunctionInstance;
+using Esprima; // TODO to switch to the latest version Esprima directly, but this is not critical thanks to the little trick descibed in JintExtensions::ProcessJintStub
 using Raven.Server.Documents.Jint.Patch;
 
 using V8.Net;
@@ -50,7 +50,6 @@ function map(name, lambda) {
         moreArgs: Array.prototype.slice.call(arguments, 2)
     };
     globalDefinition.maps.push(map);
-    globalDefinition.desc = 'Descripton is ok';
 }";
         }
 
@@ -80,41 +79,6 @@ function map(name, lambda) {
 
         protected override void ProcessMaps(List<string> mapList, List<MapMetadata> mapReferencedCollections, out Dictionary<string, Dictionary<string, List<JavaScriptMapOperation>>> collectionFunctions)
         {
-            var mapsArrayJint = _definitionsJint.GetProperty(MapsProperty).Value;
-            if (mapsArrayJint.IsNull() || mapsArrayJint.IsUndefined() || mapsArrayJint.IsArray() == false)
-                ThrowIndexCreationException($"Jint: doesn't contain any map function or '{GlobalDefinitions}.{Maps}' was modified in the script");
-
-            var mapsJint = mapsArrayJint.AsArray();
-            if (mapsJint.Length == 0)
-                ThrowIndexCreationException($"Jint: doesn't contain any map functions or '{GlobalDefinitions}.{Maps}' was modified in the script");
-
-
-            /*var desc3 = InternalHandle.Empty;
-            using (var desc2 = _engine.CreateValue("desc"))
-            {
-                desc3 = new InternalHandle(ref desc2, true);
-            }
-            desc3.Dispose();
-            using (var desc2 = _engine.CreateValue("desc"))
-            {
-                desc3.Set(desc2);
-            }
-            desc3.Dispose();
-
-            var desc1 = InternalHandle.Empty;
-            using (var desc = _definitions.GetProperty("desc")) 
-            {
-                desc1 = new InternalHandle(ref desc, true);
-            }
-            desc1.Dispose();
-            using (var desc = _definitions.GetProperty("desc")) 
-            {
-                desc1.Set(desc);
-            }
-            desc1.Dispose();*/
-
-            //var maps1 = InternalHandle.Empty;
-            //var map1 = InternalHandle.Empty;
             using (var maps = _definitions.GetProperty(MapsProperty)) 
             {
                 //maps1 = new InternalHandle(ref maps, true);
@@ -125,17 +89,26 @@ function map(name, lambda) {
                 if (mapCount == 0)
                     ThrowIndexCreationException($"doesn't contain any map functions or '{GlobalDefinitions}.{Maps}' was modified in the script");
 
+                var mapsArrayJint = _definitionsJint.GetProperty(MapsProperty).Value;
+                if (mapsArrayJint.IsNull() || mapsArrayJint.IsUndefined() || mapsArrayJint.IsArray() == false)
+                    ThrowIndexCreationException($"Jint doesn't contain any map function");
+
+                var mapsJint = mapsArrayJint.AsArray();
+                /*if (mapsJint.Length != mapCount)
+                    ThrowIndexCreationException($"Jint doesn't contain the same number of map functions as V8: {mapsJint.Length} in Jint, {mapCount} in V8");*/
+
                 collectionFunctions = new Dictionary<string, Dictionary<string, List<JavaScriptMapOperation>>>();
                 for (int i = 0; i < mapCount; i++)
                 {
-                    var mapObjJint = mapsJint.Get(i.ToString());
-                    if (mapObjJint.IsNull() || mapObjJint.IsUndefined() || mapObjJint.IsObject() == false)
-                        ThrowIndexCreationException($"Jint: map function #{i} is not a valid object");
-                    var mapJint = mapObjJint.AsObject();                        
-                    if (mapJint.HasProperty(MethodProperty) == false)
+                    // with the outdated Jint's Eprima map return statements analysis is available in the case of modern JS script by means of a jint stub with the corresposnding return statements structures
+                    var mapObjJint = (i < mapsJint.Length) ? mapsJint.Get(i.ToString()) : null;
+                    /*if (mapObjJint.IsNull() || mapObjJint.IsUndefined() || mapObjJint.IsObject() == false)
+                        ThrowIndexCreationException($"Jint: map function #{i} is not a valid object");*/
+                    var mapJint = mapObjJint?.AsObject();                        
+                    if (mapJint != null && mapJint.HasProperty(MethodProperty) == false)
                         ThrowIndexCreationException($"Jint: map function #{i} is missing its {MethodProperty} property");
-                    var funcInstanceJint = mapJint.Get(MethodProperty).As<FunctionInstance>();
-                    if (funcInstanceJint == null)
+                    var funcInstanceJint = mapJint?.Get(MethodProperty).As<FunctionInstance>();
+                    if (mapJint != null && funcInstanceJint == null)
                         ThrowIndexCreationException($"Jint: map function #{i} {MethodProperty} property isn't a 'FunctionInstance'");
 
                     using (var map = maps.GetProperty(i)) 
@@ -165,7 +138,7 @@ function map(name, lambda) {
                                     ThrowIndexCreationException($"map function #{i} {MethodProperty} property isn't a function");
 
                                 JavaScriptMapOperation operation = new JavaScriptMapOperation(JavaScriptIndexUtils, funcInstanceJint, func, Definition.Name, mapList[i]);
-                                if (mapJint.HasOwnProperty(MoreArgsProperty))
+                                if (mapJint != null && mapJint.HasOwnProperty(MoreArgsProperty))
                                 {
                                     var moreArgsObjJint = mapJint.Get(MoreArgsProperty);
                                     if (moreArgsObjJint.IsArray())
@@ -424,7 +397,8 @@ function map(name, lambda) {
             var indexConfiguration = new SingleIndexConfiguration(definition.Configuration, configuration);
 
             //_resolverJint = new JintNullPropagationReferenceResolver(); //JintPreventResolvingTasksReferenceResolver();
-            _engineJint = new Engine(); /*options =>
+            _engineJint = new Engine(); // no need for options as we use it for AST analysis only
+            /*options =>
             {
                 options
                     .LimitRecursion(64)
@@ -449,13 +423,13 @@ function map(name, lambda) {
 
             string strictModeFlag = configuration.Patching.StrictMode ? "--use_strict" : "--no-use_strict";
             string[] optionsCmd = {strictModeFlag}; // TODO construct from options
+                //.LimitRecursion(64) // ??? V8 analog
+                //.MaxStatements(indexConfiguration.MaxStepsForScript) // ??? V8 supports setting timeout on Execute
+                //.LocalTimeZone(TimeZoneInfo.Utc);  // -> ??? maybe these V8 args: harmony_intl_locale_info, harmony_intl_more_timezone
             _engine.SetFlagsFromCommandLine(optionsCmd);
-                    //.LimitRecursion(64)
-                    //.MaxStatements(indexConfiguration.MaxStepsForScript)
-                    //.LocalTimeZone(TimeZoneInfo.Utc);  // -> harmony_intl_locale_info, harmony_intl_more_timezone
 
-            //using (_engine.DisableMaxStatements())  // TODO to V8
-            //{
+            using (_engine.DisableMaxStatements())
+            {
                 var maps = GetMappingFunctions(modifyMappingFunctions);
 
                 var mapReferencedCollections = InitializeEngine(Definition, maps, mapCode);
@@ -468,7 +442,7 @@ function map(name, lambda) {
                 ProcessReduce();
 
                 ProcessFields(collectionFunctions);
-            //}
+            }
         }
 
         ~AbstractJavaScriptIndex()
@@ -518,20 +492,19 @@ function map(name, lambda) {
 
         private void ProcessReduce()
         {
-            var reduceObjJint = _definitionsJint.GetProperty(ReduceProperty)?.Value;
-            if (reduceObjJint != null && reduceObjJint.IsObject())
+            using (var reduceObj = _definitions.GetProperty(ReduceProperty)) 
             {
-                var reduceAsObjJint = reduceObjJint.AsObject();
-                var groupByKeyJint = reduceAsObjJint.GetProperty(KeyProperty).Value.As<ScriptFunctionInstance>();
-                var reduceJint = reduceAsObjJint.GetProperty(AggregateByProperty).Value.As<ScriptFunctionInstance>();
-
-                using (var reduceObj = _definitions.GetProperty(ReduceProperty)) 
+                if (!reduceObj.IsUndefined && reduceObj.IsObject)
                 {
-                    if (!reduceObj.IsUndefined && reduceObj.IsObject)
+                    var reduceObjJint = _definitionsJint.GetProperty(ReduceProperty)?.Value;
+                    if (reduceObjJint != null && reduceObjJint.IsObject())
                     {
+                        var reduceAsObjJint = reduceObjJint.AsObject();
+                        var groupByKeyJint = reduceAsObjJint.GetProperty(KeyProperty).Value.As<ScriptFunctionInstance>();
+
                         using (var groupByKey = reduceObj.GetProperty(KeyProperty))
                         using (var reduce = reduceObj.GetProperty(AggregateByProperty))
-                            ReduceOperation = new JavaScriptReduceOperation(reduceJint, groupByKeyJint, _engineJint, reduce, groupByKey, JavaScriptIndexUtils) { ReduceString = Definition.Reduce };
+                            ReduceOperation = new JavaScriptReduceOperation(groupByKeyJint, _engineJint, reduce, groupByKey, JavaScriptIndexUtils) { ReduceString = Definition.Reduce };
                         GroupByFields = ReduceOperation.GetReduceFieldsNames();
                         Reduce = ReduceOperation.IndexingFunction;
                     }

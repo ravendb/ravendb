@@ -10,10 +10,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 {
     public class AggregatedAnonymousObjects : AggregationResult
     {
-        private readonly List<object> _outputs;
-        private readonly List<BlittableJsonReaderObject> _jsons;
-        private readonly IPropertyAccessor _propertyAccessor;
-        private readonly JsonOperationContext _indexContext;
+        private bool _disposed = false;
+
+        private List<object> _outputs;
+        private List<BlittableJsonReaderObject> _jsons;
+        private IPropertyAccessor _propertyAccessor;
+        private JsonOperationContext _indexContext;
 
         public AggregatedAnonymousObjects(List<object> results, IPropertyAccessor propertyAccessor, JsonOperationContext indexContext)
         {
@@ -48,24 +50,50 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             }
         }
 
-        public override void Dispose()
-        {
-            for (int i = _jsons.Count - 1; i >= 0; i--)
-            {
-                _jsons[i].Dispose();
-            }
-            _jsons.Clear();
+        ~AggregatedAnonymousObjects()
+        {            
+            Dispose(false);
+        }
 
-            for (int i = _outputs.Count - 1; i >= 0; i--)
-            {
-                if (_outputs[i] is InternalHandle h) {
-                    if (h.IsBinder)
-                        h.Object.Dispose();
-                    else
-                        h.Dispose();
+
+        public override void Dispose()
+        {  
+            Dispose(true);
+        }
+
+        public void Dispose(bool disposing)
+        {
+            if (_disposed)
+                return;
+
+            if (disposing) {
+                // releasing managed resources
+                for (int i = _jsons.Count - 1; i >= 0; i--)
+                {
+                    _jsons[i].Dispose();
                 }
+                _jsons.Clear();
+                _jsons = null;
+
+                for (int i = _outputs.Count - 1; i >= 0; i--)
+                {
+                    if (_outputs[i] is InternalHandle h) {
+                        h.ForceDispose(); // we forcely dispose of all the child nodes and leaves, so they are not to be used on the native side any more
+                    }
+                }
+                _outputs.Clear();
+                _outputs = null;
+
+                _propertyAccessor = null;
+                _indexContext = null;
+
+                GC.SuppressFinalize(this);
             }
-            _outputs.Clear();
+
+            // releasing unmanaged resources
+            // ...
+
+            _disposed = true;
         }
     }
 }

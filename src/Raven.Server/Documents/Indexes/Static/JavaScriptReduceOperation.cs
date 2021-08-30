@@ -26,36 +26,35 @@ namespace Raven.Server.Documents.Indexes.Static
 {
     public class JavaScriptReduceOperation
     {
-        public JavaScriptReduceOperation(ScriptFunctionInstance reduce, ScriptFunctionInstance key, Engine engine,
-            InternalHandle reduceV8, InternalHandle keyV8, JavaScriptIndexUtils javaScriptIndexUtilsV8)
+        public JavaScriptReduceOperation(ScriptFunctionInstance keyJint, Engine engineJint,
+            InternalHandle reduceFunc, InternalHandle key, JavaScriptIndexUtils javaScriptIndexUtils)
         {
-            Reduce = reduce ?? throw new ArgumentNullException(nameof(reduce));
-            Key = key ?? throw new ArgumentNullException(nameof(key));
-            Engine = engine;
+            KeyJint = keyJint ?? throw new ArgumentNullException(nameof(keyJint));
+            EngineJint = engineJint;
             GetReduceFieldsNames();
 
             _groupedItems = null;
 
-            if (reduceV8.IsUndefined || reduceV8.IsNull)
-                throw new ArgumentNullException(nameof(reduceV8));
-            InternalHandle reduceV8Aux = reduceV8; // it is using in the caller so there is no neither need nor possibility to modify its _Object and we can modify it just for the aux value
-            ReduceV8 = new InternalHandle(ref reduceV8Aux, true);
+            if (reduceFunc.IsUndefined || reduceFunc.IsNull)
+                throw new ArgumentNullException(nameof(reduceFunc));
+            InternalHandle reduceFuncAux = reduceFunc; // it is using in the caller so there is no neither need nor possibility to modify its _Object and we can modify it just for the aux value
+            ReduceFunc = new InternalHandle(ref reduceFuncAux, true);
 
-            if (keyV8.IsUndefined || keyV8.IsNull)
-                throw new ArgumentNullException(nameof(keyV8));
-            InternalHandle keyV8Aux = keyV8; // it is using in the caller so there is no neither need nor possibility to modify its _Object and we can modify it just for the aux value
-            KeyV8 = new InternalHandle(ref keyV8Aux, true);
+            if (key.IsUndefined || key.IsNull)
+                throw new ArgumentNullException(nameof(key));
+            InternalHandle keyAux = key; // it is using in the caller so there is no neither need nor possibility to modify its _Object and we can modify it just for the aux value
+            Key = new InternalHandle(ref keyAux, true);
 
-            JavaScriptIndexUtilsV8 = javaScriptIndexUtilsV8;
-            JavaScriptUtilsV8 = JavaScriptIndexUtilsV8.JavaScriptUtils;
-            EngineV8 = JavaScriptIndexUtilsV8.Engine;
+            JavaScriptIndexUtils = javaScriptIndexUtils;
+            JavaScriptUtils = JavaScriptIndexUtils.JavaScriptUtils;
+            Engine = JavaScriptIndexUtils.Engine;
 
         }
 
         ~JavaScriptReduceOperation()
         {
-            ReduceV8.Dispose();
-            KeyV8.Dispose();
+            ReduceFunc.Dispose();
+            Key.Dispose();
         }
 
 
@@ -177,8 +176,8 @@ namespace Raven.Server.Documents.Indexes.Static
                 }
                 foreach (var item in _groupedItems.Values)
                 {
-                    EngineV8.ResetCallStack();
-                    EngineV8.ResetConstraints();
+                    Engine.ResetCallStack();
+                    Engine.ResetConstraints();
 
                     InternalHandle jsRes = InternalHandle.Empty;
                     try
@@ -186,12 +185,12 @@ namespace Raven.Server.Documents.Indexes.Static
                         using (var jsGrouping = ConstructGrouping(item))
                         {
                             bool res = false;
-                            //using (var jsStrGrouping = EngineV8.Execute("JSON.stringify").StaticCall(new InternalHandle(ref jsGrouping, true))) var strGrouping = jsStrGrouping.AsString;
-                            jsRes = ReduceV8.StaticCall(jsGrouping);
-                            //using (var jsStrRes = EngineV8.Execute("JSON.stringify").StaticCall(new InternalHandle(ref jsRes, true))) var strRes = jsStrRes.AsString;
+                            //using (var jsStrGrouping = Engine.Execute("JSON.stringify").StaticCall(new InternalHandle(ref jsGrouping, true))) var strGrouping = jsStrGrouping.AsString;
+                            jsRes = ReduceFunc.StaticCall(jsGrouping);
+                            //using (var jsStrRes = Engine.Execute("JSON.stringify").StaticCall(new InternalHandle(ref jsRes, true))) var strRes = jsStrRes.AsString;
                             jsRes.ThrowOnError();
                             if (jsRes.IsObject == false)
-                                throw new JavaScriptIndexFuncException($"Failed to execute {ReduceString}", new Exception($"Reduce result is not object: {jsRes.ToString()}"));
+                                throw new JavaScriptIndexFuncException($"Failed to execute {ReduceString}", new Exception($"ReduceFunc result is not object: {jsRes.ToString()}"));
                         }
                     }
                     catch (V8Exception jse)
@@ -236,7 +235,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         private InternalHandle ConstructGrouping(List<BlittableJsonReaderObject> values)
         {
-            var result = EngineV8.CreateObject();
+            var result = Engine.CreateObject();
             result.SetProperty("values", ConstructValues());
             result.SetProperty("key", ConstructKey());
 
@@ -252,14 +251,14 @@ namespace Raven.Server.Documents.Indexes.Static
                         BlittableJsonReaderObject.PropertyDetails prop = default;
                         values[0].GetPropertyByIndex(index, ref prop);
 
-                        return EngineV8.FromObject(prop.Value);
+                        return Engine.FromObject(prop.Value);
                     }
 
-                    return EngineV8.CreateNullValue();
+                    return Engine.CreateNullValue();
                 }
 
                 InternalHandle jsRes = InternalHandle.Empty;
-                jsRes = EngineV8.CreateObject();
+                jsRes = Engine.CreateObject();
                 foreach (var groupByField in _groupByFields)
                 {
                     var index = values[0].GetPropertyIndex(groupByField.Name);
@@ -276,15 +275,15 @@ namespace Raven.Server.Documents.Indexes.Static
                         var jsValue = value switch 
                         {
                             BlittableJsonReaderObject bjro => ((Func<BlittableJsonReaderObject, InternalHandle>)((BlittableJsonReaderObject bjro) => {
-                                var boi = new BlittableObjectInstance(JavaScriptUtilsV8, null, bjro, null, null, null);
+                                var boi = new BlittableObjectInstance(JavaScriptUtils, null, bjro, null, null, null);
                                 return boi.CreateObjectBinder(); // maybe better move to FromObject?
                             }))(bjro),
                             Document doc => ((Func<Document, InternalHandle>)((Document doc) => {
-                                var boi = new BlittableObjectInstance(JavaScriptUtilsV8, null, doc.Data, doc);
+                                var boi = new BlittableObjectInstance(JavaScriptUtils, null, doc.Data, doc);
                                 return boi.CreateObjectBinder(); // maybe better  move to FromObject?
                             }))(doc),
-                            LazyNumberValue lnv => EngineV8.CreateValue(lnv.ToDouble(CultureInfo.InvariantCulture)), // maybe better  move to FromObject?
-                            _ =>  EngineV8.FromObject(value)
+                            LazyNumberValue lnv => Engine.CreateValue(lnv.ToDouble(CultureInfo.InvariantCulture)), // maybe better  move to FromObject?
+                            _ =>  Engine.FromObject(value)
                         };
 
                         jsRes.SetProperty(propertyName, jsValue);
@@ -302,29 +301,28 @@ namespace Raven.Server.Documents.Indexes.Static
                 {
                     var val = values[i];
 
-                    if (JavaScriptIndexUtilsV8.GetValue(val, out InternalHandle jsValue, isMapReduce: true) == false)
+                    if (JavaScriptIndexUtils.GetValue(val, out InternalHandle jsValue, isMapReduce: true) == false)
                         continue;
 
                     jsItems[i] = jsValue;
                 }
 
-                return EngineV8.CreateArrayWithDisposal(jsItems);
+                return Engine.CreateArrayWithDisposal(jsItems);
             }
         }
 
-        public Engine Engine { get; }
+        public Engine EngineJint { get; }
 
-        public ScriptFunctionInstance Reduce { get; } // is not used actually
-        public ScriptFunctionInstance Key { get; }
+        public ScriptFunctionInstance KeyJint { get; }
         public string ReduceString { get; internal set; }        
 
 
-        public JavaScriptIndexUtils JavaScriptIndexUtilsV8 { get; }
-        public JavaScriptUtils JavaScriptUtilsV8 { get; }
-        public V8EngineEx EngineV8 { get; }
+        public JavaScriptIndexUtils JavaScriptIndexUtils { get; }
+        public JavaScriptUtils JavaScriptUtils { get; }
+        public V8EngineEx Engine { get; }
 
-        public InternalHandle ReduceV8 { get; }
-        public InternalHandle KeyV8 { get; }
+        public InternalHandle ReduceFunc { get; }
+        public InternalHandle Key { get; }
 
         private CompiledIndexField[] _groupByFields;
         private bool _singleField;
@@ -336,7 +334,7 @@ namespace Raven.Server.Documents.Indexes.Static
             if (_groupByFields != null)
                 return _groupByFields;
 
-            var ast = Key.FunctionDeclaration;
+            var ast = KeyJint.FunctionDeclaration;
             var body = ast.ChildNodes.ToList();
 
             if (body.Count != 2)
@@ -408,7 +406,7 @@ namespace Raven.Server.Documents.Indexes.Static
                         if (property.Value is MemberExpression me)
                             path = GetPropertyPath(me).ToArray();
 
-                        var propertyName = property.GetKey(Engine);
+                        var propertyName = property.GetKey(EngineJint);
                         cur.Add(CreateField(propertyName.AsString(), path));
                     }
                 }

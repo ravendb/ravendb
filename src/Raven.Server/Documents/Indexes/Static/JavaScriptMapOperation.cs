@@ -19,7 +19,7 @@ namespace Raven.Server.Documents.Indexes.Static
 {
     public class JavaScriptMapOperation
     {
-        public FunctionInstance MapFunc;
+        public FunctionInstance MapFuncJint;
 
         public bool HasDynamicReturns;
 
@@ -30,23 +30,23 @@ namespace Raven.Server.Documents.Indexes.Static
         private readonly JavaScriptIndexUtils _javaScriptIndexUtils;
         private readonly V8EngineEx _engine;
         public string IndexName { get; set; }
-        public InternalHandle MapFuncV8;
+        public InternalHandle MapFunc;
 
-        public JavaScriptMapOperation(JavaScriptIndexUtils javaScriptIndexUtils, FunctionInstance mapFunc, InternalHandle mapFuncV8, string indexName, string mapString)
+        public JavaScriptMapOperation(JavaScriptIndexUtils javaScriptIndexUtils, FunctionInstance mapFuncJint, InternalHandle mapFunc, string indexName, string mapString)
         {
             _javaScriptIndexUtils = javaScriptIndexUtils;
             _engine = _javaScriptIndexUtils.Engine;
 
-            MapFunc = mapFunc;
-            InternalHandle mapFuncV8Aux = mapFuncV8; // it is using in the caller so there is no neither need nor possibility to modify its _Object and we can modify it just for the aux value
-            MapFuncV8 = new InternalHandle(ref mapFuncV8Aux, true);
+            MapFuncJint = mapFuncJint;
+            InternalHandle mapFuncV8Aux = mapFunc; // it is using in the caller so there is no neither need nor possibility to modify its _Object and we can modify it just for the aux value
+            MapFunc = new InternalHandle(ref mapFuncV8Aux, true);
             IndexName = indexName;
             MapString = mapString;
         }
 
         ~JavaScriptMapOperation()
         {
-            MapFuncV8.Dispose();
+            MapFunc.Dispose();
         }
 
         public IEnumerable<InternalHandle> IndexingFunction(IEnumerable<object> items)
@@ -67,10 +67,10 @@ namespace Raven.Server.Documents.Indexes.Static
                         InternalHandle jsRes = InternalHandle.Empty;
                         try
                         {
-                            if (!MapFuncV8.IsFunction) {
-                                throw new JavaScriptIndexFuncException($"MapFuncV8 is not a function");
+                            if (!MapFunc.IsFunction) {
+                                throw new JavaScriptIndexFuncException($"MapFunc is not a function");
                             }
-                            jsRes = MapFuncV8.StaticCall(jsItem);
+                            jsRes = MapFunc.StaticCall(jsItem);
 
                             //using (var jsRes1 = new InternalHandle(ref jsRes, true)) {}
                             /*using (var jsStrRes = _engine.JsonStringify.StaticCall(new InternalHandle(ref jsRes, true))) {
@@ -131,11 +131,14 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public void Analyze(Engine engine)
         {
+            if (MapFuncJint == null)
+                return;
+
             HasDynamicReturns = false;
             HasBoostedFields = false;
 
             IFunction theFuncAst;
-            switch (MapFunc)
+            switch (MapFuncJint)
             {
                 case ScriptFunctionInstance sfi:
                     theFuncAst = sfi.FunctionDeclaration;
@@ -148,7 +151,7 @@ namespace Raven.Server.Documents.Indexes.Static
             var res = CheckIfSimpleMapExpression(engine, theFuncAst);
             if (res != null)
             {
-                MapFunc = res.Value.Function;
+                MapFuncJint = res.Value.Function;
                 theFuncAst = res.Value.FunctionAst;
             }
 

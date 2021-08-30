@@ -107,7 +107,8 @@ namespace Raven.Server.Extensions
 
         public static IDisposable ChangeMaxStatements(this V8Engine engine, int value)
         {
-            void DoNothing()
+            // TODO
+            void DoNothing() 
             {}
 
             return new DisposableAction(DoNothing);
@@ -120,12 +121,12 @@ namespace Raven.Server.Extensions
 
         public static void ResetCallStack(this V8Engine engine)
         {
-            // TODO
+            // TODO ??? should be done something
         }
 
         public static void ResetConstraints(this V8Engine engine)
         {
-            // TODO
+            // TODO ??? should be done something
         }
 
         public static void ExecuteWithReset(this V8Engine engine, string source, string sourceName = "V8.NET", bool throwExceptionOnError = true, int timeout = 0, bool trackReturn = false)

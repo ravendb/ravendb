@@ -6,7 +6,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 {
     public class AggregatedDocuments : AggregationResult
     {
-        private readonly List<Document> _outputs;
+        private bool _disposed = false;
+
+        private List<Document> _outputs;
 
         public AggregatedDocuments(List<Document> results)
         {
@@ -28,13 +30,38 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             }
         }
 
+        ~AggregatedDocuments()
+        {            
+            Dispose(false);
+        }
+
+
         public override void Dispose()
+        {  
+            Dispose(true);
+        }
+
+        public void Dispose(bool disposing)
         {
-            for (int i = _outputs.Count - 1; i >= 0; i--)
-            {
-                _outputs[i].Data.Dispose();
+            if (_disposed)
+                return;
+
+            if (disposing) {
+                // releasing managed resources
+                for (int i = _outputs.Count - 1; i >= 0; i--)
+                {
+                    _outputs[i].Data.Dispose();
+                }
+                _outputs.Clear();
+                _outputs = null;
+
+                GC.SuppressFinalize(this);
             }
-            _outputs.Clear();
+
+            // releasing unmanaged resources
+            // ...
+
+            _disposed = true;
         }
     }
 

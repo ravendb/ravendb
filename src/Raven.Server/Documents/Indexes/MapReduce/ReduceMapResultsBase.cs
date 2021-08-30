@@ -195,12 +195,15 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     result = AggregateOn(_aggregationBatch.Items, indexContext, _nestedValuesReductionStats.NestedValuesAggregation, token);
                 }
 
-                if (section.IsNew == false)
-                    writer.DeleteReduceResult(reduceKeyHash, stats);
-
-                foreach (var output in result.GetOutputs())
+                using (result)
                 {
-                    writer.IndexDocument(reduceKeyHash, null, output, stats, indexContext);
+                    if (section.IsNew == false)
+                        writer.DeleteReduceResult(reduceKeyHash, stats);
+
+                    foreach (var output in result.GetOutputs())
+                    {
+                        writer.IndexDocument(reduceKeyHash, null, output, stats, indexContext);
+                    }
                 }
 
                 _index.ReducesPerSec?.MarkSingleThreaded(numberOfEntriesToReduce);
