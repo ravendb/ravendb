@@ -202,7 +202,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         
         public void CleanWritersIfNeeded()
         {
-            if(_indexWriterCleanupNeeded == false)
+            if (_indexWriterCleanupNeeded == false)
                 return;
 
             DisposeWriters();
@@ -227,7 +227,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
 
             if (mode.HasFlag(IndexCleanup.Readers))
-                {
+            {
                 lock (_readersLock)
                 {
                     _lastReader?.DecRef(null);
