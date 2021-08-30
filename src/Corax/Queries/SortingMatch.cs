@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Buffers;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using Sparrow;
@@ -40,6 +41,12 @@ namespace Corax.Queries
             where T : IMatchComparer
             where W : struct
         {
+            [ThreadStatic]
+            public static Item[] BKeysHolder;
+
+            [ThreadStatic]
+            public static Item[] MatchKeysHolder;
+
             public struct Item
             {
                 public long Key;
@@ -135,15 +142,34 @@ namespace Corax.Queries
 
             Unsafe.SkipInit(out key);
             return false;
-        }
+        }        
 
         [SkipLocalsInit]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private int Fill<W>(Span<long> matches) where W : struct
-        {
-            int take = _take <= 0 ? matches.Length : _take;
+        {             
+            // Important: If you are going to request a massive take like 20K you need to pass at least a 20K size buffer to work with.
+            //            The rationale for such behavior is that sorting has to find among the candidates the order between elements,
+            //            and it can't do so without checking every single element found. If you fail to do so, your results may not be
+            //            correct. 
+            Debug.Assert(_take <= matches.Length);
 
-            var matchesKeys = new MatchComparer<TComparer, W>.Item[matches.Length].AsSpan();
+            Span<MatchComparer<TComparer, W>.Item> matchesKeys;
+            var matchesKeysHolder = MatchComparer<TComparer, W>.MatchKeysHolder;
+            if (matchesKeysHolder != null && matchesKeysHolder.Length > matches.Length)
+                matchesKeys = matchesKeysHolder.AsSpan(0, matches.Length);
+            else
+                matchesKeys = new MatchComparer<TComparer, W>.Item[matches.Length].AsSpan();
+
+            Span<MatchComparer<TComparer, W>.Item> bKeys;
+            var bKeysHolder = MatchComparer<TComparer, W>.BKeysHolder;
+            if (bKeysHolder != null && bKeysHolder.Length > matches.Length)
+                bKeys = matchesKeysHolder.AsSpan(0, matches.Length);
+            else
+                bKeys = new MatchComparer<TComparer, W>.Item[matches.Length].AsSpan();
+            
+            int take = _take <= 0 ? matches.Length : Math.Min(matches.Length, _take);
+
             int totalMatches = _inner.Fill(matches);
             if (totalMatches == 0)
                 return 0;
@@ -161,8 +187,7 @@ namespace Corax.Queries
             var sorter = new Sorter<MatchComparer<TComparer, W>.Item, MatchComparer<TComparer, W>>(comparer);
             sorter.Sort(matchesKeys[0..totalMatches]);
 
-            Span<long> bValues = stackalloc long[matches.Length];            
-            var bKeys = new MatchComparer<TComparer, W>.Item[matches.Length].AsSpan();
+            Span<long> bValues = stackalloc long[matches.Length];                        
             while (true)
             {
                 // We get a new batch
