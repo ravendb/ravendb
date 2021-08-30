@@ -12,6 +12,7 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.OLAP;
+using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Server;
 using Raven.Server.Documents.ETL;
 using Tests.Infrastructure;
@@ -102,7 +103,7 @@ loadToOrders(partitionBy(key),
                     }},
                 MentorNode = server.ServerStore.NodeTag
             };
-            AddEtl(store,
+            var task = AddEtl(store,
                 configuration,
                 new OlapConnectionString
                 {
@@ -139,10 +140,15 @@ loadToOrders(partitionBy(key),
 
             etlDone.Reset();
             etlDone.Wait(TimeSpan.FromMinutes(1));
+
+            var ongoingTask = store2.Maintenance.Send(new GetOngoingTaskInfoOperation(task.TaskId, OngoingTaskType.OlapEtl));
+            Assert.Equal(OngoingTaskState.Enabled, ongoingTask.TaskState);
+            Assert.NotNull(ongoingTask.ResponsibleNode);
+            Assert.NotEqual(server.ServerStore.NodeTag, ongoingTask.ResponsibleNode.NodeTag);
+
             files = Directory.GetFiles(path, "*.*", SearchOption.AllDirectories);
-
-            Assert.Equal(2, files.Length);
-
+            Assert.True(files.Length == 2, $"Expected 2 output files but got {files.Length}. files : '{string.Join(", ", files)}'. " +
+                                           $"Responsible node : '{ongoingTask.ResponsibleNode.NodeTag}'.");
         }
 
 
