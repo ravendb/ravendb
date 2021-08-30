@@ -10,6 +10,15 @@ if [ ! -z "$RAVEN_ARGS" ]; then
 	COMMAND="$COMMAND ${RAVEN_ARGS}"
 fi
 
-eval $COMMAND
-exit $?
+if [ ! -z "$RAVEN_DATABASE" ]; then
+    export RAVEN_Setup_Mode=None
+    $COMMAND &
+    COMMANDPID=$!
+    ./putdb.sh 
+else
+    $COMMAND &
+    COMMANDPID=$!
+fi
 
+wait $COMMANDPID
+exit $?
