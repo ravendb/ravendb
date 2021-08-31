@@ -25,13 +25,16 @@ namespace Raven.Server.Indexing
         private const int MaxFilesToKeepInCache = 32;
         private int _memoryStreamCapacity = 128 * Constants.Size.Kilobyte;
 
+        public int FilesCount => _files.Count;
+
         public TempFileCache(StorageEnvironmentOptions options)
         {
             _options = options;
             string path = _options.TempPath.FullPath;
             if (Directory.Exists(path) == false)
                 Directory.CreateDirectory(path);
-            foreach (string file in Directory.GetDirectories(path, "lucene-*" + StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions.TempFileExtension))
+
+            foreach (string file in Directory.GetFiles(path, "lucene-*" + StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions.TempFileExtension))
             {
                 var info = new FileInfo(file);
                 if (info.Length > MaxFileSizeToKeepInBytes ||
@@ -53,6 +56,7 @@ namespace Raven.Server.Indexing
                         // if can't open, just ignore it.
                         continue;
                     }
+
                     _files.Enqueue(fileStream);
                 }
             }
