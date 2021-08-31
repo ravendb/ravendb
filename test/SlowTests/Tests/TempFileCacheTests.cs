@@ -38,5 +38,27 @@ namespace SlowTests.Tests
                 Assert.Equal(1, cache.FilesCount);
             }
         }
+
+        [Fact]
+        public void Skip_files_that_are_in_use()
+        {
+            var path = new VoronPathSetting(NewDataPath());
+            var environment = new StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions(path, path, path, null, null);
+
+            for (var i = 0; i < TempFileCache.MaxFilesToKeepInCache; i++)
+            {
+                using (File.Create(TempFileCache.GetTempFileName(environment)))
+                {
+                }
+            }
+
+            using (File.Create(Path.Combine(environment.TempPath.FullPath,
+                TempFileCache.FilePrefix + "Z" + StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions.TempFileExtension)))
+            {
+                using (new TempFileCache(environment))
+                {
+                }
+            }
+        }
     }
 }

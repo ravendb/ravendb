@@ -22,8 +22,9 @@ namespace Raven.Server.Indexing
         private readonly ConcurrentQueue<MemoryStream> _ms = new ConcurrentQueue<MemoryStream>();
 
         private const long MaxFileSizeToKeepInBytes = 16 * Constants.Size.Megabyte;
-        private const int MaxFilesToKeepInCache = 32;
+        internal const int MaxFilesToKeepInCache = 32;
         private int _memoryStreamCapacity = 128 * Constants.Size.Kilobyte;
+        internal const string FilePrefix = "lucene-";
 
         public int FilesCount => _files.Count;
 
@@ -34,30 +35,33 @@ namespace Raven.Server.Indexing
             if (Directory.Exists(path) == false)
                 Directory.CreateDirectory(path);
 
-            foreach (string file in Directory.GetFiles(path, "lucene-*" + StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions.TempFileExtension))
+            foreach (string file in Directory.GetFiles(path, $"{FilePrefix}*" + StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions.TempFileExtension))
             {
                 var info = new FileInfo(file);
-                if (info.Length > MaxFileSizeToKeepInBytes ||
-                    _files.Count >= MaxFilesToKeepInCache)
+                if (info.Length > MaxFileSizeToKeepInBytes || _files.Count >= MaxFilesToKeepInCache)
                 {
-                    File.Delete(file);
+                    try
+                    {
+                        File.Delete(file);
+                    }
+                    catch (IOException)
+                    {
+                        // if can't delete, just ignore it.
+                    }
                 }
                 else
                 {
-                    TempFileStream fileStream;
                     try
                     {
                         var stream = new FileStream(file, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read, 4096, FileOptions.DeleteOnClose);
-                        fileStream = new TempFileStream(stream);
+                        var fileStream = new TempFileStream(stream);
                         fileStream.ResetLength();
+                        _files.Enqueue(fileStream);
                     }
                     catch (IOException)
                     {
                         // if can't open, just ignore it.
-                        continue;
                     }
-
-                    _files.Enqueue(fileStream);
                 }
             }
 
@@ -104,7 +108,7 @@ namespace Raven.Server.Indexing
 
         public static string GetTempFileName(StorageEnvironmentOptions options)
         {
-            return Path.Combine(options.TempPath.FullPath, "lucene-" + Guid.NewGuid() + StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions.TempFileExtension);
+            return Path.Combine(options.TempPath.FullPath, FilePrefix + Guid.NewGuid() + StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions.TempFileExtension);
         }
 
         public void ReturnFileStream(Stream stream)
