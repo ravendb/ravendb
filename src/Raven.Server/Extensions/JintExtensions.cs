@@ -49,18 +49,29 @@ namespace Raven.Server.Extensions
 1. Like this before real implementations of mapDoc and reduceGroup functions for doc and grouping:
 map(colName, mapDoc)
 groupBy(x => ({ ... })).aggregate(reduceGroup)
-/*JINT_START*/ // after this marker starts stub code for Jint
-//const reduceGroup = g => null
 /*JINT_END*/ // after this marker everything gets dropped for Jint
 // here real implementations of mapDoc and reduceGroup functions start
 ...
 
-Please note the following:
-- mapDoc is optional as it is used for checking of map return statements' structure consistency only which can be omitted if you don't need it,
-- reduceGroup may just return null, as no implementation details are used and only groupBy's argument matters,
-- don't use '//' comment lines in the stub block as the first occurences of '//' will be removed to get the stub code.
+Or like this if you have to close some outer block, for example:
+/*JINT_START*/ // after this marker starts stub code for Jint which will be uncommented
+//}
+/*JINT_END*/ // starting from this marker everything gets dropped for Jint
+// here real implementations of mapDoc and reduceGroup functions start
+...
 
-So if you want checking of map return statements' structure consistency to be performed you should add mapDoc stub with all your return structures described as well like this:
+Don't use '//' comment lines in the stub block as the first occurences of '//' will be removed to get the stub code.
+
+MapDoc is optional as it is used for checking of map return statements' structure consistency only which can be omitted if you don't need it.
+No implementation details of ReduceGroup are used and only groupBy's argument matters.
+
+Actually, we could define stub definitions for Jint them like below, but appears to be redundant as it will work even without it (as above):
+/*JINT_START*/
+//const mapGroup = g => null
+//const reduceGroup = g => null
+/*JINT_END*/
+
+In case you want checking of map return statements' structure consistency to be performed you should add mapDoc stub with all your return structures described as well like this:
 /*JINT_START*/
 //const mapDoc = d => {
 //    if (1) {
@@ -70,7 +81,6 @@ So if you want checking of map return statements' structure consistency to be pe
 //    } 
 //    return {...} 
 //}
-//const reduceGroup = g => null
 /*JINT_END*/
 
 2. Like this to switch off an irrelevant additional source or its part: the whole file if in the first line or its part if somewhere in the body
