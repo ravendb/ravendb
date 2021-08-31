@@ -445,6 +445,34 @@ namespace SlowTests.Client.TimeSeries.Issues
         }
 
         [Fact]
+        public void MultiIncrementOperationsOnTimeSeriesShouldWork5()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new { Name = "Oren" }, "users/ayende");
+                    var ts = session.TimeSeriesFor("users/ayende", "HeartRate");
+                    for (int i = 0; i < 3; i++)
+                    {
+                        ts.Increment(baseline, 1);
+                    }
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var ts = session.TimeSeriesFor("users/ayende", "HeartRate").Get(baseline);
+                    var sum = ts.Sum(x => x.Value);
+
+                    Assert.Equal(3, sum);
+                }
+            }
+        }
+
+        [Fact]
         public void ShouldThrowIfIncrementContainBothPositiveNegativeValues()
         {
             using (var store = GetDocumentStore())
@@ -572,6 +600,77 @@ namespace SlowTests.Client.TimeSeries.Issues
                     var vals = session.TimeSeriesFor("users/ayende", "Heartrate").Get();
 
                     Assert.Equal(4, vals.Length);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task IncrementShouldWorkOnReplication()
+        {
+            var baseline = DateTime.UtcNow;
+
+            using (var storeA = GetDocumentStore())
+            using (var storeB = GetDocumentStore())
+            {
+                using (var session = storeA.OpenSession())
+                {
+                    session.Store(new { Name = "Oren" }, "users/ayende");
+                    session.SaveChanges();
+                }
+                using (var session = storeB.OpenSession())
+                {
+                    session.Store(new { Name = "Oren" }, "users/ayende");
+                    session.SaveChanges();
+                }
+
+               // for (int i = 0; i < 100; i++)
+                //{
+                    using (var session = storeA.OpenSession())
+                    {
+                        var ts = session.TimeSeriesFor("users/ayende", "HeartRate");
+                        for (int j = 0; j < 3; j++)
+                        {
+                            ts.Increment(baseline, 1);
+                        }
+                        session.SaveChanges();
+                    }
+                //}
+                //WaitForUserToContinueTheTest(storeA);
+                //for (int i = 0; i < 100; i++)
+                //{
+                using (var session = storeB.OpenSession())
+                {
+                        var ts = session.TimeSeriesFor("users/ayende", "HeartRate");
+                        for (int j = 0; j < 3; j++)
+                        {
+                            ts.Increment(baseline, 1);
+                        }
+                        session.SaveChanges();
+                }
+                //}
+
+                await SetupReplicationAsync(storeA, storeB);
+                await SetupReplicationAsync(storeB, storeA);
+
+                await EnsureReplicatingAsync(storeA, storeB);
+                await EnsureReplicatingAsync(storeB, storeA);
+
+                await EnsureNoReplicationLoop(Server, storeA.Database);
+                await EnsureNoReplicationLoop(Server, storeB.Database);
+
+                WaitForUserToContinueTheTest(storeA);
+                using (var sessionA = storeA.OpenSession())
+                using (var sessionB = storeB.OpenSession())
+                {
+                    var tsA = sessionA.TimeSeriesFor("users/ayende", "HeartRate").Get();
+                    var tsB = sessionB.TimeSeriesFor("users/ayende", "HeartRate").Get();
+
+                    Assert.Equal(tsA.Length, tsB.Length);
+
+                    for (int i = 0; i < tsA.Length; i++)
+                    {
+                        Assert.True(Equals(tsA[i], tsB[i]));
+                    }
                 }
             }
         }
