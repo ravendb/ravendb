@@ -2770,6 +2770,15 @@ namespace Raven.Server.ServerWide
                 return items.VerifyKeyExists(key);
         }
 
+        public bool DatabaseExists(string name)
+        {
+            using (ContextPoolForReadOnlyOperations.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                return DatabaseExists(context, name);
+            }
+        }
+
         public DatabaseRecord ReadDatabase(TransactionOperationContext context, string name, out long etag)
         {
             using (var databaseRecord = ReadRawDatabaseRecord(context, name, out etag))

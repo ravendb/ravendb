@@ -165,10 +165,21 @@ namespace Raven.Server.Documents
 
                 task.IgnoreUnobservedExceptions();
 
-                if (_caseInsensitive.TryGetValue(databaseName, out current) == false)
+                bool found = false;
+                while (found == false)
                 {
-                    resource = default;
-                    return null;
+                    found = _caseInsensitive.TryGetValue(databaseName, out current);
+                    if (found == false)
+                    {
+                        resource = default(TResource);
+                        if (_caseInsensitive.TryAdd(databaseName, task) == false) 
+                            continue;
+
+                        return new DisposableAction(() =>
+                        {
+                            TryRemove(databaseName, out _);
+                        });
+                    }
                 }
 
                 if (current.IsCompleted == false)

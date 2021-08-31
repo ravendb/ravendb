@@ -35,5 +35,24 @@ namespace SlowTests.Issues
                 Assert.Equal(1, Server.ServerStore.DatabasesLandlord.DatabasesCache.DetailsCount);
             }
         }
+
+        [Fact]
+        public async Task CanDeleteDisabledDatabase()
+        {
+            using (var store = GetDocumentStore(new Options
+            {
+                RunInMemory = false, 
+                DeleteDatabaseOnDispose = false
+            }))
+            {
+                var result = await store.Maintenance.Server.SendAsync(new ToggleDatabasesStateOperation(store.Database, disable: true));
+                Assert.True(result.Success);
+                Assert.True(result.Disabled);
+
+                await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(store.Database, hardDelete: true));
+
+                Assert.False(Server.ServerStore.Cluster.DatabaseExists(store.Database));
+            }
+        }
     }
 }
