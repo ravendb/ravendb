@@ -280,8 +280,6 @@ function map(name, lambda) {
         public readonly JavaScriptUtils JavaScriptUtils;
         public readonly JavaScriptIndexUtils JavaScriptIndexUtils;
 
-
-        //private JintNullPropagationReferenceResolver _resolverJint;
         protected Engine _engineJint; // in V8 mode is used for maps static analysis, but not for running
         protected ObjectInstance _definitionsJint;
 
@@ -316,7 +314,6 @@ function map(name, lambda) {
 
             var indexConfiguration = new SingleIndexConfiguration(definition.Configuration, configuration);
 
-            //_resolverJint = new JintNullPropagationReferenceResolver(); //JintPreventResolvingTasksReferenceResolver();
             _engineJint = new Engine(); // no need for options as we use it for AST analysis only
             /*options =>
             {
