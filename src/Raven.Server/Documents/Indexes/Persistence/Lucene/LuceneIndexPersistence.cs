@@ -45,6 +45,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private SnapshotDeletionPolicy _snapshotter;
 
+        internal TempFileCache TempFileCache;
+
         // this is used to remember the positions of files in the database
         // always points to the latest valid transaction and is updated by 
         // the write tx on commit, thread safety is inherited from the voron
@@ -77,6 +79,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _disposeOnce = new DisposeOnce<SingleAttempt>(() =>
             {
                 DisposeWriters();
+                TempFileCache.Dispose();
 
                 _lastReader?.Dispose();
                 _indexSearcherHolder?.Dispose();
@@ -219,6 +222,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             if (_initialized)
                 throw new InvalidOperationException();
 
+            TempFileCache = new TempFileCache(environment.Options);
+
             environment.NewTransactionCreated += SetStreamCacheInTx;
 
             using (var tx = environment.WriteTransaction())
@@ -335,7 +340,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 if (!field.Value.HasSuggestions)
                     continue;
 
-                var directory = new LuceneVoronDirectory(tx, environment, $"Suggestions-{field.Key}");
+                var directory = new LuceneVoronDirectory(tx, environment, TempFileCache, $"Suggestions-{field.Key}");
                 _suggestionsDirectories[field.Key] = directory;
 
                 using (directory.SetTransaction(tx, out IState state))
@@ -349,7 +354,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private void InitializeMainIndexStorage(Transaction tx, StorageEnvironment environment)
         {
-            _directory = new LuceneVoronDirectory(tx, environment);
+            _directory = new LuceneVoronDirectory(tx, environment, TempFileCache);
 
             using (_directory.SetTransaction(tx, out IState state))
             {
