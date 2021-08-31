@@ -28,7 +28,7 @@ namespace Voron.Impl.Paging
 
         public static ConcurrentDictionary<string, uint> PhysicalDrivePerMountCache = new ConcurrentDictionary<string, uint>();
 
-        protected static readonly ReaderWriterLockSlim WorkingSetIncreaseLocker = new ReaderWriterLockSlim(LockRecursionPolicy.NoRecursion);
+        protected static readonly object WorkingSetIncreaseLocker = new object();
 
         protected int MinIncreaseSize => 16 * Constants.Size.Kilobyte;
 
@@ -96,10 +96,7 @@ namespace Voron.Impl.Paging
 
         protected void Lock(byte* address, long sizeToLock, TransactionState state)
         {
-            if (PlatformDetails.RunningOnPosix == false)
-                // when running on linux we can't do anything from within the process, so let's avoid the locking entirely
-                WorkingSetIncreaseLocker.EnterUpgradeableReadLock();
-
+            var lockTaken = false;
             try
             {
                 if (Sodium.Lock(address, (UIntPtr)sizeToLock) == 0) 
@@ -108,12 +105,16 @@ namespace Voron.Impl.Paging
                 if (DoNotConsiderMemoryLockFailureAsCatastrophicError)
                     return;
 
+                if (PlatformDetails.RunningOnPosix == false)
+                    // when running on linux we can't do anything from within the process, so let's avoid the locking entirely
+                    Monitor.Enter(WorkingSetIncreaseLocker, ref lockTaken);
+
                 TryHandleFailureToLockMemory(address, sizeToLock);
             }
             finally
             {
-                if (PlatformDetails.RunningOnPosix == false)
-                    WorkingSetIncreaseLocker.ExitUpgradeableReadLock();
+                if (lockTaken)
+                    Monitor.Exit(WorkingSetIncreaseLocker);
             }
         }
 
@@ -128,8 +129,8 @@ namespace Voron.Impl.Paging
 
             if (PlatformDetails.RunningOnPosix == false)
             {
-                WorkingSetIncreaseLocker.EnterWriteLock();
-                try
+                var retries = 10;
+                while (retries > 0)
                 {
                     // From: https://msdn.microsoft.com/en-us/library/windows/desktop/ms686234(v=vs.85).aspx
                     // "The maximum number of pages that a process can lock is equal to the number of pages in its minimum working set minus a small overhead"
@@ -171,13 +172,11 @@ namespace Voron.Impl.Paging
                             "and aborting the current operation.", e);
                     }
 
-                    // now we can try again, after we raised the limit, we only do so once, though
                     if (Sodium.Lock(addressToLock, (UIntPtr)sizeToLock) == 0)
                         return;
-                }
-                finally
-                {
-                    WorkingSetIncreaseLocker.ExitWriteLock();
+
+                    // let's retry, since we increased the WS, but other thread might have locked the memory
+                    retries--;
                 }
             }
 

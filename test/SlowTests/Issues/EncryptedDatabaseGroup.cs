@@ -22,6 +22,30 @@ namespace SlowTests.Issues
         public EncryptedDatabaseGroup(ITestOutputHelper output) : base(output)
         {
         }
+        
+        [Fact]
+        public async Task CanLockMemoryUnderHighContention() // this is a probabilistic test
+        {
+             DebuggerAttachedTimeout.DisableLongTimespan = true;
+            var (nodes, leader, certificates) = await CreateRaftClusterWithSsl(7, watcherCluster: true);
+
+            EncryptedCluster(nodes, certificates, out var databaseName);
+
+            var options = new Options
+            {
+                Server = leader,
+                ReplicationFactor = 7,
+                ClientCertificate = certificates.ClientCertificate1.Value,
+                AdminCertificate = certificates.ServerCertificate.Value,
+                ModifyDatabaseName = _ => databaseName,
+                Encrypted = true,
+                RunInMemory = false
+            };
+            using (var store = GetDocumentStore(options))
+            {
+                await TrySavingDocument(store, 1);
+            }
+        }
 
         [Fact]
         public async Task CanRemoveNodeWithNoKey()
