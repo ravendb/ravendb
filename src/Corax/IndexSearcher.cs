@@ -160,13 +160,13 @@ namespace Corax
         public SortingMatch OrderByAscending<TInner>(in TInner set, int fieldId, MatchCompareFieldType entryFieldType = MatchCompareFieldType.Sequence, int take = -1)
             where TInner : IQueryMatch
         {
-            return OrderBy<TInner, AscendingMatchComparer>(in set, fieldId, MatchCompareFieldType.Sequence, take);
+            return OrderBy<TInner, AscendingMatchComparer>(in set, fieldId, entryFieldType, take);
         }
 
         public SortingMatch OrderByDescending<TInner>(in TInner set, int fieldId, MatchCompareFieldType entryFieldType = MatchCompareFieldType.Sequence, int take = -1)
             where TInner : IQueryMatch
         {
-            return OrderBy<TInner, DescendingMatchComparer>(in set, fieldId, MatchCompareFieldType.Sequence, take);
+            return OrderBy<TInner, DescendingMatchComparer>(in set, fieldId, entryFieldType, take);
         }
 
         public SortingMatch OrderBy<TInner, TComparer>(in TInner set, int fieldId, MatchCompareFieldType entryFieldType = MatchCompareFieldType.Sequence, int take = -1)

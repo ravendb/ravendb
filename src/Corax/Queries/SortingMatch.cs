@@ -184,8 +184,8 @@ namespace Corax.Queries
             }
 
             // We sort the first batch
-            var sorter = new Sorter<MatchComparer<TComparer, W>.Item, MatchComparer<TComparer, W>>(comparer);
-            sorter.Sort(matchesKeys[0..totalMatches]);
+            var sorter = new Sorter<MatchComparer<TComparer, W>.Item, long, MatchComparer<TComparer, W>>(comparer);
+            sorter.Sort(matchesKeys[0..totalMatches], matches);
 
             Span<long> bValues = stackalloc long[matches.Length];                        
             while (true)
@@ -217,7 +217,7 @@ namespace Corax.Queries
                 bTotalMatches = kIdx;
 
                 // We sort the new batch
-                sorter.Sort(bKeys[0..bTotalMatches]);                
+                sorter.Sort(bKeys[0..bTotalMatches], bValues);                
                 
                 // We merge both batches. 
                 int aTotalMatches = Math.Min(totalMatches, take);
