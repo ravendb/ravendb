@@ -324,8 +324,6 @@ namespace Raven.Server.Documents
                 try
                 {
                     removeLockAndReturn = DatabasesCache.RemoveLockAndReturn(dbName, CompleteDatabaseUnloading, out var database);
-                    if (removeLockAndReturn == null)
-                        return; // database already removed
                     databaseId = database?.DbBase64Id;
                 }
                 catch (AggregateException ae) when (nameof(DeleteDatabase).Equals(ae.InnerException.Data["Source"]))
