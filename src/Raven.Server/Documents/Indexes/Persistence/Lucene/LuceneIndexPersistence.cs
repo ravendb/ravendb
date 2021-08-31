@@ -79,7 +79,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _disposeOnce = new DisposeOnce<SingleAttempt>(() =>
             {
                 DisposeWriters();
-                TempFileCache.Dispose();
 
                 _lastReader?.Dispose();
                 _indexSearcherHolder?.Dispose();
@@ -90,6 +89,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 {
                     directory.Value?.Dispose();
                 }
+
+                TempFileCache?.Dispose();
             });
 
             var fields = index.Definition.IndexFields.Values;
