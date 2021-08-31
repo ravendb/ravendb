@@ -57,15 +57,6 @@ function map(name, lambda) {
         {
             base.OnInitializeEngine();
 
-            _engineJint.SetValue("getMetadata", new JintClrFunctionInstance(_engineJint, "getMetadata", MetadataForJint)); // for backward-compatibility only
-            _engineJint.SetValue("metadataFor", new JintClrFunctionInstance(_engineJint, "metadataFor", MetadataForJint));
-            _engineJint.SetValue("attachmentsFor", new JintClrFunctionInstance(_engineJint, "attachmentsFor", AttachmentsForJint));
-            _engineJint.SetValue("timeSeriesNamesFor", new JintClrFunctionInstance(_engineJint, "timeSeriesNamesFor", TimeSeriesNamesForJint));
-            _engineJint.SetValue("counterNamesFor", new JintClrFunctionInstance(_engineJint, "counterNamesFor", CounterNamesForJint));
-            _engineJint.SetValue("loadAttachment", new JintClrFunctionInstance(_engineJint, "loadAttachment", LoadAttachmentJint));
-            _engineJint.SetValue("loadAttachments", new JintClrFunctionInstance(_engineJint, "loadAttachments", LoadAttachmentsJint));
-            _engineJint.SetValue("id", new JintClrFunctionInstance(_engineJint, "id", GetDocumentIdJint));
-
             _engine.SetGlobalCLRCallBack("getMetadata", MetadataFor); // for backward-compatibility only
             _engine.SetGlobalCLRCallBack("metadataFor", MetadataFor);
             _engine.SetGlobalCLRCallBack("attachmentsFor", AttachmentsFor);
@@ -170,77 +161,6 @@ function map(name, lambda) {
                 }
             }
         }
-
-        private JsValue GetDocumentIdJint(JsValue self, JsValue[] args)
-        {
-            Debug.Assert(false); // this code is not to be run
-            return JsValue.Null;
-            /*var scope = CurrentIndexingScope.Current;
-            scope.RegisterJavaScriptUtils(JavaScriptUtils);
-
-            return JavaScriptUtils.GetDocumentId(engine, isConstructCall, self, args);*/
-        }
-
-        private JsValue AttachmentsForJint(JsValue self, JsValue[] args)
-        {
-            Debug.Assert(false); // this code is not to be run
-            return JsValue.Null;
-            /*var scope = CurrentIndexingScope.Current;
-            scope.RegisterJavaScriptUtils(JavaScriptUtils);
-
-            return JavaScriptUtils.AttachmentsFor(engine, isConstructCall, self, args);*/
-        }
-
-        private JsValue MetadataForJint(JsValue self, JsValue[] args)
-        {
-            Debug.Assert(false); // this code is not to be run
-            return JsValue.Null;
-            /*var scope = CurrentIndexingScope.Current;
-            scope.RegisterJavaScriptUtils(JavaScriptUtils);
-
-            return JavaScriptUtils.GetMetadata(engine, isConstructCall, self, args);*/
-        }
-
-        private JsValue TimeSeriesNamesForJint(JsValue self, JsValue[] args)
-        {
-            Debug.Assert(false); // this code is not to be run
-            return JsValue.Null;
-            /*var scope = CurrentIndexingScope.Current;
-            scope.RegisterJavaScriptUtils(JavaScriptUtils);
-
-            return JavaScriptUtils.GetTimeSeriesNamesFor(engine, isConstructCall, self, args);*/
-        }
-
-        private JsValue CounterNamesForJint(JsValue self, JsValue[] args)
-        {
-            Debug.Assert(false); // this code is not to be run
-            return JsValue.Null;
-            /*var scope = CurrentIndexingScope.Current;
-            scope.RegisterJavaScriptUtils(JavaScriptUtils);
-
-            return JavaScriptUtils.GetCounterNamesFor(engine, isConstructCall, self, args);*/
-        }
-
-        private JsValue LoadAttachmentJint(JsValue self, JsValue[] args)
-        {
-            Debug.Assert(false); // this code is not to be run
-            return JsValue.Null;
-            /*var scope = CurrentIndexingScope.Current;
-            scope.RegisterJavaScriptUtils(JavaScriptUtils);
-
-            return JavaScriptUtils.LoadAttachment(engine, isConstructCall, self, args);*/
-        }
-
-        private JsValue LoadAttachmentsJint(JsValue self, JsValue[] args)
-        {
-            Debug.Assert(false); // this code is not to be run
-            return JsValue.Null;
-            /*var scope = CurrentIndexingScope.Current;
-            scope.RegisterJavaScriptUtils(JavaScriptUtils);
-
-            return JavaScriptUtils.LoadAttachments(engine, isConstructCall, self, args);*/
-        }
-
 
         private InternalHandle GetDocumentId(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
@@ -522,11 +442,6 @@ function map(name, lambda) {
 
         protected virtual void OnInitializeEngine()
         {
-            _engineJint.SetValue("load", new JintClrFunctionInstance(_engineJint, "load", LoadDocumentJint));
-            _engineJint.SetValue("cmpxchg", new JintClrFunctionInstance(_engineJint, "cmpxchg", LoadCompareExchangeValueJint));
-            _engineJint.SetValue("tryConvertToNumber", new JintClrFunctionInstance(_engineJint, "tryConvertToNumber", TryConvertToNumberJint));
-            _engineJint.SetValue("recurse", new JintClrFunctionInstance(_engineJint, "recurse", RecurseJint));
-
             _engine.SetGlobalCLRCallBack("load", LoadDocument);
             _engine.SetGlobalCLRCallBack("cmpxchg", LoadCompareExchangeValue);
             _engine.SetGlobalCLRCallBack("tryConvertToNumber", TryConvertToNumber);
@@ -574,145 +489,6 @@ function map(name, lambda) {
 
             return mapReferencedCollections;
         }
-
-
-        private JsValue RecurseJint(JsValue self, JsValue[] args)
-        {
-            Debug.Assert(false); // this code is not to be run
-            return JsValue.Null;
-            /*if (args.Length != 2)
-            {
-                throw new ArgumentException("The recurse(item, func) method expects two arguments, but got: " + args.Length);
-            }
-
-            var item = args[0];
-            var func = args[1] as ScriptFunctionInstance;
-
-            if (func == null)
-                throw new ArgumentException("The second argument in recurse(item, func) must be an arrow function.");
-
-            return new RecursiveJsFunction(_engineJint, item, func).Execute();*/
-        }
-
-        private JsValue TryConvertToNumberJint(JsValue self, JsValue[] args)
-        {
-            Debug.Assert(false); // this code is not to be run
-            return JsValue.Null;
-            /*if (args.Length != 1)
-            {
-                throw new ArgumentException("The tryConvertToNumber(value) method expects one argument, but got: " + args.Length);
-            }
-
-            var value = args[0];
-
-            if (value.IsNull() || value.IsUndefined())
-                return DynamicJsNull.ImplicitNull;
-
-            if (value.IsNumber())
-                return value;
-
-            if (value.IsString())
-            {
-                var valueAsString = value.AsString;
-                if (double.TryParse(valueAsString, out var valueAsDbl))
-                    return valueAsDbl;
-            }
-
-            return DynamicJsNull.ImplicitNull;*/
-        }
-
-        private JsValue LoadDocumentJint(JsValue self, JsValue[] args)
-        {
-            Debug.Assert(false); // this code is not to be run
-            return JsValue.Null;
-            /*if (args.Length != 2)
-            {
-                throw new ArgumentException("The load(id, collection) method expects two arguments, but got: " + args.Length);
-            }
-
-            if (args[0].IsNull() || args[0].IsUndefined())
-                return DynamicJsNull.ImplicitNull;
-
-            if (args[0].IsStringEx() == false ||
-                args[1].IsStringEx() == false)
-            {
-                throw new ArgumentException($"The load(id, collection) method expects two string arguments, but got: load({args[0]}, {args[1]})");
-            }
-
-            object doc = CurrentIndexingScope.Current.LoadDocument(null, args[0].AsString, args[1].AsString);
-            if (JavaScriptIndexUtils.GetValue(_engineJint, doc, out var item))
-                return item;
-
-            return DynamicJsNull.ImplicitNull;*/
-        }
-
-        private JsValue LoadCompareExchangeValueJint(JsValue self, JsValue[] args)
-        {
-            Debug.Assert(false); // this code is not to be run
-            return JsValue.Null;
-            /*if (args.Length != 1)
-                throw new ArgumentException("The cmpxchg(key) method expects one argument, but got: " + args.Length);
-
-            var keyArgument = args[0];
-            if (keyArgument.IsNull() || keyArgument.IsUndefined())
-                return DynamicJsNull.ImplicitNull;
-
-            if (keyArgument.IsStringEx())
-            {
-                object value = CurrentIndexingScope.Current.LoadCompareExchangeValue(null, keyArgument.AsString);
-                return ConvertToJsValue(value);
-            }
-            else if (keyArgument.IsArray())
-            {
-                var keys = keyArgument.AsArray();
-                if (keys.Length == 0)
-                    return DynamicJsNull.ImplicitNull;
-
-                var values = _engineJint.Array.Construct(keys.Length);
-                var arrayArgs = new JsValue[1];
-                for (uint i = 0; i < keys.Length; i++)
-                {
-                    var key = keys[i];
-                    if (key.IsStringEx() == false)
-                        ThrowInvalidType(key, Types.String);
-
-                    object value = CurrentIndexingScope.Current.LoadCompareExchangeValue(null, key.AsString);
-                    arrayArgs[0] = ConvertToJsValue(value);
-
-                    _engineJint.Array.PrototypeObject.Push(values, args);
-                }
-
-                return values;
-            }
-            else
-            {
-                throw new InvalidOperationException($"Argument '{keyArgument}' was of type '{keyArgument.Type}', but either string or array of strings was expected.");
-            }
-
-            JsValue ConvertToJsValue(object value)
-            {
-                switch (value)
-                {
-                    case null:
-                        return DynamicJsNull.ImplicitNull;
-
-                    case DynamicNullObject dno:
-                        return dno.IsExplicitNull ? DynamicJsNull.ExplicitNull : DynamicJsNull.ImplicitNull;
-
-                    case DynamicBlittableJson dbj:
-                        return new BlittableObjectInstance(_engineJint, null, dbj.BlittableJson, id: null, lastModified: null, changeVector: null);
-
-                    default:
-                        return JavaScriptUtils.TranslateToJs(_engineJint, context: null, value);
-                }
-            }
-
-            static void ThrowInvalidType(JsValue value, Types expectedType)
-            {
-                throw new InvalidOperationException($"Argument '{value}' was of type '{value.Type}', but '{expectedType}' was expected.");
-            }*/
-        }
-
 
         private InternalHandle Recurse(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
