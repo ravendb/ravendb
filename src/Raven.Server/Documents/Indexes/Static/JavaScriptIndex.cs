@@ -500,13 +500,19 @@ function map(name, lambda) {
                     if (reduceObjJint != null && reduceObjJint.IsObject())
                     {
                         var reduceAsObjJint = reduceObjJint.AsObject();
-                        var groupByKeyJint = reduceAsObjJint.GetProperty(KeyProperty).Value.As<ScriptFunctionInstance>();
+                        var groupByKeyJint = reduceAsObjJint?.GetProperty(KeyProperty).Value.As<ScriptFunctionInstance>();
+                        if (groupByKeyJint == null) {
+                            throw new ArgumentException(JintExtensions.JintStubInstruction);
+                        }
 
                         using (var groupByKey = reduceObj.GetProperty(KeyProperty))
                         using (var reduce = reduceObj.GetProperty(AggregateByProperty))
                             ReduceOperation = new JavaScriptReduceOperation(groupByKeyJint, _engineJint, reduce, groupByKey, JavaScriptIndexUtils) { ReduceString = Definition.Reduce };
                         GroupByFields = ReduceOperation.GetReduceFieldsNames();
                         Reduce = ReduceOperation.IndexingFunction;
+                    }
+                    else {
+                        throw new ArgumentException(JintExtensions.JintStubInstruction);
                     }
                 }
             }

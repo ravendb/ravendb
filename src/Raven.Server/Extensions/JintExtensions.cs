@@ -43,22 +43,42 @@ namespace Raven.Server.Extensions
             return ChangeMaxStatements(engine, int.MaxValue);
         }
 
-        // this is a temporary solution to replace the implementation details of map and reduce containing modern JS features with stub functions and to switch off whole additional sources
-        //
-        // 1. like this before real implementations of mapDoc and reduceGroup functions for doc and grouping
-        //  - mapDoc is optional just for return statements structure comparing
-        //  - reduceGroup may just return null, no details are needed:
-        /*JINT_START*/
-        //const mapDoc = d => {if (1) {return {...}} elseif (2) { return {...}}; return {...} }
-        //const reduceGroup = g => null
-        /*JINT_END*/
-        // here comes real implementations of mapDoc and reduceGroup functions
-        // ...
-        //
-        // 2. like this to switch off an irrelevant additional source or its part: the whole file if in the first line or its part if somewhere in the body
-        /*JINT_END*/
-        // after this marker everything gets dropped for Jint
-        //
+        public static string JintStubInstruction = 
+@"To use some of the modern JS features like optional chaining you should add stubs for map and/or reduce functions and/or switch off whole additional sources with implementation details that are not used in the stubs.
+
+1. Like this before real implementations of mapDoc and reduceGroup functions for doc and grouping:
+map(colName, mapDoc)
+groupBy(x => ({ ... })).aggregate(reduceGroup)
+/*JINT_START*/ // after this marker starts stub code for Jint
+//const reduceGroup = g => null
+/*JINT_END*/ // after this marker everything gets dropped for Jint
+// here real implementations of mapDoc and reduceGroup functions start
+...
+
+Please note the following:
+- mapDoc is optional as it is used for checking of map return statements' structure consistency only which can be omitted if you don't need it,
+- reduceGroup may just return null, as no implementation details are used and only groupBy's argument matters,
+- don't use '//' comment lines in the stub block as the first occurences of '//' will be removed to get the stub code.
+
+So if you want checking of map return statements' structure consistency to be performed you should add mapDoc stub with all your return structures described as well like this:
+/*JINT_START*/
+//const mapDoc = d => {
+//    if (1) {
+//        return {...}
+//    } elseif (2) { 
+//        return {...}
+//    } 
+//    return {...} 
+//}
+//const reduceGroup = g => null
+/*JINT_END*/
+
+2. Like this to switch off an irrelevant additional source or its part: the whole file if in the first line or its part if somewhere in the body
+/*JINT_END*/ // after this marker everything gets dropped for Jint
+";
+
+
+        // this is a temporary solution based on the description in the above JintStubInstruction string (till we don't have the latest Esprima version integrated)
         private static string ProcessJintStub(string script)
         {
             string res = "";
@@ -92,10 +112,14 @@ namespace Raven.Server.Extensions
         {
             try
             {
-                engine.Execute(JintExtensions.ProcessJintStub(source));
+                engine.Execute(ProcessJintStub(source));
             }
-            catch (JintException e) // all Jint errors can be ignored as we still may have access to AST
+            catch (JintException e) // all Jint errors can be ignored as we still may have access to AST (if we don't then we will detect it later)
             {
+            }
+            catch (Exception e)
+            {
+                throw new Exception(JintStubInstruction, e);
             }
             finally
             {
@@ -110,8 +134,12 @@ namespace Raven.Server.Extensions
             {
                 engine.Execute(script);
             }
-            catch (JintException e) // all Jint errors can be ignored as we still may have access to AST
+            catch (JintException e) // all Jint errors can be ignored as we still may have access to AST (if we don't then we will detect it later)
             {
+            }
+            catch (Exception e)
+            {
+                throw new ArgumentException(JintStubInstruction, e);
             }
             finally
             {
