@@ -9,6 +9,8 @@ namespace Raven.Client.Documents.Operations.ETL.ElasticSearch
     {
         public string[] Nodes;
 
+        public Authentication Authentication;
+
         public override ConnectionStringType Type => ConnectionStringType.ElasticSearch;
 
         protected override void ValidateImpl(ref List<string> errors)
@@ -16,7 +18,12 @@ namespace Raven.Client.Documents.Operations.ETL.ElasticSearch
             if (Nodes == null || Nodes.Length == 0)
                 errors.Add($"{nameof(Nodes)} cannot be empty");
 
-            if (Nodes == null)
+            if (Authentication == null)
+            {
+                errors.Add($"{nameof(Authentication)} cannot be empty");
+            }
+
+            if (Nodes == null || Authentication == null)
                 return;
 
             for (int i = 0; i < Nodes.Length; i++)
@@ -58,5 +65,30 @@ namespace Raven.Client.Documents.Operations.ETL.ElasticSearch
 
             return json;
         }
+    }
+    
+    public class Authentication
+    {
+        public ApiKeyAuth ApiKeyAuth { get; set; }
+        public BasicAuth BasicAuth { get; set; }
+        public CertificateAuth CertificateAuth { get; set; }
+    }
+
+    public class ApiKeyAuth
+    {
+        public string ApiKey { get; set; }
+    }
+    
+    public class BasicAuth
+    {
+        public string Username { get; set; }
+        public string Password { get; set; }
+    }
+    
+    public class CertificateAuth
+    {
+        public string CertBase64 { get; set; }
+
+        public List<string> Paths { get; set; }
     }
 }

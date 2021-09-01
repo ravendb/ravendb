@@ -22,6 +22,7 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
         public ElasticSearchEtl(Transformation transformation, ElasticSearchEtlConfiguration configuration, DocumentDatabase database, ServerStore serverStore)
             : base(transformation, configuration, database, serverStore, ElasticSearchEtlTag)
         {
+            _client = ElasticSearchHelper.CreateClient(Configuration.Connection);
         }
 
         public const string ElasticSearchEtlTag = "ElasticSearch ETL";
@@ -33,6 +34,8 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
         public override bool ShouldTrackTimeSeries() => false;
 
         protected override bool ShouldTrackAttachmentTombstones() => false;
+
+        private readonly ElasticClient _client;
 
         protected override EtlStatsScope CreateScope(EtlRunStats stats)
         {
@@ -83,10 +86,6 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
 
         protected override int LoadInternal(IEnumerable<ElasticSearchIndexWithRecords> records, DocumentsOperationContext context, EtlStatsScope scope)
         {
-            Uri[] nodes = Configuration.Connection.Nodes.Select(x => new Uri(x)).ToArray();
-            var pool = new StaticConnectionPool(nodes);
-            var settings = new ConnectionSettings(pool);
-            var client = new ElasticClient(settings);
             int statsCounter = 0;
             
             StringBuilder deleteQuery = new StringBuilder();
@@ -100,7 +99,7 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
                     deleteQuery.Append($"{delete.DocumentId},");
                 }
 
-                var deleteResponse = client.DeleteByQuery<string>(d => d
+                var deleteResponse = _client.DeleteByQuery<string>(d => d
                     .Index(index.IndexName.ToLower())
                     .Query(q => q
                         .Match(p => p
@@ -126,7 +125,7 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
                 {
                     if (insert.Property == null) continue;
 
-                    var response = client.LowLevel.Index<StringResponse>(
+                    var response = _client.LowLevel.Index<StringResponse>(
                         index: index.IndexName.ToLower(),
                         body: insert.Property.RawValue.ToString(), requestParameters: new IndexRequestParameters(){Refresh = Refresh.WaitFor});
 
