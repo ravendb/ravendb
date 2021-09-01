@@ -146,7 +146,7 @@ namespace Raven.Server.Web.Studio
             {
                 try
                 {
-                    var response = await ApiHttpClient.Instance.GetAsync("/alive", cts.Token);
+                    var response = await ApiHttpClient.Instance.GetAsync("api/v2/alive", cts.Token);
                     result.StatusCode = response.StatusCode;
                 }
                 catch (Exception e)
