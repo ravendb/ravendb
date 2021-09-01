@@ -287,8 +287,10 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                             bool CanContinueReferenceBatch()
                             {
-                                batchContinuationResult = _index.CanContinueBatch(stats, IndexingWorkType.References, queryContext, indexContext, writeOperation, 
-                                    lastEtag, lastCollectionEtag, totalProcessedCount, sw, ref maxTimeForDocumentTransactionToRemainOpen);
+                                var parameters = new CanContinueBatchParameters(stats, IndexingWorkType.References, queryContext, indexContext, writeOperation,
+                                    lastEtag, lastCollectionEtag, totalProcessedCount, sw);
+
+                                batchContinuationResult = _index.CanContinueBatch(in parameters, ref maxTimeForDocumentTransactionToRemainOpen);
                                 if (batchContinuationResult != Index.CanContinueBatchResult.True)
                                 {
                                     keepRunning = batchContinuationResult == Index.CanContinueBatchResult.RenewTransaction;
