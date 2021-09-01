@@ -2608,21 +2608,16 @@ namespace Raven.Server.ServerWide
             {
                 using (var rawRecord = ReadRawDatabaseRecord(context, name))
                 {
-                    var topology = rawRecord.Topology;
-                    if (topology.RelevantFor(oldTag) == false)
+                    if (rawRecord.IsSharded())
                     {
-                        var record = rawRecord.MaterializedRecord;
-                        toDelete.Add(record);
+                        foreach (var shard in rawRecord.Shards)
+                        {
+                            Shrink(oldTag, newTag, shard, rawRecord, ref toDelete, ref toShrink);
+                        }
                     }
                     else
                     {
-                        if (topology.RelevantFor(newTag) && topology.Count == 1)
-                            continue;
-
-                        var record = rawRecord.MaterializedRecord;
-                        record.Topology = new DatabaseTopology();
-                        record.Topology.Members.Add(newTag);
-                        toShrink.Add(record);
+                        Shrink(oldTag, newTag, rawRecord.Topology, rawRecord, ref toDelete, ref toShrink);
                     }
                 }
             }
@@ -2685,6 +2680,25 @@ namespace Raven.Server.ServerWide
             }
 
             ExecuteManyOnDispose(context, index, type, tasks);
+        }
+
+        private static void Shrink(string oldTag, string newTag, DatabaseTopology topology, RawDatabaseRecord rawRecord, ref List<DatabaseRecord> toDelete, ref List<DatabaseRecord> toShrink)
+        {
+            if (topology.RelevantFor(oldTag) == false)
+            {
+                var record = rawRecord.MaterializedRecord;
+                toDelete.Add(record);
+            }
+            else
+            {
+                if (topology.RelevantFor(newTag) && topology.Count == 1)
+                    return;
+
+                var record = rawRecord.MaterializedRecord;
+                record.Topology = new DatabaseTopology();
+                record.Topology.Members.Add(newTag);
+                toShrink.Add(record);
+            }
         }
 
         public unsafe void PutLocalState(TransactionOperationContext context, string thumbprint, BlittableJsonReaderObject value, CertificateDefinition certificateDefinition)

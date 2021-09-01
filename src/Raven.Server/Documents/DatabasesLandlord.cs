@@ -7,7 +7,6 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Nito.AsyncEx;
-using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
@@ -122,8 +121,9 @@ namespace Raven.Server.Documents
                                 await HandleSpecificClusterDatabaseChanged(
                                     shardRawRecord.DatabaseName, index, type, changeType, context, shardRawRecord);
                             }
-
-                            _shardedDatabases.TryRemove(rawRecord.DatabaseName, out var _);
+                     
+                            OnShardedDatabaseDelete?.Invoke(rawRecord.DatabaseName);
+                            OnShardedDatabaseDelete = null;
                         }
                         else
                         {
@@ -327,7 +327,17 @@ namespace Raven.Server.Documents
         public bool ShouldDeleteDatabase(TransactionOperationContext context, string dbName, RawDatabaseRecord rawRecord, bool fromReplication = false)
         {
             var index = ShardHelper.TryGetShardIndex(dbName);
-            var tag = index == -1 ? _serverStore.NodeTag : $"{_serverStore.NodeTag}${index}";
+            string tag;
+            bool sharded = false;
+            if (index == -1)
+            {
+                tag = _serverStore.NodeTag;
+            }
+            else
+            {
+                tag = $"{_serverStore.NodeTag}${index}";
+                sharded = true;
+            }
 
             var deletionInProgress = DeletionInProgressStatus.No;
             var directDelete = rawRecord.DeletionInProgress?.TryGetValue(tag, out deletionInProgress) == true &&
@@ -346,7 +356,19 @@ namespace Raven.Server.Documents
             context.CloseTransaction();
 
             DeleteDatabase(dbName, deletionInProgress, record);
+
+            if (sharded)
+            {
+                if (OnShardedDatabaseDelete == null)
+                    OnShardedDatabaseDelete += DatabasesLandlord_OnShardedDatabaseDelete;
+            }
+            
             return true;
+        }
+
+        private void DatabasesLandlord_OnShardedDatabaseDelete(string obj)
+        {
+            _shardedDatabases.TryRemove(obj, out var _);
         }
 
         public void DeleteDatabase(string dbName, DeletionInProgressStatus deletionInProgress, DatabaseRecord record)
@@ -555,6 +577,7 @@ namespace Raven.Server.Documents
         }
 
         public event Action<string> OnDatabaseLoaded = delegate { };
+        public event Action<string> OnShardedDatabaseDelete;
 
         public bool IsDatabaseLoaded(StringSegment databaseName)
         {
