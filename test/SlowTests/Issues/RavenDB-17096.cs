@@ -117,7 +117,6 @@ namespace SlowTests.Issues
 
                 await WaitAndAssertForValueAsync(() => GetMembersCount(src), 3);
 
-
                 using (var session = src.OpenSession())
                 {
                     session.Advanced.WaitForReplicationAfterSaveChanges(replicas: 2);
