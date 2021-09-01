@@ -60,6 +60,8 @@ Or like this if you have to close some outer block, for example:
 // here real implementations of mapDoc and reduceGroup functions start
 ...
 
+At that, make shure that you have available to Jint fully workable (without modern JS features) definitions of all the functions and other code that you use to return map and reduce expressions (if you use them).
+
 Don't use '//' comment lines in the stub block as the first occurences of '//' will be removed to get the stub code.
 
 MapDoc is optional as it is used for checking of map return statements' structure consistency only which can be omitted if you don't need it.
@@ -83,7 +85,8 @@ In case you want checking of map return statements' structure consistency to be 
 //}
 /*JINT_END*/
 
-2. Like this to switch off an irrelevant additional source or its part: the whole file if in the first line or its part if somewhere in the body
+2. Like this to switch off an irrelevant additional source or its part: the whole file if in the first line or its lower part if somewhere in the body.
+Actually, it is worth to switch off the whole file in case it does not contain map/reduce definitions for the index in place.
 /*JINT_END*/ // after this marker everything gets dropped for Jint
 ";
 
