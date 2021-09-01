@@ -9,6 +9,7 @@ namespace Raven.Server.Documents.Subscriptions.Stats
     public class SubscriptionBatchRunStats
     {
         public long TaskId { get; set; }
+        //TODO: egor add shard id / name
         public string TaskName { get; set; }
         
         public long ConnectionId { get; set; }

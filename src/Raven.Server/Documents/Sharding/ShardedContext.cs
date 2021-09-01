@@ -1,18 +1,22 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
+using Raven.Server.Documents.Sharding.Commands;
 using Raven.Server.Documents.Sharding.Documents;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding
 {
-    public unsafe class ShardedContext
+    public class ShardedContext
     {
         public const int NumberOfShards = 1024 * 1024;
         public ShardedSubscriptionContext ShardedSubscriptionStorage { get; }
@@ -50,6 +54,8 @@ namespace Raven.Server.Documents.Sharding
 
         public int Count => _record.Shards.Length;
 
+        public DatabaseTopology[] ShardsTopology => _record.Shards;
+
         /// <summary>
         /// The shard id is a hash of the document id, lower case, reduced to
         /// 20 bits. This gives us 0 .. 1M range of shard ids and means that assuming
@@ -57,7 +63,7 @@ namespace Raven.Server.Documents.Sharding
         /// per TB of overall db size. That means that even for *very* large databases, the
         /// size of the shard is still going to be manageable.
         /// </summary>
-        public int GetShardId(TransactionOperationContext context, string key)
+        public unsafe int GetShardId(TransactionOperationContext context, string key)
         {
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, key, out var lowerId, out _))
             {
@@ -74,7 +80,7 @@ namespace Raven.Server.Documents.Sharding
             }
         }
 
-        private static void AdjustAfterSeparator(byte expected, ref byte* ptr, ref int len)
+        private unsafe static void AdjustAfterSeparator(byte expected, ref byte* ptr, ref int len)
         {
             for (int i = len - 1; i > 0; i--)
             {
@@ -137,6 +143,38 @@ namespace Raven.Server.Documents.Sharding
                 list.Add(GetShardedDatabaseName(i));
             }
             return list;
+        }
+
+        public async Task<string> GetLastDocumentChangeVectorForCollection(string subCollection)
+        {
+            var disposables = new List<IDisposable>();
+            var cvs = new List<string>();
+            try
+            {
+                var cmds = new List<LastChangeVectorForCollectionCommand>();
+                var tasks = new List<Task>();
+                foreach (var re in RequestExecutors)
+                {
+                    disposables.Add(re.ContextPool.AllocateOperationContext(out JsonOperationContext ctx));
+
+                    var cmd = new LastChangeVectorForCollectionCommand(subCollection);
+                    cmds.Add(cmd);
+                    tasks.Add(re.ExecuteAsync(cmd, ctx));
+
+                }
+                await Task.WhenAll(tasks);
+                foreach (var cmd in cmds)
+                {
+                    //TODO: egor throw on failed request
+                    cvs.Add(cmd.Result.LastChangeVector);
+                }
+            }
+            finally
+            {
+                disposables.ForEach(x => x.Dispose());
+            }
+
+            return ChangeVectorUtils.MergeVectors(cvs);
         }
     }
 }

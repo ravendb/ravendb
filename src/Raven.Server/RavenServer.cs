@@ -2367,6 +2367,13 @@ namespace Raven.Server
                         ThrowDatabaseShutdown(tcp.DocumentDatabase);
 
                     tcp.DocumentDatabase.RunningTcpConnections.Add(tcp);
+
+                    if (ShardHelper.IsShardedName(tcp.DocumentDatabase.Name))
+                    {
+                        var shardedName = ShardHelper.ToDatabaseName(tcp.DocumentDatabase.Name);
+                        var shardedResult = ServerStore.DatabasesLandlord.TryGetOrCreateDatabase(shardedName);
+                        tcp.ShardedContext = shardedResult.ShardedContext;
+                    }
                     break;
                 case DatabasesLandlord.DatabaseSearchResult.Status.Missing:
                     DatabaseDoesNotExistException.Throw(header.DatabaseName);

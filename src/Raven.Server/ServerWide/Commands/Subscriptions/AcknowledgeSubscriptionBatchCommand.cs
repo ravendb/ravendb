@@ -1,9 +1,12 @@
 ﻿using System;
+using System.Linq;
 using Raven.Client;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.ServerWide;
+using Raven.Server.Documents.Replication;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -16,6 +19,9 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         public long SubscriptionId;
         public string SubscriptionName;
         public string NodeTag;
+        public string ShardName;
+        public string ShardDbId;
+        public string ShardLocalChangeVector;
         public bool HasHighlyAvailableTasks;
         public DateTime LastTimeServerMadeProgressWithDocuments;
 
@@ -31,6 +37,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         protected override BlittableJsonReaderObject GetUpdatedValue(long index, RawDatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue)
         {
             var subscriptionName = SubscriptionName;
+            var isSharded = ShardName != null;
             if (string.IsNullOrEmpty(subscriptionName))
             {
                 subscriptionName = SubscriptionId.ToString();
@@ -40,8 +47,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                 throw new SubscriptionDoesNotExistException($"Subscription with name '{subscriptionName}' does not exist");
 
             var subscription = JsonDeserializationCluster.SubscriptionState(existingValue);
-
-            var topology = record.Topology;
+            var topology = ShardName == null ? record.Topology : record.Shards[ShardHelper.TryGetShardIndex(ShardName)];
             var lastResponsibleNode = GetLastResponsibleNode(HasHighlyAvailableTasks, topology, NodeTag);
             var appropriateNode = topology.WhoseTaskIsIt(RachisState.Follower, subscription, lastResponsibleNode);
             if (appropriateNode == null && record.DeletionInProgress.ContainsKey(NodeTag))
@@ -60,10 +66,60 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                 return context.ReadObject(existingValue, SubscriptionName);
             }
 
-            if (LastKnownSubscriptionChangeVector != subscription.ChangeVectorForNextBatchStartingPoint)
-                throw new SubscriptionChangeVectorUpdateConcurrencyException($"Can't acknowledge subscription with name '{subscriptionName}' due to inconsistency in change vector progress. Probably there was an admin intervention that changed the change vector value. Stored value: {subscription.ChangeVectorForNextBatchStartingPoint}, received value: {LastKnownSubscriptionChangeVector}");
+            if (isSharded)
+            {
+                if (string.IsNullOrEmpty(LastKnownSubscriptionChangeVector))
+                {
+                    if (string.IsNullOrEmpty(subscription.ChangeVectorForNextBatchStartingPoint))
+                    {
+                        // can update
+                    }
+                    else
+                    {
+                        var currentLocalShardCv = ShardLocalChangeVector.ToChangeVector();
+                        var currentCvInStorage = subscription.ChangeVectorForNextBatchStartingPoint.ToChangeVector();
 
-            subscription.ChangeVectorForNextBatchStartingPoint = ChangeVector;
+                        foreach (var entry in currentLocalShardCv)
+                        {
+                            if (currentCvInStorage.Any(x => x.DbId == entry.DbId))
+                                throw new SubscriptionChangeVectorUpdateConcurrencyException($"Can't acknowledge sharded subscription with name '{subscriptionName}' due to inconsistency in change vector progress. Probably there was an admin intervention that changed the change vector value. Stored value: {subscription.ChangeVectorForNextBatchStartingPoint}, received value: {LastKnownSubscriptionChangeVector}");
+                        }
+                    }
+                }
+                else
+                {
+                    if (string.IsNullOrEmpty(subscription.ChangeVectorForNextBatchStartingPoint))
+                    {
+                        throw new SubscriptionChangeVectorUpdateConcurrencyException($"Can't acknowledge sharded subscription with name '{subscriptionName}' due to inconsistency in change vector progress. Probably there was an admin intervention that changed the change vector value. Stored value: {subscription.ChangeVectorForNextBatchStartingPoint}, received value: {LastKnownSubscriptionChangeVector}");
+                    }
+                    else
+                    {
+                        var currentCvInStorage = subscription.ChangeVectorForNextBatchStartingPoint.ToChangeVector();
+                        var currentCvInCommand = LastKnownSubscriptionChangeVector.ToChangeVector();
+                        var currentLocalShardCv = ShardLocalChangeVector.ToChangeVector();
+
+                        foreach (var entry in currentLocalShardCv)
+                        {
+                            var lastStorageCv = currentCvInStorage.FirstOrDefault(x => x.DbId == entry.DbId);
+                            var lastCommandCv = currentCvInCommand.FirstOrDefault(x => x.DbId == entry.DbId);
+                            if (lastStorageCv.Equals(lastCommandCv) == false)
+                            {
+                                throw new SubscriptionChangeVectorUpdateConcurrencyException($"Can't acknowledge sharded subscription with name '{subscriptionName}' due to inconsistency in change vector progress. Probably there was an admin intervention that changed the change vector value. Stored value: {subscription.ChangeVectorForNextBatchStartingPoint}, received value: {LastKnownSubscriptionChangeVector}");
+                            }
+                        }
+                    }
+                }
+
+                subscription.ChangeVectorForNextBatchStartingPoint = ChangeVectorUtils.MergeVectors(ChangeVector, subscription.ChangeVectorForNextBatchStartingPoint);
+            }
+            else
+            {
+                if (LastKnownSubscriptionChangeVector != subscription.ChangeVectorForNextBatchStartingPoint)
+                    throw new SubscriptionChangeVectorUpdateConcurrencyException($"Can't acknowledge subscription with name '{subscriptionName}' due to inconsistency in change vector progress. Probably there was an admin intervention that changed the change vector value. Stored value: {subscription.ChangeVectorForNextBatchStartingPoint}, received value: {LastKnownSubscriptionChangeVector}");
+
+                subscription.ChangeVectorForNextBatchStartingPoint = ChangeVector;
+            }
+
             subscription.NodeTag = NodeTag;
             subscription.LastBatchAckTime = LastTimeServerMadeProgressWithDocuments;
 
@@ -96,6 +152,9 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             json[nameof(HasHighlyAvailableTasks)] = HasHighlyAvailableTasks;
             json[nameof(LastTimeServerMadeProgressWithDocuments)] = LastTimeServerMadeProgressWithDocuments;
             json[nameof(LastKnownSubscriptionChangeVector)] = LastKnownSubscriptionChangeVector;
+            json[nameof(ShardName)] = ShardName;
+            json[nameof(ShardDbId)] = ShardDbId;
+            json[nameof(ShardLocalChangeVector)] = ShardLocalChangeVector;
         }
 
         public override string AdditionalDebugInformation(Exception exception)

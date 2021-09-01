@@ -28,6 +28,17 @@ namespace Raven.Server.Documents.Replication
 
         public bool Equals(ChangeVectorEntry other)
         {
+            if (DbId == null)
+            {
+                if (other.DbId == null)
+                    return Etag == other.Etag;
+
+                return false;
+            }
+
+            if (other.DbId == null)
+                return false;
+
             return DbId.Equals(other.DbId) && Etag == other.Etag;
         }
 

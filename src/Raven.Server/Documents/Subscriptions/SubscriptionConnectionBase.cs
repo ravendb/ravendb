@@ -68,10 +68,12 @@ namespace Raven.Server.Documents.Subscriptions
         public DisposeOnce<SingleAttempt> DisposeOnDisconnect;
         public long SubscriptionId { get; set; }
         public SubscriptionOpeningStrategy Strategy => Options.Strategy;
+        public string Database;
+        public ShardData Shard;
 
         internal SubscriptionConnectionStatsAggregator _lastConnectionStats; // inProgress connection data
         internal SubscriptionBatchStatsAggregator _lastBatchStats; // inProgress batch data
-      
+
         protected SubscriptionConnectionBase(TcpConnectionOptions connectionOptions, ServerStore serverStore, JsonOperationContext.MemoryBuffer memoryBuffer, IDisposable tcpConnectionDisposable)
         {
             TcpConnection = connectionOptions;
@@ -96,14 +98,17 @@ namespace Raven.Server.Documents.Subscriptions
 
         public void UpdateBatchPerformanceStats(long batchSize, bool anyDocumentsSent = true)
         {
-            _lastBatchStats.Complete();
-
-            if (anyDocumentsSent)
+            if (_lastBatchStats != null)
             {
-                _connectionScope.RecordBatchCompleted(batchSize);
+                _lastBatchStats.Complete();
 
-                AddBatchPerformanceStatsToBatchesHistory(_lastBatchStats);
-                TcpConnection.DocumentDatabase.SubscriptionStorage.RaiseNotificationForBatchEnded(_options.SubscriptionName, _lastBatchStats);
+                if (anyDocumentsSent)
+                {
+                    _connectionScope.RecordBatchCompleted(batchSize);
+
+                    AddBatchPerformanceStatsToBatchesHistory(_lastBatchStats);
+                    TcpConnection.DocumentDatabase.SubscriptionStorage.RaiseNotificationForBatchEnded(_options.SubscriptionName, _lastBatchStats);
+                }
             }
 
             _lastBatchStats = null;
@@ -159,7 +164,7 @@ namespace Raven.Server.Documents.Subscriptions
             _tcpConnection.RegisterBytesSent(writtenBytes);
         }
 
-        internal static async Task ReportExceptionToClient(ServerStore server, TcpConnectionOptions tcpConnectionOptions, SubscriptionConnection connection, Exception ex, Logger logger, int recursionDepth = 0)
+        internal static async Task ReportExceptionToClient(ServerStore server, TcpConnectionOptions tcpConnectionOptions, SubscriptionConnectionBase connection, Exception ex, Logger logger, int recursionDepth = 0)
         {
             if (recursionDepth == 2)
                 return;
@@ -396,6 +401,7 @@ namespace Raven.Server.Documents.Subscriptions
             try
             {
                 await TcpConnection.Stream.WriteAsync(Heartbeat, 0, Heartbeat.Length, CancellationTokenSource.Token);
+                await TcpConnection.Stream.FlushAsync();
 
                 if (_logger.IsInfoEnabled)
                 {
@@ -778,5 +784,12 @@ namespace Raven.Server.Documents.Subscriptions
             public string[] CounterIncludes;
             internal TimeSeriesIncludesField TimeSeriesIncludes;
         }
+    }
+
+    public class ShardData
+    {
+        public string DatabaseId;
+        public string ShardName;
+        public string LocalChangeVector;
     }
 }

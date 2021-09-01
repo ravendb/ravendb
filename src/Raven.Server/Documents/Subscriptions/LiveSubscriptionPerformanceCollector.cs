@@ -43,7 +43,7 @@ namespace Raven.Server.Documents.Subscriptions
             using (Database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var subscriptions = Database.SubscriptionStorage.GetAllSubscriptions(context, false, 0, int.MaxValue);
+                var subscriptions = Database.SubscriptionStorage.GetAllSubscriptions(context, Database.Name, history: false, start: 0, take: int.MaxValue);
                 foreach (var subscription in subscriptions)
                 {
                     var subscriptionName = subscription.SubscriptionName;
@@ -248,17 +248,17 @@ namespace Raven.Server.Documents.Subscriptions
         }
         
         private class SubscriptionAndPerformanceConnectionStatsList
-            : HandlerAndPerformanceStatsList<SubscriptionStorage.SubscriptionGeneralDataAndStats, SubscriptionConnectionStatsAggregator>
+            : HandlerAndPerformanceStatsList<SubscriptionGeneralDataAndStats, SubscriptionConnectionStatsAggregator>
         {
-            public SubscriptionAndPerformanceConnectionStatsList(SubscriptionStorage.SubscriptionGeneralDataAndStats subscription) : base(subscription)
+            public SubscriptionAndPerformanceConnectionStatsList(SubscriptionGeneralDataAndStats subscription) : base(subscription)
             {
             }
         }
         
         private class SubscriptionAndPerformanceBatchStatsList
-            : HandlerAndPerformanceStatsList<SubscriptionStorage.SubscriptionGeneralDataAndStats, SubscriptionBatchStatsAggregator>
+            : HandlerAndPerformanceStatsList<SubscriptionGeneralDataAndStats, SubscriptionBatchStatsAggregator>
         {
-            public SubscriptionAndPerformanceBatchStatsList(SubscriptionStorage.SubscriptionGeneralDataAndStats subscription) : base(subscription)
+            public SubscriptionAndPerformanceBatchStatsList(SubscriptionGeneralDataAndStats subscription) : base(subscription)
             {
             }
         }
@@ -282,7 +282,7 @@ namespace Raven.Server.Documents.Subscriptions
             using (Database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var subscription = Database.SubscriptionStorage.GetSubscription(context, null, subscriptionName, true);
+                var subscription = Database.SubscriptionStorage.GetSubscription(context, id: null, Database.Name, subscriptionName, true);
                 _perSubscriptionConnectionStats.TryAdd(subscriptionName, new SubscriptionAndPerformanceConnectionStatsList(subscription));
                 
                 if (_perSubscriptionBatchStats.ContainsKey(subscriptionName))

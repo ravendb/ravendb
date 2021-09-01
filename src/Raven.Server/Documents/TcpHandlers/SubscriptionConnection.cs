@@ -68,9 +68,20 @@ namespace Raven.Server.Documents.TcpHandlers
 
         private async Task InitAsync()
         {
+            if (TcpConnection.ShardedContext == null)
+            {
+                Database = TcpConnection.DocumentDatabase.Name;
+                Shard = null;
+            }
+            else
+            {
+                Database = TcpConnection.ShardedContext.DatabaseName;
+                Shard = new ShardData { ShardName = TcpConnection.DocumentDatabase.Name, DatabaseId = TcpConnection.DocumentDatabase.DbBase64Id };
+            }
+
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                (SubscriptionWorkerOptions subscriptionWorkerOptions, long? id) = await ParseSubscriptionOptionsAsync(context, _serverStore, TcpConnection, _copiedBuffer.Buffer, TcpConnection.DocumentDatabase.Name, CancellationTokenSource.Token);
+                (SubscriptionWorkerOptions subscriptionWorkerOptions, long? id) = await ParseSubscriptionOptionsAsync(context, _serverStore, TcpConnection, _copiedBuffer.Buffer, Database, CancellationTokenSource.Token);
                 _options = subscriptionWorkerOptions;
                 if (id.HasValue)
                     SubscriptionId = id.Value;
@@ -84,7 +95,7 @@ namespace Raven.Server.Documents.TcpHandlers
             }
 
             // first, validate details and make sure subscription exists
-            SubscriptionState = await TcpConnection.DocumentDatabase.SubscriptionStorage.AssertSubscriptionConnectionDetails(SubscriptionId, _options.SubscriptionName, CancellationTokenSource.Token);
+            SubscriptionState = await TcpConnection.DocumentDatabase.SubscriptionStorage.AssertSubscriptionConnectionDetails(SubscriptionId, _options.SubscriptionName, Database, CancellationTokenSource.Token);
             Subscription = ParseSubscriptionQuery(SubscriptionState.Query);
 
             if (_supportedFeatures.Subscription.Includes == false)
@@ -113,11 +124,11 @@ namespace Raven.Server.Documents.TcpHandlers
                 _activeConnectionScope = _connectionScope.For(SubscriptionOperationScope.ConnectionActive);
 
                 // refresh subscription data (change vector may have been updated, because in the meanwhile, another subscription could have just completed a batch)
-                SubscriptionState = await TcpConnection.DocumentDatabase.SubscriptionStorage.AssertSubscriptionConnectionDetails(SubscriptionId, _options.SubscriptionName, CancellationTokenSource.Token);
+                SubscriptionState = await TcpConnection.DocumentDatabase.SubscriptionStorage.AssertSubscriptionConnectionDetails(SubscriptionId, _options.SubscriptionName, Database, CancellationTokenSource.Token);
 
                 Subscription = ParseSubscriptionQuery(SubscriptionState.Query);
 
-                await SendNoopAck(TcpConnection, SubscriptionId, Options.SubscriptionName);
+                await SendNoopAck(TcpConnection, SubscriptionId, Options.SubscriptionName, Database, Shard);
                 await WriteJsonAsync(new DynamicJsonValue
                 {
                     [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.ConnectionStatus),
@@ -125,7 +136,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 }, TcpConnection);
 
                 await TcpConnection.DocumentDatabase.SubscriptionStorage.UpdateClientConnectionTime(SubscriptionState.SubscriptionId,
-                    SubscriptionState.SubscriptionName, SubscriptionState.MentorNode);
+                    SubscriptionState.SubscriptionName, Database, Shard, SubscriptionState.MentorNode);
             }
             catch
             {
@@ -289,7 +300,6 @@ namespace Raven.Server.Documents.TcpHandlers
                 var replyFromClientTask = GetReplyFromClientAsync(TcpConnection, _copiedBuffer.Buffer, _isDisposed);
 
                 string subscriptionChangeVectorBeforeCurrentBatch = SubscriptionState.ChangeVectorForNextBatchStartingPoint;
-
                 _startEtag = GetStartEtagForSubscription(SubscriptionState);
                 _filterAndProjectionScript = SetupFilterAndProjectionScript();
                 var useRevisions = Subscription.Revisions;
@@ -310,7 +320,7 @@ namespace Raven.Server.Documents.TcpHandlers
                             {
                                 var sendingCurrentBatchStopwatch = Stopwatch.StartNew();
 
-                                var anyDocumentsSentInCurrentIteration = await TrySendingBatchToClient(docsContext, sendingCurrentBatchStopwatch, batchScope, inProgressBatchStats);
+                                var anyDocumentsSentInCurrentIteration = await TrySendingBatchToClient(docsContext, sendingCurrentBatchStopwatch, batchScope, inProgressBatchStats.Id);
 
                                 if (anyDocumentsSentInCurrentIteration == false)
                                 {
@@ -320,7 +330,7 @@ namespace Raven.Server.Documents.TcpHandlers
                                     }
                                     AddToStatusDescription($"Acknowledging docs processing progress without sending any documents to client. CV: {_lastChangeVector}");
 
-                                    await TcpConnection.DocumentDatabase.SubscriptionStorage.AcknowledgeBatchProcessed(SubscriptionId,
+                                    await TcpConnection.DocumentDatabase.SubscriptionStorage.AcknowledgeBatchProcessed(Database, Shard, SubscriptionId,
                                         Options.SubscriptionName,
                                         // if this is a new subscription that we sent anything in this iteration,
                                         // _lastChangeVector is null, so let's not change it
@@ -347,7 +357,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
                                     AssertCloseWhenNoDocsLeft();
 
-                                    if (await WaitForChangedDocuments(replyFromClientTask))
+                                    if (await WaitForChangedDocuments(replyFromClientTask, docsContext))
                                         continue;
                                 }
                             }
@@ -357,7 +367,7 @@ namespace Raven.Server.Documents.TcpHandlers
                                 (replyFromClientTask, subscriptionChangeVectorBeforeCurrentBatch) =
                                     await WaitForClientAck(replyFromClientTask, subscriptionChangeVectorBeforeCurrentBatch);
                             }
-
+                            //TODO: egor _lastBatchStats = null here sometimes
                             UpdateBatchPerformanceStats(batchScope.GetBatchSize());
                         }
                         catch (Exception e)
@@ -410,15 +420,14 @@ namespace Raven.Server.Documents.TcpHandlers
                 }
                 
                 await SendHeartBeat("Waiting for client ACK");
-                await SendNoopAck(TcpConnection, SubscriptionId, Options.SubscriptionName);
+                await SendNoopAck(TcpConnection, SubscriptionId, Options.SubscriptionName, Database, Shard);
             }
 
             CancellationTokenSource.Token.ThrowIfCancellationRequested();
-
             switch (clientReply.Type)
             {
                 case SubscriptionConnectionClientMessage.MessageType.Acknowledge:
-                    await TcpConnection.DocumentDatabase.SubscriptionStorage.AcknowledgeBatchProcessed(
+                    await TcpConnection.DocumentDatabase.SubscriptionStorage.AcknowledgeBatchProcessed(Database, Shard,
                         SubscriptionId,
                         Options.SubscriptionName,
                         _lastChangeVector,
@@ -453,14 +462,14 @@ namespace Raven.Server.Documents.TcpHandlers
         /// <param name="sendingCurrentBatchStopwatch"></param>
         /// <returns>Whether succeeded finding any documents to send</returns>
         private async Task<bool> TrySendingBatchToClient(DocumentsOperationContext docsContext, Stopwatch sendingCurrentBatchStopwatch,
-            SubscriptionBatchStatsScope batchScope, SubscriptionBatchStatsAggregator batchStatsAggregator)
+            SubscriptionBatchStatsScope batchScope, int subscriptionBatchStatsId)
         {
             AddToStatusDescription("Start trying to send docs to client");
             bool anyDocumentsSentInCurrentIteration = false;
 
             using (batchScope.For(SubscriptionOperationScope.BatchSendDocuments))
             {
-                batchScope.RecordBatchInfo(_connectionState.Connection.SubscriptionId, _connectionState.SubscriptionName, _connectionState.Connection._connectionStatsIdForConnection, batchStatsAggregator.Id);
+                batchScope.RecordBatchInfo(_connectionState.Connection.SubscriptionId, _connectionState.SubscriptionName, _connectionState.Connection._connectionStatsIdForConnection, subscriptionBatchStatsId);
 
                 int docsToFlush = 0;
 
@@ -487,7 +496,8 @@ namespace Raven.Server.Documents.TcpHandlers
                             _lastChangeVector = string.IsNullOrEmpty(SubscriptionState.ChangeVectorForNextBatchStartingPoint)
                                 ? result.Doc.ChangeVector
                                 : ChangeVectorUtils.MergeVectors(result.Doc.ChangeVector, SubscriptionState.ChangeVectorForNextBatchStartingPoint);
-
+                            if (Shard != null)
+                                Shard.LocalChangeVector = result.Doc.ChangeVector;
                             if (result.Doc.Data == null)
                             {
                                 if (sendingCurrentBatchStopwatch.ElapsedMilliseconds > 1000)
@@ -637,39 +647,38 @@ namespace Raven.Server.Documents.TcpHandlers
                 if (string.IsNullOrEmpty(subscription.ChangeVectorForNextBatchStartingPoint))
                     return startEtag;
 
-                long etag;
                 var changeVector = subscription.ChangeVectorForNextBatchStartingPoint.ToChangeVector();
-                if (ShardHelper.IsShardedName(TcpConnection.DocumentDatabase.Name))
-                {
-                    // check if cv is part of the shards
-                    var dbName = ShardHelper.ToDatabaseName(TcpConnection.DocumentDatabase.Name);
-                    var result = TcpConnection.DocumentDatabase.ServerStore.DatabasesLandlord.TryGetOrCreateDatabase(dbName);
-                    if (result.DatabaseStatus == DatabasesLandlord.DatabaseSearchResult.Status.Sharded)
-                    {
-                        for (int i = 0; i < result.ShardedContext.Count; i++)
-                        {
-                            var db = TcpConnection.DocumentDatabase.ServerStore.DatabasesLandlord.TryGetOrCreateDatabase(result.ShardedContext.GetShardedDatabaseName(i)).DatabaseTask.Result;
-                            foreach (var part in changeVector)
-                            {
-                                if (part.DbId == db.DbBase64Id && part.Etag != 0)
-                                {
-                                    return part.Etag;
-                                }
-                            }
-                        }
-                    }
-                }
-
                 var cv = changeVector.FirstOrDefault(x => x.DbId == TcpConnection.DocumentDatabase.DbBase64Id);
-                etag = cv.Etag;
                 if (cv.DbId == "" && cv.Etag == 0 && cv.NodeTag == 0)
                     return startEtag;
-
-                return etag;
+                return cv.Etag;
             }
         }
 
+        private async Task TryFlushEmptyBatchToClient(JsonOperationContext docsContext)
+        {
+            if (Shard == null)
+                return;
 
+            CancellationTokenSource.Token.ThrowIfCancellationRequested();
+
+            if (_logger.IsInfoEnabled)
+            {
+                _logger.Info($"Flushing empty batch for sharded subscription '{SubscriptionId}' sending to '{TcpConnection.TcpClient.Client.RemoteEndPoint}'.");
+            }
+
+            await using (var writer = new AsyncBlittableJsonTextWriter(docsContext, _buffer))
+            {
+                writer.WriteStartObject();
+                writer.WritePropertyName(nameof(SubscriptionConnectionServerMessage.Type));
+                writer.WriteString(nameof(SubscriptionConnectionServerMessage.MessageType.EndOfBatch));
+                writer.WriteEndObject();
+                await writer.FlushAsync();
+            }
+            var bufferSize = _buffer.Length;
+            await FlushBufferToNetwork();
+            TcpConnection.RegisterBytesSent(bufferSize);
+        }
 
         private async Task FlushDocsToClient(AsyncBlittableJsonTextWriter writer, int flushedDocs, bool endOfBatch = false)
         {
@@ -690,7 +699,7 @@ namespace Raven.Server.Documents.TcpHandlers
             TcpConnection.RegisterBytesSent(bufferSize);
         }
 
-        private async Task<bool> WaitForChangedDocuments(Task pendingReply)
+        private async Task<bool> WaitForChangedDocuments(Task pendingReply, JsonOperationContext docsContext)
         {
             AddToStatusDescription("Start waiting for changed documents");
             do
@@ -709,15 +718,20 @@ namespace Raven.Server.Documents.TcpHandlers
                     return true;
                 }
 
-                await SendHeartBeat("Waiting for changed documents");
-                await SendNoopAck(TcpConnection, SubscriptionId, Options.SubscriptionName);
+                await TryFlushEmptyBatchToClient(docsContext);
+                if (Shard == null)
+                    await SendHeartBeat("Waiting for changed documents");
+
+                await SendNoopAck(TcpConnection, SubscriptionId, Options.SubscriptionName, Database, Shard);
             } while (CancellationTokenSource.IsCancellationRequested == false);
             return false;
         }
 
-        internal static async Task SendNoopAck(TcpConnectionOptions tcpConnection, long subscriptionId, string subscriptionName)
+        internal static async Task SendNoopAck(TcpConnectionOptions tcpConnection, long subscriptionId, string subscriptionName, string database, ShardData shardData)
         {
             await tcpConnection.DocumentDatabase.SubscriptionStorage.AcknowledgeBatchProcessed(
+                database,
+                shardData,
                 subscriptionId,
                 subscriptionName,
                 nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange),
