@@ -12,7 +12,7 @@ namespace Raven.Client.Documents.Operations.ETL.ElasticSearch
         {
             ElasticIndexes = new List<ElasticSearchIndex>();
         }
-        
+
         public List<ElasticSearchIndex> ElasticIndexes { get; set; }
         
         public override string GetDestination()
@@ -44,18 +44,7 @@ namespace Raven.Client.Documents.Operations.ETL.ElasticSearch
     {
         public string IndexName { get; set; }
         public string IndexIdProperty { get; set; }
-
-        protected bool Equals(ElasticSearchIndex other)
-        {
-            return string.Equals(IndexName, other.IndexName, StringComparison.OrdinalIgnoreCase) &&
-                   string.Equals(IndexIdProperty, other.IndexIdProperty, StringComparison.OrdinalIgnoreCase);
-        }
         
-        public override int GetHashCode()
-        {
-            return base.GetHashCode();
-        }
-
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
