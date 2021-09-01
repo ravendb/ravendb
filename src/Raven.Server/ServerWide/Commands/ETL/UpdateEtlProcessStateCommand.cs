@@ -102,7 +102,9 @@ namespace Raven.Server.ServerWide.Commands.ETL
                 };
             }
 
-            etlState.LastProcessedEtagPerDbId[DbId] = LastProcessedEtag;
+            if (DbId != null)
+                etlState.LastProcessedEtagPerDbId[DbId] = LastProcessedEtag;
+
             etlState.ChangeVector = ChangeVector;
             etlState.NodeTag = NodeTag;
 

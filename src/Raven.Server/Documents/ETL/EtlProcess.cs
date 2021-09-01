@@ -5,7 +5,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading;
-using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.Counters;
@@ -622,7 +621,7 @@ namespace Raven.Server.Documents.ETL
 
                     var state  = _lastProcessState = GetProcessState(Database, Configuration.Name, Transformation.Name);
 
-                    var loadLastProcessedEtag = state.GetLastProcessedEtagForDbId(Database.DbBase64Id);
+                    var loadLastProcessedEtag = state.GetLastProcessedEtag(Database.DbBase64Id, _serverStore.NodeTag);
 
                     using (Statistics.NewBatch())
                     using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -1071,7 +1070,7 @@ namespace Raven.Server.Documents.ETL
             long counterGroupsToProcess = 0;
             long totalCounterGroupsCount = 0;
 
-            var lastProcessedEtag = _lastProcessState.GetLastProcessedEtagForDbId(Database.DbBase64Id);
+            var lastProcessedEtag = _lastProcessState.GetLastProcessedEtag(Database.DbBase64Id, Database.ServerStore.NodeTag);
 
             foreach (var collection in collections)
             {

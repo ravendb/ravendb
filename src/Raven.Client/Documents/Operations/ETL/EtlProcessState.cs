@@ -19,15 +19,21 @@ namespace Raven.Client.Documents.Operations.ETL
 
         public Dictionary<string, long> LastProcessedEtagPerDbId { get; set; }
 
+        public Dictionary<string, long> LastProcessedEtagPerNode { get; set; }
+
         public string ChangeVector { get; set; }
 
         public string NodeTag { get; set; }
 
-        public long GetLastProcessedEtagForDbId(string dbId)
+        public long GetLastProcessedEtag(string dbId, string nodeTag)
         {
             if (LastProcessedEtagPerDbId.TryGetValue(dbId, out var etag))
                 return etag;
-
+            
+            if (LastProcessedEtagPerNode != null && LastProcessedEtagPerNode.TryGetValue(nodeTag, out etag))
+                // legacy EtlProcessState
+                return etag;
+            
             return 0;
         }
 
@@ -38,6 +44,7 @@ namespace Raven.Client.Documents.Operations.ETL
                 [nameof(ConfigurationName)] = ConfigurationName,
                 [nameof(TransformationName)] = TransformationName,
                 [nameof(LastProcessedEtagPerDbId)] = LastProcessedEtagPerDbId.ToJson(),
+                [nameof(LastProcessedEtagPerNode)] = LastProcessedEtagPerNode.ToJson(),
                 [nameof(ChangeVector)] = ChangeVector,
                 [nameof(NodeTag)] = NodeTag
             };
