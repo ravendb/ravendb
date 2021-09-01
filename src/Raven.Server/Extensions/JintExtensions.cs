@@ -45,6 +45,7 @@ namespace Raven.Server.Extensions
 
         public static string JintStubInstruction = 
 @"To use some of the modern JS features like optional chaining you should add stubs for map and/or reduce functions and/or switch off whole additional sources with implementation details that are not used in the stubs.
+Also please make shure that you have available to Jint fully workable (without modern JS features) definitions of all the functions and other code that you use to return map and reduce expressions (if you use them).
 
 1. Like this before real implementations of mapDoc and reduceGroup functions for doc and grouping:
 map(colName, mapDoc)
@@ -59,8 +60,6 @@ Or like this if you have to close some outer block, for example:
 /*JINT_END*/ // starting from this marker everything gets dropped for Jint
 // here real implementations of mapDoc and reduceGroup functions start
 ...
-
-At that, make shure that you have available to Jint fully workable (without modern JS features) definitions of all the functions and other code that you use to return map and reduce expressions (if you use them).
 
 Don't use '//' comment lines in the stub block as the first occurences of '//' will be removed to get the stub code.
 
