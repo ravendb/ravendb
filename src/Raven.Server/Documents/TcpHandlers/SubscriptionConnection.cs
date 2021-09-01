@@ -70,7 +70,7 @@ namespace Raven.Server.Documents.TcpHandlers
         {
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                (SubscriptionWorkerOptions subscriptionWorkerOptions, long? id) = await ParseSubscriptionOptionsAsync(context, _serverStore, TcpConnection, _copiedBuffer.Buffer, TcpConnection.DocumentDatabase.Name, CancellationTokenSource.TokenCancellationTokenSource.Token);
+                (SubscriptionWorkerOptions subscriptionWorkerOptions, long? id) = await ParseSubscriptionOptionsAsync(context, _serverStore, TcpConnection, _copiedBuffer.Buffer, TcpConnection.DocumentDatabase.Name, CancellationTokenSource.Token);
                 _options = subscriptionWorkerOptions;
                 if (id.HasValue)
                     SubscriptionId = id.Value;

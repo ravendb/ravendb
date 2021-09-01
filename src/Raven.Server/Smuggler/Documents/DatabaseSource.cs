@@ -502,7 +502,7 @@ namespace Raven.Server.Smuggler.Documents
         {
             Debug.Assert(_serverContext != null);
 
-            return _database.SubscriptionStorage.GetAllSubscriptions(_serverContext, false, 0, int.MaxValue).ToAsyncEnumerable();
+            return _database.SubscriptionStorage.GetAllSubscriptions(_serverContext, _database.Name, false, 0, int.MaxValue).ToAsyncEnumerable();
         }
 
 #pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
