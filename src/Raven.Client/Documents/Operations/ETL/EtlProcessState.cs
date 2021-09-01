@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Sparrow.Json.Parsing;
@@ -19,6 +20,7 @@ namespace Raven.Client.Documents.Operations.ETL
 
         public Dictionary<string, long> LastProcessedEtagPerDbId { get; set; }
 
+        [Obsolete("Was used in older versions, replaced by 'LastProcessedEtagPerDbId'")]
         public Dictionary<string, long> LastProcessedEtagPerNode { get; set; }
 
         public string ChangeVector { get; set; }
@@ -30,7 +32,9 @@ namespace Raven.Client.Documents.Operations.ETL
             if (LastProcessedEtagPerDbId.TryGetValue(dbId, out var etag))
                 return etag;
             
+#pragma warning disable 618
             if (LastProcessedEtagPerNode != null && LastProcessedEtagPerNode.TryGetValue(nodeTag, out etag))
+#pragma warning restore 618
                 // legacy EtlProcessState
                 return etag;
             
@@ -44,7 +48,7 @@ namespace Raven.Client.Documents.Operations.ETL
                 [nameof(ConfigurationName)] = ConfigurationName,
                 [nameof(TransformationName)] = TransformationName,
                 [nameof(LastProcessedEtagPerDbId)] = LastProcessedEtagPerDbId.ToJson(),
-                [nameof(LastProcessedEtagPerNode)] = LastProcessedEtagPerNode.ToJson(),
+                [nameof(LastProcessedEtagPerNode)] = LastProcessedEtagPerNode?.ToJson(),
                 [nameof(ChangeVector)] = ChangeVector,
                 [nameof(NodeTag)] = NodeTag
             };
