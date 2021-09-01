@@ -213,7 +213,6 @@ namespace Raven.Server.Indexing
 
         protected override void Dispose(bool disposing)
         {
-            TempFileCache.Dispose();
         }
 
         public void ResetAllocations()

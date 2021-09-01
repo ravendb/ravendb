@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Concurrent;
 using System.IO;
-using System.Threading;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Sparrow.Global;
@@ -40,14 +39,7 @@ namespace Raven.Server.Indexing
                 var info = new FileInfo(file);
                 if (info.Length > MaxFileSizeToKeepInBytes || _files.Count >= MaxFilesToKeepInCache)
                 {
-                    try
-                    {
-                        File.Delete(file);
-                    }
-                    catch (IOException)
-                    {
-                        // if can't delete, just ignore it.
-                    }
+                    IOExtensions.DeleteFile(file);
                 }
                 else
                 {
