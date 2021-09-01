@@ -1,21 +1,35 @@
 ﻿using System;
-using System.Buffers;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using Lucene.Net.Documents;
 using Raven.Client.Documents.Indexes;
-using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
-using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields;
 using Raven.Server.Documents.Indexes.Static;
+using Raven.Server.Json;
+using Sparrow;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Indexes.Persistence
 {
-    public class ConverterBase
+    public abstract class ConverterBase : IDisposable
     {
-        protected bool IsArrayOfTypeValueObject(BlittableJsonReaderObject val)
+        protected readonly BlittableJsonTraverser _blittableTraverser;
+        protected readonly Index _index;
+        protected readonly Dictionary<string, IndexField> _fields;
+
+        public ConverterBase(Index index, bool storeValue)
+        {
+            _index = index ?? throw new ArgumentNullException(nameof(index));
+            _index = index;
+            _blittableTraverser = storeValue ? BlittableJsonTraverser.FlatMapReduceResults : BlittableJsonTraverser.Default;
+            var fields = index.Definition.IndexFields.Values;
+            var dictionary = new Dictionary<string, IndexField>(fields.Count, OrdinalStringStructComparer.Instance);
+            foreach (var field in fields)
+                dictionary[field.Name] = field;
+            _fields = dictionary;
+        }
+        
+        protected static bool IsArrayOfTypeValueObject(BlittableJsonReaderObject val)
         {
             foreach (var propertyName in val.GetPropertyNames())
             {
@@ -195,5 +209,7 @@ namespace Raven.Server.Documents.Indexes.Persistence
 
             Stream
         }
+
+        public abstract void Dispose();
     }
 }

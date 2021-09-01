@@ -4911,6 +4911,8 @@ namespace Raven.Server.Documents.Indexes
                 //todo maciej
                 return 0;
             }
+
+            LuceneIndexPersistence indexPersistence = (LuceneIndexPersistence)IndexPersistence;
             if (Directory.Exists(path) == false)
                 Directory.CreateDirectory(path);
 
@@ -4919,13 +4921,13 @@ namespace Raven.Server.Documents.Indexes
             {
                 var state = new Indexing.VoronState(tx);
 
-                var files = IndexPersistence.LuceneDirectory.ListAll(state);
+                var files = indexPersistence.LuceneDirectory.ListAll(state);
                 var currentFile = 0;
                 var buffer = new byte[64 * 1024];
                 var sp = Stopwatch.StartNew();
                 foreach (var file in files)
                 {
-                    using (var input = IndexPersistence.LuceneDirectory.OpenInput(file, state))
+                    using (var input = indexPersistence.LuceneDirectory.OpenInput(file, state))
                     using (var output = File.Create(Path.Combine(path, file)))
                     {
                         var currentFileLength = input.Length(state);

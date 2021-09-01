@@ -1,6 +1,6 @@
 ﻿namespace Raven.Server.Documents.Indexes
 {
-    public enum IndexingEngine
+    public enum SearchEngine
     {
         None,
         Corax, 

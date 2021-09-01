@@ -35,7 +35,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private readonly Analyzer _dummyAnalyzer = new SimpleAnalyzer();
         internal IndexReader _lastReader;
         private readonly LuceneDocumentConverterBase _converter;
-
+        protected IndexTransactionCache _streamsCache = new IndexTransactionCache();
         private static readonly StopAnalyzer StopAnalyzer = new StopAnalyzer(Version.LUCENE_30);
 
         private LuceneIndexWriter _indexWriter;
@@ -49,6 +49,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
 
         private LuceneVoronDirectory _directory;
+        public LuceneVoronDirectory LuceneDirectory { get { return _directory; } }
+
         private readonly Dictionary<string, LuceneVoronDirectory> _suggestionsDirectories;
         private readonly Dictionary<string, LuceneIndexSearcherHolder> _suggestionsIndexSearcherHolders;
 
@@ -59,8 +61,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private bool _initialized;
         private readonly Dictionary<string, IndexField> _fields;
         private readonly Logger _logger;
-
-        internal override LuceneVoronDirectory LuceneDirectory => _directory;
 
         private readonly object _readersLock = new object();
 
@@ -280,6 +280,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return newCache;
         }
 
+        private void SetStreamCacheInTx(LowLevelTransaction tx)
+        {
+            tx.ImmutableExternalState = _streamsCache;
+        }
+        
         private void FillCollectionEtags(Transaction tx,
             Dictionary<string, IndexTransactionCache.CollectionEtags> map)
         {

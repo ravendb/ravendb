@@ -5,7 +5,6 @@ using Corax;
 using Corax.Queries;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
-using Raven.Server.Documents.Queries.Parser;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax
 {
@@ -23,6 +22,15 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             return Search(query.Where);
         }
 
+        public IQueryMatch Search(QueryMetadata query, FieldsToFetch fieldsToFetch)
+        {
+            IQueryMatch result = null;
+            if (query.Query.Where != null)
+                result = Evaluate(query.Query.Where);
+            if (query.Query.OrderBy != null)
+                result = OrderByEvaluate(result, fieldsToFetch, query.Query.OrderBy);
+            return result;
+        }
         public IQueryMatch Search(QueryExpression where)
         {
             return Evaluate(@where);
@@ -40,8 +48,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             switch (@where)
             {
                 case MethodExpression me:
-                    var exprssionType = QueryMethod.GetMethodType(me.Name.Value);
-                    switch (exprssionType)
+                    var expressionType = QueryMethod.GetMethodType(me.Name.Value);
+                    switch (expressionType)
                     {
                         case MethodType.StartsWith:
                             return _searcher.StartWithQuery(GetField((FieldExpression)me.Arguments[0]), ((ValueExpression)me.Arguments[1]).Token.Value);
@@ -79,5 +87,33 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             return _searcher.InQuery(f.FieldValue, values);
         }
 
+        private MatchCompareFieldType OrderTypeFieldConventer(OrderByFieldType original) =>
+            original switch
+            {
+                OrderByFieldType.Double => MatchCompareFieldType.Floating,
+                OrderByFieldType.Long => MatchCompareFieldType.Integer,
+                OrderByFieldType.AlphaNumeric => MatchCompareFieldType.Integer,
+                _ => MatchCompareFieldType.Sequence
+            };
+        
+        private IQueryMatch OrderByEvaluate(IQueryMatch result, FieldsToFetch fieldsToFetch, List<(QueryExpression Expression, OrderByFieldType FieldType, bool Ascending)> orderList)
+        {
+            foreach (var order in orderList)
+            {
+                if (order.Expression is not FieldExpression fe) continue;
+                var fieldName = GetField(fe);
+                var id = fieldsToFetch.IndexFields[GetField(fe)].Id;
+                if (order.Ascending == false)
+                {
+                    result = _searcher.OrderByDescending(result, id, OrderTypeFieldConventer(order.FieldType));
+                }
+                else
+                {
+                    result = _searcher.OrderByAscending(result, id, OrderTypeFieldConventer(order.FieldType));
+                }
+            }
+            
+            return result;
+        }
     }
 }

@@ -29,7 +29,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         IList<IFieldable> GetFields();
     }
 
-    public abstract class LuceneDocumentConverterBase : ConverterBase, IDisposable
+    public abstract class LuceneDocumentConverterBase : ConverterBase
     {
         public struct DefaultDocumentLuceneWrapper : ILuceneDocumentWrapper
         {
@@ -79,10 +79,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         private readonly List<int> _multipleItemsSameFieldCount = new List<int>();
 
-        protected readonly Dictionary<string, IndexField> _fields;
         private readonly bool _indexImplicitNull;
         private readonly bool _indexEmptyEntries;
-        private readonly Index _index;
         private readonly int _numberOfBaseFields;
         private readonly string _keyFieldName;
         protected readonly bool _storeValue;
@@ -135,14 +133,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
              int numberOfBaseFields,
              string keyFieldName = null,
              bool storeValue = false,
-             string storeValueFieldName = Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName)
+             string storeValueFieldName = Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName) : base(index, storeValue)
         {
-            _index = index ?? throw new ArgumentNullException(nameof(index));
-            var dictionary = new Dictionary<string, IndexField>(fields.Count, default(OrdinalStringStructComparer));
-            foreach (var field in fields)
-                dictionary[field.Name] = field;
-            _fields = dictionary;
-
             _indexImplicitNull = indexImplicitNull;
             _indexEmptyEntries = indexEmptyEntries;
 
@@ -736,7 +728,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             return storeValueBuffer;
         }
 
-        public void Dispose()
+        public override void Dispose()
         {
             ClearFieldCache(_fieldsCache);
             ClearFieldCache(_numericFieldsCache);

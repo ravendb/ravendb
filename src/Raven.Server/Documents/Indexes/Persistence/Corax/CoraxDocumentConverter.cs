@@ -4,27 +4,25 @@ using System.Collections.Generic;
 using System.Globalization;
 using Corax;
 using Raven.Client;
+using Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes;
 using Raven.Server.Json;
 using Raven.Server.Utils;
-using Sparrow;
 using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Sparrow.Threading;
 using Voron;
+using Encoding = System.Text.Encoding;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax
 {
-    public sealed class CoraxDocumentConverter : ConverterBase, IDisposable
+    public sealed class CoraxDocumentConverter : ConverterBase
     {
-        private readonly BlittableJsonTraverser _blittableTraverser;
-        private readonly Dictionary<string, IndexField> _fields;
-        private readonly Index _index;
         private readonly ByteStringContext _allocator;
         private readonly Dictionary<Slice, int> _knownFields;
-        private static readonly string _trueLiteral = "true";
-        private static readonly string _falseLiteral = "false";
+        private static readonly byte[] _trueLiteral = Encoding.UTF8.GetBytes("true"); 
+        private static readonly byte[] _falseLiteral = Encoding.UTF8.GetBytes("false"); 
 
         public CoraxDocumentConverter(
                 Index index, 
@@ -32,16 +30,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 bool indexEmptyEntries = true, 
                 string keyFieldName = null, 
                 bool storeValue = false, 
-                string storeValueFieldName = Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName)
+                string storeValueFieldName = Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName) :
+            base(index, storeValue)
         {
-            _index = index ?? throw new ArgumentNullException(nameof(index));
-            _index = index;
-            var fields = index.Definition.IndexFields.Values;
-            var dictionary = new Dictionary<string, IndexField>(fields.Count, default(OrdinalStringStructComparer));
-            foreach (var field in fields)
-                dictionary[field.Name] = field;
-            _fields = dictionary;
-            _blittableTraverser = storeValue ? BlittableJsonTraverser.FlatMapReduceResults : BlittableJsonTraverser.Default;
             _allocator = new ByteStringContext(SharedMultipleUseFlag.None);
             _knownFields = GetKnownFields();
         }
@@ -63,16 +54,23 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             return knownFields;
         }
         
-        public Span<byte> InsertDocumentFields(LazyStringValue key, LazyStringValue sourceDocumentId, object doc, JsonOperationContext indexContext, out string id)
+        public Span<byte> InsertDocumentFields(LazyStringValue key, LazyStringValue sourceDocumentId, object doc, JsonOperationContext indexContext, out LazyStringValue id)
         {
             var document = (Document)doc;
             _allocator.Allocate(document.Data.Size + _fields.Count * 1024, out ByteString buffer);
             var entryWriter = new IndexEntryWriter(buffer.ToSpan(), _knownFields);
-            id = document.LowerId.ToLower();
+            id = document.LowerId;
             bool shouldSkip;
+            
+            
+            //TODO maciej - please look at this.
+            // this is reference to list for EnumerableWritingScope due to making it persistence during indexing document. 
+            // We want avoid allocation for every enumerable in doc, but if think it should be persistence during whole indexing process.
+            // Where should we put this and when release it?
+            List<int> stringsLength = new List<int>(128);
+            var scope = new SingleEntryWriterScope(stringsLength);
             foreach (var indexField in _fields.Values)
             {
-                var scope = new CoraxWriterScope(_fields.Count);
                 if (BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, indexField.OriginalName ?? indexField.Name, out var value) == true)
                 {
                     InsertRegularField(indexField, value, indexContext, out shouldSkip, ref entryWriter, scope);
@@ -85,7 +83,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             return output;
         }
         
-        private void InsertRegularField(IndexField field, object value, JsonOperationContext indexContext, out bool shouldSkip, ref IndexEntryWriter entryWriter, CoraxWriterScope scope, bool nestedArray = false)
+        private void InsertRegularField(IndexField field, object value, JsonOperationContext indexContext, out bool shouldSkip, ref IndexEntryWriter entryWriter, IWriterScope scope, bool nestedArray = false)
         {
             var path = field.Name;
             var valueType = GetValueType(value);
@@ -103,7 +101,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                             doubleAsString = ldv.Inner;
                         @long = (long)ldv;
                         @double = ldv.ToDouble(CultureInfo.InvariantCulture);
-                        scope.Write(field.Id, doubleAsString.ToString(), @long, @double, ref entryWriter);
+                        scope.Write(field.Id, doubleAsString.AsSpan(), @long, @double, ref entryWriter);
                         break;
                     }
                     else
@@ -133,13 +131,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     var lazyNumber = value as LazyNumberValue;
                     if (lazyNumber == null)
                     {
-                        scope.Write(field.Id, value.ToString(), (long)value, Convert.ToDouble(value), ref entryWriter);
+                        scope.Write(field.Id, lazyNumber.Inner.AsSpan(), (long)value, Convert.ToDouble(value), ref entryWriter);
                         return;
                     }
                     @long = (long)lazyNumber;
                     @double = lazyNumber.ToDouble(CultureInfo.InvariantCulture);
 
-                    scope.Write(field.Id, lazyNumber.ToString(), @long, @double, ref entryWriter);
+                    scope.Write(field.Id, lazyNumber.Inner.AsSpan(), @long, @double, ref entryWriter);
                     return;
 
                 case ValueType.String:
@@ -153,7 +151,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                         lazyStringValue = ((LazyCompressedStringValue)value).ToLazyStringValue();
                     else
                         lazyStringValue = (LazyStringValue)value;
-                    scope.Write(field.Id, lazyStringValue.ToString(), ref entryWriter);
+                    scope.Write(field.Id, lazyStringValue.AsSpan(), ref entryWriter);
                     return;
 
                     case ValueType.Enum:
@@ -187,13 +185,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
                 case ValueType.Enumerable:
                     var iterator = (IEnumerable)value;
-                    if (scope.Allocate(field.Id, false) == false)
-                        return;
+                    var enumerableScope = new EnumerableWriterScope(field.Id, ref entryWriter, scope.GetLengthList());
                     foreach (var item in iterator)
                     {
-                        InsertRegularField(field, item, indexContext, out _, ref entryWriter, scope);
+                        InsertRegularField(field, item, indexContext, out _, ref entryWriter, enumerableScope);
                     }
-                    scope.WriteCollection(field.Id, ref entryWriter);
+                    enumerableScope.Finish(field.Id, ref entryWriter);
                     return;
 
                 case ValueType.DynamicJsonObject:
@@ -221,7 +218,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             shouldSkip = true;
         }
 
-        void HandleArray(IEnumerable itemsToIndex, IndexField field, JsonOperationContext indexContext, out bool shouldSkip, ref IndexEntryWriter entryWriter, CoraxWriterScope scope, bool nestedArray = false)
+        void HandleArray(IEnumerable itemsToIndex, IndexField field, JsonOperationContext indexContext, out bool shouldSkip, ref IndexEntryWriter entryWriter, IWriterScope scope, bool nestedArray = false)
         {
             shouldSkip = false;
             if (nestedArray)
@@ -236,9 +233,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         }
 
         //todo maciej Discuss how we gonna handle nestedArrays. Now I skip them.
-        void HandleObject(BlittableJsonReaderObject val, IndexField field, JsonOperationContext indexContext, out bool shouldSkip, ref IndexEntryWriter entryWriter, CoraxWriterScope scope, bool nestedArray = false)
+        void HandleObject(BlittableJsonReaderObject val, IndexField field, JsonOperationContext indexContext, out bool shouldSkip, ref IndexEntryWriter entryWriter, IWriterScope scope, bool nestedArray = false)
         {
-            if (val.TryGetMember("$values", out var values) &&
+            if (val.TryGetMember(Constants.Json.Fields.Values, out var values) &&
                 IsArrayOfTypeValueObject(val))
             {
                 HandleArray((IEnumerable)values, field, indexContext, out _, ref entryWriter, scope, true);
@@ -247,7 +244,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             shouldSkip = false;
         }
 
-        public void Dispose()
+        public override void Dispose()
         {
             _allocator?.Dispose();
         }
