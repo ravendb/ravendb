@@ -568,59 +568,60 @@ namespace Raven.Server.Documents.Patch
         }
 
 
-        private static string ArrayExtensionCode=  @"
-            Array.prototype.orig = {}
+        //private static string ArrayExtensionCode =  "";
+        private static string ArrayExtensionCode =  @"
+Array.prototype.__reduce = Array.prototype.reduce;
+Array.prototype.reduce = function(...args) {
+    const v = this
+    return v.length > 0 ? v.__reduce(...args) :
+        args.length > 1 ? args[1] : null
+}
 
-            Array.prototype.orig.reduce = Array.prototype.reduce;
-            Array.prototype.reduce = function(...args) {
-                const v = this
-                return v.length > 0 ? v.orig.reduce(...args) :
-                        args.length > 1 ? args[1] : null
-            }
+Array.prototype.__concat = Array.prototype.concat;
+Array.prototype.concat = function(...args) {
+    const v = this
+    return v.length > 0 ? v.__concat(...args) :
+        args.length > 0 ? args[0] : []
+}
 
-            Array.prototype.orig.concat = Array.prototype.concat;
-            Array.prototype.concat = function(...args) {
-                const v = this
-                return v.length > 0 ? v.orig.concat(...args) :
-                    args.length > 0 ? args[0] : []
-            }
+Array.prototype.__some = Array.prototype.some;
+Array.prototype.some = function(...args) {
+    const v = this
+    return v.length > 0 ? v.__some(...args) : false
+}
 
-            Array.prototype.orig.some = Array.prototype.some;
-            Array.prototype.some = function(...args) {
-                const v = this
-                return v.length > 0 ? v.orig.some(...args) : false
-            }
+Array.prototype.__includes = Array.prototype.includes;
+Array.prototype.includes = function(...args) {
+    const v = this
+    return v.length > 0 ? v.__includes(...args) : false
+}
 
-            Array.prototype.orig.includes = Array.prototype.includes;
-            Array.prototype.includes = function(...args) {
-                const v = this
-                return v.length > 0 ? v.orig.includes(...args) : false
-            }
+Array.prototype.__every = Array.prototype.every;
+Array.prototype.every = function(...args) {
+    const v = this
+    return v.length > 0 ? v.__every(...args) : true
+}
 
-            Array.prototype.orig.every = Array.prototype.every;
-            Array.prototype.every = function(...args) {
-                const v = this
-                return v.length > 0 ? v.orig.every(...args) : true
-            }
+Array.prototype.__map = Array.prototype.map;
+Array.prototype.map = function(...args) {
+    const v = this
+    return v.length > 0 ? v.__map(...args) : []
+}
 
-            Array.prototype.orig.map = Array.prototype.map;
-            Array.prototype.map = function(...args) {
-                const v = this
-                return v.length > 0 ? v.orig.map(...args) : []
-            }
+Array.prototype.__filter = Array.prototype.filter;
+Array.prototype.filter = function(...args) {
+    const v = this
+    return v.length > 0 ? v.__filter(...args) : []
+}
 
-            Array.prototype.orig.filter = Array.prototype.filter;
-            Array.prototype.filter = function(...args) {
-                const v = this
-                return v.length > 0 ? v.orig.filter(...args) : []
-            }
-
-            Array.prototype.orig.reverse = Array.prototype.reverse;
-            Array.prototype.reverse = function(...args) {
-                const v = this
-                return v.length > 0 ? v.orig.reverse(...args) : []
-            }
+Array.prototype.__reverse = Array.prototype.reverse;
+Array.prototype.reverse = function(...args) {
+    const v = this
+    return v.length > 0 ? v.__reverse(...args) : []
+}
         ";
+
+
         
         internal Dictionary<Type, Func<object, InternalHandle>> TypeMappers;
 
