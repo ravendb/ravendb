@@ -1,19 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
 using System.Net;
-using System.Net.Http;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
-using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
-using Raven.Client.Http;
-using Raven.Client.Json;
-using Raven.Client.Json.Serialization;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Sharding;
+using Raven.Server.Documents.Sharding.Commands;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Json;
@@ -39,125 +33,9 @@ namespace Raven.Server.Documents.ShardedHandlers
 
                 var options = JsonDeserializationServer.SubscriptionCreationParams(json);
                 var id = GetLongQueryString("id", required: false);
+                bool? disabled = GetBoolValueQueryString("disabled", required: false);
 
-                await CreateSubscriptionInternal(id, options, context);
-            }
-        }
-
-        private async Task CreateSubscriptionInternal(long? id, SubscriptionCreationOptions options, TransactionOperationContext context)
-        {
-            var disposables = new List<IDisposable>();
-            try
-            {
-                var cmds = new List<CreateSubscriptionCommand>();
-                var tasks = new List<Task>();
-                foreach (var re in ShardedContext.RequestExecutors)
-                {
-                    disposables.Add(ContextPool.AllocateOperationContext(out TransactionOperationContext ctx));
-                    var cmd = new CreateSubscriptionCommand(conventions: null, options, id.HasValue ? $"{id}" : null);
-                    cmds.Add(cmd);
-                    var t = re.ExecuteAsync(cmd, ctx);
-                    tasks.Add(t);
-                    if (id.HasValue == false)
-                    {
-                        // wait on first command to have equal id for all subscriptions
-                        await t;
-                        id = cmd.Result.RaftIndex;
-                    }
-                }
-
-                await Task.WhenAll(tasks);
-                Debug.Assert(cmds.All(x => x.Result.Name == cmds.First().Result.Name));
-
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    context.Write(writer, new DynamicJsonValue
-                    {
-                        [nameof(CreateSubscriptionResult.Name)] = cmds.First().Result.Name
-                    });
-                }
-            }
-            finally
-            {
-                disposables.ForEach(x => x.Dispose());
-            }
-        }
-
-        [RavenShardedAction("/databases/*/subscriptions", "DELETE", AuthorizationStatus.ValidUser, EndpointType.Write)]
-        public async Task Delete()
-        {
-            var subscriptionName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("taskName");
-            var disposables = new List<IDisposable>();
-
-            try
-            {
-                var tasks = new List<Task>();
-                foreach (var re in ShardedContext.RequestExecutors)
-                {
-                    disposables.Add(ContextPool.AllocateOperationContext(out TransactionOperationContext ctx));
-                    tasks.Add(re.ExecuteAsync(new DeleteSubscriptionCommand(subscriptionName), ctx));
-                }
-
-                await Task.WhenAll(tasks);
-                await NoContent();
-            }
-            finally
-            {
-                disposables.ForEach(x => x.Dispose());
-
-            }
-        }
-
-        //TODO: egor attribute
-        [RavenShardedAction("/databases/*/subscriptions", "GET", AuthorizationStatus.ValidUser, EndpointType.Read/*, IsDebugInformationEndpoint = true*/)]
-        public async Task GetAll()
-        {
-            var start = GetStart();
-            var pageSize = GetPageSize();
-
-            var disposables = new List<IDisposable>();
-            try
-            {
-                var tasks = new List<Task>();
-                var cmds = new List<GetSubscriptionsCommand>();
-                foreach (var re in ShardedContext.RequestExecutors)
-                {
-                    disposables.Add(ContextPool.AllocateOperationContext(out TransactionOperationContext ctx));
-                    var cmd = new GetSubscriptionsCommand(start, pageSize);
-                    cmds.Add(cmd);
-                    tasks.Add(re.ExecuteAsync(cmd, ctx));
-                }
-                await Task.WhenAll(tasks);
-                Debug.Assert(cmds.All(x => x.Result.Length == cmds.First().Result.Length));
-
-                HashSet<string> names = new HashSet<string>();
-                HashSet<SubscriptionState> subscriptions = new HashSet<SubscriptionState>();
-
-                foreach (var cmd in cmds)
-                {
-                    foreach (var subscription in cmd.Result)
-                    {
-                        if (names.Add(subscription.SubscriptionName))
-                        {
-                            subscriptions.Add(subscription);
-                        }
-                    }
-                }
-                using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                using (context.OpenReadTransaction())
-                {
-                    await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                    {
-                        writer.WriteStartObject();
-                        writer.WriteArray(context, "Results", SubscriptionsHandler.GetSubscriptionStateBlittable(subscriptions), (w, c, subscription) => c.Write(w, subscription));
-                        writer.WriteEndObject();
-                    }
-                }
-            }
-            finally
-            {
-                disposables.ForEach(x => x.Dispose());
+                await CreateSubscriptionInternal(id, disabled, options, context);
             }
         }
 
@@ -177,12 +55,12 @@ namespace Raven.Server.Documents.ShardedHandlers
                 {
                     if (id == null)
                     {
-                        state = SubscriptionStorage.GetSubscriptionFromServerStore(ServerStore, context, ShardedContext.GetShardedDatabaseName(), options.Name);
+                        state = SubscriptionStorageBase.GetSubscriptionFromServerStore(ServerStore, context, ShardedContext.DatabaseName, options.Name);
                         id = state.SubscriptionId;
                     }
                     else
                     {
-                        state = SubscriptionStorage.GetSubscriptionFromServerStoreById(ServerStore, ShardedContext.GetShardedDatabaseName(), id.Value);
+                        state = SubscriptionStorageBase.GetSubscriptionFromServerStoreById(ServerStore, ShardedContext.DatabaseName, id.Value);
 
                         // keep the old subscription name
                         if (options.Name == null)
@@ -196,14 +74,14 @@ namespace Raven.Server.Documents.ShardedHandlers
                         if (id == null)
                         {
                             // subscription with such name doesn't exist, add new subscription
-                            await CreateSubscriptionInternal(id: null, options, context);
+                            await CreateSubscriptionInternal(id: null, disabled: false, options, context);
                             return;
                         }
 
                         if (options.Name == null)
                         {
                             // subscription with such id doesn't exist, add new subscription using id
-                            await CreateSubscriptionInternal(id, options, context);
+                            await CreateSubscriptionInternal(id, disabled: false, options, context);
                             return;
                         }
 
@@ -211,13 +89,13 @@ namespace Raven.Server.Documents.ShardedHandlers
                         try
                         {
                             // check the name
-                            state = SubscriptionStorage.GetSubscriptionFromServerStore(ServerStore, context, ShardedContext.GetShardedDatabaseName(), options.Name);
+                            state = SubscriptionStorageBase.GetSubscriptionFromServerStore(ServerStore, context, ShardedContext.DatabaseName, options.Name);
                             id = state.SubscriptionId;
                         }
                         catch (SubscriptionDoesNotExistException)
                         {
                             // subscription with such id or name doesn't exist, add new subscription using both name and id
-                            await CreateSubscriptionInternal(id, options, context);
+                            await CreateSubscriptionInternal(id, disabled: false, options, context);
                             return;
                         }
                     }
@@ -242,7 +120,102 @@ namespace Raven.Server.Documents.ShardedHandlers
                     return;
                 }
 
-                await CreateSubscriptionInternal(id, options, context);
+                await CreateSubscriptionInternal(id, disabled: false, options, context);
+            }
+        }
+
+        private async Task CreateSubscriptionInternal(long? id, bool? disabled, SubscriptionCreationOptions options, JsonOperationContext context)
+        {
+            var sub = SubscriptionConnectionBase.ParseSubscriptionQuery(options.Query);
+            if (Enum.TryParse(options.ChangeVector, out Client.Constants.Documents.SubscriptionChangeVectorSpecialStates changeVectorSpecialValue))
+            {
+                switch (changeVectorSpecialValue)
+                {
+                    case Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.BeginningOfTime:
+                        options.ChangeVector = null;
+                        break;
+
+                    case Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.LastDocument:
+                        options.ChangeVector = await ShardedContext.GetLastDocumentChangeVectorForCollection(sub.Collection);
+                        break;
+                }
+            }
+
+            var etag = await ShardedContext.ShardedSubscriptionStorage.PutSubscription(ShardedContext.DatabaseName, options, GetRaftRequestIdFromQuery(), id, disabled, options.MentorNode);
+
+            long subscriptionId;
+            long index;
+            if (id != null)
+            {
+                // updated existing subscription
+                subscriptionId = id.Value;
+                index = etag;
+
+            }
+            else
+            {
+                subscriptionId = etag;
+                index = etag;
+            }
+
+            var name = options.Name ?? subscriptionId.ToString();
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
+            using (serverContext.OpenReadTransaction())
+            {
+                var responsibleNodes = ShardedContext.ShardedSubscriptionStorage.GetResponsibleNodes(serverContext, name);
+                foreach (var node in responsibleNodes)
+                {
+                    if (node != ServerStore.NodeTag)
+                    {
+                        await WaitForExecutionOnSpecificNode(serverContext, ServerStore.GetClusterTopology(serverContext), node, index);
+
+                    }
+                }
+            }
+
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                context.Write(writer, new DynamicJsonValue
+                {
+                    [nameof(CreateSubscriptionResult.Name)] = name,
+                    [nameof(CreateSubscriptionResult.RaftIndex)] = index
+                });
+            }
+        }
+
+        [RavenShardedAction("/databases/*/subscriptions", "DELETE", AuthorizationStatus.ValidUser, EndpointType.Write)]
+        public async Task Delete()
+        {
+            var subscriptionName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("taskName");
+            await ShardedContext.ShardedSubscriptionStorage.DeleteSubscription(ShardedContext.DatabaseName, subscriptionName, GetRaftRequestIdFromQuery());
+            await NoContent();
+        }
+
+        //TODO: egor attribute
+        [RavenShardedAction("/databases/*/subscriptions", "GET", AuthorizationStatus.ValidUser, EndpointType.Read /*, IsDebugInformationEndpoint = true*/)]
+        public async Task GetAll()
+        {
+            var start = GetStart();
+            var pageSize = GetPageSize();
+            var history = GetBoolValueQueryString("history", required: false) ?? false;
+            var running = GetBoolValueQueryString("running", required: false) ?? false;
+            var id = GetLongQueryString("id", required: false);
+            var name = GetStringQueryString("name", required: false);
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                if (SubscriptionsHandler.GetAllInternal(ShardedContext.ShardedSubscriptionStorage, context, ShardedContext.DatabaseName, name, id, running, history, start, pageSize, out IEnumerable<SubscriptionGeneralDataAndStats> subscriptions))
+                {
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                    return;
+                }
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    SubscriptionsHandler.WriteGetAllResult(writer, subscriptions, context);
+                }
             }
         }
 
@@ -272,7 +245,6 @@ namespace Raven.Server.Documents.ShardedHandlers
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 if (string.IsNullOrEmpty(subscriptionName))
                 {
@@ -288,7 +260,10 @@ namespace Raven.Server.Documents.ShardedHandlers
                     Strategy = state?.Connection?.Strategy
                 };
 
-                context.Write(writer, subscriptionConnectionDetails.ToJson());
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    context.Write(writer, subscriptionConnectionDetails.ToJson());
+                }
             }
         }
 
@@ -404,54 +379,5 @@ namespace Raven.Server.Documents.ShardedHandlers
             }
             writer.WriteEndObject();
         }
-    }
-
-    public class SubscriptionTryoutCommand : RavenCommand<GetDocumentsResult>
-    {
-        private readonly SubscriptionTryout _tryout;
-        private readonly int _pageSize;
-
-        public SubscriptionTryoutCommand(SubscriptionTryout tryout, int pageSize)
-        {
-            _tryout = tryout;
-            _pageSize = pageSize;
-        }
-
-        public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
-        {
-            url = $"{node.Url}/databases/{node.Database}/subscriptions/try?pageSize={_pageSize}";
-
-            var request = new HttpRequestMessage
-            {
-                Method = HttpMethod.Post,
-                Content = new BlittableJsonContent(async stream =>
-                {
-                    await using (var writer = new AsyncBlittableJsonTextWriter(ctx, stream))
-                    {
-                        writer.WriteStartObject();
-                        writer.WritePropertyName(nameof(SubscriptionTryout.ChangeVector));
-                        writer.WriteString(_tryout.ChangeVector);
-                        writer.WritePropertyName(nameof(SubscriptionTryout.Query));
-                        writer.WriteString(_tryout.Query);
-                        writer.WriteEndObject();
-                    }
-                })
-            };
-
-            return request;
-        }
-
-        public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
-        {
-            if (response == null)
-            {
-                Result = null;
-                return;
-            }
-
-            Result = JsonDeserializationClient.GetDocumentsResult(response);
-        }
-
-        public override bool IsReadRequest => true;
     }
 }

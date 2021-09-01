@@ -177,7 +177,11 @@ namespace Raven.Server.Documents.Handlers
         {
             var subscriptionName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("taskName");
 
-            await Database.SubscriptionStorage.DeleteSubscription(subscriptionName, GetRaftRequestIdFromQuery());
+            await Database.SubscriptionStorage.DeleteSubscription(Database.Name, subscriptionName, GetRaftRequestIdFromQuery());
+            if (Logger.IsInfoEnabled)
+            {
+                Logger.Info($"Subscription with name {subscriptionName} was deleted");
+            }
 
             Database.SubscriptionStorage.RaiseNotificationForTaskRemoved(subscriptionName);
 
@@ -254,83 +258,80 @@ namespace Raven.Server.Documents.Handlers
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                IEnumerable<SubscriptionStorage.SubscriptionGeneralDataAndStats> subscriptions;
-                if (string.IsNullOrEmpty(name) && id == null)
+                if (GetAllInternal(Database.SubscriptionStorage, context, Database.Name, name, id, running, history, start, pageSize, out IEnumerable<SubscriptionGeneralDataAndStats> subscriptions))
                 {
-                    subscriptions = running
-                        ? Database.SubscriptionStorage.GetAllRunningSubscriptions(context, history, start, pageSize)
-                        : Database.SubscriptionStorage.GetAllSubscriptions(context, history, start, pageSize);
-                }
-                else
-                {
-                    var subscription = running
-                        ? Database
-                            .SubscriptionStorage
-                            .GetRunningSubscription(context, id, name, history)
-                        : Database
-                            .SubscriptionStorage
-                            .GetSubscription(context, id, name, history);
-
-                    if (subscription == null)
-                    {
-                        HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                        return;
-                    }
-
-                    subscriptions = new[] { subscription };
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                    return;
                 }
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    writer.WriteStartObject();
-                    IEnumerable<DynamicJsonValue> subscriptionsAsBlittable = GetSubscriptionStateBlittable(subscriptions);
-
-                    writer.WriteArray(context, "Results", subscriptionsAsBlittable, (w, c, subscription) => c.Write(w, subscription));
-
-                    writer.WriteEndObject();
+                    WriteGetAllResult(writer, subscriptions, context);
                 }
             }
         }
 
-        internal static IEnumerable<DynamicJsonValue> GetSubscriptionStateBlittable(IEnumerable<SubscriptionState> subscriptions)
+        internal static bool GetAllInternal(SubscriptionStorageBase storage, TransactionOperationContext context, string databaseName, string name, long? id, bool running, bool history, int start, int pageSize, out IEnumerable<SubscriptionGeneralDataAndStats> subscriptions)
         {
-            var subscriptionsAsBlittable = subscriptions.Select(x =>
+            if (string.IsNullOrEmpty(name) && id == null)
             {
-                var res = new DynamicJsonValue()
+                subscriptions = running
+                    ? storage.GetAllRunningSubscriptions(context, databaseName, history, start, pageSize)
+                    : storage.GetAllSubscriptions(context, databaseName, history, start, pageSize);
+            }
+            else
+            {
+                var subscription = running
+                    ? storage.GetRunningSubscription(context, id, databaseName, name, history)
+                    : storage.GetSubscription(context, id, databaseName, name, history);
+
+                if (subscription == null)
                 {
-                    [nameof(SubscriptionState.SubscriptionId)] = x.SubscriptionId,
-                    [nameof(SubscriptionState.SubscriptionName)] = x.SubscriptionName,
-                    [nameof(SubscriptionState.ChangeVectorForNextBatchStartingPoint)] = x.ChangeVectorForNextBatchStartingPoint,
-                    [nameof(SubscriptionState.Query)] = x.Query,
-                    [nameof(SubscriptionState.Disabled)] = x.Disabled,
-                    [nameof(SubscriptionState.LastClientConnectionTime)] = x.LastClientConnectionTime,
-                    [nameof(SubscriptionState.LastBatchAckTime)] = x.LastBatchAckTime
-                };
-                if (x is SubscriptionStorage.SubscriptionGeneralDataAndStats superX)
-                {
-                    res["Connection"] = GetSubscriptionConnectionJson(superX.Connection);
-                    res["RecentConnections"] = superX.RecentConnections?.Select(r => new DynamicJsonValue()
-                    {
-                        ["State"] = new DynamicJsonValue()
-                        {
-                            ["LatestChangeVectorClientACKnowledged"] = r.SubscriptionState.ChangeVectorForNextBatchStartingPoint,
-                            ["Query"] = r.SubscriptionState.Query
-                        },
-                        ["Connection"] = GetSubscriptionConnectionJson(r)
-                    });
-                    res["FailedConnections"] = superX.RecentRejectedConnections?.Select(r => new DynamicJsonValue()
-                    {
-                        ["State"] = new DynamicJsonValue()
-                        {
-                            ["LatestChangeVectorClientACKnowledged"] = r.SubscriptionState.ChangeVectorForNextBatchStartingPoint,
-                            ["Query"] = r.SubscriptionState.Query
-                        },
-                        ["Connection"] = GetSubscriptionConnectionJson(r)
-                    }).ToList();
+
+                    subscriptions = Array.Empty<SubscriptionGeneralDataAndStats>();
+                    return true;
                 }
-                return res;
+
+                subscriptions = new[] {subscription};
+            }
+
+            return false;
+        }
+
+        internal static void WriteGetAllResult(AsyncBlittableJsonTextWriter writer, IEnumerable<SubscriptionGeneralDataAndStats> subscriptions, TransactionOperationContext context)
+        {
+            writer.WriteStartObject();
+            IEnumerable<DynamicJsonValue> subscriptionsAsBlittable = subscriptions.Select(x => new DynamicJsonValue()
+            {
+                [nameof(SubscriptionState.SubscriptionId)] = x.SubscriptionId,
+                [nameof(SubscriptionState.SubscriptionName)] = x.SubscriptionName,
+                [nameof(SubscriptionState.ChangeVectorForNextBatchStartingPoint)] = x.ChangeVectorForNextBatchStartingPoint,
+                [nameof(SubscriptionState.Query)] = x.Query,
+                [nameof(SubscriptionState.Disabled)] = x.Disabled,
+                [nameof(SubscriptionState.LastClientConnectionTime)] = x.LastClientConnectionTime,
+                [nameof(SubscriptionState.LastBatchAckTime)] = x.LastBatchAckTime,
+                ["Connection"] = GetSubscriptionConnectionJson(x.Connection),
+                ["RecentConnections"] = x.RecentConnections?.Select(r => new DynamicJsonValue()
+                {
+                    ["State"] = new DynamicJsonValue()
+                    {
+                        ["LatestChangeVectorClientACKnowledged"] = r.SubscriptionState.ChangeVectorForNextBatchStartingPoint,
+                        ["Query"] = r.SubscriptionState.Query
+                    },
+                    ["Connection"] = GetSubscriptionConnectionJson(r)
+                }),
+                ["FailedConnections"] = x.RecentRejectedConnections?.Select(r => new DynamicJsonValue()
+                {
+                    ["State"] = new DynamicJsonValue()
+                    {
+                        ["LatestChangeVectorClientACKnowledged"] = r.SubscriptionState.ChangeVectorForNextBatchStartingPoint,
+                        ["Query"] = r.SubscriptionState.Query
+                    },
+                    ["Connection"] = GetSubscriptionConnectionJson(r)
+                }).ToList()
             });
-            return subscriptionsAsBlittable;
+            writer.WriteArray(context, "Results", subscriptionsAsBlittable, (w, c, subscription) => c.Write(w, subscription));
+            writer.WriteEndObject();
         }
 
         [RavenAction("/databases/*/subscriptions/performance/live", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, SkipUsagesCount = true)]
@@ -399,7 +400,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 var subscription = Database
                     .SubscriptionStorage
-                    .GetRunningSubscription(context, subscriptionId, subscriptionName, false);
+                    .GetRunningSubscription(context, subscriptionId, Database.Name, subscriptionName, false);
 
                 if (subscription != null)
                 {
