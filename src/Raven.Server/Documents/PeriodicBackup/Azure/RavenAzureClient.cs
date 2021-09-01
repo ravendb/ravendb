@@ -10,6 +10,7 @@ using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Azure.Storage.Blobs.Specialized;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Http;
 using Raven.Server.Documents.PeriodicBackup.Restore;
 using Sparrow;
 
@@ -27,6 +28,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
         private static readonly Size TotalBlocksSizeLimit = new Size(4750, SizeUnit.Gigabytes);
 
         internal Size MaxUploadPutBlob = new Size(256, SizeUnit.Megabytes);
+
+        private static readonly BlobClientOptions DefaultClientOptions = new BlobClientOptions
+        {
+            Retry = { NetworkTimeout = RequestExecutor.GlobalHttpClientTimeout }
+        };
 
         public RavenAzureClient(AzureSettings azureSettings, Progress progress = null, CancellationToken cancellationToken = default)
         {
@@ -51,12 +57,12 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             var serverUrlForContainer = new Uri($"https://{azureSettings.AccountName}.blob.core.windows.net/{azureSettings.StorageContainer.ToLower()}", UriKind.Absolute);
 
             if (hasAccountKey)
-                _client = new BlobContainerClient(serverUrlForContainer, new StorageSharedKeyCredential(azureSettings.AccountName, azureSettings.AccountKey));
+                _client = new BlobContainerClient(serverUrlForContainer, new StorageSharedKeyCredential(azureSettings.AccountName, azureSettings.AccountKey), DefaultClientOptions);
 
             if (hasSasToken)
             {
                 VerifySasToken(azureSettings.SasToken);
-                _client = new BlobContainerClient(serverUrlForContainer, new AzureSasCredential(azureSettings.SasToken));
+                _client = new BlobContainerClient(serverUrlForContainer, new AzureSasCredential(azureSettings.SasToken), DefaultClientOptions);
             }
 
             _progress = progress;

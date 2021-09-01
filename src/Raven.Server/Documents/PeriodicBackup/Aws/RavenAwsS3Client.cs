@@ -9,7 +9,9 @@ using Amazon;
 using Amazon.Runtime;
 using Amazon.S3;
 using Amazon.S3.Model;
+using Azure.Core;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Http;
 using Raven.Client.Util;
 using Raven.Server.Documents.PeriodicBackup.Restore;
 using Sparrow;
@@ -47,7 +49,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             if (string.IsNullOrWhiteSpace(s3Settings.BucketName))
                 throw new ArgumentException("AWS Bucket Name cannot be null or empty");
 
-            var config = new AmazonS3Config();
+            var config = new AmazonS3Config
+            {
+                Timeout = RequestExecutor.GlobalHttpClientTimeout
+            };
+
             if (string.IsNullOrWhiteSpace(s3Settings.CustomServerUrl))
             {
                 if (string.IsNullOrWhiteSpace(s3Settings.AwsRegionName))
