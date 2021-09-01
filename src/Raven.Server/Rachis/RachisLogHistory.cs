@@ -279,6 +279,18 @@ namespace Raven.Server.Rachis
             }
         }
 
+        public string GetHistoryLogsAsString(TransactionOperationContext context)
+        {
+            var sb = new StringBuilder();
+
+            foreach (var entry in GetHistoryLogs(context))
+            {
+                sb.AppendLine(context.ReadObject(entry, "raft-command-history").ToString());
+            }
+
+            return sb.ToString();
+        }
+
         public IEnumerable<DynamicJsonValue> GetHistoryLogs(TransactionOperationContext context)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(LogHistoryTable, LogHistorySlice);

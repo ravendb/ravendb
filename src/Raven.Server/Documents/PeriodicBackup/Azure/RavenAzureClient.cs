@@ -10,6 +10,7 @@ using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Azure.Storage.Blobs.Specialized;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Server.Config.Categories;
 using Raven.Server.Documents.PeriodicBackup.Restore;
 using Sparrow;
 
@@ -28,10 +29,12 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
 
         internal Size MaxUploadPutBlob = new Size(256, SizeUnit.Megabytes);
 
-        public RavenAzureClient(AzureSettings azureSettings, Progress progress = null, CancellationToken cancellationToken = default)
+        public RavenAzureClient(AzureSettings azureSettings, Config.Categories.BackupConfiguration configuration, Progress progress = null, CancellationToken cancellationToken = default)
         {
             if (azureSettings == null)
                 throw new ArgumentNullException(nameof(azureSettings));
+            if (configuration == null)
+                throw new ArgumentNullException(nameof(configuration));
 
             var hasAccountKey = string.IsNullOrWhiteSpace(azureSettings.AccountKey) == false;
             var hasSasToken = string.IsNullOrWhiteSpace(azureSettings.SasToken) == false;
@@ -50,13 +53,21 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
 
             var serverUrlForContainer = new Uri($"https://{azureSettings.AccountName}.blob.core.windows.net/{azureSettings.StorageContainer.ToLower()}", UriKind.Absolute);
 
+            var options = new BlobClientOptions
+            {
+                Retry =
+                {
+                    NetworkTimeout = configuration.CloudStorageOperationTimeout.AsTimeSpan
+                }
+            };
+
             if (hasAccountKey)
-                _client = new BlobContainerClient(serverUrlForContainer, new StorageSharedKeyCredential(azureSettings.AccountName, azureSettings.AccountKey));
+                _client = new BlobContainerClient(serverUrlForContainer, new StorageSharedKeyCredential(azureSettings.AccountName, azureSettings.AccountKey), options);
 
             if (hasSasToken)
             {
                 VerifySasToken(azureSettings.SasToken);
-                _client = new BlobContainerClient(serverUrlForContainer, new AzureSasCredential(azureSettings.SasToken));
+                _client = new BlobContainerClient(serverUrlForContainer, new AzureSasCredential(azureSettings.SasToken), options);
             }
 
             _progress = progress;
