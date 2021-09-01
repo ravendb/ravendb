@@ -275,7 +275,7 @@ namespace Sparrow.Server
 
         private static long _lockedBytes;
 
-        public static Size LockedMemory => new Size(_lockedBytes, SizeUnit.Bytes);
+        public static long LockedBytes => _lockedBytes;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int Lock(byte* addr, UIntPtr len)
