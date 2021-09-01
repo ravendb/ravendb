@@ -15,7 +15,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         private readonly string _remoteFolderName;
         public RestoreFromAzure(ServerStore serverStore, RestoreFromAzureConfiguration restoreFromConfiguration, string nodeTag, OperationCancelToken operationCancelToken) : base(serverStore, restoreFromConfiguration, nodeTag, operationCancelToken)
         {
-            _client = new RavenAzureClient(restoreFromConfiguration.Settings);
+            _client = new RavenAzureClient(restoreFromConfiguration.Settings, serverStore.Configuration.Backup);
             _remoteFolderName = restoreFromConfiguration.Settings.RemoteFolderName;
         }
 

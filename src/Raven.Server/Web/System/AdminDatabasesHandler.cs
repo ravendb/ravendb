@@ -532,7 +532,7 @@ namespace Raven.Server.Web.System
 
                     case PeriodicBackupConnectionType.S3:
                         var s3Settings = JsonDeserializationServer.S3Settings(restorePathBlittable);
-                        using (var s3RestoreUtils = new S3RestorePoints(sortedList, context, s3Settings))
+                        using (var s3RestoreUtils = new S3RestorePoints(ServerStore.Configuration.Backup, sortedList, context, s3Settings))
                         {
                             await s3RestoreUtils.FetchRestorePoints(s3Settings.RemoteFolderName);
                         }
@@ -541,7 +541,7 @@ namespace Raven.Server.Web.System
 
                     case PeriodicBackupConnectionType.Azure:
                         var azureSettings = JsonDeserializationServer.AzureSettings(restorePathBlittable);
-                        using (var azureRestoreUtils = new AzureRestorePoints(sortedList, context, azureSettings))
+                        using (var azureRestoreUtils = new AzureRestorePoints(ServerStore.Configuration.Backup, sortedList, context, azureSettings))
                         {
                             await azureRestoreUtils.FetchRestorePoints(azureSettings.RemoteFolderName);
                         }
@@ -549,7 +549,7 @@ namespace Raven.Server.Web.System
 
                     case PeriodicBackupConnectionType.GoogleCloud:
                         var googleCloudSettings = JsonDeserializationServer.GoogleCloudSettings(restorePathBlittable);
-                        using (var googleCloudRestoreUtils = new GoogleCloudRestorePoints(sortedList, context, googleCloudSettings))
+                        using (var googleCloudRestoreUtils = new GoogleCloudRestorePoints(ServerStore.Configuration.Backup, sortedList, context, googleCloudSettings))
                         {
                             await googleCloudRestoreUtils.FetchRestorePoints(googleCloudSettings.RemoteFolderName);
                         }

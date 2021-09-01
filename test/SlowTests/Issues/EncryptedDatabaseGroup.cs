@@ -22,7 +22,7 @@ namespace SlowTests.Issues
         public EncryptedDatabaseGroup(ITestOutputHelper output) : base(output)
         {
         }
-
+        
         [Fact]
         public async Task CanRemoveNodeWithNoKey()
         {

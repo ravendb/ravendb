@@ -172,8 +172,9 @@ namespace Raven.Server.Documents
                     if (found == false)
                     {
                         resource = default(TResource);
-                        if (_caseInsensitive.TryAdd(databaseName, task) == false)
+                        if (_caseInsensitive.TryAdd(databaseName, task) == false) 
                             continue;
+
                         return new DisposableAction(() =>
                         {
                             TryRemove(databaseName, out _);
