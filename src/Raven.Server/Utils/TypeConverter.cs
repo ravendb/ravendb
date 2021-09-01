@@ -175,9 +175,9 @@ namespace Raven.Server.Utils
             return UnlikelyIsSupportedType(value);
         }
 
-        public static object ToBlittableSupportedType(object value, bool flattenArrays = false, bool forIndexing = false, V8Engine engine = null, JsonOperationContext context = null)
+        public static object ToBlittableSupportedType(object value, bool flattenArrays = false, bool forIndexing = false, V8Engine engine = null, JsonOperationContext context = null, bool isRoot = true)
         {
-            return ToBlittableSupportedType(value, value, flattenArrays, forIndexing, 0, engine, context);
+            return ToBlittableSupportedType(value, value, flattenArrays, forIndexing, 0, engine, context, isRoot);
         }
 
 
@@ -229,7 +229,7 @@ namespace Raven.Server.Utils
             return BlittableSupportedReturnType.Runtime;
         }
 
-        private static object ToBlittableSupportedType(object root, object value, bool flattenArrays, bool forIndexing, int recursiveLevel, V8Engine engine, JsonOperationContext context)
+        private static object ToBlittableSupportedType(object root, object value, bool flattenArrays, bool forIndexing, int recursiveLevel, V8Engine engine, JsonOperationContext context, bool isRoot = true)
         {
             if (recursiveLevel > MaxAllowedRecursiveLevelForType)
                 NestingLevelTooDeep(root);
@@ -300,7 +300,7 @@ namespace Raven.Server.Utils
                             }
                             //ThrowInvalidObject(jsValue);
                         }
-                        return JsBlittableBridge.Translate(context, engine, jsValue);
+                        return JsBlittableBridge.Translate(context, engine, jsValue, isRoot: isRoot);
                     }
                     ThrowInvalidObject(jsValue);
                     return null;

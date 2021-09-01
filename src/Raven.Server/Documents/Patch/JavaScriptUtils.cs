@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.Patch
 {
     public class JavaScriptUtils
     {
-        private JsonOperationContext Context
+        public JsonOperationContext Context
         {
             get
             {
@@ -55,31 +55,7 @@ namespace Raven.Server.Documents.Patch
                 if (args.Length != 1 || !(args[0].BoundObject is BlittableObjectInstance boi))
                     throw new InvalidOperationException("metadataFor(doc) must be called with a single entity argument");
 
-                if (!(boi.Blittable[Constants.Documents.Metadata.Key] is BlittableJsonReaderObject metadata))
-                    return engine.CreateNullValue();
-                metadata.Modifications = new DynamicJsonValue
-                {
-                    [Constants.Documents.Metadata.ChangeVector] = boi.ChangeVector,
-                    [Constants.Documents.Metadata.Id] = boi.DocumentId,
-                    [Constants.Documents.Metadata.LastModified] = boi.LastModified,
-                };
-
-                if (boi.IndexScore != null)
-                    metadata.Modifications[Constants.Documents.Metadata.IndexScore] = boi.IndexScore.Value;
-
-                if (boi.Distance != null)
-                    metadata.Modifications[Constants.Documents.Metadata.SpatialResult] = boi.Distance.Value.ToJson();
-
-                using (var old = metadata)
-                {
-                    metadata = Context.ReadObject(metadata, boi.DocumentId);
-                    InternalHandle metadataJs = TranslateToJs(Context, metadata);
-                    if (metadataJs.IsError)
-                        return metadataJs;
-                    args[0].SetProperty(Constants.Documents.Metadata.Key, metadataJs);
-
-                    return metadataJs;
-                }
+                return boi.GetMetadata();
             }
             catch (Exception e) 
             {
@@ -313,7 +289,7 @@ namespace Raven.Server.Documents.Patch
             }
         }
 
-        internal InternalHandle TranslateToJs(JsonOperationContext context, object o)
+        public InternalHandle TranslateToJs(JsonOperationContext context, object o)
         {
             if (o is Tuple<Document, Lucene.Net.Documents.Document, IState, Dictionary<string, IndexField>, bool?, ProjectionOptions> t)
             {

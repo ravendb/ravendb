@@ -556,7 +556,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                         foreach (var property in accessor.GetPropertiesInOrder(output))
                         {
                             var value = property.Value;
-                            var blittableValue = TypeConverter.ToBlittableSupportedType(value, context: _parent._indexContext);
+                            var blittableValue = TypeConverter.ToBlittableSupportedType(value, context: _parent._indexContext, isRoot: false);
                             _propertyQueue.Enqueue((property.Key, blittableValue));
 
                             if (property.IsGroupByField)

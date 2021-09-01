@@ -732,11 +732,14 @@ function map(name, lambda) {
         }
 
         private const string Code = @"
+// this helps to distinguish between execution environments like 'RavendDB' and 'Node.js'.
+// Node.js can be used both for testing and alternative execution (with modified logic).
 var process = {
     env: {
         EXEC_ENV: 'RavenDB'
     }
 }
+
 var globalDefinition =
 {
     maps: [],

@@ -9,7 +9,9 @@ using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static.JavaScript;
 using Raven.Server.Documents.Queries.Results;
+using Sparrow;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Sparrow.Server.Json.Sync;
 using Raven.Server.Utils;
 
@@ -151,53 +153,193 @@ namespace Raven.Server.Documents.Patch
         }
 
 
+        public BlittableObjectProperty GetOwnProperty(string propertyName)
+        {
+            BlittableObjectProperty val = null;
+            if (OwnValues?.TryGetValue(propertyName, out val) == true &&
+                val != null)
+            {
+                return val;
+            }
+
+            if (propertyName == Constants.Documents.Metadata.Key && IsDocument()) {
+                InternalHandle jsMD = GetMetadata();
+                OwnValues?.TryGetValue(propertyName, out val);
+                return val;
+            }
+            
+            Deletes?.Remove(propertyName);
+
+            val = new BlittableObjectProperty(this, propertyName);
+
+            /*if (val.Value.IsEmpty) {
+                InternalHandle jsValue = base.NamedPropertyGetter(ref propertyName);
+                if (!jsValue.IsEmpty) {
+                    val = new BlittableObjectProperty(this, propertyName, jsValue);
+                }
+            }*/
+
+            if (val.Value.IsEmpty &&
+                DocumentId == null &&
+                _set == false)
+            {
+                val.Dispose();
+                return null;
+            }
+
+            OwnValues ??= new Dictionary<string, BlittableObjectProperty>(Blittable.Count);
+
+            OwnValues[propertyName] = val;
+
+            return val;
+        }
+
+        public InternalHandle SetOwnProperty(string propertyName, InternalHandle value, V8PropertyAttributes attributes = V8PropertyAttributes.Undefined)
+        {
+            _set = true;
+            try
+            {
+                BlittableObjectProperty val = null;
+                if (OwnValues?.TryGetValue(propertyName, out val) == true &&
+                    val != null)
+                {
+                    val.Value = value;
+                    return value;
+                }
+                
+                InternalHandle jsRes = InternalHandle.Empty; //base.NamedPropertySetter(ref propertyName, value, attributes);
+                if (jsRes.IsEmpty) {
+                    Deletes?.Remove(propertyName);
+
+                    jsRes = new InternalHandle(ref value, true);
+                    val = new BlittableObjectProperty(this, propertyName, jsRes);
+                    val.Changed = true;
+                    MarkChanged();
+                    OwnValues ??= new Dictionary<string, BlittableObjectProperty>(Blittable.Count);
+                    OwnValues[propertyName] = val;
+                }
+                return jsRes;
+            }
+            finally
+            {
+                _set = false;
+            }
+        }
+
+        public bool? DeleteOwnProperty(string propertyName)
+        {
+            if (propertyName == Constants.Documents.Metadata.Key && IsDocument())
+                return false;
+
+            if (Deletes == null)
+                Deletes = new HashSet<string>();
+
+            var desc = GetOwnProperty(propertyName);
+            if (desc == null)
+                return InternalHandle.Empty; //base.NamedPropertyDeleter(ref propertyName);
+
+            MarkChanged();
+            Deletes.Add(propertyName);
+            return OwnValues?.Remove(propertyName);
+        }
+
+        public V8PropertyAttributes? QueryOwnProperty(string propertyName)
+        {
+            if (OwnValues?.ContainsKey(propertyName) == true || Array.IndexOf(Blittable.GetPropertyNames(), propertyName) >= 0)
+                return V8PropertyAttributes.None;
+
+            return null;
+        }
+
+        public InternalHandle EnumerateOwnProperties()
+        {
+            var list = Engine.CreateArray(Array.Empty<InternalHandle>()); //base.NamedPropertyEnumerator();
+            void pushKey(string value) {
+                using (var jsResPush = list.StaticCall("push", Engine.CreateValue(value)))
+                    jsResPush.ThrowOnError();
+            }
+
+            if (OwnValues != null)
+            {
+                foreach (var value in OwnValues)
+                    pushKey(value.Key);
+            }
+
+            if (Blittable == null) {
+                //using (var jsStrList1 = Engine.Execute("JSON.stringify").StaticCall(new InternalHandle(ref list, true))) var strList1 = jsStrList1.AsString;
+                return list;
+            }
+
+            foreach (var key in Blittable.GetPropertyNames())
+            {
+                if (Deletes?.Contains(key) == true)
+                    continue;
+                if (OwnValues?.ContainsKey(key) == true)
+                    continue;
+
+                pushKey(key);
+            }
+
+            //using (var jsStrList2 = Engine.Execute("JSON.stringify").StaticCall(new InternalHandle(ref list, true))) var strList1 = jsStrList2.AsString;
+            return list;
+        }
+
+        public bool IsDocument()
+        {
+            var propertyName = Constants.Documents.Metadata.Key;
+            return Blittable[propertyName] is BlittableJsonReaderObject metadata;
+        }
+
+        public InternalHandle GetMetadata()
+        {
+            try {
+                var propertyName = Constants.Documents.Metadata.Key;
+                if (!(Blittable[propertyName] is BlittableJsonReaderObject metadata))
+                    return Engine.CreateNullValue();
+
+                metadata.Modifications = new DynamicJsonValue
+                {
+                    [Constants.Documents.Metadata.ChangeVector] = ChangeVector,
+                    [Constants.Documents.Metadata.Id] = DocumentId,
+                    [Constants.Documents.Metadata.LastModified] = LastModified,
+                };
+
+                if (IndexScore != null)
+                    metadata.Modifications[Constants.Documents.Metadata.IndexScore] = IndexScore.Value;
+
+                if (Distance != null)
+                    metadata.Modifications[Constants.Documents.Metadata.SpatialResult] = Distance.Value.ToJson();
+
+                // we cannot dispose the metadata here because the BOI is accessing blittable directly using the .Blittable property
+                //using (var old = metadata)
+                {
+                    metadata = JavaScriptUtils.Context.ReadObject(metadata, DocumentId);
+                    InternalHandle metadataJs = JavaScriptUtils.TranslateToJs(JavaScriptUtils.Context, metadata);
+                    if (metadataJs.IsError)
+                        return metadataJs;
+                    SetOwnProperty(propertyName, metadataJs);
+
+                    return metadataJs;
+                }
+            }
+            catch (Exception e) 
+            {
+                return Engine.CreateError(e.Message, JSValueType.ExecutionError);
+            }
+        }
+
         public class CustomBinder : ObjectBinderEx<BlittableObjectInstance>
         {
             public CustomBinder() : base()
             {
             }
 
-            private BlittableObjectProperty GetOwnProperty(string propertyName)
+            public override InternalHandle NamedPropertyGetter(ref string propertyName)
             {
                 ObjCLR.HandleID = this._.ID;
                 ObjCLR.ObjectID = this.ID;
 
-                BlittableObjectProperty val = null;
-                if (ObjCLR.OwnValues?.TryGetValue(propertyName, out val) == true &&
-                    val != null)
-                {
-                    return val;
-                }
-
-                ObjCLR.Deletes?.Remove(propertyName);
-
-                val = new BlittableObjectProperty(ObjCLR, propertyName);
-
-                /*if (val.Value.IsEmpty) {
-                    InternalHandle jsValue = base.NamedPropertyGetter(ref propertyName);
-                    if (!jsValue.IsEmpty) {
-                        val = new BlittableObjectProperty(ObjCLR, propertyName, jsValue);
-                    }
-                }*/
-
-                if (val.Value.IsEmpty &&
-                    ObjCLR.DocumentId == null &&
-                    ObjCLR._set == false)
-                {
-                    val.Dispose();
-                    return null;
-                }
-
-                ObjCLR.OwnValues ??= new Dictionary<string, BlittableObjectProperty>(ObjCLR.Blittable.Count);
-
-                ObjCLR.OwnValues[propertyName] = val;
-
-                return val;
-            }
-
-            public override InternalHandle NamedPropertyGetter(ref string propertyName)
-            {
-                var desc = GetOwnProperty(propertyName);
+                var desc = ObjCLR.GetOwnProperty(propertyName);
                 if (desc != null) {
                     return desc.ValueCopy();
                 }
@@ -206,57 +348,12 @@ namespace Raven.Server.Documents.Patch
 
             public override InternalHandle NamedPropertySetter(ref string propertyName, InternalHandle value, V8PropertyAttributes attributes = V8PropertyAttributes.Undefined)
             {
-                if (propertyName == Constants.Documents.Metadata.Key) {
-                    ObjCLR._set = false;
-                    return InternalHandle.Empty;
-                }
-                
-                ObjCLR._set = true;
-                try
-                {
-                    BlittableObjectProperty val = null;
-                    if (ObjCLR.OwnValues?.TryGetValue(propertyName, out val) == true &&
-                        val != null)
-                    {
-                        val.Value = value;
-                        return value;
-                    }
-                    
-                    InternalHandle jsRes = InternalHandle.Empty; //base.NamedPropertySetter(ref propertyName, value, attributes);
-                    if (jsRes.IsEmpty) {
-                        ObjCLR.Deletes?.Remove(propertyName);
-
-                        jsRes = new InternalHandle(ref value, true);
-                        val = new BlittableObjectProperty(ObjCLR, propertyName, jsRes);
-                        val.Changed = true;
-                        ObjCLR.MarkChanged();
-                        ObjCLR.OwnValues ??= new Dictionary<string, BlittableObjectProperty>(ObjCLR.Blittable.Count);
-                        ObjCLR.OwnValues[propertyName] = val;
-                    }
-                    return jsRes;
-                }
-                finally
-                {
-                    ObjCLR._set = false;
-                }
+                return ObjCLR.SetOwnProperty(propertyName, value, attributes);
             }
 
             public override bool? NamedPropertyDeleter(ref string propertyName)
             {
-                if (propertyName == Constants.Documents.Metadata.Key) {
-                    return false;
-                }
-                
-                if (ObjCLR.Deletes == null)
-                    ObjCLR.Deletes = new HashSet<string>();
-
-                var desc = GetOwnProperty(propertyName);
-                if (desc == null)
-                    return InternalHandle.Empty; //base.NamedPropertyDeleter(ref propertyName);
-
-                ObjCLR.MarkChanged();
-                ObjCLR.Deletes.Add(propertyName);
-                return ObjCLR.OwnValues?.Remove(propertyName);
+                return ObjCLR.DeleteOwnProperty(propertyName);
             }
 
             public override V8PropertyAttributes? NamedPropertyQuery(ref string propertyName)
@@ -265,43 +362,12 @@ namespace Raven.Server.Documents.Patch
                 if (res != null)
                     return res;*/
 
-                if (ObjCLR.OwnValues?.ContainsKey(propertyName) == true || Array.IndexOf(ObjCLR.Blittable.GetPropertyNames(), propertyName) >= 0)
-                    return V8PropertyAttributes.None;
-
-                return null;
+                return ObjCLR.QueryOwnProperty(propertyName);
             }
 
             public override InternalHandle NamedPropertyEnumerator()
             {
-                var list = Engine.CreateArray(Array.Empty<InternalHandle>()); //base.NamedPropertyEnumerator();
-                void pushKey(string value) {
-                    using (var jsResPush = list.StaticCall("push", Engine.CreateValue(value)))
-                        jsResPush.ThrowOnError();
-                }
-
-                if (ObjCLR.OwnValues != null)
-                {
-                    foreach (var value in ObjCLR.OwnValues)
-                        pushKey(value.Key);
-                }
-
-                if (ObjCLR.Blittable == null) {
-                    //using (var jsStrList1 = Engine.Execute("JSON.stringify").StaticCall(new InternalHandle(ref list, true))) var strList1 = jsStrList1.AsString;
-                    return list;
-                }
-
-                foreach (var key in ObjCLR.Blittable.GetPropertyNames())
-                {
-                    if (ObjCLR.Deletes?.Contains(key) == true)
-                        continue;
-                    if (ObjCLR.OwnValues?.ContainsKey(key) == true)
-                        continue;
-
-                    pushKey(key);
-                }
-
-                //using (var jsStrList2 = Engine.Execute("JSON.stringify").StaticCall(new InternalHandle(ref list, true))) var strList1 = jsStrList2.AsString;
-                return list;
+                return ObjCLR.EnumerateOwnProperties();
             }
 
         }
