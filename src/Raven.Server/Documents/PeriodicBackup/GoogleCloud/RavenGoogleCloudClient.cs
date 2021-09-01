@@ -44,7 +44,7 @@ namespace Raven.Server.Documents.PeriodicBackup.GoogleCloud
             try
             {
                 _client = StorageClient.Create(GoogleCredential.FromJson(settings.GoogleCredentialsJson));
-                _client.Service.HttpClient.Timeout = configuration.UploadTimeout.AsTimeSpan;
+                _client.Service.HttpClient.Timeout = configuration.CloudStorageOperationTimeout.AsTimeSpan;
             }
             catch (Exception e)
             {

@@ -59,7 +59,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             _client = new AmazonGlacierClient(credentials, new AmazonGlacierConfig
             {
                 RegionEndpoint = region,
-                Timeout = configuration.UploadTimeout.AsTimeSpan
+                Timeout = configuration.CloudStorageOperationTimeout.AsTimeSpan
             });
 
             _region = glacierSettings.AwsRegionName;

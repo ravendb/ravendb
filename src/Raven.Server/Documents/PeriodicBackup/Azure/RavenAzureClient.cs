@@ -57,7 +57,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             {
                 Retry =
                 {
-                    NetworkTimeout = configuration.UploadTimeout.AsTimeSpan
+                    NetworkTimeout = configuration.CloudStorageOperationTimeout.AsTimeSpan
                 }
             };
 

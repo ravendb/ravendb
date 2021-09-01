@@ -52,7 +52,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
 
             var config = new AmazonS3Config
             {
-                Timeout = configuration.UploadTimeout.AsTimeSpan
+                Timeout = configuration.CloudStorageOperationTimeout.AsTimeSpan
             };
 
             if (string.IsNullOrWhiteSpace(s3Settings.CustomServerUrl))
