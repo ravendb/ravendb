@@ -11,13 +11,6 @@ namespace Raven.Server.Documents.Indexes.Persistence
     {
         protected readonly Index _index;
 
-        // this is used to remember the positions of files in the database
-        // always points to the latest valid transaction and is updated by
-        // the write tx on commit, thread safety is inherited from the voron
-        // transaction
-        protected IndexTransactionCache _streamsCache = new IndexTransactionCache();
-
-        internal abstract LuceneVoronDirectory LuceneDirectory { get; }
         protected IndexPersistenceBase(Index index)
         {
             _index = index;
@@ -47,10 +40,7 @@ namespace Raven.Server.Documents.Indexes.Persistence
         public abstract void DisposeWriters();
         public abstract void Dispose();
 
-        protected void SetStreamCacheInTx(LowLevelTransaction tx)
-        {
-            tx.ImmutableExternalState = _streamsCache;
-        }
+        
 
     }
 

@@ -1,5 +1,6 @@
 using System;
 using System.Buffers;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
@@ -146,6 +147,43 @@ namespace Corax
             _dataIndex = dataLocation + value.Length;
         }
 
+        public void PrepareForEnumerable(int field, out int dataLocation)
+        {
+            Debug.Assert(field < _knownFields.Count);
+            dataLocation = _dataIndex;
+            _knownFieldsLocations[field] = dataLocation | unchecked((int)0x80000000);
+            dataLocation += VariableSizeEncoding.Write(_buffer, (byte)IndexEntryFieldType.List, dataLocation);
+            Unsafe.WriteUnaligned(ref _buffer[dataLocation], 0F);
+            dataLocation += sizeof(long);
+            //place for buffer ptr
+            Unsafe.WriteUnaligned(ref _buffer[dataLocation], 1);
+            dataLocation += sizeof(int);
+            //we need to start writing buffer[dataLocation - sizeof(long) - sizeof(int)]
+        }
+
+        public void WriteEnumerableItem(ref int dataLocation, int field, ReadOnlySpan<byte> value)
+        {
+            value.CopyTo(_buffer[dataLocation..]);
+            dataLocation += value.Length;
+            _dataIndex = dataLocation;
+        }
+
+        public void FinishWritingEnumerable(int metadataLocation, int dataLocation, int field, List<int> lengthList)
+        {
+            //<- move pointer to left.
+            metadataLocation -= sizeof(long) + sizeof(int);
+            //write length of array
+            metadataLocation += VariableSizeEncoding.Write(_buffer, lengthList.Count, metadataLocation);
+            //allocate ptr table
+            var stringPtrTableLocation = _buffer.Slice(metadataLocation, sizeof(int));
+            MemoryMarshal.Write(stringPtrTableLocation, ref dataLocation);
+            
+            foreach (var length in lengthList)
+                dataLocation += VariableSizeEncoding.Write<int>(_buffer, length, dataLocation);
+
+            _dataIndex = dataLocation;
+        }
+        
         public void Write<TEnumerator>(int field, TEnumerator values) where TEnumerator : IReadOnlySpanEnumerator
         {
             Debug.Assert(field < _knownFields.Count);

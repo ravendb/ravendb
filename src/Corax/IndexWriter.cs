@@ -62,7 +62,6 @@ namespace Corax
             _entriesContainerId = Transaction.OpenContainer(EntriesContainerSlice);
         }
         
-        // _transactionInjected disable transaction commit in instance of IndexWriter because it's done by Server. 
         public IndexWriter([NotNull] Transaction tx)
         {
             Transaction = tx;
@@ -254,7 +253,7 @@ namespace Corax
                     }
                 }
             }
-            if(_ownsTransaction)
+            if (_ownsTransaction)
                 Transaction.Commit();
         }
         

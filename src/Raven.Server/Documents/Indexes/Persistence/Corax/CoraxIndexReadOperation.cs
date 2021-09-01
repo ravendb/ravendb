@@ -47,66 +47,75 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             if (isDistinctCount)
                 pageSize = int.MaxValue;
             var position = query.Start;
+            long readCounter = 0;
 
-
-            IQueryMatch result = _coraxQueryEvaluator.Search(query.Metadata.Query);
-            if(result == null)
+            IQueryMatch result = _coraxQueryEvaluator.Search(query.Metadata, fieldsToFetch);
+            if (result == null)
                 yield break;
 
             totalResults.Value = Convert.ToInt32(result.Count);
             var ids = ArrayPool<long>.Shared.Rent(_bufferSize);
-            int read = 0;
-
-            //escaping already returned docs.
-            // Q: Can Corax have "skip" method inside? It's inefficient to copy values only for skipping.
-            int docsToLoad = pageSize;
-            if (position != 0)
+            try
             {
-                int emptyRead = position / _bufferSize;
-                do
+                int read = 0;
+
+                //escaping already returned docs.
+                // Q: Can Corax have "skip" method inside? It's inefficient to copy values only for skipping.
+                int docsToLoad = pageSize;
+                if (position != 0)
                 {
-                    read = result.Fill(ids);
-                    emptyRead--;
-                } while (emptyRead > 0);
-
-                position %= _bufferSize; // move into <0;_bufferSize> set.
-                //I know there is a cost of copying this but it's max _bufferSize and make code much simpler.
-                ids[position..read].CopyTo(ids, 0);
-                read -= position;
-                skippedResults.Value = docsToLoad * _bufferSize + position;
-            }
-
-
-            // first Fill operation would be done outside loop because we need to check if there is already some data read.
-            if (read == 0)
-                read = result.Fill(ids);
-
-            while (read != 0)
-            {
-                for (int i = 0; i < read && docsToLoad != 0; --docsToLoad, ++i)
-                {
-                    RetrieverInput retrieverInput = new(_indexSearcher.GetReaderFor(ids[i]), _indexSearcher.GetIdentityFor(ids[i]));
-
-                    yield return new QueryResult()
+                    int emptyRead = position / _bufferSize;
+                    do
                     {
-                        Result = retriever.Get(ref retrieverInput)
-                    };
+                        read = result.Fill(ids);
+                        readCounter += read;
+                        emptyRead--;
+                    } while (emptyRead > 0);
+
+                    position %= _bufferSize; // move into <0;_bufferSize> set.
+                    //I know there is a cost of copying this but it's max _bufferSize and make code much simpler.
+                    ids[position..read].CopyTo(ids, 0);
+                    read -= position;
+                    skippedResults.Value = -1; // docsToLoad * _bufferSize + position;
                 }
 
-                if (docsToLoad == 0)
-                    break;
+                // first Fill operation would be done outside loop because we need to check if there is already some data read.
+                if (read == 0)
+                {
+                    read = result.Fill(ids);
+                    readCounter += read;
+                }
 
-                read = result.Fill(ids);
+                while (read != 0)
+                {
+                    for (int i = 0; i < read && docsToLoad != 0; --docsToLoad, ++i)
+                    {
+                        RetrieverInput retrieverInput = new(_indexSearcher.GetReaderFor(ids[i]), _indexSearcher.GetIdentityFor(ids[i]));
+
+                        yield return new QueryResult() { Result = retriever.Get(ref retrieverInput) };
+                    }
+
+                    if (docsToLoad == 0)
+                        break;
+
+                    read = result.Fill(ids);
+                    readCounter += read;
+                }
+
+                //special value for studio. We have unbounded set and don't know how much items is in index so it should count it during loading.
+                if (totalResults.Value == 0)
+                {
+                    totalResults.Value = Convert.ToInt32(readCounter);
+                }
             }
-
-            //special value for studio. We have unbounded set and don't know how much items is in index so it should count it during loading.
-            if(read > docsToLoad)    
-                totalResults.Value = -1;
-
-            ArrayPool<long>.Shared.Return(ids);
+            finally
+            {
+                ArrayPool<long>.Shared.Return(ids);
+            }
         }
-        
-        public override IEnumerable<QueryResult> IntersectQuery(IndexQueryServerSide query, FieldsToFetch fieldsToFetch, Reference<int> totalResults, Reference<int> skippedResults, IQueryResultRetriever retriever,
+
+        public override IEnumerable<QueryResult> IntersectQuery(IndexQueryServerSide query, FieldsToFetch fieldsToFetch, Reference<int> totalResults,
+            Reference<int> skippedResults, IQueryResultRetriever retriever,
             DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField, CancellationToken token)
         {
             throw new NotImplementedException();
@@ -117,12 +126,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             throw new NotImplementedException();
         }
 
-        public override IEnumerable<QueryResult> MoreLikeThis(IndexQueryServerSide query, IQueryResultRetriever retriever, DocumentsOperationContext context, CancellationToken token)
+        public override IEnumerable<QueryResult> MoreLikeThis(IndexQueryServerSide query, IQueryResultRetriever retriever, DocumentsOperationContext context,
+            CancellationToken token)
         {
             throw new NotImplementedException();
         }
 
-        public override IEnumerable<BlittableJsonReaderObject> IndexEntries(IndexQueryServerSide query, Reference<int> totalResults, DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField, CancellationToken token)
+        public override IEnumerable<BlittableJsonReaderObject> IndexEntries(IndexQueryServerSide query, Reference<int> totalResults,
+            DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField, CancellationToken token)
         {
             throw new NotImplementedException();
         }

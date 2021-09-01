@@ -22,9 +22,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             _logger = LoggingSource.Instance.GetLogger<CoraxIndexPersistence>(index.DocumentDatabase.Name);
             _converter = new CoraxDocumentConverter(index);
         }
-
         
-
         public override IndexWriteOperationBase OpenIndexWriter(Transaction writeTransaction, JsonOperationContext indexContext)
         {
             return new CoraxIndexWriteOperation(
@@ -62,7 +60,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
         #region LuceneMethods
 
-        internal override LuceneVoronDirectory LuceneDirectory { get; }
         public override bool HasWriter { get; }
 
         public override void CleanWritersIfNeeded()
@@ -82,7 +79,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
         public override void PublishIndexCacheToNewTransactions(IndexTransactionCache transactionCache)
         {
-            _streamsCache = transactionCache;
+            //lucene method
         }
 
         internal override IndexTransactionCache BuildStreamCacheAfterTx(Transaction tx)

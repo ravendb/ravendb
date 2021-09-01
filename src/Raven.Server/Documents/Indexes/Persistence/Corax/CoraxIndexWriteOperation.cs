@@ -56,12 +56,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             EnsureValidStats(stats);
             _entriesCount++;
             Span<byte> data;
-            string id;
+            LazyStringValue lowerId;
 
             using (Stats.ConvertStats.Start())
-                data = _converter.InsertDocumentFields(key, sourceDocumentId, document, indexContext, out id);
+                data = _converter.InsertDocumentFields(key, sourceDocumentId, document, indexContext, out lowerId);
 
-            _indexWriter.Index(id, data, _knownFields);
+            _indexWriter.Index(lowerId, data, _knownFields);
             stats.RecordIndexingOutput();
 
         }
@@ -70,8 +70,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
         public override (long RamSizeInBytes, long FilesAllocationsInBytes) GetAllocations()
         {
+            //todo maciej
             return (1024 * 1024, 1024 * 1024);
-            //throw new NotImplementedException();
+           
         }
 
         public override void Optimize()

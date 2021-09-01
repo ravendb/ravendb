@@ -32,20 +32,14 @@ namespace Corax
 
         public bool IsAccelerated => Avx2.IsSupported && !ForceNonAccelerated;
 
-        private readonly bool _ownsTransaction = true;
+        private readonly bool _ownsTransaction;
         // The reason why we want to have the transaction open for us is so that we avoid having
         // to explicitly provide the index searcher with opening semantics and also every new
         // searcher becomes essentially a unit of work which makes reusing assets tracking more explicit.
         public IndexSearcher(StorageEnvironment environment)
         {
             _transaction = environment.ReadTransaction();
-        }
-
-        public UnmanagedSpan GetIndexEntryPointer(long id)
-        {
-            var data = Container.MaybeGetFromSamePage(_transaction.LowLevelTransaction, ref _lastPage, id);
-            int size = ZigZagEncoding.Decode<int>(data.ToSpan(), out var len);
-            return data.ToUnmanagedSpan().Slice(size + len);
+            _ownsTransaction = true;
         }
 
         public IndexSearcher(Transaction tx)
@@ -53,7 +47,14 @@ namespace Corax
             _ownsTransaction = false;
             _transaction = tx;
         }
-
+        
+        public UnmanagedSpan GetIndexEntryPointer(long id)
+        {
+            var data = Container.MaybeGetFromSamePage(_transaction.LowLevelTransaction, ref _lastPage, id);
+            int size = ZigZagEncoding.Decode<int>(data.ToSpan(), out var len);
+            return data.ToUnmanagedSpan().Slice(size + len);
+        }
+        
         public IndexEntryReader GetReaderFor(long id)
         {
             var data = Container.MaybeGetFromSamePage(_transaction.LowLevelTransaction, ref _lastPage, id).ToSpan();
@@ -439,7 +440,7 @@ namespace Corax
 
         public void Dispose()
         {
-            if(_ownsTransaction)
+            if (_ownsTransaction)
                 _transaction?.Dispose();
         }
     }

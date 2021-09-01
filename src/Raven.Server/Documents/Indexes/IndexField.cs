@@ -24,6 +24,7 @@ namespace Raven.Server.Documents.Indexes
     {
         internal string OriginalName { get; set; }
 
+        // corax field id
         public int Id { get; set; }
 
         public string Analyzer { get; set; }
