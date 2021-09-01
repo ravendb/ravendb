@@ -811,7 +811,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             TaskCancelToken.Token.ThrowIfCancellationRequested();
 
-            var uploaderSettings = new UploaderSettings
+            var uploaderSettings = new UploaderSettings(_database.Configuration.Backup)
             {
                 S3Settings = s3Settings,
                 GlacierSettings = glacierSettings,

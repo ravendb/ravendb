@@ -4,6 +4,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Logging;
@@ -74,21 +75,9 @@ namespace Voron.Impl.Paging
                             if (info.Size == 0 || info.BaseAddress == null)
                                 continue;
 
-                            if (Sodium.sodium_mlock(info.BaseAddress, (UIntPtr)info.Size) != 0)
-                            {
-                                if (DoNotConsiderMemoryLockFailureAsCatastrophicError)
-                                    continue; // okay, can skip this, then
-
-                                lock (WorkingSetIncreaseLocker)
-                                {
-                                    // we should check ourselves again after we enter the lock, someone could halve already increased working set enough
-                                    if (Sodium.sodium_mlock(info.BaseAddress, (UIntPtr)info.Size) != 0)
-                                        TryHandleFailureToLockMemory(info.BaseAddress, info.Size);
-                                 
+                            Lock(info.BaseAddress, info.Size, state: null);
                                 }
                             }
-                        }
-                    }
                     catch
                     {
                         // need to restore the state to the way it was, so we'll dispose the pager state
@@ -105,6 +94,30 @@ namespace Voron.Impl.Paging
             }
         }
 
+        protected void Lock(byte* address, long sizeToLock, TransactionState state)
+        {
+            var lockTaken = false;
+            try
+            {
+                if (Sodium.Lock(address, (UIntPtr)sizeToLock) == 0) 
+                    return;
+
+                if (DoNotConsiderMemoryLockFailureAsCatastrophicError)
+                    return;
+
+                if (PlatformDetails.RunningOnPosix == false)
+                    // when running on linux we can't do anything from within the process, so let's avoid the locking entirely
+                    Monitor.Enter(WorkingSetIncreaseLocker, ref lockTaken);
+
+                TryHandleFailureToLockMemory(address, sizeToLock);
+            }
+            finally
+            {
+                if (lockTaken)
+                    Monitor.Exit(WorkingSetIncreaseLocker);
+            }
+        }
+
         public virtual bool ShouldLockMemoryAtPagerLevel()
         {
             return LockMemory;
@@ -112,10 +125,13 @@ namespace Voron.Impl.Paging
 
         protected void TryHandleFailureToLockMemory(byte* addressToLock, long sizeToLock)
         {
-            var currentProcess = Process.GetCurrentProcess();
+            using var currentProcess = Process.GetCurrentProcess();
 
             if (PlatformDetails.RunningOnPosix == false)
             {
+                var retries = 10;
+                while (retries > 0)
+                {
                 // From: https://msdn.microsoft.com/en-us/library/windows/desktop/ms686234(v=vs.85).aspx
                 // "The maximum number of pages that a process can lock is equal to the number of pages in its minimum working set minus a small overhead"
                 // let's increase the max size of memory we can lock by increasing the MinWorkingSet. On Windows, that is available for all users
@@ -138,7 +154,8 @@ namespace Voron.Impl.Paging
                     }
                     catch (Exception e)
                     {
-                        throw new InsufficientMemoryException($"Need to increase the min working set size from {(long)currentProcess.MinWorkingSet:#,#;;0} bytes to {nextWorkingSetSize:#,#;;0} bytes but the max working set size was too small: {(long)currentProcess.MaxWorkingSet:#,#;;0}. " +
+                            throw new InsufficientMemoryException(
+                                $"Need to increase the min working set size from {(long)currentProcess.MinWorkingSet:#,#;;0} bytes to {nextWorkingSetSize:#,#;;0} bytes but the max working set size was too small: {(long)currentProcess.MaxWorkingSet:#,#;;0}. " +
                                                               $"Failed to increase the max working set size so we can lock {sizeToLock:#,#;;0} bytes for {FileName}. With encrypted " +
                                                               "databases we lock some memory in order to avoid leaking secrets to disk. Treating this as a catastrophic error " +
                                                               "and aborting the current operation.", e);
@@ -153,14 +170,18 @@ namespace Voron.Impl.Paging
                 }
                 catch (Exception e)
                 {
-                    throw new InsufficientMemoryException($"Failed to increase the min working set size to {nextWorkingSetSize:#,#;;0} bytes so we can lock {sizeToLock:#,#;;0} bytes for {FileName}. With encrypted " +
+                        throw new InsufficientMemoryException(
+                            $"Failed to increase the min working set size to {nextWorkingSetSize:#,#;;0} bytes so we can lock {sizeToLock:#,#;;0} bytes for {FileName}. With encrypted " +
                                                           "databases we lock some memory in order to avoid leaking secrets to disk. Treating this as a catastrophic error " +
                                                           "and aborting the current operation.", e);
                 }
 
-                // now we can try again, after we raised the limit, we only do so once, though
-                if (Sodium.sodium_mlock(addressToLock, (UIntPtr)sizeToLock) == 0)
+                    if (Sodium.Lock(addressToLock, (UIntPtr)sizeToLock) == 0)
                     return;
+
+                    // let's retry, since we increased the WS, but other thread might have locked the memory
+                    retries--;
+            }
             }
 
             var msg =
@@ -525,7 +546,7 @@ namespace Voron.Impl.Paging
             // that at any rate, we don't care about the memory zeroing, since
             // we are already zeroing the memory ourselves (the pager is likely
             // to be part of a long term held instance).
-            Sodium.sodium_munlock(baseAddress, (UIntPtr)size);
+            Sodium.Unlock(baseAddress, (UIntPtr)size);
         }
 
         // NodeMaxSize - RequiredSpaceForNewNode for 4Kb page is 2038, so we drop this by a bit

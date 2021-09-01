@@ -248,10 +248,10 @@ namespace FastTests
                 message += $"{Environment.NewLine}Url: {nodes[i].WebUrl}. Applied: {tasks[i].IsCompleted}.";
                 if (tasks[i].IsCompleted == false)
                 {
-                    using (nodes[i].ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    using (nodes[i].ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                     {
                         context.OpenReadTransaction();
-                        message += $"{Environment.NewLine}Log state for non responsing server:{Environment.NewLine}{context.ReadObject(nodes[i].ServerStore.GetLogDetails(context), "LogSummary/" + i)}";
+                        message += $"{Environment.NewLine}Log state for non responsing server:{Environment.NewLine}{nodes[i].ServerStore.Engine.LogHistory.GetHistoryLogsAsString(context)}";
                     }
                 }
             }

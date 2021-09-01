@@ -4,6 +4,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Server.Config.Categories;
 using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.ServerWide.Context;
 
@@ -13,9 +14,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
     {
         private readonly RavenAwsS3Client _client;
 
-        public S3RestorePoints(SortedList<DateTime, RestorePoint> sortedList, TransactionOperationContext context, S3Settings s3Settings) : base(sortedList, context)
+        public S3RestorePoints(Config.Categories.BackupConfiguration configuration, SortedList<DateTime, RestorePoint> sortedList, TransactionOperationContext context, S3Settings s3Settings) : base(sortedList, context)
         {
-            _client = new RavenAwsS3Client(s3Settings);
+            _client = new RavenAwsS3Client(s3Settings, configuration);
         }
 
         public override async Task FetchRestorePoints(string path)
