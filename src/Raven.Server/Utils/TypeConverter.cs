@@ -177,7 +177,7 @@ namespace Raven.Server.Utils
 
         public static object ToBlittableSupportedType(object value, bool flattenArrays = false, bool forIndexing = false, V8Engine engine = null, JsonOperationContext context = null, bool isRoot = true)
         {
-            return ToBlittableSupportedType(value, value, flattenArrays, forIndexing, 0, engine, context, isRoot);
+            return ToBlittableSupportedType(value, value, flattenArrays, forIndexing, 0, engine, context, isRoot: isRoot);
         }
 
 
