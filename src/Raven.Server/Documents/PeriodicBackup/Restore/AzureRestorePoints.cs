@@ -4,6 +4,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Server.Config.Categories;
 using Raven.Server.Documents.PeriodicBackup.Azure;
 using Raven.Server.ServerWide.Context;
 
@@ -12,9 +13,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
     public class AzureRestorePoints : RestorePointsBase
     {
         private readonly RavenAzureClient _client;
-        public AzureRestorePoints(SortedList<DateTime, RestorePoint> sortedList, TransactionOperationContext context, AzureSettings azureSettings) : base(sortedList, context)
+        public AzureRestorePoints(BackupConfiguration configuration, SortedList<DateTime, RestorePoint> sortedList, TransactionOperationContext context, AzureSettings azureSettings) : base(sortedList, context)
         {
-            _client = new RavenAzureClient(azureSettings);
+            _client = new RavenAzureClient(azureSettings, configuration);
         }
 
         public override async Task FetchRestorePoints(string path)

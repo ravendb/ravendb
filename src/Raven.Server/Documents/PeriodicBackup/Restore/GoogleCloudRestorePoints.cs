@@ -1,14 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.IO.Compression;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Server.Config.Categories;
 using Raven.Server.Documents.PeriodicBackup.GoogleCloud;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Server.Utils;
 
 namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
@@ -16,9 +14,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
     {
         private readonly RavenGoogleCloudClient _client;
 
-        public GoogleCloudRestorePoints(SortedList<DateTime, RestorePoint> sortedList, TransactionOperationContext context, GoogleCloudSettings client) : base(sortedList, context)
+        public GoogleCloudRestorePoints(BackupConfiguration configuration, SortedList<DateTime, RestorePoint> sortedList, TransactionOperationContext context, GoogleCloudSettings client) : base(sortedList, context)
         {
-            _client = new RavenGoogleCloudClient(client);
+            _client = new RavenGoogleCloudClient(client, configuration);
         }
 
         public override async Task FetchRestorePoints(string path)

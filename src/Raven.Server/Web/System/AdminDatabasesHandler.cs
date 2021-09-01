@@ -229,7 +229,7 @@ namespace Raven.Server.Web.System
         public async Task Put()
         {
             var raftRequestId = GetRaftRequestIdFromQuery();
-            
+
             ServerStore.EnsureNotPassive();
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
@@ -238,7 +238,7 @@ namespace Raven.Server.Web.System
                 var replicationFactor = GetIntValueQueryString("replicationFactor", required: false) ?? 1;
                 var json = context.ReadForDisk(RequestBodyStream(), "Database Record");
                 var databaseRecord = JsonDeserializationCluster.DatabaseRecord(json);
-               
+
                 if (LoggingSource.AuditLog.IsInfoEnabled)
                 {
                     var clientCert = GetCurrentCertificate();
@@ -246,15 +246,15 @@ namespace Raven.Server.Web.System
                     var auditLog = LoggingSource.AuditLog.GetLogger("DbMgmt", "Audit");
                     auditLog.Info($"Database {databaseRecord.DatabaseName} PUT by {clientCert?.Subject} ({clientCert?.Thumbprint})");
                 }
-                
+
                 if (databaseRecord.Encrypted)
                     ServerStore.LicenseManager.AssertCanCreateEncryptedDatabase();
-                
+
                 // Validate Directory
-                var dataDirectoryThatWillBeUsed = databaseRecord.Settings.TryGetValue(RavenConfiguration.GetKey(x => x.Core.DataDirectory), out var dir) == false ? 
+                var dataDirectoryThatWillBeUsed = databaseRecord.Settings.TryGetValue(RavenConfiguration.GetKey(x => x.Core.DataDirectory), out var dir) == false ?
                                                   ServerStore.Configuration.Core.DataDirectory.FullPath :
                                                   new PathSetting(dir, ServerStore.Configuration.Core.DataDirectory.FullPath).FullPath;
-                
+
                 if (string.IsNullOrWhiteSpace(dir) == false)
                 {
                     if (ServerStore.Configuration.Core.EnforceDataDirectoryPath)
@@ -271,7 +271,7 @@ namespace Raven.Server.Web.System
                         throw new InvalidOperationException($"Cannot access path '{dataDirectoryThatWillBeUsed}'. {error}");
                     }
                 }
-                
+
                 // Validate Name
                 databaseRecord.DatabaseName = databaseRecord.DatabaseName.Trim();
                 if (ResourceNameValidator.IsValidResourceName(databaseRecord.DatabaseName, dataDirectoryThatWillBeUsed, out string errorMessage) == false)
@@ -548,7 +548,7 @@ namespace Raven.Server.Web.System
 
                     case PeriodicBackupConnectionType.S3:
                         var s3Settings = JsonDeserializationServer.S3Settings(restorePathBlittable);
-                        using (var s3RestoreUtils = new S3RestorePoints(sortedList, context, s3Settings))
+                        using (var s3RestoreUtils = new S3RestorePoints(ServerStore.Configuration.Backup, sortedList, context, s3Settings))
                         {
                             await s3RestoreUtils.FetchRestorePoints(s3Settings.RemoteFolderName);
                         }
@@ -556,14 +556,14 @@ namespace Raven.Server.Web.System
                         break;
                     case PeriodicBackupConnectionType.Azure:
                         var azureSettings = JsonDeserializationServer.AzureSettings(restorePathBlittable);
-                        using (var azureRestoreUtils = new AzureRestorePoints(sortedList, context, azureSettings))
+                        using (var azureRestoreUtils = new AzureRestorePoints(ServerStore.Configuration.Backup, sortedList, context, azureSettings))
                         {
                             await azureRestoreUtils.FetchRestorePoints(azureSettings.RemoteFolderName);
                         }
-                        break;  
+                        break;
                     case PeriodicBackupConnectionType.GoogleCloud:
                         var googleCloudSettings = JsonDeserializationServer.GoogleCloudSettings(restorePathBlittable);
-                        using (var googleCloudRestoreUtils = new GoogleCloudRestorePoints(sortedList, context, googleCloudSettings))
+                        using (var googleCloudRestoreUtils = new GoogleCloudRestorePoints(ServerStore.Configuration.Backup, sortedList, context, googleCloudSettings))
                         {
                             await googleCloudRestoreUtils.FetchRestorePoints(googleCloudSettings.RemoteFolderName);
                         }
@@ -626,15 +626,15 @@ namespace Raven.Server.Web.System
                         break;
                     case RestoreType.Azure:
                         var azureConfiguration = JsonDeserializationCluster.RestoreAzureBackupConfiguration(restoreConfiguration);
-                        restoreBackupTask  = new RestoreFromAzure(
+                        restoreBackupTask = new RestoreFromAzure(
                             ServerStore,
                             azureConfiguration,
                             ServerStore.NodeTag,
                             cancelToken);
-                        break;      
+                        break;
                     case RestoreType.GoogleCloud:
                         var googlCloudConfiguration = JsonDeserializationCluster.RestoreGoogleCloudBackupConfiguration(restoreConfiguration);
-                        restoreBackupTask  = new RestoreFromGoogleCloud(
+                        restoreBackupTask = new RestoreFromGoogleCloud(
                             ServerStore,
                             googlCloudConfiguration,
                             ServerStore.NodeTag,
@@ -824,7 +824,7 @@ namespace Raven.Server.Web.System
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var (index, _) = await ServerStore.ToggleDatabasesStateAsync(ToggleDatabasesStateCommand.Parameters.ToggleType.DynamicDatabaseDistribution, new []{name}, enable == false, $"{raftRequestId}");
+                var (index, _) = await ServerStore.ToggleDatabasesStateAsync(ToggleDatabasesStateCommand.Parameters.ToggleType.DynamicDatabaseDistribution, new[] { name }, enable == false, $"{raftRequestId}");
                 await ServerStore.Cluster.WaitForIndexNotification(index);
 
                 NoContentStatus();
@@ -1170,12 +1170,12 @@ namespace Raven.Server.Web.System
             }
 
             var dataDir = configuration.DataDirectory;
-            var dataDirectoryThatWillBeUsed =  string.IsNullOrWhiteSpace(dataDir) ? 
+            var dataDirectoryThatWillBeUsed = string.IsNullOrWhiteSpace(dataDir) ?
                                                ServerStore.Configuration.Core.DataDirectory.FullPath :
                                                new PathSetting(dataDir, ServerStore.Configuration.Core.DataDirectory.FullPath).FullPath;
-            
+
             OfflineMigrationConfiguration.ValidateDataDirectory(dataDirectoryThatWillBeUsed);
-            
+
             var dataExporter = OfflineMigrationConfiguration.EffectiveDataExporterFullPath(configuration.DataExporterFullPath);
             OfflineMigrationConfiguration.ValidateExporterPath(dataExporter);
 

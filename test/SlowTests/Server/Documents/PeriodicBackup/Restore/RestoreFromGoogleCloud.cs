@@ -18,14 +18,14 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.PeriodicBackup.Restore
 {
-    public class RestoreFromGoogleCloud : RavenTestBase
+    public class RestoreFromGoogleCloud : CloudBackupTestBase
     {
         public RestoreFromGoogleCloud(ITestOutputHelper output) : base(output)
         {
         }
 
         private readonly string _cloudPathPrefix = $"{nameof(RestoreFromGoogleCloud)}-{Guid.NewGuid()}";
-        
+
         [Fact]
         public void restore_google_cloud_settings_tests()
         {
@@ -68,7 +68,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                     session.CountersFor("users/1").Increment("likes", 100);
                     await session.SaveChangesAsync();
                 }
-                
+
                 var googleCloudSettings = GetGoogleCloudSettings();
                 var config = Backup.CreateBackupConfiguration(googleCloudSettings: googleCloudSettings);
                 var backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store);
@@ -92,7 +92,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
 
                 var subfolderGoogleCloudSettings = GetGoogleCloudSettings(status.FolderName);
-                
+
                 var restoreFromGoogleCloudConfiguration = new RestoreFromGoogleCloudConfiguration
                 {
                     DatabaseName = databaseName,
@@ -174,7 +174,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                 string databaseName = $"restored_database_snapshot-{Guid.NewGuid()}";
 
                 var subfolderGoogleCloudSettings = GetGoogleCloudSettings(status.FolderName);
-                
+
                 var restoreFromGoogleCloudConfiguration = new RestoreFromGoogleCloudConfiguration
                 {
                     DatabaseName = databaseName,
@@ -223,7 +223,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
             var remoteFolderName = string.IsNullOrEmpty(subPath)
                 ? _cloudPathPrefix
                 : $"{_cloudPathPrefix}/{subPath}";
-            
+
             return new GoogleCloudSettings
             {
                 BucketName = testSettings.BucketName,
@@ -231,18 +231,18 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                 RemoteFolderName = remoteFolderName
             };
         }
-        
+
         public override void Dispose()
         {
             base.Dispose();
-            
+
             var settings = GetGoogleCloudSettings();
             if (settings == null)
                 return;
 
             try
             {
-                using (var client = new RavenGoogleCloudClient(settings))
+                using (var client = new RavenGoogleCloudClient(settings, DefaultConfiguration))
                 {
                     var cloudObjects = client.ListObjectsAsync(settings.RemoteFolderName).GetAwaiter().GetResult();
 

@@ -9,7 +9,7 @@ using Amazon.Glacier.Model;
 using Amazon.Runtime;
 using Amazon.Runtime.Internal.Util;
 using Raven.Client.Documents.Operations.Backups;
-using Raven.Client.Http;
+using Raven.Server.Config.Categories;
 using Sparrow;
 using Sparrow.Binary;
 
@@ -29,8 +29,13 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
         private readonly Progress _progress;
         private readonly CancellationToken _cancellationToken;
 
-        public RavenAwsGlacierClient(GlacierSettings glacierSettings, Progress progress = null, CancellationToken cancellationToken = default)
+        public RavenAwsGlacierClient(GlacierSettings glacierSettings, BackupConfiguration configuration, Progress progress = null, CancellationToken cancellationToken = default)
         {
+            if (glacierSettings == null)
+                throw new ArgumentNullException(nameof(glacierSettings));
+            if (configuration == null)
+                throw new ArgumentNullException(nameof(configuration));
+
             if (string.IsNullOrWhiteSpace(glacierSettings.AwsAccessKey))
                 throw new ArgumentException("AWS Access Key cannot be null or empty");
 
@@ -54,7 +59,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             _client = new AmazonGlacierClient(credentials, new AmazonGlacierConfig
             {
                 RegionEndpoint = region,
-                Timeout = RequestExecutor.GlobalHttpClientTimeout
+                Timeout = configuration.UploadTimeout.AsTimeSpan
             });
 
             _region = glacierSettings.AwsRegionName;
