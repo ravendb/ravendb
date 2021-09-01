@@ -238,17 +238,8 @@ namespace Voron.Impl.Paging
         private void LockMemory32Bits(byte* address, long sizeToLock, TransactionState state)
         {
             try
-            {                
-                if (Sodium.sodium_mlock(address, (UIntPtr)sizeToLock) != 0)
-                {
-                    lock (WorkingSetIncreaseLocker)
-                    { 
-                        if (Sodium.sodium_mlock(address, (UIntPtr)sizeToLock) != 0 && DoNotConsiderMemoryLockFailureAsCatastrophicError == false)
-                        {
-                            TryHandleFailureToLockMemory(address, sizeToLock);
-                        }                    
-                    }
-                }
+            {
+                Lock(address, sizeToLock, state);
             }
             catch (Exception e)
             {
@@ -260,7 +251,7 @@ namespace Voron.Impl.Paging
         {
             try
             {
-                Sodium.sodium_munlock(address, (UIntPtr)sizeToUnlock);
+                Sodium.Unlock(address, (UIntPtr)sizeToUnlock);
             }
             catch (Exception e)
             {

@@ -15,8 +15,9 @@ namespace SlowTests.Issues
         public void Lucene_directory_must_be_aware_of_created_outputs()
         {
             using (var tx = Env.WriteTransaction())
+            using (var cache = new TempFileCache(Env.Options))
             {
-                var dir = new LuceneVoronDirectory(tx, Env);
+                var dir = new LuceneVoronDirectory(tx, Env, cache);
 
                 var state = new VoronState(tx);
 

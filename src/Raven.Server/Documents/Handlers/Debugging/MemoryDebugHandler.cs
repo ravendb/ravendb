@@ -14,6 +14,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.LowMemory;
 using Sparrow.Platform;
 using Sparrow.Platform.Posix;
+using Sparrow.Server;
 using Sparrow.Server.Platform.Win32;
 using Sparrow.Utils;
 using Voron.Impl;
@@ -316,6 +317,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 [nameof(MemoryInfo.UnmanagedAllocations)] = Size.Humane(totalUnmanagedAllocations),
                 [nameof(MemoryInfo.EncryptionBuffersInUse)] = Size.Humane(encryptionBuffers.CurrentlyInUseSize),
                 [nameof(MemoryInfo.EncryptionBuffersPool)] = Size.Humane(encryptionBuffers.TotalPoolSize),
+                [nameof(MemoryInfo.EncryptionLockedMemory)] = Size.Humane(Sodium.LockedBytes),
                 [nameof(MemoryInfo.MemoryMapped)] = Size.Humane(totalMapping),
                 [nameof(MemoryInfo.ScratchDirtyMemory)] = memInfo.TotalScratchDirtyMemory.ToString(),
                 [nameof(MemoryInfo.IsHighDirty)] = dirtyMemoryState.IsHighDirty,
@@ -525,6 +527,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             public string UnmanagedAllocations { get; set; }
             public string EncryptionBuffersInUse { get; set; }
             public string EncryptionBuffersPool { get; set; }
+            public string EncryptionLockedMemory { get; set; }
             public string MemoryMapped { get; set; }
             public string ScratchDirtyMemory { get; set; }
             public bool IsHighDirty { get; set; }
