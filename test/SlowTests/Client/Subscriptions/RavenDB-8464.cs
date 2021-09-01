@@ -70,7 +70,7 @@ namespace SlowTests.Client.Subscriptions
                 using (db.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (context.OpenReadTransaction())
                 {
-                    var s = db.SubscriptionStorage.GetSubscription(context, null, subsId, false);
+                    var s = db.SubscriptionStorage.GetSubscription(context, null, db.Name, subsId, false);
                     Assert.Equal(cv, s.ChangeVectorForNextBatchStartingPoint);
                     Assert.Equal("From Shipments", s.Query);
                 }

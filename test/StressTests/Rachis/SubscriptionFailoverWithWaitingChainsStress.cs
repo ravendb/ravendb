@@ -199,7 +199,7 @@ namespace StressTests.Rachis
                 {
                     var subscription = db
                         .SubscriptionStorage
-                        .GetRunningSubscription(context, null, "Subscription" + k, false);
+                        .GetRunningSubscription(context, null, db.Name, "Subscription" + k, false);
 
                     if (subscription != null)
                         Assert.True(false, "no subscriptions should be alive at this point");
@@ -464,7 +464,7 @@ namespace StressTests.Rachis
                     {
                         var subscription = db
                             .SubscriptionStorage
-                            .GetRunningSubscription(context, null, "Subscription" + k, false);
+                            .GetRunningSubscription(context, null, db.Name, "Subscription" + k, false);
 
                         if (subscription == null)
                             continue;
@@ -475,7 +475,7 @@ namespace StressTests.Rachis
             }
         }
 
-        internal static async Task<SubscriptionStorage.SubscriptionGeneralDataAndStats> GetSubscription(string name, string database, List<RavenServer> nodes, CancellationToken token = default)
+        internal static async Task<SubscriptionGeneralDataAndStats> GetSubscription(string name, string database, List<RavenServer> nodes, CancellationToken token = default)
         {
             foreach (var curNode in nodes)
             {
@@ -492,12 +492,12 @@ namespace StressTests.Rachis
                 using (curNode.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (context.OpenReadTransaction())
                 {
-                    SubscriptionStorage.SubscriptionGeneralDataAndStats subscription = null;
+                    SubscriptionGeneralDataAndStats subscription = null;
                     try
                     {
                         subscription = db
                             .SubscriptionStorage
-                            .GetSubscription(context, id: null, name, history: false);
+                            .GetSubscription(context, id: null, db.Name, name, history: false);
                     }
                     catch (SubscriptionDoesNotExistException)
                     {

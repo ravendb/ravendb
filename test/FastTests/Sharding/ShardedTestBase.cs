@@ -1,11 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents;
+using Raven.Server.ServerWide.Context;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -49,6 +52,32 @@ namespace FastTests.Sharding
             }
 
             return dbs;
+        }
+
+        protected DatabasesLandlord.DatabaseSearchResult GetSharededDatabaseInstancesFor(IDocumentStore store, string database = null)
+        {
+            var res = Server.ServerStore.DatabasesLandlord.TryGetOrCreateDatabase(database ?? store.Database);
+
+            return res;
+        }
+
+        internal static bool AllShardHaveDocs(IDictionary<string, List<DocumentDatabase>> servers, long count = 1L)
+        {
+            foreach (var kvp in servers)
+            {
+                foreach (var documentDatabase in kvp.Value)
+                {
+                    using (documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                    {
+                        context.OpenReadTransaction();
+                        var ids = documentDatabase.DocumentsStorage.GetNumberOfDocuments(context);
+                        if (ids < count)
+                            return false;
+                    }
+                }
+            }
+
+            return true;
         }
     }
 }

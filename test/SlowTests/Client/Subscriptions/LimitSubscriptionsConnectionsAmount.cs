@@ -69,7 +69,7 @@ namespace SlowTests.Client.Subscriptions
                     while (sp.Elapsed < _reasonableWaitTime && subscriptionsCount != 3)
                     {
                         subscriptionsCount = (await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database)).SubscriptionStorage
-                            .GetAllRunningSubscriptions(context, false, 0, 1024).Count();
+                            .GetAllRunningSubscriptions(context, store.Database, false, 0, 1024).Count();
                     }
 
 

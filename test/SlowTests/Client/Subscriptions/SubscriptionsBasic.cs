@@ -284,7 +284,7 @@ namespace SlowTests.Client.Subscriptions
 
                     Assert.True(await ackFirstCV.WaitAsync(_reasonableWaitTime));
 
-                    SubscriptionStorage.SubscriptionGeneralDataAndStats subscriptionState;
+                    SubscriptionGeneralDataAndStats subscriptionState;
                     using (database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                     using (context.OpenReadTransaction())
                     {
@@ -612,7 +612,8 @@ namespace SlowTests.Client.Subscriptions
                     }
                 }
 
-                WaitForValue(() => docs.CurrentCount, count / 2);
+                var res = WaitForValue(() => docs.CurrentCount, count / 2);
+               Assert.Equal(5, res); 
 
                 const string newQuery = "from Users where Age > 18";
 
