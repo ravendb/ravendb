@@ -12,11 +12,19 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 {
     public abstract class CloudBackupTestBase : RavenTestBase
     {
+        protected static readonly BackupConfiguration DefaultConfiguration;
+
+        static CloudBackupTestBase()
+        {
+            var configuration = RavenConfiguration.CreateForTesting("foo", ResourceType.Database);
+            configuration.Initialize();
+
+            DefaultConfiguration = configuration.Backup;
+        }
+
         protected CloudBackupTestBase(ITestOutputHelper output) : base(output)
         {
         }
-
-        protected static readonly BackupConfiguration DefaultConfiguration = RavenConfiguration.CreateForTesting("foo", ResourceType.Database).Backup;
 
         public static List<string> GenerateBlobNames(ICloudBackupSettings setting, int blobsCount, out string prefix)
         {

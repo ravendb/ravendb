@@ -50,7 +50,7 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Backup.LowMemoryBackupDelayInMin", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting LowMemoryBackupDelay { get; set; }
 
-        [Description("Number of minutes after which the backup upload operation will timeout when cloud storage is used (in minutes).")]
+        [Description("Number of minutes after which the backup operation will timeout when cloud storage is used (in minutes).")]
         [DefaultValue(720)]
         [TimeUnit(TimeUnit.Minutes)]
         [ConfigurationEntry("Backup.CloudStorageOperationTimeoutInMin", ConfigurationEntryScope.ServerWideOrPerDatabase)]
