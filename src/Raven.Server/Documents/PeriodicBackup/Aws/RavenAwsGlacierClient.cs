@@ -9,6 +9,7 @@ using Amazon.Glacier.Model;
 using Amazon.Runtime;
 using Amazon.Runtime.Internal.Util;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Http;
 using Sparrow;
 using Sparrow.Binary;
 
@@ -50,7 +51,12 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             else
                 credentials = new SessionAWSCredentials(glacierSettings.AwsAccessKey, glacierSettings.AwsSecretKey, glacierSettings.AwsSessionToken);
 
-            _client = new AmazonGlacierClient(credentials, region);
+            _client = new AmazonGlacierClient(credentials, new AmazonGlacierConfig
+            {
+                RegionEndpoint = region,
+                Timeout = RequestExecutor.GlobalHttpClientTimeout
+            });
+
             _region = glacierSettings.AwsRegionName;
             _vaultName = glacierSettings.VaultName;
             _progress = progress;
