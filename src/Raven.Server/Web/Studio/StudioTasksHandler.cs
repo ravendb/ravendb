@@ -98,7 +98,8 @@ namespace Raven.Server.Web.Studio
 
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                var folderPathOptions  = new FolderPathOptions();;
+                var folderPathOptions = new FolderPathOptions();
+                ;
                 switch (connectionType)
                 {
                     case PeriodicBackupConnectionType.Local:
@@ -121,7 +122,7 @@ namespace Raven.Server.Web.Studio
                             string.IsNullOrWhiteSpace(s3Settings.AwsRegionName))
                             break;
 
-                        using (var client = new RavenAwsS3Client(s3Settings))
+                        using (var client = new RavenAwsS3Client(s3Settings, ServerStore.Configuration.Backup))
                         {
                             // fetching only the first 64 results for the auto complete
                             var folders = await client.ListObjectsAsync(s3Settings.RemoteFolderName, "/", true, take: 64);
@@ -140,7 +141,7 @@ namespace Raven.Server.Web.Studio
                         break;
                     case PeriodicBackupConnectionType.Azure:
                         var azureJson = context.ReadForMemory(RequestBodyStream(), "studio-tasks/format");
-                        
+
                         if (connectionType != PeriodicBackupConnectionType.Local && azureJson == null)
                             throw new BadRequestException("No JSON was posted.");
 
@@ -153,7 +154,7 @@ namespace Raven.Server.Web.Studio
                             string.IsNullOrWhiteSpace(azureSettings.StorageContainer))
                             break;
 
-                        using (var client = new RavenAzureClient(azureSettings))
+                        using (var client = new RavenAzureClient(azureSettings, ServerStore.Configuration.Backup))
                         {
                             var folders = (await client.ListBlobsAsync(azureSettings.RemoteFolderName, "/", true));
 
@@ -169,7 +170,7 @@ namespace Raven.Server.Web.Studio
                         break;
                     case PeriodicBackupConnectionType.GoogleCloud:
                         var googleCloudJson = context.ReadForMemory(RequestBodyStream(), "studio-tasks/format");
-                        
+
                         if (connectionType != PeriodicBackupConnectionType.Local && googleCloudJson == null)
                             throw new BadRequestException("No JSON was posted.");
 
@@ -181,7 +182,7 @@ namespace Raven.Server.Web.Studio
                             string.IsNullOrWhiteSpace(googleCloudSettings.GoogleCredentialsJson))
                             break;
 
-                        using (var client = new RavenGoogleCloudClient(googleCloudSettings))
+                        using (var client = new RavenGoogleCloudClient(googleCloudSettings, ServerStore.Configuration.Backup))
                         {
                             var folders = (await client.ListObjectsAsync(googleCloudSettings.RemoteFolderName));
                             var requestedPathLength = googleCloudSettings.RemoteFolderName.Split('/').Length;
@@ -191,7 +192,7 @@ namespace Raven.Server.Web.Studio
                                 const char separator = '/';
                                 var splitted = folder.Name.Split(separator);
                                 var result = string.Join(separator, splitted.Take(requestedPathLength)) + separator;
-                                
+
                                 if (string.IsNullOrWhiteSpace(result))
                                     continue;
 
@@ -283,28 +284,28 @@ namespace Raven.Server.Web.Studio
                     {
                         case PeriodicBackupConnectionType.S3:
                             var s3Settings = JsonDeserializationClient.S3Settings(connectionInfo);
-                            using (var awsClient = new RavenAwsS3Client(s3Settings, cancellationToken: ServerStore.ServerShutdown))
+                            using (var awsClient = new RavenAwsS3Client(s3Settings, ServerStore.Configuration.Backup, cancellationToken: ServerStore.ServerShutdown))
                             {
                                 awsClient.TestConnection();
                             }
                             break;
                         case PeriodicBackupConnectionType.Glacier:
                             var glacierSettings = JsonDeserializationClient.GlacierSettings(connectionInfo);
-                            using (var glacierClient = new RavenAwsGlacierClient(glacierSettings, cancellationToken: ServerStore.ServerShutdown))
+                            using (var glacierClient = new RavenAwsGlacierClient(glacierSettings, ServerStore.Configuration.Backup, cancellationToken: ServerStore.ServerShutdown))
                             {
                                 glacierClient.TestConnection();
                             }
                             break;
                         case PeriodicBackupConnectionType.Azure:
                             var azureSettings = JsonDeserializationClient.AzureSettings(connectionInfo);
-                            using (var azureClient = new RavenAzureClient(azureSettings, cancellationToken: ServerStore.ServerShutdown))
+                            using (var azureClient = new RavenAzureClient(azureSettings, ServerStore.Configuration.Backup, cancellationToken: ServerStore.ServerShutdown))
                             {
                                 azureClient.TestConnection();
                             }
                             break;
                         case PeriodicBackupConnectionType.GoogleCloud:
                             var googleCloudSettings = JsonDeserializationClient.GoogleCloudSettings(connectionInfo);
-                            using (var googleCloudClient = new RavenGoogleCloudClient(googleCloudSettings, cancellationToken: ServerStore.ServerShutdown))
+                            using (var googleCloudClient = new RavenGoogleCloudClient(googleCloudSettings, ServerStore.Configuration.Backup, cancellationToken: ServerStore.ServerShutdown))
                             {
                                 await googleCloudClient.TestConnection();
                             }

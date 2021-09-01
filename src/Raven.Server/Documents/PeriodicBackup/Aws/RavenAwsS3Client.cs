@@ -9,10 +9,9 @@ using Amazon;
 using Amazon.Runtime;
 using Amazon.S3;
 using Amazon.S3.Model;
-using Azure.Core;
 using Raven.Client.Documents.Operations.Backups;
-using Raven.Client.Http;
 using Raven.Client.Util;
+using Raven.Server.Config.Categories;
 using Raven.Server.Documents.PeriodicBackup.Restore;
 using Sparrow;
 using Size = Sparrow.Size;
@@ -35,10 +34,12 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
 
         public readonly string Region;
 
-        public RavenAwsS3Client(S3Settings s3Settings, Progress progress = null, CancellationToken cancellationToken = default)
+        public RavenAwsS3Client(S3Settings s3Settings, BackupConfiguration configuration, Progress progress = null, CancellationToken cancellationToken = default)
         {
             if (s3Settings == null)
                 throw new ArgumentNullException(nameof(s3Settings));
+            if (configuration == null) 
+                throw new ArgumentNullException(nameof(configuration));
 
             if (string.IsNullOrWhiteSpace(s3Settings.AwsAccessKey))
                 throw new ArgumentException("AWS Access Key cannot be null or empty");
@@ -51,7 +52,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
 
             var config = new AmazonS3Config
             {
-                Timeout = RequestExecutor.GlobalHttpClientTimeout
+                Timeout = configuration.UploadTimeout.AsTimeSpan
             };
 
             if (string.IsNullOrWhiteSpace(s3Settings.CustomServerUrl))

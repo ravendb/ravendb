@@ -270,7 +270,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                 var backupStatus = await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
 
                 string lastFileToRestore;
-                using (var client = new RavenAwsS3Client(s3Settings))
+                using (var client = new RavenAwsS3Client(s3Settings, DefaultConfiguration))
                 {
                     var fullBackupPath = $"{s3Settings.RemoteFolderName}/{backupStatus.FolderName}";
                     lastFileToRestore = (await client.ListObjectsAsync(fullBackupPath, string.Empty, false)).FileInfoDetails.Last().FullPath;
@@ -463,7 +463,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
 
             try
             {
-                using (var s3Client = new RavenAwsS3Client(s3Settings))
+                using (var s3Client = new RavenAwsS3Client(s3Settings, DefaultConfiguration))
                 {
                     var cloudObjects = s3Client.ListObjects($"{s3Settings.RemoteFolderName}/{_remoteFolderName}/", string.Empty, false, includeFolders: true);
                     var pathsToDelete = cloudObjects.FileInfoDetails.Select(x => x.FullPath).ToList();

@@ -3,6 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Server.Config;
+using Raven.Server.Config.Categories;
+using Raven.Server.ServerWide;
 using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.PeriodicBackup
@@ -12,6 +15,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         protected CloudBackupTestBase(ITestOutputHelper output) : base(output)
         {
         }
+
+        protected static readonly BackupConfiguration DefaultConfiguration = RavenConfiguration.CreateForTesting("foo", ResourceType.Database).Backup;
 
         public static List<string> GenerateBlobNames(ICloudBackupSettings setting, int blobsCount, out string prefix)
         {

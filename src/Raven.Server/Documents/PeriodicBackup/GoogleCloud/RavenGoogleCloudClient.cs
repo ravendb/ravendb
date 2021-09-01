@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Google.Api.Gax;
@@ -11,7 +10,7 @@ using Google.Apis.Upload;
 using Google.Cloud.Storage.V1;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Operations.Backups;
-using Raven.Client.Http;
+using Raven.Server.Config.Categories;
 using Sparrow;
 using Sparrow.Server.Utils;
 using Object = Google.Apis.Storage.v1.Data.Object;
@@ -30,8 +29,13 @@ namespace Raven.Server.Documents.PeriodicBackup.GoogleCloud
 
         private const string ProjectIdPropertyName = "project_id";
 
-        public RavenGoogleCloudClient(GoogleCloudSettings settings, Progress progress = null, CancellationToken? cancellationToken = null)
+        public RavenGoogleCloudClient(GoogleCloudSettings settings, BackupConfiguration configuration, Progress progress = null, CancellationToken? cancellationToken = null)
         {
+            if (settings == null)
+                throw new ArgumentNullException(nameof(settings));
+            if (configuration == null)
+                throw new ArgumentNullException(nameof(configuration));
+
             if (string.IsNullOrWhiteSpace(settings.BucketName))
                 throw new ArgumentException("Google Cloud Bucket name cannot be null or empty");
 
@@ -40,7 +44,7 @@ namespace Raven.Server.Documents.PeriodicBackup.GoogleCloud
             try
             {
                 _client = StorageClient.Create(GoogleCredential.FromJson(settings.GoogleCredentialsJson));
-                _client.Service.HttpClient.Timeout = RequestExecutor.GlobalHttpClientTimeout;
+                _client.Service.HttpClient.Timeout = configuration.UploadTimeout.AsTimeSpan;
             }
             catch (Exception e)
             {

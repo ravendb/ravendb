@@ -200,7 +200,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 // keep only alphanumeric characters
                 Settings.RemoteFolderName = _remoteFolder = GetRemoteFolder(caller);
-                Client = new RavenAzureClient(Settings, progress);
+                Client = new RavenAzureClient(Settings, DefaultConfiguration, progress);
             }
 
             public void Dispose()
