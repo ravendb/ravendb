@@ -2,15 +2,16 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure;
+using Azure.Core.Pipeline;
 using Azure.Storage;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Azure.Storage.Blobs.Specialized;
 using Raven.Client.Documents.Operations.Backups;
-using Raven.Server.Config.Categories;
 using Raven.Server.Documents.PeriodicBackup.Restore;
 using Sparrow;
 
@@ -58,7 +59,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
                 Retry =
                 {
                     NetworkTimeout = configuration.CloudStorageOperationTimeout.AsTimeSpan,
-                    MaxRetries = 64
+                    MaxRetries = 10
                 }
             };
 
@@ -97,6 +98,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
                     _progress?.UploadProgress.ChangeType(UploadType.Chunked);
 
                     var blockBlob = _client.GetBlockBlobClient(blobName);
+                    blockBlob = blockBlob.WithVersion("2019-02-02");
+
                     var blockNumber = 0;
                     var blockIds = new List<string>();
 
