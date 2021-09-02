@@ -47,6 +47,7 @@ namespace Raven.Server.Documents.ShardedHandlers
         {
             return HandleQuery(HttpMethod.Get);
         }
+
         public async Task HandleQuery(HttpMethod httpMethod)
         {
             // TODO: Sharding - figure out how to report this
@@ -112,7 +113,7 @@ namespace Raven.Server.Documents.ShardedHandlers
 
                             var result = queryProcessor.GetResult();
                             int numberOfResults;
-                            using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream(), HttpContext.RequestAborted))
+                            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream(), HttpContext.RequestAborted))
                             {
                                 result.Timings = indexQuery.Timings?.ToTimings();
                                 numberOfResults = await writer.WriteDocumentQueryResultAsync(context, result, metadataOnly); 
