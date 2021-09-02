@@ -216,13 +216,13 @@ namespace Raven.Server.Documents.Handlers
             {
                 if (method == HttpMethod.Get)
                 {
-                    var result = IndexQueryServerSide.Create(HttpContext, Start, PageSize, context, tracker);
-                    return ValueTask.FromResult(result);
+                    return AwaitAndReturn(context, tracker);
                 }
 
                 var read = context.ReadForMemoryAsync(Stream, "index/query");
                 if (read.IsCompleted)
                 {
+
                     var result = IndexQueryServerSide.Create(HttpContext, read.Result, QueryMetadataCache, tracker, database: Database);
                     return ValueTask.FromResult(result);
                 }
@@ -234,6 +234,11 @@ namespace Raven.Server.Documents.Handlers
             {
                 var json = await read;
                 return IndexQueryServerSide.Create(HttpContext, json, QueryMetadataCache, tracker, database: Database);
+            }
+
+            private async ValueTask<IndexQueryServerSide> AwaitAndReturn(JsonOperationContext context, RequestTimeTracker tracker)
+            {
+                return await IndexQueryServerSide.CreateAsync(HttpContext, Start, PageSize, context, tracker);
             }
         }
 
