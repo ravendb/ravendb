@@ -126,7 +126,12 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                                 PartNumber = partNumber++,
                                 PartSize = toUpload,
                                 UploadId = initiateResponse.UploadId,
-                                StreamTransferProgress = (_, args) => _progress?.UploadProgress.UpdateUploaded(args.IncrementTransferred)
+                                StreamTransferProgress = (_, args) =>
+                                {
+                                    _progress?.UploadProgress.ChangeState(UploadState.Uploading);
+                                    _progress?.UploadProgress.UpdateUploaded(args.IncrementTransferred);
+                                    _progress?.OnUploadProgress?.Invoke();
+                                }
                             }, _cancellationToken);
 
                         partEtags.Add(new PartETag(uploadResponse.PartNumber, uploadResponse.ETag));
@@ -144,7 +149,12 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                     Key = key,
                     BucketName = _bucketName,
                     InputStream = stream,
-                    StreamTransferProgress = (_, args) => _progress?.UploadProgress.UpdateUploaded(args.IncrementTransferred)
+                    StreamTransferProgress = (_, args) =>
+                    {
+                        _progress?.UploadProgress.ChangeState(UploadState.Uploading);
+                        _progress?.UploadProgress.UpdateUploaded(args.IncrementTransferred);
+                        _progress?.OnUploadProgress?.Invoke();
+                    }
                 };
 
                 FillMetadata(request.Metadata, metadata);

@@ -56,6 +56,12 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Backup.CloudStorageOperationTimeoutInMin", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public TimeSetting CloudStorageOperationTimeout { get; set; }
 
+
+        [Description("EXPERT: Indicates which library to use when doing Azure backups.")]
+        [DefaultValue(false)]
+        [ConfigurationEntry("Backup.Azure.Legacy", ConfigurationEntryScope.ServerWideOnly)]
+        public bool AzureLegacy { get; set; }
+
         public override void Initialize(IConfigurationRoot settings, IConfigurationRoot serverWideSettings, ResourceType type, string resourceName)
         {
             base.Initialize(settings, serverWideSettings, type, resourceName);
@@ -85,7 +91,7 @@ namespace Raven.Server.Config.Categories
                 throw new ArgumentException($"The backup path '{LocalRootPath.FullPath}' defined in the configuration under '{RavenConfiguration.GetKey(x => x.Backup.LocalRootPath)}' doesn't exist.");
             }
         }
-        
+
         internal void ValidateAllowedDestinations()
         {
             if (AllowedDestinations == null)
