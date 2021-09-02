@@ -116,7 +116,12 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                             VaultName = _vaultName,
                             AccountId = "-",
                             Body = partStream,
-                            StreamTransferProgress = (_, args) => _progress?.UploadProgress.UpdateUploaded(args.IncrementTransferred),
+                            StreamTransferProgress = (_, args) =>
+                            {
+                                _progress?.UploadProgress.ChangeState(UploadState.Uploading);
+                                _progress?.UploadProgress.UpdateUploaded(args.IncrementTransferred);
+                                _progress?.OnUploadProgress?.Invoke();
+                            },
                             Checksum = partChecksum
                         };
 
@@ -145,7 +150,12 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                     ArchiveDescription = archiveDescription,
                     Body = stream,
                     VaultName = _vaultName,
-                    StreamTransferProgress = (_, args) => _progress?.UploadProgress.UpdateUploaded(args.IncrementTransferred),
+                    StreamTransferProgress = (_, args) =>
+                    {
+                        _progress?.UploadProgress.ChangeState(UploadState.Uploading);
+                        _progress?.UploadProgress.UpdateUploaded(args.IncrementTransferred);
+                        _progress?.OnUploadProgress?.Invoke();
+                    },
                     Checksum = TreeHashGenerator.CalculateTreeHash(stream)
                 }, _cancellationToken);
 

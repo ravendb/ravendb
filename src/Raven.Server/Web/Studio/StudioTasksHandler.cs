@@ -154,7 +154,7 @@ namespace Raven.Server.Web.Studio
                             string.IsNullOrWhiteSpace(azureSettings.StorageContainer))
                             break;
 
-                        using (var client = new RavenAzureClient(azureSettings, ServerStore.Configuration.Backup))
+                        using (var client = RavenAzureClient.Create(azureSettings, ServerStore.Configuration.Backup))
                         {
                             var folders = (await client.ListBlobsAsync(azureSettings.RemoteFolderName, "/", true));
 
@@ -298,7 +298,7 @@ namespace Raven.Server.Web.Studio
                             break;
                         case PeriodicBackupConnectionType.Azure:
                             var azureSettings = JsonDeserializationClient.AzureSettings(connectionInfo);
-                            using (var azureClient = new RavenAzureClient(azureSettings, ServerStore.Configuration.Backup, cancellationToken: ServerStore.ServerShutdown))
+                            using (var azureClient = RavenAzureClient.Create(azureSettings, ServerStore.Configuration.Backup, cancellationToken: ServerStore.ServerShutdown))
                             {
                                 azureClient.TestConnection();
                             }
