@@ -22,6 +22,7 @@ namespace Raven.Server.Rachis
         protected RachisConsensus _parent;
         public RachisVersionValidation Validator;
         public ClusterChanges Changes { get; private set; }
+        public readonly ClusterTransactionWaiter ClusterTransactionWaiter = new ClusterTransactionWaiter();
 
         public virtual void Initialize(RachisConsensus parent, ClusterOperationContext context, ClusterChanges changes)
         {

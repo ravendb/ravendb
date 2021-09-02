@@ -2,7 +2,6 @@
 using System.IO;
 using System.Text;
 using Raven.Client.Exceptions;
-using Raven.Client.Util;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Binary;
@@ -145,9 +144,9 @@ namespace Raven.Server.ServerWide.Commands
 
         public const long InvalidIndexValue = -1;
         
-        public bool Validate(ClusterOperationContext context, Table items, long index, out long currentIndex)
+        public bool Validate(ClusterOperationContext context, Table items, out long currentIndex)
         {
-            if (index == InvalidIndexValue)
+            if (Index == InvalidIndexValue)
             {
                 currentIndex = InvalidIndexValue;
                 return true;    
@@ -155,10 +154,10 @@ namespace Raven.Server.ServerWide.Commands
 
             using (Slice.From(context.Allocator, ActualKey, out Slice keySlice))
             {
-                return Validate(context, keySlice, items, index, out currentIndex);
+                return Validate(context, keySlice, items, out currentIndex);
             }
         }
-        protected abstract bool Validate(ClusterOperationContext context, Slice keySlice, Table items, long index, out long currentIndex);
+        protected abstract bool Validate(ClusterOperationContext context, Slice keySlice, Table items, out long currentIndex);
 
         public override DynamicJsonValue ToJson(JsonOperationContext context)
         {
@@ -303,15 +302,15 @@ namespace Raven.Server.ServerWide.Commands
             }
         }
         
-        protected override bool Validate(ClusterOperationContext context, Slice keySlice, Table items, long index, out long currentIndex)
+        protected override bool Validate(ClusterOperationContext context, Slice keySlice, Table items, out long currentIndex)
         {
             if (items.ReadByKey(keySlice, out var reader))
             {
                 currentIndex = ClusterStateMachine.ReadCompareExchangeOrTombstoneIndex(reader);
-                return currentIndex == index;
+                return currentIndex == Index;
             }
             currentIndex = InvalidIndexValue;
-            return index == 0;
+            return Index == 0;
         }
     }
 
@@ -421,18 +420,18 @@ namespace Raven.Server.ServerWide.Commands
                 $"but the key was {Encoding.GetByteCount(str)} bytes. The invalid key is '{str}'. Parameter '{nameof(str)}'");
         }
         
-        protected override bool Validate(ClusterOperationContext context, Slice keySlice, Table items, long index, out long currentIndex)
+        protected override bool Validate(ClusterOperationContext context, Slice keySlice, Table items, out long currentIndex)
         {
             BlittableJsonReaderObject value;
             (currentIndex, value) = ClusterStateMachine.GetCompareExchangeValue(context, keySlice, items);
             if (currentIndex == InvalidIndexValue)
-                return index == 0;
+                return Index == 0;
 
             using (value)
             {
                 if (TryGetExpires(value, out var ticks) && ticks < CurrentTicks)
                     return true;
-                return currentIndex == index;
+                return currentIndex == Index;
             }
         }
     }

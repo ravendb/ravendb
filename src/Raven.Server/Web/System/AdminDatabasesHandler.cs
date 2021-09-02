@@ -403,18 +403,7 @@ namespace Raven.Server.Web.System
             var clusterTopology = ServerStore.GetClusterTopology(context);
             ValidateClusterMembers(clusterTopology, databaseRecord);
 
-            if (databaseRecord.Shards?.Length > 0)
-            {
-                for (var i = 0; i < databaseRecord.Shards.Length; i++)
-                {
-                    databaseRecord.Shards[i] =
-                        UpdateDatabaseTopology(databaseRecord.Shards[i], clusterTopology, replicationFactor);
-                }
-            }
-            else
-            {
-                databaseRecord.Topology = UpdateDatabaseTopology(databaseRecord.Topology, clusterTopology, replicationFactor);
-            }
+            UpdateDatabaseTopology(databaseRecord, clusterTopology, replicationFactor);
 
             var (newIndex, result) = await ServerStore.WriteDatabaseRecordAsync(name, databaseRecord, index, raftRequestId);
             await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, newIndex);
@@ -447,28 +436,41 @@ namespace Raven.Server.Web.System
             }
         }
         
-        private static DatabaseTopology UpdateDatabaseTopology(DatabaseTopology topology, ClusterTopology clusterTopology, int replicationFactor)
+        private static void UpdateDatabaseTopology(DatabaseRecord databaseRecord, ClusterTopology clusterTopology, int replicationFactor)
         {
-            if (topology?.Members?.Count > 0)
+            var clusterTransactionId = Guid.NewGuid().ToBase64Unpadded();
+
+            if (databaseRecord.IsSharded)
             {
-                foreach (var member in topology.Members)
+                foreach (var databaseTopology in databaseRecord.Shards)
+                {
+                    UpdateDatabaseTopology(databaseTopology, clusterTopology, replicationFactor, clusterTransactionId);
+                }
+            }
+            else
+            {
+                databaseRecord.Topology ??= new DatabaseTopology();
+                UpdateDatabaseTopology(databaseRecord.Topology, clusterTopology, replicationFactor, clusterTransactionId);
+            }
+        }
+
+        private static void UpdateDatabaseTopology(DatabaseTopology databaseTopology, ClusterTopology clusterTopology, int replicationFactor, string clusterTransactionId)
+        {
+            if (databaseTopology.Members?.Count > 0)
+            {
+                foreach (var member in databaseTopology.Members)
                 {
                     if (clusterTopology.Contains(member) == false)
                         throw new ArgumentException($"Failed to add node {member}, because we don't have it in the cluster.");
                 }
 
-                topology.ReplicationFactor = Math.Min(topology.Count, clusterTopology.AllNodes.Count);
-            }
-            else
-            {
-                topology ??= new DatabaseTopology();
-                topology.ReplicationFactor = Math.Min(replicationFactor, clusterTopology.AllNodes.Count);
+                replicationFactor = databaseTopology.Count;
             }
 
-            topology.ClusterTransactionIdBase64 ??= Guid.NewGuid().ToBase64Unpadded();
-            topology.DatabaseTopologyIdBase64 ??= Guid.NewGuid().ToBase64Unpadded();
+            databaseTopology.ReplicationFactor = Math.Min(replicationFactor, clusterTopology.AllNodes.Count);
 
-            return topology;
+            databaseTopology.ClusterTransactionIdBase64 ??= clusterTransactionId;
+            databaseTopology.DatabaseTopologyIdBase64 ??= Guid.NewGuid().ToBase64Unpadded();
         }
 
 

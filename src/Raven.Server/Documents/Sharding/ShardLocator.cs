@@ -28,7 +28,7 @@ namespace Raven.Server.Documents.Sharding
             for (var i = 0; i < ids.Count; i++)
             {
                 var id = ids[i];
-                var shardId = shardedContext.GetShardId(context, id);
+                var shardId = ShardedContext.GetShardId(context, id);
                 var index = shardedContext.GetShardIndex(shardId);
 
                 if (result.TryGetValue(index, out var shardIds) == false)

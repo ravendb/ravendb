@@ -490,13 +490,13 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        public static async Task<CommandData> ReadAndCopySingleCommand(
-            JsonOperationContext ctx,
+        public static async Task<CommandData> ReadAndCopySingleCommand(JsonOperationContext ctx,
             Stream stream,
             JsonParserState state,
             UnmanagedJsonParser parser,
             JsonOperationContext.MemoryBuffer buffer,
             ShardedBatchCommandBuilder.BufferedCommand bufferedCommand,
+            BlittableMetadataModifier modifier,
             CancellationToken token)
         {
             var commandData = new CommandData();
@@ -600,6 +600,33 @@ namespace Raven.Server.Documents.Handlers
                             // we need this only for identities and we expect to have always null
                             bufferedCommand.ChangeVectorPosition = checked((int)(commandCopy.Position + parser.BufferOffset - position - 4));
                         }
+                        break;
+                    case CommandPropertyName.Document:
+                        while (parser.Read() == false)
+                        {
+                            parser.CopyParsedChunk(commandCopy, position);
+                            position = 0;
+                            await RefillParserBuffer(stream, buffer, parser, token);
+                        }
+                    
+                        commandData.Document = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token);
+                        commandData.SeenAttachments = modifier.SeenAttachments;
+                        commandData.SeenCounters = modifier.SeenCounters;
+                        commandData.SeenTimeSeries = modifier.SeenTimeSeries;
+                        break;
+                    case CommandPropertyName.Index:
+                        while (parser.Read() == false)
+                        {
+                            parser.CopyParsedChunk(commandCopy, position);
+                            position = 0;
+                            await RefillParserBuffer(stream, buffer, parser, token);
+                        }
+                        if (state.CurrentTokenType != JsonParserToken.Integer)
+                        {
+                            ThrowUnexpectedToken(JsonParserToken.Integer, state);
+                        }
+                        commandData.Index = state.Long;
+
                         break;
                 }
             }

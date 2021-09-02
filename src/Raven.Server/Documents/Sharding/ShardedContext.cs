@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using Raven.Client;
@@ -90,7 +91,7 @@ namespace Raven.Server.Documents.Sharding
         /// per TB of overall db size. That means that even for *very* large databases, the
         /// size of the shard is still going to be manageable.
         /// </summary>
-        public int GetShardId(TransactionOperationContext context, string key)
+        public static int GetShardId<TTransaction>(TransactionOperationContext<TTransaction> context, string key) where TTransaction : RavenTransaction
         {
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, key, out var lowerId, out _))
             {
@@ -124,41 +125,32 @@ namespace Raven.Server.Documents.Sharding
             }
         }
 
-        public int GetShardIndex(int shardId)
-        {
-            for (int i = 0; i < _record.ShardAllocations.Count - 1; i++)
-            {
-                if (shardId < _record.ShardAllocations[i + 1].RangeStart)
-                    return _record.ShardAllocations[i].Shard;
-            }
-
-            return _record.ShardAllocations[^1].Shard;
-        }
-
         public int GetShardIndex(Slice lowerId)
         {
             var shardId = GetShardId(lowerId);
             return GetShardIndex(shardId);
         }
-
-        public int GetShardIndex(TransactionOperationContext context, string key)
+        
+        private static int GetShardIndex(List<DatabaseRecord.ShardRangeAssignment> shardAllocations, int shardId)
         {
-            var shardId = GetShardId(context, key);
-            return GetShardIndex(shardId);
-        }
-
-        public int GetShardIndex(ByteStringContext context, LazyStringValue key)
-        {
-            var shardId = ShardHelper.GetBucket(context, key);
-            for (int i = 0; i < _record.ShardAllocations.Count - 1; i++)
+            for (int i = 0; i < shardAllocations.Count - 1; i++)
             {
-                if (shardId < _record.ShardAllocations[i + 1].RangeStart)
-                    return _record.ShardAllocations[i].Shard;
+                if (shardId < shardAllocations[i + 1].RangeStart)
+                    return shardAllocations[i].Shard;
             }
 
-            return _record.ShardAllocations[^1].Shard;
+            return shardAllocations[^1].Shard;
         }
+        public int GetShardIndex(int shardId) => GetShardIndex(_record.ShardAllocations, shardId);
+        public int GetShardIndex(TransactionOperationContext context, string key) => GetShardIndex(context, _record.ShardAllocations, key);
 
+        public static int GetShardIndex<TTransaction>(TransactionOperationContext<TTransaction> context, List<DatabaseRecord.ShardRangeAssignment> shardAllocations, string key)
+            where TTransaction : RavenTransaction
+        {
+            var shardId = GetShardId(context, key);
+            return GetShardIndex(shardAllocations, shardId);
+        }
+        
         public bool HasTopologyChanged(long etag)
         {
             // TODO fix this

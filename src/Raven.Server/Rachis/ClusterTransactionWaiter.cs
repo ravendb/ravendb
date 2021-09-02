@@ -2,56 +2,60 @@
 using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
+using Sparrow.Json.Parsing;
 
-namespace Raven.Server.Documents
+namespace Raven.Server.Rachis
 {
-    public class ClusterTransactionWaiter
+    public class ClusterTransactionWaiter : AsyncWaiter<ClusterTransactionCompletionResult>
     {
-        internal readonly DocumentDatabase Database;
-        private readonly ConcurrentDictionary<string, TaskCompletionSource<object>> _results = new ConcurrentDictionary<string, TaskCompletionSource<object>>();
 
-        public ClusterTransactionWaiter(DocumentDatabase database)
-        {
-            Database = database;
-        }
+    }
+
+    public class ClusterTransactionCompletionResult
+    {
+        public Task IndexTask;
+        public DynamicJsonArray Array;
+    }
+
+    public class AsyncWaiter<T>
+    {
+        private readonly ConcurrentDictionary<string, TaskCompletionSource<T>> _results = new ConcurrentDictionary<string, TaskCompletionSource<T>>();
 
         public RemoveTask CreateTask(out string id)
         {
             id = Guid.NewGuid().ToString();
-            _results.TryAdd(id, new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously));
+            _results.TryAdd(id, new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously));
             return new RemoveTask(this, id);
         }
 
-        public TaskCompletionSource<object> Get(string id)
+        public TaskCompletionSource<T> Get(string id)
         {
             _results.TryGetValue(id, out var val);
             return val;
         }
 
-        public void SetResult(string id, long index, object result)
+        public void TrySetResult(string id, T result)
         {
-            Database.RachisLogIndexNotifications.NotifyListenersAbout(index, null);
             if (_results.TryGetValue(id, out var task))
             {
-                task.SetResult(result);
+                task.TrySetResult(result);
             }
         }
 
-        public void SetException(string id, long index, Exception e)
+        public void TrySetException(string id, Exception e)
         {
-            Database.RachisLogIndexNotifications.NotifyListenersAbout(index, e);
             if (_results.TryGetValue(id, out var task))
             {
-                task.SetException(e);
+                task.TrySetException(e);
             }
         }
 
-        public struct RemoveTask : IDisposable
+        public readonly struct RemoveTask : IDisposable
         {
-            private readonly ClusterTransactionWaiter _parent;
+            private readonly AsyncWaiter<T> _parent;
             private readonly string _id;
 
-            public RemoveTask(ClusterTransactionWaiter parent, string id)
+            public RemoveTask(AsyncWaiter<T> parent, string id)
             {
                 _parent = parent;
                 _id = id;
@@ -65,7 +69,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public async Task<object> WaitForResults(string id, CancellationToken token)
+        public async Task<T> WaitForResults(string id, CancellationToken token)
         {
             if (_results.TryGetValue(id, out var task) == false)
             {
