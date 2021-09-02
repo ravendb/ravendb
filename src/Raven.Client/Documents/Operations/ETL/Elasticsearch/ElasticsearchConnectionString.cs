@@ -76,6 +76,8 @@ namespace Raven.Client.Documents.Operations.ETL.ElasticSearch
 
     public class ApiKeyAuth
     {
+        public string ApiKeyId { get; set; }
+        
         public string ApiKey { get; set; }
     }
     
@@ -87,8 +89,6 @@ namespace Raven.Client.Documents.Operations.ETL.ElasticSearch
     
     public class CertificateAuth
     {
-        public string CertBase64 { get; set; }
-
-        public List<string> Paths { get; set; }
+        public string[] CertificatesBase64 { get; set; }
     }
 }

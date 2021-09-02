@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 using Elasticsearch.Net;
 using Nest;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
@@ -21,11 +22,26 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
             }
             else if (connectionString.Authentication.ApiKeyAuth != null)
             {
-                settings.ApiKeyAuthentication("", connectionString.Authentication.ApiKeyAuth.ApiKey);
+                settings.ApiKeyAuthentication(connectionString.Authentication.ApiKeyAuth.ApiKeyId, connectionString.Authentication.ApiKeyAuth.ApiKey);
             }
             else if (connectionString.Authentication.CertificateAuth != null)
             {
-                // add certificates
+                if (connectionString.Authentication.CertificateAuth.CertificatesBase64.Length == 1)
+                {
+                    var cert = new X509Certificate2(Convert.FromBase64String(connectionString.Authentication.CertificateAuth.CertificatesBase64.First()));
+                    settings.ClientCertificate(cert);
+                }
+                else
+                {
+                    var certificates = new X509CertificateCollection();
+
+                    foreach (var certificateBase64 in connectionString.Authentication.CertificateAuth.CertificatesBase64)
+                    {
+                        certificates.Add(new X509Certificate2(Convert.FromBase64String(certificateBase64)));
+                    }
+
+                    settings.ClientCertificates(certificates);
+                }
             }
 
             ElasticClient client = new(settings);
