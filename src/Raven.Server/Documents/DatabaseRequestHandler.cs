@@ -30,6 +30,11 @@ namespace Raven.Server.Documents
             ContextPool = Database.DocumentsStorage.ContextPool;
             Logger = LoggingSource.Instance.GetLogger(Database.Name, GetType().FullName);
 
+            context.HttpContext.Response.OnStarting(() => CheckForChanges(context));
+        }
+
+        public Task CheckForChanges(RequestHandlerContext context)
+        {
             var topologyEtag = GetLongFromHeaders(Constants.Headers.TopologyEtag);
             if (topologyEtag.HasValue && Database.HasTopologyChanged(topologyEtag.Value))
                 context.HttpContext.Response.Headers[Constants.Headers.RefreshTopology] = "true";
@@ -37,6 +42,8 @@ namespace Raven.Server.Documents
             var clientConfigurationEtag = GetLongFromHeaders(Constants.Headers.ClientConfigurationEtag);
             if (clientConfigurationEtag.HasValue && Database.HasClientConfigurationChanged(clientConfigurationEtag.Value))
                 context.HttpContext.Response.Headers[Constants.Headers.RefreshClientConfiguration] = "true";
+
+            return Task.CompletedTask;
         }
 
         protected delegate void RefAction(string databaseName, ref BlittableJsonReaderObject configuration, JsonOperationContext context);
@@ -138,12 +145,12 @@ namespace Raven.Server.Documents
             return new OperationCancelToken(cancelAfter, Database.DatabaseShutdown, HttpContext.RequestAborted);
         }
 
-        protected void AddPagingPerformanceHint(PagingOperationType operation, string action, string details, long numberOfResults, int pageSize, long duration)
+        protected void AddPagingPerformanceHint(PagingOperationType operation, string action, string details, long numberOfResults, int pageSize, long duration, long totalDocumentsSizeInBytes)
         {
             if (numberOfResults <= Database.Configuration.PerformanceHints.MaxNumberOfResults)
                 return;
 
-            Database.NotificationCenter.Paging.Add(operation, action, details, numberOfResults, pageSize, duration);
+            Database.NotificationCenter.Paging.Add(operation, action, details, numberOfResults, pageSize, duration, totalDocumentsSizeInBytes);
         }
     }
 }

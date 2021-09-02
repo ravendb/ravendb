@@ -67,7 +67,5 @@ namespace Raven.Server.Documents.Replication
         }
 
         public static int FromBase26(string tag) => tag.ParseNodeTag();
-
-        public static readonly int SinkTag = FromBase26("SINK");
     }
 }

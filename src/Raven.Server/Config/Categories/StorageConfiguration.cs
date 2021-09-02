@@ -2,12 +2,25 @@ using System.ComponentModel;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
 using Sparrow;
+using Sparrow.Platform;
 
 namespace Raven.Server.Config.Categories
 {
     [ConfigurationCategory(ConfigurationCategoryType.Storage)]
     public class StorageConfiguration : ConfigurationCategory
     {
+        public StorageConfiguration()
+        {
+            // On Windows, DiscardVirtualMemory can result in high CPU usage due to contention on the
+            // PTE entry (in Win Server 2016 and Win Server 2019), we want to avoid it by default.
+            DiscardVirtualMemory = PlatformDetails.RunningOnPosix;
+        }
+
+        [Description("You can use this setting to specify whether to disable or enable discard virtual memory. By default, on windows, it will be disabled.")]
+        [DefaultValue(DefaultValueSetInConstructor)]
+        [ConfigurationEntry("Storage.DiscardVirtualMemory", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public bool DiscardVirtualMemory { get; set; }
+        
         [Description("You can use this setting to specify a different path to temporary files. By default it is empty, which means that temporary files will be created at same location as data file.")]
         [DefaultValue(null)]
         [ConfigurationEntry("Storage.TempPath", ConfigurationEntryScope.ServerWideOrPerDatabase)]
@@ -125,7 +138,7 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Storage.Dangerous.IgnoreInvalidJournalErrors", ConfigurationEntryScope.ServerWideOnly)]
         public bool? IgnoreInvalidJournalErrors { get; set; }
 
-        [Description("EXPERT: Skip checksum validation on database loading process (applicable only for ARM 32/64)")]
+        [Description("EXPERT: Skip checksum validation on database loading process")]
         [DefaultValue(false)]
         [ConfigurationEntry("Storage.Dangerous.SkipChecksumValidationOnDatabaseLoading", ConfigurationEntryScope.ServerWideOnly)]
         public bool SkipChecksumValidationOnDatabaseLoading { get; set; }
@@ -139,5 +152,11 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(false)]
         [ConfigurationEntry("Storage.Encrypted.DisableBuffersPooling", ConfigurationEntryScope.ServerWideOnly)]
         public bool DisableEncryptionBuffersPooling { get; set; }
+
+        [Description("Max number of recyclable journals that will be reused. ")]
+        [DefaultValue(32)]
+        [MinValue(0)]
+        [ConfigurationEntry("Storage.MaxNumberOfRecyclableJournals", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public int MaxNumberOfRecyclableJournals { get; set; }
     }
 }

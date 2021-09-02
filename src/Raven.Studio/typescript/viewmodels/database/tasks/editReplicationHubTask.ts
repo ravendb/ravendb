@@ -65,7 +65,7 @@ class editReplicationHubTask extends viewModelBase {
                                    "cancelHubTaskOperation", "cancelReplicationAccessOperation",
                                    "addNewReplicationAccess", "editReplicationAccessItem", 
                                    "cloneReplicationAccessItem","deleteReplicationAccessItem",
-                                   "saveReplicationHubTask", "saveReplicationAccessItem", "loadMoreAccessItems");
+                                   "saveReplicationHubTask", "saveReplicationAccessItem", "loadMoreAccessItems", "setState");
     }
 
     activate(args: any) {
@@ -190,10 +190,12 @@ class editReplicationHubTask extends viewModelBase {
         
         this.dirtyFlag = new ko.DirtyFlag([
             model.taskName,
+            model.disabled,
             model.manualChooseMentor,
             model.mentorNode,
             model.delayReplicationTime,
             model.showDelayReplication,
+            model.preventDeletions,
             model.withFiltering,
             model.allowReplicationFromHubToSink,
             model.allowReplicationFromSinkToHub
@@ -559,6 +561,10 @@ class editReplicationHubTask extends viewModelBase {
     
     loadMoreAccessItems() {
         this.batchCounter(this.batchCounter() + 1);
+    }
+
+    setState(state: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskState): void {
+        this.editedHubTask().disabled(state === "Disabled");
     }
 }
 

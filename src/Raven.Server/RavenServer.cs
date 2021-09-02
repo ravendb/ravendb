@@ -76,7 +76,7 @@ namespace Raven.Server
 
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<RavenServer>("Server");
         private readonly Logger _authAuditLog = LoggingSource.AuditLog.GetLogger("AuthenticateCertificate", "Audit");
-        private TestingStuff _forTestingPurposes;
+        internal TestingStuff _forTestingPurposes;
 
         public readonly RavenConfiguration Configuration;
 
@@ -297,7 +297,7 @@ namespace Raven.Server
                         Logger.Operations("Could not open the server store", e);
                     throw;
                 }
-
+                
                 ServerStore.TriggerDatabases();
 
                 StartSnmp();
@@ -1602,12 +1602,28 @@ namespace Raven.Server
             // The certificate is not explicitly registered in our server, let's see if we have a certificate
             // with the same public key pinning hash.
             var pinningHash = certificate.GetPublicKeyPinningHash();
-            var certWithSameHash = ServerStore.Cluster.GetCertificatesByPinningHash(ctx, pinningHash).FirstOrDefault();
+            var certificatesWithSameHash = ServerStore.Cluster.GetCertificatesByPinningHash(ctx, pinningHash).ToList();
 
-            if (certWithSameHash == null)
+            if (certificatesWithSameHash.Count == 0)
             {
                 authenticationStatus.Status = AuthenticationStatus.UnfamiliarCertificate;
                 return;
+            }
+
+            CertificateDefinition certWithSameHash = null;
+            string issuerHash = null;
+
+            foreach (var certDef in certificatesWithSameHash.OrderByDescending(x => x.NotAfter))
+            {
+                // Hash is good, let's validate it was signed by a known issuer, otherwise users can use the private key to register a new cert with a different issuer.
+                using (var goodKnownCert = new X509Certificate2(Convert.FromBase64String(certDef.Certificate)))
+                {
+                    if (CertificateUtils.CertHasKnownIssuer(certificate, goodKnownCert, Configuration.Security, out issuerHash))
+                    {
+                        certWithSameHash = certDef;
+                        break;
+                    }
+                }
             }
 
             string remoteAddress = null;
@@ -1622,9 +1638,7 @@ namespace Raven.Server
                     break;
             }
 
-            // Hash is good, let's validate it was signed by a known issuer, otherwise users can use the private key to register a new cert with a different issuer.
-            var goodKnownCert = new X509Certificate2(Convert.FromBase64String(certWithSameHash.Certificate));
-            if (CertificateUtils.CertHasKnownIssuer(certificate, goodKnownCert, ServerStore.Configuration.Security, out var issuerHash) == false)
+            if (certWithSameHash == null)
             {
                 if (_authAuditLog.IsInfoEnabled)
                     _authAuditLog.Info($"Connection from {remoteAddress} with certificate '{certificate.Subject} ({certificate.Thumbprint})' which is not registered in the cluster. " +
@@ -1781,6 +1795,10 @@ namespace Raven.Server
                         errors.Add(new IOException(msg, ex));
                         if (Logger.IsOperationsEnabled)
                             Logger.Operations(msg, ex);
+                        
+                        ServerStore.NotificationCenter.Add(AlertRaised.Create(Notification.ServerWide, "Unable to start tcp listener", msg,
+                            AlertType.TcpListenerError, NotificationSeverity.Error, key: $"tcp/listener/{ipAddress}/{port}", details: new ExceptionDetails(ex)));
+                        
                         continue;
                     }
 
@@ -1857,7 +1875,7 @@ namespace Raven.Server
 
         private void ListenToNewTcpConnection(TcpListener listener)
         {
-            Task.Run(async () =>
+            Task.Factory.StartNew(async () =>
             {
                 var tcpClient = await AcceptTcpClientAsync(listener);
                 if (tcpClient == null)
@@ -1872,7 +1890,7 @@ namespace Raven.Server
                 EndPoint remoteEndPoint = null;
                 X509Certificate2 cert = null;
                 TcpConnectionHeaderMessage header = null;
-
+                
                 try
                 {
                     remoteEndPoint = tcpClient.Client.RemoteEndPoint;
@@ -2015,14 +2033,14 @@ namespace Raven.Server
                         {
                             throw new InvalidOperationException($"TCP negotiation dropped after reaching {maxRetries} retries, header:{headerJson}, this is probably a bug.");
                         }
-
+                        
                         header = JsonDeserializationClient.TcpConnectionHeaderMessage(headerJson);
 
                         if (Logger.IsInfoEnabled)
                         {
                             Logger.Info($"New {header.Operation} TCP connection to {header.DatabaseName ?? "the cluster node"} from {tcpClient.Client.RemoteEndPoint}");
                         }
-
+                        
                         //In the case where we have mismatched version but the other side doesn't know how to handle it.
                         if (header.Operation == TcpConnectionHeaderMessage.OperationTypes.Drop)
                         {
@@ -2039,7 +2057,7 @@ namespace Raven.Server
                             return header;
                         }
                     }
-
+                    
                     var status = TcpConnectionHeaderMessage.OperationVersionSupported(header.Operation, header.OperationVersion, out supported);
                     if (status == TcpConnectionHeaderMessage.SupportedStatus.Supported)
                         break;
@@ -2066,15 +2084,16 @@ namespace Raven.Server
                             $"Got a request to establish TCP connection to {header.DatabaseName ?? "the cluster node"} from {tcpClient.Client.RemoteEndPoint} " +
                             $"Didn't agree on {header.Operation} protocol version: {header.OperationVersion} will request to use version: {supported}.");
                     }
-
+                    
                     await RespondToTcpConnection(stream, context, $"Not supporting version {header.OperationVersion} for {header.Operation}", TcpConnectionStatus.TcpVersionMismatch,
                         supported);
                 }
 
-                bool authSuccessful = TryAuthorize(Configuration, tcp.Stream, header, tcpClient, out var err);
+                bool authSuccessful = TryAuthorize(Configuration, tcp.Stream, header, tcpClient, out var err, out TcpConnectionStatus statusResult);
                 //At this stage the error is not relevant.
-                await RespondToTcpConnection(stream, context, null,
-                    authSuccessful ? TcpConnectionStatus.Ok : TcpConnectionStatus.AuthorizationFailed,
+                
+                await RespondToTcpConnection(stream, context, err,
+                    authSuccessful ? TcpConnectionStatus.Ok : statusResult,
                     supported);
 
                 tcp.ProtocolVersion = supported;
@@ -2387,9 +2406,18 @@ namespace Raven.Server
             return (stream, null);
         }
 
-        private bool TryAuthorize(RavenConfiguration configuration, Stream stream, TcpConnectionHeaderMessage header, TcpClient tcpClient, out string msg)
+        private bool TryAuthorize(RavenConfiguration configuration, Stream stream, TcpConnectionHeaderMessage header, TcpClient tcpClient, out string msg, out TcpConnectionStatus statusResult)
         {
             msg = null;
+            if (header.ServerId != null && header.ServerId != ServerStore.ServerId.ToString())
+            {
+                msg = $"Tried to connect to server with Id {header.ServerId} at {tcpClient.Client.LocalEndPoint} "+
+                      $" but instead reached a server with Id {ServerStore.ServerId}. Check your network configuration.";
+                statusResult = TcpConnectionStatus.InvalidNetworkTopology;
+                return false;
+            }
+
+            statusResult = TcpConnectionStatus.AuthorizationFailed;
 
             if (configuration.Security.AuthenticationEnabled == false)
                 return true;
@@ -2675,6 +2703,7 @@ namespace Raven.Server
         {
             internal bool ThrowExceptionInListenToNewTcpConnection = false;
             internal bool ThrowExceptionInTrafficWatchTcp = false;
+            internal bool GatherVerboseDatabaseDisposeInformation = false;
         }
     }
 }

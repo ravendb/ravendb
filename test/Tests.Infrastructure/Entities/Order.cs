@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using Raven.Tests.Core.Utils.Entities;
 
-namespace FastTests.Server.Basic.Entities
+namespace Tests.Infrastructure.Entities
 {
     public class Order
     {

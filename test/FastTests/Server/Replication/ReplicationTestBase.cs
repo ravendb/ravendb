@@ -130,7 +130,7 @@ namespace FastTests.Server.Replication
             }
             return false;
         }
-        
+
         protected List<string> WaitUntilHasTombstones(
                 IDocumentStore store,
                 int count = 1)
@@ -179,8 +179,8 @@ namespace FastTests.Server.Replication
                 using (var session = store.OpenSession(store.Database))
                 {
                     var doc = session.Load<T>(id);
-                    if (doc != null && session.Advanced.Attachments.Exists(id, attachmentName))                   
-                        return doc;                    
+                    if (doc != null && session.Advanced.Attachments.Exists(id, attachmentName))
+                        return doc;
                 }
                 Thread.Sleep(100);
             }
@@ -260,13 +260,21 @@ namespace FastTests.Server.Replication
             return await store.Maintenance.Server.SendAsync(op);
         }
 
-        public async Task<List<ModifyOngoingTaskResult>> SetupReplicationAsync(IDocumentStore fromStore, params IDocumentStore[] toStores)
+        public Task<List<ModifyOngoingTaskResult>> SetupReplicationAsync(IDocumentStore fromStore, params IDocumentStore[] toStores)
+        {
+            return SetupReplicationAsync(fromStore, responsibleNode: null, toStores);
+        }
+
+        public async Task<List<ModifyOngoingTaskResult>> SetupReplicationAsync(IDocumentStore fromStore, string responsibleNode = null, params IDocumentStore[] toStores)
         {
             var tasks = new List<Task<ModifyOngoingTaskResult>>();
             var resList = new List<ModifyOngoingTaskResult>();
             foreach (var store in toStores)
             {
-                var databaseWatcher = new ExternalReplication(store.Database, $"ConnectionString-{store.Identifier}");
+                var databaseWatcher = new ExternalReplication(store.Database, $"ConnectionString-{store.Identifier}")
+                {
+                    MentorNode = responsibleNode
+                };
                 ModifyReplicationDestination(databaseWatcher);
                 tasks.Add(AddWatcherToReplicationTopology(fromStore, databaseWatcher, store.Urls));
             }
@@ -374,7 +382,7 @@ namespace FastTests.Server.Replication
 
         protected async Task<(DocumentStore source, DocumentStore destination)> CreateDuoCluster([CallerMemberName] string caller = null)
         {
-            var leader = await CreateRaftClusterAndGetLeader(2);
+            var (_, leader) = await CreateRaftCluster(2);
             var follower = Servers.First(srv => ReferenceEquals(srv, leader) == false);
             var source = new DocumentStore
             {

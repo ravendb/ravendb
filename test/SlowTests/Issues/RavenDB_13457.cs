@@ -39,7 +39,7 @@ namespace SlowTests.Issues
             var nodesCount = 3;
             var db = GetDatabaseName();
 
-            var leader = await CreateRaftClusterAndGetLeader(nodesCount);
+            var (_, leader) = await CreateRaftCluster(nodesCount);
             var result = await CreateDatabaseInCluster(db, nodesCount, leader.WebUrl);
 
             using (var store =

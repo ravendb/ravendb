@@ -457,7 +457,7 @@ select out(p) as HeartRate, p.Name
             using (var store = GetDocumentStore())
             {
                 var baseline = RavenTestHelper.UtcToday;
-                var baseline2 = DateTime.Today.AddDays(-1);
+                var baseline2 = RavenTestHelper.UtcToday.AddDays(-1);
 
                 using (var session = store.OpenSession())
                 {
@@ -980,7 +980,7 @@ as HeartRate, Name
             using (var store = GetDocumentStore())
             {
                 var baseline = RavenTestHelper.UtcToday;
-                var baseline2 = DateTime.Today.AddDays(-1);
+                var baseline2 = RavenTestHelper.UtcToday.AddDays(-1);
 
                 using (var session = store.OpenSession())
                 {
@@ -6090,7 +6090,7 @@ select out()");
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today.EnsureUtc();
+                var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
                 var totalMinutes = TimeSpan.FromDays(3).TotalMinutes;
 
@@ -6606,7 +6606,7 @@ select out(p)
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today.EnsureUtc();
+                var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
                 var totalMinutes = TimeSpan.FromDays(3).TotalMinutes;
 
@@ -7355,7 +7355,7 @@ select out(c)
                 Assert.Equal(nameof(StockPrice.Low), stock[3]);
                 Assert.Equal(nameof(StockPrice.Volume), stock[4]);
 
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 using (var session = store.OpenSession())
                 {

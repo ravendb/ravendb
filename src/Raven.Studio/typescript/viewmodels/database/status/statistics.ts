@@ -62,12 +62,31 @@ class statistics extends viewModelBase {
 
         popoverUtils.longWithHover($(".js-cv-tooltip"),
             {
-                content: `<div>${cvTooltip}</div>`
+                content: this.stats().databaseChangeVector.length === 0 ? "" : `<div>${cvTooltip}</div>`
             });
         
         popoverUtils.longWithHover($(".js-identities-header"),
             {
                 content: "<div>Identities allow you to have consecutive IDs across the cluster.</div>"
+            });
+        
+        popoverUtils.longWithHover($(".js-timeseries-segments"),
+            {
+                content: `<ul class="margin-top margin-right">
+                              <li>
+                                  <small>
+                                      <strong>Time series</strong> data is stored within <strong>segments</strong>.<br>
+                                      Each segment contains consecutive entries from the same time series.
+                                  </small>
+                              </li><br>
+                              <li>
+                                  <small>
+                                      Segments' maximum size is 2KB.<br>
+                                      Segments are added as needed when the number of entries grows,<br>
+                                      or when a certain amount of time has passed since the last entry.
+                                  </small>
+                              </li>
+                          </ul>`
             });
     }
 
@@ -102,11 +121,11 @@ class statistics extends viewModelBase {
                 this.processStatsResults(dbStats, indexesStats);
                 this.dataLocation(dbLocation.BasePath);
                 
-                const mappedIdentities = _.map(identities, (value, key) => {
+                const mappedIdentities = _.map(identities, (value, key): identityItem => {
                     return {
                         Prefix: key,
                         Value: value
-                    } as identityItem;
+                    };
                 });
                 
                 this.identities(_.sortBy(mappedIdentities, x => x.Prefix.toLocaleLowerCase()));

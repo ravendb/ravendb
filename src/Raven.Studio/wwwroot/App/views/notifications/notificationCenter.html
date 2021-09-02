@@ -1,7 +1,4 @@
 <div id="notification-center" class="flex-vertical" data-bind="css: { 'show-notifications': notificationCenter.showNotifications() }, with: notificationCenter">
-
-
-
     <div class="notification-actions flex-horizontal flex-stretch-items" data-bind="if: includeInDom">
         <div class="flex-horizontal flex-stretch-items">
             <button data-bind="click: _.partial(filterBySeverity, null), css: { active: !severityFilter() }"
@@ -21,18 +18,15 @@
         <div class="flex-grow"></div>
         <button data-bind="{ click: pinNotifications.toggle.bind(pinNotifications), css: { 'pinned': pinNotifications() } }" class="notifications-pin-toggle"><i class="icon-pin"></i><i class="icon-pinned"></i></button>
     </div>
-
     <div class="padding" data-bind="visible: noNewNotifications">
         <i class="icon-xl icon-empty-set text-muted"></i>
         <h2 class="text-center text-muted">No new notifications</h2>
     </div>
-
     <div class="notification-list scroll" data-bind="if: includeInDom">
         <!-- ko foreach: visibleNotifications-->
         <div data-bind="template: { name: type + '-template' }"></div>
         <!-- /ko -->
     </div>
-
 </div>
 
 <script type="text/html" id="OperationChanged-template">
@@ -46,7 +40,7 @@
                     <i data-bind="attr: { 'class': headerIconClass() + ' ' +  headerIconAddonClass() } "></i>
                     <h3 data-bind="text: title"></h3>
                 </div>
-                <div class="time" data-bind="text: displayDate().format('LLL')"></div>
+                <div class="notification-time" data-bind="text: displayDate().format('LLL')"></div>
                 <p data-bind="html: message"></p>
                 <p data-bind="visible: isCanceled" class="text-warning">The operation was cancelled.</p>
 
@@ -58,7 +52,6 @@
                     </button>
                 </div>
             </div>
-
             <div data-bind="if: !isCompleted()">
                 <div class="notification-header">
                     <h3>
@@ -66,16 +59,14 @@
                         <span class="global-spinner spinner-xs"></span>
                     </h3>
                 </div>
-                <div class="time" data-bind="text: displayDate().format('LLL')"></div>
+                <div class="notification-time" data-bind="text: displayDate().format('LLL')"></div>
                 <p data-bind="html: message"></p>
-
                 <div class="progress" data-bind="visible: isPercentageProgress(), if: isPercentageProgress()">
                     <div class="progress-bar" role="progressbar"
                          data-bind="style: {  width: percentageProgress() + '%' }, attr: { 'aria-valuenow': progress().Processed, 'aria-valuemax': progress().Total }" aria-valuemin="0">
                         <span class="sr-only" data-bind="text: percentageProgress() + '%'"></span>
                     </div>
                 </div>
-
                 <div class="flex-horizontal">
                     <button data-bind="visible: hasDetails(), click: _.partial($parent.openDetails, $data)"
                             class="btn btn-sm">
@@ -92,6 +83,7 @@
         </div>
     </div>
 </script>
+
 <script type="text/html" id="AlertRaised-template">
     <div data-bind="attr: { class: 'notification-item ' + cssClass() }">
         <div class="padding">
@@ -102,7 +94,7 @@
                 <i data-bind="attr: { class: headerIconClass() + ' icon-addon-warning' }"></i>
                 <h3 data-bind="text: title"></h3>
             </div>
-            <div class="time" data-bind="text: displayDate().format('LLL')"></div>
+            <div class="notification-time" data-bind="text: displayDate().format('LLL')"></div>
             <p data-bind="html: message"></p>
             <div class="flex-horizontal">
                 <button data-bind="visible: hasDetails(), click: _.partial($parent.openDetails, $data)"
@@ -127,6 +119,7 @@
         </div>
     </div>
 </script>
+
 <script type="text/html" id="RecentError-template">
     <div data-bind="attr: { class: 'notification-item ' + cssClass() }">
         <div class="padding">
@@ -137,7 +130,7 @@
                 <i data-bind="attr: { class: headerIconClass() + ' icon-addon-danger' }"></i>
                 <h3 data-bind="text: title"></h3>
             </div>
-            <div class="time" data-bind="text: displayDate().format('LLL')"></div>
+            <div class="notification-time" data-bind="text: displayDate().format('LLL')"></div>
             <p data-bind="html: shortMessage"></p>
             <div class="flex-horizontal">
                 <button data-bind="visible: hasDetails(), click: _.partial($parent.openDetails, $data)"
@@ -148,6 +141,7 @@
         </div>
     </div>
 </script>
+
 <script type="text/html" id="PerformanceHint-template">
     <div data-bind="attr: { class: 'notification-item ' + cssClass() }">
         <div class="padding">
@@ -158,9 +152,8 @@
                 <i data-bind="attr: { class: headerIconClass() + ' icon-addon-rocket' }"></i>
                 <h3 data-bind="text: title"></h3>
             </div>
-            <div class="time" data-bind="text: displayDate().format('LLL')"></div>
+            <div class="notification-time" data-bind="text: displayDate().format('LLL')"></div>
             <p data-bind="html: message"></p>
-
             <div class="flex-horizontal">
                 <button data-bind="visible: hasDetails(), click: _.partial($parent.openDetails, $data)"
                         class="btn btn-sm">
@@ -192,7 +185,6 @@
     </div>
 </script>
 
-
 <script type="text/html" id="CumulativeBulkInsert-template">
     <div data-bind="attr: { class: 'notification-item ' + cssClass() }">
         <div class="padding">
@@ -203,9 +195,8 @@
                 <i class="icon-database-cutout icon-addon-tick"></i>
                 <h3 data-bind="text: title"></h3>
             </div>
-            <div class="time" data-bind="text: displayDate().format('LLL')"></div>
+            <div class="notification-time" data-bind="text: displayDate().format('LLL')"></div>
             <p data-bind="text: message"></p>
-
             <div class="flex-horizontal">
                 <button data-bind="click: _.partial($parent.openDetails, $data)"
                         class="btn btn-sm">
@@ -217,7 +208,6 @@
     </div>
 </script>
 
-
 <script type="text/html" id="CumulativeUpdateByQuery-template">
     <div data-bind="attr: { class: 'notification-item ' + cssClass() }">
         <div class="padding">
@@ -228,9 +218,8 @@
                 <i class="icon-database-cutout icon-addon-tick"></i>
                 <h3 data-bind="text: title"></h3>
             </div>
-            <div class="time" data-bind="text: displayDate().format('LLL')"></div>
+            <div class="notification-time" data-bind="text: displayDate().format('LLL')"></div>
             <p data-bind="text: message"></p>
-
             <div class="flex-horizontal">
                 <button data-bind="click: _.partial($parent.openDetails, $data)"
                         class="btn btn-sm">
@@ -252,9 +241,8 @@
                 <i class="icon-database-cutout icon-addon-tick"></i>
                 <h3 data-bind="text: title"></h3>
             </div>
-            <div class="time" data-bind="text: displayDate().format('LLL')"></div>
+            <div class="notification-time" data-bind="text: displayDate().format('LLL')"></div>
             <p data-bind="html: message"></p>
-
             <div class="flex-horizontal">
                 <button data-bind="click: _.partial($parent.openDetails, $data)"
                         class="btn btn-sm">
@@ -277,11 +265,10 @@
                     <i class="icon-database-cutout icon-addon-tick"></i>
                     <h3 data-bind="text: title"></h3>
                 </div>
-                <div class="time" data-bind="text: displayDate().format('LLL')"></div>
+                <div class="notification-time" data-bind="text: displayDate().format('LLL')"></div>
                 <p data-bind="html: message"></p>
                 <p data-bind="visible: isCanceled" class="text-warning">The operation was cancelled.</p>
             </div>
-
             <div data-bind="if: !isCompleted()">
                 <div class="notification-header">
                     <h3>
@@ -289,7 +276,7 @@
                         <span class="global-spinner spinner-xs"></span>
                     </h3>
                 </div>
-                <div class="time" data-bind="text: displayDate().format('LLL')"></div>
+                <div class="notification-time" data-bind="text: displayDate().format('LLL')"></div>
                 <p data-bind="html: message"></p>
 
                 <div class="progress" data-bind="visible: isPercentageProgress(), if: isPercentageProgress()">
@@ -298,7 +285,6 @@
                         <span class="sr-only" data-bind="text: percentageProgress() + '%'"></span>
                     </div>
                 </div>
-
                 <div class="flex-horizontal">
                     <small class="text-progress" data-bind="text: textualProgress, visible: !isCompleted()"></small>
                     <div class="flex-separator"></div>

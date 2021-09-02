@@ -7,9 +7,7 @@ using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
-using Raven.Client.Documents.Session;
 using Raven.Client.ServerWide.Operations;
-using Raven.Server;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -346,8 +344,8 @@ namespace SlowTests.Server.Replication
         public async Task FailoverOnHubNodeFail()
         {
             var clusterSize = 3;
-            var hub = await CreateRaftClusterAndGetLeader(clusterSize);
-            var minion = await CreateRaftClusterAndGetLeader(clusterSize);
+            var (_, hub) = await CreateRaftCluster(clusterSize);
+            var (minionNodes, minion) = await CreateRaftCluster(clusterSize);
 
             var hubDB = GetDatabaseName();
             var minionDB = GetDatabaseName();
@@ -394,7 +392,8 @@ namespace SlowTests.Server.Replication
                 using (var dstSession = minionStore.OpenSession())
                 {
                     Assert.True(await WaitForDocumentInClusterAsync<User>(
-                        dstSession as DocumentSession,
+                        minionNodes,
+                        minionDB,
                         "users/1",
                         u => u.Name.Equals("Karmel"),
                         TimeSpan.FromSeconds(30)));
@@ -428,7 +427,8 @@ namespace SlowTests.Server.Replication
                 using (var dstSession = minionStore.OpenSession())
                 {
                     Assert.True(await WaitForDocumentInClusterAsync<User>(
-                        dstSession as DocumentSession,
+                        minionNodes,
+                        minionDB,
                         "users/2",
                         u => u.Name.Equals("Karmel2"),
                         TimeSpan.FromSeconds(30)));
@@ -441,8 +441,8 @@ namespace SlowTests.Server.Replication
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;
             var clusterSize = 3;
-            var hub = await CreateRaftClusterAndGetLeader(clusterSize);
-            var minion = await CreateRaftClusterAndGetLeader(clusterSize);
+            var (_, hub) = await CreateRaftCluster(clusterSize);
+            var (minionNodes, minion) = await CreateRaftCluster(clusterSize);
 
             var hubDB = GetDatabaseName();
             var minionDB = GetDatabaseName();
@@ -486,7 +486,8 @@ namespace SlowTests.Server.Replication
                 using (var dstSession = minionStore.OpenSession())
                 {
                     Assert.True(await WaitForDocumentInClusterAsync<User>(
-                        dstSession as DocumentSession,
+                        minionNodes,
+                        minionDB,
                         "users/1",
                         u => u.Name.Equals("Karmel"),
                         TimeSpan.FromSeconds(30)));
@@ -512,7 +513,7 @@ namespace SlowTests.Server.Replication
                     await WaitForValueAsync(async () => (await minionStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(minionDB))).Topology.Rehabs.Count,
                         1));
 
-                EnsureReplicating((DocumentStore)hubStore, (DocumentStore)minionStore);
+                await EnsureReplicatingAsync((DocumentStore)hubStore, (DocumentStore)minionStore);
 
                 connections = await WaitForValueAsync(() => mentorDatabase.ReplicationLoader.OutgoingConnections.Count(), 3);
                 Assert.Equal(3, connections);
@@ -523,8 +524,8 @@ namespace SlowTests.Server.Replication
         public async Task FailoverOnSinkNodeFail()
         {
             var clusterSize = 3;
-            var hub = await CreateRaftClusterAndGetLeader(clusterSize);
-            var minion = await CreateRaftClusterAndGetLeader(clusterSize);
+            var (_, hub) = await CreateRaftCluster(clusterSize);
+            var (minionNodes, minion) = await CreateRaftCluster(clusterSize);
 
             var hubDB = GetDatabaseName();
             var minionDB = GetDatabaseName();
@@ -566,7 +567,8 @@ namespace SlowTests.Server.Replication
                 using (var dstSession = minionStore.OpenSession())
                 {
                     Assert.True(await WaitForDocumentInClusterAsync<User>(
-                        dstSession as DocumentSession,
+                        minionNodes,
+                        minionDB,
                         "users/1",
                         u => u.Name.Equals("Karmel"),
                         TimeSpan.FromSeconds(30)));

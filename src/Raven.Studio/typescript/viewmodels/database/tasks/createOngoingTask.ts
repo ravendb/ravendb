@@ -47,6 +47,13 @@ class createOngoingTask extends dialogViewModelBase {
         this.close();
     }
 
+    newElasticSearchEtlTask() {
+        // eventsCollector.default.reportEvent("ElasticSearchETL", "new");
+        // const url = appUrl.forEditElasticSearchEtl(this.activeDatabase());
+        // router.navigate(url);
+        // this.close();
+    }
+
     newReplicationHubTask() {
         eventsCollector.default.reportEvent("ReplicationHub", "new");
         const url = appUrl.forEditReplicationHub(this.activeDatabase());

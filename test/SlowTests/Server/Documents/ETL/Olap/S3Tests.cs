@@ -6,7 +6,6 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using FastTests.Client;
-using FastTests.Server.Basic.Entities;
 using Parquet;
 using Parquet.Data;
 using Raven.Client.Documents;
@@ -19,6 +18,7 @@ using Raven.Server.Documents.ETL.Providers.OLAP;
 using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.Documents.PeriodicBackup.Restore;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -49,7 +49,7 @@ namespace SlowTests.Server.Documents.ETL.Olap
                     {
                         for (int i = 0; i < 31; i++)
                         {
-                            await session.StoreAsync(new Query.Order
+                            await session.StoreAsync(new Order
                             {
                                 Id = $"orders/{i}",
                                 OrderedAt = baseline.AddDays(i),
@@ -60,7 +60,7 @@ namespace SlowTests.Server.Documents.ETL.Olap
 
                         for (int i = 0; i < 28; i++)
                         {
-                            await session.StoreAsync(new Query.Order
+                            await session.StoreAsync(new Order
                             {
                                 Id = $"orders/{i + 31}",
                                 OrderedAt = baseline.AddMonths(1).AddDays(i),
@@ -123,7 +123,7 @@ loadToOrders(partitionBy(key),
                     {
                         for (int i = 1; i <= 10; i++)
                         {
-                            var o = new Query.Order
+                            var o = new Order
                             {
                                 Id = $"orders/{i}",
                                 OrderedAt = baseline.AddDays(i),
@@ -162,7 +162,7 @@ loadToOrders(partitionBy(key),
 
                         Assert.Equal(1, cloudObjects.FileInfoDetails.Count);
 
-                        var fullPath = cloudObjects.FileInfoDetails[0].FullPath.Replace("=", "%3D");
+                        var fullPath = cloudObjects.FileInfoDetails[0].FullPath;
                         var blob = await s3Client.GetObjectAsync(fullPath);
 
                         await using var ms = new MemoryStream();
@@ -243,7 +243,7 @@ loadToOrders(partitionBy(key),
                                 });
                             }
 
-                            var o = new Query.Order
+                            var o = new Order
                             {
                                 Id = $"orders/{i}",
                                 OrderedAt = orderedAt,
@@ -272,7 +272,7 @@ loadToOrders(partitionBy(key),
                                 });
                             }
 
-                            var o = new Query.Order
+                            var o = new Order
                             {
                                 Id = $"orders/{i + 31}",
                                 OrderedAt = orderedAt,
@@ -332,7 +332,7 @@ loadToOrders(partitionBy(key), orderData);
                         Assert.Contains("2020-01-01", cloudObjects.FileInfoDetails[0].FullPath);
                         Assert.Contains("2020-02-01", cloudObjects.FileInfoDetails[1].FullPath);
 
-                        var fullPath = cloudObjects.FileInfoDetails[0].FullPath.Replace("=", "%3D");
+                        var fullPath = cloudObjects.FileInfoDetails[0].FullPath;
                         var blob = await s3Client.GetObjectAsync(fullPath);
 
                         await using var ms = new MemoryStream();
@@ -365,7 +365,7 @@ loadToOrders(partitionBy(key), orderData);
                         Assert.Contains("2020-01-01", cloudObjects.FileInfoDetails[0].FullPath);
                         Assert.Contains("2020-02-01", cloudObjects.FileInfoDetails[1].FullPath);
 
-                        var fullPath = cloudObjects.FileInfoDetails[1].FullPath.Replace("=", "%3D");
+                        var fullPath = cloudObjects.FileInfoDetails[1].FullPath;
                         var blob = await s3Client.GetObjectAsync(fullPath);
 
                         await using var ms = new MemoryStream();
@@ -414,7 +414,7 @@ loadToOrders(partitionBy(key), orderData);
                     {
                         for (int i = 0; i < 31; i++)
                         {
-                            await session.StoreAsync(new Query.Order
+                            await session.StoreAsync(new Order
                             {
                                 Id = $"orders/{i}",
                                 OrderedAt = baseline.AddDays(i),
@@ -425,7 +425,7 @@ loadToOrders(partitionBy(key), orderData);
 
                         for (int i = 0; i < 28; i++)
                         {
-                            await session.StoreAsync(new Query.Order
+                            await session.StoreAsync(new Order
                             {
                                 Id = $"orders/{i + 31}",
                                 OrderedAt = baseline.AddMonths(1).AddDays(i),
@@ -506,7 +506,7 @@ loadToOrders(partitionBy(['order_date', key]),
                     {
                         for (int i = 0; i < 100; i++)
                         {
-                            await session.StoreAsync(new Query.Order
+                            await session.StoreAsync(new Order
                             {
                                 Id = $"orders/{i}",
                                 OrderedAt = baseline.AddDays(i),
@@ -617,7 +617,7 @@ loadToOrders(noPartition(),
                         for (int i = 0; i < total; i++)
                         {
                             var orderedAt = baseline.AddDays(i);
-                            await session.StoreAsync(new Query.Order
+                            await session.StoreAsync(new Order
                             {
                                 Id = $"orders/{i}",
                                 OrderedAt = orderedAt,
@@ -631,7 +631,7 @@ loadToOrders(noPartition(),
                         {
                             var index = i + total;
                             var orderedAt = baseline.AddYears(1).AddMonths(1).AddDays(i);
-                            await session.StoreAsync(new Query.Order
+                            await session.StoreAsync(new Order
                             {
                                 Id = $"orders/{index}",
                                 OrderedAt = orderedAt,
@@ -678,7 +678,7 @@ loadToOrders(partitionBy(
                         {
                             var folder = cloudObjects.FileInfoDetails[index - 1];
                             var objectsInFolder = await s3Client.ListObjectsAsync(prefix: folder.FullPath, delimiter: "/", listFolders: true);
-                            
+
                             Assert.Equal(2, objectsInFolder.FileInfoDetails.Count);
                             Assert.Contains($"month={index}/", objectsInFolder.FileInfoDetails[0].FullPath);
                             Assert.Contains($"month={index + 1}/", objectsInFolder.FileInfoDetails[1].FullPath);
@@ -689,7 +689,7 @@ loadToOrders(partitionBy(
 
                         foreach (var filePath in files)
                         {
-                            var blob = await s3Client.GetObjectAsync(filePath.Replace("=", "%3D"));
+                            var blob = await s3Client.GetObjectAsync(filePath);
                             await using var ms = new MemoryStream();
                             blob.Data.CopyTo(ms);
 
@@ -749,7 +749,7 @@ loadToOrders(partitionBy(
                     {
                         for (int i = 0; i < 31; i++)
                         {
-                            await session.StoreAsync(new Query.Order
+                            await session.StoreAsync(new Order
                             {
                                 Id = $"orders/{i}",
                                 OrderedAt = baseline.AddDays(i),
@@ -760,7 +760,7 @@ loadToOrders(partitionBy(
 
                         for (int i = 0; i < 28; i++)
                         {
-                            await session.StoreAsync(new Query.Order
+                            await session.StoreAsync(new Order
                             {
                                 Id = $"orders/{i + 31}",
                                 OrderedAt = baseline.AddMonths(1).AddDays(i),
@@ -796,7 +796,7 @@ loadToOrders(partitionBy(['year', year], ['month', month], ['source', $customPar
                         var prefix = $"{settings.RemoteFolderName}/{CollectionName}/";
                         var cloudObjects = await s3Client.ListObjectsAsync(prefix, delimiter: "/", listFolders: true);
                         Assert.Equal(1, cloudObjects.FileInfoDetails.Count);
-                        
+
                         var files = await ListAllFilesInFolders(s3Client, cloudObjects);
                         Assert.Equal(2, files.Count);
                         Assert.Contains($"/Orders/year=2020/month=1/source={customPartition}/", files[0]);
@@ -860,7 +860,7 @@ loadToOrders(noPartition(), {
             {
                 using (var store = GetDocumentStore())
                 {
-                    using (var session= store.OpenAsyncSession())
+                    using (var session = store.OpenAsyncSession())
                     {
                         var today = DateTime.Today;
                         await session.StoreAsync(new Order
@@ -1032,7 +1032,7 @@ for (var i = 0; i < this.Lines.length; i++){
                     {
                         for (int i = 1; i <= 5; i++)
                         {
-                            var o = new Query.Order
+                            var o = new Order
                             {
                                 Id = $"orders/{i}",
                                 Company = $"companies/{i}",
@@ -1145,7 +1145,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
                     {
                         for (int i = 6; i <= 10; i++)
                         {
-                            var o = new Query.Order
+                            var o = new Order
                             {
                                 Id = $"orders/{i}",
                                 Company = $"companies/{i}",
@@ -1257,7 +1257,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
                 await DeleteObjects(settings, prefix: $"{settings.RemoteFolderName}{CollectionName}", delimiter: string.Empty);
             }
         }
-       
+
         private void SetupS3OlapEtl(DocumentStore store, string script, S3Settings settings, string customPartitionValue = null, string transformationName = null)
         {
             var connectionStringName = $"{store.Database} to S3";

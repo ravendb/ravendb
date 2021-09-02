@@ -8,11 +8,11 @@ class chooseTheme extends dialogViewModelBase {
     
     static readonly defaultTheme = "dark";
     
-    static readonly themeToStylesheet = {
+    static readonly themeToStylesheet: dictionary<string> = {
         "dark" : "styles.css",
         "light": "styles-light.css",
         "blue": "styles-blue.css"
-    } as dictionary<string>;
+    };
     
     currentTheme = ko.observable<string>();
     

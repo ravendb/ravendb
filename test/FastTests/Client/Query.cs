@@ -2,11 +2,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using FastTests.Server.Basic.Entities;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -19,7 +19,7 @@ namespace FastTests.Client
         }
 
 
-        public class Order
+        private class Order
         {
             public string Id { get; set; }
             public string Company { get; set; }

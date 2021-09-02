@@ -95,10 +95,10 @@ class graphHelper {
     }
     
     static readScrollConfig(): scrollColorConfig {
-        const config = {
-            scrollColor: undefined as string,
-            trackColor: undefined as string
-        } as scrollColorConfig;
+        const config: scrollColorConfig = {
+            scrollColor: undefined,
+            trackColor: undefined
+        };
         
         colorsManager.setup(".graph-helper", config);
         
@@ -238,7 +238,7 @@ class graphHelper {
 
         getItem(0).x = getDesiredX(0) - getItem(0).width / 2;
 
-        const emptySpaceInfo = [] as Array<{ space: number, idx: number }>;
+        const emptySpaceInfo: Array<{ space: number, idx: number }> = [];
 
         let currentPosition = getItem(0).x + getItem(0).width + padding;
 

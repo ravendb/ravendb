@@ -436,6 +436,7 @@ namespace Raven.Client.ServerWide
     public class DocumentsCompressionConfiguration : IDynamicJson
     {
         public string[] Collections { get; set; }
+        public bool CompressAllCollections { get; set; }
         public bool CompressRevisions { get; set; }
 
         public DocumentsCompressionConfiguration()
@@ -448,11 +449,19 @@ namespace Raven.Client.ServerWide
             CompressRevisions = compressRevisions;
         }
 
+        public DocumentsCompressionConfiguration(bool compressRevisions, bool compressAllCollections, params string[] collections)
+        {
+            Collections = collections ?? throw new ArgumentNullException(nameof(collections));
+            CompressAllCollections = compressAllCollections;
+            CompressRevisions = compressRevisions;
+        }
+
         protected bool Equals(DocumentsCompressionConfiguration other)
         {
             var mine = new HashSet<string>(Collections,StringComparer.OrdinalIgnoreCase);
             var them = new HashSet<string>(other.Collections, StringComparer.OrdinalIgnoreCase);
             return CompressRevisions == other.CompressRevisions && 
+                   CompressAllCollections == other.CompressAllCollections &&
                    mine.SetEquals(them);
         }
 
@@ -477,6 +486,7 @@ namespace Raven.Client.ServerWide
             }
 
             hash = 31 * hash + CompressRevisions.GetHashCode();
+            hash = 31 * hash + CompressAllCollections.GetHashCode();
             return hash;
         }
         
@@ -485,6 +495,7 @@ namespace Raven.Client.ServerWide
             return new DynamicJsonValue
             {
                 [nameof(Collections)] =  new DynamicJsonArray(Collections),
+                [nameof(CompressAllCollections)] = CompressAllCollections,
                 [nameof(CompressRevisions)] = CompressRevisions
             };
         }

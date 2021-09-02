@@ -35,7 +35,7 @@ namespace RachisTests
         {
             var clusterSize = 3;
             var databaseName = GetDatabaseName();
-            var leader = await CreateRaftClusterAndGetLeader(clusterSize, false, 0);
+            var (_, leader) = await CreateRaftCluster(clusterSize, false, 0);
             using (var store = new DocumentStore
             {
                 Urls = new[] { Servers[1].WebUrl },
@@ -66,7 +66,7 @@ namespace RachisTests
         public async Task CanCreateAddAndDeleteDatabaseFromNodes()
         {
             var clusterSize = 3;
-            var leader = await CreateRaftClusterAndGetLeader(clusterSize);
+            var (_, leader) = await CreateRaftCluster(clusterSize);
             var replicationFactor = 2;
             var databaseName = GetDatabaseName();
             using (var store = new DocumentStore()

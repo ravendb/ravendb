@@ -1,9 +1,9 @@
 ﻿using System.Linq;
 using FastTests;
-using FastTests.Server.Basic.Entities;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
+using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
 

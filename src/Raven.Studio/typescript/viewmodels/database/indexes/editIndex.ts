@@ -78,10 +78,11 @@ class editIndex extends viewModelBase {
     
     previewItem = ko.observable<Raven.Client.ServerWide.IndexHistoryEntry>();
     previewDefinition = ko.observable<string>();
+    previewItemNodes: KnockoutComputed<string[]>;
     
     defaultDeploymentMode = ko.observable<Raven.Client.Documents.Indexes.IndexDeploymentMode>();
     defaultDeploymentModeFormatted = ko.pureComputed(() => {
-        return this.defaultDeploymentMode() === "Rolling" ? "Server default (rolling - one node at a time)" : "Server default (parallel - all nodes concurrently)";
+        return this.defaultDeploymentMode() === "Rolling" ? "Database default (rolling - one node at a time)" : "Database default (parallel - all nodes concurrently)";
     });
 
     effectiveDeploymentMode = ko.pureComputed(() => {
@@ -174,6 +175,12 @@ class editIndex extends viewModelBase {
             this.$previewEditor = $(editIndex.previewEditorSelector);
             this.previewEditor = aceEditorBindingHandler.getEditorBySelection(this.$previewEditor);
             this.previewEditor.setOption("wrap", true);
+
+            setTimeout(() => this.onPreviewItemChange(), 0);
+        })
+        
+        this.previewItemNodes = ko.pureComputed<string[]>(() => {
+            return this.previewItem() ? Object.keys(this.previewItem().RollingDeployment).reverse() : [];
         })
     }
 
@@ -325,8 +332,31 @@ class editIndex extends viewModelBase {
             .done((indexHistory) => this.indexHistory(indexHistory.History));
     }
     
-    createdAtFormatted(indexHistoryEntry: Raven.Client.ServerWide.IndexHistoryEntry) {
-        return ko.pureComputed(() => generalUtils.formatUtcDateAsLocal(indexHistoryEntry.CreatedAt));
+    getLocalTime(utcTime: string) {
+        if (utcTime) {
+            return ko.pureComputed(() => generalUtils.formatUtcDateAsLocal(utcTime));
+        }
+        
+        return "N/A";
+    }
+
+    getDeploymentDuration(item: Raven.Client.ServerWide.IndexHistoryEntry, nodeTag: string): string {
+        if (Object.keys(item.RollingDeployment).length) {
+            const startedUtc = item.RollingDeployment[nodeTag].StartedAt;
+            const finishedUtc = item.RollingDeployment[nodeTag].FinishedAt;
+            
+            if (!startedUtc || !finishedUtc) {
+                return "N/A";
+            }
+
+            const started = moment.utc(startedUtc);
+            const finished = moment.utc(finishedUtc);
+            const diff = finished.diff(started);
+            
+            return generalUtils.formatDuration(moment.duration(diff), true);
+        }
+        
+        return "N/A";
     }
 
     useIndexRevisionItem(item: Raven.Client.ServerWide.IndexHistoryEntry) {
@@ -373,18 +403,29 @@ class editIndex extends viewModelBase {
         this.previewItem(item);
     }
 
-    creationTimeTooltip(item: Raven.Client.ServerWide.IndexHistoryEntry) {
+    onPreviewItemChange() {
+        $('.history-rolling-deployment-area [data-toggle="tooltip"]').tooltip({
+            html: true
+        });
+        
+        this.previewEditor.resize();
+    }
+
+    getTimeTooltip(utcTime: string, isRevisionTime: boolean = false) {
         return ko.pureComputed(() => {
-            if (item) {
-                return `<div class="date-container">
+            if (utcTime) {
+                const clickInfo = `<div class="margin-top margin-top-sm">Click to load this index revision</div>`;
+                
+                return `<div class="data-container">
                             <div>
-                                <div class="date-label">UTC:</div>
-                                <div class="date-value">${item.CreatedAt}</div>
+                                <div class="data-label">UTC:</div>
+                                <div class="data-value">${utcTime}</div>
                             </div>
                             <div>
-                                <div class="date-label">Relative:</div>
-                                <div class="date-value">${generalUtils.formatDurationByDate(moment.utc(item.CreatedAt), true)}</div>
+                                <div class="data-label">Relative:</div>
+                                <div class="data-value">${generalUtils.formatDurationByDate(moment.utc(utcTime), true)}</div>
                             </div>
+                            ${isRevisionTime ? clickInfo : ''}
                         </div>`;
             }
 
@@ -725,7 +766,7 @@ class editIndex extends viewModelBase {
                     .execute()
                     .done((savedIndexName) => {
                         this.resetDirtyFlag();
-                        router.navigate(appUrl.forIndexes(db));
+                        router.navigate(appUrl.forIndexes(db, this.editedIndex().name()));
                     });
             });
     }

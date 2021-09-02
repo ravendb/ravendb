@@ -3,7 +3,7 @@
 class protractedCommandsDetector {
     static instance = new protractedCommandsDetector();
 
-    private requestsInProgress = [] as Array<requestExecution>;
+    private requestsInProgress: requestExecution[] = [];
 
     showSpinner = ko.observable<boolean>(false);
     showServerNotResponding = ko.observable<boolean>(false);

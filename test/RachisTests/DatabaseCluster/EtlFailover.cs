@@ -30,8 +30,8 @@ namespace RachisTests.DatabaseCluster
         {
             var srcDb = "ReplicateFromSingleSourceSrc";
             var dstDb = "ReplicateFromSingleSourceDst";
-            var srcRaft = await CreateRaftClusterAndGetLeader(3);
-            var dstRaft = await CreateRaftClusterAndGetLeader(1);
+            var (_, srcRaft) = await CreateRaftCluster(3);
+            var (_, dstRaft) = await CreateRaftCluster(1);
             var srcNodes = await CreateDatabaseInCluster(srcDb, 3, srcRaft.WebUrl);
             var destNode = await CreateDatabaseInCluster(dstDb, 1, dstRaft.WebUrl);
             var node = srcNodes.Servers.First(x => x.ServerStore.NodeTag != srcRaft.ServerStore.NodeTag).ServerStore.NodeTag;
@@ -136,8 +136,8 @@ namespace RachisTests.DatabaseCluster
         {
             var srcDb = "EtlDestinationFailoverBetweenNodesWithinSameClusterSrc";
             var dstDb = "EtlDestinationFailoverBetweenNodesWithinSameClusterDst";
-            var srcRaft = await CreateRaftClusterAndGetLeader(3, leaderIndex: 0);
-            var dstRaft = await CreateRaftClusterAndGetLeader(3);
+            var (_, srcRaft) = await CreateRaftCluster(3, leaderIndex: 0);
+            var (_, dstRaft) = await CreateRaftCluster(3);
             var srcNodes = await CreateDatabaseInCluster(srcDb, 3, srcRaft.WebUrl);
             var destNode = await CreateDatabaseInCluster(dstDb, 3, dstRaft.WebUrl);
 
@@ -245,8 +245,8 @@ namespace RachisTests.DatabaseCluster
             var srcDb = "ETL-src";
             var dstDb = "ETL-dst";
 
-            var srcRaft = await CreateRaftClusterAndGetLeader(3, shouldRunInMemory: false);
-            var dstRaft = await CreateRaftClusterAndGetLeader(1);
+            var (_, srcRaft) = await CreateRaftCluster(3, shouldRunInMemory: false);
+            var (_, dstRaft) = await CreateRaftCluster(1);
             var srcNodes = await CreateDatabaseInCluster(srcDb, 2, srcRaft.WebUrl);
             var destNode = await CreateDatabaseInCluster(dstDb, 1, dstRaft.WebUrl);
 

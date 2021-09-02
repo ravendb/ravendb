@@ -13,7 +13,6 @@ using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Replication;
-using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
@@ -1179,7 +1178,7 @@ namespace SlowTests.Server.Replication
 
                 using (var session = store1.OpenSession())
                 {
-                    Assert.True(await WaitForDocumentInClusterAsync<User>((DocumentSession)session, "foo/bar", u => u.Name == "Grisha", TimeSpan.FromSeconds(15)));
+                    Assert.True(await WaitForDocumentInClusterAsync<User>(cluster.Nodes, store1.Database, "foo/bar", u => u.Name == "Grisha", TimeSpan.FromSeconds(15)));
                 }
             }
         }
@@ -1268,7 +1267,7 @@ namespace SlowTests.Server.Replication
         [Fact]
         public async Task ResolveToLatestInClusterOnTheFly()
         {
-            var leader1 = await CreateRaftClusterAndGetLeader(3);
+            var (_, leader1) = await CreateRaftCluster(3);
 
             using (var store1 = GetDocumentStore(new Options
             {

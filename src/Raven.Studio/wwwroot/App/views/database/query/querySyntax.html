@@ -1,9 +1,22 @@
 <div class="modal-dialog modal-lg" role="document" id="querySyntaxDialog">
     <div class="modal-content">
+        <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <i class="icon-cancel"></i>
+            </button>
+            <div>Sample Queries</div>
+        </div>        
         <div class="modal-body">
-            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><i class="icon-cancel"></i></button>
             <div data-bind="foreach: $data.constructor.samples">
-                <div class="margin-top" data-bind="text: title"></div>
+                <div class="flex-horizontal">
+                    <div data-bind="text: title"></div>
+                    <div class="flex-separator"></div>
+                    <small title="Go to RQL documentation" data-bind="visible: $index() === 0">
+                        <a target="_blank" data-bind="attr: { href: 'https://ravendb.net/l/48L1WY/' + $root.clientVersion() }">
+                            <i class="icon-link"></i><span>RQL tutorial</span>
+                        </a>
+                    </small>
+                </div>
                 <pre class="margin-bottom copy-area"><a href="#" class="copy-button pull-right" title="Copy code sample" data-bind="click: _.partial($root.copySample, title)"><i class="icon-copy"></i></a><span data-bind="html: html"></span></pre>
             </div>
         </div>

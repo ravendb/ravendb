@@ -22,6 +22,8 @@ namespace Raven.Server.Indexing
         private MemoryStream _ms;
         private readonly IndexOutputFilesSummary _indexOutputFilesSummary;
 
+        private Stream StreamToUse => _ms ?? _file;
+
         public VoronIndexOutput(
             TempFileCache fileCache,
             string name,
@@ -39,7 +41,6 @@ namespace Raven.Server.Indexing
             _tx.ReadTree(_tree).AddStream(name, Stream.Null); // ensure it's visible by LuceneVoronDirectory.FileExists, the actual write is inside Dispose
         }
 
-
         public override void FlushBuffer(byte[] b, int offset, int len)
         {
             try
@@ -52,15 +53,11 @@ namespace Raven.Server.Indexing
                         _ms.Write(b, offset, len);
                         return;
                     }
+
                     // too big, copy the buffer to the file
-                    _file = _fileCache.RentFileStream();
-                    var position = _ms.Position;
-                    _ms.Position = 0;
-                    _ms.CopyTo(_file);
-                    _file.Position = position;
-                    _fileCache.ReturnMemoryStream(_ms);
-                    _ms = null;
+                    ConvertMemoryStreamToFileStream();
                 }
+
                 _file.Write(b, offset, len);
             }
             catch (IOException ioe) when (ioe.IsOutOfDiskSpaceException())
@@ -75,10 +72,8 @@ namespace Raven.Server.Indexing
             try
             {
                 base.Seek(pos);
-                if (_ms != null)
-                    _ms.Seek(pos, SeekOrigin.Begin);
-                else
-                    _file.Seek(pos, SeekOrigin.Begin);
+
+                StreamToUse.Seek(pos, SeekOrigin.Begin);
             }
             catch (IOException ioe) when (ioe.IsOutOfDiskSpaceException())
             {
@@ -86,16 +81,19 @@ namespace Raven.Server.Indexing
             }
         }
 
-        public override long Length => _ms?.Length ?? _file.Length;
+        public override long Length => StreamToUse.Length;
 
         public override void SetLength(long length)
         {
             try
             {
-                if (_ms != null)
-                    _ms.SetLength(length);
-                else
-                    _file.SetLength(length);
+                if (_ms != null && _ms.Capacity < length)
+                {
+                    // too big, copy the buffer to the file
+                    ConvertMemoryStreamToFileStream();
+                }
+
+                StreamToUse.SetLength(length);
             }
             catch (IOException ioe) when (ioe.IsOutOfDiskSpaceException())
             {
@@ -122,6 +120,17 @@ namespace Raven.Server.Indexing
             }
         }
 
+        private void ConvertMemoryStreamToFileStream()
+        {
+            _file = _fileCache.RentFileStream();
+            var position = _ms.Position;
+            _ms.Position = 0;
+            _ms.CopyTo(_file);
+            _file.Position = position;
+            _fileCache.ReturnMemoryStream(_ms);
+            _ms = null;
+        }
+
         private void CopyFileStream()
         {
             if (_indexOutputFilesSummary.HasVoronWriteErrors)
@@ -136,16 +145,8 @@ namespace Raven.Server.Indexing
 
                 using (Slice.From(_tx.Allocator, _name, out var nameSlice))
                 {
-                    if (_ms != null)
-                    {
-                        _ms.Seek(0, SeekOrigin.Begin);
-                        files.AddStream(nameSlice, _ms);
-                    }
-                    else
-                    {
-                        _file.Seek(0, SeekOrigin.Begin);
-                        files.AddStream(nameSlice, _file);
-                    }
+                    StreamToUse.Seek(0, SeekOrigin.Begin);
+                    files.AddStream(nameSlice, StreamToUse);
                 }
             }
             catch (Exception e)

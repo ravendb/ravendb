@@ -9,7 +9,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Primitives;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Exceptions;
@@ -22,6 +21,7 @@ using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Exceptions.Routing;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Properties;
+using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Exceptions;
 using Raven.Server.Rachis;
@@ -298,7 +298,8 @@ namespace Raven.Server
                 CustomInfo = twTuple.CustomInfo,
                 Type = twTuple.Type,
                 ClientIP = context.Connection.RemoteIpAddress?.ToString(),
-                CertificateThumbprint = context.Connection.ClientCertificate?.Thumbprint
+                CertificateThumbprint = context.Connection.ClientCertificate?.Thumbprint,
+                ResponseSizeInBytes = ((StreamWithTimeout)context.Items["ResponseStream"])?.TotalWritten ?? 0
             };
 
             TrafficWatchManager.DispatchMessage(twn);

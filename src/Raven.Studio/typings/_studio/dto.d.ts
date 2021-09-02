@@ -386,6 +386,8 @@ interface EtlPerformanceBaseWithCache extends Raven.Server.Documents.ETL.Stats.E
     CompletedAsDate: Date;
     Type: Raven.Client.Documents.Operations.ETL.EtlType;
     HasErrors: boolean;
+    HasLoadErrors: boolean;
+    HasTransformErrors: boolean;
 }
 
 interface SubscriptionConnectionPerformanceStatsWithCache extends Raven.Server.Documents.Subscriptions.Stats.SubscriptionConnectionPerformanceStats {
@@ -644,6 +646,7 @@ interface textColumnOpts<T> {
     sortable?: "number" | "string" | valueProvider<T>;
     defaultSortOrder?: sortMode;
     customComparator?: (a: any, b: any) => number;
+    transformValue?: (a: any) => any;
 }
 
 interface hypertextColumnOpts<T> extends textColumnOpts<T> {
@@ -659,7 +662,7 @@ interface timeSeriesColumnOpts<T> extends textColumnOpts<T> {
 }
 
 interface virtualColumnDto {
-    type: "flags" | "checkbox" | "text" | "hyperlink" | "custom" | "timeSeries" | "nodeTag";
+    type: "flags" | "checkbox" | "text" | "hyperlink" | "custom" | "timeSeries" | "nodeTag" | "iconsPlusText";
     width: string;
     header: string;
     serializedValue: string;
@@ -780,14 +783,14 @@ interface timeSeriesRawItemResultDto {
 
 type timeUnit = "year" | "month" | "day" | "hour" | "minute" | "second";
 
-type settingsTemplateType = Raven.Server.Config.ConfigurationEntryType | "StringArray" | "EnumArray" | "ServeWide";
+type settingsTemplateType = Raven.Server.Config.ConfigurationEntryType | "StringArray" | "EnumArray" | "ServerWide";
 
 interface TimeSeriesOperation extends Raven.Client.Documents.Operations.TimeSeries.TimeSeriesOperation {
     Appends: Raven.Client.Documents.Operations.TimeSeries.TimeSeriesOperation.AppendOperation[];
     Deletes: Raven.Client.Documents.Operations.TimeSeries.TimeSeriesOperation.DeleteOperation[];
 }
 
-type TasksNamesInUI = "External Replication" | "RavenDB ETL" | "SQL ETL" | "OLAP ETL" | "Backup" | "Subscription" | "Replication Hub" | "Replication Sink";
+type TasksNamesInUI = "External Replication" | "RavenDB ETL" | "SQL ETL" | "OLAP ETL" | "Backup" | "Subscription" | "Replication Hub" | "Replication Sink" | "Elastic Search ETL";
 
 interface sampleCode {
     title: string;
@@ -796,6 +799,8 @@ interface sampleCode {
 }
 
 type OnlyStrings<T> = { [ P in keyof T]: T[P] extends string ? P : never }[keyof T & string];
+
+type commandLineType = "PowerShell" | "Cmd" | "Bash";
 
 interface geoPointInfo extends Raven.Server.Documents.Indexes.Spatial.Coordinates {
     PopupContent: document;
@@ -829,3 +834,10 @@ type widgetType = Raven.Server.Dashboard.Cluster.ClusterDashboardNotificationTyp
 type databaseAccessLevel = `Database${Raven.Client.ServerWide.Operations.Certificates.DatabaseAccess}`;
 type securityClearance = Raven.Client.ServerWide.Operations.Certificates.SecurityClearance;
 type accessLevel = databaseAccessLevel | securityClearance;
+
+interface iconPlusText {
+    iconClass: string;
+    text: string;
+    textClass: string;
+    title: string;
+}

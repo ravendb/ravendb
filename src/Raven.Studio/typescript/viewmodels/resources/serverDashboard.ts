@@ -20,6 +20,7 @@ import serverTime = require("common/helpers/database/serverTime");
 import accessManager = require("common/shell/accessManager");
 import driveUsageDetails = require("models/resources/serverDashboard/driveUsageDetails");
 import viewHelpers = require("common/helpers/view/viewHelpers");
+import timeHelpers = require("common/timeHelpers");
 
 class machineResourcesSection {
 
@@ -110,7 +111,7 @@ class indexingSpeedSection {
     indexingChart: dashboardChart;
     reduceChart: dashboardChart;
     
-    private table = [] as indexingSpeed[];
+    private table: indexingSpeed[] = [];
     private gridController = ko.observable<virtualGridController<indexingSpeed>>();
 
     totalIndexedPerSecond = ko.observable<number>(0);
@@ -245,7 +246,7 @@ class indexingSpeedSection {
 }
 
 class databasesSection {
-    private table = [] as databaseItem[];
+    private table: databaseItem[] = [];
     private gridController = ko.observable<virtualGridController<databaseItem>>();
     
     databasesViewUrl = appUrl.forDatabases();
@@ -367,7 +368,7 @@ class databasesSection {
 class trafficSection {
     private sizeFormatter = generalUtils.formatBytesToSize;
     
-    private table = [] as trafficItem[];
+    private table: trafficItem[] = [];
     private trafficChart: dashboardChart;
     
     trafficViewUrl = appUrl.forTrafficWatch();
@@ -710,7 +711,7 @@ class driveUsageSection {
             });
         });
         
-        const result = [] as Array<{ Database: string, Size: number }>;
+        const result: Array<{ Database: string, Size: number }> = [];
         
         cache.forEach((value, key) => {
             result.push({
@@ -745,8 +746,9 @@ class serverDashboard extends viewModelBase {
         return null;
     });
     
-    formattedUpTime: KnockoutComputed<string>;
+    formattedUpTime = ko.observable<string>();
     formattedStartTime: KnockoutComputed<string>;
+    
     node: KnockoutComputed<clusterNode>;
     sizeFormatter = generalUtils.formatBytesToSize;
 
@@ -765,15 +767,6 @@ class serverDashboard extends viewModelBase {
 
     constructor() {
         super();
-
-        this.formattedUpTime = ko.pureComputed(() => {
-            const startTime = serverTime.default.startUpTime();
-            if (!startTime) {
-                return "a few seconds";
-            }
-
-            return generalUtils.formatDurationByDate(startTime);
-        });
 
         this.formattedStartTime = ko.pureComputed(() => {
             const start = serverTime.default.startUpTime();
@@ -795,6 +788,18 @@ class serverDashboard extends viewModelBase {
         this.enableLiveView();
         
         this.onResize();
+
+        this.onTick();
+        this.registerDisposable(timeHelpers.utcNowWithMinutePrecision.subscribe(() => this.onTick()));
+    }
+    
+    private onTick(): void {
+        const startTime = serverTime.default.startUpTime();
+        if (!startTime) {
+            this.formattedUpTime("a few seconds");
+        }
+
+        this.formattedUpTime(generalUtils.formatDurationByDate(startTime));
     }
 
     private initSections() {

@@ -367,8 +367,8 @@ class columnsSelector<T> {
 
     private findColumnsToFetch(): { full: string[], preview: string[] } {
         if (this.customLayout()) {
-            const fullColumns = [] as string[];
-            const previewColumns = [] as string[];
+            const fullColumns: string[] = [];
+            const previewColumns: string[] = [];
 
             this.columnLayout().forEach(item => {
                 if (item.visible()) {
@@ -403,7 +403,7 @@ class columnsSelector<T> {
 
     // gets all columns except custom columns
     getSimpleColumnsFields() {
-        const columns = [] as string[];
+        const columns: string[] = [];
 
         this.columnLayout().forEach(item => {
             if (item.visible()) {

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using FastTests;
 using FastTests.Server.Replication;
 using Raven.Client.Exceptions;
 using Raven.Tests.Core.Utils.Entities;
@@ -204,7 +205,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                     await session.StoreAsync(new User {Name = "karmel"}, id);
 
                     var tsf = session.TimeSeriesFor(id, name);
-                    var baseline = DateTime.Today;
+                    var baseline = RavenTestHelper.UtcToday;
                     for (int i = 0; i < 100; i++)
                     {
                         tsf.Append(baseline.AddDays(i), new[] {1d, 2d, 3d});

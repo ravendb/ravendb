@@ -8,7 +8,6 @@ using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
-using Sparrow.Extensions;
 using Tests.Infrastructure.Operations;
 using Xunit;
 using Xunit.Abstractions;

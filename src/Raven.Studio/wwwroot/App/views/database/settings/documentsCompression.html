@@ -15,31 +15,40 @@
         <div class="col-sm-12 col-lg-6">
             <div class="panel">
                 <div class="padding padding-lg">
-                    <div class="flex-horizontal" data-bind="requiredAccess: 'DatabaseAdmin'">
-                        <div class="dropdown btn-group flex-grow">
-                            <input class="form-control dropdown-toggle" placeholder="Select collection (or enter new collection)" data-toggle="dropdown"
-                                   data-bind="textInput: collectionToAdd, attr: { id: 'collectionNameInput' }" />
-                            <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
-                            <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#' + 'collectionNameInput', foreach: $root.createCollectionNameAutocompleter()">
-                                <li role="presentation" data-bind="click: _.partial($root.addWithBlink, $data)">
-                                    <a role="menuitem" tabindex="-1" href="#">
-                                        <span data-bind="text: $data"></span>
-                                    </a>
-                                </li>
-                            </ul>
-                        </div>
-                        <button class="btn btn-success" data-bind="click: $root.addCollection, enable: collectionToAdd" title="Click to add collection to the compressed collections list">
-                            <i class="icon-plus"></i>
-                            <span>Add</span>
-                        </button>
-                        <div class=" margin-left margin-left-sm">
-                            <button class="btn btn-info" data-bind="click: $root.addAllCollections, enable: canAddAllCollections" title="Add all collections in the database to the compressed collections list">
+                    <div class="toggle toggle-primary">
+                        <input id="allCollectionsToggle" class="styled" type="checkbox"
+                               data-bind="checked: compressAllCollections, requiredAccess: 'DatabaseAdmin', requiredAccessOptions: { strategy: 'disable' }">
+                        <label for="allCollectionsToggle">Compress all collections</label>
+                    </div>
+                    <div data-bind="collapse: !compressAllCollections()">
+                        <div class="flex-horizontal margin-top" data-bind="requiredAccess: 'DatabaseAdmin'">
+                            <div class="dropdown btn-group flex-grow">
+                                <input class="form-control dropdown-toggle" placeholder="Select collection (or enter new collection)" data-toggle="dropdown"
+                                       data-bind="textInput: collectionToAdd, attr: { id: 'collectionNameInput' }" />
+                                <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
+                                <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#' + 'collectionNameInput', foreach: $root.createCollectionNameAutocompleter()">
+                                    <li role="presentation" data-bind="click: _.partial($root.addWithBlink, $data)">
+                                        <a role="menuitem" tabindex="-1" href="#">
+                                            <span data-bind="text: $data"></span>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                            <button class="btn btn-success" data-bind="click: $root.addCollection, enable: collectionToAdd"
+                                    title="Click to add the entered collection to the compressed collections list">
                                 <i class="icon-plus"></i>
-                                <span>Add All</span>
+                                <span>Add</span>
                             </button>
+                            <div class=" margin-left margin-left-sm">
+                                <button class="btn btn-info" data-bind="click: $root.addAllCollections, enable: canAddAllCollections"
+                                        title="Add all existing collections in the database to the compressed collections list">
+                                    <i class="icon-plus"></i>
+                                    <span>Add All</span>
+                                </button>
+                            </div>
                         </div>
                     </div>
-                    <div data-bind="visible: collectionsToCompress().length" class="margin-top">
+                    <div data-bind="collapse: !compressAllCollections() && collectionsToCompress().length" class="margin-top">
                         <div>
                             <label><strong>Collections Selected:</strong></label>
                             <ul class="well collection-list" data-bind="foreach: collectionsToCompress">
@@ -52,6 +61,8 @@
                                 </li>
                             </ul>
                         </div>
+                    </div>
+                    <div data-bind="collapse: compressAllCollections() || collectionsToCompress().length" class="margin-top margin-top-sm">
                         <div class="bg-info text-info padding margin-top margin-top-lg flex-horizontal">
                             <div class="flex-start">
                                 <small><i class="icon-info"></i></small>
@@ -59,13 +70,21 @@
                             <div>
                                 <div class="margin-left margin-left-xs"><small>Documents that will be compressed:</small></div>
                                 <ul class="no-margin">
-                                    <li><small>New documents created in the selected collections</small></li>
-                                    <li><small>Existing documents that are modified & saved</small></li>
+                                    <li>
+                                        <small>New documents created in 
+                                            <span data-bind="text: compressAllCollections() ? 'all collections' : 'the selected collections'"></span>
+                                        </small>
+                                    </li>
+                                    <li>
+                                        <small>Existing documents that are modified & saved in 
+                                            <span data-bind="text: compressAllCollections() ? 'all collections' : 'the selected collections'"></span>
+                                        </small>
+                                    </li>
                                 </ul>
                             </div>
                         </div>
                     </div>
-                    <div class="text-center text-muted margin-top margin-top-lg" data-bind="visible: collectionsToCompress().length === 0">
+                    <div class="text-center text-muted margin-top margin-top-lg" data-bind="visible: !compressAllCollections() && collectionsToCompress().length === 0">
                         <i class="icon-lg icon-empty-set"></i>
                         <h2 class="margin-top margin-top-sm">No collections have been selected</h2>
                     </div>
@@ -75,9 +94,7 @@
                 <div class="padding padding-lg">
                     <div class="toggle toggle-primary">
                         <input id="revisionsToggle" class="styled" type="checkbox" data-bind="checked: compressRevisions, requiredAccess: 'DatabaseAdmin', requiredAccessOptions: { strategy: 'disable' }">
-                        <label for="revisionsToggle">
-                            Compress Revisions for All Collections
-                        </label>
+                        <label for="revisionsToggle">Compress revisions for all collections</label>
                     </div>
                 </div>
             </div>

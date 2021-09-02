@@ -39,11 +39,11 @@ class importDatabaseFromFile extends viewModelBase {
 
     isUploading = ko.observable<boolean>(false);
     uploadStatus = ko.observable<number>();
-
-    importCommandPowerShell: KnockoutComputed<string>;
-    importCommandCmd: KnockoutComputed<string>;
-    importCommandBash: KnockoutComputed<string>;
-
+    
+    commandTypes: Array<commandLineType> = ["PowerShell", "Cmd", "Bash"];
+    effectiveCommandType = ko.observable<commandLineType>("PowerShell");
+    effectiveCommand: KnockoutComputed<string>;
+    
     validationGroup = ko.validatedObservable({
         importedFileName: this.importedFileName,
         transformScript: this.model.transformScript
@@ -72,51 +72,8 @@ class importDatabaseFromFile extends viewModelBase {
             }
         });
         
-        const modelAsJson = () => {
-            const args = this.model.toDto();
-            if (!args.TransformScript) {
-                delete args.TransformScript;
-            }
-            return JSON.stringify(args);
-        };
-        
-        const fileNameProvider = () => this.importedFileName() || "Dump of Database.ravendbdump";
-        const commandEndpointUrl = (db: database) => appUrl.forServer() + appUrl.forDatabaseQuery(db) + endpoints.databases.smuggler.smugglerImport;
-        
-        this.importCommandPowerShell = ko.pureComputed(() => {
-            const db = this.activeDatabase();
-            if (!db) {
-                return "";
-            }
-            
-            const json = modelAsJson();
-            const fileName = fileNameProvider();
-
-            return `curl.exe -F 'importOptions=${json.replace(/"/g, '\\"')}' -F 'file=@.\\${fileName}' ${commandEndpointUrl(db)}`;
-        });
-        
-        this.importCommandBash = ko.pureComputed(() => {
-            const db = this.activeDatabase();
-            if (!db) {
-                return "";
-            }
-
-            const json = modelAsJson();
-            const fileName = fileNameProvider();
-            
-            return `curl -F 'importOptions=${json}' -F 'file=@${fileName}' ${commandEndpointUrl(db)}`;
-        });
-        
-        this.importCommandCmd = ko.pureComputed(() => {
-            const db = this.activeDatabase();
-            if (!db) {
-                return "";
-            }
-
-            const json = modelAsJson();
-            const fileName = fileNameProvider();
-
-            return `curl.exe -F "importOptions=${json.replace(/"/g, '\\"')}" -F "file=@.\\${fileName}" ${commandEndpointUrl(db)}`;
+        this.effectiveCommand = ko.pureComputed(() => {
+            return this.getCommand(this.effectiveCommandType());
         });
 
         this.isUploading.subscribe((newValue) => {
@@ -265,7 +222,7 @@ class importDatabaseFromFile extends viewModelBase {
                     new importDatabaseCommand(db, operationId, fileInput.files[0], this.model, this.isUploading, this.uploadStatus)
                         .execute()
                         .always(() => this.isUploading(false));
-                });                
+                });
             })
             .fail((response: JQueryXHR) => {
                 messagePublisher.reportError("Invalid import options", response.responseText, response.statusText);
@@ -286,12 +243,8 @@ class importDatabaseFromFile extends viewModelBase {
                                 collectionsTracker.default.configureRevisions(db);
                             }
                         });
-                });    
+                });
         }
-    }
-
-    copyCommandToClipboard(command: string) {
-        copyToClipboard.copy(command, "Command was copied to clipboard.");
     }
 
     private getNextOperationId(db: database): JQueryPromise<number> {
@@ -302,6 +255,40 @@ class importDatabaseFromFile extends viewModelBase {
             });
     }
 
+    getCommandTypeLabel(cmdType: commandLineType) {
+        return `Import Command - ${cmdType}`;
+    }
+
+    copyCommandToClipboard() {
+        const command = this.effectiveCommand();
+        copyToClipboard.copy(command, "Import command was copied to clipboard.");
+    }
+    
+    private getCommand(commandType: commandLineType) {
+
+        const db = this.activeDatabase();
+        if (!db) {
+            return "";
+        }
+
+        const args = this.model.toDto();
+        if (!args.TransformScript) {
+            delete args.TransformScript;
+        }
+
+        const json = JSON.stringify(args);
+        const fileName = this.importedFileName() || "Dump of Database.ravendbdump";
+        const commandEndpointUrl = (db: database) => appUrl.forServer() + appUrl.forDatabaseQuery(db) + endpoints.databases.smuggler.smugglerImport;
+        
+        switch (commandType) {
+            case "PowerShell":
+                return `curl.exe -F 'importOptions=${json.replace(/"/g, '\\"')}' -F 'file=@.\\${fileName}' ${commandEndpointUrl(db)}`;
+            case "Cmd":
+                return `curl.exe -F "importOptions=${json.replace(/"/g, '\\"')}" -F "file=@.\\${fileName}" ${commandEndpointUrl(db)}`;
+            case "Bash":
+                return `curl -F 'importOptions=${json}' -F 'file=@${fileName}' ${commandEndpointUrl(db)}`;
+        }
+    }
 }
 
 export = importDatabaseFromFile; 

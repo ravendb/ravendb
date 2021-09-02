@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Client;
+using Orders;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Backups;
@@ -55,7 +56,7 @@ namespace SlowTests.Server.Documents.ETL.Olap
             {
                 for (int i = 0; i < 31; i++)
                 {
-                    await session.StoreAsync(new Query.Order
+                    await session.StoreAsync(new Order
                     {
                         Id = $"orders/{i}",
                         OrderedAt = baseline.AddDays(i),
@@ -124,7 +125,7 @@ loadToOrders(partitionBy(key),
             {
                 for (int i = 0; i < 28; i++)
                 {
-                    await session.StoreAsync(new Query.Order
+                    await session.StoreAsync(new Order
                     {
                         Id = $"orders/{i + 31}",
                         OrderedAt = baseline.AddMonths(1).AddDays(i),

@@ -41,7 +41,7 @@ class editExternalReplicationTask extends viewModelBase {
 
     constructor() {
         super();
-        this.bindToCurrentInstance("useConnectionString", "onTestConnectionRaven");
+        this.bindToCurrentInstance("useConnectionString", "onTestConnectionRaven", "setState");
     }
 
     activate(args: any) { 
@@ -126,6 +126,7 @@ class editExternalReplicationTask extends viewModelBase {
 
         this.dirtyFlag = new ko.DirtyFlag([
             model.taskName,
+            model.taskState,
             model.manualChooseMentor,
             model.mentorNode,
             model.connectionStringName,
@@ -236,6 +237,10 @@ class editExternalReplicationTask extends viewModelBase {
                 this.spinners.test(false);
                 this.fullErrorDetailsVisible(false);
             });
+    }
+
+    setState(state: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskState): void {
+        this.editedExternalReplication().taskState(state);
     }
 }
 

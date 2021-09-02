@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Linq;
+using FastTests;
 using FastTests.Server.Replication;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Tests.Core.Utils.Entities;
-using Sparrow;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -21,7 +21,7 @@ namespace SlowTests.Client.TimeSeries.Issues
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today.EnsureUtc();
+                var baseline = RavenTestHelper.UtcToday;
                 var id = "people/1";
 
                 using (var session = store.OpenSession())

@@ -36,7 +36,7 @@ namespace SlowTests.Client.TimeSeries.Query
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 using (var session = store.OpenSession())
                 {
@@ -98,7 +98,7 @@ select min(), max(), avg()
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 using (var session = store.OpenSession())
                 {
@@ -162,7 +162,7 @@ where Tag = 'watches/fitbit'
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -224,7 +224,7 @@ select min(), max(), avg()
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -662,7 +662,7 @@ where Tag = 'watches/fitbit'
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 using (var session = store.OpenSession())
                 {
@@ -739,7 +739,7 @@ where Tag = 'watches/fitbit'
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 using (var session = store.OpenSession())
                 {

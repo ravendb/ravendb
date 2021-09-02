@@ -24,41 +24,40 @@ namespace SlowTests.Issues
         public async Task InstallSnapshotShouldHandleDeletionInProgress()
         {
             var databaseName = nameof(InstallSnapshotShouldHandleDeletionInProgress) + Guid.NewGuid();
-            using (var leader = await CreateRaftClusterAndGetLeader(3, shouldRunInMemory: false, leaderIndex: 0))
+            var (_, leader) = await CreateRaftCluster(3, shouldRunInMemory: false, leaderIndex: 0);
+
+            using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(120)))
             {
-                using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(120)))
+                await CreateDatabaseInCluster(databaseName, 3, leader.WebUrl);
+
+                using (var leaderStore = new DocumentStore
                 {
-                    await CreateDatabaseInCluster(databaseName, 3, leader.WebUrl);
+                    Urls = new[] { leader.WebUrl },
+                    Database = databaseName
+                })
+                {
+                    leaderStore.Initialize();
 
-                    using (var leaderStore = new DocumentStore
+                    var stats = await leaderStore.Maintenance.SendAsync(new GetStatisticsOperation(), cts.Token);
+                    Assert.NotNull(stats);
+
+                    var result = await DisposeServerAndWaitForFinishOfDisposalAsync(Servers[1]);
+
+                    await leaderStore.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(databaseName, hardDelete: true), cts.Token);
+
+                    Servers[1] = GetNewServer(new ServerCreationOptions
                     {
-                        Urls = new[] { leader.WebUrl },
-                        Database = databaseName
-                    })
-                    {
-                        leaderStore.Initialize();
-
-                        var stats = await leaderStore.Maintenance.SendAsync(new GetStatisticsOperation(), cts.Token);
-                        Assert.NotNull(stats);
-
-                        var result = await DisposeServerAndWaitForFinishOfDisposalAsync(Servers[1]);
-
-                        await leaderStore.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(databaseName, hardDelete: true), cts.Token);
-
-                        Servers[1] = GetNewServer(new ServerCreationOptions
-                        {
-                            CustomSettings = new Dictionary<string, string>
+                        CustomSettings = new Dictionary<string, string>
                             {
                                 {RavenConfiguration.GetKey(x => x.Core.PublicServerUrl), result.Url},
                                 {RavenConfiguration.GetKey(x => x.Core.ServerUrls), result.Url}
                             },
-                            RunInMemory = false,
-                            DeletePrevious = false,
-                            DataDirectory = result.DataDirectory
-                        });
+                        RunInMemory = false,
+                        DeletePrevious = false,
+                        DataDirectory = result.DataDirectory
+                    });
 
-                        Assert.True(await WaitForDatabaseToBeDeleted(Servers[1], databaseName, TimeSpan.FromSeconds(30), cts.Token));
-                    }
+                    Assert.True(await WaitForDatabaseToBeDeleted(Servers[1], databaseName, TimeSpan.FromSeconds(30), cts.Token));
                 }
             }
         }

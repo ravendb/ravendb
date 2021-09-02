@@ -229,7 +229,7 @@
                     <h3>Advanced</h3>
                     <div class="margin-left margin-left-lg">
                         <div data-bind="with: model">
-                            <div data-bind="visible: isRavenDb() && !ravenFsImport()">
+                            <div data-bind="visible: enableAdvanced">
                                 <div class="form-group">
                                     <div class="toggle">
                                         <input class="styled" type="checkbox" id="use-transform-script" data-bind="checked: showTransformScript">
@@ -243,16 +243,20 @@
                                 </pre>
                                 </div>
                             </div>
-                            <div data-bind="with: databaseModel, visible: isRavenDb() && !ravenFsImport()">
+                            <div data-bind="with: databaseModel, visible: enableAdvanced">
                                 <div data-bind="compose: 'database/tasks/smugglerDatabaseRecord.html'"></div>
                             </div>
                         </div>
                     </div>
                 </div>
                 <hr />
-                <button class="btn btn-default" type="button" data-bind="click: showAdvancedOptions.toggle.bind(showAdvancedOptions)">
-                    Advanced
-                </button>
+                <span class="has-disable-reason" data-placement="bottom"
+                      data-bind="attr: { 'data-original-title': model.enableAdvanced() ? '': 'Advanced section is available once you enter a valid RavenDB Server URL' }">
+                    <button class="btn btn-default" type="button"
+                            data-bind="click: showAdvancedOptions.toggle.bind(showAdvancedOptions), enable: model.enableAdvanced()">
+                        Advanced
+                    </button>
+                </span>
                 <button class="btn btn-primary" type="submit" data-bind="css: { 'btn-spinner': spinners.migration() }, disable: spinners.migration">
                     <span class="icon-import"></span> <span>Migrate Database</span>
                 </button>

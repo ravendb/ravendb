@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using FastTests;
 using FastTests.Server.Replication;
 using Raven.Client.Documents.Operations.TimeSeries;
@@ -28,7 +27,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                     session.SaveChanges();
                 }
 
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 var timeSeriesOp = new TimeSeriesOperation
                 {
@@ -65,7 +64,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                     session.SaveChanges();
                 }
 
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 using (var session = store.OpenSession())
                 {
@@ -98,7 +97,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                     session.SaveChanges();
                 }
 
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 using (var session = store.OpenSession())
                 {

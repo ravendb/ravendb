@@ -401,11 +401,17 @@ namespace SlowTests.Client.Subscriptions
                 {
                     subscription.OnSubscriptionConnectionRetry += x =>
                     {
-                        var sce = x as SubscriptionClosedException;
-                        Assert.NotNull(sce);
-                        Assert.Equal(typeof(SubscriptionClosedException), x.GetType());
-                        Assert.True(sce.CanReconnect);
-                        Assert.Equal($"Subscription With Id '{state.SubscriptionName}' was closed.  Raven.Client.Exceptions.Documents.Subscriptions.SubscriptionClosedException: The subscription {state.SubscriptionName} query has been modified, connection must be restarted", x.Message);
+                        switch (x)
+                        {
+                            case SubscriptionClosedException sce:
+                                Assert.True(sce.CanReconnect);
+                                Assert.Equal($"Subscription With Id '{state.SubscriptionName}' was closed.  Raven.Client.Exceptions.Documents.Subscriptions.SubscriptionClosedException: The subscription {state.SubscriptionName} query has been modified, connection must be restarted", x.Message);
+                                break;
+                            case SubscriptionChangeVectorUpdateConcurrencyException:
+                                // sometimes we may hit cv concurrency exception because of the update
+                                Assert.StartsWith($"Can't acknowledge subscription with name '{state.SubscriptionName}' due to inconsistency in change vector progress. Probably there was an admin intervention that changed the change vector value. Stored value: , received value: A:11", x.Message);
+                                break;
+                        }
                     };
 
                     using var first = new CountdownEvent(count);

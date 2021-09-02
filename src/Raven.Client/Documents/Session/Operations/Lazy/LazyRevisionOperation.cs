@@ -42,6 +42,7 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
 
         public void HandleResponse(GetResponse response)
         {
+            if(response.Result is null) return;
             BlittableJsonReaderObject responseAsBlittableReaderObject = (BlittableJsonReaderObject)response.Result;
             responseAsBlittableReaderObject.TryGet("Results", out BlittableJsonReaderArray blittableJsonReaderArray);
 

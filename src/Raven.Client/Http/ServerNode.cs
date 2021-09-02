@@ -47,6 +47,8 @@ namespace Raven.Client.Http
         
         public string LastServerVersion { get; private set; }
         
+        internal bool SupportsAtomicClusterWrites { get; set; }
+        
         public bool ShouldUpdateServerVersion()
         {            
             if (LastServerVersion == null || _lastServerVersionCheck > 100)
@@ -59,7 +61,17 @@ namespace Raven.Client.Http
         public void UpdateServerVersion (string serverVersion)
         {
             LastServerVersion = serverVersion;
-            _lastServerVersionCheck = 0;            
+            _lastServerVersionCheck = 0;
+            if (serverVersion != null && Version.TryParse(serverVersion, out var ver))
+            {
+                // 5.2 or higher
+                SupportsAtomicClusterWrites = ver.Major == 5 && ver.Minor >= 2 || 
+                                              ver.Major > 5;
+            }
+            else
+            {
+                SupportsAtomicClusterWrites = false;
+            }
         }
 
         public void DiscardServerVersion()

@@ -2,7 +2,7 @@ name: "CodeQL"
 
 on:
   push:
-    branches: [ v4.2, v5.0, v5.1, v5.2 ]
+    branches: [ v4.2, v5.1, v5.2 ]
   schedule:
     - cron: '26 4 * * 5'
 

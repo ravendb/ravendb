@@ -5,7 +5,6 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using FastTests.Client;
-using FastTests.Server.Basic.Entities;
 using Parquet;
 using Parquet.Data;
 using Raven.Client.Documents;
@@ -17,6 +16,7 @@ using Raven.Server.Documents.ETL.Providers.OLAP;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Azure;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -46,7 +46,7 @@ namespace SlowTests.Server.Documents.ETL.Olap
                     {
                         for (int i = 0; i < 31; i++)
                         {
-                            await session.StoreAsync(new Query.Order
+                            await session.StoreAsync(new Order
                             {
                                 Id = $"orders/{i}",
                                 OrderedAt = baseline.AddDays(i),
@@ -57,7 +57,7 @@ namespace SlowTests.Server.Documents.ETL.Olap
 
                         for (int i = 0; i < 28; i++)
                         {
-                            await session.StoreAsync(new Query.Order
+                            await session.StoreAsync(new Order
                             {
                                 Id = $"orders/{i + 31}",
                                 OrderedAt = baseline.AddMonths(1).AddDays(i),
@@ -121,7 +121,7 @@ loadToOrders(partitionBy(key),
                     {
                         for (int i = 1; i <= 10; i++)
                         {
-                            var o = new Query.Order
+                            var o = new Order
                             {
                                 Id = $"orders/{i}",
                                 OrderedAt = baseline.AddDays(i),
@@ -242,7 +242,7 @@ loadToOrders(partitionBy(key),
                                 });
                             }
 
-                            var o = new Query.Order
+                            var o = new Order
                             {
                                 Id = $"orders/{i}",
                                 OrderedAt = orderedAt,
@@ -271,7 +271,7 @@ loadToOrders(partitionBy(key),
                                 });
                             }
 
-                            var o = new Query.Order
+                            var o = new Order
                             {
                                 Id = $"orders/{i + 31}",
                                 OrderedAt = orderedAt,
@@ -412,7 +412,7 @@ loadToOrders(partitionBy(key), orderData);
                     {
                         for (int i = 0; i < 31; i++)
                         {
-                            await session.StoreAsync(new Query.Order
+                            await session.StoreAsync(new Order
                             {
                                 Id = $"orders/{i}",
                                 OrderedAt = baseline.AddDays(i),
@@ -423,7 +423,7 @@ loadToOrders(partitionBy(key), orderData);
 
                         for (int i = 0; i < 28; i++)
                         {
-                            await session.StoreAsync(new Query.Order
+                            await session.StoreAsync(new Order
                             {
                                 Id = $"orders/{i + 31}",
                                 OrderedAt = baseline.AddMonths(1).AddDays(i),
@@ -504,7 +504,7 @@ loadToOrders(partitionBy(['order_date', key]),
                     {
                         for (int i = 0; i < 100; i++)
                         {
-                            await session.StoreAsync(new Query.Order
+                            await session.StoreAsync(new Order
                             {
                                 Id = $"orders/{i}",
                                 OrderedAt = baseline.AddDays(i),
@@ -618,7 +618,7 @@ loadToOrders(noPartition(),
                         for (int i = 0; i < total; i++)
                         {
                             var orderedAt = baseline.AddDays(i);
-                            await session.StoreAsync(new Query.Order
+                            await session.StoreAsync(new Order
                             {
                                 Id = $"orders/{i}",
                                 OrderedAt = orderedAt,
@@ -632,7 +632,7 @@ loadToOrders(noPartition(),
                         {
                             var index = i + total;
                             var orderedAt = baseline.AddYears(1).AddMonths(1).AddDays(i);
-                            await session.StoreAsync(new Query.Order
+                            await session.StoreAsync(new Order
                             {
                                 Id = $"orders/{index}",
                                 OrderedAt = orderedAt,
@@ -645,7 +645,7 @@ loadToOrders(noPartition(),
                         await session.SaveChangesAsync();
                     }
 
-                    var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                    var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0 && statistics.LoadErrors == 0);
 
                     var script = @"
 var orderDate = new Date(this.OrderedAt);
@@ -750,7 +750,7 @@ loadToOrders(partitionBy(
                     {
                         for (int i = 0; i < 31; i++)
                         {
-                            await session.StoreAsync(new Query.Order
+                            await session.StoreAsync(new Order
                             {
                                 Id = $"orders/{i}",
                                 OrderedAt = baseline.AddDays(i),
@@ -761,7 +761,7 @@ loadToOrders(partitionBy(
 
                         for (int i = 0; i < 28; i++)
                         {
-                            await session.StoreAsync(new Query.Order
+                            await session.StoreAsync(new Order
                             {
                                 Id = $"orders/{i + 31}",
                                 OrderedAt = baseline.AddMonths(1).AddDays(i),

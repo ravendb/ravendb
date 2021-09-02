@@ -394,26 +394,28 @@ namespace Raven.Server.ServerWide.Maintenance
             private async Task<ClusterMaintenanceConnection> ConnectToClientNodeAsync(TcpConnectionInfo tcpConnectionInfo, TimeSpan timeout)
             {
                 TcpConnectionHeaderMessage.SupportedFeatures supportedFeatures;
+                Stream connection;
                 TcpClient tcpClient;
-                string url;
-                (tcpClient, url) = await TcpUtils.ConnectSocketAsync(tcpConnectionInfo, timeout, _log);
 
-                var connection = await TcpUtils.WrapStreamWithSslAsync(tcpClient, tcpConnectionInfo, _parent._server.Server.Certificate.Certificate, _parent._server.Server.CipherSuitesPolicy, timeout);
                 using (_contextPool.AllocateOperationContext(out JsonOperationContext ctx))
-                await using (var writer = new AsyncBlittableJsonTextWriter(ctx, connection))
                 {
-                    var parameters = new AsyncTcpNegotiateParameters
-                    {
-                        Database = null,
-                        Operation = TcpConnectionHeaderMessage.OperationTypes.Heartbeats,
-                        Version = TcpConnectionHeaderMessage.HeartbeatsTcpVersion,
-                        ReadResponseAndGetVersionCallbackAsync = SupervisorReadResponseAndGetVersionAsync,
-                        DestinationUrl = url,
-                        DestinationNodeTag = ClusterTag
-                    };
-                    supportedFeatures = await TcpNegotiation.NegotiateProtocolVersionAsync(ctx, connection, parameters);
+                    var result = await TcpUtils.ConnectSecuredTcpSocket(
+                        tcpConnectionInfo,
+                        _parent._server.Server.Certificate.Certificate,
+                        _parent._server.Server.CipherSuitesPolicy,
+                        TcpConnectionHeaderMessage.OperationTypes.Heartbeats,
+                        NegotiateProtocolVersionAsyncForClusterSupervisor,
+                        ctx,
+                        timeout, null, _token);
 
-                    await WriteClusterMaintenanceConnectionHeaderAsync(writer);
+                    tcpClient = result.TcpClient;
+                    connection = result.Stream;
+                    supportedFeatures = result.SupportedFeatures;
+
+                    await using (var writer = new AsyncBlittableJsonTextWriter(ctx, connection))
+                    {
+                        await WriteClusterMaintenanceConnectionHeaderAsync(writer);
+                    }
                 }
 
                 return new ClusterMaintenanceConnection
@@ -422,6 +424,21 @@ namespace Raven.Server.ServerWide.Maintenance
                     Stream = connection,
                     SupportedFeatures = supportedFeatures
                 };
+            }
+
+            private async Task<TcpConnectionHeaderMessage.SupportedFeatures> NegotiateProtocolVersionAsyncForClusterSupervisor(string url, TcpConnectionInfo info, Stream stream, JsonOperationContext context, List<string> _)
+            {
+                var parameters = new AsyncTcpNegotiateParameters
+                {
+                    Database = null,
+                    Operation = TcpConnectionHeaderMessage.OperationTypes.Heartbeats,
+                    Version = TcpConnectionHeaderMessage.HeartbeatsTcpVersion,
+                    ReadResponseAndGetVersionCallbackAsync = SupervisorReadResponseAndGetVersionAsync,
+                    DestinationUrl = url,
+                    DestinationNodeTag = ClusterTag,
+                    DestinationServerId = info.ServerId
+                };
+                return await TcpNegotiation.NegotiateProtocolVersionAsync(context, stream, parameters);
             }
 
             private async ValueTask<int> SupervisorReadResponseAndGetVersionAsync(JsonOperationContext ctx, AsyncBlittableJsonTextWriter writer, Stream stream, string url)
@@ -445,6 +462,9 @@ namespace Raven.Server.ServerWide.Maintenance
                             //Kindly request the server to drop the connection
                             await WriteOperationHeaderToRemoteAsync(writer, headerResponse.Version, drop: true);
                             throw new InvalidOperationException($"Node with ClusterTag = {ClusterTag} replied to initial handshake with mismatching tcp version {headerResponse.Message}");
+                        case TcpConnectionStatus.InvalidNetworkTopology:
+                            throw new AuthorizationException(
+                                $"Node with ClusterTag = {ClusterTag} replied to initial handshake with {nameof(TcpConnectionStatus.InvalidNetworkTopology)} error {headerResponse.Message}");
                         default:
                             throw new InvalidOperationException($"{url} replied with unknown status {headerResponse.Status}, message:{headerResponse.Message}");
                     }

@@ -133,7 +133,7 @@ class memoryMappedFiles extends viewModelBase {
             .execute()
             .done(response => {
                 
-                const mappedResults = _.flatMap(response.Mappings, m => {
+                const mappedResults: memoryMappingItem[] = _.flatMap(response.Mappings, m => {
                     return _.map(m.Details, (details: Raven.Server.Documents.Handlers.Debugging.MemoryDebugHandler.MemoryInfoMappingFileInfo, fileName: string) => {
                         return {
                             Directory: m.Directory,
@@ -143,7 +143,7 @@ class memoryMappedFiles extends viewModelBase {
                             FileSize: details.FileSize,
                             TotalMapped: details.TotalMapped,
                             Mappings: details.Mappings
-                        } as memoryMappingItem;
+                        };
                     })
                 });
                 

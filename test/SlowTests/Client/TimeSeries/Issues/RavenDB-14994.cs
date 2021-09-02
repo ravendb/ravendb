@@ -1,5 +1,4 @@
-﻿using System;
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Tests.Core.Utils.Entities;
@@ -45,7 +44,7 @@ namespace SlowTests.Client.TimeSeries.Issues
             using (var store = GetDocumentStore())
             {
                 var documentId = "users/ayende";
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 using (var session = store.OpenSession())
                 {

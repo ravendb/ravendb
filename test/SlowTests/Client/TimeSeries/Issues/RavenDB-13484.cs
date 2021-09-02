@@ -32,7 +32,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                     await session.SaveChangesAsync();
                 }
 
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 using (var session = store.OpenAsyncSession())
                 {

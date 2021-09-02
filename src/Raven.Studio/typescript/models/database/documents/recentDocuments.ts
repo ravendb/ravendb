@@ -18,19 +18,19 @@ class recentDocuments {
         return recentDocumentsForCurDb.recentDocuments;
     }
 
-    getTopRecentDocuments(activeDatabase: database, documentId: string): Array<connectedDocument> {
+    getTopRecentDocuments(activeDatabase: database, documentId: string, includeThisDocument: boolean): Array<connectedDocument> {
         const currentDbName = activeDatabase ? activeDatabase.name : null;
         const recentDocumentsForCurDb = recentDocuments.recentDocumentsInDatabases()
             .find(x => x.databaseName === currentDbName);
         if (recentDocumentsForCurDb) {
             const value = recentDocumentsForCurDb
                 .recentDocuments()
-                .filter((x: string) => x !== documentId)
+                .filter((x: string) => includeThisDocument ? x : x !== documentId)
                 .slice(0, recentDocuments.maxRecentItems)
-                .map((docId: string) => ({
+                .map((docId: string): connectedDocument => ({
                         id: docId,
                         href: appUrl.forEditDoc(docId, activeDatabase)
-                    }) as connectedDocument);
+                    }));
             return value;
         } else {
             return [];

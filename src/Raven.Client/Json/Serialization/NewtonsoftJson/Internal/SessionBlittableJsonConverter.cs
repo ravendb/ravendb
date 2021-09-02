@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using Newtonsoft.Json.Serialization;
 using Raven.Client.Documents.Session;
 using Raven.Client.Util;
@@ -71,8 +72,43 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
             }
             catch (Exception ex)
             {
-                throw new InvalidOperationException($"Could not convert document {id} to entity of type {type}",
+                string jsonAsString = TryReadBlittableAsString(json);
+
+                throw new InvalidOperationException($"Could not convert document {id} to entity of type {type}. Json: {jsonAsString}",
                     ex);
+            }
+
+            string TryReadBlittableAsString(BlittableJsonReaderObject jsonToRead)
+            {
+                var jsString = string.Empty;
+
+                using (var memoryStream = new MemoryStream())
+                {
+                    try
+                    {
+                        jsonToRead.WriteJsonToAsync(memoryStream).AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
+                    }
+                    catch
+                    {
+                        // ignore
+                    }
+
+                    memoryStream.Position = 0;
+
+                    try
+                    {
+                        using (var sr = new StreamReader(memoryStream))
+                        {
+                            jsString = sr.ReadToEnd();
+                        }
+                    }
+                    catch
+                    {
+                        // ignore
+                    }
+                }
+
+                return jsString;
             }
         }
 

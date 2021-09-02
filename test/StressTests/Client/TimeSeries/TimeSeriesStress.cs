@@ -10,7 +10,6 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries;
-using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Server.Config;
 using Raven.Server.Documents.TimeSeries;
@@ -72,7 +71,7 @@ namespace StressTests.Client.TimeSeries
                     session.Store(new User(), "marker");
                     session.SaveChanges();
 
-                    Assert.True(await WaitForDocumentInClusterAsync<User>((DocumentSession)session, "marker", null, TimeSpan.FromSeconds(15)));
+                    Assert.True(await WaitForDocumentInClusterAsync<User>(cluster.Nodes, store.Database, "marker", null, TimeSpan.FromSeconds(15)));
                 }
 
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
@@ -160,7 +159,6 @@ namespace StressTests.Client.TimeSeries
                 };
 
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
-
                 for (int j = 0; j < 1024; j++)
                 {
                     var now = DateTime.UtcNow;
@@ -170,6 +168,7 @@ namespace StressTests.Client.TimeSeries
                     using (var session = store.OpenSession())
                     {
                         var id = "users/karmel/" + j;
+
                         session.Store(new User { Name = "Karmel" }, id);
 
                         for (int i = 0; i < total; i++)
@@ -185,20 +184,17 @@ namespace StressTests.Client.TimeSeries
                 {
                     session.Store(new User(), "marker");
                     session.SaveChanges();
-
-                    await WaitForDocumentInClusterAsync<User>((DocumentSession)session, "marker", null, TimeSpan.FromSeconds(15));
+                    Assert.True(await WaitForDocumentInClusterAsync<User>(cluster.Nodes, store.Database, "marker", null, TimeSpan.FromSeconds(15)));
                 }
 
                 var sp = Stopwatch.StartNew();
                 await Task.Delay(retention / 2);
 
-                WaitForUserToContinueTheTest(store);
-
                 var check = true;
                 while (check)
                 {
-                    Assert.True(sp.Elapsed < retention.Add(retention / 10), $"too long has passed {sp.Elapsed}, retention is {retention}");
-                    await Task.Delay(100);
+                    Assert.True(sp.Elapsed < retention.Add(retention * 5), $"too long has passed {sp.Elapsed}, retention is {retention}");
+                    await Task.Delay(200);
                     check = false;
                     foreach (var server in Servers)
                     {
@@ -225,7 +221,6 @@ namespace StressTests.Client.TimeSeries
                                     Assert.Equal(stats.End, reader.Last().Timestamp, RavenTestHelper.DateTimeComparer.Instance);
                                     continue;
                                 }
-
                                 check = true;
                                 reader = tss.GetReader(ctx, id, "Heartrate", DateTime.MinValue, DateTime.MaxValue);
                                 Assert.Equal(stats.Start, reader.First().Timestamp, RavenTestHelper.DateTimeComparer.Instance);

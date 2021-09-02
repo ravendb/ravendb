@@ -26,10 +26,10 @@ namespace StressTests.Rachis.DatabaseCluster
         {
             var clusterSize = 5;
             var databaseName = GetDatabaseName();
-            var leader = await CreateRaftClusterAndGetLeader(clusterSize);
+            var (_, leader) = await CreateRaftCluster(clusterSize);
             var mainTopology = leader.ServerStore.GetClusterTopology();
 
-            var secondLeader = await CreateRaftClusterAndGetLeader(1);
+            var (_, secondLeader) = await CreateRaftCluster(1);
             var secondTopology = secondLeader.ServerStore.GetClusterTopology();
 
             var watchers = new List<ExternalReplication>();

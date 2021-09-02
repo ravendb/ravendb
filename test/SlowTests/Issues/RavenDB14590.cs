@@ -26,7 +26,7 @@ namespace SlowTests.Issues
                 await s.SaveChangesAsync();
             }
 
-            var baseline = DateTime.Today;
+            var baseline = RavenTestHelper.UtcToday;
 
             for (int i = 0; i < 3; i++)
             {
@@ -71,7 +71,7 @@ namespace SlowTests.Issues
                 await s.SaveChangesAsync();
             }
 
-            var baseline = DateTime.Today;
+            var baseline = RavenTestHelper.UtcToday;
 
             for (int i = 0; i < 3; i++)
             {

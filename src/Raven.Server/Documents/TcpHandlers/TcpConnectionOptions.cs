@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
+using System.Text;
 using System.Threading;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Server.Utils;
@@ -56,8 +57,20 @@ namespace Raven.Server.Documents.TcpHandlers
 
         public override string ToString()
         {
-            return $"TCP Connection ('{Operation}') {_debugTag}";
+            var sb = new StringBuilder();
+            sb.Append($"TCP Connection ('{Operation}')");
+
+            var debugTag = _debugTag;
+            if (debugTag != null)
+                sb.Append($" with Debug Tag: '{debugTag}'");
+
+            var database = DocumentDatabase;
+            if (database != null)
+                sb.Append($" for database '{database.Name}'");
+
+            return sb.ToString();
         }
+
         public IDisposable ConnectionProcessingInProgress(string debugTag)
         {
             _debugTag = debugTag;
@@ -74,9 +87,14 @@ namespace Raven.Server.Documents.TcpHandlers
             GC.SuppressFinalize(this);
 #endif
 
-            using (TcpClient)
-            using (Stream)
+            _running.Wait();
+            try
             {
+                if (_isDisposed)
+                    return;
+
+                _isDisposed = true;
+
                 if (Operation == TcpConnectionHeaderMessage.OperationTypes.Cluster)
                 {
                     try
@@ -88,15 +106,9 @@ namespace Raven.Server.Documents.TcpHandlers
                         // nothing we can do
                     }
                 }
-            }
 
-            _running.Wait();
-            try
-            {
-                if (_isDisposed)
-                    return;
-
-                _isDisposed = true;
+                SafelyDispose(Stream);
+                SafelyDispose(TcpClient);
 
                 DocumentDatabase?.RunningTcpConnections.TryRemove(this);
 
@@ -109,8 +121,21 @@ namespace Raven.Server.Documents.TcpHandlers
             {
                 _running.Release();
             }
+
             // we'll let the _running be finalized, because otherwise we have
             // a possible race condition on dispose
+
+            static void SafelyDispose(IDisposable toDispose)
+            {
+                try
+                {
+                    toDispose?.Dispose();
+                }
+                catch
+                {
+                    // nothing we can do
+                }
+            }
         }
 
 #if !RELEASE

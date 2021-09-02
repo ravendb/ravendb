@@ -16,7 +16,6 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
-using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Replication;
@@ -120,11 +119,11 @@ namespace SlowTests.Issues
                 await s.StoreAsync(new { Name = "Oren" }, "users/ayende");
                 s.CountersFor("users/ayende").Increment("test");
                 s.CountersFor("users/pheobe").Increment("test");
-                s.TimeSeriesFor<HeartRateMeasure>("users/pheobe").Append(DateTime.Today, new HeartRateMeasure
+                s.TimeSeriesFor<HeartRateMeasure>("users/pheobe").Append(RavenTestHelper.UtcToday, new HeartRateMeasure
                 {
                     HeartRate = 34
                 }, "test/things/out");
-                s.TimeSeriesFor<HeartRateMeasure>("users/ayende").Append(DateTime.Today, new HeartRateMeasure
+                s.TimeSeriesFor<HeartRateMeasure>("users/ayende").Append(RavenTestHelper.UtcToday, new HeartRateMeasure
                 {
                     HeartRate = 55
                 }, "test/things/out");
@@ -322,11 +321,11 @@ namespace SlowTests.Issues
                 await s.StoreAsync(new { Name = "Oren" }, "users/ayende");
                 s.CountersFor("users/ayende").Increment("test");
                 s.CountersFor("users/pheobe").Increment("test");
-                s.TimeSeriesFor<HeartRateMeasure>("users/pheobe").Append(DateTime.Today, new HeartRateMeasure
+                s.TimeSeriesFor<HeartRateMeasure>("users/pheobe").Append(RavenTestHelper.UtcToday, new HeartRateMeasure
                 {
                     HeartRate = 34
                 }, "test/things/out");
-                s.TimeSeriesFor<HeartRateMeasure>("users/ayende").Append(DateTime.Today, new HeartRateMeasure
+                s.TimeSeriesFor<HeartRateMeasure>("users/ayende").Append(RavenTestHelper.UtcToday, new HeartRateMeasure
                 {
                     HeartRate = 55
                 }, "test/things/out");
@@ -397,21 +396,28 @@ namespace SlowTests.Issues
             using (var s = storeB.OpenAsyncSession())
             {
                 Assert.Null(await s.LoadAsync<object>("users/pheobe"));
-                Assert.Null(await s.Advanced.Revisions.GetAsync<object>("users/pheobe", DateTime.Today.AddDays(1)));
+                Assert.Null(await s.Advanced.Revisions.GetAsync<object>("users/pheobe", RavenTestHelper.UtcToday.AddDays(1)));
                 Assert.Null(await s.CountersFor("users/pheobe").GetAsync("test"));
                 Assert.Null(await s.TimeSeriesFor<HeartRateMeasure>("users/pheobe").GetAsync());
-                Assert.Null(await s.Advanced.Attachments.GetAsync("users/pheobe", "test.bin"));
+                using (var attachment = await s.Advanced.Attachments.GetAsync("users/pheobe", "test.bin"))
+                {
+                    Assert.Null(attachment);
+                }
 
                 WaitForUserToContinueTheTest(storeA);
 
                 Assert.NotNull(await s.LoadAsync<object>("users/ayende/dogs/arava"));
                 Assert.NotNull(await s.LoadAsync<object>("users/ayende"));
-                Assert.NotNull(await s.Advanced.Revisions.GetAsync<object>("users/ayende", DateTime.Today.AddDays(1)));
+                Assert.NotNull(await s.Advanced.Revisions.GetAsync<object>("users/ayende", RavenTestHelper.UtcToday.AddDays(1)));
 
-                Assert.NotNull(await s.Advanced.Revisions.GetAsync<object>("users/ayende", DateTime.Today.AddDays(1)));
+                Assert.NotNull(await s.Advanced.Revisions.GetAsync<object>("users/ayende", RavenTestHelper.UtcToday.AddDays(1)));
                 Assert.NotNull(await s.CountersFor("users/ayende").GetAsync("test"));
                 Assert.NotEmpty(await s.TimeSeriesFor<HeartRateMeasure>("users/ayende").GetAsync());
-                Assert.NotNull(await s.Advanced.Attachments.GetAsync("users/ayende", "test.bin"));
+                using (var attachment = await s.Advanced.Attachments.GetAsync("users/ayende", "test.bin"))
+                {
+                    Assert.NotNull(attachment);
+                }
+
             }
 
             using (var s = storeA.OpenAsyncSession())
@@ -429,10 +435,13 @@ namespace SlowTests.Issues
 
                 Assert.NotNull(await s.LoadAsync<object>("users/ayende"));
 
-                Assert.NotNull(await s.Advanced.Revisions.GetAsync<object>("users/ayende", DateTime.Today.AddDays(1)));
+                Assert.NotNull(await s.Advanced.Revisions.GetAsync<object>("users/ayende", RavenTestHelper.UtcToday.AddDays(1)));
                 Assert.NotNull(await s.CountersFor("users/ayende").GetAsync("test"));
                 Assert.NotEmpty(await s.TimeSeriesFor<HeartRateMeasure>("users/ayende").GetAsync());
-                Assert.NotNull(await s.Advanced.Attachments.GetAsync("users/ayende", "test.bin"));
+                using (var attachment = await s.Advanced.Attachments.GetAsync("users/ayende", "test.bin"))
+                {
+                    Assert.NotNull(attachment);
+                }
             }
         }
 
@@ -465,11 +474,11 @@ namespace SlowTests.Issues
                 await s.StoreAsync(new { Name = "Oren" }, "users/ayende");
                 s.CountersFor("users/ayende").Increment("test");
                 s.CountersFor("users/pheobe").Increment("test");
-                s.TimeSeriesFor<HeartRateMeasure>("users/pheobe").Append(DateTime.Today, new HeartRateMeasure
+                s.TimeSeriesFor<HeartRateMeasure>("users/pheobe").Append(RavenTestHelper.UtcToday, new HeartRateMeasure
                 {
                     HeartRate = 34
                 }, "test/things/out");
-                s.TimeSeriesFor<HeartRateMeasure>("users/ayende").Append(DateTime.Today, new HeartRateMeasure
+                s.TimeSeriesFor<HeartRateMeasure>("users/ayende").Append(RavenTestHelper.UtcToday, new HeartRateMeasure
                 {
                     HeartRate = 55
                 }, "test/things/out");
@@ -541,19 +550,25 @@ namespace SlowTests.Issues
             using (var s = storeB.OpenAsyncSession())
             {
                 Assert.Null(await s.LoadAsync<object>("users/pheobe"));
-                Assert.Null(await s.Advanced.Revisions.GetAsync<object>("users/pheobe", DateTime.Today.AddDays(1)));
+                Assert.Null(await s.Advanced.Revisions.GetAsync<object>("users/pheobe", RavenTestHelper.UtcToday.AddDays(1)));
                 Assert.Null(await s.CountersFor("users/pheobe").GetAsync("test"));
                 Assert.Null(await s.TimeSeriesFor<HeartRateMeasure>("users/pheobe").GetAsync());
-                Assert.Null(await s.Advanced.Attachments.GetAsync("users/pheobe", "test.bin"));
+                using (var attachment = await s.Advanced.Attachments.GetAsync("users/pheobe", "test.bin"))
+                {
+                    Assert.Null(attachment);
+                }
 
                 Assert.NotNull(await s.LoadAsync<object>("users/ayende/dogs/arava"));
                 Assert.NotNull(await s.LoadAsync<object>("users/ayende"));
-                Assert.NotNull(await s.Advanced.Revisions.GetAsync<object>("users/ayende", DateTime.Today.AddDays(1)));
+                Assert.NotNull(await s.Advanced.Revisions.GetAsync<object>("users/ayende", RavenTestHelper.UtcToday.AddDays(1)));
 
-                Assert.NotNull(await s.Advanced.Revisions.GetAsync<object>("users/ayende", DateTime.Today.AddDays(1)));
+                Assert.NotNull(await s.Advanced.Revisions.GetAsync<object>("users/ayende", RavenTestHelper.UtcToday.AddDays(1)));
                 Assert.NotNull(await s.CountersFor("users/ayende").GetAsync("test"));
                 Assert.NotEmpty(await s.TimeSeriesFor<HeartRateMeasure>("users/ayende").GetAsync());
-                Assert.NotNull(await s.Advanced.Attachments.GetAsync("users/ayende", "test.bin"));
+                using (var attachment = await s.Advanced.Attachments.GetAsync("users/ayende", "test.bin"))
+                {
+                    Assert.NotNull(attachment);
+                }
             }
 
             using (var s = storeA.OpenAsyncSession())
@@ -571,10 +586,13 @@ namespace SlowTests.Issues
 
                 Assert.NotNull(await s.LoadAsync<object>("users/ayende"));
 
-                Assert.NotNull(await s.Advanced.Revisions.GetAsync<object>("users/ayende", DateTime.Today.AddDays(1)));
+                Assert.NotNull(await s.Advanced.Revisions.GetAsync<object>("users/ayende", RavenTestHelper.UtcToday.AddDays(1)));
                 Assert.NotNull(await s.CountersFor("users/ayende").GetAsync("test"));
                 Assert.NotEmpty(await s.TimeSeriesFor<HeartRateMeasure>("users/ayende").GetAsync());
-                Assert.NotNull(await s.Advanced.Attachments.GetAsync("users/ayende", "test.bin"));
+                using (var attachment = await s.Advanced.Attachments.GetAsync("users/ayende", "test.bin"))
+                {
+                    Assert.NotNull(attachment);
+                }
             }
         }
 
@@ -1005,7 +1023,7 @@ namespace SlowTests.Issues
 
             using (var s = sinkStore1.OpenAsyncSession())
             {
-                s.TimeSeriesFor("common", "test").Append(DateTime.Today, 12);
+                s.TimeSeriesFor("common", "test").Append(RavenTestHelper.UtcToday, 12);
                 await s.SaveChangesAsync();
             }
 
@@ -1165,7 +1183,7 @@ namespace SlowTests.Issues
 
             using (var s = hubStore.OpenAsyncSession())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
                 for (int i = 0; i < 150; i++)
                 {
                     s.TimeSeriesFor("foo", "test").Append(baseline.AddHours(i), 1);

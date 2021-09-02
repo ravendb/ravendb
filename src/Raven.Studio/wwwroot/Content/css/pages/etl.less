@@ -18,6 +18,10 @@
 @olap-etl-color-dark: darken(@color-1-2, 10%);
 @olap-etl-color-light: lighten(@color-1-2, 5%);
 
+@elastic-etl-color: @color-5-2;
+@elastic-etl-color-dark: darken(@color-5-2, 10%);
+@elastic-etl-color-light: lighten(@color-5-2, 5%);
+
 @ravendb-etl-color: @color-2;
 @ravendb-etl-color-dark: darken(@color-2, 10%);
 @ravendb-etl-color-light: lighten(@color-2, 5%);
@@ -51,7 +55,7 @@
 }
 
 .destinationModal {
-    .external-replication, .sql-etl, .olap-etl, .ravendb-etl, .periodic-backup, .subscription, .pull-replication-hub, .pull-replication-sink {
+    .external-replication, .sql-etl, .olap-etl, .elastic-etl, .ravendb-etl, .periodic-backup, .subscription, .pull-replication-hub, .pull-replication-sink {
         display: block;
         padding: 10px;
         transition: background-color .2s ease, color .1s;
@@ -79,6 +83,10 @@
 
     .olap-etl {
         .bigbtn-variant (@olap-etl-color, @olap-etl-color-dark);
+    }
+
+    .elastic-etl {
+        .bigbtn-variant (@elastic-etl-color, @elastic-etl-color-dark);
     }
 
     .ravendb-etl {
@@ -202,6 +210,14 @@
             background-color: @olap-etl-color;
         }
 
+        .elastic-etl {
+            color: @elastic-etl-color;
+        }
+
+        .task-elastic-etl {
+            background-color: @elastic-etl-color;
+        }
+
         .subscriptions {
             color: @subscription-color;
         }
@@ -276,6 +292,11 @@
         }
 
         &.olap-etl {
+            .name-variant (@brand-info, @brand-info-light);
+        }
+
+        // todo ???
+        &.elastic-etl {
             .name-variant (@brand-info, @brand-info-light);
         }
 

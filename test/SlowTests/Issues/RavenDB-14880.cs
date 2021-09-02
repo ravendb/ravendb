@@ -25,17 +25,15 @@ namespace SlowTests.Issues
         [InlineData(true)]
         public async Task UpdateClientConfigurationOnlyWhenRequired(bool isServerWide)
         {
-            const string databaseName = "test";
-            var leader = await CreateRaftClusterAndGetLeader(3);
-            using (var store = new DocumentStore
-            {
-                Urls = new[] { leader.WebUrl },
-                Database = databaseName
-            }.Initialize())
-            {
-                var (index, _) = await CreateDatabaseInCluster(databaseName, 2, leader.WebUrl);
-                await WaitForRaftIndexToBeAppliedInCluster(index, TimeSpan.FromSeconds(30));
+            var cluster = await CreateRaftCluster(3);
+            var leader = cluster.Leader;
 
+            using (var store = GetDocumentStore(new Options
+            {
+                Server = leader, 
+                ReplicationFactor = 2
+            }))
+            {
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User());
@@ -45,16 +43,12 @@ namespace SlowTests.Issues
                 ExecuteQuery(store);
                 WaitForIndexing(store);
 
-                var re = store.GetRequestExecutor(databaseName);
+                var re = store.GetRequestExecutor(store.Database);
                 var configurationChanges = new List<long>();
 
                 re.ClientConfigurationChanged += (sender, tuple) => configurationChanges.Add(tuple.RaftCommandIndex);
 
-                SetClientConfiguration(new ClientConfiguration
-                {
-                    ReadBalanceBehavior = ReadBalanceBehavior.RoundRobin,
-                    Disabled = false
-                });
+                SetClientConfiguration(new ClientConfiguration {ReadBalanceBehavior = ReadBalanceBehavior.RoundRobin, Disabled = false});
 
                 var value = WaitForValue(() =>
                 {
@@ -64,11 +58,7 @@ namespace SlowTests.Issues
 
                 Assert.Equal(1, value);
 
-                SetClientConfiguration(new ClientConfiguration
-                {
-                    ReadBalanceBehavior = ReadBalanceBehavior.None,
-                    Disabled = true
-                });
+                SetClientConfiguration(new ClientConfiguration {ReadBalanceBehavior = ReadBalanceBehavior.None, Disabled = true});
 
                 value = WaitForValue(() =>
                 {
@@ -107,53 +97,48 @@ namespace SlowTests.Issues
         [Fact]
         public async Task UpdateTopologyWhenNeeded()
         {
-            const string databaseName = "test";
-            var leader = await CreateRaftClusterAndGetLeader(3);
-            using (var store = new DocumentStore
+            var (_, leader) = await CreateRaftCluster(3);
+            var toplogyUpdatesCount = 0;
+            Topology topology = null;
+            using (var store = GetDocumentStore(new Options
             {
-                Urls = new[] { leader.WebUrl },
-                Database = databaseName
-            })
-            {
-                var toplogyUpdatesCount = 0;
-                Topology topology = null;
-                store.OnTopologyUpdated += (sender, tuple) =>
+                Server = leader,
+                ReplicationFactor = 2,
+                ModifyDocumentStore = s =>
                 {
-                    toplogyUpdatesCount++;
-                    topology = tuple.Topology;
-                };
-
-                store.Initialize();
-                var (index, _) = await CreateDatabaseInCluster(databaseName, 2, leader.WebUrl);
-                await WaitForRaftIndexToBeAppliedInCluster(index, TimeSpan.FromSeconds(30));
-
+                    s.OnTopologyUpdated += (sender, tuple) =>
+                    {
+                        if (sender?.GetType() == typeof(RequestExecutor))
+                        {
+                            toplogyUpdatesCount++;
+                            topology = tuple.Topology;
+                        }
+                    };
+                }
+            }))
+            {
+                var databaseName = store.Database;
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User());
                     session.SaveChanges();
                 }
 
-                ExecuteQuery(store);
-                WaitForIndexing(store);
-
-                var server = Servers.Single(x => x.ServerStore.NodeTag == topology.Nodes.First().ClusterTag);
-                var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName).ConfigureAwait(false);
-                var prop = database.GetType().GetField("_lastTopologyIndex", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                prop.SetValue(database, -2);
+                Assert.Equal(1, toplogyUpdatesCount);
 
                 // shouldn't trigger a topology update
                 ExecuteQuery(store);
+                WaitForIndexing(store);
 
                 Assert.Equal(1, toplogyUpdatesCount);
 
                 var topologyEtag = topology.Etag;
-                var nodeTagToAdd = Servers.Select(x => x.ServerStore.NodeTag).Except(topology.Nodes.Select(x => x.ClusterTag)).First();
+                var nodeTagToAdd = Servers.Select(x => x.ServerStore.NodeTag).Except(topology.Nodes.Select(x => x.ClusterTag)).Single();
                 await store.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(databaseName, nodeTagToAdd));
 
-                WaitForValue(() =>
-                {
-                    return topology.Etag > topologyEtag;
-                }, true);
+                ExecuteQuery(store);
+
+                await WaitAndAssertForValueAsync(() => topology.Etag > topologyEtag, true);
 
                 Assert.Equal(2, toplogyUpdatesCount);
             }

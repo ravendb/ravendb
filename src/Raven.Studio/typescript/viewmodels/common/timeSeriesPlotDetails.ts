@@ -119,7 +119,7 @@ class groupedTimeSeriesContainer extends timeSeriesContainer<dataRangePoint> {
         const dateFromPoints = groupedValues.map(x => new Date(x.From));
         const dateToPoints = groupedValues.map(x => new Date(x.To));
         
-        const series = [] as Array<graphSeries<dataRangePoint>>;
+        const series: graphSeries<dataRangePoint>[] = [];
         
         seriesPrefixNames.forEach(prefix => {
             seriesValuesName.forEach((valueName, valueIdx) => {
@@ -150,7 +150,7 @@ class groupedTimeSeriesContainer extends timeSeriesContainer<dataRangePoint> {
                         return {
                             series: x,
                             closestIndex: approxIndex - 1
-                        } as closestItem<dataRangePoint>;    
+                        };    
                     }
                 }
                 return undefined;
@@ -206,7 +206,7 @@ class rawTimeSeriesContainer extends timeSeriesContainer<dataPoint> {
                 return {
                     series: x,
                     closestIndex: effectiveIndex
-                } as closestItem<dataPoint>;
+                };
             });
     }
 }
@@ -281,6 +281,9 @@ class timeSeriesPlotDetails extends viewModelBase {
     
     private throttledTooltipUpdate = _.throttle((svgLocation: [number, number], globalLocation: [number, number]) => this.updateTooltip(svgLocation, globalLocation), 100);
     
+    tabText: KnockoutComputed<string>;
+    tabInfo: KnockoutComputed<string>;
+    
     constructor(timeSeries: Array<timeSeriesPlotItem>) {
         super();
         
@@ -300,6 +303,27 @@ class timeSeriesPlotDetails extends viewModelBase {
                     this.pointTimeSeries.push(new rawTimeSeriesContainer(item, onChange));
                     break;
             }
+        });
+        
+        this.tabText = ko.pureComputed(() => {
+           const documentIdsSet = new Set<string>();
+           const allData = [...this.rangeTimeSeries, ...this.pointTimeSeries];
+           allData.map(x => documentIdsSet.add(x.documentId));
+           
+           const numberOfDocuments =  Array.from(documentIdsSet).length;
+           return numberOfDocuments === 1 ? `TS - ${genUtils.truncateDocumentId(allData[0].documentId)}` :
+                                            `TS - ${numberOfDocuments} documents`;
+        });
+        
+        this.tabInfo = ko.pureComputed(() => {
+           const documentIdsSet = new Set<string>();
+           const allData = [...this.rangeTimeSeries, ...this.pointTimeSeries];
+           allData.map(x => documentIdsSet.add(`<span class="document-id">${genUtils.escapeHtml(x.documentId)}</span> - ${x.name}`));
+           
+           return `<div class="tab-info-tooltip padding padding-sm">
+                       <div class="margin-bottom margin-bottom-sm"><strong>Time Series Graph for:</strong></div>
+                       <div class="text-left">${Array.from(documentIdsSet).join("<br>")}</div>
+                   </div>`;
         });
         
         _.bindAll(this, "getColor", "getColorClass");
@@ -666,7 +690,7 @@ class timeSeriesPlotDetails extends viewModelBase {
     private tooltipContents(rangeItems: closestItem<dataRangePoint>[], pointItems: closestItem<dataPoint>[]) {
         const formatDate = (d: Date) => moment.utc(d).local().format(timeSeriesContainer.dateFormat);
         
-        const mappedRange = rangeItems.map(x => {
+        const mappedRange: tooltipItem[] = rangeItems.map(x => {
             const closestItem = x.series.points[x.closestIndex];
             const date = formatDate(closestItem.from) + " - " + formatDate(closestItem.to);
             
@@ -676,10 +700,10 @@ class timeSeriesPlotDetails extends viewModelBase {
                 dateDescription: date,
                 type: "grouped",
                 value: typeof closestItem.value !== "undefined" ? closestItem.value.toLocaleString() : "N/A"
-            } as tooltipItem;
+            };
         });
         
-        const mappedPoints = pointItems.map(x => {
+        const mappedPoints: tooltipItem[] = pointItems.map(x => {
             const closestItem = x.series.points[x.closestIndex];
             const date = formatDate(closestItem.date);
 
@@ -689,7 +713,7 @@ class timeSeriesPlotDetails extends viewModelBase {
                 dateDescription: date,
                 type: "raw",
                 value: typeof closestItem.value !== "undefined" ? closestItem.value.toLocaleString() : "N/A"
-            } as tooltipItem;
+            };
         });
         
         return genUtils.inMemoryRender("time-series-graph-tooltip", {

@@ -255,7 +255,7 @@ select last()
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
                 store.TimeSeries.Register<User>("Heartrate", new[] {"BPM"});
                 using (var session = store.OpenSession())
                 {

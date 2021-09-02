@@ -62,7 +62,7 @@ namespace SlowTests.Issues
         [Fact]
         public async Task CanSwitch()
         {
-            var leader = await CreateRaftClusterAndGetLeader(3);
+            var (_, leader) = await CreateRaftCluster(3);
             var databaseName = GetDatabaseName();
 
             using (var store = new DocumentStore()

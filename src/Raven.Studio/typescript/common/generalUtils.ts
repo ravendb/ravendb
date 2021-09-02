@@ -113,7 +113,7 @@ class genUtils {
     }
 
     static formatDuration(duration: moment.Duration, longFormat = false, desiredAccuracy = 5, skipSecondsAndMilliseconds = false) {
-        const timeTokens = [] as Array<string>;
+        const timeTokens: string[] = [];
 
         if (duration.years() >= 1) {
             timeTokens.push(longFormat ?
@@ -508,6 +508,24 @@ class genUtils {
             return JSON.stringify(obj, null, prettifySpacing);
         }
     }
+    
+    static truncateDocumentId(documentId: string, charsToShow: number = 12): string {
+        if (!documentId) {
+            return null;
+        }
+
+        const slashPosition = documentId.lastIndexOf("/");
+        
+        if (slashPosition === -1) {
+            return _.truncate(documentId, { "length": charsToShow });
+        }
+
+        const start = documentId.substring(0, slashPosition);
+        const end = documentId.substr(slashPosition);
+        
+        const startTruncated = _.truncate(start, { "length": charsToShow });
+        return startTruncated + end;
+    }
 
     /***  File Methods ***/
     
@@ -674,6 +692,21 @@ class genUtils {
         }
 
         return result;
+    }
+    
+    static scrollToElement(element: Element, containerSelector: string = ".js-scroll-container") {
+        const containerRect = document.querySelector(containerSelector).getBoundingClientRect();
+        const rectTop = containerRect.top;
+        const rectBottom = rectTop + containerRect.height;
+
+        const elementRect = element.getBoundingClientRect();
+        const elementTop = elementRect.top;
+        const elementBottom = elementTop + elementRect.height;
+
+        // Scroll vertically only if element is outside of viewport 
+        if ((elementTop < rectTop) || (elementBottom > rectBottom)){
+            $(containerSelector).scrollTop(elementTop);
+        }
     }
 } 
 

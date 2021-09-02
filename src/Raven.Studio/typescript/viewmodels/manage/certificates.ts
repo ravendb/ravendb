@@ -40,8 +40,8 @@ class certificates extends viewModelBase {
     
     model = ko.observable<certificateModel>();
     showDatabasesSelector: KnockoutComputed<boolean>;
-    canDownloadClusterCertificates: KnockoutComputed<boolean>;
-    canReplaceClusterCertificate: KnockoutComputed<boolean>;
+    canExportServerCertificates: KnockoutComputed<boolean>;
+    canReplaceServerCertificate: KnockoutComputed<boolean>;
     certificates = ko.observableArray<unifiedCertificateDefinition>();
     
     serverCertificateThumbprint = ko.observable<string>();
@@ -109,19 +109,13 @@ class certificates extends viewModelBase {
         
         this.addNotification(changesContext.default.serverNotifications().watchAllAlerts(alert => this.onAlert(alert)));
 
-        $('.certificates [data-toggle="tooltip"]').tooltip();
-        
-        popoverUtils.longWithHover($("#download-certificates"),
-            {
-                content: `<ul class="margin-top margin-top-xs padding padding-xs margin-left margin-bottom margin-bottom-xs">
-                              <li><small>Download the server certificate(s) of the cluster into a .pfx file.</small></li>
-                              <li><small>Only the <strong>public key</strong> is download.</small></li>
-                              <li><small>These certificates can be used during a manual cluster setup,<br>
-                                         when registering server certificates to be trusted on other nodes.</small>
-                              </li>
-                          </ul>`,
-                html: true
-            });
+        $(".js-export-certificates").tooltip({
+            container: "body",
+            placement: "right",
+            html: true,
+            title: `<div class="text-left">Export the server certificate(s) without their private key into a .pfx file.
+                   These certificates can be used during a manual cluster setup, when you need to register server certificates to be trusted on other nodes.</div>`
+        });
         
         this.model.subscribe(model => {
             if (model) {
@@ -189,12 +183,12 @@ class certificates extends viewModelBase {
             return this.model().securityClearance() === "ValidUser";
         });
         
-        this.canDownloadClusterCertificates = ko.pureComputed(() => {
+        this.canExportServerCertificates = ko.pureComputed(() => {
             const certs = this.certificates();
             return _.some(certs, x => x.SecurityClearance === "ClusterNode");
         });
         
-        this.canReplaceClusterCertificate = ko.pureComputed(() => {
+        this.canReplaceServerCertificate = ko.pureComputed(() => {
             const certs = this.certificates();
             return _.some(certs, x => x.SecurityClearance === "ClusterNode");
         });
@@ -251,8 +245,10 @@ class certificates extends viewModelBase {
     }
     
     enterEditCertificateMode(itemToEdit: unifiedCertificateDefinition) {
-        this.model(certificateModel.fromDto(itemToEdit));
-        this.model().validationGroup.errors.showAllMessages(false);
+        if (!_.includes(itemToEdit.Thumbprints, this.serverCertificateThumbprint())) {
+            this.model(certificateModel.fromDto(itemToEdit));
+            this.model().validationGroup.errors.showAllMessages(false);
+        }
     }
 
     deleteCertificate(certificate: Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition) {
@@ -270,8 +266,8 @@ class certificates extends viewModelBase {
             });
     }
 
-    downloadClusterCertificates() {
-        eventsCollector.default.reportEvent("certificates", "download-cluster-certificates");
+    exportServerCertificates() {
+        eventsCollector.default.reportEvent("certificates", "export-certs");
         const targetFrame = $("form#certificates_download_form");
         targetFrame.attr("action", this.exportCertificateUrl);
         targetFrame.submit();
@@ -287,7 +283,7 @@ class certificates extends viewModelBase {
         this.model(certificateModel.upload());
     }
     
-    replaceClusterCertificate() {
+    replaceServerCertificate() {
         eventsCollector.default.reportEvent("certificates", "replace");
         this.model(certificateModel.replace());
         
@@ -402,9 +398,9 @@ class certificates extends viewModelBase {
         return new getCertificatesCommand(true)
             .execute()
             .done(certificatesInfo => {
-                let mergedCertificates = [] as Array<unifiedCertificateDefinition>;
+                let mergedCertificates: unifiedCertificateDefinition[] = [];
                 
-                const secondaryCertificates = [] as Array<Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition>;
+                const secondaryCertificates: Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition[] = [];
                 
                 certificatesInfo.Certificates.forEach(cert => {
                     if (cert.CollectionPrimaryKey) {
@@ -432,9 +428,10 @@ class certificates extends viewModelBase {
                 const clientCert = mergedCertificates.find(x => _.includes(x.Thumbprints, this.clientCertificateThumbprint()));
                 const orderedCertificates = mergedCertificates.filter(x => x !== serverCert && x !== clientCert);
                 
-                if (clientCert) {
+                if (clientCert && serverCert && clientCert.Thumbprint !== serverCert.Thumbprint) {
                     orderedCertificates.unshift(clientCert);
                 }
+                
                 orderedCertificates.unshift(serverCert);
                 
                 this.updateCache(orderedCertificates);

@@ -31,7 +31,7 @@ class encryptionSettings {
     
     dirtyFlag: () => DirtyFlag;
     
-    encryptionModes = [
+    encryptionModes: Array<valueAndLabelItem<Raven.Client.Documents.Operations.Backups.EncryptionMode, string>> = [
         {
             label: "Encrypt using Database Encryption Key",
             value: "UseDatabaseKey"
@@ -40,7 +40,7 @@ class encryptionSettings {
             label: "Provide your own Encryption Key",
             value: "UseProvidedKey"
         }
-    ] as Array<valueAndLabelItem<Raven.Client.Documents.Operations.Backups.EncryptionMode, string>>;
+    ];
 
     validationGroup: KnockoutComputed<KnockoutValidationGroup>;
     validationGroupWithKey: KnockoutValidationGroup;
@@ -159,8 +159,8 @@ class encryptionSettings {
         
         this.keySourceDropdownTitle = ko.pureComputed(() => {
             if (this.encryptedDatabase()) {
-                return this.enableKeySourceDropdown() ?  'Select Encryption Key mode' : 
-                                                         'The Database Key will be used as the Encryption Key when selecting Snapshot type';
+                return this.enableKeySourceDropdown() ? 'Select Encryption Key mode' :
+                                                        'The Database Encryption Key will be used when selecting Snapshot type';
             }
             // db is not encrypted and the dropdown is disabled... 
             return 'The database is not encrypted. Provide your own Encryption Key for the Backup task.';

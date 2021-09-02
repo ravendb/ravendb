@@ -876,7 +876,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             using (token)
             using (var source = new StreamSource(stream, context, Database))
             {
-                var destination = new DatabaseDestination(Database);
+                var destination = new DatabaseDestination(Database, token.Token);
                 var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, options, result, onProgress, token.Token);
 
                 await smuggler.ExecuteAsync();

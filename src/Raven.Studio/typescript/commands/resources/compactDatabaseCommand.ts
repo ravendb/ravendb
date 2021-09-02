@@ -8,11 +8,11 @@ class compactDatabaseCommand extends commandBase {
     }
 
     execute(): JQueryPromise<operationIdDto> {
-        const payload = {
+        const payload: Raven.Client.ServerWide.CompactSettings = {
             DatabaseName: this.databaseName,
             Documents: this.compactDocuments,
             Indexes: this.indexesToCompact
-        } as Raven.Client.ServerWide.CompactSettings;
+        };
 
         const url = endpoints.global.adminDatabases.adminCompact;
         

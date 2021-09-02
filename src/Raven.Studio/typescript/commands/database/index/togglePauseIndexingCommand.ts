@@ -20,10 +20,10 @@ class togglePauseIndexingCommand extends commandBase {
 
     constructor(private start: boolean, private db: database, options: optsNames | optsType = null) {
         super();
-        if (options && options.hasOwnProperty("name")) {
-            this.names = (options as optsNames).name;
-        } else if (options && options.hasOwnProperty("type")) {
-            this.type = (options as optsType).type;
+        if (options && "name" in options) {
+            this.names = options.name;
+        } else if (options && "type" in options) {
+            this.type = options.type;
         } else {
             this.toggleAll = true;
         }
@@ -34,9 +34,9 @@ class togglePauseIndexingCommand extends commandBase {
 
         let args: optsNames | optsType = null;
         if (this.names) {
-            args = { name: this.names } as optsNames;
+            args = { name: this.names };
         } else if (this.type) {
-            args = { type: this.type } as optsType;
+            args = { type: this.type };
         }
 
         const url = basicUrl + (args ? this.urlEncodeArgs(args) : "");

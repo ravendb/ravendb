@@ -226,22 +226,26 @@ namespace Raven.Server.NotificationCenter
 
         public bool Delete(string id, RavenTransaction existingTransaction = null)
         {
-            if (Logger.IsInfoEnabled)
-                Logger.Info($"Deleting notification '{id}'.");
+            bool deleteResult;
 
             if (existingTransaction != null)
             {
-                return DeleteFromTable(existingTransaction);
+                deleteResult = DeleteFromTable(existingTransaction);
             }
-
-            bool deleteResult;
-
-            using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (var tx = context.OpenWriteTransaction())
+            else
             {
-                deleteResult = DeleteFromTable(tx);
-                tx.Commit();
+                using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (var tx = context.OpenWriteTransaction())
+                {
+                    deleteResult = DeleteFromTable(tx);
+                    tx.Commit();
+                }
             }
+
+            if (deleteResult && Logger.IsInfoEnabled)
+                Logger.Info($"Deleted notification '{id}'.");
+
+            return deleteResult;
 
             bool DeleteFromTable(RavenTransaction tx)
             {
@@ -252,8 +256,6 @@ namespace Raven.Server.NotificationCenter
                     return table.DeleteByKey(alertSlice);
                 }
             }
-
-            return deleteResult;
         }
 
         public long GetAlertCount()

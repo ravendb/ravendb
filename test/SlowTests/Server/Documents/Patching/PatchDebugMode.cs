@@ -20,7 +20,7 @@ namespace SlowTests.Server.Documents.Patching
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
                 
                 using (var session = store.OpenSession())
                 {
@@ -202,7 +202,7 @@ namespace SlowTests.Server.Documents.Patching
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today.ToUniversalTime();
+                var baseline = RavenTestHelper.UtcToday.ToUniversalTime();
                 
                 using (var session = store.OpenSession())
                 {
@@ -316,7 +316,7 @@ namespace SlowTests.Server.Documents.Patching
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today.ToUniversalTime();
+                var baseline = RavenTestHelper.UtcToday.ToUniversalTime();
                 
                 using (var session = store.OpenSession())
                 {
@@ -379,7 +379,7 @@ namespace SlowTests.Server.Documents.Patching
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today.EnsureUtc();
+                var baseline = RavenTestHelper.UtcToday.EnsureUtc();
                 
                 using (var session = store.OpenSession())
                 {
@@ -495,7 +495,7 @@ namespace SlowTests.Server.Documents.Patching
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today.ToUniversalTime();
+                var baseline = RavenTestHelper.UtcToday.ToUniversalTime();
                 
                 using (var session = store.OpenSession())
                 {

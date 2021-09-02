@@ -97,7 +97,7 @@ namespace SlowTests.Issues
         public async Task DatabaseChangeVectorIsUpdatedCorrectlyInACluster()
         {
             var databaseName = nameof(DatabaseChangeVectorIsUpdatedCorrectlyInACluster);
-            var leader = await CreateRaftClusterAndGetLeader(3, shouldRunInMemory: false);
+            var (_, leader) = await CreateRaftCluster(3, shouldRunInMemory: false);
             var db = await CreateDatabaseInCluster(databaseName, 1, leader.WebUrl);
 
             var mainServer = db.Servers[0];

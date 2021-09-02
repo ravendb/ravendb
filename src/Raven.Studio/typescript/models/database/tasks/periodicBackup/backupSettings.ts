@@ -91,12 +91,12 @@ abstract class backupSettings {
         }
     }
     
-    private configurationScriptToDto() {
+    private configurationScriptToDto(): Raven.Client.Documents.Operations.Backups.GetBackupConfigurationScript {
         return {
             Exec: this.configurationScript.exec(),
             Arguments: this.configurationScript.arguments(),
             TimeoutInMs: this.configurationScript.timeoutInMs()
-        } as Raven.Client.Documents.Operations.Backups.GetBackupConfigurationScript;
+        };
     }
 }
 

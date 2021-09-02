@@ -21,6 +21,7 @@ using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.ETL.Providers.OLAP
 {
@@ -143,32 +144,64 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         protected override int LoadInternal(IEnumerable<OlapTransformedItems> records, DocumentsOperationContext context, OlapEtlStatsScope scope)
         {
             var count = 0;
-
+            var uploadedFiles = new List<UploadInfo>();
+            var localFiles = new List<string>();
             var outerScope = scope.For(EtlOperations.LoadLocal, start: false);
-
-            foreach (var transformed in records)
+            try
             {
-                outerScope.NumberOfFiles++;
-
-                string localPath, folderName, fileName, safeFolderName;
-                using (outerScope.Start())
-                using (var loadScope = outerScope.For($"{EtlOperations.LoadLocal}/{outerScope.NumberOfFiles}"))
+                foreach (var transformed in records)
                 {
-                    localPath = transformed.GenerateFile(out folderName, out safeFolderName, out fileName);
+                    outerScope.NumberOfFiles++;
 
-                    loadScope.FileName = fileName;
-                    loadScope.NumberOfFiles = 1;
+                    using (outerScope.Start())
+                    using (var loadScope = outerScope.For($"{EtlOperations.LoadLocal}/{outerScope.NumberOfFiles}"))
+                    {
+                        string localPath = transformed.GenerateFile(out UploadInfo uploadInfo);
+                        localFiles.Add(localPath);
 
-                    count += transformed.Count;
+                        loadScope.FileName = uploadInfo.FileName;
+                        loadScope.NumberOfFiles = 1;
+
+                        count += transformed.Count;
+
+                        if (AnyRemoteDestinations == false) 
+                            continue;
+
+                        UploadToRemoteDestinations(localPath, uploadInfo, scope);
+                        uploadedFiles.Add(uploadInfo);
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                // an error occurred during the upload phase.
+                // try delete the uploaded files in order to avoid duplicates.
+                // we will re upload these files in the next batch.
+
+                foreach (var uploadInfo in uploadedFiles)
+                {
+                    TryDeleteFromRemoteDestinations(uploadInfo);
                 }
 
-                if (AnyRemoteDestinations)
-                    UploadToServer(localPath, folderName, fileName, safeFolderName, scope);
+                foreach (var file in localFiles)
+                {
+                    IOExtensions.DeleteFile(file);
+                }
 
-                if (Configuration.Connection.LocalSettings != null)
-                    continue;
+                localFiles.Clear();
 
-                File.Delete(localPath);
+                throw;
+            }
+            finally
+            {
+                if (Configuration.Connection.LocalSettings == null)
+                {
+                    foreach (var file in localFiles)
+                    {
+                        IOExtensions.DeleteFile(file);
+                    }
+                }
+
             }
 
             return count;
@@ -291,14 +324,13 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         }
 
 
-        private void UploadToServer(string localPath, string folderName, string fileName, string safeFolderName, OlapEtlStatsScope scope)
+        private void UploadToRemoteDestinations(string localPath, UploadInfo uploadInfo, OlapEtlStatsScope scope)
         {
             CancellationToken.ThrowIfCancellationRequested();
             
             _uploaderSettings.FilePath = localPath;
-            _uploaderSettings.FileName = fileName;
-            _uploaderSettings.FolderName = folderName;
-            _uploaderSettings.SafeFolderName = safeFolderName;
+            _uploaderSettings.FileName = uploadInfo.FileName;
+            _uploaderSettings.FolderName = uploadInfo.FolderName;
             
             var backupUploader = new BackupUploader(_uploaderSettings, retentionPolicyParameters: null, Logger, GenerateUploadResult(), onProgress: ProgressNotification, _operationCancelToken);
 
@@ -311,17 +343,37 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                     outerScope.NumberOfFiles++;
 
                     _uploadScope = outerScope.For($"{EtlOperations.LoadUpload}/{outerScope.NumberOfFiles}", start: true);
-                    _uploadScope.FileName = fileName;
+                    _uploadScope.FileName = uploadInfo.FileName;
                     _uploadScope.NumberOfFiles = 1;
                 }
 
                 using (outerScope)
                 using (_uploadScope)
-                    backupUploader.Execute();
+                    backupUploader.ExecuteUpload();
             }
             finally
             {
                 _uploadScope = null;
+            }
+        }
+
+        private void TryDeleteFromRemoteDestinations(UploadInfo uploadInfo)
+        {
+            CancellationToken.ThrowIfCancellationRequested();
+
+            _uploaderSettings.FilePath = null;
+            _uploaderSettings.FileName = uploadInfo.FileName;
+            _uploaderSettings.FolderName = uploadInfo.FolderName;
+
+            var backupUploader = new BackupUploader(_uploaderSettings, retentionPolicyParameters: null, Logger, GenerateUploadResult(), onProgress: ProgressNotification, _operationCancelToken);
+
+            try
+            {
+                backupUploader.ExecuteDelete();
+            }
+            catch
+            {
+                // ignore
             }
         }
 

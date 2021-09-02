@@ -225,7 +225,7 @@ class indexDefinition {
     }
     
     private parseConfiguration(config: Raven.Client.Documents.Indexes.IndexConfiguration): Array<configurationItem> {
-        const configurations = [] as configurationItem[];
+        const configurations: configurationItem[] = [];
 
         if (config) {
             _.forIn(config, (value, key) => {
@@ -388,7 +388,7 @@ class indexDefinition {
             LockMode: "Unlock",
             Reduce: undefined,
             Priority: "Normal",
-            DeploymentMode: "Rolling",
+            DeploymentMode: null,
             Configuration: null,
             Type: "Map",
             SourceType: "None",

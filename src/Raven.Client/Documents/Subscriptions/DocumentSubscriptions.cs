@@ -47,7 +47,8 @@ namespace Raven.Client.Documents.Subscriptions
             {
                 Name = options.Name,
                 ChangeVector = options.ChangeVector,
-                MentorNode = options.MentorNode
+                MentorNode = options.MentorNode,
+                Disabled = options.Disabled
             }, options.Filter, options.Projection, options.Includes), database);
         }
 
@@ -74,7 +75,8 @@ namespace Raven.Client.Documents.Subscriptions
             {
                 Name = options.Name,
                 ChangeVector = options.ChangeVector,
-                MentorNode = options.MentorNode
+                MentorNode = options.MentorNode,
+                Disabled = options.Disabled
             }, options.Filter, options.Projection, options.Includes), database, token);
         }
 
@@ -207,7 +209,7 @@ namespace Raven.Client.Documents.Subscriptions
                                 .Append("'");
                         }
                         else
-                            queryBuilder.Append(include);
+                            queryBuilder.Append(QueryToken.IsKeyword(include) ? $"'{include}'" : include);
 
                         numberOfIncludesAdded++;
                     }

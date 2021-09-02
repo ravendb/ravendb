@@ -1,9 +1,11 @@
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
+import viewModelBase = require("viewmodels/viewModelBase");
 import copyToClipboard = require("common/copyToClipboard");
 
 class querySyntax extends dialogViewModelBase {
 
     dialogContainer: Element;
+    clientVersion = viewModelBase.clientVersion;
 
     compositionComplete() {
         super.compositionComplete();

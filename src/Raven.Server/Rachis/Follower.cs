@@ -108,9 +108,21 @@ namespace Raven.Server.Rachis
                     _engine.Timeout.Defer(_connection.Source);
                     if (appendEntries.EntriesCount != 0)
                     {
-                        for (int i = 0; i < appendEntries.EntriesCount; i++)
+                        using (var cts = new CancellationTokenSource())
                         {
-                            entries.Add(_connection.ReadRachisEntry(context));
+                            var task = Concurrent_SendAppendEntriesPendingToLeaderAsync(cts, _term, appendEntries.PrevLogIndex);
+                            try
+                            {
+                                for (int i = 0; i < appendEntries.EntriesCount; i++)
+                                {
+                                    entries.Add(_connection.ReadRachisEntry(context));
+                                }
+                            }
+                            finally
+                            {
+                                cts.Cancel();
+                                task.Wait(CancellationToken.None);
+                            }
                             _engine.Timeout.Defer(_connection.Source);
                         }
                         if (_engine.Log.IsInfoEnabled)

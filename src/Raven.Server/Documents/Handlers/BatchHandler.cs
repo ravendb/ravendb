@@ -22,9 +22,11 @@ using Raven.Client.Exceptions.Documents;
 using Raven.Client.Json;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Documents.Replication;
 using Raven.Server.Json;
 using Raven.Server.Rachis;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler;
@@ -48,23 +50,33 @@ namespace Raven.Server.Documents.Handlers
             using (var command = new MergedBatchCommand(Database))
             {
                 var contentType = HttpContext.Request.ContentType;
-                if (contentType == null ||
-                    contentType.StartsWith("application/json", StringComparison.OrdinalIgnoreCase))
+                try
                 {
-                    await BatchRequestParser.BuildCommandsAsync(context, command, RequestBodyStream(), Database, ServerStore);
+                    if (contentType == null ||
+                        contentType.StartsWith("application/json", StringComparison.OrdinalIgnoreCase))
+                    {
+                        await BatchRequestParser.BuildCommandsAsync(context, command, RequestBodyStream(), Database, ServerStore);
+                    }
+                    else if (contentType.StartsWith("multipart/mixed", StringComparison.OrdinalIgnoreCase) ||
+                             contentType.StartsWith("multipart/form-data", StringComparison.OrdinalIgnoreCase))
+                    {
+                        await ParseMultipart(context, command);
+                    }
+                    else
+                        ThrowNotSupportedType(contentType);
                 }
-                else if (contentType.StartsWith("multipart/mixed", StringComparison.OrdinalIgnoreCase) ||
-                    contentType.StartsWith("multipart/form-data", StringComparison.OrdinalIgnoreCase))
+                finally
                 {
-                    await ParseMultipart(context, command);
+                    if (TrafficWatchManager.HasRegisteredClients)
+                    {
+                        BatchTrafficWatch(command.ParsedCommands);
+                    }
                 }
-                else
-                    ThrowNotSupportedType(contentType);
+                
+                var disableAtomicDocumentWrites = GetBoolValueQueryString("disableAtomicDocumentWrites", required: false) ??
+                                                  Database.Configuration.Cluster.DisableAtomicDocumentWrites;
 
-                if (TrafficWatchManager.HasRegisteredClients)
-                {
-                    BatchTrafficWatch(command.ParsedCommands);
-                }
+                CheckBackwardCompatibility(ref disableAtomicDocumentWrites);
 
                 var waitForIndexesTimeout = GetTimeSpanQueryString("waitForIndexesTimeout", required: false);
                 var waitForIndexThrow = GetBoolValueQueryString("waitForIndexThrow", required: false) ?? true;
@@ -78,11 +90,11 @@ namespace Raven.Server.Documents.Handlers
                     {
                         // Since this is a cluster transaction we are not going to wait for the write assurance of the replication.
                         // Because in any case the user will get a raft index to wait upon on his next request.
-                        var options = new ClusterTransactionCommand.ClusterTransactionOptions(taskId)
+                        var options = new ClusterTransactionCommand.ClusterTransactionOptions(taskId, disableAtomicDocumentWrites, ClusterCommandsVersionManager.CurrentClusterMinimalVersion)
                         {
                             WaitForIndexesTimeout = waitForIndexesTimeout,
                             WaitForIndexThrow = waitForIndexThrow,
-                            SpecifiedIndexesQueryString = specifiedIndexesQueryString.Count > 0 ? specifiedIndexesQueryString.ToList() : null
+                            SpecifiedIndexesQueryString = specifiedIndexesQueryString.Count > 0 ? specifiedIndexesQueryString.ToList() : null,
                         };
                         await HandleClusterTransaction(context, command, options);
                     }
@@ -95,7 +107,6 @@ namespace Raven.Server.Documents.Handlers
                 try
                 {
                     await Database.TxMerger.Enqueue(command);
-                    command.ExceptionDispatchInfo?.Throw();
                 }
                 catch (ConcurrencyException)
                 {
@@ -126,6 +137,23 @@ namespace Raven.Server.Documents.Handlers
                         [nameof(BatchCommandResult.Results)] = command.Reply
                     });
                 }
+            }
+        }
+
+        private void CheckBackwardCompatibility(ref bool disableAtomicDocumentWrites)
+        {
+            if (disableAtomicDocumentWrites) 
+                return;
+
+            if (RequestRouter.TryGetClientVersion(HttpContext, out var clientVersion) == false)
+            {
+                disableAtomicDocumentWrites = true;
+                return;
+            }
+
+            if (clientVersion.Major < 5 || (clientVersion.Major == 5 && clientVersion.Minor < 2))
+            {
+                disableAtomicDocumentWrites = true;
             }
         }
 
@@ -195,7 +223,7 @@ namespace Raven.Server.Documents.Handlers
             if (topology.Promotables.Contains(ServerStore.NodeTag))
                 throw new DatabaseNotRelevantException("Cluster transaction can't be handled by a promotable node.");
 
-            var clusterTransactionCommand = new ClusterTransactionCommand(Database.Name, Database.IdentityPartsSeparator, topology.DatabaseTopologyIdBase64, command.ParsedCommands, options, raftRequestId);
+            var clusterTransactionCommand = new ClusterTransactionCommand(Database.Name, Database.IdentityPartsSeparator, topology, command.ParsedCommands, options, raftRequestId);
             var result = await ServerStore.SendToLeaderAsync(clusterTransactionCommand);
 
             if (result.Result is List<string> errors)
@@ -513,8 +541,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 var global = context.LastDatabaseChangeVector ??
                              (context.LastDatabaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(context));
-                var dbGrpId = Database.DatabaseGroupId;
-                var current = ChangeVectorUtils.GetEtagById(global, dbGrpId);
+                var current = ChangeVectorUtils.GetEtagById(global, Database.DatabaseGroupId);
 
                 Replies.Clear();
                 Options.Clear();
@@ -538,7 +565,11 @@ namespace Raven.Server.Documents.Handlers
                         foreach (BlittableJsonReaderObject blittableCommand in commands)
                         {
                             count++;
-                            var changeVector = $"RAFT:{count}-{dbGrpId}";
+                            var changeVector = $"{ChangeVectorParser.RaftTag}:{count}-{Database.DatabaseGroupId}";
+                            if (options.DisableAtomicDocumentWrites == false)
+                            {
+                                changeVector += $",{ChangeVectorParser.TrxnTag}:{command.Index}-{Database.ClusterTransactionId}";
+                            }
                             var cmd = JsonDeserializationServer.ClusterTransactionDataCommand(blittableCommand);
 
                             switch (cmd.Type)
@@ -651,7 +682,8 @@ namespace Raven.Server.Documents.Handlers
                         context.LastDatabaseChangeVector = global;
                     }
 
-                    var updatedChangeVector = ChangeVectorUtils.TryUpdateChangeVector("RAFT", dbGrpId, count, global);
+                    var updatedChangeVector = ChangeVectorUtils.TryUpdateChangeVector("RAFT", Database.DatabaseGroupId, count, global);
+
                     if (updatedChangeVector.IsValid)
                     {
                         context.LastDatabaseChangeVector = updatedChangeVector.ChangeVector;
@@ -693,7 +725,6 @@ namespace Raven.Server.Documents.Handlers
 
             private Dictionary<string, List<(DynamicJsonValue Reply, string FieldName)>> _documentsToUpdateAfterAttachmentChange;
             private readonly List<IDisposable> _disposables = new List<IDisposable>();
-            public ExceptionDispatchInfo ExceptionDispatchInfo;
 
             public bool IsClusterTransaction;
 
@@ -728,20 +759,6 @@ namespace Raven.Server.Documents.Handlers
                     ParsedCommands = ParsedCommands.ToArray(),
                     AttachmentStreams = AttachmentStreams
                 };
-            }
-
-            private bool CanAvoidThrowingToMerger(Exception e, int commandOffset)
-            {
-                // if a concurrency exception has been thrown, because the user passed a change vector,
-                // we need to check if we are on the very first command and can abort immediately without
-                // having the transaction merger try to run the transactions again
-                if (commandOffset == ParsedCommands.Offset)
-                {
-                    ExceptionDispatchInfo = ExceptionDispatchInfo.Capture(e);
-                    return true;
-                }
-
-                return false;
             }
 
             protected override long ExecuteCmd(DocumentsOperationContext context)
@@ -791,7 +808,8 @@ namespace Raven.Server.Documents.Handlers
                                     flags |= DocumentFlags.HasRevisions;
                                 }
 
-                                putResult = Database.DocumentsStorage.Put(context, cmd.Id, cmd.ChangeVector, cmd.Document, flags: flags);
+                                putResult = Database.DocumentsStorage.Put(context, cmd.Id, cmd.ChangeVector, cmd.Document, 
+                                    oldChangeVectorForClusterTransactionIndexCheck: cmd.OriginalChangeVector, flags: flags);
                             }
                             catch (Voron.Exceptions.VoronConcurrencyErrorException)
                             {
@@ -812,10 +830,6 @@ namespace Raven.Server.Documents.Handlers
                                 }
                                 throw;
                             }
-                            catch (ConcurrencyException e) when (CanAvoidThrowingToMerger(e, i))
-                            {
-                                return 0;
-                            }
 
                             context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(cmd.Id, cmd.Document.Size);
                             AddPutResult(putResult);
@@ -824,14 +838,7 @@ namespace Raven.Server.Documents.Handlers
 
                         case CommandType.PATCH:
                         case CommandType.BatchPATCH:
-                            try
-                            {
                                 cmd.PatchCommand.ExecuteDirectly(context);
-                            }
-                            catch (ConcurrencyException e) when (CanAvoidThrowingToMerger(e, i))
-                            {
-                                return 0;
-                            }
 
                             var lastChangeVector = cmd.PatchCommand.HandleReply(Reply, ModifiedCollections);
 
@@ -843,15 +850,7 @@ namespace Raven.Server.Documents.Handlers
                         case CommandType.DELETE:
                             if (cmd.IdPrefixed == false)
                             {
-                                DocumentsStorage.DeleteOperationResult? deleted;
-                                try
-                                {
-                                    deleted = Database.DocumentsStorage.Delete(context, cmd.Id, cmd.ChangeVector);
-                                }
-                                catch (ConcurrencyException e) when (CanAvoidThrowingToMerger(e, i))
-                                {
-                                    return 0;
-                                }
+                                var deleted = Database.DocumentsStorage.Delete(context, cmd.Id, cmd.ChangeVector);
                                 AddDeleteResult(deleted, cmd.Id);
                             }
                             else
@@ -1038,14 +1037,7 @@ namespace Raven.Server.Documents.Handlers
                                 Documents = new List<DocumentCountersOperation> { cmd.Counters },
                                 FromEtl = cmd.FromEtl
                             });
-                            try
-                            {
                                 counterBatchCmd.ExecuteDirectly(context);
-                            }
-                            catch (DocumentDoesNotExistException e) when (CanAvoidThrowingToMerger(e, i))
-                            {
-                                return 0;
-                            }
 
                             LastChangeVector = counterBatchCmd.LastChangeVector;
 

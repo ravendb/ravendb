@@ -73,16 +73,19 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.Disable", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public virtual bool Disabled { get; protected set; }
 
+        [Description("The default deployment mode for static indexes")]
         [DefaultValue(IndexDeploymentMode.Parallel)]
         [IndexUpdateType(IndexUpdateType.Refresh)]
         [ConfigurationEntry("Indexing.Static.DeploymentMode", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public IndexDeploymentMode StaticIndexDeploymentMode { get; protected set; }
 
+        [Description("The default deployment mode for auto indexes")]
         [DefaultValue(IndexDeploymentMode.Parallel)]
         [IndexUpdateType(IndexUpdateType.Refresh)]
         [ConfigurationEntry("Indexing.Auto.DeploymentMode", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public IndexDeploymentMode AutoIndexDeploymentMode { get; protected set; }
 
+        [Description("Indicate if indexing performance metrics are gathered")]
         [DefaultValue(true)]
         [IndexUpdateType(IndexUpdateType.Refresh)]
         [ConfigurationEntry("Indexing.Metrics.Enabled", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]

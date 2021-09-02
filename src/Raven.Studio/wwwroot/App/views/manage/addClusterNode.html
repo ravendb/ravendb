@@ -27,7 +27,7 @@
                             </div>
                         </div>
                         <div class="form-group">
-                            <label  class="control-label"></label>
+                            <label class="control-label"></label>
                             <div class="flex-grow">
                                 <div class="toggle">
                                     <input id="toggleWatcher" type="checkbox" data-bind="checked: addAsWatcher" />
@@ -39,18 +39,19 @@
                             <label class="control-label"></label>
                             <div class="flex-grow">
                                 <div class="toggle">
-                                    <input id="toggleAutoAssign" type="checkbox" data-bind="checked: usaAvailableCores" />
+                                    <input id="toggleAutoAssign" type="checkbox" data-bind="checked: useAvailableCores" />
                                     <label for="toggleAutoAssign"><small>Use available cores</small></label>
                                 </div>
                             </div>
                         </div>
-                        
-                        <div data-bind="collapse: !usaAvailableCores()">
+                        <div data-bind="collapse: !useAvailableCores()">
                             <div class="form-group">
                                 <label for="max-utilized-cores" class="control-label">Maximum cores to use</label>
                                 <div class="flex-grow">
                                     <div data-bind="validationElement: maxUtilizedCores">
-                                        <input autocomplete="off" type="number" class="form-control" data-bind="numericInput: maxUtilizedCores, disable: usaAvailableCores" id="max-utilized-cores" placeholder="Enter the number of the maximum utilized cores for the new node">
+                                        <input autocomplete="off" type="number" class="form-control" min="1"
+                                               data-bind="numericInput: maxUtilizedCores, disable: useAvailableCores" id="max-utilized-cores"
+                                               placeholder="Enter the maximum number of cores to be used by the new node">
                                     </div>
                                 </div>
                             </div>
@@ -84,7 +85,7 @@
                             <h2>About this error</h2>
                             <div>Each RavenDB server has both HTTP and TCP endpoints. While the first one is used for system management and client-server rest request, the second is used for inter-server and advanced client-server communications.</div>
                             <div>The connection tests the TCP endpoint only after a successful HTTP connection.</div>
-                            <div data-bind="visible: HTTPSuccess">It appears that the current server was able to connect to the desired server through HTTP, but failed connecting to it using TCP.</div>                            
+                            <div data-bind="visible: HTTPSuccess">It appears that the current server was able to connect to the desired server through HTTP, but failed connecting to it using TCP.</div>
                             <div data-bind="visible: !HTTPSuccess">It appears that the current server could not connect to the desired node through HTTP.</div>
                             <div>
                                 Please verify that:

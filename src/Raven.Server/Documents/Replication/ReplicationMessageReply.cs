@@ -1,4 +1,6 @@
-﻿namespace Raven.Server.Documents.Replication
+﻿using Raven.Client.Documents.Operations.Replication;
+
+namespace Raven.Server.Documents.Replication
 {
     internal class ReplicationMessageReply
     {
@@ -18,6 +20,8 @@
         public string DatabaseChangeVector { get; set; }
         
         public string[] AcceptablePaths { get; set; }
+
+        public PreventDeletionsMode PreventDeletionsMode { get; set; }
         public string DatabaseId { get; set; }
         public string NodeTag { get; set; }
         public long CurrentEtag { get; set; }

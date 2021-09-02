@@ -16,6 +16,8 @@ namespace Raven.Client.Documents.Session.Operations
         private string[] _ids;
         private string[] _includes;
         private string[] _countersToInclude;
+        private string[] _revisionsToIncludeByChangeVector;
+        private DateTime? _revisionsToIncludeByDateTimeBefore;
         private string[] _compareExchangeValuesToInclude;
         private bool _includeAllCounters;
         private IEnumerable<AbstractTimeSeriesRange> _timeSeriesToInclude;
@@ -32,15 +34,15 @@ namespace Raven.Client.Documents.Session.Operations
         {
             if (_session.CheckIfIdAlreadyIncluded(_ids, _includes))
                 return null;
-
+            
             _session.IncrementRequestCount();
             if (Logger.IsInfoEnabled)
                 Logger.Info($"Requesting the following ids '{string.Join(", ", _ids)}' from {_session.StoreIdentifier}");
 
             if (_includeAllCounters)
                 return new GetDocumentsCommand(_ids, _includes, includeAllCounters: true, timeSeriesIncludes: _timeSeriesToInclude, compareExchangeValueIncludes: _compareExchangeValuesToInclude, metadataOnly: false);
-
-            return new GetDocumentsCommand(_ids, _includes, _countersToInclude, _timeSeriesToInclude, _compareExchangeValuesToInclude, metadataOnly: false);
+            
+            return new GetDocumentsCommand(_ids, _includes, _countersToInclude, _revisionsToIncludeByChangeVector, _revisionsToIncludeByDateTimeBefore, _timeSeriesToInclude, _compareExchangeValuesToInclude, metadataOnly: false);
         }
 
         public LoadOperation ById(string id)
@@ -72,7 +74,21 @@ namespace Raven.Client.Documents.Session.Operations
                 _countersToInclude = counters;
             return this;
         }
-
+        
+        public LoadOperation WithRevisions(string[] revisionsByChangeVector)
+        {
+            if (revisionsByChangeVector != null)
+                _revisionsToIncludeByChangeVector = revisionsByChangeVector;
+            return this;
+        }
+        
+        public LoadOperation WithRevisions(DateTime? revisionByDateTimeBefore)
+        {
+            if (revisionByDateTimeBefore != null)
+                _revisionsToIncludeByDateTimeBefore = revisionByDateTimeBefore;
+            return this;
+        }
+        
         public LoadOperation WithAllCounters()
         {
             _includeAllCounters = true;
@@ -196,6 +212,10 @@ namespace Raven.Client.Documents.Session.Operations
             if (_timeSeriesToInclude != null)
             {
                 _session.RegisterTimeSeries(result.TimeSeriesIncludes);
+            }
+            if (_revisionsToIncludeByChangeVector != null || _revisionsToIncludeByDateTimeBefore != null)
+            {
+               _session.RegisterRevisionIncludes(result.RevisionIncludes);
             }
 
             if (_compareExchangeValuesToInclude != null)

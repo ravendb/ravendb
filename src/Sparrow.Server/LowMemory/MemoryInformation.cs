@@ -189,8 +189,91 @@ namespace Sparrow.LowMemory
         private static void ThrowInsufficientMemory(MemoryInfoResult memInfo)
         {
             LowMemoryNotification.Instance.SimulateLowMemoryNotification();
-            throw new EarlyOutOfMemoryException($"The amount of available memory to commit on the system is low. Commit charge: {memInfo.CurrentCommitCharge} / {memInfo.TotalCommittableMemory}. Memory: {memInfo.TotalPhysicalMemory - memInfo.AvailableMemory} / {memInfo.TotalPhysicalMemory}");
+            throw new EarlyOutOfMemoryException($"The amount of available memory to commit on the system is low. Commit charge: {memInfo.CurrentCommitCharge} / {memInfo.TotalCommittableMemory}. Memory: {memInfo.TotalPhysicalMemory - memInfo.AvailableMemory} / {memInfo.TotalPhysicalMemory}", memInfo);
         }
+        
+        
+        public enum JOBOBJECTINFOCLASS
+        {
+            AssociateCompletionPortInformation = 7,
+            BasicLimitInformation = 2,
+            BasicUIRestrictions = 4,
+            EndOfJobTimeInformation = 6,
+            ExtendedLimitInformation = 9,
+            SecurityLimitInformation = 5,
+            GroupInformation = 11
+        }
+        
+        [StructLayout(LayoutKind.Sequential)]
+        struct JOBOBJECT_BASIC_LIMIT_INFORMATION
+        {
+            public Int64 PerProcessUserTimeLimit;
+            public Int64 PerJobUserTimeLimit;
+            public JOBOBJECTLIMIT LimitFlags;
+            public UIntPtr MinimumWorkingSetSize;
+            public UIntPtr MaximumWorkingSetSize;
+            public UInt32 ActiveProcessLimit;
+            public Int64 Affinity;
+            public UInt32 PriorityClass;
+            public UInt32 SchedulingClass;
+        }
+        
+        [Flags]
+        public enum JOBOBJECTLIMIT : uint
+        {
+            // Basic Limits
+            Workingset = 0x00000001,
+            ProcessTime = 0x00000002,
+            JobTime = 0x00000004,
+            ActiveProcess = 0x00000008,
+            Affinity = 0x00000010,
+            PriorityClass = 0x00000020,
+            PreserveJobTime = 0x00000040,
+            SchedulingClass = 0x00000080,
+
+            // Extended Limits
+            ProcessMemory = 0x00000100,
+            JobMemory = 0x00000200,
+            DieOnUnhandledException = 0x00000400,
+            BreakawayOk = 0x00000800,
+            SilentBreakawayOk = 0x00001000,
+            KillOnJobClose = 0x00002000,
+            SubsetAffinity = 0x00004000,
+
+            // Notification Limits
+            JobReadBytes = 0x00010000,
+            JobWriteBytes = 0x00020000,
+            RateControl = 0x00040000,
+        }
+        
+        [StructLayout(LayoutKind.Sequential)]
+        struct JOBOBJECT_EXTENDED_LIMIT_INFORMATION
+        {
+            public JOBOBJECT_BASIC_LIMIT_INFORMATION BasicLimitInformation;
+            public IO_COUNTERS IoInfo;
+            public UIntPtr ProcessMemoryLimit;
+            public UIntPtr JobMemoryLimit;
+            public UIntPtr PeakProcessMemoryUsed;
+            public UIntPtr PeakJobMemoryUsed;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        struct IO_COUNTERS
+        {
+            public UInt64 ReadOperationCount;
+            public UInt64 WriteOperationCount;
+            public UInt64 OtherOperationCount;
+            public UInt64 ReadTransferCount;
+            public UInt64 WriteTransferCount;
+            public UInt64 OtherTransferCount;
+        }
+        
+        
+        [return: MarshalAs(UnmanagedType.Bool)]
+        [DllImport("kernel32.dll")]
+        public static extern unsafe bool QueryInformationJobObject(IntPtr hJob, JOBOBJECTINFOCLASS JobObjectInformationClass, void* lpJobObjectInformation,
+            int cbJobObjectInformationLength, out int lpReturnLength);
+
 
         [return: MarshalAs(UnmanagedType.Bool)]
         [DllImport("kernel32.dll", SetLastError = true)]
@@ -424,7 +507,8 @@ namespace Sparrow.LowMemory
                 TotalSwapUsage = swapUsage,
                 WorkingSetSwapUsage = fromProcMemInfo.WorkingSetSwap,
                 
-                IsExtended = extended
+                IsExtended = extended,
+                Remarks = maxMemoryUsage != 0 ? "Memory constrained by cgroups limits" :  null
             };
         }
 
@@ -502,6 +586,8 @@ namespace Sparrow.LowMemory
             };
         }
 
+        private static bool _reportedQueryJobObjectFailure = false;
+
         private static unsafe MemoryInfoResult GetMemoryInfoWindows(Process process, bool extended)
         {
             // windows
@@ -524,14 +610,63 @@ namespace Sparrow.LowMemory
             var fetchedInstalledMemory = GetPhysicallyInstalledSystemMemory(out var installedMemoryInKb);
 
             var sharedCleanInBytes = GetSharedCleanInBytes(process);
-            var availableMemoryForProcessingInBytes = (long)memoryStatus.ullAvailPhys + sharedCleanInBytes;
+            long memoryStatusUllAvailPhys = (long)memoryStatus.ullAvailPhys;
+            long totalPageFile = (long)memoryStatus.ullTotalPageFile;
+            long availPageFile = (long)(memoryStatus.ullTotalPageFile - memoryStatus.ullAvailPageFile);
+            var availableMemoryForProcessingInBytes = memoryStatusUllAvailPhys + sharedCleanInBytes;
+
+            string remarks = null;
+            JOBOBJECT_EXTENDED_LIMIT_INFORMATION limits = default;
+            if (QueryInformationJobObject(IntPtr.Zero, 
+                    JOBOBJECTINFOCLASS.ExtendedLimitInformation, (void*)&limits, 
+                    sizeof(JOBOBJECT_EXTENDED_LIMIT_INFORMATION),
+                    out int limitsOutputSize) == false || 
+                limitsOutputSize != sizeof(JOBOBJECT_EXTENDED_LIMIT_INFORMATION))
+            {
+                if (_reportedQueryJobObjectFailure == false && Logger.IsInfoEnabled)
+                {
+                    _reportedQueryJobObjectFailure = true;
+                    Logger.Info(
+                        $"Failure when trying to query job object information info from Windows, error code is: {Marshal.GetLastWin32Error()}. Output size: {limitsOutputSize} instead of {sizeof(JOBOBJECT_EXTENDED_LIMIT_INFORMATION)}!");
+                }
+            }
+            else
+            {
+                long maxSize = long.MaxValue;
+                if (limits.BasicLimitInformation.MaximumWorkingSetSize != UIntPtr.Zero)
+                {
+                    maxSize = (long)limits.BasicLimitInformation.MaximumWorkingSetSize;
+                }
+
+                if (limits.ProcessMemoryLimit != UIntPtr.Zero)
+                {
+                    maxSize = Math.Min(maxSize, (long)limits.ProcessMemoryLimit);
+                }
+                
+                if (limits.JobMemoryLimit != UIntPtr.Zero)
+                {
+                    maxSize = Math.Min(maxSize, (long)limits.ProcessMemoryLimit);
+                }
+
+                if (maxSize != long.MaxValue)
+                {
+                    long workingSet64 = Process.GetCurrentProcess().WorkingSet64;
+                    availableMemoryForProcessingInBytes = Math.Max(maxSize - workingSet64, 0);
+                    availPageFile = Math.Max(maxSize - workingSet64, 0);
+                    totalPageFile = maxSize;
+                    memoryStatusUllAvailPhys = Math.Min(availableMemoryForProcessingInBytes, memoryStatusUllAvailPhys);
+                    remarks = "Memory limited by Job Object limits";
+                }
+            }
+            
             SetMemoryRecords(availableMemoryForProcessingInBytes);
 
             return new MemoryInfoResult
             {
-                TotalCommittableMemory = new Size((long)memoryStatus.ullTotalPageFile, SizeUnit.Bytes),
-                CurrentCommitCharge = new Size((long)(memoryStatus.ullTotalPageFile - memoryStatus.ullAvailPageFile), SizeUnit.Bytes),
-                AvailableMemory = new Size((long)memoryStatus.ullAvailPhys, SizeUnit.Bytes),
+                Remarks = remarks,
+                TotalCommittableMemory = new Size(totalPageFile, SizeUnit.Bytes),
+                CurrentCommitCharge = new Size(availPageFile, SizeUnit.Bytes),
+                AvailableMemory = new Size(memoryStatusUllAvailPhys, SizeUnit.Bytes),
                 AvailableMemoryForProcessing = new Size(availableMemoryForProcessingInBytes, SizeUnit.Bytes),
                 SharedCleanMemory = new Size(sharedCleanInBytes, SizeUnit.Bytes),
                 TotalPhysicalMemory = new Size((long)memoryStatus.ullTotalPhys, SizeUnit.Bytes),
@@ -691,12 +826,15 @@ namespace Sparrow.LowMemory
         {
         }
 
-        public EarlyOutOfMemoryException(string message) : base(message)
+        public EarlyOutOfMemoryException(string message, MemoryInfoResult memoryInfo) : base(message)
         {
+            MemoryInfo = memoryInfo;
         }
 
         public EarlyOutOfMemoryException(string message, Exception inner) : base(message, inner)
         {
         }
+
+        public MemoryInfoResult? MemoryInfo { get; }
     }
 }

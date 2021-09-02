@@ -135,7 +135,7 @@
             </div>
         </div>
     </div>
-    <div class="flex-grow scroll" data-bind="if: databases().sortedDatabases().length, visible: databases().sortedDatabases().length">
+    <div class="flex-grow scroll js-scroll-container" data-bind="if: databases().sortedDatabases().length, visible: databases().sortedDatabases().length">
         <div class="database-counter on-base-background">
             <span>
                 <strong data-bind="text: databases().sortedDatabases().length"></strong> Databases
@@ -158,7 +158,7 @@
         </div>
         <div data-bind="foreach: databases().sortedDatabases">
             <div data-bind="click: $root.databasePanelClicked, scrollTo: isCurrentlyActiveDatabase(), visible: !filteredOut(),
-                            attr: { class: 'panel panel-hover panel-state database-item ' + badgeClass() + ' ' + (isCurrentlyActiveDatabase() ? 'active' : '') + ' ' + ($root.createIsLocalDatabaseObservable(name)() ? 'relevant' : '') }">
+                            attr: { class: 'panel panel-hover panel-state database-item ' + badgeClass() + ' ' + (isCurrentlyActiveDatabase() ? 'active ' : '') + ' ' + ($root.createIsLocalDatabaseObservable(name)() ? 'relevant' : '') }">
                 <div data-bind="attr: { 'data-state-text': $root.createIsLocalDatabaseObservable(name)() ? badgeText : 'remote', class: 'state ' + ($root.createIsLocalDatabaseObservable(name)() ? badgeClass() : 'state-remote') }"></div>
                 <div class="padding">
                     <div class="database-header">
@@ -401,7 +401,7 @@
                 <div class="alerts text-warning" data-bind="visible: alerts()">
                     <div class="set-size">
                         <small><i class="icon-warning"></i></small>
-                        <a class="set-size text-warning" title="Click to view alerts in notification center" href="#"
+                        <a class="set-size text-warning" title="Click to view alerts in Notification Center" href="#"
                            data-bind="click: _.partial($root.openNotificationCenter, $data), css: { 'link-disabled': !canNavigateToDatabase() }">
                             <small data-bind="text: alerts().toLocaleString()"></small>
                             <small data-bind="text: $root.pluralize(alerts().toLocaleString(), 'alert', 'alerts', true)"></small>
@@ -411,7 +411,7 @@
                 <div class="performance-hints text-info" data-bind="visible: performanceHints()">
                     <div class="set-size">
                         <small><i class="icon-rocket"></i></small>
-                        <a class="set-size text-info" title="Click to view hints in notification center" href="#"
+                        <a class="set-size text-info" title="Click to view hints in Notification Center" href="#"
                            data-bind="click: _.partial($root.openNotificationCenter, $data), css: { 'link-disabled': !canNavigateToDatabase() }">
                             <small data-bind="text: performanceHints().toLocaleString()"></small>
                             <small class="hidden-compact" data-bind="text: $root.pluralize(performanceHints().toLocaleString(), 'performance hint', 'performance hints', true)"></small>

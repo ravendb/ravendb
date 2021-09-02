@@ -22,7 +22,6 @@ class ioStats extends viewModelBase {
         this.graph.init(width, height);
     }
     
-    
     deactivate() {
         super.deactivate();
 

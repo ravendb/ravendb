@@ -33,6 +33,7 @@ using Voron;
 using Voron.Data;
 using Voron.Data.Tables;
 using Voron.Impl;
+using Sparrow.Collections;
 
 namespace Raven.Server.Rachis
 {
@@ -100,7 +101,7 @@ namespace Raven.Server.Rachis
             if (_serverStore.Initialized == false)
                 throw new InvalidOperationException("Server store isn't initialized.");
 
-            return StateMachine.ConnectToPeer(url, tag, certificate);
+            return StateMachine.ConnectToPeer(url, tag, certificate, _serverStore.ServerShutdown);
         }
 
         private class NullDisposable : IDisposable
@@ -306,6 +307,7 @@ namespace Raven.Server.Rachis
         private StorageEnvironment _persistentState;
         internal Logger Log;
 
+        private readonly ConcurrentQueue<Elector> _electors = new ConcurrentQueue<Elector>();
         private readonly List<IDisposable> _disposables = new List<IDisposable>();
 
         public long CurrentTerm { get; private set; }
@@ -754,6 +756,9 @@ namespace Raven.Server.Rachis
             var toDispose = new List<IDisposable>(_disposables);
             _disposables.Clear();
 
+            while (_electors.TryDequeue(out var elector))
+                toDispose.Add(elector);
+
             if (parent != null)
             {
                 _disposables.Add(parent);
@@ -876,6 +881,11 @@ namespace Raven.Server.Rachis
             CurrentState = RachisState.Leader;
             TaskExecutor.CompleteAndReplace(ref _stateChanged);
             return true;
+        }
+
+        public void AppendElector(Elector elector)
+        {
+            _electors.Enqueue(elector);
         }
 
         public void AppendStateDisposable(IDisposable parentState, IDisposable disposeOnStateChange)
@@ -1185,6 +1195,11 @@ namespace Raven.Server.Rachis
                                 var follower = new Follower(this, negotiation.Term, remoteConnection);
                                 follower.AcceptConnection(negotiation);
                             }
+                            else
+                            {
+                                DisposeRemoteConnection(remoteConnection);
+                            }
+
                             break;
 
                         default:
@@ -1214,14 +1229,7 @@ namespace Raven.Server.Rachis
                     Log.Info("Failed to process incoming connection", e);
                 }
 
-                try
-                {
-                    remoteConnection?.Dispose();
-                }
-                catch (Exception)
-                {
-                    // ignored
-                }
+                DisposeRemoteConnection(remoteConnection);
 
                 try
                 {
@@ -1233,6 +1241,18 @@ namespace Raven.Server.Rachis
                 }
 
                 throw;
+            }
+
+            static void DisposeRemoteConnection(RemoteConnection remoteConnection)
+            {
+                try
+                {
+                    remoteConnection?.Dispose();
+                }
+                catch (Exception)
+                {
+                    // ignored
+                }
             }
         }
 
@@ -1266,7 +1286,9 @@ namespace Raven.Server.Rachis
 
         public unsafe bool RemoveEntryFromRaftLog(long index)
         {
-            using (ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+            try
+            {
+                using (ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (var tx = context.OpenWriteTransaction())
             {
                 Table table = context.Transaction.InnerTransaction.OpenTable(LogsTable, EntriesSlice);
@@ -1308,6 +1330,11 @@ namespace Raven.Server.Rachis
             }
 
             return true;
+        }
+            catch (Exception e)
+            {
+                throw new RachisApplyException($"Failed to remove entry number {index} from raft log", e);
+            }
         }
 
         public unsafe long InsertToLeaderLog(ClusterOperationContext context, long term, BlittableJsonReaderObject cmd,
@@ -1655,11 +1682,13 @@ namespace Raven.Server.Rachis
             context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += _ => TaskExecutor.CompleteAndReplace(ref _commitIndexChanged);
         }
 
-        public async Task WaitForCommitIndexChange(CommitIndexModification modification, long value)
+        public async Task WaitForCommitIndexChange(CommitIndexModification modification, long value, CancellationToken token = default)
         {
-            var timeoutTask = TimeoutManager.WaitFor(OperationTimeout);
+            var timeoutTask = TimeoutManager.WaitFor(OperationTimeout, token);
             while (timeoutTask.IsCompleted == false)
             {
+                token.ThrowIfCancellationRequested();
+
                 var task = _commitIndexChanged.Task;
                 using (ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                 using (context.OpenReadTransaction())

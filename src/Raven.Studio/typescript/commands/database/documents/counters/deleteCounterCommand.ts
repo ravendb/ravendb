@@ -9,19 +9,19 @@ class deleteCounterCommand extends commandBase {
     }
 
     execute(): JQueryPromise<Raven.Client.Documents.Operations.Counters.CounterBatch> {
-
-        const payload = {
+        const payload: Omit<Raven.Client.Documents.Operations.Counters.CounterBatch, "FromEtl"> = {
             ReplyWithAllNodesValues: true,
             Documents:
                 [{
                     DocumentId: this.documentId,
                     Operations:
                         [{
-                            Type: 'Delete',
+                            Type: "Delete",
+                            Delta: undefined,
                             CounterName: this.counterName
                         }]
                 }]
-        }  as Raven.Client.Documents.Operations.Counters.CounterBatch; 
+        }; 
 
         const url = endpoints.databases.counters.counters;
 

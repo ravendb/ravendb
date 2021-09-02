@@ -1,4 +1,5 @@
-﻿using Raven.Client;
+﻿using System.Threading.Tasks;
+using Raven.Client;
 
 namespace Raven.Server.Web
 {
@@ -8,9 +9,16 @@ namespace Raven.Server.Web
         {
             base.Init(context);
 
+            context.HttpContext.Response.OnStarting(() => CheckForTopologyChanges(context));
+        }
+
+        public Task CheckForTopologyChanges(RequestHandlerContext context)
+        {
             var topologyEtag = GetLongFromHeaders(Constants.Headers.TopologyEtag);
             if (topologyEtag.HasValue && Server.ServerStore.HasTopologyChanged(topologyEtag.Value))
                 context.HttpContext.Response.Headers[Constants.Headers.RefreshTopology] = "true";
+
+            return Task.CompletedTask;
         }
     }
 }

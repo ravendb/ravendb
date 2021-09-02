@@ -30,15 +30,28 @@
                                 <div class="bg-warning inline-block padding padding-xs small" title="Note: Client connection will be disconnected upon Save !">
                                     <i class="icon-warning"></i>&nbsp;&nbsp;Warning: You are editing a live subscription connection . . .
                                 </div>
-                            </div>                       
+                            </div>
                             <h3 data-bind="text: $parent.isAddingNewSubscriptionTask() ? `New Subscription` : `Edit Subscription`"></h3>
-                            <div class="form-group margin-top" data-bind="validationElement: taskName">
+                            <div class="form-group margin-top margin-top-lg" data-bind="validationElement: taskName">
                                 <label class="control-label">Task Name</label>
-                                <input type="text" class="form-control" id="taskName" placeholder="Enter a descriptive name for the subscription task (optional)"                                     
+                                <input type="text" class="form-control" id="taskName" placeholder="Enter a descriptive name for the subscription task (optional)"
                                        data-bind="textInput: taskName, enable: $root.isAddingNewSubscriptionTask, 
                                                   attr: { 'title': $root.isAddingNewSubscriptionTask() ? 'Note: if no name is supplied then server will create one for you' : '' }" autocomplete="off" >
                             </div>
-                            <label>Subscription RQL:</label>
+                            <div class="form-group">
+                                <label class="control-label">Task State</label>
+                                <div class="flex-grow">
+                                    <button type="button" class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown" aria-expanded="false">
+                                        <span data-bind="text: stateText()"></span>
+                                        <span class="caret"></span>
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li><a href="#" data-bind="click: _.partial($root.setState, 'Enabled')"><span>Enabled</span></a></li>
+                                        <li><a href="#" data-bind="click: _.partial($root.setState, 'Disabled')"><span>Disabled</span></a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <label class="margin-top">Subscription RQL:</label>
                             <div class="pull-right"><a href="#" data-bind="click: $root.syntaxHelp"><small>Syntax <i class="icon-help"></i></small></a></div>
                             <pre class="form-control margin-top" placeholder="Enter transform script" 
                                  data-bind="aceEditor: { code: query, lang:'ace/mode/rql', completer: $root.queryCompleter.complete }, validationOptions: { errorsAsTitle: false }, validationElement: query" style="height: 160px;">
@@ -121,7 +134,7 @@
                 </form>
             </div>
             <div class="col-sm-12 col-lg-6 flex-vertical" id="subscriptionTestArea" data-bind="visible: enableTestArea">
-                <div class="panel padding flex-vertical flex-grow fixed">
+                <div class="panel padding flex-vertical flex-grow">
                     <div class="flex-header"> 
                         <div class="flex-horizontal">
                             <div class="flex-grow"><h3>Test Subscription</h3></div>

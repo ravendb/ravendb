@@ -89,7 +89,7 @@ class connectionStringRavenEtlModel extends connectionStringModel {
             Name: "", 
             TopologyDiscoveryUrls: [],
             Database: ""
-        } as Raven.Client.Documents.Operations.ETL.RavenConnectionString, true, []);
+        }, true, []);
     }
     
     toDto() {

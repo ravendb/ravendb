@@ -381,7 +381,7 @@ namespace Raven.Server.Documents
                 }
 
                 data = context.ReadObject(data, documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-                return _documentsStorage.Put(context, documentId, null, data, null, null, flags, NonPersistentDocumentFlags.ByAttachmentUpdate).ChangeVector;
+                return _documentsStorage.Put(context, documentId, null, data, null, null, null, flags, NonPersistentDocumentFlags.ByAttachmentUpdate).ChangeVector;
             }
             finally
             {

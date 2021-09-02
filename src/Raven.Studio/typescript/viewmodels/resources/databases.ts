@@ -501,7 +501,7 @@ class databases extends viewModelBase {
         if (selectedCount > 0) {
             this.selectedDatabases([]);
         } else {
-            const namesToSelect = [] as Array<string>;
+            const namesToSelect: string[] = [];
 
             this.databases().sortedDatabases().forEach(db => {
                 if (!db.filteredOut()) {

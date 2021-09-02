@@ -271,16 +271,16 @@ class indexErrors extends viewModelBase {
         return _.sortBy(array, x => x.indexName.toLocaleLowerCase());
     }
 
-    private extractActionNamesAndCount(indexErrors: Raven.Client.Documents.Indexes.IndexErrors[]): Array<indexActionAndCount> {
-        const mappedItems = _.flatMap(indexErrors,
+    private extractActionNamesAndCount(indexErrors: Raven.Client.Documents.Indexes.IndexErrors[]): indexActionAndCount[] {
+        const mappedItems: indexActionAndCount[] = _.flatMap(indexErrors,
             value => {
                 return value.Errors.map(x => ({
                     actionName: x.Action,
                     count: 1
-                } as indexActionAndCount));
+                }));
             });
 
-        const mappedReducedItems = mappedItems.reduce((result: indexActionAndCount[], next: indexActionAndCount) => {
+        const mappedReducedItems: indexActionAndCount[] = mappedItems.reduce((result: indexActionAndCount[], next: indexActionAndCount) => {
             var existing = result.find(x => x.actionName === next.actionName);
             if (existing) {
                 existing.count += next.count;
@@ -295,14 +295,14 @@ class indexErrors extends viewModelBase {
 
     private mapItems(indexErrors: Raven.Client.Documents.Indexes.IndexErrors[]): IndexErrorPerDocument[] {
         const mappedItems = _.flatMap(indexErrors, value => {
-            return value.Errors.map((error: Raven.Client.Documents.Indexes.IndexingError) =>
+            return value.Errors.map((error: Raven.Client.Documents.Indexes.IndexingError): IndexErrorPerDocument =>
                 ({
                     Timestamp: error.Timestamp,
                     Document: error.Document,
                     Action: error.Action,
                     Error: error.Error,
                     IndexName: value.Name
-                } as IndexErrorPerDocument));
+                }));
         });
         
         return _.orderBy(mappedItems, [x => x.Timestamp], ["desc"]);

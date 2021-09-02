@@ -240,6 +240,7 @@ namespace Raven.Server.Documents
             options.CompressTxAboveSizeInBytes = DocumentDatabase.Configuration.Storage.CompressTxAboveSize.GetValue(SizeUnit.Bytes);
             options.ForceUsing32BitsPager = DocumentDatabase.Configuration.Storage.ForceUsing32BitsPager;
             options.EnablePrefetching = DocumentDatabase.Configuration.Storage.EnablePrefetching;
+            options.DiscardVirtualMemory = DocumentDatabase.Configuration.Storage.DiscardVirtualMemory;
             options.TimeToSyncAfterFlushInSec = (int)DocumentDatabase.Configuration.Storage.TimeToSyncAfterFlush.AsTimeSpan.TotalSeconds;
             options.AddToInitLog = _addToInitLog;
             options.Encryption.MasterKey = DocumentDatabase.MasterKey?.ToArray();
@@ -253,6 +254,7 @@ namespace Raven.Server.Documents
             options.IgnoreInvalidJournalErrors = DocumentDatabase.Configuration.Storage.IgnoreInvalidJournalErrors;
             options.SkipChecksumValidationOnDatabaseLoading = DocumentDatabase.Configuration.Storage.SkipChecksumValidationOnDatabaseLoading;
             options.IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions = DocumentDatabase.Configuration.Storage.IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions;
+            options.MaxNumberOfRecyclableJournals = DocumentDatabase.Configuration.Storage.MaxNumberOfRecyclableJournals;
 
             try
             {
@@ -724,38 +726,54 @@ namespace Raven.Server.Documents
             return lastEtag;
         }
 
-        public IEnumerable<Document> GetDocumentsStartingWith(DocumentsOperationContext context, string idPrefix, string matches, string exclude, string startAfterId,
-            long start, long take, string collection, DocumentFields fields = DocumentFields.All)
+        public IEnumerable<Document> GetDocumentsStartingWith(DocumentsOperationContext context, string idPrefix,  string startAfterId,
+            long start, long take, string collection, Reference<long> skippedResults, DocumentFields fields = DocumentFields.All)
         {
+            int alreadyReturnedDocumentsCount = 0;
+            int lastLoadedDocumentsCount;
             var isAllDocs = collection == Constants.Documents.Collections.AllDocumentsCollection;
             var requestedDataField = fields.HasFlag(DocumentFields.Data);
             if (isAllDocs == false && requestedDataField == false)
                 fields |= DocumentFields.Data;
-
-            foreach (var doc in GetDocumentsStartingWith(context, idPrefix, matches, exclude, startAfterId, start, take, fields: fields))
+            
+            do
             {
-                if (isAllDocs)
+                lastLoadedDocumentsCount = 0;
+                foreach (var doc in GetDocumentsStartingWith(context, idPrefix, null, null, startAfterId, start, take, fields: fields))
                 {
+                    lastLoadedDocumentsCount++;
+                    if (isAllDocs)
+                    {
+                        yield return doc;
+                        continue;
+                    }
+
+                    if (IsCollectionMatch(doc, collection) == false)
+                    {
+                        skippedResults.Value++;
+                        doc.Dispose();
+                        continue;
+                    }
+
+                    if (requestedDataField == false)
+                    {
+                        doc.Data.Dispose();
+                        doc.Data = null;
+                    }
+
+                    alreadyReturnedDocumentsCount++;
                     yield return doc;
-                    continue;
+
+                    if (alreadyReturnedDocumentsCount >= take)
+                        break;
+
                 }
 
-                if (IsMatch(doc, collection) == false)
-                {
-                    doc.Dispose();
-                    continue;
-                }
-
-                if (requestedDataField == false)
-                {
-                    doc.Data.Dispose();
-                    doc.Data = null;
-                }
-
-                yield return doc;
+                start += take;
             }
+            while (alreadyReturnedDocumentsCount != take && lastLoadedDocumentsCount > 0);
 
-            static bool IsMatch(Document doc, string collection)
+            static bool IsCollectionMatch(Document doc, string collection)
             {
                 if (doc.TryGetMetadata(out var metadata) == false)
                     return false;
@@ -1597,19 +1615,27 @@ namespace Raven.Server.Documents
                 {
                     tombstoneTable.Delete(local.Tombstone.StorageId);
                 }
-
+                DocumentFlags flags;
                 var localFlags = local.Tombstone.Flags.Strip(DocumentFlags.FromClusterTransaction);
-                var flags = localFlags | documentFlags;
-
-                if (collectionName.IsHiLo == false &&
-                    (flags & DocumentFlags.Artificial) != DocumentFlags.Artificial)
+                if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByEnforceRevisionConfiguration))
                 {
-                    var revisionsStorage = DocumentDatabase.DocumentsStorage.RevisionsStorage;
-                    if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) == false &&
-                        (revisionsStorage.Configuration != null || flags.Contain(DocumentFlags.Resolved)))
+                    //after enforce revision configuration we don't have revision and we want to remove the flag from tombstone
+                    flags = localFlags.Strip(DocumentFlags.HasRevisions);
+                }
+                else
+                {
+                    flags = localFlags | documentFlags;
+
+                    if (collectionName.IsHiLo == false &&
+                        (flags & DocumentFlags.Artificial) != DocumentFlags.Artificial)
                     {
-                        revisionsStorage.Delete(context, id, lowerId, collectionName, changeVector ?? local.Tombstone.ChangeVector,
-                            modifiedTicks, nonPersistentFlags, documentFlags);
+                        var revisionsStorage = DocumentDatabase.DocumentsStorage.RevisionsStorage;
+                        if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) == false &&
+                            (revisionsStorage.Configuration != null || flags.Contain(DocumentFlags.Resolved)))
+                        {
+                            revisionsStorage.Delete(context, id, lowerId, collectionName, changeVector ?? local.Tombstone.ChangeVector,
+                                modifiedTicks, nonPersistentFlags, documentFlags);
+                        }
                     }
                 }
 
@@ -1941,25 +1967,51 @@ namespace Raven.Server.Documents
         public static void FlagsProperlySet(DocumentFlags flags, string changeVector)
         {
             var cvArray = changeVector.ToChangeVector();
-
+            var expectedValues = new int[] { ChangeVectorParser.RaftInt, ChangeVectorParser.TrxnInt };
             if (flags.Contain(DocumentFlags.FromClusterTransaction))
             {
-                if (cvArray.Length != 1)
+                switch (cvArray.Length)
                 {
-                    Debug.Assert(false, $"FromClusterTransaction, expect change vector of length 1, {changeVector}");
-                }
-                if (cvArray[0].NodeTag != ChangeVectorParser.RaftInt)
-                {
-                    Debug.Assert(false, $"FromClusterTransaction, expect only RAFT, {changeVector}");
+                    case 1:
+                        if (cvArray[0].NodeTag != ChangeVectorParser.RaftInt)
+                        {
+                            Debug.Assert(false, $"FromClusterTransaction, expect RAFT, {changeVector}");
+                        }
+                        break;
+                    case 2:
+                        if (expectedValues.Contains(cvArray[0].NodeTag) == false ||
+                            expectedValues.Contains(cvArray[1].NodeTag) == false ||
+                            cvArray[0].NodeTag == cvArray[1].NodeTag)
+                        {
+                            Debug.Assert(false, $"FromClusterTransaction, expect RAFT or TRXN, {changeVector}");
+                        }
+                        break;
+                    default:
+                       Debug.Assert(false, $"FromClusterTransaction, expect change vector of length 1 or 2, {changeVector}");
+                        break;
                 }
             }
 
-            if (cvArray.Length == 1 && cvArray[0].NodeTag == ChangeVectorParser.RaftInt)
+            switch (cvArray.Length)
             {
-                if (flags.Contain(DocumentFlags.FromClusterTransaction) == false)
-                {
-                    Debug.Assert(false, $"flags must set FromClusterTransaction for the change vector: {changeVector}");
-                }
+                case 1:
+                    if (cvArray[0].NodeTag == ChangeVectorParser.RaftInt)
+                    {
+                        if (flags.Contain(DocumentFlags.FromClusterTransaction) == false)
+                        {
+                            Debug.Assert(false, $"flags must set FromClusterTransaction for the change vector: {changeVector}");
+                        }
+                    }
+                    break;
+                case 2:
+                    if (expectedValues.Contains(cvArray[0].NodeTag) && expectedValues.Contains(cvArray[1].NodeTag))
+                    {
+                        if (flags.Contain(DocumentFlags.FromClusterTransaction) == false)
+                        {
+                            Debug.Assert(false, $"flags must set FromClusterTransaction for the change vector: {changeVector}");
+                        }
+                    }
+                    break;
             }
         }
 
@@ -2057,9 +2109,10 @@ namespace Raven.Server.Documents
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public PutOperationResults Put(DocumentsOperationContext context, string id,
             string expectedChangeVector, BlittableJsonReaderObject document, long? lastModifiedTicks = null, string changeVector = null,
+            string oldChangeVectorForClusterTransactionIndexCheck = null,
             DocumentFlags flags = DocumentFlags.None, NonPersistentDocumentFlags nonPersistentFlags = NonPersistentDocumentFlags.None)
         {
-            return DocumentPut.PutDocument(context, id, expectedChangeVector, document, lastModifiedTicks, changeVector, flags, nonPersistentFlags);
+            return DocumentPut.PutDocument(context, id, expectedChangeVector, document, lastModifiedTicks, changeVector, oldChangeVectorForClusterTransactionIndexCheck, flags, nonPersistentFlags);
         }
 
         public long GetNumberOfDocumentsToProcess(DocumentsOperationContext context, string collection, long afterEtag, out long totalCount)
@@ -2303,6 +2356,10 @@ namespace Raven.Server.Documents
                 // case 4: incoming change vector A:11, B:12, C:10 -> update                (original: conflict, after: update)
 
                 var original = ChangeVectorUtils.GetConflictStatus(remote, local);
+                
+                remote = remote.StripTrxnTags();
+                local = local.StripTrxnTags();
+
                 TryRemoveUnusedIds(ref remote);
                 skipValidation = TryRemoveUnusedIds(ref local);
                 var after = ChangeVectorUtils.GetConflictStatus(remote, local);

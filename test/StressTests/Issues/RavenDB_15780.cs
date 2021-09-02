@@ -15,7 +15,7 @@ namespace StressTests.Issues
         {
         }
 
-        [Theory64Bit]
+        [NightlyBuildTheory64Bit]
         [InlineData(10_000, 0.999, BloomFilterVersion.CurrentVersion)]
         [InlineData(100_000, 0.999, BloomFilterVersion.CurrentVersion)]
         [InlineData(1_000_000, 0.999, BloomFilterVersion.CurrentVersion)]
@@ -52,7 +52,7 @@ namespace StressTests.Issues
             }
         }
 
-        [Theory64Bit]
+        [NightlyBuildTheory64Bit]
         [InlineData(10_000, 0.999, BloomFilterVersion.CurrentVersion)]
         [InlineData(100_000, 0.999, BloomFilterVersion.CurrentVersion)]
         [InlineData(1_000_000, 0.999, BloomFilterVersion.CurrentVersion)]
@@ -89,7 +89,7 @@ namespace StressTests.Issues
             }
         }
 
-        [Theory64Bit]
+        [NightlyBuildTheory64Bit]
         [InlineData(10_000, 0.999, BloomFilterVersion.CurrentVersion)]
         [InlineData(100_000, 0.999, BloomFilterVersion.CurrentVersion)]
         [InlineData(1_000_000, 0.999, BloomFilterVersion.CurrentVersion)]

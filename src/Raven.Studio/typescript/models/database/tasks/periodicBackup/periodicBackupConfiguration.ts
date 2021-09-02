@@ -8,9 +8,11 @@ import savePeriodicBackupConfigurationCommand = require("commands/database/tasks
 class periodicBackupConfiguration extends backupConfiguration {
 
     backupOperation = "periodic";
+
+    name = ko.observable<string>();
     
     disabled = ko.observable<boolean>();
-    name = ko.observable<string>();
+    stateText: KnockoutComputed<string>;
 
     manualChooseMentor = ko.observable<boolean>(false);
 
@@ -50,8 +52,23 @@ class periodicBackupConfiguration extends backupConfiguration {
     initObservables() {
         super.initObservables();
 
+        this.encryptionSettings.subscribe(() => {
+           if (this.backupType() === "Snapshot" && this.encryptionSettings().enabled()) {
+               this.encryptionSettings().mode("UseDatabaseKey");
+           } 
+        });
+
+        this.stateText = ko.pureComputed(() => {
+            if (this.disabled()) {
+                return "Disabled";
+            }
+
+            return "Enabled";
+        });
+
         this.dirtyFlag = new ko.DirtyFlag([
             this.name,
+            this.disabled,
             this.backupType,
             this.fullBackupFrequency,
             this.fullBackupEnabled,
@@ -107,7 +124,8 @@ class periodicBackupConfiguration extends backupConfiguration {
             incrementalBackupFrequency: this.incrementalBackupFrequency,
             incrementalBackupEnabled: this.incrementalBackupEnabled,
             mentorNode: this.mentorNode,
-            minimumBackupAgeToKeep: this.retentionPolicy().minimumBackupAgeToKeep
+            minimumBackupAgeToKeep: this.retentionPolicy().minimumBackupAgeToKeep,
+            hasDestination: this.hasDestination
         });
     }
 
@@ -154,6 +172,10 @@ class periodicBackupConfiguration extends backupConfiguration {
     submit(db: database, cfg: Raven.Client.Documents.Operations.Backups.BackupConfiguration) {
         return new savePeriodicBackupConfigurationCommand(db, cfg as Raven.Client.Documents.Operations.Backups.PeriodicBackupConfiguration)
             .execute()
+    }
+
+    setState(state: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskState): void {
+        this.disabled(state === "Disabled");
     }
 }
 

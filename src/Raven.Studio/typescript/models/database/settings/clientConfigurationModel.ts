@@ -3,11 +3,11 @@ import jsonUtil = require("common/jsonUtil");
 
 class clientConfigurationModel {
 
-    static readonly readModes = [
+    static readonly readModes: Array<valueAndLabelItem<Raven.Client.Http.ReadBalanceBehavior, string>> = [
         { value: "None", label: "None"},
         { value: "RoundRobin", label: "Round Robin"},
         { value: "FastestNode", label: "Fastest node"}
-    ] as Array<valueAndLabelItem<Raven.Client.Http.ReadBalanceBehavior, string>>;
+    ];
 
     identityPartsSeparator = ko.observable<string>();
     separatorPlaceHolder: KnockoutComputed<string>;
@@ -179,18 +179,21 @@ class clientConfigurationModel {
     
     static empty() {
         return new clientConfigurationModel({
-        } as Raven.Client.Documents.Operations.Configuration.ClientConfiguration);
+            Disabled: false,
+            Etag: undefined
+        });
     }
     
-    toDto() {
+    toDto(): Raven.Client.Documents.Operations.Configuration.ClientConfiguration {
         return {
             IdentityPartsSeparator: _.includes(this.isDefined(), "identityPartsSeparator") ? this.identityPartsSeparator() : null,
-            LoadBalanceBehavior: _.includes(this.isDefined(), "useSessionContextForLoadBehavior") ? "UseSessionContext" : null,
+            LoadBalanceBehavior: _.includes(this.isDefined(), "useSessionContextForLoadBehavior") ? "UseSessionContext" : "None",
             LoadBalancerContextSeed: _.includes(this.isDefined(), "useSessionContextForLoadBehavior") && _.includes(this.isDefined(), "loadBalanceContextSeed") ? this.loadBalanceContextSeed() : null,
             ReadBalanceBehavior: _.includes(this.isDefined(), "readBalanceBehavior") ? this.readBalanceBehavior() : null,
             MaxNumberOfRequestsPerSession: _.includes(this.isDefined(), "maxNumberOfRequestsPerSession") ? this.maxNumberOfRequestsPerSession() : null,
-            Disabled: this.disabled()
-        } as Raven.Client.Documents.Operations.Configuration.ClientConfiguration;
+            Disabled: this.disabled(),
+            Etag: undefined
+        };
     }
 }
 

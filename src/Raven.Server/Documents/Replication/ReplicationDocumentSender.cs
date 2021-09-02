@@ -44,6 +44,10 @@ namespace Raven.Server.Documents.Replication
                 _destinationAcceptablePaths = new AllowedPathsValidator(destinationAcceptablePaths);
             _stream = stream;
             _parent = parent;
+            
+            _shouldSkipSendingTombstones = _parent.Destination is PullReplicationAsSink sink && sink.Mode == PullReplicationMode.SinkToHub &&
+                                           parent._outgoingPullReplicationParams?.PreventDeletionsMode?.HasFlag(PreventDeletionsMode.PreventSinkToHubDeletions) == true &&
+                                           _parent._database.ForTestingPurposes?.ForceSendTombstones == false;
         }
 
         public class MergedReplicationBatchEnumerator : IEnumerator<ReplicationBatchItem>
@@ -211,6 +215,17 @@ namespace Raven.Server.Documents.Replication
                     // filtering a lot of documents, because we need to let the other side know about this, and 
                     // at the same time, we need to send a heartbeat to keep the tcp connection alive
                     _lastEtag = _parent._lastSentDocumentEtag;
+
+                    var lastEtagFromDestinationChangeVector = ChangeVectorUtils.GetEtagById(_parent.LastAcceptedChangeVector, _parent._database.DbBase64Id);
+                    if (lastEtagFromDestinationChangeVector > _lastEtag)
+                    {
+                        if (_log.IsInfoEnabled)
+                        {
+                            _log.Info($"We jump to get items from etag {lastEtagFromDestinationChangeVector} instead of {_lastEtag}, because we got a bigger etag for the destination database change vector ({_parent.LastAcceptedChangeVector})");
+                        }
+                        _lastEtag = lastEtagFromDestinationChangeVector;
+                    }
+
                     _parent.CancellationToken.ThrowIfCancellationRequested();
 
                     var skippedReplicationItemsInfo = new SkippedReplicationItemsInfo();
@@ -231,6 +246,8 @@ namespace Raven.Server.Documents.Replication
                     {
                         foreach (var item in GetReplicationItems(_parent._database, documentsContext, _lastEtag, _stats, _parent.SupportedFeatures.Replication.CaseInsensitiveCounters))
                         {
+                            _parent.ForTestingPurposes?.OnDocumentSenderFetchNewItem?.Invoke();
+
                             _parent.CancellationToken.ThrowIfCancellationRequested();
 
                             if (replicationState.LastTransactionMarker != item.TransactionMarker)
@@ -328,6 +345,8 @@ namespace Raven.Server.Documents.Replication
 
                     _parent.CancellationToken.ThrowIfCancellationRequested();
 
+                    MissingAttachmentsInLastBatch = false;
+
                     try
                     {
                         using (_stats.Network.Start())
@@ -351,8 +370,6 @@ namespace Raven.Server.Documents.Replication
                             _log.Info("Failed to send document replication batch", e);
                         throw;
                     }
-
-                    MissingAttachmentsInLastBatch = false;
 
                     return true;
                 }
@@ -585,6 +602,11 @@ namespace Raven.Server.Documents.Replication
             if (ValidatorSaysToSkip(_pathsToSend) || ValidatorSaysToSkip(_destinationAcceptablePaths))
                 return true;
 
+            if (_shouldSkipSendingTombstones)
+            {
+                return ReplicationLoader.IsOfTypePreventDeletions(item);
+            }
+
             switch (item)
             {
                 case DocumentReplicationItem doc:
@@ -594,7 +616,7 @@ namespace Raven.Server.Documents.Replication
                         skippedReplicationItemsInfo.Update(item, isArtificial: true);
                         return true;
                     }
-
+                    
                     if (doc.Flags.Contain(DocumentFlags.Revision) || doc.Flags.Contain(DocumentFlags.DeleteRevision))
                     {
                         // we let pass all the conflicted/resolved revisions, since we keep them with their original change vector which might be `AlreadyMerged` at the destination.
@@ -648,6 +670,7 @@ namespace Raven.Server.Documents.Replication
         }
 
         private readonly AllowedPathsValidator _pathsToSend, _destinationAcceptablePaths;
+        private readonly bool _shouldSkipSendingTombstones;
 
         private void SendDocumentsBatch(DocumentsOperationContext documentsContext, OutgoingReplicationStatsScope stats)
         {

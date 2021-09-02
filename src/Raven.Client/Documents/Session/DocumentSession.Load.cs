@@ -22,10 +22,11 @@ namespace Raven.Client.Documents.Session
     /// </summary>
     public partial class DocumentSession
     {
+
         /// <inheritdoc />
         public T Load<T>(string id)
         {
-            if (id == null)
+            if (string.IsNullOrWhiteSpace(id))
                 return default;
 
             var loadOperation = new LoadOperation(this);
@@ -80,11 +81,13 @@ namespace Raven.Client.Documents.Session
                 includeBuilder.CountersToInclude?.ToArray(),
                 includeBuilder.AllCounters,
                 includeBuilder.TimeSeriesToInclude,
-                includeBuilder.CompareExchangeValuesToInclude?.ToArray());
+                includeBuilder.CompareExchangeValuesToInclude?.ToArray(),
+                includeBuilder.RevisionsToIncludeByChangeVector?.ToArray(),
+                includeBuilder.RevisionsToIncludeByDateTime);
         }
 
         /// <inheritdoc />
-        public Dictionary<string, T> LoadInternal<T>(string[] ids, string[] includes, string[] counterIncludes = null, bool includeAllCounters = false, IEnumerable<AbstractTimeSeriesRange> timeSeriesIncludes = null, string[] compareExchangeValueIncludes = null)
+        public Dictionary<string, T> LoadInternal<T>(string[] ids, string[] includes, string[] counterIncludes = null, bool includeAllCounters = false, IEnumerable<AbstractTimeSeriesRange> timeSeriesIncludes = null, string[] compareExchangeValueIncludes = null, string[] revisionIncludesByChangeVector = null,  DateTime? revisionIncludeByDateTimeBefore = null)
         {
             if (ids == null)
                 throw new ArgumentNullException(nameof(ids));
@@ -102,6 +105,8 @@ namespace Raven.Client.Documents.Session
                 loadOperation.WithCounters(counterIncludes);
             }
 
+            loadOperation.WithRevisions(revisionIncludesByChangeVector);
+            loadOperation.WithRevisions(revisionIncludeByDateTimeBefore);
             loadOperation.WithTimeSeries(timeSeriesIncludes);
             loadOperation.WithCompareExchange(compareExchangeValueIncludes);
 
@@ -201,5 +206,7 @@ namespace Raven.Client.Documents.Session
                     operation.SetResult(command.Result);
             }
         }
+
+
     }
 }

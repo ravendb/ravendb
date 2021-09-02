@@ -63,7 +63,7 @@ namespace Raven.Server.Documents.Queries
 
         public override async Task<DocumentQueryResult> ExecuteQuery(IndexQueryServerSide query, QueryOperationContext queryContext, long? existingResultEtag, OperationCancelToken token)
         {
-            ObjectDisposedException lastException = null;
+            Exception lastException = null;
             for (var i = 0; i < NumberOfRetries; i++)
             {
                 try
@@ -89,6 +89,20 @@ namespace Raven.Server.Documents.Queries
                         throw;
 
                     lastException = e;
+                    
+                    await WaitForIndexBeingLikelyReplacedDuringQuery();
+                }
+                catch (OperationCanceledException e)
+                {
+                    if (Database.DatabaseShutdown.IsCancellationRequested)
+                        throw;
+
+                    if (token.Token.IsCancellationRequested)
+                        throw;
+
+                    lastException = e;
+
+                    await WaitForIndexBeingLikelyReplacedDuringQuery();
                 }
             }
 
@@ -97,7 +111,7 @@ namespace Raven.Server.Documents.Queries
 
         public override async Task ExecuteStreamQuery(IndexQueryServerSide query, QueryOperationContext queryContext, HttpResponse response, IStreamQueryResultWriter<Document> writer, OperationCancelToken token)
         {
-            ObjectDisposedException lastException = null;
+            Exception lastException = null;
             for (var i = 0; i < NumberOfRetries; i++)
             {
                 try
@@ -111,6 +125,20 @@ namespace Raven.Server.Documents.Queries
                         throw;
 
                     lastException = e;
+
+                    await WaitForIndexBeingLikelyReplacedDuringQuery();
+                }
+                catch (OperationCanceledException e)
+                {
+                    if (Database.DatabaseShutdown.IsCancellationRequested)
+                        throw;
+
+                    if (token.Token.IsCancellationRequested)
+                        throw;
+
+                    lastException = e;
+
+                    await WaitForIndexBeingLikelyReplacedDuringQuery();
                 }
             }
 
@@ -120,7 +148,7 @@ namespace Raven.Server.Documents.Queries
         public override async Task ExecuteStreamIndexEntriesQuery(IndexQueryServerSide query, QueryOperationContext queryContext, HttpResponse response,
             IStreamQueryResultWriter<BlittableJsonReaderObject> writer, OperationCancelToken token)
         {
-            ObjectDisposedException lastException = null;
+            Exception lastException = null;
             for (var i = 0; i < NumberOfRetries; i++)
             {
                 try
@@ -135,6 +163,20 @@ namespace Raven.Server.Documents.Queries
                         throw;
 
                     lastException = e;
+
+                    await WaitForIndexBeingLikelyReplacedDuringQuery();
+                }
+                catch (OperationCanceledException e)
+                {
+                    if (Database.DatabaseShutdown.IsCancellationRequested)
+                        throw;
+
+                    if (token.Token.IsCancellationRequested)
+                        throw;
+
+                    lastException = e;
+
+                    await WaitForIndexBeingLikelyReplacedDuringQuery();
                 }
             }
 
@@ -146,7 +188,7 @@ namespace Raven.Server.Documents.Queries
             if (query.Metadata.IsDynamic)
                 throw new InvalidQueryException("Facet query must be executed against static index.", query.Metadata.QueryText, query.QueryParameters);
 
-            ObjectDisposedException lastException = null;
+            Exception lastException = null;
             for (var i = 0; i < NumberOfRetries; i++)
             {
                 try
@@ -165,6 +207,20 @@ namespace Raven.Server.Documents.Queries
                         throw;
 
                     lastException = e;
+
+                    await WaitForIndexBeingLikelyReplacedDuringQuery();
+                }
+                catch (OperationCanceledException e)
+                {
+                    if (Database.DatabaseShutdown.IsCancellationRequested)
+                        throw;
+
+                    if (token.Token.IsCancellationRequested)
+                        throw;
+
+                    lastException = e;
+
+                    await WaitForIndexBeingLikelyReplacedDuringQuery();
                 }
             }
 
@@ -173,7 +229,7 @@ namespace Raven.Server.Documents.Queries
 
         public TermsQueryResultServerSide ExecuteGetTermsQuery(string indexName, string field, string fromValue, long? existingResultEtag, int pageSize, QueryOperationContext queryContext, OperationCancelToken token, out Index index)
         {
-            ObjectDisposedException lastException = null;
+            Exception lastException = null;
             for (var i = 0; i < NumberOfRetries; i++)
             {
                 try
@@ -194,6 +250,20 @@ namespace Raven.Server.Documents.Queries
                         throw;
 
                     lastException = e;
+
+                    WaitForIndexBeingLikelyReplacedDuringQuery().GetAwaiter().GetResult();
+                }
+                catch (OperationCanceledException e)
+                {
+                    if (Database.DatabaseShutdown.IsCancellationRequested)
+                        throw;
+
+                    if (token.Token.IsCancellationRequested)
+                        throw;
+
+                    lastException = e;
+                    
+                    WaitForIndexBeingLikelyReplacedDuringQuery().GetAwaiter().GetResult();
                 }
             }
 
@@ -202,7 +272,7 @@ namespace Raven.Server.Documents.Queries
 
         public override async Task<SuggestionQueryResult> ExecuteSuggestionQuery(IndexQueryServerSide query, QueryOperationContext queryContext, long? existingResultEtag, OperationCancelToken token)
         {
-            ObjectDisposedException lastException = null;
+            Exception lastException = null;
             for (var i = 0; i < NumberOfRetries; i++)
             {
                 try
@@ -228,6 +298,20 @@ namespace Raven.Server.Documents.Queries
                         throw;
 
                     lastException = e;
+
+                    await WaitForIndexBeingLikelyReplacedDuringQuery();
+                }
+                catch (OperationCanceledException e)
+                {
+                    if (Database.DatabaseShutdown.IsCancellationRequested)
+                        throw;
+
+                    if (token.Token.IsCancellationRequested)
+                        throw;
+
+                    lastException = e;
+
+                    await WaitForIndexBeingLikelyReplacedDuringQuery();
                 }
             }
 
@@ -236,7 +320,7 @@ namespace Raven.Server.Documents.Queries
 
         public override async Task<IndexEntriesQueryResult> ExecuteIndexEntriesQuery(IndexQueryServerSide query, QueryOperationContext queryContext, long? existingResultEtag, OperationCancelToken token)
         {
-            ObjectDisposedException lastException = null;
+            Exception lastException = null;
             for (var i = 0; i < NumberOfRetries; i++)
             {
                 try
@@ -249,6 +333,20 @@ namespace Raven.Server.Documents.Queries
                         throw;
 
                     lastException = e;
+
+                    await WaitForIndexBeingLikelyReplacedDuringQuery();
+                }
+                catch (OperationCanceledException e)
+                {
+                    if (Database.DatabaseShutdown.IsCancellationRequested)
+                        throw;
+
+                    if (token.Token.IsCancellationRequested)
+                        throw;
+
+                    lastException = e;
+
+                    await WaitForIndexBeingLikelyReplacedDuringQuery();
                 }
             }
 
@@ -257,7 +355,7 @@ namespace Raven.Server.Documents.Queries
 
         public override async Task<IOperationResult> ExecuteDeleteQuery(IndexQueryServerSide query, QueryOperationOptions options, QueryOperationContext queryContext, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
-            ObjectDisposedException lastException = null;
+            Exception lastException = null;
             for (var i = 0; i < NumberOfRetries; i++)
             {
                 try
@@ -270,6 +368,20 @@ namespace Raven.Server.Documents.Queries
                         throw;
 
                     lastException = e;
+
+                    await WaitForIndexBeingLikelyReplacedDuringQuery();
+                }
+                catch (OperationCanceledException e)
+                {
+                    if (Database.DatabaseShutdown.IsCancellationRequested)
+                        throw;
+
+                    if (token.Token.IsCancellationRequested)
+                        throw;
+
+                    lastException = e;
+
+                    await WaitForIndexBeingLikelyReplacedDuringQuery();
                 }
             }
 
@@ -278,7 +390,7 @@ namespace Raven.Server.Documents.Queries
 
         public override async Task<IOperationResult> ExecutePatchQuery(IndexQueryServerSide query, QueryOperationOptions options, PatchRequest patch, BlittableJsonReaderObject patchArgs, QueryOperationContext queryContext, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
-            ObjectDisposedException lastException = null;
+            Exception lastException = null;
             for (var i = 0; i < NumberOfRetries; i++)
             {
                 try
@@ -291,10 +403,32 @@ namespace Raven.Server.Documents.Queries
                         throw;
 
                     lastException = e;
+
+                    await WaitForIndexBeingLikelyReplacedDuringQuery();
+                }
+                catch (OperationCanceledException e)
+                {
+                    if (Database.DatabaseShutdown.IsCancellationRequested)
+                        throw;
+
+                    if (token.Token.IsCancellationRequested)
+                        throw;
+
+                    lastException = e;
+
+                    await WaitForIndexBeingLikelyReplacedDuringQuery();
                 }
             }
 
             throw CreateRetriesFailedException(lastException);
+        }
+
+        private Task WaitForIndexBeingLikelyReplacedDuringQuery()
+        {
+            // sometimes we might encounter OperationCanceledException or ObjectDisposedException thrown during the query because the index is being replaced
+            // in that case we want to repeat the query but let's give it a moment to properly finish the replacement operation (e.g. removal of old index files)
+
+            return Task.Delay(500);
         }
 
         public List<DynamicQueryToIndexMatcher.Explanation> ExplainDynamicIndexSelection(IndexQueryServerSide query, out string indexName)

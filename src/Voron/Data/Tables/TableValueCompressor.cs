@@ -113,7 +113,7 @@ namespace Voron.Data.Tables
 
                 long lastEtag = it.CurrentKey;
 
-                return (lastEtag & 1024) == 0;
+                return (lastEtag % 1024) == 0;
             }
         }
 

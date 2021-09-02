@@ -24,10 +24,15 @@ namespace Raven.Server.Documents.Queries
         public override bool SupportsExceptionHandling => false;
 
         private Dictionary<string, List<CounterDetail>> _counterIncludes;
+        
+        private Dictionary<string, Document> _revisionsChangeVectorResults;
+        
+        private Dictionary<string, Dictionary<DateTime, Document>> _revisionsDateTimeBeforeResults;
 
         private Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>> _timeSeriesIncludes;
 
         private Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>> _compareExchangeValueIncludes;
+        
 
         public override void AddCounterIncludes(IncludeCountersCommand includeCountersCommand)
         {
@@ -41,6 +46,7 @@ namespace Raven.Server.Documents.Queries
         {
             _timeSeriesIncludes = includeTimeSeriesCommand.Results;
         }
+        
 
         public override Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>> GetTimeSeriesIncludes() => _timeSeriesIncludes;
 
@@ -50,6 +56,16 @@ namespace Raven.Server.Documents.Queries
         }
 
         public override Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>> GetCompareExchangeValueIncludes() => _compareExchangeValueIncludes;
+        
+        public override void AddRevisionIncludes(IncludeRevisionsCommand command)
+        {
+            _revisionsChangeVectorResults = command.RevisionsChangeVectorResults;
+            _revisionsDateTimeBeforeResults = command.IdByRevisionsByDateTimeResults;
+            
+        }
+
+        public override Dictionary<string, Document>  GetRevisionIncludesByChangeVector() => _revisionsChangeVectorResults;
+        public Dictionary<string, Dictionary<DateTime, Document>>  GetRevisionIncludesIdByDateTime() => _revisionsDateTimeBeforeResults;
 
         public override ValueTask AddResultAsync(Document result, CancellationToken token)
         {

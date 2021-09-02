@@ -389,7 +389,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                 };
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
 
-                var baseline = DateTime.Today.AddDays(-1);
+                var baseline = RavenTestHelper.UtcToday.AddDays(-1);
 
                 using (var session = store.OpenSession())
                 {
@@ -470,7 +470,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                 };
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
 
-                var baseline = DateTime.Today.AddDays(-1);
+                var baseline = RavenTestHelper.UtcToday.AddDays(-1);
 
                 using (var session = store.OpenSession())
                 {
@@ -537,7 +537,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                 };
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
 
-                var baseline = DateTime.Today.AddDays(-1);
+                var baseline = RavenTestHelper.UtcToday.AddDays(-1);
 
                 using (var session = store.OpenSession())
                 {
@@ -650,7 +650,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                 };
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
 
-                var baseline = DateTime.Today.AddDays(-1);
+                var baseline = RavenTestHelper.UtcToday.AddDays(-1);
 
                 using (var session = store.OpenSession())
                 {
@@ -753,7 +753,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                 };
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
 
-                var baseline = DateTime.Today.AddDays(-1);
+                var baseline = RavenTestHelper.UtcToday.AddDays(-1);
 
                 using (var session = store.OpenSession())
                 {
@@ -804,7 +804,7 @@ namespace SlowTests.Client.TimeSeries.Policies
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today.AddDays(-1);
+                var baseline = RavenTestHelper.UtcToday.AddDays(-1);
 
                 var p1 = new TimeSeriesPolicy("BySecond", TimeValue.FromSeconds(1));
                 var p2 = new TimeSeriesPolicy("By2Seconds", TimeValue.FromSeconds(2));
@@ -899,7 +899,7 @@ namespace SlowTests.Client.TimeSeries.Policies
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today.AddDays(-1);
+                var baseline = RavenTestHelper.UtcToday.AddDays(-1);
 
                 var p1 = new TimeSeriesPolicy("BySecond", TimeValue.FromSeconds(1));
                 var p2 = new TimeSeriesPolicy("By2Seconds", TimeValue.FromSeconds(2));
@@ -965,7 +965,7 @@ namespace SlowTests.Client.TimeSeries.Policies
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today.AddDays(-1);
+                var baseline = RavenTestHelper.UtcToday.AddDays(-1);
 
                 using (var session = store.OpenSession())
                 {
@@ -1333,7 +1333,7 @@ namespace SlowTests.Client.TimeSeries.Policies
             using (var storeA = GetDocumentStore())
             using (var storeB = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 var config = new TimeSeriesConfiguration
                 {
@@ -1429,7 +1429,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                     session.Store(new User { Name = "Karmel" }, "marker");
                     session.SaveChanges();
 
-                    await WaitForDocumentInClusterAsync<User>((DocumentSession)session, "marker", null, TimeSpan.FromSeconds(15));
+                    await WaitForDocumentInClusterAsync<User>(cluster.Nodes, store.Database, "marker", null, TimeSpan.FromSeconds(15));
                 }
 
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
@@ -1506,7 +1506,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                     session.Store(new User { Name = "Karmel" }, "marker");
                     session.SaveChanges();
 
-                    await WaitForDocumentInClusterAsync<User>((DocumentSession)session, "marker", null, TimeSpan.FromSeconds(15));
+                    await WaitForDocumentInClusterAsync<User>(cluster.Nodes, store.Database, "marker", null, TimeSpan.FromSeconds(15));
                 }
 
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
@@ -1843,7 +1843,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                 };
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
 
-                var baseline = DateTime.Today.AddHours(-4);
+                var baseline = RavenTestHelper.UtcToday.AddHours(-4);
                 var rawName = "HeartRate";
 
                 using (var session = store.OpenSession())
@@ -1860,13 +1860,14 @@ namespace SlowTests.Client.TimeSeries.Policies
                 }
 
                 var database = await GetDocumentDatabaseInstanceFor(store);
-                await database.TimeSeriesPolicyRunner.RunRollups();
+                await WaitForPolicyRunner(database);
 
                 using (var session = store.OpenSession())
                 {
                     var doc = session.Load<User>("users/karmel");
                     var tsNames = session.Advanced.GetTimeSeriesFor(doc);
-                    Assert.Equal(4, tsNames.Count);
+                    Assert.True(tsNames.Count == 4, 
+                        $"Wrong number of timeseries, expected 4 but got {tsNames.Count} : {string.Join(',', tsNames)}");
 
                     Assert.Equal(rawName, tsNames[0]);
                     Assert.Equal($"{rawName}@{p1.Name}", tsNames[1]);

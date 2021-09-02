@@ -9,12 +9,16 @@ using System.Runtime.Loader;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using Raven.Client;
+using Raven.Client.Extensions;
 using Raven.Client.Http;
+using Raven.Client.Properties;
 using Raven.Client.Util;
+using Raven.Debug.StackTrace;
 using Raven.Server;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
@@ -22,6 +26,8 @@ using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes.Static.NuGet;
+using Raven.Server.Documents.PeriodicBackup;
+using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -92,6 +98,10 @@ namespace FastTests
             NativeMemory.GetCurrentUnmanagedThreadId = () => (ulong)Pal.rvn_get_current_thread_id();
             Lucene.Net.Util.UnmanagedStringArray.Segment.AllocateMemory = NativeMemory.AllocateMemory;
             Lucene.Net.Util.UnmanagedStringArray.Segment.FreeMemory = NativeMemory.Free;
+
+            BackupTask.DateTimeFormat = "yyyy-MM-dd-HH-mm-ss-fffffff";
+            RestorePointsBase.BackupFolderRegex = new Regex(@"([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{2}-[0-9]{2}(-[0-9]{2}-[0-9]{7})?).ravendb-(.+)-([A-Za-z]+)-(.+)$", RegexOptions.Compiled);
+            RestorePointsBase.FileNameRegex = new Regex(@"([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{2}-[0-9]{2}(-[0-9]{2}-[0-9]{7})?)", RegexOptions.Compiled);
 
             var packagesPath = new PathSetting(RavenTestHelper.NewDataPath("NuGetPackages", 0, forceCreateDir: true));
             GlobalPathsToDelete.Add(packagesPath.FullPath);
@@ -180,7 +190,7 @@ namespace FastTests
         protected TestCertificatesHolder GenerateAndSaveSelfSignedCertificate(bool createNew = false)
         {
             if (createNew)
-                return ReturnCertificatesHolder(Generate());
+                return ReturnCertificatesHolder(Generate(Interlocked.Increment(ref _counter)));
 
             var selfSignedCertificates = _selfSignedCertificates;
             if (selfSignedCertificates != null)
@@ -200,12 +210,14 @@ namespace FastTests
                 return new TestCertificatesHolder(certificates, GetTempFileName);
             }
 
-            TestCertificatesHolder Generate()
+            TestCertificatesHolder Generate(int gen = 0)
             {
                 var log = new StringBuilder();
                 byte[] certBytes;
                 string serverCertificatePath = null;
-                serverCertificatePath = Path.Combine(Path.GetTempPath(), "Server-" + DateTime.Today.ToString("yyyy-MM-dd") + ".pfx");
+
+                serverCertificatePath = Path.Combine(Path.GetTempPath(), $"Server-{gen}-{RavenVersionAttribute.Instance.Build}-{DateTime.Today:yyyy-MM-dd}.pfx");
+
                 if (File.Exists(serverCertificatePath) == false)
                 {
                     try
@@ -247,6 +259,7 @@ namespace FastTests
                 }
 
                 SecretProtection.ValidatePrivateKey(serverCertificatePath, null, certBytes, out var pk);
+                SecretProtection.ValidateKeyUsages(serverCertificatePath, serverCertificate, validateKeyUsages: true);
 
                 var clientCertificate1Path = GenerateClientCertificate(1, serverCertificate, pk);
                 var clientCertificate2Path = GenerateClientCertificate(2, serverCertificate, pk);
@@ -257,7 +270,7 @@ namespace FastTests
 
             string GenerateClientCertificate(int index, X509Certificate2 serverCertificate, Org.BouncyCastle.Pkcs.AsymmetricKeyEntry pk)
             {
-                string name = $"{Environment.MachineName}_CC_{index}_{DateTime.Today:yyyy-MM-DD}";
+                string name = $"{Environment.MachineName}_CC_{RavenVersionAttribute.Instance.Build}_{index}_{DateTime.Today:yyyy-MM-dd}";
                 string clientCertificatePath = Path.Combine(Path.GetTempPath(), name + ".pfx");
 
                 if (File.Exists(clientCertificatePath) == false)
@@ -810,12 +823,15 @@ namespace FastTests
             var debugTag = server.DebugTag;
             var timeout = TimeSpan.FromMilliseconds(timeoutInMs);
 
+            using (DebugHelper.GatherVerboseDatabaseDisposeInformation(server, timeoutInMs))
             using (var mre = new ManualResetEventSlim())
             {
                 server.AfterDisposal += () => mre.Set();
                 var task = Task.Run(server.Dispose);
 
-                Assert.True(mre.Wait(timeout), $"Could not dispose server with URL '{url}' and DebugTag: '{debugTag}' in '{timeout}'.");
+                if (mre.Wait(timeout) == false)
+                    ThrowCouldNotDisposeServerException(url, debugTag, timeout);
+
                 task.GetAwaiter().GetResult();
             }
         }
@@ -832,13 +848,49 @@ namespace FastTests
             var debugTag = server.DebugTag;
             var timeout = TimeSpan.FromMilliseconds(timeoutInMs);
 
+            using (await DebugHelper.GatherVerboseDatabaseDisposeInformationAsync(server, timeoutInMs))
             using (var mre = new AsyncManualResetEvent())
             {
                 server.AfterDisposal += () => mre.Set();
-                var task = Task.Run(() => server.Dispose());
+                var task = Task.Run(server.Dispose);
 
-                Assert.True(await mre.WaitAsync(timeout), $"Could not dispose server with URL '{url}' and DebugTag: '{debugTag}' in '{timeout}'.");
+                if (await mre.WaitAsync(timeout) == false)
+                    ThrowCouldNotDisposeServerException(url, debugTag, timeout);
+
                 await task;
+            }
+        }
+
+        private static void ThrowCouldNotDisposeServerException(string url, string debugTag, TimeSpan timeout)
+        {
+            using (var process = Process.GetCurrentProcess())
+            using (var ms = new MemoryStream())
+            using (var outputWriter = new StreamWriter(ms, leaveOpen: true))
+            {
+                var sb = new StringBuilder($"Could not dispose server with URL '{url}' and DebugTag: '{debugTag}' in '{timeout}'.");
+
+                try
+                {
+                    StackTracer.ShowStackTraceWithSnapshot(process.Id, outputWriter);
+                    ms.Position = 0;
+
+                    using (var outputReader = new StreamReader(ms, leaveOpen: true))
+                    {
+                        var stackTraces = outputReader.ReadToEnd();
+                        var tempPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.stacks.json");
+
+                        File.WriteAllText(tempPath, stackTraces);
+                        Console.WriteLine(stackTraces);
+
+                        sb.Append($" StackTraces available at: '{tempPath}'");
+                    }
+                }
+                catch (Exception e)
+                {
+                    sb.Append($" Failed to retrieve StackTraces: {e}");
+                }
+
+                throw new InvalidOperationException(sb.ToString());
             }
         }
     }

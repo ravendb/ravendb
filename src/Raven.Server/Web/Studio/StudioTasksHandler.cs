@@ -394,6 +394,10 @@ namespace Raven.Server.Web.Studio
                     case ItemType.Index:
                         isValid = IndexStore.IsValidIndexName(name, isStatic: true, out errorMessage);
                         break;
+                    
+                    case ItemType.Script:
+                        isValid = ResourceNameValidator.IsValidFileName(name, out errorMessage);
+                        break;
                 }
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -557,7 +561,8 @@ namespace Raven.Server.Web.Studio
         public enum ItemType
         {
             Index,
-            Database
+            Database,
+            Script
         }
     }
 }

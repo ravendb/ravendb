@@ -2,18 +2,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
-using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
-using FastTests;
 using FastTests.Server.Replication;
-using Raven.Client.Documents;
-using Raven.Client.Documents.Indexes;
-using Raven.Client.ServerWide;
-using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.Util;
-using Raven.Server.Documents.Patch;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -30,9 +23,8 @@ namespace SlowTests.Issues
         {
             var clusterSize = 3;
             var databaseName = GetDatabaseName();
-            var leader = await CreateRaftClusterAndGetLeader(clusterSize, false, useSsl: true);
+            var (_, leader, certificates) = await CreateRaftClusterWithSsl(clusterSize, false);
 
-            var certificates = GenerateAndSaveSelfSignedCertificate();
             X509Certificate2 adminCertificate = RegisterClientCertificate(certificates, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, server: leader);
 
             var members = leader.ServerStore.GetClusterTopology().Members.Values.ToList();

@@ -1,8 +1,8 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.Basic.Entities;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
 

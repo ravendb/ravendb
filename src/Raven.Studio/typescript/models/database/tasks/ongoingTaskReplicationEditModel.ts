@@ -7,8 +7,8 @@ class ongoingTaskReplicationEditModel extends ongoingTaskEditModel {
     connectionStringName = ko.observable<string>();
     
     delayReplicationTime = ko.observable<number>();
-    showDelayReplication = ko.observable<boolean>(false);   
-    humaneDelayDescription: KnockoutComputed<string>;   
+    showDelayReplication = ko.observable<boolean>(false);
+    humaneDelayDescription: KnockoutComputed<string>;
      
     validationGroup: KnockoutValidationGroup;
 
@@ -38,7 +38,7 @@ class ongoingTaskReplicationEditModel extends ongoingTaskEditModel {
 
         const delayTime = generalUtils.timeSpanToSeconds(dto.DelayReplicationFor);
         this.showDelayReplication(dto.DelayReplicationFor != null && delayTime !== 0);
-        this.delayReplicationTime(dto.DelayReplicationFor ? delayTime : null);       
+        this.delayReplicationTime(dto.DelayReplicationFor ? delayTime : null);
     }
 
     toDto(taskId: number): Raven.Client.Documents.Operations.Replication.ExternalReplication {
@@ -48,7 +48,10 @@ class ongoingTaskReplicationEditModel extends ongoingTaskEditModel {
             ConnectionStringName: this.connectionStringName(),
             TaskId: taskId,
             DelayReplicationFor: this.showDelayReplication() ? generalUtils.formatAsTimeSpan(this.delayReplicationTime() * 1000) : null,
-        } as Raven.Client.Documents.Operations.Replication.ExternalReplication;
+            Url: undefined,
+            Disabled: this.taskState() === "Disabled",
+            Database: undefined
+        };
     }
 
     initValidation() {
@@ -57,25 +60,29 @@ class ongoingTaskReplicationEditModel extends ongoingTaskEditModel {
 
         this.connectionStringName.extend({
             required: true
-        });               
+        });
 
         this.delayReplicationTime.extend({
-            required: {
-                onlyIf: () => this.showDelayReplication()
-            },
+            validation: [
+                {
+                    validator: () => !this.showDelayReplication() || !!this.delayReplicationTime(),
+                    message: "Please enter a value greater than 0"
+                }
+            ],
             min: 0
         });
         
-        this.validationGroup = ko.validatedObservable({         
+        this.validationGroup = ko.validatedObservable({
             connectionStringName: this.connectionStringName,
             mentorNode: this.mentorNode,
-            delayReplicationTime: this.delayReplicationTime            
+            delayReplicationTime: this.delayReplicationTime
         });
     }
 
     static empty(): ongoingTaskReplicationEditModel {
-        return new ongoingTaskReplicationEditModel({  
+        return new ongoingTaskReplicationEditModel({
             TaskName: "",
+            TaskState: "Enabled",
             TaskType: "Replication",
             DestinationDatabase: null,
             DestinationUrl: null

@@ -19,7 +19,7 @@ type pagingDetailsItemDto = {
 
 class pagingDetails extends abstractPerformanceHintDetails {
 
-    tableItems = [] as pagingDetailsItemDto[];
+    tableItems: pagingDetailsItemDto[] = [];
     private gridController = ko.observable<virtualGridController<pagingDetailsItemDto>>();
     private columnPreview = new columnPreviewPlugin<pagingDetailsItemDto>();
 

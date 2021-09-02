@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Raven.Client.Documents.Session.Loaders;
 using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Util;
@@ -48,7 +49,7 @@ namespace Raven.Client.Documents.Session
         
         public TimeSeriesEntry[] Get(DateTime? from = null, DateTime? to = null, int start = 0, int pageSize = int.MaxValue)
         {
-            return AsyncHelpers.RunSync(() => _asyncSessionTimeSeries.GetAsync(from, to, start, pageSize));
+            return Get(from, to, includes: null, start, pageSize);
         }
 
         public TimeSeriesEntry[] Get(DateTime? from, DateTime? to, Action<ITimeSeriesIncludeBuilder> includes, int start = 0, int pageSize = int.MaxValue)
@@ -58,12 +59,26 @@ namespace Raven.Client.Documents.Session
 
         TimeSeriesEntry<TValues>[] ISessionDocumentTypedTimeSeries<TValues>.Get(DateTime? from, DateTime? to, int start, int pageSize)
         {
-            return AsyncHelpers.RunSync(() => _asyncSessionTimeSeries.GetAsyncInternal<TimeSeriesEntry<TValues>>(from, to, start, pageSize));
+            return AsyncHelpers.RunSync(() =>
+            {
+                if (_asyncSessionTimeSeries.NotInCache(from, to))
+                {
+                    return _asyncSessionTimeSeries.GetTimeSeriesAndIncludes<TimeSeriesEntry<TValues>>(from, to, includes: null, start, pageSize);
+                }
+
+                return _asyncSessionTimeSeries.GetTypedFromCache<TValues>(from, to, null, start, pageSize);
+            });
         }
 
         TimeSeriesRollupEntry<TValues>[] ISessionDocumentRollupTypedTimeSeries<TValues>.Get(DateTime? from, DateTime? to, int start, int pageSize)
         {
-            return AsyncHelpers.RunSync(() => _asyncSessionTimeSeries.GetAsyncInternal<TimeSeriesRollupEntry<TValues>>(from, to, start, pageSize));
+            if (_asyncSessionTimeSeries.NotInCache(from, to))
+            {
+                return AsyncHelpers.RunSync(() => _asyncSessionTimeSeries.GetTimeSeriesAndIncludes<TimeSeriesRollupEntry<TValues>>(from, to, includes: null, start, pageSize));
+            }
+
+            var result = _asyncSessionTimeSeries.GetTypedFromCache<TValues>(from, to, includes: null, start, pageSize);
+            return result.Result?.Select(r => r.AsRollupEntry()).ToArray();
         }
 
         public void Append(TimeSeriesRollupEntry<TValues> entry)
@@ -82,17 +97,17 @@ namespace Raven.Client.Documents.Session
             _asyncSessionTimeSeries.Delete(at);
         }
 
-        IEnumerator<TimeSeriesEntry> ITimeSeriesStreamingBase<TimeSeriesEntry>.Stream(DateTime? @from, DateTime? to, TimeSpan? offset)
+        IEnumerator<TimeSeriesEntry> ITimeSeriesStreamingBase<TimeSeriesEntry>.Stream(DateTime? from, DateTime? to, TimeSpan? offset)
         {
             return AsyncHelpers.RunSync(() => _asyncSessionTimeSeries.GetStream<TimeSeriesEntry>(from, to, offset));
         }
 
-        IEnumerator<TimeSeriesRollupEntry<TValues>> ITimeSeriesStreamingBase<TimeSeriesRollupEntry<TValues>>.Stream(DateTime? @from, DateTime? to, TimeSpan? offset)
+        IEnumerator<TimeSeriesRollupEntry<TValues>> ITimeSeriesStreamingBase<TimeSeriesRollupEntry<TValues>>.Stream(DateTime? from, DateTime? to, TimeSpan? offset)
         {
             return AsyncHelpers.RunSync(() => _asyncSessionTimeSeries.GetStream<TimeSeriesRollupEntry<TValues>>(from, to, offset));
         }
 
-        IEnumerator<TimeSeriesEntry<TValues>> ITimeSeriesStreamingBase<TimeSeriesEntry<TValues>>.Stream(DateTime? @from, DateTime? to, TimeSpan? offset)
+        IEnumerator<TimeSeriesEntry<TValues>> ITimeSeriesStreamingBase<TimeSeriesEntry<TValues>>.Stream(DateTime? from, DateTime? to, TimeSpan? offset)
         {
             return AsyncHelpers.RunSync(() => _asyncSessionTimeSeries.GetStream<TimeSeriesEntry<TValues>>(from, to, offset));
         }

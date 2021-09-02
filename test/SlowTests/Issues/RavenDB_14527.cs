@@ -15,7 +15,7 @@ namespace SlowTests.Issues
             session.Store(new {}, "nodes/2-A");
             var timeSeries = session.TimeSeriesFor("nodes/2-A", "DiskQueue");
 
-            var start = DateTime.Today.AddDays(-3);
+            var start = RavenTestHelper.UtcToday.AddDays(-3);
             var random = new Random(1337);
             var n1 = 0.4;
             var n2 = 0.27;

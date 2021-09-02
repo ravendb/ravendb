@@ -5,8 +5,8 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.Basic.Entities;
 using Sparrow.Server;
+using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
 

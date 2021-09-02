@@ -52,7 +52,13 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(false)]
         [ConfigurationEntry("License.DisableAutoUpdate", ConfigurationEntryScope.ServerWideOnly)]
         public bool DisableAutoUpdate { get; set; }
-        
+
+        [Description("EXPERT ONLY. Disable automatic updating of the license from api.ravendb.net")]
+        [DefaultValue(false)]
+        [ConfigurationEntry("License.DisableAutoUpdateFromApi", ConfigurationEntryScope.ServerWideOnly)]
+        public bool DisableAutoUpdateFromApi { get; set; }
+
+
         [Description("EXPERT ONLY. Disable checking the support options for the license")]
         [DefaultValue(false)]
         [ConfigurationEntry("License.DisableLicenseSupportCheck", ConfigurationEntryScope.ServerWideOnly)]

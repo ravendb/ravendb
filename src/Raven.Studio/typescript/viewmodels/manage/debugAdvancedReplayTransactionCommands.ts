@@ -56,7 +56,7 @@ class debugAdvancedReplayTransactionCommands extends viewModelBase {
         }
         
         const db = databasesManager.default.getDatabaseByName(this.databaseName());
-        const fileInput = document.querySelector(debugAdvancedReplayTransactionCommands.filePickerTag) as HTMLInputElement;
+        const fileInput = document.querySelector<HTMLInputElement>(debugAdvancedReplayTransactionCommands.filePickerTag);
 
         this.isUploading(true);
 

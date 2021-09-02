@@ -78,6 +78,15 @@ namespace Raven.Server.Config.Categories
         public bool CompressRevisionsDefault { get; set; }
 
         /// <summary>
+        /// Whether collections compression should be on by default or not.
+        /// This does not prevent you from enabling this after a database is created, only sets the default.
+        /// </summary>
+        [Description("Whether collections compression should be on by default or not on new databases")]
+        [DefaultValue(false)]
+        [ConfigurationEntry("Databases.Compression.CompressAllCollectionsDefault", ConfigurationEntryScope.ServerWideOnly)]
+        public bool CompressAllCollectionsDefault { get; set; }
+
+        /// <summary>
         /// This much time has to wait for the database to become available when too much
         /// different databases get loaded at the same time
         /// </summary>

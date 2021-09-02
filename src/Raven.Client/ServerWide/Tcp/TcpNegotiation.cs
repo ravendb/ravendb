@@ -77,14 +77,15 @@ namespace Raven.Client.ServerWide.Tcp
             {
                 Log.Info($"Send negotiation for {parameters.Operation} in version {currentVersion}");
             }
-
+            
             context.Write(writer, new DynamicJsonValue
             {
                 [nameof(TcpConnectionHeaderMessage.DatabaseName)] = parameters.Database,
                 [nameof(TcpConnectionHeaderMessage.Operation)] = parameters.Operation.ToString(),
                 [nameof(TcpConnectionHeaderMessage.SourceNodeTag)] = parameters.SourceNodeTag,
                 [nameof(TcpConnectionHeaderMessage.OperationVersion)] = currentVersion,
-                [nameof(TcpConnectionHeaderMessage.AuthorizeInfo)] = parameters.AuthorizeInfo?.ToJson()
+                [nameof(TcpConnectionHeaderMessage.AuthorizeInfo)] = parameters.AuthorizeInfo?.ToJson(),
+                [nameof(TcpConnectionHeaderMessage.ServerId)] = parameters.DestinationServerId
             });
 
             await writer.FlushAsync().ConfigureAwait(false);
@@ -117,6 +118,7 @@ namespace Raven.Client.ServerWide.Tcp
         public string SourceNodeTag { get; set; }
         public string DestinationNodeTag { get; set; }
         public string DestinationUrl { get; set; }
+        public string DestinationServerId { get; set; }
         public CancellationToken CancellationToken { get; set; }
     }
 }

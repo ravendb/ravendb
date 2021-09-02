@@ -375,6 +375,7 @@ namespace Raven.Server.Documents.ETL
                             Database.NotificationCenter.Add(alert);
 
                             stats.RecordBatchCompleteReason(message);
+                            stats.RecordTransformationError(); 
 
                             Stop(reason: message);
 
@@ -387,7 +388,7 @@ namespace Raven.Server.Documents.ETL
                             stats.RecordTransformationError();
 
                             if (Logger.IsOperationsEnabled)
-                                Logger.Operations($"Could not process SQL ETL script for '{Name}', skipping document: {item.DocumentId}", e);
+                                Logger.Operations($"Could not process ETL script for '{Name}', skipping document: {item.DocumentId}", e);
                         }
                     }
                 }
@@ -567,6 +568,7 @@ namespace Raven.Server.Documents.ETL
 
             return true;
         }
+        
         protected void UpdateMetrics(DateTime startTime, TStatsScope stats)
         {
             var batchSize = stats.NumberOfExtractedItems.Sum(x => x.Value);

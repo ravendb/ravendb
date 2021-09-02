@@ -45,6 +45,7 @@ class appUrl {
         editRavenEtl: (taskId?: number, taskName?: string) => ko.pureComputed(() => appUrl.forEditRavenEtl(appUrl.currentDatabase(), taskId)),
         editSqlEtl: (taskId?: number, taskName?: string) => ko.pureComputed(() => appUrl.forEditSqlEtl(appUrl.currentDatabase(), taskId)),
         editOlapEtl: (taskId?: number, taskName?: string) => ko.pureComputed(() => appUrl.forEditOlapEtl(appUrl.currentDatabase(), taskId)),
+        editElasticSearchEtl: (taskId?: number, taskName?: string) => ko.pureComputed(() => appUrl.forEditElasticSearchEtl(appUrl.currentDatabase(), taskId)),
         query: (indexName?: string) => ko.pureComputed(() => appUrl.forQuery(appUrl.currentDatabase(), indexName)),
         terms: (indexName?: string) => ko.pureComputed(() => appUrl.forTerms(indexName, appUrl.currentDatabase())),
         importDatabaseFromFileUrl: ko.pureComputed(() => appUrl.forImportDatabaseFromFile(appUrl.currentDatabase())),
@@ -63,6 +64,7 @@ class appUrl {
         editRavenEtlTaskUrl: ko.pureComputed(() => appUrl.forEditRavenEtl(appUrl.currentDatabase())),
         editSqlEtlTaskUrl: ko.pureComputed(() => appUrl.forEditSqlEtl(appUrl.currentDatabase())),
         editOlapEtlTaskUrl: ko.pureComputed(() => appUrl.forEditOlapEtl(appUrl.currentDatabase())),
+        editElasticSearchEtlTaskUrl: ko.pureComputed(() => appUrl.forEditElasticSearchEtl(appUrl.currentDatabase())),
         csvImportUrl: ko.pureComputed(() => appUrl.forCsvImport(appUrl.currentDatabase())),
         status: ko.pureComputed(() => appUrl.forStatus(appUrl.currentDatabase())),
 
@@ -455,10 +457,12 @@ class appUrl {
         }
     }
 
-    static forIndexes(db: database | databaseInfo, staleOnly = false): string {
+    static forIndexes(db: database | databaseInfo, indexName: string = null, staleOnly = false): string {
         const databasePart = appUrl.getEncodedDbPart(db);
+        const indexNamePart = indexName ? `&indexName=${indexName}` : "";
         const stalePart = staleOnly ? "&stale=true" : "";
-        return "#databases/indexes?" + databasePart + stalePart;
+        
+        return "#databases/indexes?" + databasePart + indexNamePart + stalePart;
     }
 
     static forNewIndex(db: database | databaseInfo): string {
@@ -476,7 +480,7 @@ class appUrl {
         let indexToQueryComponent = indexNameOrHashToQuery as string;
         if (typeof indexNameOrHashToQuery === "number") {
             indexToQueryComponent = "recentquery-" + indexNameOrHashToQuery;
-        } 
+        }
 
         const indexPart = indexToQueryComponent ? "/" + encodeURIComponent(indexToQueryComponent) : "";
         return "#databases/query/index" + indexPart + "?" + databasePart + extraParameters;
@@ -588,6 +592,12 @@ class appUrl {
         const databasePart = appUrl.getEncodedDbPart(db);
         const taskPart = taskId ? "&taskId=" + taskId : "";
         return "#databases/tasks/editOlapEtlTask?" + databasePart + taskPart;
+    }
+
+    static forEditElasticSearchEtl(db: database | databaseInfo, taskId?: number): string {
+        const databasePart = appUrl.getEncodedDbPart(db);
+        const taskPart = taskId ? "&taskId=" + taskId : "";
+        return "#databases/tasks/editElasticSearchEtlTask?" + databasePart + taskPart;
     }
     
     static forSampleData(db: database | databaseInfo): string {

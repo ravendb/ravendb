@@ -199,7 +199,7 @@ class clusterGraph {
     }
 
     private extractEdges(nodes: clusterNodeWithLayout[]) {
-        const edges = [] as Array<clusterGraphEdge<clusterNodeWithLayout>>;
+        const edges: clusterGraphEdge<clusterNodeWithLayout>[] = [];
 
         graphHelper.pairIterator(nodes, (a, b) => {
             if (a.tag() < b.tag()) {

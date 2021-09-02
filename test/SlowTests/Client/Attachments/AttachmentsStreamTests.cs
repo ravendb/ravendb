@@ -55,6 +55,7 @@ namespace SlowTests.Client.Attachments
                         {
                             Assert.NotNull(attachmentsEnumerator.Current != null);
                             Assert.True(CompareStreams(attachmentsEnumerator.Current.Stream, stream));
+                            attachmentsEnumerator.Current?.Stream?.Dispose();
                         }
                     }
                 }
@@ -94,8 +95,10 @@ namespace SlowTests.Client.Attachments
                         var attachmentsEnumerator = await session.Advanced.Attachments.GetAsync(attachmentsNames);
                         while (attachmentsEnumerator.MoveNext())
                         {
-                            Assert.NotNull(attachmentsEnumerator.Current != null);
-                            Assert.True(CompareStreams(attachmentsEnumerator.Current.Stream, stream));
+                            var current = attachmentsEnumerator.Current;
+                            Assert.NotNull(current);
+                            Assert.True(CompareStreams(current.Stream, stream));
+                            current.Stream?.Dispose();
                         }
                     }
                 }
@@ -141,21 +144,25 @@ namespace SlowTests.Client.Attachments
                     var attachmentsEnumerator = session.Advanced.Attachments.Get(attachmentsNames);
                     while (attachmentsEnumerator.MoveNext())
                     {
-                        var memoryStream = new MemoryStream();
-                        var attachmentResult = attachmentsEnumerator.Current;
+                        using (var memoryStream = new MemoryStream())
+                        {
+                            var attachmentResult = attachmentsEnumerator.Current;
 
-                        Assert.NotNull(attachmentsEnumerator.Current != null);
-                        attachmentResult.Stream.CopyTo(memoryStream);
-                        memoryStream.Position = 0;
-                        attachmentResult.Stream.CopyTo(memoryStream);
+                            Assert.NotNull(attachmentResult);
+                            attachmentResult.Stream.CopyTo(memoryStream);
+                            memoryStream.Position = 0;
+                            attachmentResult.Stream.CopyTo(memoryStream);
 
-                        Assert.Equal(0, memoryStream.Position);
+                            Assert.Equal(0, memoryStream.Position);
 
-                        var buffer1 = new byte[size];
-                        var buffer2 = new byte[size];
+                            var buffer1 = new byte[size];
+                            var buffer2 = new byte[size];
 
-                        Assert.Equal(attachmentDictionary[$"{attachmentResult.Details.Name}"].Read(buffer1, 0, size), memoryStream.Read(buffer2, 0, size));
-                        Assert.True(buffer1.SequenceEqual(buffer2));
+                            Assert.Equal(attachmentDictionary[$"{attachmentResult.Details.Name}"].Read(buffer1, 0, size), memoryStream.Read(buffer2, 0, size));
+                            Assert.True(buffer1.SequenceEqual(buffer2));
+
+                            attachmentResult.Stream?.Dispose();
+                        }
                     }
                 }
             }
@@ -215,8 +222,9 @@ namespace SlowTests.Client.Attachments
                             continue;
                         }
 
-                        Assert.NotNull(attachmentsEnumerator.Current != null);
+                        Assert.NotNull(attachmentsEnumerator.Current);
                         Assert.True(CompareStreams(attachmentsEnumerator.Current.Stream, attachmentDictionary[$"{attachmentsEnumerator.Current.Details.Name}"], compareByteArray: true), $"Skipped Attachments: {string.Join(" ", skippedIndexes)}");
+                        attachmentsEnumerator.Current.Stream?.Dispose();
                     }
                 }
             }
@@ -266,8 +274,9 @@ namespace SlowTests.Client.Attachments
                     var attachmentsEnumerator = session.Advanced.Attachments.Get(attachmentsNames);
                     while (attachmentsEnumerator.MoveNext())
                     {
-                        Assert.NotNull(attachmentsEnumerator.Current != null);
+                        Assert.NotNull(attachmentsEnumerator.Current);
                         Assert.True(CompareStreams(attachmentsEnumerator.Current.Stream, attachmentDictionary[$"{attachmentsEnumerator.Current.Details.Name}"], compareByteArray: true));
+                        attachmentsEnumerator.Current.Stream?.Dispose();
                     }
                 }
             }
@@ -395,15 +404,18 @@ namespace SlowTests.Client.Attachments
                         }
                         else if (n == 1)
                         {
-                            var memoryStream = new MemoryStream();
-                            attachmentsEnumerator.Current.Stream.CopyTo(memoryStream);
-                            memoryStream.Position = 0;
+                            using (var memoryStream = new MemoryStream())
+                            {
+                                attachmentsEnumerator.Current.Stream.CopyTo(memoryStream);
+                                memoryStream.Position = 0;
 
-                            var buffer1 = new byte[size];
-                            var buffer2 = new byte[size];
+                                var buffer1 = new byte[size];
+                                var buffer2 = new byte[size];
 
-                            Assert.Equal(attachmentDictionary[$"{attachmentsEnumerator.Current.Details.Name}"].Read(buffer1, 0, size), memoryStream.Read(buffer2, 0, size));
-                            Assert.True(buffer1.SequenceEqual(buffer2));
+                                Assert.Equal(attachmentDictionary[$"{attachmentsEnumerator.Current.Details.Name}"].Read(buffer1, 0, size), memoryStream.Read(buffer2, 0, size));
+                                Assert.True(buffer1.SequenceEqual(buffer2));
+                                attachmentsEnumerator.Current.Stream?.Dispose();
+                            }
                         }
                     }
                 }
@@ -455,39 +467,44 @@ namespace SlowTests.Client.Attachments
                     var rndRnd = new Random();
                     while (attachmentsEnumerator.MoveNext())
                     {
-                        var memoryStream = new MemoryStream();
-                        var attachmentResult = attachmentsEnumerator.Current;
-
-                        Assert.NotNull(attachmentsEnumerator.Current != null);
-
-                        if (rndRnd.Next(0, 2) == 0)
+                        using (var memoryStream = new MemoryStream())
                         {
-                            var s = size / 3;
-                            var buffer1 = new byte[s];
-                            var buffer2 = new byte[s];
-                            attachmentDictionary[$"{attachmentResult.Details.Name}"].Read(buffer1, 0, s);
+                            var attachmentResult = attachmentsEnumerator.Current;
 
-                            var toRead = s;
-                            var r = 0;
-                            while (toRead > 0)
+                            Assert.NotNull(attachmentsEnumerator.Current);
+
+                            if (rndRnd.Next(0, 2) == 0)
                             {
-                                r = attachmentResult.Stream.Read(buffer2, 0 + r, toRead);
-                                toRead -= r;
+                                var s = size / 3;
+                                var buffer1 = new byte[s];
+                                var buffer2 = new byte[s];
+                                attachmentDictionary[$"{attachmentResult.Details.Name}"].Read(buffer1, 0, s);
+
+                                var toRead = s;
+                                var r = 0;
+                                while (toRead > 0)
+                                {
+                                    r = attachmentResult.Stream.Read(buffer2, 0 + r, toRead);
+                                    toRead -= r;
+                                }
+
+                                Assert.True(buffer1.SequenceEqual(buffer2));
+                            }
+                            else
+                            {
+                                attachmentResult.Stream.CopyTo(memoryStream);
+                                memoryStream.Position = 0;
+
+                                var buffer1 = new byte[size];
+                                var buffer2 = new byte[size];
+
+                                Assert.Equal(attachmentDictionary[$"{attachmentResult.Details.Name}"].Read(buffer1, 0, size), memoryStream.Read(buffer2, 0, size));
+                                Assert.True(buffer1.SequenceEqual(buffer2));
                             }
 
-                            Assert.True(buffer1.SequenceEqual(buffer2));
+                            attachmentResult.Stream?.Dispose();
                         }
-                        else
-                        {
-                            attachmentResult.Stream.CopyTo(memoryStream);
-                            memoryStream.Position = 0;
 
-                            var buffer1 = new byte[size];
-                            var buffer2 = new byte[size];
-
-                            Assert.Equal(attachmentDictionary[$"{attachmentResult.Details.Name}"].Read(buffer1, 0, size), memoryStream.Read(buffer2, 0, size));
-                            Assert.True(buffer1.SequenceEqual(buffer2));
-                        }
                     }
                 }
             }
@@ -537,8 +554,10 @@ namespace SlowTests.Client.Attachments
                     var attachmentsEnumerator = await session.Advanced.Attachments.GetAsync(attachmentsNames);
                     while (attachmentsEnumerator.MoveNext())
                     {
-                        Assert.NotNull(attachmentsEnumerator.Current != null);
-                        Assert.True(await CompareStreamsAsync(attachmentsEnumerator.Current.Stream, attachmentDictionary[$"{attachmentsEnumerator.Current.Details.Name}"]));
+                        var current = attachmentsEnumerator.Current;
+                        Assert.NotNull(current);
+                        Assert.True(await CompareStreamsAsync(current.Stream, attachmentDictionary[$"{current.Details.Name}"]));
+                        current.Stream?.Dispose();
                     }
                 }
             }
@@ -591,19 +610,23 @@ namespace SlowTests.Client.Attachments
                     {
                         var size = factorials[i];
 
-                        var memoryStream = new MemoryStream();
-                        var attachmentResult = attachmentsEnumerator.Current;
+                        using (var memoryStream = new MemoryStream())
+                        {
+                            var attachmentResult = attachmentsEnumerator.Current;
 
-                        Assert.NotNull(attachmentsEnumerator.Current != null);
-                        attachmentResult.Stream.CopyTo(memoryStream);
-                        memoryStream.Position = 0;
+                            Assert.NotNull(attachmentResult);
+                            attachmentResult.Stream.CopyTo(memoryStream);
+                            memoryStream.Position = 0;
 
-                        var buffer1 = new byte[size];
-                        var buffer2 = new byte[size];
+                            var buffer1 = new byte[size];
+                            var buffer2 = new byte[size];
 
-                        Assert.Equal(attachmentDictionary[$"{attachmentResult.Details.Name}"].Read(buffer1, 0, size), memoryStream.Read(buffer2, 0, size));
-                        Assert.True(buffer1.SequenceEqual(buffer2));
-                        i++;
+                            Assert.Equal(attachmentDictionary[$"{attachmentResult.Details.Name}"].Read(buffer1, 0, size), memoryStream.Read(buffer2, 0, size));
+                            Assert.True(buffer1.SequenceEqual(buffer2));
+                            i++;
+
+                            attachmentResult.Stream?.Dispose();
+                        }
                     }
                 }
             }
@@ -665,7 +688,7 @@ namespace SlowTests.Client.Attachments
                         attachmentsEnumerator.MoveNext();
                         Assert.NotNull(attachmentsEnumerator.Current);
                         Assert.Equal(attachmentsEnumerator.Current.Details.Name, attachmentName);
-
+                        attachmentsEnumerator.Current.Stream?.Dispose();
                         Assert.False(attachmentsEnumerator.MoveNext());
                     }
                 }

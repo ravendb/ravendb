@@ -90,6 +90,13 @@ class textColumn<T> implements virtualColumn {
     protected prepareValue(item: T): preparedValue {
         const cellValue = this.getCellValue(item);
 
+        if (this.opts.transformValue) {
+            return {
+                rawText: this.opts.transformValue(cellValue),
+                typeCssClass: "token string"
+            };
+        }
+
         if (_.isString(cellValue)) {
             const rawText = this.opts.useRawValue && this.opts.useRawValue(item) ? cellValue : generalUtils.escapeHtml(cellValue);
             
@@ -167,7 +174,6 @@ class textColumn<T> implements virtualColumn {
             serializedValue: this.valueAccessor.toString()
         }
     }
-
 }
 
 export = textColumn;

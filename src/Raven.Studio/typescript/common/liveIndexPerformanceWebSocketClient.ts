@@ -35,7 +35,7 @@ class liveIndexPerformanceWebSocketClient extends abstractWebSocketClient<result
     }
 
     get autoReconnect() {
-        return false;
+        return true;
     }
 
     pauseUpdates() {

@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
@@ -23,7 +21,7 @@ namespace SlowTests.Issues
         public async Task TopologyUpdateDuringFailoverShouldntFaileCommand()
         {
             const int nodesAmount = 5;
-            var leader = await this.CreateRaftClusterAndGetLeader(nodesAmount);
+            var (_, leader) = await CreateRaftCluster(nodesAmount);
 
             var defaultDatabase = GetDatabaseName();
 

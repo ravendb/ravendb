@@ -22,8 +22,16 @@ namespace Raven.Server.Documents
         private readonly ConcurrentDictionary<StringSegment, Task<TResource>> _caseSensitive
             = new ConcurrentDictionary<StringSegment, Task<TResource>>(StringSegmentComparer.Ordinal);
 
+        private readonly ConcurrentDictionary<Task<TResource>, ResourceDetails> _resourceDetails
+            = new ConcurrentDictionary<Task<TResource>, ResourceDetails>();
+
         private readonly ConcurrentDictionary<StringSegment, ConcurrentSet<StringSegment>> _mappings =
             new ConcurrentDictionary<StringSegment, ConcurrentSet<StringSegment>>(StringSegmentComparer.OrdinalIgnoreCase);
+
+        public class ResourceDetails
+        {
+            public DateTime InCacheSince;
+        }
 
         /// <summary>
         /// This locks the entire cache. Use carefully.
@@ -32,10 +40,13 @@ namespace Raven.Server.Documents
 
         public int Count => _caseInsensitive.Count;
 
+        internal int DetailsCount => _resourceDetails.Count;
+
         public void Clear()
         {
             _caseSensitive.Clear();
             _caseInsensitive.Clear();
+            _resourceDetails.Clear();
         }
 
         public bool TryGetValue(StringSegment resourceName, out Task<TResource> resourceTask)
@@ -44,7 +55,15 @@ namespace Raven.Server.Documents
                 return true;
             
             return UnlikelyTryGet(resourceName, out resourceTask);
-                
+        }
+
+        public bool TryGetValue(StringSegment resourceName, out Task<TResource> resourceTask, out ResourceDetails details)
+        {
+            details = null;
+            if (TryGetValue(resourceName, out resourceTask) == false)
+                return false;
+
+            return _resourceDetails.TryGetValue(resourceTask, out details);
         }
 
         private bool UnlikelyTryGet(StringSegment resourceName, out Task<TResource> resourceTask)
@@ -69,6 +88,8 @@ namespace Raven.Server.Documents
         {
             if (_caseInsensitive.TryRemove(resourceName, out resourceTask) == false)
                 return false;
+            
+            _resourceDetails.TryRemove(resourceTask, out _);
 
             lock (this)
             {
@@ -113,6 +134,13 @@ namespace Raven.Server.Documents
                     return value;
 
                 value = _caseInsensitive.GetOrAdd(databaseName, task);
+                if (value == task)
+                {
+                    _resourceDetails[task] = new ResourceDetails
+                    {
+                        InCacheSince = DateTime.UtcNow
+                    };
+                }
                 _caseSensitive[databaseName] = value;
                 _mappings[databaseName] = new ConcurrentSet<StringSegment>
                 {
@@ -167,6 +195,7 @@ namespace Raven.Server.Documents
                 if (current.IsCompletedSuccessfully)
                 {
                     _caseInsensitive.TryUpdate(databaseName, task, current);
+                    _resourceDetails.TryRemove(current, out _);
                     RemoveCaseSensitive(databaseName);
                 }
             }
@@ -179,6 +208,17 @@ namespace Raven.Server.Documents
                     TryRemove(databaseName, out _);
                 });
             }
+
+            if (current.IsFaulted && current.Exception?.Data.Contains(DatabasesLandlord.DoNotRemove) == false)
+            {
+                // some real exception occurred, but we still want to remove / unload the faulty database
+                resource = default; 
+                return new DisposableAction(() =>
+                {
+                    TryRemove(databaseName, out _);
+                });
+            }
+
             current.Wait();// will throw immediately because the task failed
             resource = default(TResource);
             Debug.Assert(false, "Should never reach this place");
@@ -195,6 +235,13 @@ namespace Raven.Server.Documents
                     existingTask = existing;
                     return task;
                 });
+
+                ResourceDetails details = null;
+                if (existingTask != null)
+                    _resourceDetails.TryRemove(existingTask, out details);
+
+                _resourceDetails[task] = details ?? new ResourceDetails{InCacheSince = SystemTime.UtcNow};
+
                 if (_mappings.TryGetValue(databaseName, out ConcurrentSet<StringSegment> mappings))
                 {
                     foreach (var mapping in mappings)

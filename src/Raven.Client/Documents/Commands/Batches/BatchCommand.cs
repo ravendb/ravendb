@@ -15,37 +15,46 @@ namespace Raven.Client.Documents.Commands.Batches
 {
     internal class ClusterWideBatchCommand : SingleNodeBatchCommand, IRaftCommand
     {
+        public bool? DisableAtomicDocumentWrites { get; }
         public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
 
-        public ClusterWideBatchCommand(DocumentConventions conventions, JsonOperationContext context, IList<ICommandData> commands, BatchOptions options = null) : base(conventions, context, commands, options, TransactionMode.ClusterWide)
+        public ClusterWideBatchCommand(DocumentConventions conventions, IList<ICommandData> commands, BatchOptions options = null, bool? disableAtomicDocumentsWrites = null) : 
+            base(conventions, context: null, commands, options, TransactionMode.ClusterWide)
         {
+            DisableAtomicDocumentWrites = disableAtomicDocumentsWrites;
+        }
+
+        protected override void AppendOptions(StringBuilder sb)
+        {
+            base.AppendOptions(sb);
+            if (DisableAtomicDocumentWrites == null)
+                return;
+            sb.Append("&disableAtomicDocumentWrites=")
+                .Append(DisableAtomicDocumentWrites.Value ? "true" : "false");
         }
     }
 
     public class SingleNodeBatchCommand : RavenCommand<BatchCommandResult>, IDisposable
     {
-        private readonly BlittableJsonReaderObject[] _commands;
+        private BlittableJsonReaderObject[] _commandsAsJson;
+        private bool? _supportsAtomicWrites;
         private readonly List<Stream> _attachmentStreams;
         private readonly HashSet<Stream> _uniqueAttachmentStreams;
+        private readonly DocumentConventions _conventions;
+        private readonly IList<ICommandData> _commands;
         private readonly BatchOptions _options;
         private readonly TransactionMode _mode;
 
         public SingleNodeBatchCommand(DocumentConventions conventions, JsonOperationContext context, IList<ICommandData> commands, BatchOptions options = null, TransactionMode mode = TransactionMode.SingleNode)
         {
-            if (conventions == null)
-                throw new ArgumentNullException(nameof(conventions));
-            if (commands == null)
-                throw new ArgumentNullException(nameof(commands));
-            if (context == null)
-                throw new ArgumentNullException(nameof(context));
+            _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
+            _commands = commands ?? throw new ArgumentNullException(nameof(commands));
+            _options = options;
+            _mode = mode;
 
-            _commands = new BlittableJsonReaderObject[commands.Count];
-            for (var i = 0; i < commands.Count; i++)
+            _commandsAsJson = new BlittableJsonReaderObject[_commands.Count];
+            foreach (var command in commands)
             {
-                var command = commands[i];
-                var json = command.ToJson(conventions, context);
-                _commands[i] = context.ReadObject(json, "command");
-
                 if (command is PutAttachmentCommandData putAttachmentCommandData)
                 {
                     if (_attachmentStreams == null)
@@ -61,15 +70,30 @@ namespace Raven.Client.Documents.Commands.Batches
                     _attachmentStreams.Add(stream);
                 }
             }
-
-            _options = options;
-            _mode = mode;
-
+            
             Timeout = options?.RequestTimeout;
         }
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
+            if (_supportsAtomicWrites == null ||
+                node.SupportsAtomicClusterWrites != _supportsAtomicWrites)
+            {
+                _supportsAtomicWrites = node.SupportsAtomicClusterWrites;
+                for (var i = 0; i < _commands.Count; i++)
+                {
+                    var command = _commands[i];
+                  
+                    var json = command.ToJson(_conventions, ctx);
+
+                    if (node.SupportsAtomicClusterWrites == false)
+                    {   // support older clients
+                        json.RemoveInMemoryPropertyByName(nameof(PutCommandData.OriginalChangeVector));
+                    }
+                    _commandsAsJson[i] = ctx.ReadObject(json, "command");
+                }
+            }
+            
             var request = new HttpRequestMessage
             {
                 Method = HttpMethod.Post,
@@ -78,7 +102,7 @@ namespace Raven.Client.Documents.Commands.Batches
                     await using (var writer = new AsyncBlittableJsonTextWriter(ctx, stream))
                     {
                         writer.WriteStartObject();
-                        writer.WriteArray("Commands", _commands);
+                        writer.WriteArray("Commands", _commandsAsJson);
                         if (_mode == TransactionMode.ClusterWide)
                         {
                             writer.WriteComma();
@@ -103,7 +127,7 @@ namespace Raven.Client.Documents.Commands.Batches
                 request.Content = multipartContent;
             }
 
-            var sb = new StringBuilder($"{node.Url}/databases/{node.Database}/bulk_docs");
+            var sb = new StringBuilder($"{node.Url}/databases/{node.Database}/bulk_docs?");
 
             AppendOptions(sb);
 
@@ -126,12 +150,10 @@ namespace Raven.Client.Documents.Commands.Batches
             Result = JsonDeserializationClient.BatchCommandResult(response);
         }
 
-        private void AppendOptions(StringBuilder sb)
+        protected virtual void AppendOptions(StringBuilder sb)
         {
             if (_options == null)
                 return;
-
-            sb.Append("?");
 
             var replicationOptions = _options.ReplicationOptions;
             if (replicationOptions != null)
@@ -165,7 +187,7 @@ namespace Raven.Client.Documents.Commands.Batches
 
         public void Dispose()
         {
-            foreach (var command in _commands)
+            foreach (var command in _commandsAsJson)
                 command?.Dispose();
 
             Result?.Results?.Dispose();

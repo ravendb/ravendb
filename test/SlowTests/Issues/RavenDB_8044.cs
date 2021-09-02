@@ -26,7 +26,7 @@ namespace SlowTests.Issues
         {
             const int clusterSize = 3;
 
-            await CreateRaftClusterAndGetLeader(clusterSize);
+            await CreateRaftCluster(clusterSize);
 
             var serverA = GetNodeServer("A");
             var serverB = GetNodeServer("B");

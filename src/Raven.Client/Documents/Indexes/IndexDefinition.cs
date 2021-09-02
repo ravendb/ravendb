@@ -189,7 +189,7 @@ namespace Raven.Client.Documents.Indexes
 
             if (State != other.State)
             {
-                if ((State == null && other.State == IndexState.Normal))
+                if ((State == null && other.State == IndexState.Normal) || (State == IndexState.Normal && other.State == null))
                 {
                     // same
                 }

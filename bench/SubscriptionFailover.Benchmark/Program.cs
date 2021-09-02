@@ -17,7 +17,7 @@ namespace SubscriptionFailover.Benchmark
         public SubscriptionFailoverBenchmark(ITestOutputHelper output) : base(output)
         {
         }
-        
+
         public async Task RunTestSimple()
         {
             using (var store = GetDocumentStore())
@@ -94,9 +94,7 @@ namespace SubscriptionFailover.Benchmark
         {
             var defaultDatabase = "StressTest";
 
-
-
-            var leader = await CreateRaftClusterAndGetLeader(nodesAmount, false);
+            var (_, leader) = await CreateRaftCluster(nodesAmount, false);
 
             await CreateDatabaseInCluster(defaultDatabase, nodesAmount, leader.WebUrl).ConfigureAwait(false);
 

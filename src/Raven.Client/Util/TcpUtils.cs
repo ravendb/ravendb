@@ -1,13 +1,26 @@
-﻿using System;
+#if !(NETSTANDARD2_0 || NETSTANDARD2_1 || NETCOREAPP2_1 || NETCOREAPP3_1)
+#define TCP_CLIENT_CANCELLATIONTOKEN_SUPPORT
+#endif
+
+#if !(NETSTANDARD2_0 || NETSTANDARD2_1 || NETCOREAPP2_1)
+#define SSL_STREAM_CIPHERSUITESPOLICY_SUPPORT
+#endif
+
+using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.ServerWide.Commands;
+using Raven.Client.ServerWide.Tcp;
+using Sparrow.Json;
 using Sparrow.Logging;
 
 namespace Raven.Client.Util
@@ -15,7 +28,7 @@ namespace Raven.Client.Util
     internal static class TcpUtils
     {
         internal const SslProtocols SupportedSslProtocols =
-#if NETSTANDARD2_0 || NETSTANDARD2_1 ||  NETCOREAPP2_1
+#if NETSTANDARD2_0 || NETSTANDARD2_1 || NETCOREAPP2_1
             SslProtocols.Tls12;
 #else
             SslProtocols.Tls13 | SslProtocols.Tls12;
@@ -28,11 +41,39 @@ namespace Raven.Client.Util
             client.ReceiveTimeout = (int)timeout.TotalMilliseconds;
         }
 
-        internal static async Task<(TcpClient Client, string Url)> ConnectSocketAsync(TcpConnectionInfo connection, TimeSpan timeout, Logger log)
+        internal static async Task<ConnectSecuredTcpSocketResult> ConnectSecuredTcpSocketAsReplication(
+            TcpConnectionInfo connection, 
+            X509Certificate2 certificate,
+#if !(NETSTANDARD2_0 || NETSTANDARD2_1 || NETCOREAPP2_1)
+            CipherSuitesPolicy cipherSuitesPolicy,
+#endif
+            NegotiationCallback negotiationCallback,
+            TimeSpan timeout, 
+            Logger log
+#if TCP_CLIENT_CANCELLATIONTOKEN_SUPPORT
+            ,
+            CancellationToken token = default
+#endif
+            )
         {
             try
             {
-                return await ConnectAsyncWithPriority(connection, timeout).ConfigureAwait(false);
+                return await ConnectSecuredTcpSocket(
+                    connection,
+                    certificate,
+#if SSL_STREAM_CIPHERSUITESPOLICY_SUPPORT
+                    cipherSuitesPolicy,
+#endif
+                    TcpConnectionHeaderMessage.OperationTypes.Replication,
+                    negotiationCallback,
+                    null,
+                    timeout,
+                    null
+#if TCP_CLIENT_CANCELLATIONTOKEN_SUPPORT
+                    ,
+                    token
+#endif
+                ).ConfigureAwait(false);
             }
             catch (AggregateException ae) when (ae.InnerException is SocketException)
             {
@@ -70,7 +111,15 @@ namespace Raven.Client.Util
             }
         }
 
-        public static async Task<TcpClient> ConnectAsync(string url, TimeSpan? timeout = null, bool useIPv6 = false)
+        public static async Task<TcpClient> ConnectAsync(
+            string url,
+            TimeSpan? timeout = null,
+            bool useIPv6 = false
+#if TCP_CLIENT_CANCELLATIONTOKEN_SUPPORT
+            ,
+            CancellationToken token = default
+#endif
+            )
         {
             var uri = new Uri(url);
 
@@ -82,11 +131,27 @@ namespace Raven.Client.Util
                 if (isIPv6)
                 {
                     var ipAddress = IPAddress.Parse(uri.Host);
-                    await tcpClient.ConnectAsync(ipAddress, uri.Port).ConfigureAwait(false);
+                    await tcpClient.ConnectAsync(
+                        ipAddress,
+                        uri.Port
+#if TCP_CLIENT_CANCELLATIONTOKEN_SUPPORT
+                        ,
+                        token
+#endif
+                        )
+                        .ConfigureAwait(false);
                 }
                 else
                 {
-                    await tcpClient.ConnectAsync(uri.Host, uri.Port).ConfigureAwait(false);
+                    await tcpClient.ConnectAsync(
+                        uri.Host,
+                        uri.Port
+#if TCP_CLIENT_CANCELLATIONTOKEN_SUPPORT
+                        ,
+                        token
+#endif
+                        )
+                        .ConfigureAwait(false);
                 }
             }
             catch (NotSupportedException)
@@ -96,7 +161,15 @@ namespace Raven.Client.Util
                 if (useIPv6)
                     throw;
 
-                return await ConnectAsync(url, timeout, true).ConfigureAwait(false);
+                return await ConnectAsync(
+                    url,
+                    timeout,
+                    useIPv6: true
+#if TCP_CLIENT_CANCELLATIONTOKEN_SUPPORT
+                    ,
+                    token
+#endif
+                    ).ConfigureAwait(false);
             }
             catch
             {
@@ -111,10 +184,15 @@ namespace Raven.Client.Util
             TcpClient tcpClient,
             TcpConnectionInfo info,
             X509Certificate2 storeCertificate,
-#if !(NETSTANDARD2_0 || NETSTANDARD2_1 || NETCOREAPP2_1)
+#if SSL_STREAM_CIPHERSUITESPOLICY_SUPPORT
             CipherSuitesPolicy cipherSuitesPolicy,
 #endif
-            TimeSpan? timeout)
+            TimeSpan? timeout
+#if TCP_CLIENT_CANCELLATIONTOKEN_SUPPORT
+            ,
+            CancellationToken token = default
+#endif
+            )
         {
             var networkStream = tcpClient.GetStream();
             if (timeout != null)
@@ -132,7 +210,7 @@ namespace Raven.Client.Util
             var targetHost = new Uri(info.Url).Host;
             var clientCertificates = new X509CertificateCollection(new X509Certificate[] { storeCertificate });
 
-#if !(NETSTANDARD2_0 || NETSTANDARD2_1 || NETCOREAPP2_1)
+#if SSL_STREAM_CIPHERSUITESPOLICY_SUPPORT
             await sslStream.AuthenticateAsClientAsync(new SslClientAuthenticationOptions
             {
                 TargetHost = targetHost,
@@ -140,7 +218,12 @@ namespace Raven.Client.Util
                 EnabledSslProtocols = SupportedSslProtocols,
                 CertificateRevocationCheckMode = X509RevocationMode.NoCheck,
                 CipherSuitesPolicy = cipherSuitesPolicy
-            }).ConfigureAwait(false);
+            }
+#if TCP_CLIENT_CANCELLATIONTOKEN_SUPPORT
+                ,
+                token
+#endif
+            ).ConfigureAwait(false);
 #else
             await sslStream.AuthenticateAsClientAsync(targetHost, clientCertificates, SupportedSslProtocols, checkCertificateRevocation: false).ConfigureAwait(false);
 #endif
@@ -174,29 +257,117 @@ namespace Raven.Client.Util
             return tcpClient;
         }
 
-        internal static async Task<(TcpClient Client, string Url)> ConnectAsyncWithPriority(TcpConnectionInfo info, TimeSpan? tcpConnectionTimeout)
+        internal struct ConnectSecuredTcpSocketResult
         {
-            TcpClient tcpClient;
+            public string Url;
+            public TcpClient TcpClient;
+            public Stream Stream;
+            public TcpConnectionHeaderMessage.SupportedFeatures SupportedFeatures;
 
-            if (info.Urls != null)
+            public ConnectSecuredTcpSocketResult(string url, TcpClient tcpClient, Stream stream, TcpConnectionHeaderMessage.SupportedFeatures supportedFeatures)
             {
-                foreach (var url in info.Urls)
+                Url = url;
+                TcpClient = tcpClient;
+                Stream = stream;
+                SupportedFeatures = supportedFeatures;
+            }
+        }
+
+        public delegate Task<TcpConnectionHeaderMessage.SupportedFeatures> NegotiationCallback(string url, TcpConnectionInfo tcpInfo, Stream stream, JsonOperationContext context, List<string> logs = null);
+
+        internal static async Task<ConnectSecuredTcpSocketResult> ConnectSecuredTcpSocket(
+            TcpConnectionInfo info, 
+            X509Certificate2 cert,
+#if !(NETSTANDARD2_0 || NETSTANDARD2_1 || NETCOREAPP2_1)
+            CipherSuitesPolicy cipherSuitesPolicy,
+#endif  
+            TcpConnectionHeaderMessage.OperationTypes operationType,
+            NegotiationCallback negotiationCallback,
+            JsonOperationContext negContext,
+            TimeSpan? timeout,
+            List<string> logs = null
+#if TCP_CLIENT_CANCELLATIONTOKEN_SUPPORT
+            ,
+            CancellationToken token = default
+#endif
+            )
+        {
+            TcpClient tcpClient = null;
+            Stream stream = null;
+            TcpConnectionHeaderMessage.SupportedFeatures supportedFeatures = null;
+
+            string[] infoUrls = info.Urls == null ? new string[] {info.Url} : info.Urls.Append(info.Url).ToArray();
+            
+            logs?.Add($"Received tcpInfo: {Environment.NewLine}urls: { string.Join(",", infoUrls)} {Environment.NewLine}guid:{ info.ServerId}");
+
+            var exceptions = new List<Exception>();
+            for (int i=0; i < infoUrls.Length; i++)
+            {
+                string url = infoUrls[i];
+                try
                 {
-                    try
+                    tcpClient?.Dispose();
+                    stream?.Dispose();
+                    
+                    logs?.Add($"Trying to connect to :{url}");
+
+                    tcpClient = await ConnectAsync(
+                        url, 
+                        timeout
+#if TCP_CLIENT_CANCELLATIONTOKEN_SUPPORT
+                        ,
+                        token: token
+#endif
+                        ).ConfigureAwait(false);
+                    
+                    stream = await TcpUtils.WrapStreamWithSslAsync(
+                        tcpClient,
+                        info,
+                        cert,
+#if SSL_STREAM_CIPHERSUITESPOLICY_SUPPORT
+                        cipherSuitesPolicy,
+#endif
+                        timeout
+#if TCP_CLIENT_CANCELLATIONTOKEN_SUPPORT
+                        ,
+                        token: token
+#endif
+                    ).ConfigureAwait(false);
+
+                    switch (operationType)
                     {
-                        tcpClient = await ConnectAsync(url, tcpConnectionTimeout).ConfigureAwait(false);
-                        return (tcpClient, url);
+                        case TcpConnectionHeaderMessage.OperationTypes.Subscription:
+                        case TcpConnectionHeaderMessage.OperationTypes.Replication:
+                        case TcpConnectionHeaderMessage.OperationTypes.Heartbeats:
+                        case TcpConnectionHeaderMessage.OperationTypes.Cluster:
+                            supportedFeatures = await negotiationCallback(url, info, stream, negContext).ConfigureAwait(false);
+                            break;
+                        case TcpConnectionHeaderMessage.OperationTypes.TestConnection:
+                        case TcpConnectionHeaderMessage.OperationTypes.Ping:
+                            supportedFeatures = await negotiationCallback(url, info, stream, negContext, logs).ConfigureAwait(false);
+                            break;
+                        default:
+                            throw new NotSupportedException($"Operation type '{operationType}' not supported.");
                     }
-                    catch
+
+                    logs?.Add($"{Environment.NewLine}Negotiation successful for operation {operationType}.{Environment.NewLine} {tcpClient.Client.LocalEndPoint} "+
+                              $"is connected to {tcpClient.Client.RemoteEndPoint}{Environment.NewLine}");
+
+                    return new ConnectSecuredTcpSocketResult(url, tcpClient, stream, supportedFeatures);
+                }
+                catch (Exception e)
+                {
+                    logs?.Add($"Failed to connect to url {url}: {e.Message}");
+                    exceptions.Add(e);
+                    if (i == infoUrls.Length - 1)
                     {
-                        // ignored
+                        throw new AggregateException($"Failed to connect to url {url}", exceptions);
                     }
                 }
             }
-
-            tcpClient = await ConnectAsync(info.Url, tcpConnectionTimeout).ConfigureAwait(false);
-
-            return (tcpClient, info.Url);
+            //Should not reach here
+            Debug.Assert(false, "Shouldn't have reached here. This is likely a bug.");
+            throw new InvalidOperationException();
         }
     }
 }

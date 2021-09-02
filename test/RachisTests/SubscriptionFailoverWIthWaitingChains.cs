@@ -222,13 +222,17 @@ namespace RachisTests
                 subsWorker.OnSubscriptionConnectionRetry += ex =>
                 {
                     Assert.NotNull(ex);
-                    Assert.True(ex.GetType() == typeof(IOException) || ex.GetType() == typeof(EndOfStreamException));
+                    
+                    if (ex is AggregateException ae)
+                        Assert.True(ae.InnerExceptions.Count(e => e.GetType() == typeof(IOException) || e.GetType() == typeof(EndOfStreamException)) > 0);
+                    else
+                        Assert.True(ex.GetType() == typeof(IOException) || ex.GetType() == typeof(EndOfStreamException));
                     mre.Set();
                 };
-                var task = subsWorker.Run(x => { });
                 server.ForTestingPurposesOnly().ThrowExceptionInListenToNewTcpConnection = true;
                 try
                 {
+                    var task = subsWorker.Run(x => { });
                     Assert.True(await mre.WaitAsync(TimeSpan.FromSeconds(30)));
                 }
                 finally

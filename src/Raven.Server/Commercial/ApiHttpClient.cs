@@ -8,7 +8,20 @@ namespace Raven.Server.Commercial
 {
     public static class ApiHttpClient
     {
-        public const string ApiRavenDbNet = "https://api.ravendb.net";
+        public static string ApiRavenDbNet 
+        {
+            get
+            {
+                var envValue = Environment.GetEnvironmentVariable("RAVEN_API_ENV");
+                
+                if (string.IsNullOrWhiteSpace(envValue) == false)
+                {
+                    return $"https://{envValue}.api.ravendb.net";
+                }
+                
+                return "https://api.ravendb.net";
+            }
+        }
 
         public static HttpClient Instance;
 

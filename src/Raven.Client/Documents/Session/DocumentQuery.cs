@@ -435,7 +435,6 @@ namespace Raven.Client.Documents.Session
             Include(path);
             return this;
         }
-
         /// <inheritdoc />
         IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.Not
         {
@@ -738,6 +737,13 @@ namespace Raven.Client.Documents.Session
         IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.AndAlso()
         {
             AndAlso();
+            return this;
+        }
+        
+        /// <inheritdoc />
+        IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.AndAlso(bool wrapPreviousQueryClauses)
+        {
+            AndAlso(wrapPreviousQueryClauses);
             return this;
         }
 
@@ -1179,6 +1185,7 @@ namespace Raven.Client.Documents.Session
                 Negate = Negate,
                 DocumentIncludes = new HashSet<string>(DocumentIncludes),
                 CounterIncludesTokens = CounterIncludesTokens,
+                RevisionsIncludesTokens = RevisionsIncludesTokens,
                 TimeSeriesIncludesTokens = TimeSeriesIncludesTokens,
                 CompareExchangeValueIncludesTokens = CompareExchangeValueIncludesTokens,
                 RootTypes = { typeof(T) },

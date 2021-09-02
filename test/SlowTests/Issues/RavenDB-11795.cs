@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Raven.Server.Utils;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -114,6 +115,8 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
+                CultureHelper.Cultures.TryGetValue(CultureInfo.CurrentCulture.Name, out var culture);
+
                 using (var session = store.OpenSession())
                 {
                     var query = session.Query<Booking>()
@@ -124,14 +127,14 @@ namespace SlowTests.Issues
                         });
 
                     Assert.Equal("from 'Bookings' as x where x.FirstName = $p0 " +
-                                 $"select {{ StartDate : toStringWithFormat(x.Start, \"{CultureInfo.CurrentCulture.Name}\") }}"
+                                 $"select {{ StartDate : toStringWithFormat(x.Start, \"{culture.Name}\") }}"
                         , query.ToString());
 
                     var result = query.Single();
 
                     // Assert
                     Assert.NotNull(result);
-                    Assert.Equal(start.ToString(CultureInfo.CurrentCulture), result.StartDate);
+                    Assert.Equal(start.ToString(culture), result.StartDate);
 
                 }
             }

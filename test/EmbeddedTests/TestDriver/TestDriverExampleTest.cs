@@ -98,6 +98,23 @@ namespace EmbeddedTests.TestDriver
         }
 
         [Fact]
+        public void BasicSaveChanges()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User
+                    {
+                        FirstName = "Grisha",
+                        LastName = string.Empty
+                    });
+                    session.SaveChanges();
+                }
+            }
+        }
+
+        [Fact]
         public void ShouldLoadDocumentAddedInSetupDatabasePhase()
         {
             using (var documentStore = GetDocumentStore())
@@ -177,6 +194,13 @@ namespace EmbeddedTests.TestDriver
             }
 
             Assert.False(Directory.Exists(databaseDirectoryPath));
+        }
+
+        private class User
+        {
+            public string FirstName { get; set; }
+
+            public string LastName { get; set; }
         }
     }
 }

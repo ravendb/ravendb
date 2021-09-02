@@ -27,7 +27,7 @@ namespace RachisTests
         [Fact]
         public async Task RequestExecutor_failover_with_only_one_database_should_properly_fail()
         {
-            var leader = await CreateRaftClusterAndGetLeader(1);
+            var (_, leader) = await CreateRaftCluster(1);
             const int replicationFactor = 1;
             const string databaseName = "RequestExecutor_failover_with_only_one_database_should_properly_fail";
             using (var store = new DocumentStore
@@ -61,7 +61,7 @@ namespace RachisTests
         [Fact]
         public async Task RequestExecutor_failover_to_database_topology_should_work()
         {
-            var leader = await CreateRaftClusterAndGetLeader(3);
+            var (nodes, leader) = await CreateRaftCluster(3);
             using (var store = GetDocumentStore(new Options
             {
                 Server = leader,
@@ -69,13 +69,15 @@ namespace RachisTests
                 DeleteDatabaseOnDispose = false // we bring one node down, so we can't delete the entire database, but we run in mem, so we don't care
             }))
             {
+                var dbRecord = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(store.Database));
                 using (var session = (DocumentSession)store.OpenSession())
                 {
                     session.Store(new User { Name = "John Doe" }, "users/1");
                     session.SaveChanges();
 
                     Assert.True(await WaitForDocumentInClusterAsync<User>(
-                        session,
+                        nodes.Where(s => dbRecord.Topology.Members.Contains(s.ServerStore.NodeTag)).ToList(),
+                        store.Database,
                         "users/1",
                         u => u.Name.Equals("John Doe"),
                         TimeSpan.FromSeconds(10)));

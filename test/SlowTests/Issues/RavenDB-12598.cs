@@ -24,7 +24,7 @@ namespace SlowTests.Issues
         {
             var db = "changes-api-aggressive-caching";
             var docId = "users/1";
-            var leader = await CreateRaftClusterAndGetLeader(3);
+            var (_, leader) = await CreateRaftCluster(3);
             await CreateDatabaseInCluster(db, 3, leader.WebUrl);
             IDocumentStore[] stores = new IDocumentStore[3];
             HashSet<string> ensureStoresCommunicateToDiffrentNodes = new HashSet<string>();

@@ -1,4 +1,6 @@
-﻿.metricsContainer {
+﻿@default-operation-color: antiquewhite;
+
+.metricsContainer {
     position: relative;
     
     .tooltip-inner {
@@ -49,7 +51,7 @@ rect.pane {
             color: @on-base-background-color;
         }
         .gaps {
-            color: fadeout(@layout-border, 30%);
+            color: fadeout(@color-5, 50%);
         }
         .brushChartColor {
             color: @panel-bg;
@@ -121,7 +123,7 @@ rect.pane {
             }
             .storageTombstoneRead {
                 color: @color-3-2;
-            }            
+            }
             .storageCounterRead {
                 color: @color-3-1;
             }
@@ -176,8 +178,11 @@ rect.pane {
             .aggregatedBatchesInfo {
                 color: @color-4-3;
             }
+            .unknownOperation {
+                color: @default-operation-color;
+            }
         }
-    }   
+    }
 }
 
 .io-stats {
@@ -192,7 +197,7 @@ rect.pane {
             }
 
             .gaps {
-                color: fadeout(@layout-border, 30%);
+                color: fadeout(@color-5, 50%);
             }
 
             .trackBackground {
@@ -264,7 +269,7 @@ rect.pane {
             }
         }
     }
-    
+
     .tooltip-inner {
         white-space: nowrap;
         max-width: 350px;
@@ -311,7 +316,7 @@ rect.pane {
   font-size: 12px;
   text-align: center;
 
-  &.legend-title {     
+  &.legend-title {
       width: @legend-container-width - 50px;
   }
 }

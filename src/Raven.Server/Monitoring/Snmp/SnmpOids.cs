@@ -518,6 +518,24 @@ namespace Raven.Server.Monitoring.Snmp
                 [Description("Number of databases for current node")]
                 public const string NodeCount = "5.1.6";
 
+                [Description("Number of indexes in all loaded databases")]
+                public const string TotalNumberOfIndexes = "5.1.7.1";
+
+                [Description("Number of stale indexes in all loaded databases")]
+                public const string TotalNumberOfStaleIndexes = "5.1.7.2";
+
+                [Description("Number of error indexes in all loaded databases")]
+                public const string TotalNumberOfErrorIndexes = "5.1.7.3";
+
+                [Description("Number of indexed documents per second for map indexes (one minute rate) in all loaded databases")]
+                public const string TotalMapIndexIndexesPerSecond = "5.1.8.1";
+
+                [Description("Number of maps per second for map-reduce indexes (one minute rate) in all loaded databases")]
+                public const string TotalMapReduceIndexMappedPerSecond = "5.1.8.2";
+
+                [Description("Number of reduces per second for map-reduce indexes (one minute rate) in all loaded databases")]
+                public const string TotalMapReduceIndexReducedPerSecond = "5.1.8.3";
+
                 public static DynamicJsonArray ToJson()
                 {
                     var array = new DynamicJsonArray();

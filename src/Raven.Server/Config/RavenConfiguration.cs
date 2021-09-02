@@ -104,7 +104,7 @@ namespace Raven.Server.Config
         internal CommandLineConfigurationSource CommandLineSettings =>
             _configBuilder.Sources.OfType<CommandLineConfigurationSource>().FirstOrDefault();
 
-        private RavenConfiguration(string resourceName, ResourceType resourceType, string customConfigPath = null)
+        private RavenConfiguration(string resourceName, ResourceType resourceType, string customConfigPath = null, bool skipEnvironmentVariables = false)
         {
             _logger = LoggingSource.Instance.GetLogger<RavenConfiguration>(resourceName);
 
@@ -113,7 +113,8 @@ namespace Raven.Server.Config
             _customConfigPath = customConfigPath;
             PathSettingBase<string>.ValidatePath(_customConfigPath);
             _configBuilder = new ConfigurationBuilder();
-            AddEnvironmentVariables();
+            if(skipEnvironmentVariables == false)
+                AddEnvironmentVariables();
             AddJsonConfigurationVariables(customConfigPath);
 
             Settings = _configBuilder.Build();
@@ -373,7 +374,7 @@ namespace Raven.Server.Config
         /// </summary>
         internal static RavenConfiguration CreateForTesting(string name, ResourceType resourceType, string customConfigPath = null)
         {
-            return new RavenConfiguration(name, resourceType, customConfigPath);
+            return new RavenConfiguration(name, resourceType, customConfigPath, skipEnvironmentVariables: true);
         }
 
         private static string GenerateDefaultDataDirectory(string template, ResourceType type, string name)

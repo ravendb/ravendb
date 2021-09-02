@@ -11,7 +11,7 @@ import abstractPerformanceHintDetails = require("viewmodels/common/notificationC
 
 class slowWriteDetails extends abstractPerformanceHintDetails {
 
-    tableItems = [] as Raven.Server.NotificationCenter.Notifications.Details.SlowWritesDetails.SlowWriteInfo[];
+    tableItems: Raven.Server.NotificationCenter.Notifications.Details.SlowWritesDetails.SlowWriteInfo[] = [];
     private gridController = ko.observable<virtualGridController<Raven.Server.NotificationCenter.Notifications.Details.SlowWritesDetails.SlowWriteInfo>>();
     private columnPreview = new columnPreviewPlugin<Raven.Server.NotificationCenter.Notifications.Details.SlowWritesDetails.SlowWriteInfo>();
 

@@ -20,7 +20,7 @@ class changesContext {
     databaseNotifications = ko.observable<databaseNotificationCenterClient>();
 
     databaseChangesApi = ko.observable<changesApi>();
-    private pendingAfterChangesApiConnectedHandlers = [] as Function[];
+    private pendingAfterChangesApiConnectedHandlers: Function[] = [];
     private hasChangesApiConnected = false;
 
     private globalDatabaseSubscriptions: changeSubscription[] = [];
@@ -124,7 +124,11 @@ class changesContext {
             currentChanges.dispose();
             this.databaseChangesApi(null);
 
-            ko.postbox.publish(EVENTS.Database.Disconnect, { database: currentChanges.getDatabase(), cause: cause } as databaseDisconnectedEventArgs);
+            const args: databaseDisconnectedEventArgs = {
+                database: currentChanges.getDatabase(), 
+                cause
+            };
+            ko.postbox.publish(EVENTS.Database.Disconnect, args);
         }
     }
 

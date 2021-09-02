@@ -787,7 +787,7 @@ class virtualGrid<T> {
                 throw new Error("Can't provide list of selected items!");
             }
 
-            const result = [] as T[];
+            const result: T[] = [];
             this.items.forEach(item => {
                 if (!_.includes(excluded, item)) {
                     result.push(item);
@@ -799,7 +799,7 @@ class virtualGrid<T> {
 
     private setSelectedItems(selection: Array<T>) {
         this.inIncludeSelectionMode = true;
-        const selectedIdx = [] as Array<number>;
+        const selectedIdx: number[] = [];
         this.items.forEach((v, i) => {
            if (_.includes(selection, v)) {
                selectedIdx.push(i);

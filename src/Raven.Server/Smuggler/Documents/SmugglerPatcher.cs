@@ -22,39 +22,41 @@ namespace Raven.Server.Smuggler.Documents
             _database = database;
         }
 
-        public Document Transform(Document document, JsonOperationContext context)
+        public Document Transform(Document document)
         {
+            var ctx = document.Data._context;
             object translatedResult;
-
-            using (_run.ScriptEngine.ChangeMaxStatements(_options.MaxStepsForTransformScript))
+            using (document)
             {
-                try
+                using (_run.ScriptEngine.ChangeMaxStatements(_options.MaxStepsForTransformScript))
                 {
-                    using (document.Data)
-                    using (var result = _run.Run(context, null, "execute", new object[] { document }))
-                        translatedResult = _run.Translate(result, context, usageMode: BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-                }
-                catch (Raven.Client.Exceptions.Documents.Patching.JavaScriptException e)
-                {
-                    if (e.InnerException is Jint.Runtime.JavaScriptException innerException && string.Equals(innerException.Message, "skip", StringComparison.OrdinalIgnoreCase))
-                        return null;
+                    try
+                    {
+                        using (ScriptRunnerResult result = _run.Run(ctx, null, "execute", new object[] { document }))
+                        {
+                            translatedResult = _run.Translate(result, ctx, usageMode: BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                        }
+                    }
+                    catch (Client.Exceptions.Documents.Patching.JavaScriptException e)
+                    {
+                        if (e.InnerException is Jint.Runtime.JavaScriptException innerException && string.Equals(innerException.Message, "skip", StringComparison.OrdinalIgnoreCase))
+                            return null;
 
-                    throw;
+                        throw;
+                    }
                 }
+
+                if (!(translatedResult is BlittableJsonReaderObject bjro))
+                    return null;
+
+                var cloned = document.Clone(ctx);
+                using (cloned.Data)
+                {
+                    cloned.Data = bjro;
+                }
+
+                return cloned;
             }
-
-            if (translatedResult is BlittableJsonReaderObject == false)
-                return null;
-
-            return new Document
-            {
-                Data = (BlittableJsonReaderObject)translatedResult,
-                Id = document.Id,
-                Flags = document.Flags,
-                NonPersistentFlags = document.NonPersistentFlags,
-                LastModified = document.LastModified,
-                ChangeVector = document.ChangeVector
-            };
         }
 
         public IDisposable Initialize()

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client;
@@ -6,6 +7,7 @@ using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.ServerWide;
+using Raven.Server;
 using Raven.Server.Documents;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
@@ -27,7 +29,11 @@ namespace SlowTests.Client.Attachments
             const int size = 512 * 1024;
             const string hash = "BfKA8g/BJuHOTHYJ+A6sOt9jmFSVEDzCM3EcLLKCRMU=";
             UseNewLocalServer();
-            var leader = await CreateRaftClusterAndGetLeader(3);
+            var (_, leader) = await CreateRaftCluster(3);
+            var members = new List<RavenServer>
+            {
+                leader, Servers.First(x => x != leader)
+            };
             using (var store = GetDocumentStore(new Options
             {
                 Server = leader,
@@ -36,11 +42,7 @@ namespace SlowTests.Client.Attachments
                     record.Topology = new DatabaseTopology
                     {
                         DynamicNodesDistribution = false,
-                        Members =
-                        {
-                            leader.ServerStore.NodeTag,
-                            Servers.First(x=>x!= leader).ServerStore.NodeTag
-                        }
+                        Members = members.Select(s => s.ServerStore.NodeTag).ToList()
                     };
                 }
             }))
@@ -54,7 +56,8 @@ namespace SlowTests.Client.Attachments
                     session.SaveChanges();
 
                     Assert.True(await WaitForDocumentInClusterAsync<User>(
-                        session,
+                        members,
+                        store.Database,
                         "users/1",
                         u => u.Name.Equals("Fitzchak"),
                         TimeSpan.FromSeconds(10)));
@@ -108,7 +111,11 @@ namespace SlowTests.Client.Attachments
             const string hash = "BfKA8g/BJuHOTHYJ+A6sOt9jmFSVEDzCM3EcLLKCRMU=";
             const int size = 512 * 1024;
             UseNewLocalServer();
-            var leader = await CreateRaftClusterAndGetLeader(3);
+            var (_, leader) = await CreateRaftCluster(3);
+            var members = new List<RavenServer>
+            {
+                leader, Servers.First(x => x != leader)
+            };
             using (var store = GetDocumentStore(new Options
             {
                 Server = leader,
@@ -117,11 +124,7 @@ namespace SlowTests.Client.Attachments
                     record.Topology = new DatabaseTopology
                     {
                         DynamicNodesDistribution = false,
-                        Members =
-                        {
-                            leader.ServerStore.NodeTag,
-                            Servers.First(x=>x!= leader).ServerStore.NodeTag
-                        }
+                        Members = members.Select(s => s.ServerStore.NodeTag).ToList()
                     };
                 }
             }))
@@ -135,7 +138,8 @@ namespace SlowTests.Client.Attachments
                     session.SaveChanges();
 
                     Assert.True(await WaitForDocumentInClusterAsync<User>(
-                        session,
+                        members,
+                        store.Database,
                         "users/1",
                         u => u.Name.Equals("Fitzchak"),
                         TimeSpan.FromSeconds(10)));

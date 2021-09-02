@@ -662,7 +662,8 @@ namespace Raven.Server.ServerWide
             options.BeforeSchemaUpgrade = _server.BeforeSchemaUpgrade;
             options.ForceUsing32BitsPager = Configuration.Storage.ForceUsing32BitsPager;
             options.EnablePrefetching = Configuration.Storage.EnablePrefetching;
-
+            options.DiscardVirtualMemory = Configuration.Storage.DiscardVirtualMemory;
+            
             if (Configuration.Storage.MaxScratchBufferSize.HasValue)
                 options.MaxScratchBufferSize = Configuration.Storage.MaxScratchBufferSize.Value.GetValue(SizeUnit.Bytes);
             options.PrefetchSegmentSize = Configuration.Storage.PrefetchBatchSize.GetValue(SizeUnit.Bytes);
@@ -1103,6 +1104,9 @@ namespace Raven.Server.ServerWide
                     break;
 
                 case nameof(PutLicenseCommand):
+
+                    ForTestingPurposes?.BeforePutLicenseCommandHandledInOnValueChanged?.Invoke();
+
                     // reload license can send a notification which will open a write tx
                     LicenseManager.ReloadLicense();
                     ConcurrentBackupsCounter.ModifyMaxConcurrentBackups();
@@ -1619,6 +1623,25 @@ namespace Raven.Server.ServerWide
             readResult.Reader.Read(protectedData, 0, protectedData.Length);
 
             return Secrets.Unprotect(protectedData);
+        }
+
+        public byte[] GetSecretKey(string databaseName)
+        {
+            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                return GetSecretKey(context, databaseName);
+            }
+        }
+
+        public void DeleteSecretKey(string databaseName)
+        {
+            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (var tx = context.OpenWriteTransaction())
+            {
+                DeleteSecretKey(context, databaseName);
+                tx.Commit();
+            }
         }
 
         public void DeleteSecretKey(TransactionOperationContext context, string name)
@@ -2200,6 +2223,8 @@ namespace Raven.Server.ServerWide
             return _env.DbId;
         }
 
+        public Guid ServerId => GetServerId();
+
         public void Dispose()
         {
             if (_shutdownNotification.IsCancellationRequested || _disposed)
@@ -2582,9 +2607,13 @@ namespace Raven.Server.ServerWide
             if (string.IsNullOrEmpty(record.Topology.DatabaseTopologyIdBase64))
                 record.Topology.DatabaseTopologyIdBase64 = Guid.NewGuid().ToBase64Unpadded();
 
+            if (string.IsNullOrEmpty(record.Topology.ClusterTransactionIdBase64))
+                record.Topology.ClusterTransactionIdBase64 = Guid.NewGuid().ToBase64Unpadded();
+
             record.Topology.Stamp ??= new LeaderStamp();
             record.Topology.Stamp.Term = _engine.CurrentTerm;
             record.Topology.Stamp.LeadersTicks = _engine.CurrentLeader?.LeaderShipDuration ?? 0;
+            record.Topology.NodesModifiedAt = SystemTime.UtcNow;
 
             var addDatabaseCommand = new AddDatabaseCommand(raftRequestId)
             {
@@ -2794,7 +2823,7 @@ namespace Raven.Server.ServerWide
             if (Logger.IsInfoEnabled)
                 Logger.Info($"Updating license id: {license.Id}");
 
-            await WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, result.Index);
+            await Cluster.WaitForIndexNotification(result.Index);
         }
 
         public async Task PutNodeLicenseLimitsAsync(string nodeTag, DetailsPerNode detailsPerNode, int maxLicensedCores, string raftRequestId = null)
@@ -3061,9 +3090,9 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public async Task WaitForCommitIndexChange(RachisConsensus.CommitIndexModification modification, long value)
+        public async Task WaitForCommitIndexChange(RachisConsensus.CommitIndexModification modification, long value, CancellationToken token = default)
         {
-            await _engine.WaitForCommitIndexChange(modification, value);
+            await _engine.WaitForCommitIndexChange(modification, value, token);
         }
 
         public string LastStateChangeReason()
@@ -3170,7 +3199,7 @@ namespace Raven.Server.ServerWide
             try
             {
                 await TestConnectionHandler.ConnectToClientNodeAsync(_server, connectionInfo.Result, Engine.TcpConnectionTimeout,
-                    LoggingSource.Instance.GetLogger("testing-connection", "testing-connection"), database, result);
+                    LoggingSource.Instance.GetLogger("testing-connection", "testing-connection"), database, result, ServerShutdown);
             }
             catch (Exception e)
             {
@@ -3196,7 +3225,8 @@ namespace Raven.Server.ServerWide
             {
                 [nameof(TcpConnectionInfo.Url)] = tcpServerUrl,
                 [nameof(TcpConnectionInfo.Certificate)] = _server.Certificate.CertificateForClients,
-                [nameof(TcpConnectionInfo.NodeTag)] = NodeTag
+                [nameof(TcpConnectionInfo.NodeTag)] = NodeTag,
+                [nameof(TcpConnectionInfo.ServerId)] = ServerId.ToString()
             };
 
             var urls = GetNodeClusterTcpServerUrls(clientRequestedNodeUrl, forExternalUse);
@@ -3315,6 +3345,21 @@ namespace Raven.Server.ServerWide
             }
 
             yield return usage;
+        }
+
+        internal TestingStuff ForTestingPurposes;
+
+        internal TestingStuff ForTestingPurposesOnly()
+        {
+            if (ForTestingPurposes != null)
+                return ForTestingPurposes;
+
+            return ForTestingPurposes = new TestingStuff();
+        }
+
+        internal class TestingStuff
+        {
+            internal Action BeforePutLicenseCommandHandledInOnValueChanged;
         }
     }
 }

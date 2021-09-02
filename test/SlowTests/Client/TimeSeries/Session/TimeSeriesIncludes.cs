@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.Basic.Entities;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.TimeSeries;
@@ -11,6 +10,7 @@ using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
+using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
 

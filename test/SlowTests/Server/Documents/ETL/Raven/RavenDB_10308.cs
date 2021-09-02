@@ -70,9 +70,10 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
                     Assert.Null(user);
 
-                    var attachment = session.Advanced.Attachments.Get("users/1", "photo.jpg");
-
-                    Assert.Null(attachment);
+                    using (var attachment = session.Advanced.Attachments.Get("users/1", "photo.jpg"))
+                    {
+                        Assert.Null(attachment);
+                    }
                 }
             }
         }

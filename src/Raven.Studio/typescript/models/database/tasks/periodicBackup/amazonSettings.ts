@@ -157,7 +157,7 @@ abstract class amazonSettings extends backupSettings {
         dto.AwsAccessKey = this.awsAccessKey();
         dto.AwsSecretKey = this.awsSecretKey();
         dto.AwsRegionName = this.awsRegionName();
-        dto.RemoteFolderName = this.remoteFolderName();
+        dto.RemoteFolderName = this.remoteFolderName() || null;
         return dto;
     }
 }

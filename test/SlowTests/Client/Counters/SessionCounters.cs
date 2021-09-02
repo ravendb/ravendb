@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.Basic.Entities;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
 

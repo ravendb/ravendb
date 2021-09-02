@@ -108,7 +108,7 @@ namespace Raven.Server.Documents.Handlers
             }
 
             Database.QueryMetadataCache.MaybeAddToCache(indexQuery.Metadata, result.IndexName);
-            AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(FacetedQuery)} ({result.IndexName})", indexQuery.Query, numberOfResults, indexQuery.PageSize, result.DurationInMs);
+            AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(FacetedQuery)} ({result.IndexName})", indexQuery.Query, numberOfResults, indexQuery.PageSize, result.DurationInMs, -1);
         }
 
         private async Task Query(QueryOperationContext queryContext, OperationCancelToken token, RequestTimeTracker tracker, HttpMethod method, bool diagnostics)
@@ -159,14 +159,15 @@ namespace Raven.Server.Documents.Handlers
             HttpContext.Response.Headers[Constants.Headers.Etag] = CharExtensions.ToInvariantString(result.ResultEtag);
 
             long numberOfResults;
+            long totalDocumentsSizeInBytes;
             await using (var writer = new AsyncBlittableJsonTextWriter(queryContext.Documents, ResponseBodyStream()))
             {
                 result.Timings = indexQuery.Timings?.ToTimings();
-                numberOfResults = await writer.WriteDocumentQueryResultAsync(queryContext.Documents, result, metadataOnly, WriteAdditionalData(indexQuery, shouldReturnServerSideQuery), token.Token);
+                (numberOfResults, totalDocumentsSizeInBytes) = await writer.WriteDocumentQueryResultAsync(queryContext.Documents, result, metadataOnly, WriteAdditionalData(indexQuery, shouldReturnServerSideQuery), token.Token);
             }
 
             Database.QueryMetadataCache.MaybeAddToCache(indexQuery.Metadata, result.IndexName);
-            AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(Query)} ({result.IndexName})", indexQuery.Query, numberOfResults, indexQuery.PageSize, result.DurationInMs);
+            AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(Query)} ({result.IndexName})", indexQuery.Query, numberOfResults, indexQuery.PageSize, result.DurationInMs, totalDocumentsSizeInBytes);
         }
 
         private Action<AbstractBlittableJsonTextWriter> WriteAdditionalData(IndexQueryServerSide indexQuery, bool shouldReturnServerSideQuery)
@@ -206,7 +207,6 @@ namespace Raven.Server.Documents.Handlers
         private async Task SuggestQuery(IndexQueryServerSide indexQuery, QueryOperationContext queryContext, OperationCancelToken token)
         {
             var existingResultEtag = GetLongFromHeaders("If-None-Match");
-
             var result = await Database.QueryRunner.ExecuteSuggestionQuery(indexQuery, queryContext, existingResultEtag, token);
             if (result.NotModified)
             {
@@ -217,12 +217,13 @@ namespace Raven.Server.Documents.Handlers
             HttpContext.Response.Headers[Constants.Headers.Etag] = CharExtensions.ToInvariantString(result.ResultEtag);
 
             long numberOfResults;
+            long totalDocumentsSizeInBytes;
             await using (var writer = new AsyncBlittableJsonTextWriter(queryContext.Documents, ResponseBodyStream()))
             {
-                numberOfResults = await writer.WriteSuggestionQueryResultAsync(queryContext.Documents, result, token.Token);
+                (numberOfResults, totalDocumentsSizeInBytes) = await writer.WriteSuggestionQueryResultAsync(queryContext.Documents, result, token.Token);
             }
 
-            AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(SuggestQuery)} ({result.IndexName})", indexQuery.Query, numberOfResults, indexQuery.PageSize, result.DurationInMs);
+            AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(SuggestQuery)} ({result.IndexName})", indexQuery.Query, numberOfResults, indexQuery.PageSize, result.DurationInMs, totalDocumentsSizeInBytes);
         }
 
         private async Task DetailedGraphResult(QueryOperationContext queryContext, RequestTimeTracker tracker, HttpMethod method)
@@ -355,7 +356,7 @@ namespace Raven.Server.Documents.Handlers
 
                     await ExecuteQueryOperation(query,
                         (runner, options, onProgress, token) => runner.ExecuteDeleteQuery(query, options, queryContext, onProgress, token),
-                        queryContext, queryContext, Operations.Operations.OperationType.DeleteByQuery);
+                        queryContext, Operations.Operations.OperationType.DeleteByQuery);
                 }
             }
             catch
@@ -396,7 +397,7 @@ namespace Raven.Server.Documents.Handlers
                     isTest: true,
                     collectResultsNeeded: true,
                     returnDocument: false
-                  
+
                 );
 
                 using (context.OpenWriteTransaction())
@@ -487,7 +488,7 @@ namespace Raven.Server.Documents.Handlers
                 await ExecuteQueryOperation(query,
                     (runner, options, onProgress, token) => runner.ExecutePatchQuery(
                         query, options, patch, query.QueryParameters, queryContext, onProgress, token),
-                    queryContext, queryContext, Operations.Operations.OperationType.UpdateByQuery);
+                    queryContext, Operations.Operations.OperationType.UpdateByQuery);
             }
             catch
             {
@@ -516,7 +517,6 @@ namespace Raven.Server.Documents.Handlers
                 QueryOperationOptions,
                 Action<IOperationProgress>, OperationCancelToken,
                 Task<IOperationResult>> operation,
-                QueryOperationContext queryContext,
                 IDisposable returnContextToPool,
                 Operations.Operations.OperationType operationType)
         {
@@ -540,9 +540,10 @@ namespace Raven.Server.Documents.Handlers
                 operationType,
                 onProgress => operation(Database.QueryRunner, options, onProgress, token), operationId, details, token);
 
-            await using (var writer = new AsyncBlittableJsonTextWriter(queryContext.Documents, ResponseBodyStream()))
+            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                writer.WriteOperationIdAndNodeTag(queryContext.Documents, operationId, ServerStore.NodeTag);
+                writer.WriteOperationIdAndNodeTag(context, operationId, ServerStore.NodeTag);
             }
 
             _ = task.ContinueWith(_ =>

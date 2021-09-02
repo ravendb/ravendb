@@ -3,11 +3,11 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.Basic.Entities;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
+using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
 

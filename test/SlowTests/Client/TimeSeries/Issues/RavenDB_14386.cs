@@ -24,7 +24,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                 var id2 = "users/2-A";
                 var tag = "Heartrate";
                 var tag2 = "Raven";
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 using (var session = store.OpenSession())
                 {
@@ -89,7 +89,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                 var id2 = "users/2-A";
                 var tag = "Heartrate";
                 var tag2 = "Raven";
-                var baseline = DateTime.Today;
+                var baseline = RavenTestHelper.UtcToday;
 
                 using (var session = store.OpenSession())
                 {
