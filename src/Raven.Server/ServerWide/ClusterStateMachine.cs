@@ -931,7 +931,13 @@ namespace Raven.Server.ServerWide
             try
             {
                 clusterTransaction = (ClusterTransactionCommand)JsonDeserializationCluster.Commands[nameof(ClusterTransactionCommand)](cmd);
-                var dbTopology = UpdateDatabaseRecordId(context, index, clusterTransaction);
+                using var rawRecord = ReadRawDatabaseRecord(context, clusterTransaction.DatabaseName);
+                if (rawRecord == null)
+                    throw DatabaseDoesNotExistException.CreateWithMessage(clusterTransaction.DatabaseName, $"Could not execute update command of type '{nameof(ClusterTransactionCommand)}'.");
+                
+                if(rawRecord.IsSharded() == false)
+                    //This function is used to set cluster & database id for backward compatibility so no need if for shard
+                    UpdateDatabaseRecordId(context, rawRecord, index, clusterTransaction);
 
                 if (clusterTransaction.SerializedDatabaseCommands != null &&
                     clusterTransaction.SerializedDatabaseCommands.TryGet(nameof(ClusterTransactionCommand.Options), out BlittableJsonReaderObject blittableOptions))
@@ -940,13 +946,14 @@ namespace Raven.Server.ServerWide
                 }
 
                 var compareExchangeItems = context.Transaction.InnerTransaction.OpenTable(CompareExchangeSchema, CompareExchange);
-                var error = clusterTransaction.ExecuteCompareExchangeCommands(dbTopology, context, index, compareExchangeItems);
+                var error = clusterTransaction.ExecuteCompareExchangeCommands(rawRecord.GetClusterTransactionId(), context, index, compareExchangeItems);
                 if (error == null)
                 {
-                    clusterTransaction.SaveCommandsBatch(context, index);
+                    clusterTransaction.SaveCommandsBatch(context, rawRecord, index, ClusterTransactionWaiter);
+                    
                     var notify = clusterTransaction.HasDocumentsInTransaction
-                        ? DatabasesLandlord.ClusterDatabaseChangeType.PendingClusterTransactions
-                        : DatabasesLandlord.ClusterDatabaseChangeType.ClusterTransactionCompleted;
+                    ? DatabasesLandlord.ClusterDatabaseChangeType.PendingClusterTransactions
+                    : DatabasesLandlord.ClusterDatabaseChangeType.ClusterTransactionCompleted;
 
                     NotifyDatabaseAboutChanged(context, clusterTransaction.DatabaseName, index, nameof(ClusterTransactionCommand), notify, null);
 
@@ -967,10 +974,9 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private DatabaseTopology UpdateDatabaseRecordId(ClusterOperationContext context, long index, ClusterTransactionCommand clusterTransaction)
+        private void UpdateDatabaseRecordId(ClusterOperationContext context, RawDatabaseRecord rawRecord, long index,
+            ClusterTransactionCommand clusterTransaction)
         {
-            var rawRecord = ReadRawDatabaseRecord(context, clusterTransaction.DatabaseName);
-
             if (rawRecord == null)
                 throw DatabaseDoesNotExistException.CreateWithMessage(clusterTransaction.DatabaseName, $"Could not execute update command of type '{nameof(ClusterTransactionCommand)}'.");
 
@@ -998,7 +1004,6 @@ namespace Raven.Server.ServerWide
                     UpdateValue(index, items, valueNameLowered, valueName, databaseRecordJson);
                 }
             }
-            return topology;
         }
 
         private void ConfirmReceiptServerCertificate(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index, ServerStore serverStore)

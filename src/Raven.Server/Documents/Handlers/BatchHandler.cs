@@ -8,6 +8,7 @@ using System.Runtime.ExceptionServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands.Batches;
@@ -68,18 +69,18 @@ namespace Raven.Server.Documents.Handlers
                 }
                 finally
                 {
-                if (TrafficWatchManager.HasRegisteredClients)
-                {
-                    var log = BatchTrafficWatch(commandBuilder.Commands);
-                    // add sb to httpContext
-                    AddStringToHttpContext(log, TrafficWatchChangeType.BulkDocs);
-                }
+                    if (TrafficWatchManager.HasRegisteredClients)
+                    {
+                        var log = BatchTrafficWatch(commandBuilder.Commands);
+                        // add sb to httpContext
+                        AddStringToHttpContext(log, TrafficWatchChangeType.BulkDocs);
+                    }
                 }
                 
                 var disableAtomicDocumentWrites = GetBoolValueQueryString("disableAtomicDocumentWrites", required: false) ??
                                                   Database.Configuration.Cluster.DisableAtomicDocumentWrites;
 
-                CheckBackwardCompatibility(ref disableAtomicDocumentWrites);
+                CheckBackwardCompatibility(HttpContext, ref disableAtomicDocumentWrites);
 
                 using (var command = await commandBuilder.GetCommand(context))
                 {
@@ -87,7 +88,7 @@ namespace Raven.Server.Documents.Handlers
                     {
                         ValidateCommandForClusterWideTransaction(command);
 
-                        using (Database.ClusterTransactionWaiter.CreateTask(out var taskId))
+                        using (ServerStore.Cluster.ClusterTransactionWaiter.CreateTask(out var taskId))
                         {
                             // Since this is a cluster transaction we are not going to wait for the write assurance of the replication.
                             // Because in any case the user will get a raft index to wait upon on his next request.
@@ -143,12 +144,12 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private void CheckBackwardCompatibility(ref bool disableAtomicDocumentWrites)
+        internal static void CheckBackwardCompatibility(HttpContext httpContext, ref bool disableAtomicDocumentWrites)
         {
-            if (disableAtomicDocumentWrites) 
+            if (disableAtomicDocumentWrites)
                 return;
 
-            if (RequestRouter.TryGetClientVersion(HttpContext, out var clientVersion) == false)
+            if (RequestRouter.TryGetClientVersion(httpContext, out var clientVersion) == false)
             {
                 disableAtomicDocumentWrites = true;
                 return;
@@ -160,39 +161,10 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private static void ValidateCommandForClusterWideTransaction(MergedBatchCommand command)
+        internal static void ValidateCommandForClusterWideTransaction(MergedBatchCommand command)
         {
-            foreach (var document in command.ParsedCommands)
-            {
-                switch (document.Type)
-                {
-                    case CommandType.PUT:
-                    case CommandType.DELETE:
-                    case CommandType.CompareExchangePUT:
-                    case CommandType.CompareExchangeDELETE:
-                        if (document.Type == CommandType.PUT)
-                        {
-                            if (document.SeenAttachments)
-                                throw new NotSupportedException($"The document {document.Id} has attachments, this is not supported in cluster wide transaction.");
-
-                            if (document.SeenCounters)
-                                throw new NotSupportedException($"The document {document.Id} has counters, this is not supported in cluster wide transaction.");
-
-                            if (document.SeenTimeSeries)
-                                throw new NotSupportedException($"The document {document.Id} has time series, this is not supported in cluster wide transaction.");
-                        }
-                        break;
-
-                    default:
-                        throw new ArgumentOutOfRangeException($"The command type {document.Type} is not supported in cluster transaction.");
-                }
-            }
-        }
-
-        public class ClusterTransactionCompletionResult
-        {
-            public Task IndexTask;
-            public DynamicJsonArray Array;
+            var commandParsedCommands = command.ParsedCommands;
+            ClusterTransactionCommand.ValidateCommands(commandParsedCommands);
         }
 
         public static string BatchTrafficWatch(ArraySegment<BatchRequestParser.CommandData> parsedCommands)
@@ -248,7 +220,7 @@ namespace Raven.Server.Documents.Handlers
                 using (var timeout = new CancellationTokenSource(ServerStore.Engine.OperationTimeout))
                 using (var cts = CancellationTokenSource.CreateLinkedTokenSource(timeout.Token, HttpContext.RequestAborted))
                 {
-                    reply = (ClusterTransactionCompletionResult)await Database.ClusterTransactionWaiter.WaitForResults(options.TaskId, cts.Token);
+                    reply = await ServerStore.Cluster.ClusterTransactionWaiter.WaitForResults(options.TaskId, cts.Token);
                 }
                 if (reply.IndexTask != null)
                 {
@@ -530,17 +502,15 @@ namespace Raven.Server.Documents.Handlers
                     {
                         ModifiedCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                     }
+                    (long, string)? clusterGuardAddition = options.DisableAtomicDocumentWrites == true ? null
+                        : (command.Index, Database.ClusterTransactionId);
 
                     if (commands != null)
                     {
                         foreach (BlittableJsonReaderObject blittableCommand in commands)
                         {
                             count++;
-                            var changeVector = $"{ChangeVectorParser.RaftTag}:{count}-{Database.DatabaseGroupId}";
-                            if (options.DisableAtomicDocumentWrites == false)
-                            {
-                                changeVector += $",{ChangeVectorParser.TrxnTag}:{command.Index}-{Database.ClusterTransactionId}";
-                            }
+                            var changeVector = GetClusterWideChangeVector(Database.DatabaseGroupId, count, clusterGuardAddition);
                             var cmd = JsonDeserializationServer.ClusterTransactionDataCommand(blittableCommand);
 
                             switch (cmd.Type)
@@ -686,6 +656,22 @@ namespace Raven.Server.Documents.Handlers
                     Batch = _batch
                 };
             }
+
+            public static string GetClusterWideChangeVector(string databaseId, long prevCountPerShard, (long Index, string ClusterId)? clusterAddition)
+            {
+                var stringBuilder = new StringBuilder(ChangeVectorParser.RaftTag)
+                    .Append(':').Append(prevCountPerShard)
+                    .Append('-').Append(databaseId);
+                if (clusterAddition.HasValue)
+                {
+                    stringBuilder
+                        .Append(',').Append(ChangeVectorParser.TrxnTag)
+                        .Append(':').Append(clusterAddition.Value.Index)
+                        .Append('-').Append(clusterAddition.Value.ClusterId);
+                }
+                return stringBuilder.ToString();
+            }
+
         }
 
         public class MergedBatchCommand : TransactionMergedCommand, IDisposable

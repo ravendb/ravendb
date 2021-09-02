@@ -1,6 +1,7 @@
 ﻿
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
@@ -219,6 +220,32 @@ namespace Raven.Server.ServerWide
                 return _shards;
             }
         }
+        
+        private List<DatabaseRecord.ShardRangeAssignment> _shardAllocations;
+
+        public List<DatabaseRecord.ShardRangeAssignment> ShardAllocations
+        {
+            get
+            {
+                if (_materializedRecord != null)
+                    return _materializedRecord.ShardAllocations;
+
+                if (_shardAllocations != null)
+                    return _shardAllocations;
+
+                if (_record.TryGet(nameof(DatabaseRecord.ShardAllocations), out BlittableJsonReaderArray array) == false || array == null)
+                    return null;
+
+                _shardAllocations = new List<DatabaseRecord.ShardRangeAssignment>(array.Length);
+                for (var index = 0; index < array.Length; index++)
+                {
+                    var shardAllocation = (BlittableJsonReaderObject)array[index];
+                    _shardAllocations.Add(JsonDeserializationCluster.ShardRangeAssignment(shardAllocation));
+                }
+
+                return _shardAllocations;
+            }
+        }
 
         public bool IsSharded()
         {
@@ -278,6 +305,18 @@ namespace Raven.Server.ServerWide
             {
                 yield return GetShardedDatabaseRecord(index);
             }
+        }
+
+        public string GetClusterTransactionId()
+        {
+            if (_materializedRecord != null)
+                return _materializedRecord.GetClusterTransactionId();
+
+            if (IsSharded() == false) 
+                return Topology.ClusterTransactionIdBase64;
+
+            Debug.Assert(Shards.All(s => s.ClusterTransactionIdBase64.Equals(Shards[0].ClusterTransactionIdBase64)));
+            return Shards[0].ClusterTransactionIdBase64;
         }
 
         private DatabaseStateStatus? _databaseState;
@@ -1051,7 +1090,6 @@ namespace Raven.Server.ServerWide
                 return _olapConnectionStrings;
             }
         }
-
 
         public void Dispose()
         {

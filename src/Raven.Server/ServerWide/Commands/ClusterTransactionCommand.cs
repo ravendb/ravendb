@@ -6,7 +6,9 @@ using Raven.Client;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
+using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers;
+using Raven.Server.Documents.Sharding;
 using Raven.Server.Json;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
@@ -17,6 +19,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Voron;
+using Voron.Data.BTrees;
 using Voron.Data.Tables;
 using static Raven.Client.Exceptions.ClusterTransactionConcurrencyException;
 
@@ -132,11 +135,17 @@ namespace Raven.Server.ServerWide.Commands
 
         public ClusterTransactionCommand(string databaseName, char identityPartsSeparator, DatabaseTopology topology,
             ArraySegment<BatchRequestParser.CommandData> commandParsedCommands,
+            ClusterTransactionOptions options, string uniqueRequestId) 
+            : this(databaseName, identityPartsSeparator, commandParsedCommands, options, uniqueRequestId)
+        {
+            DatabaseRecordId = topology.DatabaseTopologyIdBase64 ?? Guid.NewGuid().ToBase64Unpadded();
+            ClusterTransactionId = topology.ClusterTransactionIdBase64 ?? Guid.NewGuid().ToBase64Unpadded();
+        }
+        public ClusterTransactionCommand(string databaseName, char identityPartsSeparator,
+            ArraySegment<BatchRequestParser.CommandData> commandParsedCommands,
             ClusterTransactionOptions options, string uniqueRequestId) : base(uniqueRequestId)
         {
             DatabaseName = databaseName;
-            DatabaseRecordId = topology.DatabaseTopologyIdBase64 ?? Guid.NewGuid().ToBase64Unpadded();
-            ClusterTransactionId = topology.ClusterTransactionIdBase64 ?? Guid.NewGuid().ToBase64Unpadded();
             Options = options;
             CommandCreationTicks = SystemTime.UtcNow.Ticks;
 
@@ -162,6 +171,35 @@ namespace Raven.Server.ServerWide.Commands
             DatabaseCommandsCount = DatabaseCommands.Count;
         }
 
+        internal static void ValidateCommands(ArraySegment<BatchRequestParser.CommandData> parsedCommands)
+        {
+            foreach (var document in parsedCommands)
+            {
+                switch (document.Type)
+                {
+                    case CommandType.PUT:
+                    case CommandType.DELETE:
+                    case CommandType.CompareExchangePUT:
+                    case CommandType.CompareExchangeDELETE:
+                        if (document.Type == CommandType.PUT)
+                        {
+                            if (document.SeenAttachments)
+                                throw new NotSupportedException($"The document {document.Id} has attachments, this is not supported in cluster wide transaction.");
+
+                            if (document.SeenCounters)
+                                throw new NotSupportedException($"The document {document.Id} has counters, this is not supported in cluster wide transaction.");
+
+                            if (document.SeenTimeSeries)
+                                throw new NotSupportedException($"The document {document.Id} has time series, this is not supported in cluster wide transaction.");
+                        }
+                        break;
+
+                    default:
+                        throw new ArgumentOutOfRangeException($"The command type {document.Type} is not supported in cluster transaction.");
+                }
+            }
+        }
+
         private static void ClusterCommandValidation(ClusterTransactionDataCommand command, char identityPartsSeparator)
         {
             if (string.IsNullOrWhiteSpace(command.Id))
@@ -173,10 +211,10 @@ namespace Raven.Server.ServerWide.Commands
                 throw new RachisApplyException($"Document id {command.Id} cannot end with '|' or '{identityPartsSeparator}' as part of cluster transaction");
         }
 
-        public List<ClusterTransactionErrorInfo> ExecuteCompareExchangeCommands(DatabaseTopology dbTopology, ClusterOperationContext context, long index, Table items)
+        public List<ClusterTransactionErrorInfo> ExecuteCompareExchangeCommands(string clusterTransactionId, ClusterOperationContext context, long index, Table items)
         {
             if (Options?.DisableAtomicDocumentWrites == false)
-                EnsureAtomicDocumentWrites(dbTopology, context, items, index);
+                EnsureAtomicDocumentWrites(clusterTransactionId, context, items, index);
 
             if (ClusterCommands == null || ClusterCommands.Count == 0)
                 return null;
@@ -191,7 +229,7 @@ namespace Raven.Server.ServerWide.Commands
                     case CommandType.CompareExchangePUT:
                         var put = new AddOrUpdateCompareExchangeCommand(DatabaseName, clusterCommand.Id, clusterCommand.Document, clusterCommand.Index, context, null);
                         put.CurrentTicks = CommandCreationTicks;
-                        if (put.Validate(context, items, clusterCommand.Index, out current) == false)
+                        if (put.Validate(context, items, out current) == false)
                         {
                             errors.Add(GenerateErrorInfo(clusterCommand, current));
                             continue;
@@ -200,7 +238,7 @@ namespace Raven.Server.ServerWide.Commands
                         break;
                     case CommandType.CompareExchangeDELETE:
                         var delete = new RemoveCompareExchangeCommand(DatabaseName, clusterCommand.Id, clusterCommand.Index, context, null);
-                        if (delete.Validate(context, items, clusterCommand.Index, out current) == false)
+                        if (delete.Validate(context, items, out current) == false)
                         {
                             errors.Add(GenerateErrorInfo(clusterCommand, current, delete: true));
                             continue;
@@ -253,7 +291,7 @@ namespace Raven.Server.ServerWide.Commands
             };
         }
 
-        private void EnsureAtomicDocumentWrites(DatabaseTopology dbTopology, ClusterOperationContext context, Table items, long index)
+        private void EnsureAtomicDocumentWrites(string clusterTransactionId, ClusterOperationContext context, Table items, long index)
         {
             if (SerializedDatabaseCommands == null)
                 return;
@@ -271,7 +309,7 @@ namespace Raven.Server.ServerWide.Commands
                 long changeVectorIndex = 0;
 
                 if (changeVector != null)
-                    changeVectorIndex = ChangeVectorUtils.GetEtagById(changeVector, dbTopology.ClusterTransactionIdBase64);
+                    changeVectorIndex = ChangeVectorUtils.GetEtagById(changeVector, clusterTransactionId);
 
                 if (FromBackup)
                     changeVectorIndex = GetCurrentIndex(context, items, atomicGuardKey) ?? 0;
@@ -346,28 +384,130 @@ namespace Raven.Server.ServerWide.Commands
             return RvnAtomicPrefix + docId;
         }
 
-        public unsafe void SaveCommandsBatch(ClusterOperationContext context, long index)
+        public void SaveCommandsBatch(ClusterOperationContext context, RawDatabaseRecord rawRecord, long index,
+            ClusterTransactionWaiter clusterTransactionWaiter)
         {
             if (HasDocumentsInTransaction == false)
                 return;
-
             var items = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.TransactionCommandsSchema, ClusterStateMachine.TransactionCommands);
             var commandsCountPerDatabase = context.Transaction.InnerTransaction.ReadTree(ClusterStateMachine.TransactionCommandsCountPerDatabase);
-            var commands = context.ReadObject(SerializedDatabaseCommands, "serialized-tx-commands");
 
-            using (GetPrefix(context, DatabaseName, out var databaseSlice))
+            if (SerializedDatabaseCommands == null)
+                return;
+
+            if (rawRecord.IsSharded())
             {
-                var count = commandsCountPerDatabase.ReadInt64(databaseSlice) ?? 0;
-                using (GetPrefix(context, DatabaseName, out var prefixSlice, count))
+                if (SerializedDatabaseCommands.TryGet(nameof(DatabaseCommands), out BlittableJsonReaderArray commands) == false)
+                    throw new InvalidOperationException($"Cluster {nameof(SerializedDatabaseCommands)} don't include the actual commands : {SerializedDatabaseCommands}");
+
+                var commandsPreShard = new DynamicJsonArray[rawRecord.Shards.Count()];
+                var prevCountPerShard = GetPrevCountPerShard(context, commandsCountPerDatabase, rawRecord);
+
+                (long, string)? clusterGuardAddition = Options.DisableAtomicDocumentWrites == true ? null
+                    : (index, rawRecord.GetClusterTransactionId());
+
+                var result = new DynamicJsonArray();
+                foreach (BlittableJsonReaderObject command in commands)
+                {
+                    if (command.TryGet(nameof(ClusterTransactionDataCommand.Id), out string id) == false)
+                        throw new InvalidOperationException($"Got cluster transaction database command without an id: {command}");
+
+                    var shardIndex = ShardedContext.GetShardIndex(context, rawRecord.ShardAllocations, id);
+                    commandsPreShard[shardIndex] ??= new DynamicJsonArray();
+                    commandsPreShard[shardIndex].Add(command);
+                    var currentCount = ++prevCountPerShard[shardIndex];
+                    result.Add(GetCommandResult(rawRecord, command, id, shardIndex, currentCount, clusterGuardAddition));
+                }
+
+                for (int i = 0; i < commandsPreShard.Length; i++)
+                {
+                    if (commandsPreShard[i] == null)
+                        continue;
+
+                    var toSave = context.ReadObject(new DynamicJsonValue
+                    {
+                        [nameof(DatabaseCommands)] = commandsPreShard[i],
+                        [nameof(Options)] = Options.ToJson()
+                    }, "serialized-database-commands");
+
+                    var shard = rawRecord.DatabaseName + "$" + i;
+                    SaveCommandBatch(context, index, shard, commandsCountPerDatabase, items, toSave, out var prevCount);
+                }
+
+                context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
+                {
+                    clusterTransactionWaiter.TrySetResult(Options.TaskId, new ClusterTransactionCompletionResult
+                    {
+                        Array = result
+                    });
+                };
+            }
+            else
+            {
+                var commands = context.ReadObject(SerializedDatabaseCommands, "serialized-tx-commands");
+                SaveCommandBatch(context, index, DatabaseName, commandsCountPerDatabase, items, commands, out _);
+            }
+        }
+
+        private static long[] GetPrevCountPerShard(ClusterOperationContext context, Tree commandsCountPerDatabase, RawDatabaseRecord rawRecord)
+        {
+            long[] prevCountPerShard = new long[rawRecord.Shards.Length];
+            for (int i = 0; i < prevCountPerShard.Length; i++)
+            {
+                using (GetPrefix(context, rawRecord.DatabaseName + "$" + i, out var databaseSlice))
+                {
+                    prevCountPerShard[i] = commandsCountPerDatabase.ReadInt64(databaseSlice) ?? 0;
+                }
+            }
+
+            return prevCountPerShard;
+        }
+
+        private static DynamicJsonValue GetCommandResult(
+            RawDatabaseRecord rawRecord,
+            BlittableJsonReaderObject command,
+            string id,
+            int shardIndex,
+            long currentCommandCount,
+            (long, string)? clusterGuardAddition)
+        {
+            var flags = DocumentFlags.None;
+            if (command.TryGet(nameof(ClusterTransactionDataCommand.Document), out BlittableJsonReaderObject document) &&
+                document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata))
+                metadata.TryGet(Constants.Documents.Metadata.Flags, out flags);
+
+            if (command.TryGet(nameof(ClusterTransactionDataCommand.Type), out string type) == false)
+                throw new InvalidOperationException($"Got command with no type defined: {command}");
+
+            var currentShardCount = currentCommandCount;
+            var databaseId = rawRecord.Shards[shardIndex].DatabaseTopologyIdBase64;
+            var changeVector = BatchHandler.ClusterTransactionMergedCommand.GetClusterWideChangeVector(databaseId, currentShardCount, clusterGuardAddition);
+
+            return new DynamicJsonValue
+            {
+                [nameof(ICommandData.Type)] = type,
+                [Constants.Documents.Metadata.Id] = id,
+                [Constants.Documents.Metadata.ChangeVector] = changeVector,
+                [Constants.Documents.Metadata.LastModified] = DateTime.UtcNow,
+                [Constants.Documents.Metadata.Flags] = flags | DocumentFlags.FromClusterTransaction
+            };
+        }
+
+        private unsafe void SaveCommandBatch(ClusterOperationContext context, long index, string databaseName, Tree commandsCountPerDatabase, Table items, BlittableJsonReaderObject commands, out long prevCount)
+        {
+            using (GetPrefix(context, databaseName, out var databaseSlice))
+            {
+                prevCount = commandsCountPerDatabase.ReadInt64(databaseSlice) ?? 0;
+                using (GetPrefix(context, databaseName, out var prefixSlice, prevCount))
                 using (items.Allocate(out TableValueBuilder tvb))
                 {
                     tvb.Add(prefixSlice.Content.Ptr, prefixSlice.Size);
                     tvb.Add(commands.BasePointer, commands.Size);
                     tvb.Add(index);
                     items.Insert(tvb);
-                    using (commandsCountPerDatabase.DirectAdd(databaseSlice, sizeof(long), out var ptr))
-                        *(long*)ptr = count + DatabaseCommandsCount;
                 }
+                using (commandsCountPerDatabase.DirectAdd(databaseSlice, sizeof(long), out var ptr))
+                    *(long*)ptr = prevCount + commands.Count;
             }
         }
 

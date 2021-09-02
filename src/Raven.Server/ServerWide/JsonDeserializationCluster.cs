@@ -56,6 +56,8 @@ namespace Raven.Server.ServerWide
         public static readonly Func<BlittableJsonReaderObject, DatabaseRecord> DatabaseRecord = GenerateJsonDeserializationRoutine<DatabaseRecord>();
 
         public static readonly Func<BlittableJsonReaderObject, DatabaseTopology> DatabaseTopology = GenerateJsonDeserializationRoutine<DatabaseTopology>();
+      
+        public static readonly Func<BlittableJsonReaderObject, DatabaseRecord.ShardRangeAssignment> ShardRangeAssignment = GenerateJsonDeserializationRoutine<DatabaseRecord.ShardRangeAssignment>();
 
         public static readonly Func<BlittableJsonReaderObject, RemoveNodeFromDatabaseCommand> RemoveNodeFromDatabaseCommand = GenerateJsonDeserializationRoutine<RemoveNodeFromDatabaseCommand>();
 
