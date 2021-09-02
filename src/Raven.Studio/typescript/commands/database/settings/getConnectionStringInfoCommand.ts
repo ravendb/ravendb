@@ -34,7 +34,7 @@ class getConnectionStringInfoCommand extends commandBase {
     }
 
     static forElasticSearchEtl(db: database, connectionStringName: string) {
-        return new getConnectionStringInfoCommand(db, "Elasticsearch", connectionStringName);
+        return new getConnectionStringInfoCommand(db, "ElasticSearch", connectionStringName);
     }
 }
 

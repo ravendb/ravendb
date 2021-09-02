@@ -1,0 +1,114 @@
+﻿/// <reference path="../../../../typings/tsd.d.ts"/>
+import ongoingTaskEditModel = require("models/database/tasks/ongoingTaskEditModel");
+import ongoingTaskElasticSearchEtlTransformationModel = require("models/database/tasks/ongoingTaskElasticSearchEtlTransformationModel");
+import ongoingTaskElasticSearchEtlIndexModel = require("models/database/tasks/ongoingTaskElasticSearchEtlIndexModel");
+
+class ongoingTaskElasticSearchEtlEditModel extends ongoingTaskEditModel {
+    connectionStringName = ko.observable<string>();
+        
+    transformationScripts = ko.observableArray<ongoingTaskElasticSearchEtlTransformationModel>([]);
+    elasticIndexes = ko.observableArray<ongoingTaskElasticSearchEtlIndexModel>([]);
+    
+    validationGroup: KnockoutValidationGroup;
+    enterTestModeValidationGroup: KnockoutValidationGroup;
+    dirtyFlag: () => DirtyFlag;
+    
+    constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtlDetails) {
+        super();
+
+        this.update(dto);
+        this.initializeObservables();
+        this.initializeValidation();
+    }
+    
+    protected initializeObservables() {
+        super.initializeObservables();
+        
+        // todo .. script dirty ?? check...
+        this.dirtyFlag = new ko.DirtyFlag([ 
+            this.taskName,
+            this.taskState,
+            this.connectionStringName,
+            this.mentorNode,
+            this.manualChooseMentor
+        ])
+    }
+    
+    initializeValidation() {
+        this.initializeMentorValidation();
+
+        this.connectionStringName.extend({
+            required: true
+        });
+
+        this.transformationScripts.extend({
+            validation: [
+                {
+                    validator: () => this.transformationScripts().length > 0,
+                    message: "Transformation Script is Not defined"
+                }
+            ]
+        });
+
+        this.validationGroup = ko.validatedObservable({
+            connectionStringName: this.connectionStringName,
+            elasticIndexes: this.elasticIndexes,
+            transformationScripts: this.transformationScripts,
+            mentorNode: this.mentorNode
+        });
+        
+        this.enterTestModeValidationGroup = ko.validatedObservable({
+            elasticIndexes: this.elasticIndexes,
+            transformationScripts: this.transformationScripts
+        });
+    }
+
+    update(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtlDetails) {
+        super.update(dto);
+        
+        const configuration = dto.Configuration;
+        if (configuration) {
+            this.connectionStringName(configuration.ConnectionStringName);
+            this.manualChooseMentor(!!configuration.MentorNode);
+            
+            if (configuration.Transforms) {
+                this.transformationScripts(configuration.Transforms.map(x => new ongoingTaskElasticSearchEtlTransformationModel(x, false, false)));
+            }
+            
+            if (configuration.ElasticIndexes) {
+                this.elasticIndexes(configuration.ElasticIndexes.map(x => new ongoingTaskElasticSearchEtlIndexModel(x, false)));
+            }
+        }
+    }
+    
+    toDto(): Raven.Client.Documents.Operations.ETL.ElasticSearch.ElasticSearchEtlConfiguration {
+        return {
+            TaskId: this.taskId,
+            Name: this.taskName(),
+            EtlType: "ElasticSearch",
+            ConnectionStringName: this.connectionStringName(),
+            AllowEtlOnNonEncryptedChannel: true,
+            Disabled: this.taskState() === "Disabled",
+            MentorNode: this.manualChooseMentor() ? this.mentorNode() : undefined,
+            Transforms: this.transformationScripts().map(x => x.toDto()),
+            ElasticIndexes: this.elasticIndexes().map(x => x.toDto())
+        };
+        
+    }
+    
+    static empty(): ongoingTaskElasticSearchEtlEditModel {
+        return new ongoingTaskElasticSearchEtlEditModel(
+            {
+                TaskName: "",
+                TaskType: "ElasticSearchEtl",
+                TaskState: "Enabled",
+                TaskConnectionStatus: "Active",
+                Configuration: {
+                    Transforms: [],
+                    ElasticIndexes: []
+                }
+            } as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtlDetails);
+       }
+}
+
+export = ongoingTaskElasticSearchEtlEditModel;

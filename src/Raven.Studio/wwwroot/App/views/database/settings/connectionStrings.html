@@ -99,13 +99,13 @@
                     </div>
                 </div>
                 <div class="hr-title on-base-background margin-top margin-top-lg">
-                    <h5><strong>Elastic Search</strong> Connection Strings</h5><hr>
-                    <button class="btn btn-sm btn-primary" data-bind="click: onAddElasticSearchEtl" title="Add a new Elastic Search ETL connection string"><i class="icon-plus"></i><span>Add</span></button>
+                    <h5><strong>Elasticsearch</strong> Connection Strings</h5><hr>
+                    <button class="btn btn-sm btn-primary" data-bind="click: onAddElasticSearchEtl" title="Add a new Elasticsearch ETL connection string"><i class="icon-plus"></i><span>Add</span></button>
                 </div>
                 <div data-bind="if: elasticSearchEtlConnectionStringsNames().length === 0">
                     <div class="text-center">
                         <i class="icon-lg icon-empty-set text-muted"></i>
-                        <h3 class="text-center text-muted margin-top">No Elastic Search ETL connection strings have been defined</h3>
+                        <h3 class="text-center text-muted margin-top">No Elasticsearch ETL connection strings have been defined</h3>
                     </div>
                 </div>
                 <div data-bind="foreach: elasticSearchEtlConnectionStringsNames">
@@ -136,7 +136,7 @@
                 <div class="flex-horizontal padding">
                     <h3 class="flex-grow" data-bind="visible: editedRavenEtlConnectionString">RavenDB Connection String</h3>
                     <h3 class="flex-grow" data-bind="visible: editedSqlEtlConnectionString">SQL Connection String</h3>
-                    <h3 class="flex-grow" data-bind="visible: editedElasticSearchEtlConnectionString">Elastic Search Connection String</h3>
+                    <h3 class="flex-grow" data-bind="visible: editedElasticSearchEtlConnectionString">Elasticsearch Connection String</h3>
                     <button class="close flex-start" data-bind="click: onCloseEdit"><i class="icon-cancel"></i></button>
                 </div>
                 <form class="flex-form padding" autocomplete="off">

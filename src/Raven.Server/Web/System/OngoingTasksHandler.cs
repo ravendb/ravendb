@@ -28,6 +28,7 @@ using Raven.Client.Util;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.Documents.ETL;
+using Raven.Server.Documents.ETL.Providers.ElasticSearch;
 using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.Replication;
@@ -897,7 +898,7 @@ namespace Raven.Server.Web.System
                     if (databaseRecord.OlapConnectionStrings.TryGetValue(olapEtl.ConnectionStringName, out var olapConnection))
                     {
                         destination = olapConnection.GetDestination();
-        }
+                    }
 
                     var connectionStatus = GetEtlTaskConnectionStatus(databaseRecord, olapEtl, out var tag, out var error);
 
@@ -917,6 +918,34 @@ namespace Raven.Server.Web.System
                         },
                         ConnectionStringName = olapEtl.ConnectionStringName,
                         Destination = destination,
+                        Error = error
+                    };
+                }
+            }
+            
+            if (databaseRecord.ElasticSearchEtls != null)
+            {
+                foreach (var elasticSearchEtl in databaseRecord.ElasticSearchEtls)
+                {
+                    databaseRecord.ElasticSearchConnectionStrings.TryGetValue(elasticSearchEtl.ConnectionStringName, out var connection);
+                    
+                    var connectionStatus = GetEtlTaskConnectionStatus(databaseRecord, elasticSearchEtl, out var tag, out var error);
+                    var taskState = GetEtlTaskState(elasticSearchEtl);
+
+                    yield return new OngoingTaskElasticSearchEtlListView
+                    {
+                        TaskId = elasticSearchEtl.TaskId,
+                        TaskName = elasticSearchEtl.Name,
+                        TaskConnectionStatus = connectionStatus,
+                        TaskState = taskState,
+                        MentorNode = elasticSearchEtl.MentorNode,
+                        ResponsibleNode = new NodeId
+                        {
+                            NodeTag = tag,
+                            NodeUrl = clusterTopology.GetUrlFromTag(tag)
+                        },
+                        ConnectionStringName = elasticSearchEtl.ConnectionStringName,
+                        NodesUrls = connection?.Nodes,
                         Error = error
                     };
                 }
@@ -1124,6 +1153,35 @@ namespace Raven.Server.Web.System
                                     NodeUrl = clusterTopology.GetUrlFromTag(node)
                                 },
                                 Error = ravenEtlError
+                            });
+                            break;
+                        
+                        case OngoingTaskType.ElasticSearchEtl:
+
+                            var elasticSearchEtl = name != null ?
+                                record.ElasticSearchEtls.Find(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+                                : record.ElasticSearchEtls?.Find(x => x.TaskId == key);
+
+                            if (elasticSearchEtl == null)
+                            {
+                                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                                break;
+                            }
+
+                            await WriteResult(context, new OngoingTaskElasticSearchEtlDetails
+                            {
+                                TaskId = elasticSearchEtl.TaskId,
+                                TaskName = elasticSearchEtl.Name,
+                                Configuration = elasticSearchEtl,
+                                TaskState = GetEtlTaskState(elasticSearchEtl),
+                                MentorNode = elasticSearchEtl.MentorNode,
+                                TaskConnectionStatus = GetEtlTaskConnectionStatus(record, elasticSearchEtl, out var nodeES, out var elasticSearchEtlError),
+                                ResponsibleNode = new NodeId
+                                {
+                                    NodeTag = nodeES,
+                                    NodeUrl = clusterTopology.GetUrlFromTag(nodeES)
+                                },
+                                Error = elasticSearchEtlError
                             });
                             break;
 

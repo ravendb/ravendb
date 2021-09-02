@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.ETL.ElasticSearch
@@ -38,6 +39,15 @@ namespace Raven.Client.Documents.Operations.ETL.ElasticSearch
         {
             return $"ElasticSearch ETL to {ConnectionStringName}";
         }
+        
+        public override DynamicJsonValue ToJson()
+        {
+            var json = base.ToJson();
+
+            json[nameof(ElasticIndexes)] = new DynamicJsonArray(ElasticIndexes.Select(x => x.ToJson()));
+
+            return json;
+        }
     }
     
     public class ElasticSearchIndex
@@ -50,6 +60,7 @@ namespace Raven.Client.Documents.Operations.ETL.ElasticSearch
             return new DynamicJsonValue
             {
                 [nameof(IndexName)] = IndexName,
+                [nameof(IndexIdProperty)] = IndexIdProperty
             };
         }
     }

@@ -243,7 +243,6 @@ namespace Raven.Client.Documents.Operations.ETL
 
         internal bool IsEmptyScript { get; set; }
 
-
         internal Dictionary<string, string> CollectionToDeleteDocumentsBehaviorFunction { get; private set; }
 
         internal bool IsAddingAttachments { get; private set; }

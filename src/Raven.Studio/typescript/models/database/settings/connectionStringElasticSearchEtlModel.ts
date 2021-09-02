@@ -7,12 +7,7 @@ import jsonUtil = require("common/jsonUtil");
 import discoveryUrl = require("models/database/settings/discoveryUrl");
 
 class connectionStringElasticSearchEtlModel extends connectionStringModel {
-
-    //static serverWidePrefix = "Server Wide Raven Connection String";
-    //isServerWide: KnockoutComputed<boolean>;
-
-    //database = ko.observable<string>();
-    elasticUrls = ko.observableArray<discoveryUrl>([]);
+    nodesUrls = ko.observableArray<discoveryUrl>([]);
     inputUrl = ko.observable<discoveryUrl>(new discoveryUrl(""));
     selectedUrlToTest = ko.observable<string>();
 
@@ -20,17 +15,17 @@ class connectionStringElasticSearchEtlModel extends connectionStringModel {
 
     dirtyFlag: () => DirtyFlag;
 
-    constructor(dto: Raven.Client.Documents.Operations.ETL.Elasticsearch.ElasticsearchConnectionString, isNew: boolean, tasks: { taskName: string; taskId: number }[]) {
+    constructor(dto: Raven.Client.Documents.Operations.ETL.ElasticSearch.ElasticSearchConnectionString, isNew: boolean, tasks: { taskName: string; taskId: number }[]) {
         super(isNew, tasks);
 
         this.update(dto);
         this.initValidation();
 
-        const urlsCount = ko.pureComputed(() => this.elasticUrls().length);
+        const urlsCount = ko.pureComputed(() => this.nodesUrls().length);
         const urlsAreDirty = ko.pureComputed(() => {
             let anyDirty = false;
 
-            this.elasticUrls().forEach(url => {
+            this.nodesUrls().forEach(url => {
                 if (url.dirtyFlag().isDirty()) {
                     anyDirty = true;
                 }
@@ -46,20 +41,20 @@ class connectionStringElasticSearchEtlModel extends connectionStringModel {
         ], false, jsonUtil.newLineNormalizingHashFunction);
     }
 
-    update(dto: Raven.Client.Documents.Operations.ETL.Elasticsearch.ElasticsearchConnectionString) {
+    update(dto: Raven.Client.Documents.Operations.ETL.ElasticSearch.ElasticSearchConnectionString) {
         super.update(dto);
 
         this.connectionStringName(dto.Name);
-        this.elasticUrls(dto.Nodes.map((x) => new discoveryUrl(x)));
+        this.nodesUrls(dto.Nodes.map((x) => new discoveryUrl(x)));
     }
 
     initValidation() {
         super.initValidation();
 
-        this.elasticUrls.extend({
+        this.nodesUrls.extend({
             validation: [
                 {
-                    validator: () => this.elasticUrls().length > 0,
+                    validator: () => this.nodesUrls().length > 0,
                     message: "At least one Elastic Search destination url is required"
                 }
             ]
@@ -67,24 +62,23 @@ class connectionStringElasticSearchEtlModel extends connectionStringModel {
 
         this.validationGroup = ko.validatedObservable({
             connectionStringName: this.connectionStringName,
-            topologyDiscoveryUrls: this.elasticUrls
+            topologyDiscoveryUrls: this.nodesUrls
         });
     }
 
     static empty(): connectionStringElasticSearchEtlModel {
         return new connectionStringElasticSearchEtlModel({
-            Type: "Elasticsearch",
+            Type: "ElasticSearch",
             Name: "",
             Nodes: []
-        } as Raven.Client.Documents.Operations.ETL.Elasticsearch.ElasticsearchConnectionString, true, []);
+        } as Raven.Client.Documents.Operations.ETL.ElasticSearch.ElasticSearchConnectionString, true, []);
     }
 
     toDto() {
         return {
             Type: "Elasticsearch",
             Name: this.connectionStringName(),
-            // TopologyDiscoveryUrls: this.elasticUrls().map((x) => x.discoveryUrlName())
-            Nodes: this.elasticUrls().map((x) => x.discoveryUrlName())
+            Nodes: this.nodesUrls().map((x) => x.discoveryUrlName())
         };
     }
 
@@ -92,14 +86,14 @@ class connectionStringElasticSearchEtlModel extends connectionStringModel {
     //     this.elasticUrls.remove(url);
     // }
     removeDiscoveryUrl(url: discoveryUrl) {
-        this.elasticUrls.remove(url);
+        this.nodesUrls.remove(url);
     }
 
     addDiscoveryUrlWithBlink() {
-        if ( !_.find(this.elasticUrls(), x => x.discoveryUrlName() === this.inputUrl().discoveryUrlName())) {
+        if ( !_.find(this.nodesUrls(), x => x.discoveryUrlName() === this.inputUrl().discoveryUrlName())) {
             const newUrl = new discoveryUrl(this.inputUrl().discoveryUrlName());
             newUrl.dirtyFlag().forceDirty();
-            this.elasticUrls.unshift(newUrl);
+            this.nodesUrls.unshift(newUrl);
             this.inputUrl().discoveryUrlName("");
 
             $(".collection-list li").first().addClass("blink-style");
@@ -108,7 +102,7 @@ class connectionStringElasticSearchEtlModel extends connectionStringModel {
 
     testConnection(urlToTest: discoveryUrl) : JQueryPromise<Raven.Server.Web.System.NodeConnectionTestResult> {
         // return new testClusterNodeConnectionCommand(urlToTest.discoveryUrlName(), this.database(), false)
-        return new testClusterNodeConnectionCommand(urlToTest.discoveryUrlName(), null, false) // todo ... we need new ep...
+        return new testClusterNodeConnectionCommand(urlToTest.discoveryUrlName(), null, false) // TODO ... we need new ep...
             .execute()
             .done((result) => {
                 if (result.Error) {

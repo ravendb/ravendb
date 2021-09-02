@@ -219,8 +219,8 @@
             </form>
         </div>
         <div class="col-xs-12 col-lg-6 flex-vertical" data-bind="with: editedRavenEtl()">
-            <div class="flex-grow">
-                <div id="editTransform" class="panel padding" data-bind="if: showEditTransformationArea">
+            <div class="flex-grow" data-bind="if: showEditTransformationArea">
+                <div id="editTransform" class="panel padding">
                     <div data-bind="with: editedTransformationScriptSandbox">
                         <div class="flex-horizontal margin-bottom" data-bind="validationElement: name">
                             <label class="control-label"><strong>Name:</strong></label>

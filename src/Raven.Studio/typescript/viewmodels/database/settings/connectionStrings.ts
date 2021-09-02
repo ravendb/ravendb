@@ -153,7 +153,7 @@ class connectionStrings extends viewModelBase {
                                                                               task.TaskType === "RavenEtl"         ||
                                                                               task.TaskType === "SqlEtl"           ||
                                                                               task.TaskType === "OlapEtl"          ||
-                                                                              task.TaskType === "ElasticsearchEtl" ||
+                                                                              task.TaskType === "ElasticSearchEtl" ||
                                                                               task.TaskType === "Replication"      ||
                                                                               task.TaskType === "PullReplicationAsSink");
         for (let i = 0; i < tasksThatUseConnectionStrings.length; i++) {
@@ -174,7 +174,7 @@ class connectionStrings extends viewModelBase {
                 case "OlapEtl":
                     stringName = (task as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskOlapEtlListView).ConnectionStringName;
                     break;
-                case "ElasticsearchEtl":
+                case "ElasticSearchEtl":
                     stringName = (task as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskOlapEtlListView).ConnectionStringName;
                     break;
                 case "Replication":
@@ -221,7 +221,7 @@ class connectionStrings extends viewModelBase {
                 this.olapEtlConnectionStringsNames(_.sortBy(this.olapEtlConnectionStringsNames(), x => x.toUpperCase()));
 
                 // elasticSearchEtl
-                this.elasticSearchEtlConnectionStringsNames(Object.keys(result.ElasticsearchConnectionStrings));
+                this.elasticSearchEtlConnectionStringsNames(Object.keys(result.ElasticSearchConnectionStrings));
             });
     }
 
@@ -237,8 +237,8 @@ class connectionStrings extends viewModelBase {
             case "Olap":
                 stringType = "OLAP";
                 break;
-            case "Elasticsearch":
-                stringType = "Elastic Search"
+            case "ElasticSearch":
+                stringType = "Elastic Search" // todo ... ??
                 break;
             default:
                 console.warn("Invalid connection string type: " + connectionStringType);
@@ -390,9 +390,9 @@ class connectionStrings extends viewModelBase {
             .execute()
             .done((result: Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult) => {
                 const elasticConnectionString = new connectionStringElasticSearchEtlModel(
-                    result.ElasticsearchConnectionStrings[connectionStringName],
+                    result.ElasticSearchConnectionStrings[connectionStringName],
                     false,
-                    this.getTasksThatUseThisString(connectionStringName, "Elasticsearch"));
+                    this.getTasksThatUseThisString(connectionStringName, "ElasticSearch"));
 
                 this.editedElasticSearchEtlConnectionString(elasticConnectionString);
                 this.onElasticSearchEtl();
@@ -400,7 +400,7 @@ class connectionStrings extends viewModelBase {
     }
 
     private onElasticSearchEtl() {
-        this.editedElasticSearchEtlConnectionString().elasticUrls.subscribe(() => this.clearTestResult());
+        this.editedElasticSearchEtlConnectionString().nodesUrls.subscribe(() => this.clearTestResult());
         this.editedElasticSearchEtlConnectionString().inputUrl().discoveryUrlName.subscribe(() => this.clearTestResult());
 
         this.editedRavenEtlConnectionString(null);

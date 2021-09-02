@@ -19,6 +19,7 @@ using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Expiration;
@@ -456,10 +457,16 @@ namespace TypingsGenerator
             scripter.AddType(typeof(OlapEtlTestScriptResult));
             scripter.AddType(typeof(TestOlapEtlScript));
             
+            // ongoing tasks - Elastic Search ETL
+            scripter.AddType(typeof(OngoingTaskElasticSearchEtlDetails));
+            scripter.AddType(typeof(OngoingTaskElasticSearchEtlListView));
+            scripter.AddType(typeof(ElasticSearchEtlConfiguration));
+            
             // connection strings
             scripter.AddType(typeof(ConnectionString));
             scripter.AddType(typeof(RavenConnectionString));
             scripter.AddType(typeof(SqlConnectionString));
+            scripter.AddType(typeof(ElasticSearchConnectionString));
             scripter.AddType(typeof(ConnectionStringType));
             scripter.AddType(typeof(GetConnectionStringsResult));
 

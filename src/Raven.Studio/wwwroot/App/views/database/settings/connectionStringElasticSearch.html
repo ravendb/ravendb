@@ -6,7 +6,7 @@
     </div>
 </div>
 <div class="form-group" data-bind="validationElement: inputUrl().discoveryUrlName"> 
-    <label class="control-label">Elastic Search Nodes URLs:</label>
+    <label class="control-label">Nodes URLs:</label>
     <div class="flex-grow"> 
         <input class="form-control" placeholder="Enter node url to add" data-bind="textInput: inputUrl().discoveryUrlName" />
     </div>
@@ -15,10 +15,10 @@
         <i class="icon-plus"></i><span>Add URL</span>
     </button> 
 </div>
-<div class="form-group" data-bind="visible: elasticUrls().length">
+<div class="form-group" data-bind="visible: nodesUrls().length">
     <label class="control-label">&nbsp;</label>
     <div class="flex-grow">
-        <ul class="well collection-list" data-bind="foreach: elasticUrls">
+        <ul class="well collection-list" data-bind="foreach: nodesUrls">
             <li>
                 <div class="name" data-bind="text: $data.discoveryUrlName"></div>
                 <div class="text-warning margin-top margin-top-xs" data-bind="if: hasTestError" title="Connection test failed!">
@@ -44,9 +44,9 @@
         </ul>
     </div>
 </div>
-<div class="form-group" data-bind="if: !elasticUrls.isValid()">
+<div class="form-group" data-bind="if: !nodesUrls.isValid()">
     <label class="control-label">&nbsp;</label>
-    <span data-bind="validationElement: elasticUrls">
-        <span class="help-block" data-bind="validationMessage: elasticUrls"></span>
+    <span data-bind="validationElement: nodesUrls">
+        <span class="help-block" data-bind="validationMessage: nodesUrls"></span>
     </span>
 </div>
