@@ -16,31 +16,34 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
             StaticConnectionPool pool = new StaticConnectionPool(nodesUrls);
             ConnectionSettings settings = new ConnectionSettings(pool);
 
-            if (connectionString.Authentication.BasicAuth != null)
+            if (connectionString.Authentication != null)
             {
-                settings.BasicAuthentication(connectionString.Authentication.BasicAuth.Username, connectionString.Authentication.BasicAuth.Password);
-            }
-            else if (connectionString.Authentication.ApiKeyAuth != null)
-            {
-                settings.ApiKeyAuthentication(connectionString.Authentication.ApiKeyAuth.ApiKeyId, connectionString.Authentication.ApiKeyAuth.ApiKey);
-            }
-            else if (connectionString.Authentication.CertificateAuth != null)
-            {
-                if (connectionString.Authentication.CertificateAuth.CertificatesBase64.Length == 1)
+                if (connectionString.Authentication.BasicAuth != null)
                 {
-                    var cert = new X509Certificate2(Convert.FromBase64String(connectionString.Authentication.CertificateAuth.CertificatesBase64.First()));
-                    settings.ClientCertificate(cert);
+                    settings.BasicAuthentication(connectionString.Authentication.BasicAuth.Username, connectionString.Authentication.BasicAuth.Password);
                 }
-                else
+                else if (connectionString.Authentication.ApiKeyAuth != null)
                 {
-                    var certificates = new X509CertificateCollection();
-
-                    foreach (var certificateBase64 in connectionString.Authentication.CertificateAuth.CertificatesBase64)
+                    settings.ApiKeyAuthentication(connectionString.Authentication.ApiKeyAuth.ApiKeyId, connectionString.Authentication.ApiKeyAuth.ApiKey);
+                }
+                else if (connectionString.Authentication.CertificateAuth != null)
+                {
+                    if (connectionString.Authentication.CertificateAuth.CertificatesBase64.Length == 1)
                     {
-                        certificates.Add(new X509Certificate2(Convert.FromBase64String(certificateBase64)));
+                        var cert = new X509Certificate2(Convert.FromBase64String(connectionString.Authentication.CertificateAuth.CertificatesBase64.First()));
+                        settings.ClientCertificate(cert);
                     }
+                    else
+                    {
+                        var certificates = new X509CertificateCollection();
 
-                    settings.ClientCertificates(certificates);
+                        foreach (var certificateBase64 in connectionString.Authentication.CertificateAuth.CertificatesBase64)
+                        {
+                            certificates.Add(new X509Certificate2(Convert.FromBase64String(certificateBase64)));
+                        }
+
+                        settings.ClientCertificates(certificates);
+                    }
                 }
             }
 

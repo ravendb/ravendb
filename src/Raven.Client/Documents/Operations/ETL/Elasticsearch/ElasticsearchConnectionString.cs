@@ -18,12 +18,7 @@ namespace Raven.Client.Documents.Operations.ETL.ElasticSearch
             if (Nodes == null || Nodes.Length == 0)
                 errors.Add($"{nameof(Nodes)} cannot be empty");
 
-            if (Authentication == null)
-            {
-                errors.Add($"{nameof(Authentication)} cannot be empty");
-            }
-
-            if (Nodes == null || Authentication == null)
+            if (Nodes == null)
                 return;
 
             for (int i = 0; i < Nodes.Length; i++)
