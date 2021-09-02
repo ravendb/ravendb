@@ -2,11 +2,9 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure;
-using Azure.Core.Pipeline;
 using Azure.Storage;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
@@ -17,20 +15,32 @@ using Sparrow;
 
 namespace Raven.Server.Documents.PeriodicBackup.Azure
 {
-    public class RavenAzureClient : IProgress<long>, IDisposable
+    public interface IRavenAzureClient : IDisposable
+    {
+        void PutBlob(string blobName, Stream stream, Dictionary<string, string> metadata);
+        RavenStorageClient.ListBlobResult ListBlobs(string prefix, string delimiter, bool listFolders, string continuationToken = null);
+        Task<RavenStorageClient.ListBlobResult> ListBlobsAsync(string prefix, string delimiter, bool listFolders, string continuationToken = null);
+        Task<RavenStorageClient.Blob> GetBlobAsync(string blobName);
+        void DeleteBlobs(List<string> blobsToDelete);
+        void TestConnection();
+        string? RemoteFolderName { get; }
+        Size MaxUploadPutBlob { get; set; }
+    }
+
+    public class RavenAzureClient : IProgress<long>, IRavenAzureClient
     {
         private readonly Progress _progress;
         private readonly CancellationToken _cancellationToken;
         private readonly BlobContainerClient _client;
 
-        public readonly string RemoteFolderName;
+        public string RemoteFolderName { get; }
         private readonly string _storageContainer;
 
         private static readonly Size TotalBlocksSizeLimit = new Size(4750, SizeUnit.Gigabytes);
 
-        internal Size MaxUploadPutBlob = new Size(256, SizeUnit.Megabytes);
+        public Size MaxUploadPutBlob { get; set; } = new Size(256, SizeUnit.Megabytes);
 
-        public RavenAzureClient(AzureSettings azureSettings, Config.Categories.BackupConfiguration configuration, Progress progress = null, CancellationToken cancellationToken = default)
+        private RavenAzureClient(AzureSettings azureSettings, BackupConfiguration configuration, Progress progress = null, CancellationToken cancellationToken = default)
         {
             if (azureSettings == null)
                 throw new ArgumentNullException(nameof(azureSettings));
@@ -241,5 +251,13 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
                 throw new ArgumentException($"{nameof(AzureSettings.SasToken)} isn't in the correct format", e);
             }
         }
+
+        public static IRavenAzureClient Create(AzureSettings settings, BackupConfiguration configuration, Progress progress = null, CancellationToken cancellationToken = default)
+        {
+            if (configuration.AzureLegacy)
+                return new LegacyRavenAzureClient(settings, progress, cancellationToken: cancellationToken);
+
+            return new RavenAzureClient(settings, configuration, progress, cancellationToken);
     }
+}
 }
