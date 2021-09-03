@@ -12,6 +12,7 @@ using Azure.Storage.Blobs.Specialized;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Documents.PeriodicBackup.Restore;
 using Sparrow;
+using BackupConfiguration = Raven.Server.Config.Categories.BackupConfiguration;
 
 namespace Raven.Server.Documents.PeriodicBackup.Azure
 {
@@ -25,11 +26,14 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
         void TestConnection();
         string? RemoteFolderName { get; }
         Size MaxUploadPutBlob { get; set; }
+        Size MaxSingleBlockSize { get; set; }
     }
 
     public class RavenAzureClient : IProgress<long>, IRavenAzureClient
     {
         private readonly Progress _progress;
+        private long _alreadyUploadedInBytes;
+
         private readonly CancellationToken _cancellationToken;
         private readonly BlobContainerClient _client;
 
@@ -39,6 +43,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
         private static readonly Size TotalBlocksSizeLimit = new Size(4750, SizeUnit.Gigabytes);
 
         public Size MaxUploadPutBlob { get; set; } = new Size(256, SizeUnit.Megabytes);
+
+        public Size MaxSingleBlockSize { get; set; } = new Size(256, SizeUnit.Megabytes);
 
         private RavenAzureClient(AzureSettings azureSettings, BackupConfiguration configuration, Progress progress = null, CancellationToken cancellationToken = default)
         {
@@ -97,6 +103,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
                 throw new InvalidOperationException(@"Can't upload more than 4.75TB to Azure, " +
                                                     $"current upload size: {streamSize}");
 
+            _alreadyUploadedInBytes = 0;
             var streamLength = streamSize.GetValue(SizeUnit.Bytes);
 
             try
@@ -105,10 +112,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
 
                 if (streamSize > MaxUploadPutBlob)
                 {
+                    var maxSingleBlockSize = MaxSingleBlockSize.GetValue(SizeUnit.Bytes);
+
                     _progress?.UploadProgress.ChangeType(UploadType.Chunked);
 
                     var blockBlob = _client.GetBlockBlobClient(blobName);
-                    blockBlob = blockBlob.WithVersion("2019-02-02");
 
                     var blockNumber = 0;
                     var blockIds = new List<string>();
@@ -119,7 +127,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
                         var blockIdString = Convert.ToBase64String(blockNumberInBytes);
                         blockIds.Add(blockIdString);
 
-                        blockBlob.StageBlock(blockIdString, stream, progressHandler: this, cancellationToken: _cancellationToken);
+                        var stageBlockLength = Math.Min(maxSingleBlockSize, streamLength - stream.Position);
+                        using (var stageBlockStream = new NestedStream(stream, stageBlockLength))
+                            blockBlob.StageBlock(blockIdString, stageBlockStream, progressHandler: this, cancellationToken: _cancellationToken);
+
+                        _alreadyUploadedInBytes += stageBlockLength;
                     }
 
                     blockBlob.CommitBlockList(blockIds, metadata: metadata, cancellationToken: _cancellationToken);
@@ -210,7 +222,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
         public void Report(long value)
         {
             _progress?.UploadProgress.ChangeState(UploadState.Uploading);
-            _progress?.UploadProgress.SetUploaded(value);
+            _progress?.UploadProgress.SetUploaded(_alreadyUploadedInBytes + value);
             _progress?.OnUploadProgress?.Invoke();
         }
 
@@ -258,6 +270,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
                 return new LegacyRavenAzureClient(settings, progress, cancellationToken: cancellationToken);
 
             return new RavenAzureClient(settings, configuration, progress, cancellationToken);
+        }
     }
-}
 }
