@@ -337,7 +337,6 @@ namespace Raven.Server.Documents.Queries.Results
                     }
 
                     return (null, results);
-                    break;
                 case BlittableJsonReaderObject nested:
                     return (new Document
                     {

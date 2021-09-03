@@ -155,6 +155,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                             continue;
                         }
 
+                        bool markedAsSkipped = false;
                         var r = retriever.Get(document, scoreDoc, _state);
                         if (r.Document != null)
                         {
@@ -180,7 +181,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                             {
                                 d?.Dispose();
 
-                                skippedResults.Value++;
+                                if (markedAsSkipped == false)
+                                {
+                                    skippedResults.Value++;
+                                    markedAsSkipped = true;
+                                }
+
                                 return default;
                             }
 
