@@ -6,4 +6,3 @@ script server
 return server.$1
 EXEC
 EOF
-exit 0
