@@ -74,8 +74,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             {
                 Retry =
                 {
-                    NetworkTimeout = configuration.CloudStorageOperationTimeout.AsTimeSpan,
-                    MaxRetries = 10
+                    NetworkTimeout = configuration.CloudStorageOperationTimeout.AsTimeSpan
                 }
             };
 
