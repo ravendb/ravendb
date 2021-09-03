@@ -31,6 +31,7 @@ using Raven.Server.Web.System;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Platform;
+using Voron.Data.Tables;
 using Voron.Impl.Backup;
 using Voron.Util.Settings;
 
@@ -485,6 +486,25 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                         ? restorePath
                         : restorePath.Combine(directory);
 
+                    var isSubDirectory = PathUtil.IsSubDirectory(restoreDirectory.FullPath, restorePath.FullPath);
+                    if (isSubDirectory == false)
+                    {
+                        var extensions = zipEntries
+                            .Select(x => Path.GetExtension(x.Name))
+                            .Distinct()
+                            .ToArray();
+
+                        if (extensions.Length != 1 || string.Equals(extensions[0], TableValueCompressor.CompressionRecoveryExtension, StringComparison.OrdinalIgnoreCase) == false)
+                            throw new InvalidOperationException($"Encountered invalid directory '{directory}' in snapshot file with following file extensions: {string.Join(", ", extensions)}");
+
+                        // this enables backward compatibility of snapshot backups with compression recovery files before fix was made in RavenDB-17173
+                        // the underlying issue was that we were putting full path when compression recovery files were backed up using snapshot
+                        // because of that the end restore directory was not a sub-directory of a restore path
+                        // which could result in a file already exists exception
+                        // since restoring of compression recovery files is not mandatory then it is safe to skip them
+                        continue;
+                    }
+
                     BackupMethods.Full.Restore(
                         zipEntries,
                         restoreDirectory,
@@ -811,5 +831,5 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         {
             _operationCancelToken.Dispose();
         }
-        }
     }
+}

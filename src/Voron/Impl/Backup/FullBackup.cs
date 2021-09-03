@@ -113,8 +113,8 @@ namespace Voron.Impl.Backup
 
                     JournalInfo journalInfo = env.HeaderAccessor.Get(ptr => ptr->Journal);
                     var startingJournal = journalInfo.LastSyncedJournal;
-                    if (env.Options.JournalExists(startingJournal) == false && 
-                        journalInfo.Flags.HasFlag(JournalInfoFlags.IgnoreMissingLastSyncJournal) || 
+                    if (env.Options.JournalExists(startingJournal) == false &&
+                        journalInfo.Flags.HasFlag(JournalInfoFlags.IgnoreMissingLastSyncJournal) ||
                         startingJournal == -1)
                     {
                         startingJournal++;
@@ -186,7 +186,9 @@ namespace Voron.Impl.Backup
 
                             using (src)
                             {
-                                var recoveryPart = package.CreateEntry(Path.Combine(basePath, src.Name), compressionLevel);
+                                var srcFileName = Path.GetFileName(recoveryFile);
+
+                                var recoveryPart = package.CreateEntry(Path.Combine(basePath, srcFileName), compressionLevel);
                                 using var dst = recoveryPart.Open();
                                 src.CopyTo(dst);
                             }
