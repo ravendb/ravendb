@@ -234,6 +234,7 @@ namespace Raven.Server.Documents.Queries
                         var it = result.List.GetEnumerator();
                         if (it.MoveNext() == false)
                             return (true, null);
+                        _totalResults.Value += result.List.Count - 1;
                         _projections = it;
                         _hasProjections = true;
                         return (true, it.Current);

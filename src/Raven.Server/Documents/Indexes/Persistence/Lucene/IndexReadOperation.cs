@@ -166,12 +166,19 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         }
                         else if (r.List != null)
                         {
+                            int numberOfProjectedResults = 0;
                             foreach (Document item in r.List)
                             {
                                 var qr = CreateQueryResult(item);
                                 if(qr.Result == null)
                                     continue;
                                 yield return qr;
+                                numberOfProjectedResults++;
+                            }
+
+                            if (numberOfProjectedResults > 1)
+                            {
+                                totalResults.Value += numberOfProjectedResults - 1;
                             }
                         }
 
