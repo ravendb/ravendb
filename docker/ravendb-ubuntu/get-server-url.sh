@@ -1,20 +1,16 @@
 #!/bin/bash
-# This script takes prefix as first arg (http, https, tcp etc.)
+# This script takes scheme as first arg (http, https, tcp etc.)
 
-if [[ $# < 1 ]]; then
-prefix="http"
-else
-prefix=$1
-fi
+[[ $# -lt 1 ]] && scheme="http" || scheme=$1
 
 address=$(./get-server-var.sh "ListenEndpoints.Item1[0].ToString()")
 port=$(./get-server-var.sh "ListenEndpoints.Item2")
 
 if [[ "$address" == "0.0.0.0" ]]; then
-    echo $prefix://127.0.0.1:$port
-elif [[ "$address" == "$(hostname)" || "$address" == "172.17.0.2" ]]; then # 172.17.0.2 is default docker address
-    echo $prefix://$(hostname):$port
+    echo $scheme://127.0.0.1:$port
+elif [[ "$address" == "$(hostname)" ]]; then
+    echo $scheme://$(hostname):$port
 else
-    echo $prefix://$address:$port
+    echo $scheme://$address:$port
 fi
-exit 0
+

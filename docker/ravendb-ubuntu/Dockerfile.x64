@@ -18,7 +18,7 @@ RUN cd /opt \
     && rm -rf /var/lib/apt/lists/*
 
 COPY run-raven.sh healthcheck.sh /opt/RavenDB/
-COPY settings.json putdb.sh get-server-var.sh wait-for-server.sh get-server-url.sh cleave-cert.sh /opt/RavenDB/Server/
+COPY settings.json get-server-var.sh wait-for-server.sh get-server-url.sh cleave-cert.sh create-database.sh /opt/RavenDB/Server/
 
 HEALTHCHECK --start-period=60s CMD /opt/RavenDB/healthcheck.sh
 
