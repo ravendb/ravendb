@@ -347,8 +347,6 @@ namespace Raven.Server.Documents.Queries
                     {
                         count++;
 
-                        Document doc;
-
                         if (_fieldsToFetch.IsProjection)
                         {
                             var result = _resultsRetriever.GetProjectionFromDocument(document, null, QueryResultRetrieverBase.ZeroScore, _fieldsToFetch, _context, null);
