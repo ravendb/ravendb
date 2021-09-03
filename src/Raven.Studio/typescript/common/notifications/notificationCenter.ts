@@ -35,6 +35,7 @@ import generateClientCertificateDetails = require("viewmodels/common/notificatio
 import compactDatabaseDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/compactDatabaseDetails");
 import indexingDetails = require("viewmodels/common/notificationCenter/detailViewer/performanceHint/indexingDetails");
 import slowSqlDetails = require("viewmodels/common/notificationCenter/detailViewer/performanceHint/slowSqlDetails");
+import indexingReferencesDetails = require("viewmodels/common/notificationCenter/detailViewer/performanceHint/indexingReferencesDetails");
 import slowWriteDetails = require("viewmodels/common/notificationCenter/detailViewer/performanceHint/slowWriteDetails");
 import pagingDetails = require("viewmodels/common/notificationCenter/detailViewer/performanceHint/pagingDetails");
 import hugeDocumentsDetails = require("viewmodels/common/notificationCenter/detailViewer/performanceHint/hugeDocumentsDetails");
@@ -147,6 +148,7 @@ class notificationCenter {
             // performance hints:
             indexingDetails,
             slowSqlDetails,
+            indexingReferencesDetails,
             slowWriteDetails,
             pagingDetails,
             requestLatencyDetails,
