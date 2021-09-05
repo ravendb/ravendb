@@ -14,6 +14,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Json.Sync;
 using Raven.Server.Utils;
+using Raven.Server.Extensions;
 
 namespace Raven.Server.Documents.Patch
 {
@@ -55,7 +56,8 @@ namespace Raven.Server.Documents.Patch
             return BlittableObjectInstance.CreateObjectBinder(Engine, this);
         }
 
-        public static InternalHandle CreateObjectBinder(V8EngineEx engine, BlittableObjectInstance boi) {
+        public static InternalHandle CreateObjectBinder(V8EngineEx engine, BlittableObjectInstance boi)
+        {
             return engine.CreateObjectBinder<BlittableObjectInstance.CustomBinder>(boi, engine.TypeBinderBlittableObjectInstance);
         }
 
@@ -153,7 +155,7 @@ namespace Raven.Server.Documents.Patch
         }
 
 
-        public BlittableObjectProperty GetOwnProperty(string propertyName)
+        public BlittableObjectProperty GetOwnProperty(string propertyName, BlittableObjectInstance.CustomBinder binder = null)
         {
             BlittableObjectProperty val = null;
             if (OwnValues?.TryGetValue(propertyName, out val) == true &&
@@ -163,7 +165,12 @@ namespace Raven.Server.Documents.Patch
             }
 
             if (propertyName == Constants.Documents.Metadata.Key && IsDocument()) {
-                InternalHandle jsMD = GetMetadata();
+                using (var jsGetMetadataFor = Engine.ExecuteExprWithReset("getMetadata", "getMetadata")) {
+                    if (jsGetMetadataFor.IsFunction) {
+                        InternalHandle jsMD = jsGetMetadataFor.StaticCall(binder._);
+                        jsMD.Dispose(); // it has got hashed in OwnValues
+                    }
+                }
                 OwnValues?.TryGetValue(propertyName, out val);
                 return val;
             }
@@ -228,8 +235,9 @@ namespace Raven.Server.Documents.Patch
 
         public bool? DeleteOwnProperty(string propertyName)
         {
-            if (propertyName == Constants.Documents.Metadata.Key && IsDocument())
+            if (propertyName == Constants.Documents.Metadata.Key && IsDocument()) {
                 return false;
+            }
 
             if (Deletes == null)
                 Deletes = new HashSet<string>();
@@ -339,7 +347,7 @@ namespace Raven.Server.Documents.Patch
                 ObjCLR.HandleID = this._.ID;
                 ObjCLR.ObjectID = this.ID;
 
-                var desc = ObjCLR.GetOwnProperty(propertyName);
+                var desc = ObjCLR.GetOwnProperty(propertyName, this);
                 if (desc != null) {
                     return desc.ValueCopy();
                 }
