@@ -13,6 +13,11 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
     {
         private readonly BlittableJsonReaderObject _attachmentName;
 
+        public static InternalHandle CreateObjectBinder(V8EngineEx engine, AttachmentNameObjectInstance oi) 
+        {
+            return engine.CreateObjectBinder<AttachmentNameObjectInstance.CustomBinder>(oi, engine.TypeBinderAttachmentNameObjectInstance);
+        }
+
         public AttachmentNameObjectInstance(BlittableJsonReaderObject attachmentName) : base()
         {
             _attachmentName = attachmentName ?? throw new ArgumentNullException(nameof(attachmentName));

@@ -11,6 +11,11 @@ namespace Raven.Server.Documents.Patch
 
     public class TaskCustomBinder : ObjectBinderEx<Task>
     {
+        public static InternalHandle CreateObjectBinder(V8EngineEx engine, Task oi) 
+        {
+            return engine.CreateObjectBinder<TaskCustomBinder>(oi, engine.TypeBinderTask);
+        }
+
         public static InternalHandle GetRunningTaskResult(V8Engine engine, Task task)
         {
             var value = $"{{Ignoring Task.Result as task's status is {task.Status.ToString()}}}.";

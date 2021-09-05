@@ -24,6 +24,28 @@ namespace Raven.Server.Documents.Patch
 {
     public class JavaScriptUtils
     {
+// env object helps to distinguish between execution environments like 'RavendDB' and 'Node.js' and engines like 'V8' and 'Jint'.
+// Node.js can be used both for testing and alternative execution (with modified logic).
+// Engine kind is important in the current situation of using Jint for Esprima
+// in order to adopt the basic code, that is used to calculate groupBy expressions, to Jint without support of modern JS features.
+        public const string ExecEnvCodeV8 = @"
+var process = {
+    env: {
+        EXEC_ENV: 'RavenDB',
+        ENGINE: 'V8'
+    }
+}
+";
+
+        public const string ExecEnvCodeJint = @"
+var process = {
+    env: {
+        EXEC_ENV: 'RavenDB',
+        ENGINE: 'Jint'
+    }
+}
+";
+
         public JsonOperationContext Context
         {
             get
@@ -78,8 +100,10 @@ namespace Raven.Server.Documents.Patch
 
                 int arrayLength =  attachments.Length;
                 InternalHandle[] jsItems = new InternalHandle[arrayLength];
-                for (int i = 0; i < arrayLength; i++)
-                    jsItems[i] = engineEx.CreateObjectBinder(new AttachmentNameObjectInstance((BlittableJsonReaderObject)attachments[i]), engineEx.TypeBinderAttachmentNameObjectInstance);
+                for (int i = 0; i < arrayLength; i++) {
+                    var anoi = new AttachmentNameObjectInstance((BlittableJsonReaderObject)attachments[i]);
+                    jsItems[i] = AttachmentNameObjectInstance.CreateObjectBinder(engineEx, anoi);
+                }
 
                 return engineEx.CreateArrayWithDisposal(jsItems);
 
@@ -121,10 +145,11 @@ namespace Raven.Server.Documents.Patch
                     throw new InvalidOperationException($"Indexing scope was not initialized. Attachment Name: {attachmentName}");
 
                 var attachment = CurrentIndexingScope.Current.LoadAttachment(doc.DocumentId, attachmentName);
-                if (attachment.BoundObject is DynamicNullObject)
+                if (attachment is DynamicNullObject)
                     return DynamicJsNull.ImplicitNull._;
 
-                return engineEx.CreateObjectBinder(new AttachmentObjectInstance((DynamicAttachment)attachment), engineEx.TypeBinderAttachmentObjectInstance);
+                var aoi = new AttachmentObjectInstance((DynamicAttachment)attachment);
+                return AttachmentObjectInstance.CreateObjectBinder(engineEx, aoi);
             }
             catch (Exception e) 
             {
@@ -166,7 +191,8 @@ namespace Raven.Server.Documents.Patch
                 int arrayLength =  attachments.Count;
                 var jsItems = new InternalHandle[attachments.Count];
                 for (int i = 0; i < arrayLength; i++) {
-                    jsItems[i] = engineEx.CreateObjectBinder(new AttachmentObjectInstance(attachments[i]), engineEx.TypeBinderAttachmentObjectInstance);
+                    var aoi = new AttachmentObjectInstance((DynamicAttachment)attachments[i]);
+                    jsItems[i] = AttachmentObjectInstance.CreateObjectBinder(engineEx, aoi);
                 }
 
                 return engineEx.CreateArrayWithDisposal(jsItems);
@@ -513,6 +539,8 @@ namespace Raven.Server.Documents.Patch
                 }
             };
 
+            this.ExecuteWithReset(JavaScriptUtils.ExecEnvCodeV8, "ExecEnvCode");
+
             this.ExecuteWithReset(ArrayExtensionCode, "arrayExtension");
 
             TypeBinderBlittableObjectInstance = RegisterType<BlittableObjectInstance>(null, true);
@@ -570,54 +598,54 @@ namespace Raven.Server.Documents.Patch
 
         //private static string ArrayExtensionCode =  "";
         private static string ArrayExtensionCode =  @"
-Array.prototype.__reduce = Array.prototype.reduce;
+Array.prototype._reduce = Array.prototype.reduce;
 Array.prototype.reduce = function(...args) {
     const v = this
-    return v.length > 0 ? v.__reduce(...args) :
+    return v.length > 0 ? v._reduce(...args) :
         args.length > 1 ? args[1] : null
 }
 
-Array.prototype.__concat = Array.prototype.concat;
+Array.prototype._concat = Array.prototype.concat;
 Array.prototype.concat = function(...args) {
     const v = this
-    return v.length > 0 ? v.__concat(...args) :
+    return v.length > 0 ? v._concat(...args) :
         args.length > 0 ? args[0] : []
 }
 
-Array.prototype.__some = Array.prototype.some;
+Array.prototype._some = Array.prototype.some;
 Array.prototype.some = function(...args) {
     const v = this
-    return v.length > 0 ? v.__some(...args) : false
+    return v.length > 0 ? v._some(...args) : false
 }
 
-Array.prototype.__includes = Array.prototype.includes;
+Array.prototype._includes = Array.prototype.includes;
 Array.prototype.includes = function(...args) {
     const v = this
-    return v.length > 0 ? v.__includes(...args) : false
+    return v.length > 0 ? v._includes(...args) : false
 }
 
-Array.prototype.__every = Array.prototype.every;
+Array.prototype._every = Array.prototype.every;
 Array.prototype.every = function(...args) {
     const v = this
-    return v.length > 0 ? v.__every(...args) : true
+    return v.length > 0 ? v._every(...args) : true
 }
 
-Array.prototype.__map = Array.prototype.map;
+Array.prototype._map = Array.prototype.map;
 Array.prototype.map = function(...args) {
     const v = this
-    return v.length > 0 ? v.__map(...args) : []
+    return v.length > 0 ? v._map(...args) : []
 }
 
-Array.prototype.__filter = Array.prototype.filter;
+Array.prototype._filter = Array.prototype.filter;
 Array.prototype.filter = function(...args) {
     const v = this
-    return v.length > 0 ? v.__filter(...args) : []
+    return v.length > 0 ? v._filter(...args) : []
 }
 
-Array.prototype.__reverse = Array.prototype.reverse;
+Array.prototype._reverse = Array.prototype.reverse;
 Array.prototype.reverse = function(...args) {
     const v = this
-    return v.length > 0 ? v.__reverse(...args) : []
+    return v.length > 0 ? v._reverse(...args) : []
 }
         ";
 

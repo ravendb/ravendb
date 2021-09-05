@@ -18,7 +18,7 @@ using Jint.Native.Object;
 using Jint.Runtime;
 //using Jint.Runtime.Interop;
 using JintClrFunctionInstance = Jint.Runtime.Interop.ClrFunctionInstance;
-using Esprima; // TODO to switch to the latest version Esprima directly, but this is not critical thanks to the little trick descibed in JintExtensions::ProcessJintStub
+using Esprima; // TODO to switch to the latest version Esprima directly or maybe even better to eliminate the need for it by implementing groupBy as CLR callback (why not?), but this is not critical thanks to the little trick descibed in JintExtensions::ProcessJintStub
 using Raven.Server.Documents.Jint.Patch;
 
 using V8.Net;
@@ -419,7 +419,7 @@ function map(name, lambda) {
                         var reduceAsObjJint = reduceObjJint.AsObject();
                         var groupByKeyJint = reduceAsObjJint?.GetProperty(KeyProperty).Value.As<ScriptFunctionInstance>();
                         if (groupByKeyJint == null) {
-                            throw new ArgumentException(JintExtensions.JintStubInstruction);
+                            throw new ArgumentException("Failed to get reduce key object" + JintExtensions.JintStubInstruction);
                         }
 
                         using (var groupByKey = reduceObj.GetProperty(KeyProperty))
@@ -429,7 +429,7 @@ function map(name, lambda) {
                         Reduce = ReduceOperation.IndexingFunction;
                     }
                     else {
-                        throw new ArgumentException(JintExtensions.JintStubInstruction);
+                        throw new ArgumentException("Failed to get the reduce object: " + JintExtensions.JintStubInstruction);
                     }
                 }
             }
@@ -452,6 +452,7 @@ function map(name, lambda) {
             _engine.ExecuteWithReset(Code, "Code");
             _engine.ExecuteWithReset(MapCode, "MapCode");
 
+            _engineJint.ExecuteWithReset(JavaScriptUtils.ExecEnvCodeJint);
             _engineJint.ExecuteWithReset(Code);
             _engineJint.ExecuteWithReset(mapCode);
 
@@ -732,14 +733,6 @@ function map(name, lambda) {
         }
 
         private const string Code = @"
-// this helps to distinguish between execution environments like 'RavendDB' and 'Node.js'.
-// Node.js can be used both for testing and alternative execution (with modified logic).
-var process = {
-    env: {
-        EXEC_ENV: 'RavenDB'
-    }
-}
-
 var globalDefinition =
 {
     maps: [],

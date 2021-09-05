@@ -47,7 +47,16 @@ namespace Raven.Server.Extensions
 @"To use some of the modern JS features like optional chaining you should add stubs for map and/or reduce functions and/or switch off whole additional sources with implementation details that are not used in the stubs.
 Also please make shure that you have available to Jint fully workable (without modern JS features) definitions of all the functions and other code that you use to return map and reduce expressions (if you use them).
 
-1. Like this before real implementations of mapDoc and reduceGroup functions for doc and grouping:
+1. You can switch off or replace pieces of code based on the environment variable process.env.ENGINE which is set to 'Jint' for Jint engine:
+const IS_ENGINE_JINT = process && process.env && process.env.ENGINE === 'Jint'
+if (!IS_ENGINE_JINT) {
+    // switched off code
+}
+else { // optional
+    // replacement code for Jint
+}
+
+2. Like this before real implementations of mapDoc and reduceGroup functions for doc and grouping:
 map(colName, mapDoc)
 groupBy(x => ({ ... })).aggregate(reduceGroup)
 /*JINT_END*/ // after this marker everything gets dropped for Jint
@@ -84,7 +93,7 @@ In case you want checking of map return statements' structure consistency to be 
 //}
 /*JINT_END*/
 
-2. Like this to switch off an irrelevant additional source or its part: the whole file if in the first line or its lower part if somewhere in the body.
+3. Like this to switch off an irrelevant additional source or its part: the whole file if in the first line or its lower part if somewhere in the body.
 Actually, it is worth to switch off the whole file in case it does not contain map/reduce definitions for the index in place.
 /*JINT_END*/ // after this marker everything gets dropped for Jint
 ";

@@ -40,6 +40,10 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
         where T : ObjectInstanceBase
         {
 
+            public CustomBinder() : base()
+            {
+            }
+
             public override InternalHandle NamedPropertyGetter(ref string propertyName)
             {
                 return ObjCLR.NamedPropertyGetter((V8EngineEx)Engine, ref propertyName);

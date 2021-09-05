@@ -426,7 +426,7 @@ namespace Raven.Server.Documents.Patch
                     }
 
                     InternalHandle jsRes = InternalHandle.Empty;
-                    yield return new KeyValuePair<string, InternalHandle>(property.Name, _engine.CreateObjectBinder(obj));
+                    yield return new KeyValuePair<string, InternalHandle>(property.Name, TaskCustomBinder.CreateObjectBinder(_engine, task));
                 }
                 yield break;
             }
