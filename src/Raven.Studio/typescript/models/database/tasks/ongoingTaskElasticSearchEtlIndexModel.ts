@@ -39,7 +39,7 @@ class ongoingTaskElasticSearchEtlIndexModel {
     
     private initValidation() {
         this.indexName.extend({
-            required: true // todo verify lower case...
+            required: true
         });
         
         this.idProperty.extend({

@@ -55,7 +55,7 @@ class connectionStringElasticSearchEtlModel extends connectionStringModel {
             validation: [
                 {
                     validator: () => this.nodesUrls().length > 0,
-                    message: "At least one Elastic Search destination url is required"
+                    message: "At least one Elasticsearch node url is required"
                 }
             ]
         });
