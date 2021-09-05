@@ -104,6 +104,7 @@ namespace Raven.Server.Documents.Queries
                 {
                     result.Metadata = metadata;
                     SetupPagingFromQueryMetadata();
+                    AssertPaging(result);
                     return result;
                 }
 
