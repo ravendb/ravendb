@@ -48,6 +48,7 @@ if [[ "$cert_path" == "null" ]]; then
     putdb
 else
     export serverUrl=$(./get-server-url.sh https)
-    ./cleave-cert.sh $cert_path
+    source ./cert-utils.sh
+    extract_cert_and_key $cert_path
     putdb /tmp/docker_cert.crt /tmp/docker_key.key
 fi
