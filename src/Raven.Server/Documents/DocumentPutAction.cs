@@ -709,19 +709,24 @@ namespace Raven.Server.Documents
 
         private static void DeleteTombstoneIfNeeded(DocumentsOperationContext context, CollectionName collectionName, byte* lowerId, int lowerSize)
         {
-            var tombstoneTable = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, collectionName.GetTableName(CollectionTableType.Tombstones));
             using (Slice.External(context.Allocator, lowerId, lowerSize, out Slice id))
             {
-                foreach (var (tombstoneKey, tvh) in tombstoneTable.SeekByPrimaryKeyPrefix(id, Slices.Empty, 0))
-                {
-                    if (IsTombstoneOfId(tombstoneKey, id) == false)
-                        return;
+                DeleteTombstoneIfNeeded(context, collectionName, id);
+            }
+        }
 
-                    if (tombstoneTable.IsOwned(tvh.Reader.Id))
-                    {
-                        tombstoneTable.Delete(tvh.Reader.Id);
-                        return; // there could be only one tombstone per collection
-                    }
+        public static void DeleteTombstoneIfNeeded(DocumentsOperationContext context, CollectionName collectionName, Slice id)
+        {
+            var tombstoneTable = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, collectionName.GetTableName(CollectionTableType.Tombstones));
+            foreach (var (tombstoneKey, tvh) in tombstoneTable.SeekByPrimaryKeyPrefix(id, Slices.Empty, 0))
+            {
+                if (IsTombstoneOfId(tombstoneKey, id) == false)
+                    return;
+
+                if (tombstoneTable.IsOwned(tvh.Reader.Id))
+                {
+                    tombstoneTable.Delete(tvh.Reader.Id);
+                    return;
                 }
             }
         }

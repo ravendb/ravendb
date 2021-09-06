@@ -11,11 +11,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
     public class RestoreFromAzure : RestoreBackupTaskBase
     {
-        private readonly RavenAzureClient _client;
+        private readonly IRavenAzureClient _client;
         private readonly string _remoteFolderName;
         public RestoreFromAzure(ServerStore serverStore, RestoreFromAzureConfiguration restoreFromConfiguration, string nodeTag, OperationCancelToken operationCancelToken) : base(serverStore, restoreFromConfiguration, nodeTag, operationCancelToken)
         {
-            _client = new RavenAzureClient(restoreFromConfiguration.Settings, serverStore.Configuration.Backup);
+            _client = RavenAzureClient.Create(restoreFromConfiguration.Settings, serverStore.Configuration.Backup);
             _remoteFolderName = restoreFromConfiguration.Settings.RemoteFolderName;
         }
 

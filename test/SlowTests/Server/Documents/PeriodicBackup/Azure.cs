@@ -189,7 +189,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
         internal class AzureClientHolder : IDisposable
         {
-            public RavenAzureClient Client { get; set; }
+            public IRavenAzureClient Client { get; set; }
             public AzureSettings Settings { get; set; }
             private readonly string _remoteFolder;
 
@@ -200,7 +200,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 // keep only alphanumeric characters
                 Settings.RemoteFolderName = _remoteFolder = GetRemoteFolder(caller);
-                Client = new RavenAzureClient(Settings, DefaultConfiguration, progress);
+                Client = RavenAzureClient.Create(Settings, DefaultConfiguration, progress);
             }
 
             public void Dispose()
