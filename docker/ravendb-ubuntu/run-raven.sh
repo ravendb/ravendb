@@ -14,7 +14,5 @@ fi
 $COMMAND &
 COMMANDPID=$!
 
-[ -n "$RAVEN_DATABASE" ] && ./create-database.sh
-
+[ -n "$RAVEN_DATABASE" ]  && source ./server-utils.sh && create-database
 wait $COMMANDPID
-exit $?
