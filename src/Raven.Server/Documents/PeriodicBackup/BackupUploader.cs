@@ -130,7 +130,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private void UploadToAzure(AzureSettings settings, Stream stream, Progress progress)
         {
-            using (var client = new RavenAzureClient(settings, _settings.Configuration, progress, TaskCancelToken.Token))
+            using (var client = RavenAzureClient.Create(settings, _settings.Configuration, progress, TaskCancelToken.Token))
             {
                 var key = CombinePathAndKey(settings.RemoteFolderName);
                 client.PutBlob(key, stream, new Dictionary<string, string>
