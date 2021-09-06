@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
         Task<RavenStorageClient.Blob> GetBlobAsync(string blobName);
         void DeleteBlobs(List<string> blobsToDelete);
         void TestConnection();
-        string? RemoteFolderName { get; }
+        string RemoteFolderName { get; }
         Size MaxUploadPutBlob { get; set; }
         Size MaxSingleBlockSize { get; set; }
     }
@@ -127,7 +127,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
                         blockIds.Add(blockIdString);
 
                         var stageBlockLength = Math.Min(maxSingleBlockSize, streamLength - stream.Position);
-                        using (var stageBlockStream = new NestedStream(stream, stageBlockLength))
+                        using (var stageBlockStream = new ReadOnlyNestedStream(stream, stageBlockLength))
                             blockBlob.StageBlock(blockIdString, stageBlockStream, progressHandler: this, cancellationToken: _cancellationToken);
 
                         _alreadyUploadedInBytes += stageBlockLength;

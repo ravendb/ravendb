@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace Raven.Server.Documents.PeriodicBackup.Azure
 {
-    internal class NestedStream : Stream
+    internal class ReadOnlyNestedStream : Stream
     {
         private Stream _innerStream;
 
@@ -13,7 +13,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
 
         private long _remainingBytes;
 
-        public NestedStream(Stream innerStream, long length)
+        public ReadOnlyNestedStream(Stream innerStream, long length)
         {
             if (length < 0)
                 throw new ArgumentOutOfRangeException(nameof(length));
