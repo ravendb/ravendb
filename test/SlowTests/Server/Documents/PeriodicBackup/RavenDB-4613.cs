@@ -44,7 +44,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             using (var holder = new Azure.AzureClientHolder(AzureFactAttribute.AzureSettings, progress))
             {
                 holder.Client.MaxUploadPutBlob = new Size(3, SizeUnit.Megabytes);
-                //holder.Client.OnePutBlockSizeLimitInBytes = 1 * 1024 * 1024; // TODO [ppekrol]
+                holder.Client.MaxSingleBlockSize = new Size(1, SizeUnit.Megabytes);
 
                 var blobKey = testBlobKeyAsFolder == false
                     ? holder.Settings.RemoteFolderName

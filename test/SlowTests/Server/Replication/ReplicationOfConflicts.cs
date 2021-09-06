@@ -344,5 +344,53 @@ namespace SlowTests.Server.Replication
                 }
             }
         }
+
+        [Fact]
+        public async Task TombstoneAndDocumentConflictFromDifferentCollections()
+        {
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
+            using (var store3 = GetDocumentStore())
+            {
+                using (var session = store1.OpenSession())
+                {
+                    session.Store(new User {Name = "Karmel"}, "foo/bar");
+                    session.SaveChanges();
+                }
+
+                using (var session = store2.OpenSession())
+                {
+                    session.Store(new Company() {Name = "Karmel"}, "foo/bar");
+                    session.SaveChanges();
+                }
+
+                using (var session = store1.OpenSession())
+                {
+                    session.Delete("foo/bar");
+                    session.SaveChanges();
+                }
+               
+                await SetupReplicationAsync(store1, store2);
+                await EnsureReplicatingAsync(store1, store2);
+
+                using (var session = store2.OpenSession())
+                {
+                    session.Delete("foo/bar");
+                    session.SaveChanges();
+                }
+
+                await SetupReplicationAsync(store2, store1);
+
+                await SetupReplicationAsync(store1, store3);
+                await SetupReplicationAsync(store2, store3);
+
+                await SetupReplicationAsync(store3, store1);
+                await SetupReplicationAsync(store3, store2);
+
+                await EnsureReplicatingAsync(store1, store2);
+                await EnsureReplicatingAsync(store2, store3);
+                await EnsureReplicatingAsync(store3, store1);
+            }
+        }
     }
 }
