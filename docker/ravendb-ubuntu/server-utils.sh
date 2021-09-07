@@ -9,6 +9,15 @@ EXEC
 EOF
 }
 
+function get-database-var() {
+# This script takes database name as first arg and path to variable as second arg (pass the path without . at the start)
+./rvn admin-channel <<EOF | grep -o '{"Result":[^}]*}' | jq .Result | sed 's-"--g'
+script database $1
+return database.$2
+EXEC
+EOF
+}
+
 function get-server-url() {
 # This script takes scheme as first arg (http, https, tcp etc.)
 [[ $# -lt 1 ]] && scheme="http" || scheme=$1
@@ -44,45 +53,45 @@ function create-database() {
 
         [[ $# -eq 0 ]] && mode=unsecured || mode=secured
         if [[ $mode == unsecured ]]; then
-            if curl -s $serverUrl'/admin/databases?name='$RAVEN_DATABASE -X PUT --compressed --data-raw '{"DatabaseName":"'$RAVEN_DATABASE'"}' > /dev/null; then 
-            echo "Database '$RAVEN_DATABASE' created successfully on unsecured server."
-            else
-            echo "Database '$RAVEN_DATABASE' wasn't created successfully - see error output above for details."
-            exit 1
-            fi
+
+        if curl -s $serverUrl'/admin/databases?name='$RAVEN_DATABASE -X PUT --compressed --data-raw '{"DatabaseName":"'$RAVEN_DATABASE'"}' > /dev/null; then 
+        echo "Database '$RAVEN_DATABASE' created successfully on unsecured server."
         else
-            if [[ $mode == secured ]]; then
+        echo "Database '$RAVEN_DATABASE' wasn't created successfully - see error output above for details."
+        exit 1
+        fi
+        else
+        if [[ $mode == secured ]]; then
+        if [[ $serverUrl == "0.0.0.0" || $serverUrl == "127.0.0.1" ]]; then
+        public_uri=$(get-server-var Configuration.Core.PublicServerUrl.UriValue)
+        public_tcp_uri=$(get-server-var Configuration.Core.PublicTcpServerUrl.UriValue)
+        curl_resolve="--resolve $public_uri:127.0.0.1 --resolve $public_tcp_uri:127.0.0.1"
+        else
+        curl_resolve=""
+        fi
 
-                if [[ $serverUrl == "0.0.0.0" || $serverUrl == "127.0.0.1" ]]; then
-                    public_uri=$(get-server-var Configuration.Core.PublicServerUrl.UriValue)
-                    public_tcp_uri=$(get-server-var Configuration.Core.PublicTcpServerUrl.UriValue)
-                    curl_resolve="--resolve $public_uri:127.0.0.1 --resolve $public_tcp_uri:127.0.0.1"
-                    else
-                    curl_resolve=""
-                fi
+        if curl -s "$serverUrl/admin/databases?name=$RAVEN_DATABASE" -X PUT -k \
+        --cert $1 \
+        --key $2 \
+        $curl_resolve \
+        --compressed \
+        --data-raw '{"DatabaseName":"'$RAVEN_DATABASE'"}' >/dev/null; then 
+        echo "Database '$RAVEN_DATABASE' created successfully on secured server."
+        else
+        echo "Database '$RAVEN_DATABASE' wasn't created successfully - see error output above for details."
+        exit 1
+        fi
 
-                if curl -s "$serverUrl/admin/databases?name=$RAVEN_DATABASE" -X PUT -k \
-                    --cert $1 \
-                    --key $2 \
-                    $curl_resolve \
-                    --compressed \
-                    --data-raw '{"DatabaseName":"'$RAVEN_DATABASE'"}' >/dev/null; then 
-                echo "Database '$RAVEN_DATABASE' created successfully on secured server."
-                else
-                echo "Database '$RAVEN_DATABASE' wasn't created successfully - see error output above for details."
-                exit 1
-                fi
-
-            else
-            putdb-usage
-            exit 2
-            fi
+        else
+        putdb-usage
+        exit 2
+        fi
         fi
     }
 
 wait-for-server
+if (! get-database-var $RAVEN_DATABASE Name | grep $RAVEN_DATABASE); then
 cert_path=$(get-server-var Configuration.Security.CertificatePath)
-
 if [[ "$cert_path" == "null" ]]; then
     export serverUrl=$(get-server-url)
     putdb
@@ -90,5 +99,8 @@ else
     export serverUrl=$(get-server-url https)
     source ./cert-utils.sh && extract-cert-and-key $cert_path
     putdb /tmp/docker_cert.crt /tmp/docker_key.key
+fi
+else
+echo "Database '$RAVEN_DATABASE' wasn't created, it already exists."
 fi
 }
