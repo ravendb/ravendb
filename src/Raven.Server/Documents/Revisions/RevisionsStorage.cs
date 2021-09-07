@@ -708,7 +708,7 @@ namespace Raven.Server.Documents.Revisions
 
         public void DeleteRevision(DocumentsOperationContext context, Slice key, string collection, string changeVector, long lastModifiedTicks)
         {
-            var collectionName = new CollectionName(collection);
+            var collectionName = _documentsStorage.ExtractCollectionName(context, collection);
             var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
 
             long revisionEtag;
@@ -726,8 +726,8 @@ namespace Raven.Server.Documents.Revisions
                 {
                     // We request to delete revision with the wrong collection
                     var revision = TableValueToRevision(context, ref tvr);
-                    var currentCollection = CollectionName.GetCollectionName(revision.Data);
-                    table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, new CollectionName(currentCollection));
+                    var currentCollection = _documentsStorage.ExtractCollectionName(context, revision.Data);
+                    table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, currentCollection);
 
                     if (table.IsOwned(tvr.Id) == false) // this shouldn't happened
                         throw new VoronErrorException(
