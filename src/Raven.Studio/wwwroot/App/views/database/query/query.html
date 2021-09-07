@@ -40,7 +40,7 @@
                             </div>
                         </div>
                         <pre class="form-control editor query-source"
-                             data-bind="aceEditor: { code: criteria().queryText, allowResize: true, minHeight: 180, maxHeight: 600, lang:'ace/mode/rql', completer: queryCompleter.complete, hasFocus: queryHasFocus }, validationOptions: { errorsAsTitle: false }, validationElement: criteria().queryText"></pre>
+                             data-bind="aceEditor: { code: criteria().queryText, allowResize: true, minHeight: 180, maxHeight: 600, lang:'ace/mode/rql', completer: languageService.complete, hasFocus: queryHasFocus }, validationOptions: { errorsAsTitle: false }, validationElement: criteria().queryText"></pre>
 
                         <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: criteria().queryText">
                             <div class="help-block" data-bind="validationMessage: criteria().queryText"></div>

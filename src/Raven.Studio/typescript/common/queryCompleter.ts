@@ -6,6 +6,7 @@ import database = require("models/resources/database");
 import getIndexEntriesFieldsCommand = require("commands/database/index/getIndexEntriesFieldsCommand");
 import queryUtil = require("common/queryUtil");
 
+//TODO: remove me!
 class queryCompleter {
     private rules: AceAjax.RqlHighlightRules;
     private session: AceAjax.IEditSession;
