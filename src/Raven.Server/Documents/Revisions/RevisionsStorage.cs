@@ -22,6 +22,7 @@ using Sparrow.Server;
 using Sparrow.Server.Utils;
 using Voron;
 using Voron.Data.Tables;
+using Voron.Exceptions;
 using Voron.Impl;
 using static Raven.Server.Documents.DocumentsStorage;
 using Constants = Raven.Client.Constants;
@@ -720,6 +721,18 @@ namespace Raven.Server.Documents.Revisions
                 }
 
                 revisionEtag = TableValueToEtag((int)RevisionsTable.Etag, ref tvr);
+
+                if (table.IsOwned(tvr.Id) == false) 
+                {
+                    // We request to delete revision with the wrong collection
+                    var revision = TableValueToRevision(context, ref tvr);
+                    var currentCollection = CollectionName.GetCollectionName(revision.Data);
+                    table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, new CollectionName(currentCollection));
+
+                    if (table.IsOwned(tvr.Id) == false) // this shouldn't happened
+                        throw new VoronErrorException(
+                            $"Failed to remove revision {key} (id:{revision.Id}) of collection '{currentCollection}' from table '{table.Name}', in order to replace with the collection '{collection}'");
+                }
                 table.Delete(tvr.Id);
             }
             else
