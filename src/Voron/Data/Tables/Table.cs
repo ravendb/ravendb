@@ -331,6 +331,12 @@ namespace Voron.Data.Tables
 
         public void Delete(long id)
         {
+            if (IsOwned(id) == false)
+            {
+                Debug.Assert(false, $"Trying to delete a values (id:{id}) from the wrong table ('{Name}')");
+                throw new VoronErrorException($"Trying to delete a values (id:{id}) from the wrong table ('{Name}')");
+            }
+
             AssertWritableTable();
 
             var ptr = DirectRead(id, out int size);
