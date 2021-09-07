@@ -2,10 +2,14 @@
   "version": "1.0.0",
   "name": "Raven.Studio",
   "scripts": {
-    "gulp": "gulp"
+    "gulp": "gulp",
+    "webpack-language-service": "webpack --config languageService/webpack.config.js", 
+    "webpack-language-service-watch": "webpack --config languageService/webpack.config.js --watch",
+    "antlr4ts": "antlr4ts languageService/grammar/RqlLexer.g4 -visitor -no-listener languageService/grammar/RqlParser.g4 -o languageService/src/generated/"
   },
   "private": true,
   "devDependencies": {
+    "antlr4ts-cli": "^0.5.0-alpha.4",
     "del": "^6.0.0",
     "es6-map": "^0.1.4",
     "es6-set": "^0.1.4",
@@ -33,7 +37,15 @@
     "gulp-zip": "^5.1.0",
     "natives": "^1.1.6",
     "through2": "^4.0.2",
-    "typescript": "^4.2.4"
+    "ts-loader": "^9.2.5",
+    "typescript": "^4.2.4",
+    "webpack": "^5.51.1",
+    "webpack-cli": "^4.8.0"
   },
-  "dependencies": {}
+  "dependencies": {
+    "antlr4-c3": "^1.1.16",
+    "antlr4ts": "^0.5.0-alpha.4",
+    "assert": "^2.0.0",
+    "util": "^0.12.4"
+  }
 }

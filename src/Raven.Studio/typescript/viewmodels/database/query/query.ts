@@ -10,7 +10,6 @@ import querySyntax = require("viewmodels/database/query/querySyntax");
 import deleteDocsMatchingQueryCommand = require("commands/database/documents/deleteDocsMatchingQueryCommand");
 import notificationCenter = require("common/notifications/notificationCenter");
 import queryCommand = require("commands/database/query/queryCommand");
-import queryCompleter = require("common/queryCompleter");
 import database = require("models/resources/database");
 import querySort = require("models/database/query/querySort");
 import document = require("models/database/documents/document");
@@ -42,6 +41,7 @@ import spatialQueryMap = require("viewmodels/database/query/spatialQueryMap");
 import popoverUtils = require("common/popoverUtils");
 import spatialCircleModel = require("models/database/query/spatialCircleModel");
 import spatialPolygonModel = require("models/database/query/spatialPolygonModel");
+import rqlLanguageService = require("common/rqlLanguageService");
 
 type queryResultTab = "results" | "explanations" | "timings" | "graph";
 
@@ -237,7 +237,7 @@ class query extends viewModelBase {
     private columnPreview = new columnPreviewPlugin<document>();
 
     hasEditableIndex: KnockoutComputed<boolean>;
-    queryCompleter: queryCompleter;
+    languageService: rqlLanguageService;
     queryHasFocus = ko.observable<boolean>();
 
     editIndexUrl: KnockoutComputed<string>;
@@ -293,8 +293,9 @@ class query extends viewModelBase {
 
     constructor() {
         super();
+
+        this.languageService = new rqlLanguageService(this.activeDatabase, this.indexes);
         
-        this.queryCompleter = queryCompleter.remoteCompleter(this.activeDatabase, this.indexes, "Select");
         aceEditorBindingHandler.install();
         datePickerBindingHandler.install();
 
@@ -725,8 +726,20 @@ class query extends viewModelBase {
         this.queryHasFocus(true);
         
         this.timingsGraph.syncLegend();
+        
+        const queryEditor = aceEditorBindingHandler.getEditorBySelection($(".query-source"));
+        
+        this.criteria().queryText.throttle(500).subscribe(() => {
+            this.languageService.syntaxCheck(queryEditor);
+        });
     }
     
+    detached() {
+        super.detached();
+        
+        this.languageService.dispose();
+    }
+
     private initTabTooltip(): void {
         $('.tab-info[data-toggle="tooltip"]').tooltip();
     }

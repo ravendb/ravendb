@@ -97,6 +97,8 @@ src/Raven.Studio/typings/modules
 /src/Raven.Studio/wwwroot/Content/**/*.css
 /src/Raven.Studio/wwwroot/Content_old/awesome-bootstrap-checkbox.css
 /src/Raven.Studio/wwwroot/lib
+# web woker is bundled using webpack
+/src/Raven.Studio/wwwroot/rql_worker.js 
 
 test/FastTests/Databases/
 /test/Tryouts/Logs
