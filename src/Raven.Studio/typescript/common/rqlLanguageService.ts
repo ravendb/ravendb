@@ -59,7 +59,7 @@ class rqlLanguageService {
         this.postMessage({
             type: "syntax",
             id: requestId,
-            data: text
+            query: text
         });
         
         this.pendingMessages.set(requestId, (response: LanguageServiceSyntaxResponse) => {
@@ -83,7 +83,7 @@ class rqlLanguageService {
         this.postMessage({
             type: "complete",
             id: requestId,
-            data: text,
+            query: text,
             position: {
                 row: pos.row,
                 column: pos.column

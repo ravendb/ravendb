@@ -6,12 +6,12 @@ interface BaseLanguageServiceRequest {
 
 interface LanguageServiceSyntaxRequest extends BaseLanguageServiceRequest {
     type: "syntax";
-    data: string;
+    query: string;
 }
 
 interface LanguageServiceAutoCompleteRequest extends BaseLanguageServiceRequest {
     type: "complete";
-    data: string;
+    query: string;
     position: { row: number; column: number };
 }
 
