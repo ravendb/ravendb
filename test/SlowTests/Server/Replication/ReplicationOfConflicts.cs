@@ -1,10 +1,13 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using FastTests.Server.Replication;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -386,6 +389,76 @@ namespace SlowTests.Server.Replication
 
                 await SetupReplicationAsync(store3, store1);
                 await SetupReplicationAsync(store3, store2);
+
+                await EnsureReplicatingAsync(store1, store2);
+                await EnsureReplicatingAsync(store2, store3);
+                await EnsureReplicatingAsync(store3, store1);
+            }
+        }
+
+        [Fact]
+        public async Task RemoveDeleteRevisionFromDifferentCollection()
+        {
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
+            using (var store3 = GetDocumentStore())
+            {
+                using (var session = store1.OpenSession())
+                {
+                    session.Store(new User {Name = "Karmel"}, "foo/bar");
+                    session.SaveChanges();
+                }
+
+                using (var session = store2.OpenSession())
+                {
+                    session.Store(new Company() {Name = "Karmel"}, "foo/bar");
+                    session.SaveChanges();
+                }
+
+                using (var session = store1.OpenSession())
+                {
+                    session.Delete("foo/bar");
+                    session.SaveChanges();
+                }
+               
+                using (var session = store3.OpenSession())
+                {
+                    session.Store(new Address {Street = "Karmel"}, "foo/bar");
+                    session.SaveChanges();
+                }
+
+                using (var session = store3.OpenSession())
+                {
+                    session.Delete("foo/bar");
+                    session.SaveChanges();
+                }
+
+                await SetupReplicationAsync(store1, store2);
+                await EnsureReplicatingAsync(store1, store2);
+
+                using (var session = store2.OpenSession())
+                {
+                    session.Delete("foo/bar");
+                    session.SaveChanges();
+                }
+
+                await SetupReplicationAsync(store2, store1);
+
+                await SetupReplicationAsync(store1, store3);
+                await SetupReplicationAsync(store2, store3);
+
+                await SetupReplicationAsync(store3, store1);
+                await SetupReplicationAsync(store3, store2);
+
+                await EnsureReplicatingAsync(store1, store2);
+                await EnsureReplicatingAsync(store2, store3);
+                await EnsureReplicatingAsync(store3, store1);
+
+                WaitForUserToContinueTheTest(store1);
+
+                var db1 = await GetDocumentDatabaseInstanceFor(store1);
+                var token = new OperationCancelToken(TimeSpan.FromSeconds(60), CancellationToken.None, CancellationToken.None);
+                await db1.DocumentsStorage.RevisionsStorage.EnforceConfiguration(onProgress: null, token);
 
                 await EnsureReplicatingAsync(store1, store2);
                 await EnsureReplicatingAsync(store2, store3);
