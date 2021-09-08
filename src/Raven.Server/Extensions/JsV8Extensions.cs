@@ -5,6 +5,8 @@ using Esprima.Ast;
 using Raven.Client.Util;
 
 using V8.Net;
+using Raven.Server.Documents.Patch;
+
 
 namespace Raven.Server.Extensions
 {
@@ -38,16 +40,36 @@ namespace Raven.Server.Extensions
         public static IEnumerable<KeyValuePair<string, InternalHandle>> GetOwnProperties(this InternalHandle value)
         {
             if (value.IsObject) {
-                var propertyNames = value.GetOwnPropertyNames();
-                foreach (var propertyName in propertyNames)
-                {
-                    InternalHandle jsProp = value.GetProperty(propertyName);
-                    yield return new KeyValuePair<string, InternalHandle>(propertyName, jsProp);
+                IEnumerable<string> propertyNames;
+                if (value.BoundObject is BlittableObjectInstance boi) { // for optimisation to avoid V8 participation
+                    propertyNames = boi.EnumerateOwnProperties();
+                    foreach (var propertyName in propertyNames)
+                    {
+                        yield return new KeyValuePair<string, InternalHandle>(propertyName, boi.GetOwnPropertyJs(propertyName));
+                    }
+                }
+                else {
+                    propertyNames = value.GetOwnPropertyNames();
+                    foreach (var propertyName in propertyNames)
+                    {
+                        InternalHandle jsProp = value.GetProperty(propertyName);
+                        yield return new KeyValuePair<string, InternalHandle>(propertyName, jsProp);
+                    }
                 }
             }
         }
 
         public static IEnumerable<KeyValuePair<string, InternalHandle>> GetProperties(this InternalHandle value)
+        {
+            if (value.BoundObject is BlittableObjectInstance boi) { // for optimisation to avoid V8 participation
+                return GetOwnProperties(value);
+            }
+            else {
+                return GetPropertiesAux(value);
+            }
+        }
+
+        private static IEnumerable<KeyValuePair<string, InternalHandle>> GetPropertiesAux(this InternalHandle value)
         {
             if (value.IsObject) {
                 var propertyNames = value.GetPropertyNames();
