@@ -201,7 +201,7 @@ namespace Raven.Client.Documents.Session
             new Dictionary<(string, CommandType, string), ICommandData>();
 
         public readonly bool NoTracking;
-       
+
         internal Dictionary<string, ForceRevisionStrategy> IdsForCreatingForcedRevisions = new Dictionary<string, ForceRevisionStrategy>(StringComparer.OrdinalIgnoreCase);
 
         public int DeferredCommandsCount => DeferredCommands.Count;
@@ -477,7 +477,7 @@ more responsive application.
 
             if (string.IsNullOrEmpty(id))
             {
-                return DeserializeFromTransformer(entityType, null, document,false);
+                return DeserializeFromTransformer(entityType, null, document, false);
             }
 
             if (DocumentsById.TryGetValue(id, out var docInfo))
@@ -586,7 +586,7 @@ more responsive application.
                 using (var newObj = EntityToBlittable.ConvertEntityToBlittable(documentInfo.Entity, documentInfo))
                 {
                     if (documentInfo.Entity != null && EntityChanged(newObj, documentInfo, null))
-                    {                        
+                    {
                         throw new InvalidOperationException(
                             "Can't delete changed entity using identifier. Use Delete<T>(T entity) instead.");
                     }
@@ -596,8 +596,11 @@ more responsive application.
                         DocumentsByEntity.Remove(documentInfo.Entity);
                     }
 
-                    DocumentsById.Remove(id);
-                    changeVector = documentInfo.ChangeVector;
+                    using (documentInfo)
+                    {
+                        changeVector = documentInfo.ChangeVector;
+                        DocumentsById.Remove(id);
+                    }
                 }
             }
 
@@ -920,15 +923,15 @@ more responsive application.
 
             return true;
         }
-        
+
         private void PrepareForCreatingRevisionsFromIds(SaveChangesData result)
         {
             // Note: here there is no point checking 'Before' or 'After' because if there were changes then forced revision is done from the PUT command....
             foreach (var idEntry in IdsForCreatingForcedRevisions)
             {
-                result.SessionCommands.Add(new ForceRevisionCommandData(idEntry.Key));   
+                result.SessionCommands.Add(new ForceRevisionCommandData(idEntry.Key));
             }
-            
+
             IdsForCreatingForcedRevisions.Clear();
         }
 
@@ -946,7 +949,9 @@ more responsive application.
                         var docChanges = new List<DocumentsChanges>();
                         var change = new DocumentsChanges
                         {
-                            FieldNewValue = string.Empty, FieldOldValue = string.Empty, Change = DocumentsChanges.ChangeType.DocumentDeleted
+                            FieldNewValue = string.Empty,
+                            FieldOldValue = string.Empty,
+                            Change = DocumentsChanges.ChangeType.DocumentDeleted
                         };
 
                         docChanges.Add(change);
@@ -1226,9 +1231,12 @@ more responsive application.
         {
             if (DocumentsByEntity.TryGetValue(entity, out var documentInfo))
             {
-                DocumentsByEntity.Evict(entity);
-                DocumentsById.Remove(documentInfo.Id);
-                _countersByDocId?.Remove(documentInfo.Id);
+                using (documentInfo)
+                {
+                    DocumentsByEntity.Evict(entity);
+                    DocumentsById.Remove(documentInfo.Id);
+                    _countersByDocId?.Remove(documentInfo.Id);
+                }
             }
 
             DeletedEntities.Evict(entity);
@@ -1360,7 +1368,7 @@ more responsive application.
 
             _knownMissingIds.Add(id);
         }
-        
+
         public void RegisterMissing(IEnumerable<string> ids)
         {
             if (NoTracking)
@@ -1483,7 +1491,7 @@ more responsive application.
                 if (propertyDetails.Value == null)
                     continue;
 
-                string[] counters = {};
+                string[] counters = { };
 
                 if (fromQueryResult)
                 {
@@ -1741,7 +1749,7 @@ more responsive application.
             if (documentInfo.Entity != null && NoTracking == false)
                 EntityToBlittable.RemoveFromMissing(documentInfo.Entity);
 
-            documentInfo.Entity = EntityToBlittable.ConvertToEntity(typeof(T), documentInfo.Id, ref document,!NoTracking);
+            documentInfo.Entity = EntityToBlittable.ConvertToEntity(typeof(T), documentInfo.Id, ref document, !NoTracking);
             documentInfo.Document = document;
 
             var type = entity.GetType();
@@ -2102,7 +2110,7 @@ more responsive application.
             public bool ExecuteOnBeforeStore { get; set; }
         }
     }
-    
+
     internal class DeletedEntitiesHolder
     {
         private readonly HashSet<object> _deletedEntities = new HashSet<object>(ObjectReferenceEqualityComparer<object>.Default);

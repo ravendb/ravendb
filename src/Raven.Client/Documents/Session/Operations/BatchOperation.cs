@@ -367,12 +367,15 @@ namespace Raven.Client.Documents.Session.Operations
             if (_session.DocumentsById.TryGetValue(id, out var documentInfo) == false)
                 return;
 
-            _session.DocumentsById.Remove(id);
-
-            if (documentInfo.Entity != null)
+            using (documentInfo)
             {
-                _session.DocumentsByEntity.Remove(documentInfo.Entity);
-                _session.DeletedEntities.Remove(documentInfo.Entity);
+                _session.DocumentsById.Remove(id);
+
+                if (documentInfo.Entity != null)
+                {
+                    _session.DocumentsByEntity.Remove(documentInfo.Entity);
+                    _session.DeletedEntities.Remove(documentInfo.Entity);
+                }
             }
         }
 
@@ -380,27 +383,27 @@ namespace Raven.Client.Documents.Session.Operations
         {
             // When forcing a revision for a document that does Not have any revisions yet then the HasRevisions flag is added to the document.
             // In this case we need to update the tracked entities in the session with the document new change-vector.
-            
+
             if (GetBooleanField(batchResult, CommandType.ForceRevisionCreation, "RevisionCreated") == false)
-            { 
+            {
                 // no forced revision was created...nothing to update.
                 return;
             }
-            
+
             var id = GetLazyStringField(batchResult, CommandType.ForceRevisionCreation, Constants.Documents.Metadata.Id);
             var changeVector = GetLazyStringField(batchResult, CommandType.ForceRevisionCreation, Constants.Documents.Metadata.ChangeVector);
 
             if (_session.DocumentsById.TryGetValue(id, out var documentInfo) == false)
                 return;
-            
+
             documentInfo.ChangeVector = changeVector;
-            
+
             HandleMetadataModifications(documentInfo, batchResult, id, changeVector);
-            
+
             var afterSaveChangesEventArgs = new AfterSaveChangesEventArgs(_session, documentInfo.Id, documentInfo.Entity);
             _session.OnAfterSaveChangesInvoke(afterSaveChangesEventArgs);
         }
-        
+
         private void HandlePut(int index, BlittableJsonReaderObject batchResult, bool isDeferred)
         {
             object entity = null;
@@ -426,7 +429,7 @@ namespace Raven.Client.Documents.Session.Operations
             }
 
             HandleMetadataModifications(documentInfo, batchResult, id, changeVector);
-            
+
             _session.DocumentsById.Add(documentInfo);
 
             if (entity != null)
@@ -452,8 +455,8 @@ namespace Raven.Client.Documents.Session.Operations
             documentInfo.ChangeVector = changeVector;
 
             ApplyMetadataModifications(id, documentInfo);
-        }  
-        
+        }
+
         private void HandleCounters(BlittableJsonReaderObject batchResult)
         {
             var docId = GetLazyStringField(batchResult, CommandType.Counters, nameof(CountersBatchCommandData.Id));
@@ -499,7 +502,7 @@ namespace Raven.Client.Documents.Session.Operations
 
             return longValue;
         }
-        
+
         private static bool GetBooleanField(BlittableJsonReaderObject json, CommandType type, string fieldName)
         {
             if (json.TryGet(fieldName, out bool boolValue) == false)
