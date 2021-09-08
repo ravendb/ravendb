@@ -17,6 +17,9 @@ return database.$2
 EXEC
 EOF
 }
+function database-exists(){
+get-database-var $1 Name | grep $1
+}
 
 function get-server-url() {
 # This script takes scheme as first arg (http, https, tcp etc.)
@@ -90,7 +93,7 @@ function create-database() {
     }
 
 wait-for-server
-if (! get-database-var $RAVEN_DATABASE Name | grep $RAVEN_DATABASE); then
+if (! database-exists $RAVEN_DATABASE ); then
 cert_path=$(get-server-var Configuration.Security.CertificatePath)
 if [[ "$cert_path" == "null" ]]; then
     export serverUrl=$(get-server-url)
@@ -100,7 +103,5 @@ else
     source ./cert-utils.sh && extract-cert-and-key $cert_path
     putdb /tmp/docker_cert.crt /tmp/docker_key.key
 fi
-else
-echo "Database '$RAVEN_DATABASE' wasn't created, it already exists."
 fi
 }
