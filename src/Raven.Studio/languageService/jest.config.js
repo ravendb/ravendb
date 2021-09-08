@@ -12,4 +12,7 @@ module.exports = {
     'transform': {
         '.*\.tsx?$': 'ts-jest'
     },
+    "setupFilesAfterEnv": [
+      "jest-extended"
+    ]
 }

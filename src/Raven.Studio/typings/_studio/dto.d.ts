@@ -471,7 +471,10 @@ interface autoCompleteWordList {
     value: string; 
     snippet?: string; 
     score: number; 
-    meta: string 
+    meta: string;
+    completer?: {
+        insertMatch(editor: AceAjax.Editor, data: autoCompleteWordList);
+    }
 }
 
 interface autoCompleteLastKeyword {

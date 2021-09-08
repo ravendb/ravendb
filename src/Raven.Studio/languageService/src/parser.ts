@@ -7,7 +7,7 @@ import { RecognitionException } from "antlr4ts/RecognitionException";
 import { Token } from "antlr4ts/Token";
 
 interface parseRqlOptions {
-    onSyntaxError?<T extends Token>(
+    onSyntaxError?<T>(
         recognizer: Recognizer<T, any>, 
         offendingSymbol: T, 
         line: number, 
@@ -20,6 +20,8 @@ interface parseRqlOptions {
 export function parseRql(input: string, opts: parseRqlOptions = {}): ParsedRql {
     const chars = CharStreams.fromString(input);
     const lexer = new RqlLexer(chars);
+    lexer.removeErrorListeners();
+    
     const tokenStream = new CommonTokenStream(lexer);
     const parser = new RqlParser(tokenStream);
     parser.buildParseTree = true;
@@ -27,6 +29,9 @@ export function parseRql(input: string, opts: parseRqlOptions = {}): ParsedRql {
     
     if (opts.onSyntaxError) {
         parser.addErrorListener({
+            syntaxError: opts.onSyntaxError
+        });
+        lexer.addErrorListener({
             syntaxError: opts.onSyntaxError
         });
     }
