@@ -19,10 +19,13 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
 {
     public class ElasticSearchEtl : EtlProcess<ElasticSearchItem, ElasticSearchIndexWithRecords, ElasticSearchEtlConfiguration, ElasticSearchConnectionString, EtlStatsScope, EtlPerformanceOperation>
     {
+        public readonly ElasticSearchEtlMetricsCountersManager ElasticSearchMetrics = new ElasticSearchEtlMetricsCountersManager();
+        
         public ElasticSearchEtl(Transformation transformation, ElasticSearchEtlConfiguration configuration, DocumentDatabase database, ServerStore serverStore)
             : base(transformation, configuration, database, serverStore, ElasticSearchEtlTag)
         {
             _client = ElasticSearchHelper.CreateClient(Configuration.Connection);
+            Metrics = ElasticSearchMetrics;
         }
 
         public const string ElasticSearchEtlTag = "ElasticSearch ETL";
