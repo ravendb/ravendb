@@ -64,14 +64,14 @@ namespace Raven.Server.Smuggler.Migration.ApiKey
                     {
                         // We've already tried three times and failed
                         if (tries >= 3)
-                            throw ErrorResponseException.FromResponseMessage(response);
+                            throw ErrorResponseException.FromResponseMessage(response, $"Failed to get OAuth Token from '{requestUri}'.");
 
                         if (response.StatusCode != HttpStatusCode.PreconditionFailed)
-                            throw ErrorResponseException.FromResponseMessage(response);
+                            throw ErrorResponseException.FromResponseMessage(response, $"Failed to get OAuth Token from '{requestUri}'.");
 
                         var header = response.Headers.GetFirstValue("WWW-Authenticate");
                         if (header == null || header.StartsWith(OAuthHelper.Keys.WWWAuthenticateHeaderKey) == false)
-                            throw new ErrorResponseException(response, "Got invalid WWW-Authenticate value");
+                            throw new ErrorResponseException(response, $"Failed to get OAuth Token from '{requestUri}'. Got invalid WWW-Authenticate value");
 
                         var challengeDictionary = OAuthHelper.ParseDictionary(header.Substring(OAuthHelper.Keys.WWWAuthenticateHeaderKey.Length).Trim());
                         serverRSAExponent = challengeDictionary.GetOrDefault(OAuthHelper.Keys.RSAExponent);
