@@ -18,13 +18,14 @@ prog:
     ;
 
 fromStatement:
-     FROM collectionName fromAlias? #CollectionByName 
-    |FROM INDEX indexName fromAlias? #CollectionByIndex
-    |FROM ALL_DOCS #AllCollections 
+    FROM INDEX indexName fromAlias? #CollectionByIndex
+    | FROM ALL_DOCS #AllCollections
+    | FROM collectionName fromAlias? #CollectionByName 
     ;
 
 indexName:
-    STRING;
+    STRING
+    | WORD;
 
 loadStatement:
     LOAD 
@@ -187,18 +188,7 @@ betweenFunction:
     
 //Functions like morelikethis() or intersect()
 specialFunctions:
-    (
-        ID
-        |FUZZY
-        |SEARCH
-        |FACET
-        |BOOST
-        |STARTS_WITH
-        |ENDS_WITH
-        |MORELIKETHIS
-        |INTERSECT
-        |EXACT
-    ) 
+    specialFunctionName
     OP_PAR
     (
         specialParam alias?
@@ -208,6 +198,18 @@ specialFunctions:
     )?
     CL_PAR
 ;
+
+specialFunctionName:
+    ID
+        |FUZZY
+        |SEARCH
+        |FACET
+        |BOOST
+        |STARTS_WITH
+        |ENDS_WITH
+        |MORELIKETHIS
+        |INTERSECT
+        |EXACT;
 
 specialParam:
      OP_PAR specialParam CL_PAR
