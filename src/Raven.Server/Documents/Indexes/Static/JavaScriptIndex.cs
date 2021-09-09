@@ -462,7 +462,7 @@ function map(name, lambda) {
                 foreach (var kvpScript in definition.AdditionalSources)
                 {
                     var script = kvpScript.Value;
-                    _engine.ExecuteWithReset(script, $"additionalSource[{kvpScript.Key}]");
+                    _engine.ExecuteWithReset(script, $"/{definition.Name}/additionalSource[{kvpScript.Key}]");
                     _engineJint.ExecuteWithReset(script);
                     sb.Append(Environment.NewLine);
                     sb.AppendLine(script);
@@ -536,7 +536,7 @@ function map(name, lambda) {
                 v3.Dispose();*/
 
                 if (value.IsNull || value.IsUndefined)
-                    return DynamicJsNull.ImplicitNull._;
+                    return _engine.ImplicitNull.CreateHandle();
 
                 if (value.IsNumberOrIntEx())
                     return jsRes.Set(value);
@@ -548,7 +548,7 @@ function map(name, lambda) {
                     }
                 }
 
-                return DynamicJsNull.ImplicitNull._;
+                return _engine.ImplicitNull.CreateHandle();
             }
             catch (Exception e) 
             {
@@ -566,7 +566,7 @@ function map(name, lambda) {
 
                 InternalHandle jsRes = InternalHandle.Empty;
                 if (args[0].IsNull || args[0].IsUndefined)
-                    return DynamicJsNull.ImplicitNull._;
+                    return _engine.ImplicitNull.CreateHandle();
 
                 if (args[0].IsStringEx() == false ||
                     args[1].IsStringEx() == false)
@@ -578,7 +578,7 @@ function map(name, lambda) {
                 if (JavaScriptIndexUtils.GetValue(doc, out InternalHandle jsItem))
                     return jsItem;
 
-                return DynamicJsNull.ImplicitNull._;
+                return _engine.ImplicitNull.CreateHandle();
             }
             catch (Exception e) 
             {
@@ -595,7 +595,7 @@ function map(name, lambda) {
                 InternalHandle jsRes = InternalHandle.Empty;
                 var keyArgument = args[0];
                 if (keyArgument.IsNull || keyArgument.IsUndefined)
-                    return DynamicJsNull.ImplicitNull._;
+                    return _engine.ImplicitNull.CreateHandle();
 
                 if (keyArgument.IsStringEx())
                 {
@@ -606,7 +606,7 @@ function map(name, lambda) {
                 {
                     int arrayLength =  keyArgument.ArrayLength;
                     if (arrayLength == 0)
-                        return DynamicJsNull.ImplicitNull._;
+                        return _engine.ImplicitNull.CreateHandle();
 
                     var jsItems = new InternalHandle[arrayLength];
                     for (int i = 0; i < arrayLength; i++)
@@ -639,11 +639,11 @@ function map(name, lambda) {
                 switch (value)
                 {
                     case null:
-                        return DynamicJsNull.ImplicitNull._;
+                        return _engine.ImplicitNull.CreateHandle();
 
                     case DynamicNullObject dno: {
-                        var dynamicNull = dno.IsExplicitNull ? DynamicJsNull.ExplicitNull : DynamicJsNull.ImplicitNull;
-                        return dynamicNull._;
+                        var dynamicNull = dno.IsExplicitNull ? _engine.ExplicitNull : _engine.ImplicitNull;
+                        return dynamicNull.CreateHandle();
                     }
 
                     case DynamicBlittableJson dbj: {

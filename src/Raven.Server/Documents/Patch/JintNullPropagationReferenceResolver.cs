@@ -45,7 +45,7 @@ namespace Raven.Server.Documents.Jint.Patch
 
             /*if (value is DynamicJsNull)
             {
-                value = DynamicJsNull.ImplicitNull;
+                value = Engine.ImplicitNull;
                 return true;
             }* /
 

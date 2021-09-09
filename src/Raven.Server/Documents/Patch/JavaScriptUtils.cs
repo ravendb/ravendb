@@ -121,13 +121,14 @@ var process = {
         internal static InternalHandle LoadAttachment(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
         {
             try {
+                var engineEx = (V8EngineEx)engine;
+    
                 if (args.Length != 2)
                     throw new InvalidOperationException($"{nameof(LoadAttachment)} may only be called with two arguments, but '{args.Length}' were passed.");
 
-                var engineEx = (V8EngineEx)engine;
                 InternalHandle jsRes = InternalHandle.Empty;
                 if (args[0].IsNull)
-                    return DynamicJsNull.ImplicitNull._;
+                    return engineEx.ImplicitNull.CreateHandle();
 
                 if (args[0].IsObject == false)
                     ThrowInvalidFirstParameter();
@@ -146,7 +147,7 @@ var process = {
 
                 var attachment = CurrentIndexingScope.Current.LoadAttachment(doc.DocumentId, attachmentName);
                 if (attachment is DynamicNullObject)
-                    return DynamicJsNull.ImplicitNull._;
+                    return engineEx.ImplicitNull.CreateHandle();
 
                 var aoi = new AttachmentObjectInstance((DynamicAttachment)attachment);
                 return AttachmentObjectInstance.CreateObjectBinder(engineEx, aoi);
@@ -176,7 +177,7 @@ var process = {
                 var engineEx = (V8EngineEx)engine;
                 InternalHandle jsRes = InternalHandle.Empty;
                 if (args[0].IsNull)
-                    return DynamicJsNull.ImplicitNull._;
+                    return engineEx.ImplicitNull.CreateHandle();
 
                 if (!(args[0].BoundObject is BlittableObjectInstance doc))
                     ThrowInvalidParameter();
@@ -465,6 +466,9 @@ var process = {
     {
         private List<V8Function> _CLRCallBacks;
 
+        public DynamicJsNull ImplicitNull;
+        public DynamicJsNull ExplicitNull;
+
         public V8Function CreateCLRCallBack(JSFunction func, bool keepAlive = true)
         {
             var jsFunc = CreateFunctionTemplate().GetFunctionObject<V8Function>(func);
@@ -513,6 +517,9 @@ var process = {
         {
 
             _CLRCallBacks = new List<V8Function>();
+
+            ImplicitNull = new DynamicJsNull(this, isExplicitNull: false);
+            ExplicitNull = new DynamicJsNull(this, isExplicitNull: true);
 
             TypeMappers = new Dictionary<Type, Func<object, InternalHandle>>()
             {
