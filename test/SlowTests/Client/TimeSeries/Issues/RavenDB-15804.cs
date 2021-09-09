@@ -1,16 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
-using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
-using Sparrow.Json;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -792,7 +789,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                 await EnsureReplicatingAsync(storeA, storeB);
                 await EnsureReplicatingAsync(storeB, storeA);
 
-                await EnsureNoReplicationLoop(Server, storeA.Database, storeA);
+                await EnsureNoReplicationLoop(Server, storeA.Database);
                 await EnsureNoReplicationLoop(Server, storeB.Database);
 
                 using (var sessionA = storeA.OpenSession())
@@ -801,10 +798,14 @@ namespace SlowTests.Client.TimeSeries.Issues
                     var tsA = sessionA.TimeSeriesFor("users/ayende", "HeartRate").Get();
                     var tsB = sessionB.TimeSeriesFor("users/ayende", "HeartRate").Get();
 
-                    Assert.Equal(tsA.Length, tsB.Length);
-                    for (int i = 0; i < tsA.Length; i++)
+  
+                    if (tsA != null && tsB != null)
                     {
-                        Assert.True(Equals(tsA[i], tsB[i]));
+                        Assert.Equal(tsA.Length, tsB.Length);
+                        for (int i = 0; i < tsA.Length; i++)
+                        {
+                            Assert.True(Equals(tsA[i], tsB[i]));
+                        }
                     }
                 }
             }
