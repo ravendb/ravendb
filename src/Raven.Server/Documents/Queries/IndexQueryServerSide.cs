@@ -120,7 +120,7 @@ namespace Raven.Server.Documents.Queries
                     return result;
                 }
 
-                result.Metadata = new QueryMetadata(result.Query, result.QueryParameters, metadataHash, addSpatialProperties: false, queryType, database);
+                result.Metadata = new QueryMetadata(result.Query, result.QueryParameters, metadataHash, addSpatialProperties, queryType, database);
                 if (result.Metadata.HasTimings)
                     result.Timings = new QueryTimingsScope(start: false);
 
