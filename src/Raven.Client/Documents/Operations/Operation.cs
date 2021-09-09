@@ -215,7 +215,7 @@ namespace Raven.Client.Documents.Operations
 
         protected virtual RavenCommand<OperationState> GetOperationStateCommand(DocumentConventions conventions, long id, string nodeTag = null)
         {
-            return new GetOperationStateOperation.GetOperationStateCommand(conventions, id, nodeTag);
+            return new GetOperationStateOperation.GetOperationStateCommand(id, nodeTag);
         }
 
         public void OnNext(OperationStatusChange change)
