@@ -17,12 +17,14 @@ namespace Raven.Server.Documents.Indexes.Persistence
         protected readonly Index _index;
         protected readonly Dictionary<string, IndexField> _fields;
 
-        public ConverterBase(Index index, bool storeValue)
+        public ConverterBase(Index index, bool storeValue, ICollection<IndexField> fields = null)
         {
             _index = index ?? throw new ArgumentNullException(nameof(index));
-            _index = index;
             _blittableTraverser = storeValue ? BlittableJsonTraverser.FlatMapReduceResults : BlittableJsonTraverser.Default;
-            var fields = index.Definition.IndexFields.Values;
+            
+            if (fields == null)
+                fields = index.Definition.IndexFields.Values;
+            
             var dictionary = new Dictionary<string, IndexField>(fields.Count, OrdinalStringStructComparer.Instance);
             foreach (var field in fields)
                 dictionary[field.Name] = field;

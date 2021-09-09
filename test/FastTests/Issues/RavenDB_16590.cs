@@ -69,7 +69,8 @@ namespace FastTests.Issues
                 "Indexing.NumberOfLargeSegmentsToMergeInSingleBatch",
                 "Indexing.ScratchSpaceLimitInMb",
                 "Indexing.Throttling.TimeIntervalInMs",
-                "Indexing.TransactionSizeLimitInMb"
+                "Indexing.TransactionSizeLimitInMb",
+                "Indexing.Static.SearchEngineType"
             };
 
             var sortedStudioList = propertiesDeclaredInStudio.OrderBy(x => x).ToList();

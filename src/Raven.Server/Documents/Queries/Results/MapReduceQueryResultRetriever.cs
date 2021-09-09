@@ -17,9 +17,6 @@ namespace Raven.Server.Documents.Queries.Results
             : base(Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName, database, query, queryTimings, documentsStorage, context, fieldsToFetch, includeDocumentsCommand, includeCompareExchangeValuesCommand, includeRevisionsCommand)
         {
         }
-
-        //todo maciej: this should be done in other way
-        internal Document GetDocumentById(string id) => LoadDocument(id);
     }
 
     public abstract class StoredValueQueryResultRetriever : QueryResultRetrieverBase

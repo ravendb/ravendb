@@ -22,24 +22,25 @@ namespace Raven.Server.Documents.Queries.Results
 
         public override Document Get(ref RetrieverInput retrieverInput)
         {
-            var input = retrieverInput.LuceneDocument;
-            var state = retrieverInput.State;
-            var scoreDoc = retrieverInput.Score;
+
             using (RetrieverScope?.Start())
             {
-                if (retrieverInput.LuceneDocument != null && TryGetKey(ref retrieverInput, out string id) == false)
-                    throw new InvalidOperationException($"Could not extract '{Constants.Documents.Indexing.Fields.DocumentIdFieldName}' from index.");
-                else
+                string id = string.Empty;
+                if (retrieverInput.DocumentId != string.Empty)
                     id = retrieverInput.DocumentId;
+                else if (retrieverInput.LuceneDocument != null && TryGetKey(ref retrieverInput, out id) == false)
+                {
+                    throw new InvalidOperationException($"Could not extract '{Constants.Documents.Indexing.Fields.DocumentIdFieldName}' from index.");
+                }
 
                 if (FieldsToFetch.IsProjection)
                     return GetProjection(ref retrieverInput, id);
 
                 using (_storageScope = _storageScope?.Start() ?? RetrieverScope?.For(nameof(QueryTimingsScope.Names.Storage)))
                 {
-                    var doc = DirectGet(null, id, DocumentFields, state);
+                    var doc = DirectGet(null, id, DocumentFields, retrieverInput.State);
 
-                    FinishDocumentSetup(doc, scoreDoc);
+                    FinishDocumentSetup(doc, retrieverInput.Score);
                     return doc;
                 }
             }
@@ -49,7 +50,7 @@ namespace Raven.Server.Documents.Queries.Results
         {
             //Lucene method
             key = retrieverInput.LuceneDocument.Get(Constants.Documents.Indexing.Fields.DocumentIdFieldName, retrieverInput.State);
-            return key != null;
+            return string.IsNullOrEmpty(key) == false;
         }
 
         protected override Document DirectGet(Lucene.Net.Documents.Document input, string id, DocumentFields fields, IState state)

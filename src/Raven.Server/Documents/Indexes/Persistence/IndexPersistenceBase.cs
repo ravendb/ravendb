@@ -39,9 +39,7 @@ namespace Raven.Server.Documents.Indexes.Persistence
         internal abstract void RecreateSuggestionsSearchers(Transaction asOfTx);
         public abstract void DisposeWriters();
         public abstract void Dispose();
-
         
-
     }
 
 

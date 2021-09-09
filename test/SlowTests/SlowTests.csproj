@@ -109,6 +109,8 @@
     <EmbeddedResource Include="Data\RavenDB_15753\cat.jpg" />
     <EmbeddedResource Include="Data\RavenDB_15898\1.ravendbdump" />
     <EmbeddedResource Include="Data\RavenDB_16378\RavenDB-16401-NRE.ravendb-snapshot" />
+    <EmbeddedResource Include="Data\RavenDB_17070\Precorax\Auto_Orders_ByOrderedAt.zip" />
+    <EmbeddedResource Include="Data\RavenDB_17070\Precorax\Orders_ByOrderBy.zip" />
     <EmbeddedResource Include="Data\RavenDB_8355\MySorter.cs" />
     <EmbeddedResource Include="Data\RavenDB_8355\MySorterWithDiagnostics.cs" />
     <EmbeddedResource Include="Data\RavenDB_9912\1.ravendbdump" />
@@ -138,6 +140,8 @@
   </ItemGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.11.0" />
+    <PackageReference Include="JetBrains.DotMemoryUnit" Version="3.1.20200127.214830" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.11.0" />
     <PackageReference Include="System.DirectoryServices.Protocols" Version="5.0.0" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.4.3">

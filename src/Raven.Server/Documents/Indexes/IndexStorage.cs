@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Runtime.ExceptionServices;
 using Raven.Client.Documents.Indexes;
@@ -143,10 +144,12 @@ namespace Raven.Server.Documents.Indexes
                 void PersistConfiguration()
                 {
                     var configurationTree = tx.InnerTransaction.CreateTree(IndexSchema.ConfigurationTree);
-
+                    PersistSearchEngine(configurationTree, nameof(SearchEngineType), 
+                        _index.Type.IsAuto() ? _index.Configuration.AutoIndexingEngineType : _index.Configuration.StaticIndexingEngineType);
                     AssertAndPersistAnalyzer(configurationTree, RavenConfiguration.GetKey(x => x.Indexing.DefaultAnalyzer), _index.Configuration.DefaultAnalyzer, Raven.Client.Constants.Documents.Indexing.Analyzers.Default);
                     AssertAndPersistAnalyzer(configurationTree, RavenConfiguration.GetKey(x => x.Indexing.DefaultExactAnalyzer), _index.Configuration.DefaultExactAnalyzer, Raven.Client.Constants.Documents.Indexing.Analyzers.DefaultExact);
                     AssertAndPersistAnalyzer(configurationTree, RavenConfiguration.GetKey(x => x.Indexing.DefaultSearchAnalyzer), _index.Configuration.DefaultSearchAnalyzer, Raven.Client.Constants.Documents.Indexing.Analyzers.DefaultSearch);
+                    
                 }
 
                 void AssertAndPersistAnalyzer(Tree configurationTree, string configurationKey, string expectedAnalyzer, string defaultAnalyzer)
@@ -167,6 +170,25 @@ namespace Raven.Server.Documents.Indexes
                     }
 
                     configurationTree.Add(configurationKey, expectedAnalyzer);
+                }
+
+                void PersistSearchEngine(Tree configurationTree,  string configurationKey, SearchEngineType defaultEngineType)
+                {
+                    var result = configurationTree.Read(configurationKey);
+                    if (result != null)
+                    {
+                        if (Enum.TryParse(result.Reader.ToStringValue(), out SearchEngineType persistedSearchEngineType) == false)
+                        {
+                            throw new InvalidDataException($"Invalid search engine for {_index.Name}  was saved previously or it's corrupted. Please reset the index.");
+                        }
+                    }
+                    else
+                    {
+                        if (_index.Definition.Version < IndexDefinitionBase.IndexVersion.Corax)
+                            configurationTree.Add(configurationKey, SearchEngineType.Lucene.ToString());
+                        else
+                            configurationTree.Add(configurationKey, defaultEngineType.ToString());
+                    }
                 }
             }
         }
@@ -887,6 +909,32 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
+        public static SearchEngineType ReadSearchEngineType(string name, StorageEnvironment environment)
+        {
+            using (var tx = environment.ReadTransaction())
+            {
+                var statsTree = tx.ReadTree(IndexSchema.ConfigurationTree);
+                if (statsTree == null)
+                {
+                    throw new InvalidOperationException($"Index '{name}' does not contain {nameof(IndexSchema.ConfigurationTree)}' tree.");
+                }
+
+                var result = statsTree.Read(IndexSchema.SearchEngineType);
+                if (result == null)
+                {
+                    // lucene backward compability
+                    return SearchEngineType.None;
+                }
+
+                if (Enum.TryParse(result.Reader.ToStringValue(), out SearchEngineType persistedSearchEngineType) == false)
+                {
+                    throw new InvalidOperationException($"Index '{name}' does not contain valid {nameof(SearchEngineType)} property.");
+                }
+               
+                return persistedSearchEngineType;
+            }
+        }        
+        
         public static IndexSourceType ReadIndexSourceType(string name, StorageEnvironment environment)
         {
             using (var tx = environment.ReadTransaction())
@@ -1027,6 +1075,8 @@ namespace Raven.Server.Documents.Indexes
 
             public static readonly Slice TimeSlice;
 
+            public static readonly Slice SearchEngineType;
+            
             static IndexSchema()
             {
                 using (StorageEnvironment.GetStaticContext(out var ctx))
@@ -1050,6 +1100,7 @@ namespace Raven.Server.Documents.Indexes
                     Slice.From(ctx, "MaxNumberOfOutputsPerDocument", ByteStringType.Immutable, out MaxNumberOfOutputsPerDocument);
                     Slice.From(ctx, "EntriesCount", ByteStringType.Immutable, out EntriesCount);
                     Slice.From(ctx, "Time", ByteStringType.Immutable, out TimeSlice);
+                    Slice.From(ctx, nameof(Client.Documents.Indexes.SearchEngineType), ByteStringType.Immutable, out SearchEngineType);
                 }
             }
         }

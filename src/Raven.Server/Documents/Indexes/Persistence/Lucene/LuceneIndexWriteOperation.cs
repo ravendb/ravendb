@@ -22,6 +22,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private readonly Term _documentId = new Term(Constants.Documents.Indexing.Fields.DocumentIdFieldName, "Dummy");
         private readonly Term _reduceKeyHash = new Term(Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName, "Dummy");
         private readonly Term _sourceDocumentIdHash = new Term(Constants.Documents.Indexing.Fields.SourceDocumentIdFieldName, "Dummy");
+        protected byte[] _buffer;
 
         protected readonly LuceneIndexWriter _writer;
         protected readonly Dictionary<string, LuceneSuggestionIndexWriter> _suggestionsWriters;
