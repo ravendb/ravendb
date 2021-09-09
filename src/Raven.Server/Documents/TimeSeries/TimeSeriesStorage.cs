@@ -1052,7 +1052,7 @@ namespace Raven.Server.Documents.TimeSeries
             {
                 var timestampDiff = ((time - BaselineDate).Ticks / 10_000);
                 var inRange = timestampDiff < int.MaxValue;
-                if (inRange == false || segment.Append(_context.Allocator, (int)timestampDiff, values, tagSlice, status) == false)
+                if (inRange == false || segment.CanOnlyMerge || segment.Append(_context.Allocator, (int)timestampDiff, values, tagSlice, status) == false)
                 {
                     var segmentLastTimestamp = segment.GetLastTimestamp(BaselineDate);
                     if (segmentLastTimestamp == BaselineDate && time == segmentLastTimestamp)// all the entries in the segment has the same timestamp
@@ -1062,12 +1062,7 @@ namespace Raven.Server.Documents.TimeSeries
                                 $"Segment reached to capacity and cannot receive more values with {time} timestamp on time series {_name} for {_docId} . " +
                                 "You may choose a different timestamp.");
 
-                        var msg = $"Segment reached capacity (2KB) and open a new segment unavailable at this point." +
-                                  $"Merge operation has performed for replication on doc: {_docId}, name: {_name} at {time}." +
-                                  $"Following the merge, the data may be inaccurate.";
-                        var alert = AlertRaised.Create(_context.DocumentDatabase.Name, "Time series segment is full - merge operation has performed", msg,
-                            AlertType.Replication, NotificationSeverity.Warning);
-                        _tss._documentDatabase.NotificationCenter.Add(alert);
+                        RaiseAlert();
 
                         MergeAllEntriesAtSameTimestampToSingleEntry(ref segment, tagSlice, values);
                         segment.CanOnlyMerge = true;
@@ -1081,6 +1076,17 @@ namespace Raven.Server.Documents.TimeSeries
 
                     UpdateBaseline(timestampDiff);
                 }
+            }
+
+            private void RaiseAlert()
+            {
+                var msg = $"Segment reached capacity (2KB) and open a new segment unavailable at this point." +
+                          $"Merge operation has performed for replication on doc: {_docId}, name: {_name} at {BaselineDate}." +
+                          $"Following the merge, the data may be inaccurate.";
+
+                var alert = AlertRaised.Create(_context.DocumentDatabase.Name, "Time series segment is full - merge operation has performed", msg,
+                    AlertType.Replication, NotificationSeverity.Warning);
+                _tss._documentDatabase.NotificationCenter.Add(alert);
             }
 
             public bool LoadCurrentSegment()
@@ -1259,9 +1265,12 @@ namespace Raven.Server.Documents.TimeSeries
                     // duplicated entries after this merge, but at least we tried. At any rate, we provide an alert in this case, and we don't consider
                     // this to be a likely scenario.
                     var tag = _context.GetLazyString(TimedCounterPositivePrefix  + hashBas64);
-                    
-                    ByteStringContext innerTransactionAllocator = _context.Transaction.InnerTransaction.Allocator;
-                    newSegment.Append(innerTransactionAllocator, 0, values, SliceHolder.TagAsSpan(tag), TimeSeriesValuesSegment.Dead);
+                    if (readOnlySegment.NumberOfLiveEntries > 1)
+                    {
+                        newSegment.Append(_context.Allocator, 0, values, SliceHolder.TagAsSpan(tag), TimeSeriesValuesSegment.Dead);
+                        AppendExistingSegment(newSegment);
+                    }
+
                 }
             }
 
@@ -1779,6 +1788,18 @@ namespace Raven.Server.Documents.TimeSeries
 
             if (localTime == remote.Timestamp)
             {
+                // deletion wins
+                if (localStatus == TimeSeriesValuesSegment.Dead)
+                {
+                    if (remote.Status == TimeSeriesValuesSegment.Dead)
+                        return CompareResult.Equal;
+
+                    return CompareResult.Local;
+                }
+
+                if (remote.Status == TimeSeriesValuesSegment.Dead) // deletion wins
+                    return CompareResult.Remote;
+
                 bool incrementOperation = remote.Tag?.StartsWith(TimedCounterPrefixBuffer) == true &&
                                           localTag.StartsWith(TimedCounterPrefixBuffer);
                 if (incrementOperation)
@@ -1804,19 +1825,6 @@ namespace Raven.Server.Documents.TimeSeries
                 {
                     return CompareResult.Remote; // if not from replication, remote value is an update
                 }
-
-
-                // deletion wins
-                if (localStatus == TimeSeriesValuesSegment.Dead)
-                {
-                    if (remote.Status == TimeSeriesValuesSegment.Dead)
-                        return CompareResult.Equal;
-
-                    return CompareResult.Local;
-                }
-
-                if (remote.Status == TimeSeriesValuesSegment.Dead) // deletion wins
-                    return CompareResult.Remote;
 
                 return SelectLargestValue(localValues, remote);
             }
