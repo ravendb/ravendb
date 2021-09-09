@@ -117,6 +117,8 @@ namespace Raven.Server.Documents.Queries
                     result.Metadata = metadata;
                     SetupPagingFromQueryMetadata();
                     AssertPaging(result);
+
+                    result.AddSpatialProperties = addSpatialProperties;
                     return result;
                 }
 
@@ -134,6 +136,7 @@ namespace Raven.Server.Documents.Queries
 
                 AssertPaging(result);
 
+                result.AddSpatialProperties = addSpatialProperties;
                 return result;
             }
             catch (Exception e)
