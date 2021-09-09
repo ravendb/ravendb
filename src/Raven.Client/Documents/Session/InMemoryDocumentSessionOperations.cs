@@ -1231,12 +1231,11 @@ more responsive application.
         {
             if (DocumentsByEntity.TryGetValue(entity, out var documentInfo))
             {
-                using (documentInfo)
-                {
-                    DocumentsByEntity.Evict(entity);
-                    DocumentsById.Remove(documentInfo.Id);
-                    _countersByDocId?.Remove(documentInfo.Id);
-                }
+                DocumentsByEntity.Evict(entity);
+                DocumentsById.Remove(documentInfo.Id);
+                _countersByDocId?.Remove(documentInfo.Id);
+
+                documentInfo.Dispose();
             }
 
             DeletedEntities.Evict(entity);
