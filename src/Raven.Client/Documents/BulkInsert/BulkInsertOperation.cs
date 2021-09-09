@@ -418,7 +418,7 @@ namespace Raven.Client.Documents.BulkInsert
 
         private async Task<BulkInsertAbortedException> GetExceptionFromOperation()
         {
-            var stateRequest = new GetOperationStateOperation.GetOperationStateCommand(_requestExecutor.Conventions, _operationId, _nodeTag);
+            var stateRequest = new GetOperationStateOperation.GetOperationStateCommand(_operationId, _nodeTag);
             await ExecuteAsync(stateRequest, token: _token).ConfigureAwait(false);
 
             if (!(stateRequest.Result?.Result is OperationExceptionResult error))
