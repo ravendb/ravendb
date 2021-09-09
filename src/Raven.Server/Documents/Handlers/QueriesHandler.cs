@@ -117,7 +117,6 @@ namespace Raven.Server.Documents.Handlers
             
             indexQuery.Diagnostics = diagnostics ? new List<string>() : null;
             indexQuery.AddTimeSeriesNames = GetBoolValueQueryString("addTimeSeriesNames", false) ?? false;
-            indexQuery.AddSpatialProperties = indexQuery.Metadata.AddSpatialProperties;
 
             queryContext.WithQuery(indexQuery.Metadata);
 
