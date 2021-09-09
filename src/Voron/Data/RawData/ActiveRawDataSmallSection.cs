@@ -267,6 +267,7 @@ namespace Voron.Data.RawData
             return 32;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool IsOwned(long id)
         {
             var posInPage = (int)(id % Constants.Storage.PageSize);
