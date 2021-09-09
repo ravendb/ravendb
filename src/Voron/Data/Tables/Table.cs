@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.CompilerServices;
 using Sparrow;
 using Sparrow.Server;
 using Voron.Data.BTrees;
@@ -314,6 +315,7 @@ namespace Voron.Data.Tables
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool IsOwned(long id)
         {
             var posInPage = id % Constants.Storage.PageSize;
@@ -332,10 +334,7 @@ namespace Voron.Data.Tables
         public void Delete(long id)
         {
             if (IsOwned(id) == false)
-            {
-                Debug.Assert(false, $"Trying to delete a values (id:{id}) from the wrong table ('{Name}')");
-                throw new VoronErrorException($"Trying to delete a values (id:{id}) from the wrong table ('{Name}')");
-            }
+                ThrowNotOwned();
 
             AssertWritableTable();
 
@@ -407,6 +406,12 @@ namespace Voron.Data.Tables
             }
 
             ActiveDataSmallSection.DeleteSection(sectionPageNumber);
+        }
+
+        private void ThrowNotOwned()
+        {
+            Debug.Assert(false, $"Trying to delete a value from the wrong table ('{Name}')");
+            throw new VoronErrorException($"Trying to delete a value from the wrong table ('{Name}')");
         }
 
         private void ThrowInvalidAttemptToRemoveValueFromIndexAndNotFindingIt(long id, Slice indexDefName)
