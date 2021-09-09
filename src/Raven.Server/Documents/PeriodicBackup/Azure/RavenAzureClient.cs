@@ -108,11 +108,15 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             {
                 _progress?.UploadProgress.SetTotal(streamLength);
 
+                var maxSingleBlockSizeInBytes = MaxSingleBlockSize.GetValue(SizeUnit.Bytes);
+                if (streamLength > maxSingleBlockSizeInBytes)
+                    _progress?.UploadProgress.ChangeType(UploadType.Chunked);
+
                 var client = _client.GetBlobClient(blobName);
 
                 client.Upload(stream, metadata: metadata, progressHandler: this, transferOptions: new StorageTransferOptions
                 {
-                    MaximumTransferSize = MaxSingleBlockSize.GetValue(SizeUnit.Bytes)
+                    MaximumTransferSize = maxSingleBlockSizeInBytes
                 }, cancellationToken: _cancellationToken);
             }
             finally
