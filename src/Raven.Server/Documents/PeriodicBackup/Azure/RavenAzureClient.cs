@@ -8,7 +8,6 @@ using Azure;
 using Azure.Storage;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
-using Azure.Storage.Blobs.Specialized;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Documents.PeriodicBackup.Restore;
 using Sparrow;
@@ -109,36 +108,12 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             {
                 _progress?.UploadProgress.SetTotal(streamLength);
 
-                if (streamSize > MaxUploadPutBlob)
+                var client = _client.GetBlobClient(blobName);
+
+                client.Upload(stream, metadata: metadata, progressHandler: this, transferOptions: new StorageTransferOptions
                 {
-                    var maxSingleBlockSize = MaxSingleBlockSize.GetValue(SizeUnit.Bytes);
-
-                    _progress?.UploadProgress.ChangeType(UploadType.Chunked);
-
-                    var blockBlob = _client.GetBlockBlobClient(blobName);
-
-                    var blockNumber = 0;
-                    var blockIds = new List<string>();
-
-                    while (stream.Position < streamLength)
-                    {
-                        var blockNumberInBytes = BitConverter.GetBytes(blockNumber++);
-                        var blockIdString = Convert.ToBase64String(blockNumberInBytes);
-                        blockIds.Add(blockIdString);
-
-                        var stageBlockLength = Math.Min(maxSingleBlockSize, streamLength - stream.Position);
-                        using (var stageBlockStream = new ReadOnlyNestedStream(stream, stageBlockLength))
-                            blockBlob.StageBlock(blockIdString, stageBlockStream, progressHandler: this, cancellationToken: _cancellationToken);
-
-                        _alreadyUploadedInBytes += stageBlockLength;
-                    }
-
-                    blockBlob.CommitBlockList(blockIds, metadata: metadata, cancellationToken: _cancellationToken);
-                    return;
-                }
-
-                var blob = _client.GetBlobClient(blobName);
-                blob.Upload(stream, metadata: metadata, progressHandler: this, cancellationToken: _cancellationToken);
+                    MaximumTransferSize = MaxSingleBlockSize.GetValue(SizeUnit.Bytes)
+                }, cancellationToken: _cancellationToken);
             }
             finally
             {
