@@ -335,12 +335,18 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.Throttling.TimeIntervalInMs", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public TimeSetting? ThrottlingTimeInterval { get; protected set; }
 
-        [Description("Search engine for new AutoIndexes")]
-        [DefaultValue(Documents.Indexes.SearchEngine.Corax)]
+        [Description("Search engine for auto indexes")]
+        [DefaultValue(SearchEngineType.Lucene)]
         [IndexUpdateType(IndexUpdateType.Reset)]
-        [ConfigurationEntry("Indexing.Auto.SearchEngine", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
-        public SearchEngine? AutoIndexingEngine { get; protected set; }
+        [ConfigurationEntry("Indexing.Auto.SearchEngineType", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public SearchEngineType AutoIndexingEngineType { get; protected set; }
 
+        [Description("Search engine for static indexes")]
+        [DefaultValue(SearchEngineType.Lucene)]
+        [IndexUpdateType(IndexUpdateType.Reset)]
+        [ConfigurationEntry("Indexing.Static.SearchEngineType", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
+        public SearchEngineType StaticIndexingEngineType { get; protected set; }
+        
         public Lazy<AnalyzerFactory> DefaultAnalyzerType { get; private set; }
 
         public Lazy<AnalyzerFactory> DefaultExactAnalyzerType { get; private set; }

@@ -7,7 +7,6 @@ namespace Raven.Server.Documents.Indexes.Persistence
 {
     public abstract class IndexWriteOperationBase : IndexOperationBase
     {
-        protected byte[] _buffer;
         protected IndexingStatsScope _statsInstance;
         protected readonly IndexWriteOperationStats Stats = new IndexWriteOperationStats();
 

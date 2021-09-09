@@ -408,6 +408,7 @@ namespace Raven.Server.Documents.Handlers
                                     {
                                         Name = x.Name,
                                         Type = x.Type,
+                                        SearchEngineType = x.SearchEngineType,
                                         State = x.State,
                                         Status = x.Status,
                                         LockMode = x.Definition.LockMode,
@@ -453,6 +454,7 @@ namespace Raven.Server.Documents.Handlers
                                     {
                                         Name = x.Name,
                                         Type = x.Type,
+                                        SearchEngineType = x.SearchEngineType,
                                         State = state,
                                         Status = x.Status,
                                         LockMode = x.Definition.LockMode,

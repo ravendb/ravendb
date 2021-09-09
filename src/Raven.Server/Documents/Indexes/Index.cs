@@ -540,6 +540,8 @@ namespace Raven.Server.Documents.Indexes
         }
 
         public IndexType Type { get; }
+        
+        public SearchEngineType SearchEngineType { get; private set; }
 
         public IndexSourceType SourceType { get; }
 
@@ -737,7 +739,6 @@ namespace Raven.Server.Documents.Indexes
         private void InitializeInternal(StorageEnvironment environment, DocumentDatabase documentDatabase, IndexingConfiguration configuration,
             PerformanceHintsConfiguration performanceHints)
         {
-            //todo maciej: corex
             try
             {
                 Debug.Assert(Definition != null);
@@ -795,12 +796,21 @@ namespace Raven.Server.Documents.Indexes
             _indexStorage.Initialize(environment);
 
             IndexPersistence?.Dispose();
-          
-            // place where we switch corax / lucene engine for now
-            if (SourceType == IndexSourceType.Documents && Type == IndexType.AutoMap)
-                IndexPersistence = new CoraxIndexPersistence(this);
-            else
-                IndexPersistence = new LuceneIndexPersistence(this);
+            SearchEngineType = IndexStorage.ReadSearchEngineType(Name, environment);
+
+            switch (SearchEngineType)
+            {
+                case SearchEngineType.None:
+                case SearchEngineType.Lucene:
+                    IndexPersistence = new LuceneIndexPersistence(this);
+                    SearchEngineType = SearchEngineType.Lucene;
+                    break;
+                case SearchEngineType.Corax:
+                    IndexPersistence = new CoraxIndexPersistence(this);
+                    SearchEngineType = SearchEngineType.Corax;
+                    break;
+            }
+            
             IndexPersistence.Initialize(environment);
 
             IndexFieldsPersistence = new IndexFieldsPersistence(this);
@@ -2800,6 +2810,7 @@ namespace Raven.Server.Documents.Indexes
                     {
                         Name = Name,
                         Type = Type,
+                        SearchEngineType = SearchEngineType,
                         SourceType = SourceType,
                         LockMode = Definition?.LockMode ?? IndexLockMode.Unlock,
                         Priority = Definition?.Priority ?? IndexPriority.Normal,
@@ -2819,6 +2830,7 @@ namespace Raven.Server.Documents.Indexes
 
                     stats.Name = Name;
                     stats.SourceType = SourceType;
+                    stats.SearchEngineType = SearchEngineType;
                     stats.Type = Type;
                     stats.LockMode = Definition.LockMode;
                     stats.Priority = Definition.Priority;

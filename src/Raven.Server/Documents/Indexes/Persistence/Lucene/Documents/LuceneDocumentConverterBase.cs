@@ -133,7 +133,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
              int numberOfBaseFields,
              string keyFieldName = null,
              bool storeValue = false,
-             string storeValueFieldName = Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName) : base(index, storeValue)
+             string storeValueFieldName = Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName) : base(index, storeValue, fields)
         {
             _indexImplicitNull = indexImplicitNull;
             _indexEmptyEntries = indexEmptyEntries;

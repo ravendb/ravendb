@@ -23,7 +23,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         private readonly IndexSearcher _indexSearcher;
         private readonly CoraxQueryEvaluator _coraxQueryEvaluator;
         private long _entriesCount = 0;
-        private const int _bufferSize = 2048;
+        private const int BufferSize = 2048;
 
         public CoraxIndexReadOperation(Index index, Logger logger, Transaction readTransaction) : base(index, logger)
         {
@@ -54,7 +54,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 yield break;
 
             totalResults.Value = Convert.ToInt32(result.Count);
-            var ids = ArrayPool<long>.Shared.Rent(_bufferSize);
+            var ids = ArrayPool<long>.Shared.Rent(BufferSize);
             try
             {
                 int read = 0;
@@ -64,7 +64,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 int docsToLoad = pageSize;
                 if (position != 0)
                 {
-                    int emptyRead = position / _bufferSize;
+                    int emptyRead = position / BufferSize;
                     do
                     {
                         read = result.Fill(ids);
@@ -72,9 +72,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                         emptyRead--;
                     } while (emptyRead > 0);
 
-                    position %= _bufferSize; // move into <0;_bufferSize> set.
+                    position %= BufferSize; // move into <0;_bufferSize> set.
                     //I know there is a cost of copying this but it's max _bufferSize and make code much simpler.
-                    ids[position..read].CopyTo(ids, 0);
+                    if (position != read)
+                        ids[position..read].CopyTo(ids, 0);
+                    else
+                        ids[0] = ids[position];
                     read -= position;
                     skippedResults.Value = -1; // docsToLoad * _bufferSize + position;
                 }

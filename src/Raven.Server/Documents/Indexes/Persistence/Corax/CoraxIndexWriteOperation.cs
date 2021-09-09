@@ -60,10 +60,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
             using (Stats.ConvertStats.Start())
                 data = _converter.InsertDocumentFields(key, sourceDocumentId, document, indexContext, out lowerId);
-
-            _indexWriter.Index(lowerId, data, _knownFields);
+            
+            using (Stats.AddStats.Start())
+                _indexWriter.Index(lowerId, data, _knownFields);
+            
             stats.RecordIndexingOutput();
-
         }
 
         public override int EntriesCount() => _entriesCount;

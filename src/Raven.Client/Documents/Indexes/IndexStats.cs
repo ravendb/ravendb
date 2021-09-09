@@ -133,6 +133,11 @@ namespace Raven.Client.Documents.Indexes
         /// Indicates index type.
         /// </summary>
         public IndexType Type { get; set; }
+        
+        /// <summary>
+        /// Indicates search engine.
+        /// </summary>
+        public SearchEngineType SearchEngineType { get; set; }
 
         public IndexRunningStatus Status { get; set; }
 

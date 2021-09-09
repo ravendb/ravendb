@@ -174,7 +174,7 @@ namespace Raven.Server.Documents.Queries.Results
                 foreach (var fieldToFetch in fields.Values)
                 {
                     //todo maciej: make it simpler
-                    if (retrieverInput.LuceneDocument != null)
+                    if (retrieverInput.DocumentId == string.Empty)
                     {
                         if (TryExtractValueFromIndex(fieldToFetch, retrieverInput.LuceneDocument, result, retrieverInput.State))
                             continue;

@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Buffers;
+using System.Buffers.Text;
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
@@ -20,10 +22,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
     public sealed class CoraxDocumentConverter : ConverterBase
     {
         private readonly ByteStringContext _allocator;
+        private readonly List<IDisposable> _slicesToDispose;
         private readonly Dictionary<Slice, int> _knownFields;
         private static readonly byte[] _trueLiteral = Encoding.UTF8.GetBytes("true"); 
-        private static readonly byte[] _falseLiteral = Encoding.UTF8.GetBytes("false"); 
-
+        private static readonly byte[] _falseLiteral = Encoding.UTF8.GetBytes("false");
+        private static readonly StandardFormat _standardFormat = new StandardFormat('g');
+        private static readonly StandardFormat _timeSpanFormat = new StandardFormat('c');
         public CoraxDocumentConverter(
                 Index index, 
                 bool indexImplicitNull = false, 
@@ -34,6 +38,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             base(index, storeValue)
         {
             _allocator = new ByteStringContext(SharedMultipleUseFlag.None);
+            _slicesToDispose = new();
             _knownFields = GetKnownFields();
         }
 
@@ -42,13 +47,15 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             if (_knownFields != null)
                 return _knownFields;
             var knownFields = new Dictionary<Slice, int>();
+            
+            //todo maciej: will optimize it while doing static indexes.
+            _slicesToDispose.Add(Slice.From(_allocator, Constants.Documents.Indexing.Fields.DocumentIdFieldName, ByteStringType.Immutable, out var value));
+            knownFields.Add(value, 0);
             foreach (var field in _fields.Values)
             {
-                if(field.Name == null) 
-                    continue;
-                
-                Slice.From(_allocator, field.Name, ByteStringType.Immutable, out var value);
-                knownFields.Add(value, field.Id);
+                _slicesToDispose.Add(Slice.From(_allocator, field.Name, ByteStringType.Immutable, out value));
+                //offset for ID()
+                knownFields.Add(value, field.Id + 1);
             }
 
             return knownFields;
@@ -57,30 +64,31 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         public Span<byte> InsertDocumentFields(LazyStringValue key, LazyStringValue sourceDocumentId, object doc, JsonOperationContext indexContext, out LazyStringValue id)
         {
             var document = (Document)doc;
-            _allocator.Allocate(document.Data.Size + _fields.Count * 1024, out ByteString buffer);
-            var entryWriter = new IndexEntryWriter(buffer.ToSpan(), _knownFields);
-            id = document.LowerId;
-            bool shouldSkip;
-            
-            
-            //TODO maciej - please look at this.
-            // this is reference to list for EnumerableWritingScope due to making it persistence during indexing document. 
-            // We want avoid allocation for every enumerable in doc, but if think it should be persistence during whole indexing process.
-            // Where should we put this and when release it?
-            List<int> stringsLength = new List<int>(128);
-            var scope = new SingleEntryWriterScope(stringsLength);
-            foreach (var indexField in _fields.Values)
+            using ( _allocator.Allocate(document.Data.Size * 2, out ByteString buffer))
             {
-                if (BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, indexField.OriginalName ?? indexField.Name, out var value) == true)
+                var entryWriter = new IndexEntryWriter(buffer.ToSpan(), _knownFields);
+                id = document.LowerId;
+                bool shouldSkip;
+                
+                
+                //TODO maciej - please look at this.
+                // this is reference to list for EnumerableWritingScope due to making it persistence during indexing document. 
+                // We want avoid allocation for every enumerable in doc, but if think it should be persistence during whole indexing process.
+                // Where should we put this and when release it?
+                List<int> stringsLength = new List<int>(128);
+                var scope = new SingleEntryWriterScope(stringsLength, _allocator);
+                foreach (var indexField in _fields.Values)
                 {
-                    InsertRegularField(indexField, value, indexContext, out shouldSkip, ref entryWriter, scope);
+                    if (BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, indexField.OriginalName ?? indexField.Name, out var value))
+                    {
+                        InsertRegularField(indexField, value, indexContext, out shouldSkip, ref entryWriter, scope);
+                    }
                 }
-            }
 
-            //todo maciej try to figure out how should I deal with shouldSkip
-            entryWriter.Finish(out var output);
-            _allocator.Release(ref buffer);
-            return output;
+                //todo maciej try to figure out how should I deal with shouldSkip
+                entryWriter.Finish(out var output);
+                return output;
+            }
         }
         
         private void InsertRegularField(IndexField field, object value, JsonOperationContext indexContext, out bool shouldSkip, ref IndexEntryWriter entryWriter, IWriterScope scope, bool nestedArray = false)
@@ -106,25 +114,33 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     }
                     else
                     {
-                        string s = null;
-                        switch (value)
+                        using (_allocator.Allocate(16, out var buffer))
                         {
-                            case double d:
-                                s = d.ToString("G");
-                                break;
+                            var length = 0;
+                            switch (value)
+                            {
+                                case double d:
+                                    if (Utf8Formatter.TryFormat(d, buffer.ToSpan(), out length, _standardFormat) == false)
+                                        throw new Exception($"Cannot convert {field.Name} as double into bytes.");
+                                    break;
 
-                            case decimal dm:
-                                s = dm.ToString("G");
-                                break;
+                                case decimal dm:
+                                    if (Utf8Formatter.TryFormat(dm, buffer.ToSpan(), out length, _standardFormat) == false)
+                                        throw new Exception($"Cannot convert {field.Name} as decimal into bytes.");
+                                    break;
 
-                            case float f:
-                                s = f.ToString("G");
-                                break;
+                                case float f:
+                                    if (Utf8Formatter.TryFormat(f, buffer.ToSpan(), out length, _standardFormat) == false)
+                                        throw new Exception($"Cannot convert {field.Name} as float into bytes.");
+                                    break;
+                            }
+
+                            @long = (long)ldv;
+                            @double = ldv.ToDouble(CultureInfo.InvariantCulture);
+                            buffer.Truncate(length);
+                            scope.Write(field.Id, buffer.ToSpan(), @long, @double, ref entryWriter);
+                            return;
                         }
-                        @long = (long)ldv;
-                        @double = ldv.ToDouble(CultureInfo.InvariantCulture);
-                        scope.Write(field.Id, s, @long, @double, ref entryWriter);
-                        return;
                     }
                     
                 case ValueType.Numeric:
@@ -154,7 +170,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     scope.Write(field.Id, lazyStringValue.AsSpan(), ref entryWriter);
                     return;
 
-                    case ValueType.Enum:
+                case ValueType.Enum:
                     scope.Write(field.Id, value.ToString(), ref entryWriter);
                     return;
 
@@ -176,7 +192,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
                 case ValueType.TimeSpan:
                     var timeSpan = (TimeSpan)value;
-                    scope.Write(field.Id, timeSpan.ToString("c", CultureInfo.InvariantCulture), ref entryWriter);
+                    using (_allocator.Allocate(256 ,out var buffer))
+                    {
+                        if (Utf8Formatter.TryFormat(timeSpan, buffer.ToSpan(), out var bytesWritten, _timeSpanFormat) == false)
+                            throw new Exception($"Cannot convert {field.Name} as double into bytes.");
+                        buffer.Truncate(bytesWritten);
+                        scope.Write(field.Id, buffer.ToSpan(), ref entryWriter);
+                    }
                     return;
 
                 case ValueType.Convertible:
@@ -185,7 +207,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
                 case ValueType.Enumerable:
                     var iterator = (IEnumerable)value;
-                    var enumerableScope = new EnumerableWriterScope(field.Id, ref entryWriter, scope.GetLengthList());
+                    var enumerableScope = new EnumerableWriterScope(field.Id, ref entryWriter, scope.GetLengthList(), _allocator);
                     foreach (var item in iterator)
                     {
                         InsertRegularField(field, item, indexContext, out _, ref entryWriter, enumerableScope);
@@ -220,6 +242,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
         void HandleArray(IEnumerable itemsToIndex, IndexField field, JsonOperationContext indexContext, out bool shouldSkip, ref IndexEntryWriter entryWriter, IWriterScope scope, bool nestedArray = false)
         {
+            //todo maciej https://github.com/ravendb/ravendb/pull/12689/files/d7ab5b0c9db82dff655b647a7cc97a8cdaf8a6fe#r701808845
             shouldSkip = false;
             if (nestedArray)
             {
@@ -246,7 +269,19 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
         public override void Dispose()
         {
-            _allocator?.Dispose();
+            var exceptionAggregator = new ExceptionAggregator($"Could not dispose {nameof(CoraxDocumentConverter)} of {_index.Name}");
+            foreach(var disposableItem in _slicesToDispose)
+            {
+                exceptionAggregator.Execute(() =>
+                {
+                    disposableItem?.Dispose();
+                });
+            }
+            exceptionAggregator.Execute(() =>
+            {
+                _allocator?.Dispose();
+            });
+            exceptionAggregator.ThrowIfNeeded();
         }
     }
 }

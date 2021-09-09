@@ -9,10 +9,8 @@ using Voron.Data.Sets;
 using Voron.Data.Containers;
 using Corax.Queries;
 using System.Collections.Generic;
-using System.Linq;
 using Voron.Data.CompactTrees;
 using Sparrow;
-using Voron.Debugging;
 using static Corax.Queries.SortingMatch;
 using System.Runtime.Intrinsics.X86;
 
@@ -84,6 +82,8 @@ namespace Corax
         public TermMatch TermQuery(string field, string term)
         {
             var fields = _transaction.ReadTree(IndexWriter.FieldsSlice);
+            if (fields == null)
+                return TermMatch.CreateEmpty();
             var terms = fields.CompactTreeFor(field);
             if (terms == null)
                 return TermMatch.CreateEmpty();
@@ -169,6 +169,19 @@ namespace Corax
 
             return MultiTermMatch.Create(new MultiTermMatch<StartWithTermProvider>(_transaction.Allocator, new StartWithTermProvider(this, _transaction.Allocator, terms, field, 0, startWith)));
         }
+
+        //[Obsolete("Untested.")]
+        //public MultiTermMatch AllQuery()
+        //{
+        //    // TODO: The IEnumerable<string> will die eventually, this is for prototyping only. 
+        //    var fields = _transaction.ReadTree(_transaction.Trees.First());
+
+        //    var terms = fields.CompactTreeFor(field);
+        //    if (terms == null)
+        //        return MultiTermMatch.CreateEmpty(_transaction.Allocator);
+
+        //    return MultiTermMatch.Create(new MultiTermMatch<AllTermsProvider>(_transaction.Allocator, new AllTermsProvider(this, _transaction.Allocator, terms, field)));
+        //}
 
         public SortingMatch OrderByAscending<TInner>(in TInner set, int fieldId, MatchCompareFieldType entryFieldType = MatchCompareFieldType.Sequence, int take = -1)
             where TInner : IQueryMatch

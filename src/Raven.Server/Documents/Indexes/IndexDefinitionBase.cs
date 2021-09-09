@@ -135,10 +135,12 @@ namespace Raven.Server.Documents.Indexes
 
             public const long Analyzers = 52_000;
 
+            //todo maciej
+            public const long Corax = 52_300;
             /// <summary>
             /// Remember to bump this
             /// </summary>
-            public const long CurrentVersion = Analyzers;
+            public const long CurrentVersion = Corax;
         }
     }
 
