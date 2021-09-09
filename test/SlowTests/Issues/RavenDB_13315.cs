@@ -38,7 +38,7 @@ namespace SlowTests.Issues
                     Assert.False((session as InMemoryDocumentSessionOperations).HasChanged(user));
                     session.Delete("users/1", null);
                     session.SaveChanges();
-                    Assert.Equal(allocatedMemoryBeforeOperationsThatShouldHaveNoMemoryFootpring, context.AllocatedMemory);
+                    Assert.True(allocatedMemoryBeforeOperationsThatShouldHaveNoMemoryFootpring >= context.AllocatedMemory, $"{allocatedMemoryBeforeOperationsThatShouldHaveNoMemoryFootpring} >= {context.AllocatedMemory}");
                 }
             }
         }

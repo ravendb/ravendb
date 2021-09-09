@@ -315,6 +315,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(LicenseSupportInfo));
             scripter.AddType(typeof(LicenseRenewalResult));
             scripter.AddType(typeof(LicenseConfiguration));
+            scripter.AddType(typeof(LicenseHandler.ConnectivityToLicenseServer));
 
             // feedback form
             scripter.AddType(typeof(FeedbackForm));
