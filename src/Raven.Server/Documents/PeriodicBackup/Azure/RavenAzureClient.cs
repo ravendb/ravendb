@@ -31,7 +31,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
     public class RavenAzureClient : IProgress<long>, IRavenAzureClient
     {
         private readonly Progress _progress;
-        private long _alreadyUploadedInBytes;
 
         private readonly CancellationToken _cancellationToken;
         private readonly BlobContainerClient _client;
@@ -101,7 +100,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
                 throw new InvalidOperationException(@"Can't upload more than 4.75TB to Azure, " +
                                                     $"current upload size: {streamSize}");
 
-            _alreadyUploadedInBytes = 0;
             var streamLength = streamSize.GetValue(SizeUnit.Bytes);
 
             try
@@ -200,7 +198,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
         public void Report(long value)
         {
             _progress?.UploadProgress.ChangeState(UploadState.Uploading);
-            _progress?.UploadProgress.SetUploaded(_alreadyUploadedInBytes + value);
+            _progress?.UploadProgress.SetUploaded(value);
             _progress?.OnUploadProgress?.Invoke();
         }
 
