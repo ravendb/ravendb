@@ -486,7 +486,7 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        public static async Task<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteDocumentQueryResultAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, DocumentQueryResult result, bool metadataOnly, Action<AsyncBlittableJsonTextWriter> writeAdditionalData = null, CancellationToken token = default)
+        public static async Task<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteDocumentQueryResultAsync<T>(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, QueryResultServerSide<T> result, bool metadataOnly, Action<AsyncBlittableJsonTextWriter> writeAdditionalData = null, CancellationToken token = default)
         {
             writer.WriteStartObject();
 
@@ -574,7 +574,9 @@ namespace Raven.Server.Json
 
                 writer.WriteEndObject();
             }
-            var revisionByCv = result.GetRevisionIncludesByChangeVector();
+
+            /*TODO:
+             var revisionByCv = result.GetRevisionIncludesByChangeVector();
             var revisionByDateTime = result.GetRevisionIncludesIdByDateTime();
             if (revisionByCv != null || revisionByDateTime != null)
             {
@@ -583,7 +585,7 @@ namespace Raven.Server.Json
                 writer.WriteStartArray();
                 await writer.WriteRevisionIncludes(context:context, revisionsByChangeVector: revisionByCv, revisionsByDateTime: revisionByDateTime, token: token); 
                 writer.WriteEndArray();
-            }
+            }*/
 
             
             var counters = result.GetCounterIncludes();
