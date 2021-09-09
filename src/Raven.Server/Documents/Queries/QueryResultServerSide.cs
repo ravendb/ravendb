@@ -168,5 +168,15 @@ namespace Raven.Server.Documents.Queries
         {
             return null;
         }
+
+        public override void AddRevisionIncludes(IncludeRevisionsCommand command)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override Dictionary<string, Document> GetRevisionIncludesByChangeVector()
+        {
+            throw new NotImplementedException();
+        }
     }
 }

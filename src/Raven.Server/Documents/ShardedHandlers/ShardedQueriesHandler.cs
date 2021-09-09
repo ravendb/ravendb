@@ -112,11 +112,10 @@ namespace Raven.Server.Documents.ShardedHandlers
                             queryProcessor.OrderResults();
 
                             var result = queryProcessor.GetResult();
-                            int numberOfResults;
                             await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream(), HttpContext.RequestAborted))
                             {
                                 result.Timings = indexQuery.Timings?.ToTimings();
-                                numberOfResults = await writer.WriteDocumentQueryResultAsync(context, result, metadataOnly); 
+                                var numberOfResults = await writer.WriteDocumentQueryResultAsync(context, result, metadataOnly); 
                                 await writer.OuterFlushAsync();
                             }
 
