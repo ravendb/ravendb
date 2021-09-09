@@ -60,11 +60,12 @@
                                 <div class="content">
                                     <small data-bind="html: newVersionAvailableHtml"></small>
                                     <strong data-bind="visible: !isNewVersionAvailable(), text: currentServerVersion"></strong>
+                                    <small data-bind="visible: isNewVersionAvailable">Newer version exists</small>
                                     <strong data-bind="visible: isNewVersionAvailable">Download Now</strong>
                                 </div>
                             </button>
                             <button data-bind="disable: spinners.latestVersionUpdates, click: refreshLatestVersionInfo, css: { 'btn-spinner': spinners.latestVersionUpdates }"
-                                    class="btn btn-primary">
+                                    class="btn btn-primary" title="Click to refresh version info">
                                 <i class="icon-refresh"></i>
                             </button>
                         </div>
