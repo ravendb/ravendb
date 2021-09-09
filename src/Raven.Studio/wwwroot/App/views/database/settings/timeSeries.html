@@ -39,8 +39,11 @@
                     <div class="padding padding-sm">
                         <div class="flex-horizontal" data-bind="validationElement: policyCheckFrequency">
                             <label class="control-label margin-left margin-right">Policy Check Frequency</label>
-                            <div class="flex-grow">
+                            <div class="flex-grow" data-bind="visible: $root.isAdminAccessOrAbove">
                                 <input type="text" class="form-control" data-bind="durationPicker: policyCheckFrequency, durationPickerOptions: { showDays: false, showSeconds: true }" />
+                            </div>
+                            <div class="flex-grow" data-bind="visible: !$root.isAdminAccessOrAbove()">
+                                <input type="text" class="form-control" data-bind="durationPicker: policyCheckFrequency, durationPickerOptions: { showDays: false, showSeconds: true }" disabled />
                             </div>
                         </div>
                     </div>
