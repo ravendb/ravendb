@@ -103,8 +103,6 @@ namespace Raven.Server.Documents.Queries
             LastQueriedAt = CreatedAt;
         }
 
-        public readonly bool AddSpatialProperties;
-
         public readonly bool IsDistinct;
 
         public readonly bool IsDynamic;
@@ -112,6 +110,9 @@ namespace Raven.Server.Documents.Queries
         public readonly bool IsGroupBy;
 
         public readonly bool IsGraph;
+        
+        public bool AddSpatialProperties;
+        
         public bool HasFacet { get; private set; }
 
         public bool HasSuggest { get; private set; }

@@ -82,15 +82,13 @@ namespace Raven.Server.Documents.Queries
 
         public bool AddTimeSeriesNames;
 
-        public bool AddSpatialProperties;
-
         public bool IsStream;
 
         public IndexQueryServerSide(string query, BlittableJsonReaderObject queryParameters = null)
         {
             Query = Uri.UnescapeDataString(query);
             QueryParameters = queryParameters;
-            Metadata = new QueryMetadata(Query, queryParameters, 0, AddSpatialProperties);
+            Metadata = new QueryMetadata(Query, queryParameters, 0);
         }
 
         public static IndexQueryServerSide Create(HttpContext httpContext,
@@ -118,7 +116,7 @@ namespace Raven.Server.Documents.Queries
                     SetupPagingFromQueryMetadata();
                     AssertPaging(result);
 
-                    result.AddSpatialProperties = addSpatialProperties;
+                    result.Metadata.AddSpatialProperties = addSpatialProperties;
                     return result;
                 }
 
@@ -136,7 +134,7 @@ namespace Raven.Server.Documents.Queries
 
                 AssertPaging(result);
 
-                result.AddSpatialProperties = addSpatialProperties;
+                result.Metadata.AddSpatialProperties = addSpatialProperties;
                 return result;
             }
             catch (Exception e)
@@ -188,8 +186,7 @@ namespace Raven.Server.Documents.Queries
                     Query = Uri.UnescapeDataString(actualQuery),
                     // all defaults which need to have custom value
                     Start = start,
-                    PageSize = pageSize,
-                    AddSpatialProperties = addSpatialProperties
+                    PageSize = pageSize
                 };
 
                 foreach (var item in httpContext.Request.Query)
@@ -226,7 +223,8 @@ namespace Raven.Server.Documents.Queries
                     }
                 }
 
-                result.Metadata = new QueryMetadata(result.Query, result.QueryParameters, 0, result.AddSpatialProperties);
+                result.Metadata = new QueryMetadata(result.Query, result.QueryParameters, 0, addSpatialProperties);
+                
                 if (result.Metadata.HasTimings)
                     result.Timings = new QueryTimingsScope(start: false);
 
