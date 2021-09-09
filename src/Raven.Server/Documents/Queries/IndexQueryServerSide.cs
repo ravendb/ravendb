@@ -110,13 +110,12 @@ namespace Raven.Server.Documents.Queries
                 if (string.IsNullOrWhiteSpace(result.Query))
                     throw new InvalidOperationException($"Index query does not contain '{nameof(Query)}' field.");
 
-                if (cache.TryGetMetadata(result, out var metadataHash, out var metadata))
+                if (cache.TryGetMetadata(result, addSpatialProperties, out var metadataHash, out var metadata))
                 {
                     result.Metadata = metadata;
                     SetupPagingFromQueryMetadata();
                     AssertPaging(result);
 
-                    result.Metadata.AddSpatialProperties = addSpatialProperties;
                     return result;
                 }
 
@@ -134,7 +133,6 @@ namespace Raven.Server.Documents.Queries
 
                 AssertPaging(result);
 
-                result.Metadata.AddSpatialProperties = addSpatialProperties;
                 return result;
             }
             catch (Exception e)

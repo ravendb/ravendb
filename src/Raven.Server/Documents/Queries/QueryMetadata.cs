@@ -97,11 +97,13 @@ namespace Raven.Server.Documents.Queries
 
             Build(parameters);
 
-            CanCache = cacheKey != 0;
+            CanCache = cacheKey != 0 && AddSpatialProperties == false;
 
             CreatedAt = DateTime.UtcNow;
             LastQueriedAt = CreatedAt;
         }
+
+        public readonly bool AddSpatialProperties;
 
         public readonly bool IsDistinct;
 
@@ -110,9 +112,7 @@ namespace Raven.Server.Documents.Queries
         public readonly bool IsGroupBy;
 
         public readonly bool IsGraph;
-        
-        public bool AddSpatialProperties;
-        
+
         public bool HasFacet { get; private set; }
 
         public bool HasSuggest { get; private set; }
@@ -168,7 +168,7 @@ namespace Raven.Server.Documents.Queries
         public ExplanationField Explanation;
 
         public CounterIncludesField CounterIncludes;
-        
+
         public RevisionIncludeField RevisionIncludes;
 
         public TimeSeriesIncludesField TimeSeriesIncludes;
@@ -553,16 +553,16 @@ namespace Raven.Server.Documents.Queries
 
                                 AddInclude(include, fieldName.Value, ref compareExchangeValueIncludes);
                                 break;
-                            
-                            case MethodType.Revisions: 
-                                 QueryValidator.ValidateRevisions(me.Arguments, QueryText, parameters);
-                                
+
+                            case MethodType.Revisions:
+                                QueryValidator.ValidateRevisions(me.Arguments, QueryText, parameters);
+
                                 RevisionIncludes ??= new RevisionIncludeField();
-                                
+
                                 HasIncludeOrLoad = true;
-                                
+
                                 AddToRevisionsInclude(RevisionIncludes, me, parameters);
-                                
+
                                 break;
 
                             default:
@@ -592,19 +592,19 @@ namespace Raven.Server.Documents.Queries
                 switch (queryExpression)
                 {
                     case FieldExpression fe:
-                        if (Query.From.Alias!= null)
+                        if (Query.From.Alias != null)
                             throw new InvalidOperationException($"Alias is not supported `include revisions(..)`.");
 
                         revisionIncludes.AddRevision(fe.FieldValue);
                         break;
-                    
+
                     case ValueExpression ve:
-                        foreach ((object value, _)  in QueryBuilder.GetValues(Query, this, parameters, ve))
+                        foreach ((object value, _) in QueryBuilder.GetValues(Query, this, parameters, ve))
                         {
                             string path = value.ToString();
                             if (string.IsNullOrEmpty(path))
                                 return;
-                              
+
                             if (Query.From.Alias != null)
                                 throw new InvalidOperationException($"Alias is not supported `include revisions(..)`.");
 
@@ -618,9 +618,9 @@ namespace Raven.Server.Documents.Queries
                 }
             }
         }
-        
+
         private static ExplanationField CreateExplanationField(MethodExpression expression)
-            {
+        {
             var result = new ExplanationField();
 
             if (expression.Arguments.Count == 1)
@@ -792,7 +792,7 @@ namespace Raven.Server.Documents.Queries
                 AddCounterToInclude(counterIncludes, parameters, value, sourcePath);
             }
         }
-        
+
         private void AddCounterToInclude(CounterIncludesField counterIncludes, BlittableJsonReaderObject parameters,
             (object Value, ValueTokenType Type) parameterValue, string sourcePath)
         {
@@ -802,7 +802,7 @@ namespace Raven.Server.Documents.Queries
 
             counterIncludes.AddCounter(parameterValue.Value.ToString(), sourcePath);
         }
-        
+
         private void AddToTimeSeriesIncludes(TimeSeriesIncludesField timeSeriesIncludes, MethodExpression expression, BlittableJsonReaderObject parameters)
         {
             string alias = null;
@@ -2509,7 +2509,7 @@ namespace Raven.Server.Documents.Queries
                                 shapeBase = new Polygon(rectangle);
                             else if (shape is NtsGeometry geometry && geometry.Geometry is NetTopologySuite.Geometries.Polygon polygon)
                                 shapeBase = new Polygon(polygon);
-                            
+
                             if (shapeBase != null)
                                 AddSpatialShapeToMetadata(shapeBase);
                         }
