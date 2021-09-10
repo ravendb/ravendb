@@ -10,6 +10,9 @@ if [ ! -z "$RAVEN_ARGS" ]; then
 	COMMAND="$COMMAND ${RAVEN_ARGS}"
 fi
 
-eval $COMMAND
-exit $?
+[ -n "$RAVEN_DATABASE" ] && export RAVEN_Setup_Mode=None
+$COMMAND &
+COMMANDPID=$!
 
+[ -n "$RAVEN_DATABASE" ]  && source ./server-utils.sh && create-database
+wait $COMMANDPID

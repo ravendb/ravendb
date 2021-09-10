@@ -6,7 +6,7 @@ namespace Raven.Client.Documents.Session
     /// <summary>
     /// Information held about an entity by the session
     /// </summary>
-    public class DocumentInfo
+    public class DocumentInfo : IDisposable
     {
         /// <summary>
         /// Gets or sets the id.
@@ -70,6 +70,15 @@ namespace Raven.Client.Documents.Session
                 ChangeVector = changeVector
             };
             return newDocumentInfo;
+        }
+
+        public void Dispose()
+        {
+            Metadata?.Dispose();
+            Metadata = null;
+
+            Document?.Dispose();
+            Document = null;
         }
     }
 }

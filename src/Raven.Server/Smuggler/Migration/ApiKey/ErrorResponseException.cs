@@ -46,9 +46,18 @@ namespace Raven.Server.Smuggler.Migration.ApiKey
             ResponseString = responseString;
         }
 
-        public static ErrorResponseException FromResponseMessage(HttpResponseMessage response, bool readErrorString = true)
+        public static ErrorResponseException FromResponseMessage(HttpResponseMessage response, string msg, bool readErrorString = true)
         {
-            var sb = new StringBuilder("Status code: ").Append(response.StatusCode).AppendLine();
+            var sb = new StringBuilder();
+            if (string.IsNullOrEmpty(msg) == false)
+                sb
+                    .Append(msg)
+                    .Append(" ");
+
+            sb
+                .Append("Status code:")
+                .Append(response.StatusCode)
+                .AppendLine();
 
             string responseString = null;
             if (readErrorString && response.Content != null)
@@ -63,6 +72,7 @@ namespace Raven.Server.Smuggler.Migration.ApiKey
                     }
                 }
             }
+
             return new ErrorResponseException(response, sb.ToString(), null, null)
             {
                 ResponseString = responseString
