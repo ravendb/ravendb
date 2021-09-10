@@ -78,7 +78,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                 for (int i = _outputs.Count - 1; i >= 0; i--)
                 {
                     if (_outputs[i] is InternalHandle h) {
-                        h.ForceDispose(); // we forcely dispose of all the child nodes and leaves, so they are not to be used on the native side any more
+                        h.ForceDispose(false); // we forcely dispose of all the child nodes and leaves, so they are not to be used on the native side any more
                     }
                 }
                 _outputs.Clear();

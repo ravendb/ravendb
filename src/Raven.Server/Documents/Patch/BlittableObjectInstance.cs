@@ -8,6 +8,7 @@ using Lucene.Net.Store;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Static.JavaScript;
 using Raven.Server.Documents.Queries.Results;
 using Sparrow;
@@ -49,20 +50,18 @@ namespace Raven.Server.Documents.Patch
 
         public SpatialResult? Distance => _doc?.Distance;
         public float? IndexScore => _doc?.IndexScore;
-        public BlittableObjectInstance.CustomBinder Binder; // we don't add link to binder and dispose of as disposal starts with binder
 
         private int HandleID; // just for debugging
         private Int32 ObjectID; // just for debugging
 
-        public InternalHandle CreateObjectBinder() {
-            return BlittableObjectInstance.CreateObjectBinder(Engine, this);
+        public InternalHandle CreateObjectBinder(bool keepAlive = false) {
+            return BlittableObjectInstance.CreateObjectBinder(Engine, this, keepAlive);
         }
 
-        public static InternalHandle CreateObjectBinder(V8EngineEx engine, BlittableObjectInstance boi)
+        public static InternalHandle CreateObjectBinder(V8EngineEx engine, BlittableObjectInstance boi, bool keepAlive = false)
         {
-            InternalHandle jsBinder = engine.CreateObjectBinder<BlittableObjectInstance.CustomBinder>(boi, engine.TypeBinderBlittableObjectInstance);
+            InternalHandle jsBinder = engine.CreateObjectBinder<BlittableObjectInstance.CustomBinder>(boi, engine.TypeBinderBlittableObjectInstance, keepAlive);
 
-            boi.Binder = (BlittableObjectInstance.CustomBinder)jsBinder.Object;
             boi.HandleID = jsBinder.ID;
             boi.ObjectID = jsBinder.ObjectID;
 
@@ -157,8 +156,6 @@ namespace Raven.Server.Documents.Patch
 
                 Projection = null;
 
-                Binder = null;
-
                 GC.SuppressFinalize(this);
             }
 
@@ -185,12 +182,15 @@ namespace Raven.Server.Documents.Patch
             }
 
             if (propertyName == Constants.Documents.Metadata.Key && IsDocument()) {
-                using (var jsGetMetadataFor = Engine.ExecuteExprWithReset("getMetadata", "getMetadata")) {
+                var scope = CurrentIndexingScope.Current;
+                scope.RegisterJavaScriptUtils(JavaScriptUtils);
+                GetMetadata();
+                /*using (var jsGetMetadataFor = Engine.ExecuteExprWithReset("getMetadata", "getMetadata")) {
                     if (jsGetMetadataFor.IsFunction) {
                         InternalHandle jsMD = jsGetMetadataFor.StaticCall(Binder._);
                         jsMD.Dispose(); // it has got hashed in OwnValues
                     }
-                }
+                }*/
                 OwnValues?.TryGetValue(propertyName, out val);
                 return val;
             }
@@ -358,7 +358,7 @@ namespace Raven.Server.Documents.Patch
                 //using (var old = metadata)
                 {
                     metadata = JavaScriptUtils.Context.ReadObject(metadata, DocumentId);
-                    InternalHandle metadataJs = JavaScriptUtils.TranslateToJs(JavaScriptUtils.Context, metadata);
+                    InternalHandle metadataJs = JavaScriptUtils.TranslateToJs(JavaScriptUtils.Context, metadata, true);
                     if (metadataJs.IsError)
                         return metadataJs;
                     SetOwnProperty(propertyName, metadataJs);
@@ -592,13 +592,12 @@ namespace Raven.Server.Documents.Patch
                     JavaScriptUtils = null;
                     Engine = null;
 
-                    _value.ForceDispose(); // we forcely dispose of all the child nodes and leaves, so they are not to be used on the native side any more 
-
-                    GC.SuppressFinalize(this);
+                    GC.SuppressFinalize(this); 
                 }
                 
                 // releasing unmanaged resources
                 // ...
+                _value.Dispose(); // we forcely dispose of all the child nodes and leaves, so they are not to be used on the native side any more 
 
                 _disposed = true;
             }

@@ -316,7 +316,7 @@ var process = {
             }
         }
 
-        public InternalHandle TranslateToJs(JsonOperationContext context, object o)
+        public InternalHandle TranslateToJs(JsonOperationContext context, object o, bool keepAlive = false)
         {
             if (o is Tuple<Document, Lucene.Net.Documents.Document, IState, Dictionary<string, IndexField>, bool?, ProjectionOptions> t)
             {
@@ -329,23 +329,23 @@ var process = {
                     LuceneAnyDynamicIndexFields = t.Item5 ?? false,
                     Projection = t.Item6
                 };
-                return boi.CreateObjectBinder();
+                return boi.CreateObjectBinder(keepAlive);
             }
             if (o is Document doc)
             {
                 BlittableObjectInstance boi = new BlittableObjectInstance(this, null, Clone(doc.Data, context), doc);
-                return boi.CreateObjectBinder();
+                return boi.CreateObjectBinder(keepAlive);
             }
             if (o is DocumentConflict dc)
             {
                 BlittableObjectInstance boi = new BlittableObjectInstance(this, null, Clone(dc.Doc, context), dc.Id, dc.LastModified, dc.ChangeVector);
-                return boi.CreateObjectBinder();
+                return boi.CreateObjectBinder(keepAlive);
             }
 
             if (o is BlittableJsonReaderObject json)
             {
                 BlittableObjectInstance boi = new BlittableObjectInstance(this, null, Clone(json, context), null, null, null);
-                return boi.CreateObjectBinder();
+                return boi.CreateObjectBinder(keepAlive);
             }
 
             if (o == null)
@@ -385,7 +385,7 @@ var process = {
                 for (int i = 0; i < arrayLength; ++i)
                 {
                     BlittableObjectInstance boi = new BlittableObjectInstance(this, null, Clone(docList[i].Data, context), docList[i]);
-                    jsItems[i] = boi.CreateObjectBinder();
+                    jsItems[i] = boi.CreateObjectBinder(keepAlive);
                 }
 
                 return Engine.CreateArrayWithDisposal(jsItems);
@@ -727,8 +727,8 @@ Array.prototype.reverse = function(...args) {
 
             jsValue = obj switch 
             {
-                //BlittableJsonReaderObject bjro => (new BlittableObjectInstance(this, null, bjro, null, null, null)).CreateObjectBinder(),
-                //Document doc => (new BlittableObjectInstance(this, null, doc.Data, doc)).CreateObjectBinder(),
+                //BlittableJsonReaderObject bjro => (new BlittableObjectInstance(this, null, bjro, null, null, null)).CreateObjectBinder(keepAlive),
+                //Document doc => (new BlittableObjectInstance(this, null, doc.Data, doc)).CreateObjectBinder(keepAlive),
                 //LazyNumberValue lnv => CreateValue(lnv.ToDouble(CultureInfo.InvariantCulture)),
                 StringSegment ss => CreateValue(ss.ToString()),
                 LazyStringValue lsv => CreateValue(lsv.ToString()),

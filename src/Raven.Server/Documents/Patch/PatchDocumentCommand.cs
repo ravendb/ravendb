@@ -253,7 +253,7 @@ namespace Raven.Server.Documents.Patch
                     {
                         try
                         {
-                            using (var jsDoc = (InternalHandle)run.Translate(context, originalDocument))
+                            using (var jsDoc = (InternalHandle)run.TranslateToJs(context, originalDocument, false))
                             {
                                 var translated = (BlittableObjectInstance)(jsDoc.BoundObject);
                                 // here we need to use the _cloned_ version of the document, since the patch may

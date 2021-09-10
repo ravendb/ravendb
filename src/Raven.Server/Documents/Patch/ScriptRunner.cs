@@ -212,7 +212,6 @@ namespace Raven.Server.Documents.Patch
             public HashSet<string> DocumentCountersToUpdate;
             public HashSet<string> DocumentTimeSeriesToUpdate;
             private const string _timeSeriesSignature = "timeseries(doc, name)";
-            public const string GetMetadataMethod = "getMetadata";
 
             public SingleRun(DocumentDatabase database, RavenConfiguration configuration, ScriptRunner runner, List<string> scriptsSource)
             {
@@ -228,7 +227,8 @@ namespace Raven.Server.Documents.Patch
 
                 JavaScriptUtils = new JavaScriptUtils(_runner, ScriptEngine);
 
-                ScriptEngine.SetGlobalCLRCallBack(GetMetadataMethod, JavaScriptUtils.GetMetadata);
+                ScriptEngine.SetGlobalCLRCallBack("getMetadata", JavaScriptUtils.GetMetadata);
+                ScriptEngine.SetGlobalCLRCallBack("metadataFor", JavaScriptUtils.GetMetadata);
                 ScriptEngine.SetGlobalCLRCallBack("id", JavaScriptUtils.GetDocumentId);
 
                 ScriptEngine.SetGlobalCLRCallBack("output", OutputDebug);
@@ -1513,7 +1513,7 @@ namespace Raven.Server.Documents.Patch
                     id?.Dispose();
                 }
 
-                return JavaScriptUtils.TranslateToJs(_jsonCtx, result);
+                return JavaScriptUtils.TranslateToJs(_jsonCtx, result, true);
             }
 
             private object[] GetTimeSeriesFunctionArgs(string name, InternalHandle[] args, out string docId, out List<IDisposable> lazyIds)
@@ -1986,7 +1986,7 @@ namespace Raven.Server.Documents.Patch
                     if (value == null)
                         return ScriptEngine.CreateNullValue();
 
-                    using (var jsValue = JavaScriptUtils.TranslateToJs(_jsonCtx, value.Clone(_jsonCtx)))
+                    using (var jsValue = JavaScriptUtils.TranslateToJs(_jsonCtx, value.Clone(_jsonCtx), true))
                         return jsValue.GetProperty(Constants.CompareExchange.ObjectFieldName);
                 }
             }
@@ -2007,7 +2007,7 @@ namespace Raven.Server.Documents.Patch
                     });
                 }
 
-                return JavaScriptUtils.TranslateToJs(_jsonCtx, document);
+                return JavaScriptUtils.TranslateToJs(_jsonCtx, document, true);
             }
 
             private InternalHandle[] _args = Array.Empty<InternalHandle>();
@@ -2072,7 +2072,7 @@ namespace Raven.Server.Documents.Patch
                     _args = new InternalHandle[args.Length];
                 }
                 for (var i = 0; i < args.Length; i++)
-                    _args[i] = JavaScriptUtils.TranslateToJs(jsonCtx, args[i]);
+                    _args[i] = JavaScriptUtils.TranslateToJs(jsonCtx, args[i], false);
 
                 /*if (method != QueryMetadata.SelectOutput &&
                     _args.Length == 2 &&
@@ -2127,9 +2127,9 @@ namespace Raven.Server.Documents.Patch
                 ScriptEngine.ResetConstraints();
             }
 
-            public object Translate(JsonOperationContext context, object o)
+            public object TranslateToJs(JsonOperationContext context, object o, bool keepAlive = false)
             {
-                return JavaScriptUtils.TranslateToJs(context, o);
+                return JavaScriptUtils.TranslateToJs(context, o, keepAlive);
             }
 
             public object CreateEmptyObject()

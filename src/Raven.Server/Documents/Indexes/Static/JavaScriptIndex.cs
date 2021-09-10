@@ -648,11 +648,11 @@ function map(name, lambda) {
 
                     case DynamicBlittableJson dbj: {
                         BlittableObjectInstance boi = new BlittableObjectInstance(JavaScriptUtils, null, dbj.BlittableJson, id: null, lastModified: null, changeVector: null);
-                        return boi.CreateObjectBinder();
+                        return boi.CreateObjectBinder(true);
                     }
 
                     default:
-                        return JavaScriptUtils.TranslateToJs(context: null, value);
+                        return JavaScriptUtils.TranslateToJs(context: null, value, true);
                 }
             }
 

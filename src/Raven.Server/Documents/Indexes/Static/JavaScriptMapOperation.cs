@@ -62,7 +62,8 @@ namespace Raven.Server.Documents.Indexes.Static
 
                 if (jsItem.IsBinder)
                 {
-                    using (jsItem.Object) // here the whole BOI objects tree is disposed without GC involvement
+                    jsItem.SetReadyToDisposal(); // here the whole BOI objects tree will be disposed without GC involvement
+                    using (jsItem)
                     {
                         InternalHandle jsRes = InternalHandle.Empty;
                         try
@@ -91,6 +92,7 @@ namespace Raven.Server.Documents.Indexes.Static
                             throw new JavaScriptIndexFuncException($"Failed to execute {MapString}", e);
                         }
 
+                        jsRes.SetReadyToDisposal();
                         using (jsRes) // the parts of the doc (objects and arrays) that are contained in the map result won't be disposed here, but in the outer using block)
                         {
                             if (jsRes.IsArray)

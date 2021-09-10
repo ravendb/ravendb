@@ -274,7 +274,7 @@ namespace Raven.Server.Documents.ETL
                 var jsItems = new InternalHandle[arrayLength];
                 for (int i = 0; i < arrayLength; ++i)
                 {
-                    jsItems[i] = (InternalHandle)DocumentScript.Translate(Context, attachmentsBlittableArray[i]);
+                    jsItems[i] = (InternalHandle)DocumentScript.TranslateToJs(Context, attachmentsBlittableArray[i], true);
                 }
 
                 return Engine.CreateArrayWithDisposal(jsItems);
@@ -336,7 +336,7 @@ namespace Raven.Server.Documents.ETL
                 var jsItems = new InternalHandle[arrayLength];
                 for (int i = 0; i < arrayLength; ++i)
                 {
-                    jsItems[i] = (InternalHandle)DocumentScript.Translate(Context, countersArray[i]);
+                    jsItems[i] = (InternalHandle)DocumentScript.TranslateToJs(Context, countersArray[i], true);
                 }
 
                 return Engine.CreateArrayWithDisposal(jsItems);
@@ -401,7 +401,7 @@ namespace Raven.Server.Documents.ETL
                 var jsItems = new InternalHandle[timeSeriesArray.Length];
                 for (int i = 0; i < timeSeriesArray.Length; i++)
                 {
-                    jsItems[i] = (InternalHandle)DocumentScript.Translate(Context, timeSeriesArray[i]);
+                    jsItems[i] = (InternalHandle)DocumentScript.TranslateToJs(Context, timeSeriesArray[i], true);
                 }
                 return Engine.CreateArrayWithDisposal(jsItems);
             }
