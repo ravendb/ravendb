@@ -190,7 +190,7 @@ namespace Raven.Smuggler
                     PrimaryStore.AsyncFilesCommands.UrlFor() + uri, 
                     HttpMethods.Post, 
                     commands.PrimaryCredentials, 
-                    commands.Conventions))
+                    commands.Conventions, timeout: TimeSpan.FromHours(12)))
                 .AddOperationHeaders(commands.OperationsHeaders);
             
             try
