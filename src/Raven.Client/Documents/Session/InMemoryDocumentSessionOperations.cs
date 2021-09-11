@@ -639,8 +639,11 @@ more responsive application.
                         DocumentsByEntity.Remove(documentInfo.Entity);
                     }
 
-                    DocumentsById.Remove(id);
-                    changeVector = documentInfo.ChangeVector;
+                    using (documentInfo)
+                    {
+                        changeVector = documentInfo.ChangeVector;
+                        DocumentsById.Remove(id);
+                    }
                 }
             }
 
@@ -1289,6 +1292,8 @@ more responsive application.
                 DocumentsById.Remove(documentInfo.Id);
                 _countersByDocId?.Remove(documentInfo.Id);
                 _timeSeriesByDocId?.Remove(documentInfo.Id);
+
+                documentInfo.Dispose();
             }
 
             DeletedEntities.Evict(entity);
