@@ -130,7 +130,7 @@ namespace Raven.Server.Web.Studio
             }
         }
 
-        [RavenAction("/license-server/connectivity", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
+        [RavenAction("/license-server/connectivity", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
         public async Task CheckConnectivityToLicenseServer()
         {
             var result = new ConnectivityToLicenseServer();
