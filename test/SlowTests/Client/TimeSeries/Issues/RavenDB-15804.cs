@@ -711,6 +711,15 @@ namespace SlowTests.Client.TimeSeries.Issues
         [Fact]
         public async Task ReplicationShouldNotCollapseWhenSegmentReachedCapacity()
         {
+           var tagIndexes = new int[]
+            {
+                1, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 
+                2, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 
+                3, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 
+                4, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49,
+                5, 50, 6, 7, 8, 9
+            };
+
             var baseline = DateTime.Today;
 
             using (var storeA = GetDocumentStore())
@@ -740,7 +749,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                             {
                                 Timestamp = baseline.EnsureUtc().EnsureMilliseconds(),
                                 Values = new double[] { 1 },
-                                Tag = contextA.GetLazyString("TC:INC-test-1-" + i)
+                                Tag = contextA.GetLazyString("TC:INC-test-1-" + tagIndexes[i])
                             };
                             incrementOperations.Add(singleResult);
                         }
@@ -768,7 +777,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                             {
                                 Timestamp = baseline.EnsureUtc().EnsureMilliseconds(),
                                 Values = new double[] { 1 },
-                                Tag = contextB.GetLazyString("TC:INC-test-2-" + i)
+                                Tag = contextB.GetLazyString("TC:INC-test-2-" + tagIndexes[i])
                             };
                             incrementOperations.Add(singleResult);
                         }
@@ -799,14 +808,15 @@ namespace SlowTests.Client.TimeSeries.Issues
                     var tsB = sessionB.TimeSeriesFor("users/ayende", "HeartRate").Get();
 
   
-                    if (tsA != null && tsB != null)
-                    {
+                    //if (tsA != null && tsB != null)
+                    //{
                         Assert.Equal(tsA.Length, tsB.Length);
                         for (int i = 0; i < tsA.Length; i++)
                         {
+                            Console.WriteLine($"TagA: {tsA[i].Tag}; TagB: {tsB[i].Tag}");
                             Assert.True(Equals(tsA[i], tsB[i]));
                         }
-                    }
+                    //}
                 }
             }
         }
