@@ -35,6 +35,76 @@ namespace SlowTests.Issues
         {
             public Dog[] Dogs;
         } 
+        
+        [Fact]
+        public async Task CanProjectNoValuesFromResult()
+        {
+            using var store = GetDocumentStore();
+
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new User
+                {
+                    Dogs = new []
+                    {
+                        new Dog("Arava", 12), 
+                        new Dog("Pheobe", 7)
+                    }
+                });
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var dogs = await session.Advanced.AsyncRawQuery<Dog>(@"
+declare function project(u) { return []; }
+from Users  as u
+select project(u)
+")
+                    .Statistics(out var stats)
+                    .ToListAsync();
+                
+                Assert.Equal(1, stats.TotalResults);
+                Assert.Equal(0, dogs.Count);
+            }
+        } 
+
+        [Fact]
+        public async Task CanProjectMultipleValuesFromManyResult()
+        {
+            using var store = GetDocumentStore();
+
+            using (var session = store.OpenAsyncSession())
+            {
+                for (int i = 0; i < 4; i++)
+                {
+                    await session.StoreAsync(new User
+                    {
+                        Dogs = new []
+                        {
+                            new Dog("Arava", 12), 
+                            new Dog("Pheobe", 7)
+                        }
+                    });
+                }
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var dogs = await session.Advanced.AsyncRawQuery<Dog>(@"
+declare function project(u) { return u.Dogs; }
+from Users  as u
+select project(u)
+")
+                    .Statistics(out var stats)
+                    .ToListAsync();
+                
+                Assert.Equal(8, stats.TotalResults);
+                Assert.Equal(8, dogs.Count);
+            }
+        } 
+
 
         [Fact]
         public async Task CanProjectMultipleValuesFromSingleResultInCollectionQuery()
