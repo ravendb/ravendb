@@ -1554,6 +1554,8 @@ class ongoingTasksStats extends viewModelBase {
                 return "SQL ETL";
             case "Olap":
                 return "OLAP ETL";
+            case "ElasticSearch":
+                return "Elasticsearch ETL";
             case "SubscriptionConnection":
                 return "Subscription";
             case "SubscriptionBatch":
@@ -1817,7 +1819,7 @@ class ongoingTasksStats extends viewModelBase {
         if (currentDatum !== context.item) {
             const type = context.rootStats.Type;
             const isReplication = type === "OutgoingPull" || type === "OutgoingPush" || type === "IncomingPull" || type === "IncomingPush";
-            const isEtl = type === "Raven" || type === "Sql" || type === "Olap";
+            const isEtl = type === "Raven" || type === "Sql" || type === "Olap" || type === "ElasticSearch";
             const isSubscription = type === "SubscriptionConnection" || type === "SubscriptionBatch" || type === "AggregatedBatchesInfo";
             const isRootItem = context.rootStats.Details === context.item;
             
@@ -1852,7 +1854,8 @@ class ongoingTasksStats extends viewModelBase {
                         break;
                     case "Raven":
                     case "Sql":
-                    case "Olap": {
+                    case "Olap":
+                    case "ElasticSearch": {
                         const elementWithData = context.rootStats as EtlPerformanceBaseWithCache;
                         
                         if (elementWithData.HasTransformErrors) {
