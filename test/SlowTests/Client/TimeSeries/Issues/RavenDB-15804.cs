@@ -6,6 +6,7 @@ using FastTests.Server.Replication;
 using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.TimeSeries;
+using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Xunit;
@@ -53,12 +54,12 @@ namespace SlowTests.Client.TimeSeries.Issues
             {
                 using (var session = storeA.OpenSession())
                 {
-                    session.Store(new { Name = "Oren" }, "users/ayende");
+                    session.Store(new User{ Name = "Oren" }, "users/ayende");
                     session.SaveChanges();
                 }
                 using (var session = storeB.OpenSession())
                 {
-                    session.Store(new { Name = "Oren" }, "users/ayende");
+                    session.Store(new User{ Name = "Oren" }, "users/ayende");
                     session.SaveChanges();
                 }
 
@@ -121,12 +122,12 @@ namespace SlowTests.Client.TimeSeries.Issues
             {
                 using (var session = storeA.OpenSession())
                 {
-                    session.Store(new { Name = "Oren" }, "users/ayende");
+                    session.Store(new User{ Name = "Oren" }, "users/ayende");
                     session.SaveChanges();
                 }
                 using (var session = storeB.OpenSession())
                 {
-                    session.Store(new { Name = "Oren" }, "users/ayende");
+                    session.Store(new User{ Name = "Oren" }, "users/ayende");
                     session.SaveChanges();
                 }
 
@@ -190,12 +191,12 @@ namespace SlowTests.Client.TimeSeries.Issues
             {
                 using (var session = storeA.OpenSession())
                 {
-                    session.Store(new { Name = "Oren" }, "users/ayende");
+                    session.Store(new User{ Name = "Oren" }, "users/ayende");
                     session.SaveChanges();
                 }
                 using (var session = storeB.OpenSession())
                 {
-                    session.Store(new { Name = "Oren" }, "users/ayende");
+                    session.Store(new User{ Name = "Oren" }, "users/ayende");
                     session.SaveChanges();
                 }
 
@@ -259,12 +260,12 @@ namespace SlowTests.Client.TimeSeries.Issues
             {
                 using (var session = storeA.OpenSession())
                 {
-                    session.Store(new { Name = "Oren" }, "users/ayende");
+                    session.Store(new User{ Name = "Oren" }, "users/ayende");
                     session.SaveChanges();
                 }
                 using (var session = storeB.OpenSession())
                 {
-                    session.Store(new { Name = "Oren" }, "users/ayende");
+                    session.Store(new User{ Name = "Oren" }, "users/ayende");
                     session.SaveChanges();
                 }
 
@@ -327,7 +328,7 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new { Name = "Oren" }, "users/ayende");
+                    session.Store(new User{ Name = "Oren" }, "users/ayende");
                     var ts = session.TimeSeriesFor("users/ayende", "HeartRate");
                     ts.Increment(baseline, 100_000);
                     session.SaveChanges();
@@ -360,7 +361,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                 {
                     var e = Assert.Throws<RavenException>(() =>
                     {
-                        session.Store(new {Name = "Oren"}, "users/ayende");
+                        session.Store(new User{Name = "Oren"}, "users/ayende");
                         var ts = session.TimeSeriesFor("users/ayende", "HeartRate");
                         ts.Increment(new double[] {1, -2, 3});
                         session.SaveChanges();
@@ -379,7 +380,7 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new { Name = "Oren" }, "users/ayende");
+                    session.Store(new User{ Name = "Oren" }, "users/ayende");
                     var ts = session.TimeSeriesFor("users/ayende", "HeartRate");
                     ts.Append(baseline, 4);
                     session.SaveChanges();
@@ -411,7 +412,7 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new { Name = "Oren" }, "users/ayende");
+                    session.Store(new User{ Name = "Oren" }, "users/ayende");
                     var ts = session.TimeSeriesFor("users/ayende", "HeartRate");
                     ts.Increment(baseline, 4);
                     session.SaveChanges();
@@ -443,7 +444,7 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new { Name = "Oren" }, "users/ayende");
+                    session.Store(new User{ Name = "Oren" }, "users/ayende");
                     var ts = session.TimeSeriesFor("users/ayende", "HeartRate");
                     for (int i = 0; i < 10_000; i++)
                     {
@@ -484,7 +485,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new { Name = "Oren" }, "users/ayende");
+                    session.Store(new User{ Name = "Oren" }, "users/ayende");
                     session.SaveChanges();
                 }
 
@@ -510,7 +511,7 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                             using (var tx = context.OpenWriteTransaction())
                             {
-                                db.DocumentsStorage.TimeSeriesStorage.AppendTimestamp(context, "users/ayende", "@empty",
+                                db.DocumentsStorage.TimeSeriesStorage.AppendTimestamp(context, "users/ayende", "Users",
                                     "HeartRate", incrementOperations);
 
                                 tx.Commit();
@@ -534,12 +535,12 @@ namespace SlowTests.Client.TimeSeries.Issues
             {
                 using (var session = storeA.OpenSession())
                 {
-                    session.Store(new { Name = "Oren" }, "users/ayende");
+                    session.Store(new User{ Name = "Oren" }, "users/ayende");
                     session.SaveChanges();
                 }
                 using (var session = storeB.OpenSession())
                 {
-                    session.Store(new { Name = "Oren" }, "users/ayende");
+                    session.Store(new User{ Name = "Oren" }, "users/ayende");
                     session.SaveChanges();
                 }
 
@@ -560,7 +561,7 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                         using (var tx = contextA.OpenWriteTransaction())
                         {
-                            dbA.DocumentsStorage.TimeSeriesStorage.AppendTimestamp(contextA, "users/ayende", "@empty",
+                            dbA.DocumentsStorage.TimeSeriesStorage.AppendTimestamp(contextA, "users/ayende", "Users",
                                 "HeartRate", incrementOperations);
 
                             tx.Commit();
@@ -585,7 +586,7 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                         using (var tx = contextB.OpenWriteTransaction())
                         {
-                            dbB.DocumentsStorage.TimeSeriesStorage.AppendTimestamp(contextB, "users/ayende", "@empty",
+                            dbB.DocumentsStorage.TimeSeriesStorage.AppendTimestamp(contextB, "users/ayende", "Users",
                                 "HeartRate", incrementOperations);
 
                             tx.Commit();
@@ -626,12 +627,12 @@ namespace SlowTests.Client.TimeSeries.Issues
             {
                 using (var session = storeA.OpenSession())
                 {
-                    session.Store(new { Name = "Oren" }, "users/ayende");
+                    session.Store(new User{ Name = "Oren" }, "users/ayende");
                     session.SaveChanges();
                 }
                 using (var session = storeB.OpenSession())
                 {
-                    session.Store(new { Name = "Oren" }, "users/ayende");
+                    session.Store(new User{ Name = "Oren" }, "users/ayende");
                     session.SaveChanges();
                 }
 
@@ -652,7 +653,7 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                         using (var tx = contextA.OpenWriteTransaction())
                         {
-                            dbA.DocumentsStorage.TimeSeriesStorage.AppendTimestamp(contextA, "users/ayende", "@empty",
+                            dbA.DocumentsStorage.TimeSeriesStorage.AppendTimestamp(contextA, "users/ayende", "Users",
                                 "HeartRate", incrementOperations);
 
                             tx.Commit();
@@ -677,7 +678,7 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                         using (var tx = contextB.OpenWriteTransaction())
                         {
-                            dbB.DocumentsStorage.TimeSeriesStorage.AppendTimestamp(contextB, "users/ayende", "@empty",
+                            dbB.DocumentsStorage.TimeSeriesStorage.AppendTimestamp(contextB, "users/ayende", "Users",
                                 "HeartRate", incrementOperations);
 
                             tx.Commit();
@@ -711,15 +712,6 @@ namespace SlowTests.Client.TimeSeries.Issues
         [Fact]
         public async Task ReplicationShouldNotCollapseWhenSegmentReachedCapacity()
         {
-           var tagIndexes = new int[]
-            {
-                1, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 
-                2, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 
-                3, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 
-                4, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49,
-                5, 50, 6, 7, 8, 9
-            };
-
             var baseline = DateTime.Today;
 
             using (var storeA = GetDocumentStore())
@@ -727,12 +719,12 @@ namespace SlowTests.Client.TimeSeries.Issues
             {
                 using (var session = storeA.OpenSession())
                 {
-                    session.Store(new { Name = "Oren" }, "users/ayende");
+                    session.Store(new User{ Name = "Oren" }, "users/ayende");
                     session.SaveChanges();
                 }
                 using (var session = storeB.OpenSession())
                 {
-                    session.Store(new { Name = "Oren" }, "users/ayende");
+                    session.Store(new  User{ Name = "Oren" }, "users/ayende");
                     session.SaveChanges();
                 }
 
@@ -743,20 +735,21 @@ namespace SlowTests.Client.TimeSeries.Issues
                     {
 
                         var incrementOperations = new List<SingleResult>();
+
                         for (int i = 0; i < 50; i++)
                         {
                             var singleResult = new SingleResult
                             {
                                 Timestamp = baseline.EnsureUtc().EnsureMilliseconds(),
                                 Values = new double[] { 1 },
-                                Tag = contextA.GetLazyString("TC:INC-test-1-" + tagIndexes[i])
+                                Tag = contextA.GetLazyString("TC:INC-test-1-" + i.ToString("000"))
                             };
                             incrementOperations.Add(singleResult);
                         }
 
                         using (var tx = contextA.OpenWriteTransaction())
                         {
-                            dbA.DocumentsStorage.TimeSeriesStorage.AppendTimestamp(contextA, "users/ayende", "@empty",
+                            dbA.DocumentsStorage.TimeSeriesStorage.AppendTimestamp(contextA, "users/ayende", "Users",
                                 "HeartRate", incrementOperations);
 
                             tx.Commit();
@@ -771,20 +764,21 @@ namespace SlowTests.Client.TimeSeries.Issues
                     {
 
                         var incrementOperations = new List<SingleResult>();
+
                         for (int i = 0; i < 50; i++)
                         {
                             var singleResult = new SingleResult
                             {
                                 Timestamp = baseline.EnsureUtc().EnsureMilliseconds(),
                                 Values = new double[] { 1 },
-                                Tag = contextB.GetLazyString("TC:INC-test-2-" + tagIndexes[i])
+                                Tag = contextB.GetLazyString("TC:INC-test-2-" + i.ToString("000"))
                             };
                             incrementOperations.Add(singleResult);
                         }
 
                         using (var tx = contextB.OpenWriteTransaction())
                         {
-                            dbB.DocumentsStorage.TimeSeriesStorage.AppendTimestamp(contextB, "users/ayende", "@empty",
+                            dbB.DocumentsStorage.TimeSeriesStorage.AppendTimestamp(contextB, "users/ayende", "Users",
                                 "HeartRate", incrementOperations);
 
                             tx.Commit();
@@ -794,7 +788,7 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                 await SetupReplicationAsync(storeA, storeB);
                 await SetupReplicationAsync(storeB, storeA);
-
+               
                 await EnsureReplicatingAsync(storeA, storeB);
                 await EnsureReplicatingAsync(storeB, storeA);
 
@@ -807,18 +801,36 @@ namespace SlowTests.Client.TimeSeries.Issues
                     var tsA = sessionA.TimeSeriesFor("users/ayende", "HeartRate").Get();
                     var tsB = sessionB.TimeSeriesFor("users/ayende", "HeartRate").Get();
 
-  
-                    //if (tsA != null && tsB != null)
-                    //{
-                        Assert.Equal(tsA.Length, tsB.Length);
-                        for (int i = 0; i < tsA.Length; i++)
+                    Assert.Equal(tsA.Length, tsB.Length);
+                    for (int i = 0; i < tsA.Length; i++)
+                        Assert.True(Equals(tsA[i], tsB[i]));
+                        
+
+                    var dbA = await this.GetDocumentDatabaseInstanceFor(storeA);
+                    var count = dbA.NotificationCenter.GetAlertCount();
+                    if (count > 0)
+                    {
+                        var keyA = AlertRaised.GetKey(AlertType.Replication, null);
+                        var alertA = dbA.NotificationCenter.GetStoredMessage(keyA);
+                        if (alertA != null)
                         {
-                            Console.WriteLine($"TagA: {tsA[i].Tag}; TagB: {tsB[i].Tag}");
-                            Assert.True(Equals(tsA[i], tsB[i]));
+                            Assert.True(alertA.Contains("Segment reached capacity (2KB) and open a new segment unavailable at this point."));
+                            return;
                         }
-                    //}
+                    }
+
+                    var dbB = await this.GetDocumentDatabaseInstanceFor(storeB);
+                    var keyB = AlertRaised.GetKey(AlertType.Replication, null);
+                    var alertB = dbB.NotificationCenter.GetStoredMessage(keyB);
+
+                    Assert.True(alertB.Contains("Segment reached capacity (2KB) and open a new segment unavailable at this point."));
                 }
             }
+        }
+
+        private class User
+        {
+            public string Name;
         }
     }
 }

@@ -59,14 +59,13 @@ namespace Raven.Server.Documents.TimeSeries
             return bitsHeader.NumberOfBytes + GetDataStart(Header);
         }
 
-        public bool CanOnlyMerge;
         public int Capacity => _capacity;
 
         public TimeSeriesValuesSegment(byte* buffer, int capacity)
         {
             _buffer = buffer;
             _capacity = capacity;
-            CanOnlyMerge = false;
+
             if (_capacity <= 0 || _capacity > TimeSeriesStorage.MaxSegmentSize)
                 InvalidCapacity();
         }

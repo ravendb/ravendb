@@ -1052,7 +1052,7 @@ namespace Raven.Server.Documents.TimeSeries
             {
                 var timestampDiff = ((time - BaselineDate).Ticks / 10_000);
                 var inRange = timestampDiff < int.MaxValue;
-                if (inRange == false || segment.CanOnlyMerge || segment.Append(_context.Allocator, (int)timestampDiff, values, tagSlice, status) == false)
+                if (inRange == false ||  segment.Append(_context.Allocator, (int)timestampDiff, values, tagSlice, status) == false)
                 {
                     var segmentLastTimestamp = segment.GetLastTimestamp(BaselineDate);
                     if (segmentLastTimestamp == BaselineDate && time == segmentLastTimestamp)// all the entries in the segment has the same timestamp
@@ -1062,10 +1062,7 @@ namespace Raven.Server.Documents.TimeSeries
                                 $"Segment reached to capacity and cannot receive more values with {time} timestamp on time series {_name} for {_docId} . " +
                                 "You may choose a different timestamp.");
 
-                        RaiseAlert();
-
                         MergeAllEntriesAtSameTimestampToSingleEntry(ref segment, tagSlice, values);
-                        segment.CanOnlyMerge = true;
                         return;
                     }
 
@@ -1078,12 +1075,13 @@ namespace Raven.Server.Documents.TimeSeries
                 }
             }
 
-            private void RaiseAlert()
+            private void RaiseAlertOnMaxCapacityForSingleSegmentReached(Span<double> values)
             {
                 var msg = $"Segment reached capacity (2KB) and open a new segment unavailable at this point." +
-                          $"Merge operation has performed for replication on doc: {_docId}, name: {_name} at {BaselineDate}." +
-                          $"Following the merge, the data may be inaccurate.";
+                          $"An evict operation has performed for replication on doc: {_docId}, name: {_name} at {BaselineDate}. " +
+                          $"The following values has been removed [{string.Join(", ", values.ToArray())}]";
 
+                
                 var alert = AlertRaised.Create(_context.DocumentDatabase.Name, "Time series segment is full - merge operation has performed", msg,
                     AlertType.Replication, NotificationSeverity.Warning);
                 _tss._documentDatabase.NotificationCenter.Add(alert);
@@ -1236,6 +1234,8 @@ namespace Raven.Server.Documents.TimeSeries
 
             private void MergeAllEntriesAtSameTimestampToSingleEntry(ref TimeSeriesValuesSegment timeSeriesSegment, Span<byte> currentTag, Span<double> values)
             {
+                ValidateSingleEntryIsValid(timeSeriesSegment);
+
                 using (_context.Allocator.Allocate(timeSeriesSegment.NumberOfBytes, out var currentSegmentBuffer))
                 {
                    Memory.Copy(currentSegmentBuffer.Ptr, timeSeriesSegment.Ptr, timeSeriesSegment.NumberOfBytes);
@@ -1244,31 +1244,41 @@ namespace Raven.Server.Documents.TimeSeries
                     var newSegment= new TimeSeriesValuesSegment(timeSeriesSegment.Ptr, timeSeriesSegment.Capacity);
                     newSegment.Initialize(timeSeriesSegment.NumberOfValues);
 
-                    using var tags = new MemoryStream();
                     foreach (var segmentValue in readOnlySegment.YieldAllValues(_context, BaselineDate, includeDead: false))
                     {
-                        if (segmentValue.Tag != null)
-                            tags.Write(segmentValue.Tag.AsSpan());
                         Span<double> valuesSpan = segmentValue.Values.Span;
                         for (int i = 0; i < segmentValue.Values.Length; i++)
                         {
                             values[i] += valuesSpan[i];
                         }
                     }
-                    tags.Write(currentTag);
-                    using var md5 = MD5.Create(); // we use MD5 because we need 16 bytes exactly
-                    tags.Position = 0;
-                    byte[] hash = md5.ComputeHash(tags);
-                    var hashBas64 = Format.ToBase64Unpadded(hash);
-                    // the idea is that if we run this on the same input in multiple servers with identical inputs, we'll have the same result
-                    // this will then be properly merged. We expect this to happen very rarely, and if the input isn't identical, we'll still have
-                    // duplicated entries after this merge, but at least we tried. At any rate, we provide an alert in this case, and we don't consider
-                    // this to be a likely scenario.
-                    var tag = _context.GetLazyString(TimedCounterPositivePrefix  + hashBas64);
 
-                    newSegment.Append(_context.Allocator, 0, values, SliceHolder.TagAsSpan(tag), TimeSeriesValuesSegment.Dead);
+                    RaiseAlertOnMaxCapacityForSingleSegmentReached(values);
+
+                    newSegment.Append(_context.Allocator, 0, values, currentTag, TimeSeriesValuesSegment.Dead);
                     AppendExistingSegment(newSegment);
+                }
+            }
 
+            [Conditional("DEBUG")]
+            private void ValidateSingleEntryIsValid(TimeSeriesValuesSegment timeSeriesSegment)
+            {
+                var lastTag = Span<byte>.Empty;
+                foreach (var segmentValue in timeSeriesSegment.YieldAllValues(_context, BaselineDate, includeDead: false))
+                {
+                    if (segmentValue.Timestamp != BaselineDate)
+                        throw new InvalidOperationException("BUG: attempt to merge a single entry segment with a different time than the baseline: " + BaselineDate + " vs " +
+                                                            segmentValue.Timestamp);
+
+                    if (segmentValue.Tag == null)
+                        throw new InvalidOperationException(
+                            "BUG: attempt to merge a single entry segment, with a null tag, shouldn't be possible since increment should handle this");
+
+                    var curTag = segmentValue.Tag.AsSpan();
+                    if (lastTag.SequenceCompareTo(curTag) >= 0)
+                        throw new InvalidOperationException(
+                            "BUG: Tags are not sorted for single entry segment " + Encoding.UTF8.GetString(lastTag) + " vs " + segmentValue.ToString());
+                    lastTag = curTag;
                 }
             }
 
@@ -1757,7 +1767,7 @@ namespace Raven.Server.Documents.TimeSeries
 
                     if (segmentChanged)
                         timeSeriesSegment.AppendExistingSegment(splitSegment);
-
+                    
                     return retryAppend;
                 }
             }
@@ -1788,11 +1798,17 @@ namespace Raven.Server.Documents.TimeSeries
             {
                 bool incrementOperation = remote.Tag?.StartsWith(TimedCounterPrefixBuffer) == true &&
                                           localTag.StartsWith(TimedCounterPrefixBuffer);
+
+                CompareResult compareResult;
                 if (incrementOperation)
                 {
                     int cmp = localTag.SequenceCompareTo(remote.Tag.AsSpan());
                     if (cmp == 0)
                     {
+
+                        if (EitherOneIsMarkedAsDead(localStatus, remote, out compareResult)) 
+                            return compareResult;
+
                         if (holder.FromReplication)
                         {
                             bool isIncrement = localTag.StartsWith(TimedCounterPositivePrefixBuffer);
@@ -1812,22 +1828,38 @@ namespace Raven.Server.Documents.TimeSeries
                     return CompareResult.Remote; // if not from replication, remote value is an update
                 }
 
-                // deletion wins
-                if (localStatus == TimeSeriesValuesSegment.Dead)
-                {
-                    if (remote.Status == TimeSeriesValuesSegment.Dead)
-                        return CompareResult.Equal;
 
-                    return CompareResult.Local;
-                }
-
-                if (remote.Status == TimeSeriesValuesSegment.Dead) // deletion wins
-                    return CompareResult.Remote;
+                if (EitherOneIsMarkedAsDead(localStatus, remote, out compareResult))
+                    return compareResult;
 
                 return SelectLargestValue(localValues, remote);
             }
 
             return CompareResult.Remote;
+        }
+
+        private static bool EitherOneIsMarkedAsDead(ulong localStatus, SingleResult remote, out CompareResult compareResult)
+        {
+            if (localStatus == TimeSeriesValuesSegment.Dead)
+            {
+                if (remote.Status == TimeSeriesValuesSegment.Dead)
+                {
+                    compareResult = CompareResult.Equal;
+                    return true;
+                }
+
+                compareResult = CompareResult.Local;
+                return true;
+            }
+
+            if (remote.Status == TimeSeriesValuesSegment.Dead) // deletion wins
+            {
+                compareResult = CompareResult.Remote;
+                return true;
+            }
+
+            compareResult = default;
+            return false;
         }
 
         private static CompareResult SelectLargestValue(Span<double> localValues, SingleResult remote)
