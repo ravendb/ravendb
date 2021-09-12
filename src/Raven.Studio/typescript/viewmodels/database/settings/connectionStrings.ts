@@ -87,9 +87,9 @@ class connectionStrings extends viewModelBase {
                 return olapEtl.dirtyFlag().isDirty();
             }
 
-            const ElasticEtl = this.editedElasticSearchEtlConnectionString();
-            if (ElasticEtl) {
-                return ElasticEtl.dirtyFlag().isDirty();
+            const elasticEtl = this.editedElasticSearchEtlConnectionString();
+            if (elasticEtl) {
+                return elasticEtl.dirtyFlag().isDirty();
             }
 
             return false;
