@@ -334,7 +334,7 @@ namespace Voron.Data.Tables
         public void Delete(long id)
         {
             if (IsOwned(id) == false)
-                ThrowNotOwned();
+                ThrowNotOwned(id);
 
             AssertWritableTable();
 
@@ -408,10 +408,10 @@ namespace Voron.Data.Tables
             ActiveDataSmallSection.DeleteSection(sectionPageNumber);
         }
 
-        private void ThrowNotOwned()
+        private void ThrowNotOwned(long id)
         {
-            Debug.Assert(false, $"Trying to delete a value from the wrong table ('{Name}')");
-            throw new VoronErrorException($"Trying to delete a value from the wrong table ('{Name}')");
+            Debug.Assert(false, $"Trying to delete a value (id:{id}) from the wrong table ('{Name}')");
+            throw new VoronErrorException($"Trying to delete a value (id:{id}) from the wrong table ('{Name}')");
         }
 
         private void ThrowInvalidAttemptToRemoveValueFromIndexAndNotFindingIt(long id, Slice indexDefName)
