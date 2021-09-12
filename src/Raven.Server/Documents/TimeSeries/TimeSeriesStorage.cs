@@ -1265,11 +1265,9 @@ namespace Raven.Server.Documents.TimeSeries
                     // duplicated entries after this merge, but at least we tried. At any rate, we provide an alert in this case, and we don't consider
                     // this to be a likely scenario.
                     var tag = _context.GetLazyString(TimedCounterPositivePrefix  + hashBas64);
-                    if (readOnlySegment.NumberOfLiveEntries > 1)
-                    {
-                        newSegment.Append(_context.Allocator, 0, values, SliceHolder.TagAsSpan(tag), TimeSeriesValuesSegment.Dead);
-                        AppendExistingSegment(newSegment);
-                    }
+
+                    newSegment.Append(_context.Allocator, 0, values, SliceHolder.TagAsSpan(tag), TimeSeriesValuesSegment.Dead);
+                    AppendExistingSegment(newSegment);
 
                 }
             }
@@ -1788,18 +1786,6 @@ namespace Raven.Server.Documents.TimeSeries
 
             if (localTime == remote.Timestamp)
             {
-                // deletion wins
-                if (localStatus == TimeSeriesValuesSegment.Dead)
-                {
-                    if (remote.Status == TimeSeriesValuesSegment.Dead)
-                        return CompareResult.Equal;
-
-                    return CompareResult.Local;
-                }
-
-                if (remote.Status == TimeSeriesValuesSegment.Dead) // deletion wins
-                    return CompareResult.Remote;
-
                 bool incrementOperation = remote.Tag?.StartsWith(TimedCounterPrefixBuffer) == true &&
                                           localTag.StartsWith(TimedCounterPrefixBuffer);
                 if (incrementOperation)
@@ -1825,6 +1811,18 @@ namespace Raven.Server.Documents.TimeSeries
                 {
                     return CompareResult.Remote; // if not from replication, remote value is an update
                 }
+
+                // deletion wins
+                if (localStatus == TimeSeriesValuesSegment.Dead)
+                {
+                    if (remote.Status == TimeSeriesValuesSegment.Dead)
+                        return CompareResult.Equal;
+
+                    return CompareResult.Local;
+                }
+
+                if (remote.Status == TimeSeriesValuesSegment.Dead) // deletion wins
+                    return CompareResult.Remote;
 
                 return SelectLargestValue(localValues, remote);
             }
