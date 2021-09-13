@@ -143,7 +143,7 @@
                     <div data-bind="with: editedRavenEtlConnectionString">
                         <div data-bind="compose: 'database/settings/connectionStringRaven.html'"></div>
                         <div class="form-group" data-bind="if: tasksThatAreUsingThisConnectionString().length > 0">
-                            <label class="control-label">Used in Tasks:</label>
+                            <label class="control-label">Used in Tasks</label>
                             <div data-bind="foreach: tasksThatAreUsingThisConnectionString">
                                 <div class="task">
                                     <a data-bind="attr: { 'href': $root.taskEditLink($data.taskId, $parent.connectionStringName()) }"
@@ -155,7 +155,7 @@
                     <div data-bind="with: editedElasticSearchEtlConnectionString">
                         <div data-bind="compose: 'database/settings/connectionStringElasticSearch.html'"></div>
                         <div class="form-group" data-bind="if: tasksThatAreUsingThisConnectionString().length > 0">
-                            <label class="control-label">Used in Tasks:</label>
+                            <label class="control-label">Used in Tasks</label>
                             <div data-bind="foreach: tasksThatAreUsingThisConnectionString">
                                 <div class="task">
                                     <a data-bind="attr: { 'href': $root.taskEditLink($data.taskId, $parent.connectionStringName()) }"
@@ -167,7 +167,7 @@
                     <div data-bind="with: editedSqlEtlConnectionString">
                         <div data-bind="compose: 'database/settings/connectionStringSql.html'"></div>
                         <div class="form-group" data-bind="if: tasksThatAreUsingThisConnectionString().length > 0">
-                            <label class="control-label">Used in Tasks:</label>
+                            <label class="control-label">Used in Tasks</label>
                             <div data-bind="foreach: tasksThatAreUsingThisConnectionString">
                                 <div class="task">
                                     <a data-bind="attr: { 'href': $root.taskEditLink($data.taskId, $parent.connectionStringName()) }"

@@ -1,6 +1,7 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
-
 import jsonUtil = require("common/jsonUtil");
+import generalUtils = require("common/generalUtils");
+import validateNameCommand = require("commands/resources/validateNameCommand");
 
 class ongoingTaskElasticSearchEtlIndexModel {
     indexName = ko.observable<string>();
@@ -38,8 +39,29 @@ class ongoingTaskElasticSearchEtlIndexModel {
     }
     
     private initValidation() {
+
+        const checkIndexName = (val: string,
+                                params: any,
+                                callback: (currentValue: string, errorMessageOrValidationResult: string | boolean) => void) => {
+            new validateNameCommand('ElasticSearchIndex', val)
+                .execute()
+                .done((result) => {
+                    if (result.IsValid) {
+                        callback(this.indexName(), true);
+                    } else {
+                        callback(this.indexName(), result.ErrorMessage);
+                    }
+                })
+        };
+        
         this.indexName.extend({
-            required: true
+            required: true,
+            validation: [
+                {
+                    async: true,
+                    validator: generalUtils.debounceAndFunnel(checkIndexName)
+                }
+            ]
         });
         
         this.idProperty.extend({

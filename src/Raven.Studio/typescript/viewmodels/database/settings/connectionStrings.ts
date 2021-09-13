@@ -576,7 +576,8 @@ class connectionStrings extends viewModelBase {
 
     isValidEditedElasticSearchEtl() {
         const editedElasticEtl = this.editedElasticSearchEtlConnectionString();
-        return this.isValid(editedElasticEtl.validationGroup);
+        return this.isValid(editedElasticEtl.validationGroup) && 
+               this.isValid(editedElasticEtl.authentication().validationGroup);
     }
 
     isValidEditedOlapEtl() {

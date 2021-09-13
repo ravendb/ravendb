@@ -163,7 +163,7 @@ class editReplicationHubTask extends viewModelBase {
             const filter = this.filterText();
             if (filter) {
                 const upperFilter = filter.toUpperCase();
-                items = items.filter(x => x.replicationAccessName().toLowerCase().includes(upperFilter) ||
+                items = items.filter(x => x.replicationAccessName().toUpperCase().includes(upperFilter) ||
                                      x.certificate().thumbprint().includes(upperFilter));
             }
             
@@ -404,11 +404,11 @@ class editReplicationHubTask extends viewModelBase {
             });
     }
 
-    uploadCertificate(fileInput: HTMLInputElement) {
+    uploadCertificate(fileInput: HTMLInputElement): void {
         fileImporter.readAsBinaryString(fileInput, data => this.onCertificateUploaded(data));
     }
 
-    onCertificateUploaded(data: string) {
+    private onCertificateUploaded(data: string): void {
         const accessItem = this.editedReplicationAccessItem();
         let certificateModel: replicationCertificateModel;
         
