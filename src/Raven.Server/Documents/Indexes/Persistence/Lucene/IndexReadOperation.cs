@@ -181,6 +181,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                                 totalResults.Value += numberOfProjectedResults - 1;
                             }
                         }
+                        else
+                        {
+                            skippedResults.Value++;
+                        }
 
                         QueryResult CreateQueryResult(Document d)
                         {
