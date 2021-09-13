@@ -331,6 +331,61 @@ namespace SlowTests.Server.Documents.Revisions
         }
 
         [Fact]
+        public async Task DeletedRevisionConflictShouldHaveProperDeletedEtag()
+        {
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
+            {
+                using (var session = store1.OpenAsyncSession())
+                {
+                    var user = new User { Name = "foo" };
+                    await session.StoreAsync(user, "foo/bar");
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store2.OpenAsyncSession())
+                {
+                    var user = new User { Name = "bar" };
+                    await session.StoreAsync(user, "foo/bar");
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store2.OpenAsyncSession())
+                {
+                    session.Delete("foo/bar");
+                    await session.SaveChangesAsync();
+                }
+                
+                await SetupReplicationAsync(store1, store2);
+                WaitForMarker(store1, store2);
+
+                using (var session = store1.OpenAsyncSession())
+                {
+                    var user = new User { Name = "bar" };
+                    await session.StoreAsync(user, "foo/bar");
+                    await session.SaveChangesAsync();
+                }
+
+                await SetupReplicationAsync(store2, store1);
+                WaitForMarker(store2, store1);
+                
+                await AssertRevisionBin(store1);
+                await AssertRevisionBin(store2);
+            }
+        }
+
+        private async Task AssertRevisionBin(IDocumentStore store)
+        {
+            var db = await GetDocumentDatabaseInstanceFor(store);
+
+            using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+            using (ctx.OpenReadTransaction())
+            {
+                Assert.Equal(0, db.DocumentsStorage.RevisionsStorage.GetRevisionsBinEntries(ctx, long.MaxValue, 128).Count());
+            }
+        }
+
+        [Fact]
         public async Task IdenticalRevisionCountCluster()
         {
             var cluster = await CreateRaftCluster(3);
