@@ -20,7 +20,8 @@ class etlScriptDefinitionCache {
 
             let command: getOngoingTaskInfoCommand<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtlDetails |
                                                    Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtlDetails |
-                                                   Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskOlapEtlDetails>;
+                                                   Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskOlapEtlDetails |
+                                                   Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtlDetails>;
             switch (etlType) {
                 case "Raven":
                     command = getOngoingTaskInfoCommand.forRavenEtl(this.db, taskId);
@@ -30,6 +31,9 @@ class etlScriptDefinitionCache {
                     break;
                 case "Olap":
                     command = getOngoingTaskInfoCommand.forOlapEtl(this.db, taskId);
+                    break;
+                case "ElasticSearch":
+                    command = getOngoingTaskInfoCommand.forElasticSearchEtl(this.db, taskId);
                     break;
             }
 

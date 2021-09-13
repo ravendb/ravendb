@@ -566,6 +566,8 @@ class databaseGroupGraph {
                     return "&#xe9b9;";
                 case "OlapEtl":
                     return "&#xea46;";
+                case "ElasticSearchEtl":
+                    return "&#xe93a;"; // todo.. see RavenDB-17151
                 case "Subscription":
                     return "&#xe9b5;";
                 case "PullReplicationAsHub":

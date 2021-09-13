@@ -5,9 +5,7 @@ import appUrl = require("common/appUrl");
 
 class ongoingTaskElasticSearchEtlListModel extends abstractOngoingTaskEtlListModel {
     nodesUrls = ko.observableArray<string>([]);
-
-    //connectionStringDefined: KnockoutComputed<boolean>; // connection string ??
-    connectionStringDefined = ko.observable<boolean>(true); // needed for template in the ongoing tasks list view .. todo ???
+    connectionStringDefined = ko.observable<boolean>(true); // needed for template in the ongoing tasks list view
 
     constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtlListView) {
         super();

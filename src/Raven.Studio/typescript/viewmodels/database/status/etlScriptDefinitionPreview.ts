@@ -19,7 +19,8 @@ class etlScriptDefinitionPreview extends dialogViewModelBase {
                 transformationName: string,
                 task: JQueryPromise<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtlDetails |
                                     Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtlDetails |
-                                    Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskOlapEtlDetails>) {
+                                    Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskOlapEtlDetails |
+                                    Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtlDetails>) {
         super();
 
         aceEditorBindingHandler.install();

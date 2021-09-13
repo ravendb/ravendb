@@ -87,9 +87,9 @@ class connectionStrings extends viewModelBase {
                 return olapEtl.dirtyFlag().isDirty();
             }
 
-            const ElasticEtl = this.editedElasticSearchEtlConnectionString();
-            if (ElasticEtl) {
-                return ElasticEtl.dirtyFlag().isDirty();
+            const elasticEtl = this.editedElasticSearchEtlConnectionString();
+            if (elasticEtl) {
+                return elasticEtl.dirtyFlag().isDirty();
             }
 
             return false;
@@ -175,7 +175,7 @@ class connectionStrings extends viewModelBase {
                     stringName = (task as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskOlapEtlListView).ConnectionStringName;
                     break;
                 case "ElasticSearchEtl":
-                    stringName = (task as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskOlapEtlListView).ConnectionStringName;
+                    stringName = (task as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtlListView).ConnectionStringName;
                     break;
                 case "Replication":
                     stringName = (task as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskReplication).ConnectionStringName;
@@ -222,6 +222,7 @@ class connectionStrings extends viewModelBase {
 
                 // elasticSearchEtl
                 this.elasticSearchEtlConnectionStringsNames(Object.keys(result.ElasticSearchConnectionStrings));
+                this.elasticSearchEtlConnectionStringsNames(_.sortBy(this.elasticSearchEtlConnectionStringsNames(), x => x.toUpperCase()));
             });
     }
 
@@ -238,7 +239,7 @@ class connectionStrings extends viewModelBase {
                 stringType = "OLAP";
                 break;
             case "ElasticSearch":
-                stringType = "Elastic Search" // todo ... ??
+                stringType = "Elasticsearch"
                 break;
             default:
                 console.warn("Invalid connection string type: " + connectionStringType);
@@ -429,6 +430,10 @@ class connectionStrings extends viewModelBase {
         
         if (connectionType === "Olap") {
             return ["OlapEtl"];
+        }
+
+        if (connectionType === "ElasticSearch") {
+            return ["ElasticSearchEtl"];
         }
         
         return ["RavenEtl", "Replication", "PullReplicationAsSink"];
@@ -621,6 +626,8 @@ class connectionStrings extends viewModelBase {
                 return urls.editOlapEtl(task.TaskId)();
             case "RavenEtl": 
                 return urls.editRavenEtl(task.TaskId)();
+            case "ElasticSearchEtl":
+                return urls.editElasticSearchEtl(task.TaskId)();
             case "Replication":
                return urls.editExternalReplication(task.TaskId)();
         }

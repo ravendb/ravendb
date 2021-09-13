@@ -55,7 +55,7 @@ class connectionStringElasticSearchEtlModel extends connectionStringModel {
             validation: [
                 {
                     validator: () => this.nodesUrls().length > 0,
-                    message: "At least one Elastic Search destination url is required"
+                    message: "At least one Elasticsearch node url is required"
                 }
             ]
         });
@@ -82,15 +82,12 @@ class connectionStringElasticSearchEtlModel extends connectionStringModel {
         };
     }
 
-    // removeElasticUrl(url: discoveryUrl) {
-    //     this.elasticUrls.remove(url);
-    // }
     removeDiscoveryUrl(url: discoveryUrl) {
         this.nodesUrls.remove(url);
     }
 
     addDiscoveryUrlWithBlink() {
-        if ( !_.find(this.nodesUrls(), x => x.discoveryUrlName() === this.inputUrl().discoveryUrlName())) {
+        if (!_.find(this.nodesUrls(), x => x.discoveryUrlName() === this.inputUrl().discoveryUrlName())) {
             const newUrl = new discoveryUrl(this.inputUrl().discoveryUrlName());
             newUrl.dirtyFlag().forceDirty();
             this.nodesUrls.unshift(newUrl);
@@ -111,7 +108,7 @@ class connectionStringElasticSearchEtlModel extends connectionStringModel {
             });
     }
 
-    saveConnectionString(db: database) : JQueryPromise<void> {
+    saveConnectionString(db: database): JQueryPromise<void> {
         return new saveConnectionStringCommand(db, this)
             .execute();
     }

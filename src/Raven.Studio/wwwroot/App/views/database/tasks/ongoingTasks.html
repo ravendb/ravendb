@@ -323,16 +323,13 @@
                                                 <div class="property-name">Task Status:</div>
                                                 <div class="property-value text-details" data-bind="text: badgeText"></div>
                                             </div>
-<!--                                            <div data-bind="foreach: destinations">-->
-<!--                                                <div class="property-item">-->
-<!--                                                    <div class="property-name" data-bind="visible: $index() === 0">Destination:</div>-->
-<!--                                                    <div class="property-name" data-bind="visible: $index() > 0"></div>-->
-<!--                                                    <div class="property-value" title="Destinations that are defined the in connection string">-->
-<!--                                                        <span data-bind="text: $data"></span>-->
-<!--                                                    </div>-->
-<!--                                                </div>-->
-<!--                                            </div>-->
                                             <div class="property-item" data-bind="template: { name: 'connection-string-template' }"></div>
+                                            <!-- ko foreach: nodesUrls -->
+                                            <div class="property-item">
+                                                <div class="property-name" data-bind="text: $data === $parent.nodesUrls()[0] ? 'Nodes URLs:' : ''"></div>
+                                                <div class="property-value" data-bind="text: $data" title="Node Url"></div>
+                                            </div>
+                                            <!-- /ko -->
                                         </div>
                                         <div data-bind="template: { name: 'etl-progress-template' }"></div>
                                     </div>
@@ -763,7 +760,7 @@
                     <div class="text-warning" data-bind="visible: !globalProgress.total()">
                         <small>
                             <i class="icon-warning"></i>
-                            This script doesn't match any documents. 
+                            This script doesn't match any documents.
                         </small>
                     </div>
                 </div>
@@ -774,7 +771,8 @@
                         <div class="percentage" data-bind="text: percentageFormatted,  css: { 'text-success': completed }, attr: { title: textualProgress }"></div>
                     </div>
                     <div class="progress" data-bind="with: globalProgress">
-                        <div data-bind="css: { 'progress-bar-striped': !completed() && !disabled(), 'progress-bar-primary': !completed(), 'active': !completed() && !disabled(), 'progress-bar-success': completed }, style: { width: percentageFormatted }, attr: { 'aria-valuenow': percentage, title: textualProgress } "
+                        <div data-bind="css: { 'progress-bar-striped': !completed() && !disabled(), 'progress-bar-primary': !completed(), 'active': !completed() && !disabled(), 'progress-bar-success': completed },
+                                        style: { width: percentageFormatted }, attr: { 'aria-valuenow': percentage, title: textualProgress }"
                              class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100">
                             <span class="sr-only" data-bind="text: percentageFormatted() + ' Completed'"></span>
                         </div>
@@ -788,7 +786,8 @@
                         <small class="percentage" data-bind="text: percentageFormatted(), css: { 'text-success': completed }, attr: { title: textualProgress }"></small>
                     </div>
                     <div class="progress">
-                        <div data-bind="css: { 'progress-bar-striped': !completed() && !$parents[1].globalProgress.disabled(), 'progress-bar-primary': !completed(), 'active': !completed() && !$parents[1].globalProgress.disabled(), 'progress-bar-success': completed() }, style: { width: percentageFormatted }, attr: { 'aria-valuenow': percentage, title: textualProgress } "
+                        <div data-bind="css: { 'progress-bar-striped': !completed() && !$parents[1].globalProgress.disabled(), 'progress-bar-primary': !completed(), 'active': !completed() && !$parents[1].globalProgress.disabled(), 'progress-bar-success': completed() },
+                                        style: { width: percentageFormatted }, attr: { 'aria-valuenow': percentage, title: textualProgress }"
                              class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100">
                             <span class="sr-only" data-bind="text: percentageFormatted() + ' Completed'"></span>
                         </div>
