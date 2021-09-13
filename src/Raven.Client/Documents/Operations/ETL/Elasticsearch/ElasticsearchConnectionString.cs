@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using Newtonsoft.Json;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Sparrow.Json.Parsing;
 
@@ -57,6 +58,23 @@ namespace Raven.Client.Documents.Operations.ETL.ElasticSearch
         {
             DynamicJsonValue json = base.ToJson();
             json[nameof(Nodes)] = new DynamicJsonArray(Nodes);
+            json[nameof(Authentication)] = new DynamicJsonValue()
+            {
+                [nameof(Authentication.BasicAuth)] = Authentication.BasicAuth == null ? null : new DynamicJsonValue()
+                {
+                    [nameof(Authentication.BasicAuth.Username)] = Authentication?.BasicAuth?.Username,
+                    [nameof(Authentication.BasicAuth.Password)] = Authentication?.BasicAuth?.Password
+                },
+                [nameof(Authentication.ApiKeyAuth)] = Authentication.ApiKeyAuth == null ? null : new DynamicJsonValue()
+                {
+                    [nameof(Authentication.ApiKeyAuth.ApiKeyId)] = Authentication?.ApiKeyAuth?.ApiKeyId,
+                    [nameof(Authentication.ApiKeyAuth.ApiKey)] = Authentication?.ApiKeyAuth?.ApiKey
+                },
+                [nameof(Authentication.CertificateAuth)] = Authentication.CertificateAuth == null ? null : new DynamicJsonValue()
+                {
+                    [nameof(Authentication.CertificateAuth.CertificatesBase64)] = new DynamicJsonArray(Authentication?.CertificateAuth?.CertificatesBase64)
+                },
+            };
 
             return json;
         }
