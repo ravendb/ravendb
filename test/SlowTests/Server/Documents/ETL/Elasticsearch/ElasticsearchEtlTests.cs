@@ -13,7 +13,6 @@ using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Documents.ETL.Providers.ElasticSearch;
 using Raven.Server.Documents.ETL.Providers.ElasticSearch.Test;
-using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -846,7 +845,9 @@ loadToOrders(orderData);
                         }
                     }
                 },
-                new ElasticSearchConnectionString {Name = connectionStringName, Nodes = new[] {"http://localhost:9200"}});
+                // todo: separate tests for API key?                
+                new ElasticSearchConnectionString {Name = connectionStringName, Nodes = new[] {"http://localhost:9200"}, Authentication = new global::Raven.Client.Documents.Operations.ETL.ElasticSearch.Authentication(){BasicAuth = new BasicAuth(){Username = "elastic", Password = "password123"}}});
+                //new ElasticSearchConnectionString {Name = connectionStringName, Nodes = new[] {"http://localhost:9200"}, Authentication = new global::Raven.Client.Documents.Operations.ETL.ElasticSearch.Authentication(){ApiKeyAuth = new ApiKeyAuth(){ApiKeyId = "seMIv3sBeqCmaBgzhCGX", ApiKey = "mUILNrauSsmgOgrRvFXMdw"}}});
         }
 
         private class Order
