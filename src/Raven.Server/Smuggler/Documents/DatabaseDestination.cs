@@ -1165,7 +1165,7 @@ namespace Raven.Server.Smuggler.Documents
                 if (databaseRecord.ElasticSearchEtls.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.ElasticSearchEtls))
                 {
                     if (_log.IsInfoEnabled)
-                        _log.Info("Configuring ElasticSearch etls configuration from smuggler");
+                        _log.Info("Configuring ElasticSearch ETLs configuration from smuggler");
                     foreach (var etl in databaseRecord.ElasticSearchEtls)
                     {
                         currentDatabaseRecord?.ElasticSearchEtls.ForEach(x =>
@@ -1180,37 +1180,6 @@ namespace Raven.Server.Smuggler.Documents
                         tasks.Add(_database.ServerStore.SendToLeaderAsync(new AddElasticSearchEtlCommand(etl, _database.Name, RaftIdGenerator.DontCareId)));
                     }
                     progress.ElasticSearchEtlsUpdated = true;
-                }
-                
-                if (databaseRecord.ElasticSearchEtls.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.ElasticSearchEtls))
-                {
-                    if (_log.IsInfoEnabled)
-                        _log.Info("Configuring sql etls configuration from smuggler");
-                    foreach (var etl in databaseRecord.ElasticSearchEtls)
-                    {
-                        currentDatabaseRecord?.ElasticSearchEtls.ForEach(x =>
-                        {
-                            if (x.Name.Equals(etl.Name, StringComparison.OrdinalIgnoreCase))
-                            {
-                                tasks.Add(_database.ServerStore.SendToLeaderAsync(new DeleteOngoingTaskCommand(x.TaskId, OngoingTaskType.ElasticSearchEtl, _database.Name, RaftIdGenerator.DontCareId)));
-                            }
-                        });
-                        etl.TaskId = 0;
-                        etl.Disabled = true;
-                        tasks.Add(_database.ServerStore.SendToLeaderAsync(new AddElasticSearchEtlCommand(etl, _database.Name, RaftIdGenerator.DontCareId)));
-                    }
-                    progress.ElasticSearchEtlsUpdated = true;
-                }
-                
-                if (databaseRecord.ElasticSearchConnectionStrings.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.ElasticSearchConnectionStrings))
-                {
-                    if (_log.IsInfoEnabled)
-                        _log.Info("Configuring ELASTICSEARCH connection strings from smuggler");
-                    foreach (var connectionString in databaseRecord.ElasticSearchConnectionStrings)
-                    {
-                        tasks.Add(_database.ServerStore.SendToLeaderAsync(new PutElasticSearchConnectionStringCommand(connectionString.Value, _database.Name, RaftIdGenerator.DontCareId)));
-                    }
-                    progress.ElasticSearchConnectionStringsUpdated = true;
                 }
 
                 if (tasks.Count == 0)
