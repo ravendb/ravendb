@@ -240,6 +240,8 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
                     append.Tag = tagAsString;
                 }
+
+                sorted[time] = append;
             }
 
             result._appends = sorted;
