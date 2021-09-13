@@ -26,9 +26,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             return Task.FromResult(_client.DownloadObject(path));
         }
 
-        protected override Task<ZipArchive> GetZipArchiveForSnapshot(string path)
+        protected override async Task<ZipArchive> GetZipArchiveForSnapshot(string path)
         {
-            return Task.FromResult(new ZipArchive(_client.DownloadObject(path), ZipArchiveMode.Read));
+            Stream stream = _client.DownloadObject(path);
+            var file = await CopyRemoteStreamLocally(stream);
+            return new ZipArchive(file, ZipArchiveMode.Read);
         }
 
         protected override async Task<List<string>> GetFilesForRestore()

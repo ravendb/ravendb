@@ -48,7 +48,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         private readonly bool _restoringToDefaultDataDirectory;
 
         public RestoreBackupConfigurationBase RestoreFromConfiguration { get; }
-        
+
         protected RestoreBackupTaskBase(ServerStore serverStore,
             RestoreBackupConfigurationBase restoreFromConfiguration,
             string nodeTag,
@@ -116,6 +116,26 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 RestoreFromConfiguration.DataDirectory = GetDataDirectory();
 
             _restoringToDefaultDataDirectory = IsDefaultDataDirectory(RestoreFromConfiguration.DataDirectory, RestoreFromConfiguration.DatabaseName);
+        }
+        
+        protected async Task<Stream> CopyRemoteStreamLocally(Stream stream)
+        {
+            return await CopyRemoteStreamLocally(stream, _serverStore.Configuration.Storage.TempPath);
+        }
+
+        public static async Task<Stream> CopyRemoteStreamLocally(Stream stream, PathSetting tempPath)
+        {
+            if (stream.CanSeek)
+                return stream;
+            // This is meant to be used by ZipArchive, which will copy the data locally because is *must* be seekable.
+            // To avoid reading everything to memory, we copy to a local file instead. Note that this also ensure that we
+            // can process files > 2GB in size. https://github.com/dotnet/runtime/issues/59027
+            var tmpFolder = tempPath?.FullPath ?? Path.GetTempPath();
+            var file = new FileStream(Path.Combine(tmpFolder, Guid.NewGuid().ToString() + ".restore-local-file"), FileMode.Create, FileAccess.ReadWrite, FileShare.Read,
+                32 * 1024, FileOptions.DeleteOnClose);
+            await stream.CopyToAsync(file);
+            file.Seek(0, SeekOrigin.Begin);
+            return file;
         }
 
         protected abstract Task<Stream> GetStream(string path);

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
@@ -12,10 +13,12 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
     public class GoogleCloudRestorePoints : RestorePointsBase
     {
+        private readonly BackupConfiguration _configuration;
         private readonly RavenGoogleCloudClient _client;
 
         public GoogleCloudRestorePoints(BackupConfiguration configuration, SortedList<DateTime, RestorePoint> sortedList, TransactionOperationContext context, GoogleCloudSettings client) : base(sortedList, context)
         {
+            _configuration = configuration;
             _client = new RavenGoogleCloudClient(client, configuration);
         }
 
@@ -46,14 +49,16 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         protected override ParsedBackupFolderName ParseFolderNameFrom(string path)
         {
             var arr = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
-            var lastFolderName = arr.Length > 0 ? arr[arr.Length - 1] : string.Empty;
+            var lastFolderName = arr.Length > 0 ? arr[^1] : string.Empty;
 
             return ParseFolderName(lastFolderName);
         }
 
-        protected override Task<ZipArchive> GetZipArchive(string filePath)
+        protected override async Task<ZipArchive> GetZipArchive(string filePath)
         {
-            return Task.FromResult(new ZipArchive(_client.DownloadObject(filePath), ZipArchiveMode.Read));
+            Stream downloadObject = _client.DownloadObject(filePath);
+            var file = await RestoreBackupTaskBase.CopyRemoteStreamLocally(downloadObject, _configuration.TempPath);
+            return new ZipArchive(downloadObject, ZipArchiveMode.Read);
         }
 
         protected override string GetFileName(string fullPath)

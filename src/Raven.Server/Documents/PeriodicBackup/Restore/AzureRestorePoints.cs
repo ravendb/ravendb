@@ -12,9 +12,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
     public class AzureRestorePoints : RestorePointsBase
     {
+        private readonly BackupConfiguration _configuration;
         private readonly IRavenAzureClient _client;
         public AzureRestorePoints(BackupConfiguration configuration, SortedList<DateTime, RestorePoint> sortedList, TransactionOperationContext context, AzureSettings azureSettings) : base(sortedList, context)
         {
+            _configuration = configuration;
             _client = RavenAzureClient.Create(azureSettings, configuration);
         }
 
@@ -53,7 +55,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         protected override async Task<ZipArchive> GetZipArchive(string filePath)
         {
             var blob = await _client.GetBlobAsync(filePath);
-            return new ZipArchive(blob.Data, ZipArchiveMode.Read);
+            var file = await RestoreBackupTaskBase.CopyRemoteStreamLocally(blob.Data, _configuration.TempPath);
+            return new ZipArchive(file, ZipArchiveMode.Read);
         }
 
         protected override string GetFileName(string fullPath)

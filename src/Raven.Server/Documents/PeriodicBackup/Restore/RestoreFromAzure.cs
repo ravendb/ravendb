@@ -28,7 +28,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         protected override async Task<ZipArchive> GetZipArchiveForSnapshot(string path)
         {
             var blob = await _client.GetBlobAsync(path);
-            return new ZipArchive(blob.Data, ZipArchiveMode.Read);
+            var file = await CopyRemoteStreamLocally(blob.Data);
+            return new ZipArchive(file, ZipArchiveMode.Read);
         }
 
         protected override async Task<List<string>> GetFilesForRestore()
