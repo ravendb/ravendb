@@ -107,16 +107,20 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
                             .Query(deleteQuery.ToString()))
                     )
                 );
+
+                if (string.IsNullOrWhiteSpace(deleteResponse.DebugInformation) == false)
+                {
+                    throw new ElasticSearchLoadException($"Index {index} error: {deleteResponse.DebugInformation}");
+                }
                 
                 if (deleteResponse.ServerError != null)
                 {
-                    // ElasticSearchLoadFailureException, index name, ids, deleteQuery
-                    throw new Exception($"ServerError: {deleteResponse.ServerError.Error}");
+                    throw new ElasticSearchLoadException($"Index {index} error: {deleteResponse.ServerError.Error}");
                 }
                 
                 if (deleteResponse.OriginalException != null)
                 {
-                    throw new Exception($"OriginalException: {deleteResponse.OriginalException.Message}");
+                    throw new ElasticSearchLoadException($"Index {index} error: {deleteResponse.OriginalException.Message}");
                 }
 
                 statsCounter += (int)deleteResponse.Deleted;
@@ -131,7 +135,11 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
 
                     if (response.Success == false)
                     {
-                        throw new Exception(response.OriginalException.Message);
+                        if (string.IsNullOrWhiteSpace(deleteResponse.DebugInformation) == false)
+                        {
+                            throw new ElasticSearchLoadException($"Index {index} error: {deleteResponse.DebugInformation}");
+                        }
+                        throw new ElasticSearchLoadException($"Index {index} error: {deleteResponse.OriginalException?.Message}");
                     }
 
                     statsCounter++;
