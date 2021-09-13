@@ -923,7 +923,7 @@ namespace Raven.Server.Documents.Revisions
                 tvb.Add(idSlice);
                 tvb.Add(revision.Data.BasePointer, revision.Data.Size);
                 tvb.Add((int)flags);
-                tvb.Add(deletedEtag);
+                tvb.Add(Bits.SwapBytes(deletedEtag));
                 tvb.Add(revision.LastModified.Ticks);
                 tvb.Add(context.GetTransactionMarker());
                 tvb.Add((int)resolvedFlag);
@@ -1623,7 +1623,7 @@ namespace Raven.Server.Documents.Revisions
 
                 var etag = TableValueToEtag((int)RevisionsTable.Etag, ref tvr.Reader);
                 var flags = TableValueToFlags((int)RevisionsTable.Flags, ref tvr.Reader);
-                Debug.Assert(revisionsBinEntryEtag <= etag, "Revisions bin entry etag candidate cannot meet a bigger etag.");
+                Debug.Assert(revisionsBinEntryEtag <= etag, $"Revisions bin entry for '{lowerId}' etag candidate ({etag}) cannot meet a bigger etag ({revisionsBinEntryEtag}).");
                 return (flags & DocumentFlags.DeleteRevision) == DocumentFlags.DeleteRevision && revisionsBinEntryEtag >= etag;
             }
         }
