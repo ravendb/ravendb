@@ -31,6 +31,7 @@ using Raven.Server.Web.System;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Platform;
+using Sparrow.Utils;
 using Voron.Impl.Backup;
 using Voron.Util.Settings;
 using DatabaseSmuggler = Raven.Client.Documents.Smuggler.DatabaseSmuggler;
@@ -131,7 +132,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             // To avoid reading everything to memory, we copy to a local file instead. Note that this also ensure that we
             // can process files > 2GB in size. https://github.com/dotnet/runtime/issues/59027
             var tmpFolder = tempPath?.FullPath ?? Path.GetTempPath();
-            var file = new FileStream(Path.Combine(tmpFolder, Guid.NewGuid().ToString() + ".restore-local-file"), FileMode.Create, FileAccess.ReadWrite, FileShare.Read,
+            var file = SafeFileStream.Create(Path.Combine(tmpFolder, Guid.NewGuid().ToString() + ".restore-local-file"), FileMode.Create, FileAccess.ReadWrite, FileShare.Read,
                 32 * 1024, FileOptions.DeleteOnClose);
             await stream.CopyToAsync(file);
             file.Seek(0, SeekOrigin.Begin);
