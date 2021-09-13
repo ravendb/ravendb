@@ -133,7 +133,7 @@ namespace Raven.Client.Documents.Session
             var op = new TimeSeriesOperation.IncrementOperation()
             {
                 Timestamp = timestamp.EnsureUtc(),
-                Values = values.ToArray()
+                Values = values is double[] doubleValues ? doubleValues : values.ToArray()
             };
 
             if (Session.DeferredCommandsDictionary.TryGetValue((DocId, CommandType.TimeSeries, Name), out var command))

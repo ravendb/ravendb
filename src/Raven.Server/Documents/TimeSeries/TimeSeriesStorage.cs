@@ -1055,14 +1055,14 @@ namespace Raven.Server.Documents.TimeSeries
                 if (inRange == false ||  segment.Append(_context.Allocator, (int)timestampDiff, values, tagSlice, status) == false)
                 {
                     var segmentLastTimestamp = segment.GetLastTimestamp(BaselineDate);
-                    if (segmentLastTimestamp == BaselineDate && time == segmentLastTimestamp)// all the entries in the segment has the same timestamp
+                    if (segmentLastTimestamp == BaselineDate && time == segmentLastTimestamp) // all the entries in the segment has the same timestamp
                     {
                         if (FromReplication == false)
                             throw new InvalidDataException(
                                 $"Segment reached to capacity and cannot receive more values with {time} timestamp on time series {_name} for {_docId} . " +
                                 "You may choose a different timestamp.");
 
-                        MergeAllEntriesAtSameTimestampToSingleEntry(ref segment, tagSlice, values);
+                        DiscardsAllEntriesAtSameTimestampToSingleDeadEntry(ref segment, tagSlice, values);
                         return;
                     }
 
@@ -1232,10 +1232,8 @@ namespace Raven.Server.Documents.TimeSeries
                 }
             }
 
-            private void MergeAllEntriesAtSameTimestampToSingleEntry(ref TimeSeriesValuesSegment timeSeriesSegment, Span<byte> currentTag, Span<double> values)
+            private void DiscardsAllEntriesAtSameTimestampToSingleDeadEntry(ref TimeSeriesValuesSegment timeSeriesSegment, Span<byte> currentTag, Span<double> values)
             {
-                ValidateSingleEntryIsValid(timeSeriesSegment);
-
                 using (_context.Allocator.Allocate(timeSeriesSegment.NumberOfBytes, out var currentSegmentBuffer))
                 {
                    Memory.Copy(currentSegmentBuffer.Ptr, timeSeriesSegment.Ptr, timeSeriesSegment.NumberOfBytes);
@@ -1257,28 +1255,6 @@ namespace Raven.Server.Documents.TimeSeries
 
                     newSegment.Append(_context.Allocator, 0, values, currentTag, TimeSeriesValuesSegment.Dead);
                     AppendExistingSegment(newSegment);
-                }
-            }
-
-            [Conditional("DEBUG")]
-            private void ValidateSingleEntryIsValid(TimeSeriesValuesSegment timeSeriesSegment)
-            {
-                var lastTag = Span<byte>.Empty;
-                foreach (var segmentValue in timeSeriesSegment.YieldAllValues(_context, BaselineDate, includeDead: false))
-                {
-                    if (segmentValue.Timestamp != BaselineDate)
-                        throw new InvalidOperationException("BUG: attempt to merge a single entry segment with a different time than the baseline: " + BaselineDate + " vs " +
-                                                            segmentValue.Timestamp);
-
-                    if (segmentValue.Tag == null)
-                        throw new InvalidOperationException(
-                            "BUG: attempt to merge a single entry segment, with a null tag, shouldn't be possible since increment should handle this");
-
-                    var curTag = segmentValue.Tag.AsSpan();
-                    if (lastTag.SequenceCompareTo(curTag) >= 0)
-                        throw new InvalidOperationException(
-                            "BUG: Tags are not sorted for single entry segment " + Encoding.UTF8.GetString(lastTag) + " vs " + segmentValue.ToString());
-                    lastTag = curTag;
                 }
             }
 
