@@ -31,7 +31,7 @@ describe("FROM statement parser", function() {
             .toBeInstanceOf(CollectionByIndexContext);
 
         const indexByName = from as CollectionByIndexContext;
-        expect(indexByName.indexName().text)
+        expect(indexByName._collection.text)
             .toEqual("Index1");
     });
 
@@ -47,7 +47,43 @@ describe("FROM statement parser", function() {
             .toBeInstanceOf(CollectionByIndexContext);
 
         const collectionByName = from as CollectionByIndexContext;
-        expect(collectionByName.indexName().text)
+        expect(collectionByName._collection.text)
             .toEqual(`"Orders/ByName"`);
+    });
+
+    it("from index (w/o collection)", function() {
+        const { parseTree, parser } = parseRql(`from index"`);
+
+        expect(parser.numberOfSyntaxErrors)
+            .toEqual(1);
+
+        const from = parseTree.fromStatement();
+
+        expect(from)
+            .toBeInstanceOf(CollectionByIndexContext);
+    });
+
+    it("from index '", function() {
+        const { parseTree, parser } = parseRql(`from index '`);
+
+        expect(parser.numberOfSyntaxErrors)
+            .toEqual(1);
+
+        const from = parseTree.fromStatement();
+
+        expect(from)
+        .toBeInstanceOf(CollectionByIndexContext);
+    });
+
+    it("from index d", function() {
+        const { parseTree, parser } = parseRql(`from index d"`);
+
+        expect(parser.numberOfSyntaxErrors)
+            .toEqual(1);
+
+        const from = parseTree.fromStatement();
+
+        expect(from)
+            .toBeInstanceOf(CollectionByIndexContext);
     });
 });

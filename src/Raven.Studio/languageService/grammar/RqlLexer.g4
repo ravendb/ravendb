@@ -57,6 +57,7 @@ NOT:            N O T;
 NULL:           N U L L;
 OR:             O R;
 ORDER_BY:       O R D E R ' ' B Y;
+OFFSET:         O F F S E T;
 SELECT:         S E L E C T;
 SORTING:        A S C | A S C E N D I N G | D E S C | D E S C E N D I N G;
 STRING_W:       S T R I N G;
@@ -74,11 +75,22 @@ JAVASCRIPT: '{' ( JAVASCRIPT | ~'{'  | ~'}' )*? '}'   -> channel(2);
 //Literals
 JS_FUNCTION_DECLARATION: 'declare function';
 NUM: DIGIT+ (DOT DIGIT+)?;
-STRING : ('"' ( '\\"' | . )*? '"' ) | ('\'' ( '\\"' | . )*? '\'' ) ;
-WORD: AT? [a-zA-Z_0-9]+;
+//STRING : ('"' ( '\\"' | . )*? '"' ) | ('\'' ( '\\"' | . )*? '\'' ) ;
+STRING: SINGLE_QUOTE_STRING
+        | ('"' ( '\\"' | . )*? '"' ) | ('\'' ( '\\"' | . )*?  '\'' )
+        | '"' UTFEscape '"' 
+        | '\'' UTFEscape '\''
+        ;
+SINGLE_QUOTE_STRING: '\'' ( ('\'\'') | ('\\'+ ~'\\') | ~('\'' | '\\') )* '\'' ;
+
+WORD: AT? [a-zA-Z_0-9-]+;
 
 
 // fragments
+fragment UTFEscape: '\\u' HEXDIGIT HEXDIGIT HEXDIGIT HEXDIGIT
+                    | '\\U' HEXDIGIT HEXDIGIT HEXDIGIT HEXDIGIT HEXDIGIT HEXDIGIT HEXDIGIT HEXDIGIT
+                    ;
+fragment HEXDIGIT: [0-9] | [A-F] | [a-f];
 fragment DIGIT:     [0-9];
 fragment A :    [aA];
 fragment B :    [bB];
