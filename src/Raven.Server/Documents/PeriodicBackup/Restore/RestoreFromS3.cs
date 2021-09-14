@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
@@ -5,7 +6,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Documents.PeriodicBackup.Aws;
+using Raven.Server.Indexing;
 using Raven.Server.ServerWide;
+using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
@@ -29,7 +32,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         protected override async Task<ZipArchive> GetZipArchiveForSnapshot(string path)
         {
             var blob = await _client.GetObjectAsync(path);
-            return new ZipArchive(blob.Data, ZipArchiveMode.Read);
+            var file = await CopyRemoteStreamLocally(blob.Data);
+            return new DeleteOnCloseZipArchive(file, ZipArchiveMode.Read);
         }
 
         protected override async Task<List<string>> GetFilesForRestore()

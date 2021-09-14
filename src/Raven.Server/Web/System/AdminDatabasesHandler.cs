@@ -1042,14 +1042,14 @@ namespace Raven.Server.Web.System
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var compactSettingsJson = await context.ReadForDiskAsync(RequestBodyStream(), string.Empty);
+                var compactSettingsJson = await context.ReadForMemoryAsync(RequestBodyStream(), string.Empty);
 
                 var compactSettings = JsonDeserializationServer.CompactSettings(compactSettingsJson);
 
                 if (string.IsNullOrEmpty(compactSettings.DatabaseName))
                     throw new InvalidOperationException($"{nameof(compactSettings.DatabaseName)} is a required field when compacting a database.");
 
-                if (compactSettings.Documents == false && compactSettings.Indexes.Length == 0)
+                if (compactSettings.Documents == false && (compactSettings.Indexes == null || compactSettings.Indexes.Length == 0))
                     throw new InvalidOperationException($"{nameof(compactSettings.Documents)} is false in compact settings and no indexes were supplied. Nothing to compact.");
 
                 using (context.OpenReadTransaction())
@@ -1081,12 +1081,17 @@ namespace Raven.Server.Web.System
                         try
                         {
                             using (token)
-                            using (var indexCts = CancellationTokenSource.CreateLinkedTokenSource(token.Token, database.DatabaseShutdown))
                             {
-                                var before = (await CalculateStorageSize(compactSettings.DatabaseName)).GetValue(SizeUnit.Megabytes);
+                                var storageSize = await CalculateStorageSize(compactSettings.DatabaseName);
+                                var before = storageSize.GetValue(SizeUnit.Megabytes);
                                 var overallResult = new CompactionResult(compactSettings.DatabaseName);
 
-                                // first fill in data
+                                if (compactSettings.Indexes != null && compactSettings.Indexes.Length > 0)
+                                {
+                                    using (database.PreventFromUnloadingByIdleOperations())
+                                    using (var indexCts = CancellationTokenSource.CreateLinkedTokenSource(token.Token, database.DatabaseShutdown))
+                                    {
+                                        // first fill in data 
                                 foreach (var indexName in compactSettings.Indexes)
                                 {
                                     var indexCompactionResult = new CompactionResult(indexName);
@@ -1096,12 +1101,25 @@ namespace Raven.Server.Web.System
                                 // then do actual compaction
                                 foreach (var indexName in compactSettings.Indexes)
                                 {
-                                    var index = database.IndexStore.GetIndex(indexName);
-                                    var indexCompactionResult = overallResult.IndexesResults[indexName];
+                                            indexCts.Token.ThrowIfCancellationRequested();
 
-                                    // we want to send progress of entire operation (indexes and documents), but we should update stats only for index compaction
-                                    index.Compact(progress => onProgress(overallResult.Progress), indexCompactionResult, indexCts.Token);
+                                    var index = database.IndexStore.GetIndex(indexName);
+                                            var indexCompactionResult = (CompactionResult)overallResult.IndexesResults[indexName];
+
+                                            if (index == null)
+                                            {
+                                                indexCompactionResult.Skipped = true;
                                     indexCompactionResult.Processed = true;
+
+                                                indexCompactionResult.AddInfo($"Index '{indexName}' does not exist.");
+                                                continue;
+                                }
+
+                                                                                // we want to send progress of entire operation (indexes and documents), but we should update stats only for index compaction
+                                    index.Compact(progress => onProgress(overallResult.Progress), indexCompactionResult, indexCts.Token);
+                                            indexCompactionResult.Processed = true;
+                                        }
+                                    }
                                 }
 
                                 if (compactSettings.Documents == false)
@@ -1114,7 +1132,8 @@ namespace Raven.Server.Web.System
                                 await compactDatabaseTask.Execute(onProgress, overallResult);
                                 overallResult.Processed = true;
 
-                                overallResult.SizeAfterCompactionInMb = (await CalculateStorageSize(compactSettings.DatabaseName)).GetValue(SizeUnit.Megabytes);
+                                storageSize = await CalculateStorageSize(compactSettings.DatabaseName);
+                                overallResult.SizeAfterCompactionInMb = storageSize.GetValue(SizeUnit.Megabytes);
                                 overallResult.SizeBeforeCompactionInMb = before;
 
                                 return (IOperationResult)overallResult;
@@ -1140,7 +1159,10 @@ namespace Raven.Server.Web.System
         private async Task<Size> CalculateStorageSize(string databaseName)
         {
             var database = await ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
+            if (database == null)
+                throw new InvalidOperationException($"Could not load database '{databaseName}'.");
 
+            using (database.PreventFromUnloadingByIdleOperations())
             return new Size(database.GetSizeOnDisk().Data.SizeInBytes, SizeUnit.Bytes);
         }
 
@@ -1265,7 +1287,7 @@ namespace Raven.Server.Web.System
                     {
                         try
                         {
-                            using (database.PreventFromUnloading())
+                            using (database.PreventFromUnloadingByIdleOperations())
                             {
                                 // send some initial progress so studio can open details
                                 result.AddInfo("Starting migration");

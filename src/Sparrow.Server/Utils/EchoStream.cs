@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -85,16 +86,9 @@ namespace Sparrow.Server.Utils
             _buffers = new BlockingCollection<byte[]>(_maxQueueDepth);
         }
 
-        // we override the xxxxAsync functions because the default base class shares state between ReadAsync and WriteAsync, which causes a hang if both are called at once
         public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
-            return Task.Run(() => Write(buffer, offset, count));
-        }
-
-        // we override the xxxxAsync functions because the default base class shares state between ReadAsync and WriteAsync, which causes a hang if both are called at once
-        public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
-        {
-            return Task.Run(() => Read(buffer, offset, count));
+            return Task.Run(() => Write(buffer, offset, count), cancellationToken);
         }
 
         public override void Write(byte[] buffer, int offset, int count)
@@ -116,6 +110,11 @@ namespace Sparrow.Server.Utils
                 throw new TimeoutException("EchoStream Write() Timeout");
 
             _length += count;
+        }
+
+        public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        {
+            return Task.Run(() => Read(buffer, offset, count), cancellationToken);
         }
 
         public override int Read(byte[] buffer, int offset, int count)
@@ -202,6 +201,38 @@ namespace Sparrow.Server.Utils
         public override void SetLength(long value)
         {
             throw new NotImplementedException();
+        }
+
+        public override void CopyTo(Stream destination, int bufferSize)
+        {
+            var buffer = ArrayPool<byte>.Shared.Rent(bufferSize);
+
+            try
+            {
+                int read;
+                while ((read = Read(buffer, 0, bufferSize)) > 0)
+                    destination.Write(buffer, 0, read);
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(buffer);
+            }
+        }
+
+        public override async Task CopyToAsync(Stream destination, int bufferSize, CancellationToken cancellationToken)
+        {
+            var buffer = ArrayPool<byte>.Shared.Rent(bufferSize);
+
+            try
+            {
+                int read;
+                while ((read = await ReadAsync(buffer, 0, bufferSize, cancellationToken).ConfigureAwait(false)) > 0)
+                    await destination.WriteAsync(buffer, 0, read, cancellationToken).ConfigureAwait(false);
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(buffer);
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -56,8 +56,10 @@ namespace StressTests.Server.Encryption
             {
                 if (PlatformDetails.RunningOnPosix == false)
                 {
+#pragma warning disable CA1416 // Validate platform compatibility
                     process.MinWorkingSet = minWorkingSet;
                     process.MaxWorkingSet = minWorkingSet;
+#pragma warning restore CA1416 // Validate platform compatibility
                 }
             }
             
