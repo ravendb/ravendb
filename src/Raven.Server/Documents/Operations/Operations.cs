@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions;
@@ -22,7 +23,6 @@ namespace Raven.Server.Documents.Operations
 {
     public class Operations : ILowMemoryHandler
     {
-        private readonly Logger _logger;
         private readonly ConcurrentDictionary<long, Operation> _active = new ConcurrentDictionary<long, Operation>();
         private readonly ConcurrentDictionary<long, Operation> _completed = new ConcurrentDictionary<long, Operation>();
         private readonly string _name;
@@ -42,7 +42,6 @@ namespace Raven.Server.Documents.Operations
             _notificationCenter = notificationCenter;
             _changes = changes;
             _maxCompletedTaskLifeTime = maxCompletedTaskLifeTime;
-            _logger = LoggingSource.Instance.GetLogger<Operations>(name ?? "Server");
             LowMemoryNotification.Instance.RegisterLowMemoryHandler(this);
         }
 
@@ -132,15 +131,29 @@ namespace Raven.Server.Documents.Operations
                 State = operationState
             };
 
-            void ProgressNotification(IOperationProgress progress)
+            object locker = new object();
+            Monitor.Enter(locker);
+            try
             {
-                notification.State.Progress = progress;
-                RaiseNotifications(notification, operation);
+                operation.Task = Task.Run(() => taskFactory(ProgressNotification));
+                operation.Task.ContinueWith(ContinuationFunction);
+                _active.TryAdd(id, operation);
+
+                if (token == null)
+                    return operation.Task;
+
+                return operation.Task.ContinueWith(t =>
+                {
+                    token.Dispose();
+                    return t;
+                }).Unwrap();
+            }
+            finally
+            {
+                Monitor.Exit(locker);
             }
 
-            operation.Task = Task.Run(() => taskFactory(ProgressNotification));
-
-            operation.Task.ContinueWith(taskResult =>
+            void ContinuationFunction(Task<IOperationResult> taskResult)
             {
                 operationDescription.EndTime = SystemTime.UtcNow;
                 operationState.Progress = null;
@@ -176,27 +189,36 @@ namespace Raven.Server.Documents.Operations
                     operationState.Status = OperationStatus.Completed;
                 }
 
-                if (_active.TryGetValue(id, out Operation completed))
+                if (Monitor.TryEnter(locker) == false)
                 {
-                    completed.SetCompleted();
-                    // add to completed items before removing from active ones to ensure an operation status is accessible all the time
-                    _completed.TryAdd(id, completed);
-                    _active.TryRemove(id, out completed);
+                    // adding of operation still didn't finish, just exit
+                    RaiseNotifications(notification, operation);
+                    return;
                 }
 
-                RaiseNotifications(notification, operation);
-            });
+                try
+                {
+                    if (_active.TryGetValue(id, out Operation completed))
+                    {
+                        completed.SetCompleted();
+                        // add to completed items before removing from active ones to ensure an operation status is accessible all the time
+                        _completed.TryAdd(id, completed);
+                        _active.TryRemove(id, out completed);
+                    }
 
-            _active.TryAdd(id, operation);
+                    RaiseNotifications(notification, operation);
+                }
+                finally
+                {
+                    Monitor.Exit(locker);
+                }
+            }
 
-            if (token == null)
-                return operation.Task;
-
-            return operation.Task.ContinueWith(t =>
+            void ProgressNotification(IOperationProgress progress)
             {
-                token.Dispose();
-                return t;
-            }).Unwrap();
+                notification.State.Progress = progress;
+                RaiseNotifications(notification, operation);
+            }
         }
 
         private void RaiseNotifications(OperationStatusChange change, Operation operation)
