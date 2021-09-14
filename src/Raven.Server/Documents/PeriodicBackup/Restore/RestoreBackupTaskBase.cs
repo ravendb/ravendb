@@ -132,14 +132,20 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             // This is meant to be used by ZipArchive, which will copy the data locally because is *must* be seekable.
             // To avoid reading everything to memory, we copy to a local file instead. Note that this also ensure that we
             // can process files > 2GB in size. https://github.com/dotnet/runtime/issues/59027
-            var tmpFolder = tempPath?.FullPath ?? Path.GetTempPath();
-            var file = SafeFileStream.Create(Path.Combine(tmpFolder, $"{Guid.NewGuid()}.restore-local-file"), FileMode.Create, FileAccess.ReadWrite, FileShare.Read,
+            var basePath = tempPath?.FullPath ?? Path.GetTempPath();
+            var filePath = Path.Combine(basePath, $"{Guid.NewGuid()}.restore-local-file");
+            var file = SafeFileStream.Create(filePath, FileMode.Create, FileAccess.ReadWrite, FileShare.Read,
                 32 * 1024, FileOptions.DeleteOnClose);
 
             try
             {
+                Debug.Assert(stream.Position == 0, "stream.Position == 0");
+                
                 await stream.CopyToAsync(file);
                 file.Seek(0, SeekOrigin.Begin);
+
+                Debug.Assert(stream.Length == file.Length, "stream.Length == file.Length");
+
                 return file;
             }
             catch
@@ -154,7 +160,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 }
                 finally
                 {
-                    PosixFile.DeleteOnClose(file.Name);
+                    PosixFile.DeleteOnClose(filePath);
                 }
 
                 throw;
