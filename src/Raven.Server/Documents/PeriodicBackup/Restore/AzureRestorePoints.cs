@@ -7,6 +7,7 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.PeriodicBackup.Azure;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
@@ -56,7 +57,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         {
             var blob = await _client.GetBlobAsync(filePath);
             var file = await RestoreBackupTaskBase.CopyRemoteStreamLocally(blob.Data, _configuration.TempPath);
-            return new ZipArchive(file, ZipArchiveMode.Read);
+            return new DeleteOnCloseZipArchive(file, ZipArchiveMode.Read);
         }
 
         protected override string GetFileName(string fullPath)

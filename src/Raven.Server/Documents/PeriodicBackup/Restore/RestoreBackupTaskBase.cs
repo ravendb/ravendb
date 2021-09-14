@@ -59,11 +59,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             RestoreFromConfiguration = restoreFromConfiguration;
             _nodeTag = nodeTag;
             _operationCancelToken = operationCancelToken;
-            
+
             var dataDirectoryThatWillBeUsed = string.IsNullOrWhiteSpace(RestoreFromConfiguration.DataDirectory) ?
                                        _serverStore.Configuration.Core.DataDirectory.FullPath :
                                        new PathSetting(RestoreFromConfiguration.DataDirectory, _serverStore.Configuration.Core.DataDirectory.FullPath).FullPath;
-            
+
             if (ResourceNameValidator.IsValidResourceName(RestoreFromConfiguration.DatabaseName, dataDirectoryThatWillBeUsed, out string errorMessage) == false)
                 throw new InvalidOperationException(errorMessage);
 
@@ -93,7 +93,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             var backupEncryptionSettings = RestoreFromConfiguration.BackupEncryptionSettings;
             if (backupEncryptionSettings != null)
             {
-                if (backupEncryptionSettings.EncryptionMode == EncryptionMode.UseProvidedKey && 
+                if (backupEncryptionSettings.EncryptionMode == EncryptionMode.UseProvidedKey &&
                     backupEncryptionSettings.Key == null)
                 {
                     throw new InvalidOperationException($"{nameof(BackupEncryptionSettings.EncryptionMode)} is set to {nameof(EncryptionMode.UseProvidedKey)} but an encryption key wasn't provided");
@@ -118,7 +118,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
             _restoringToDefaultDataDirectory = IsDefaultDataDirectory(RestoreFromConfiguration.DataDirectory, RestoreFromConfiguration.DatabaseName);
         }
-        
+
         protected async Task<Stream> CopyRemoteStreamLocally(Stream stream)
         {
             return await CopyRemoteStreamLocally(stream, _serverStore.Configuration.Storage.TempPath);
@@ -128,15 +128,38 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         {
             if (stream.CanSeek)
                 return stream;
+
             // This is meant to be used by ZipArchive, which will copy the data locally because is *must* be seekable.
             // To avoid reading everything to memory, we copy to a local file instead. Note that this also ensure that we
             // can process files > 2GB in size. https://github.com/dotnet/runtime/issues/59027
             var tmpFolder = tempPath?.FullPath ?? Path.GetTempPath();
-            var file = SafeFileStream.Create(Path.Combine(tmpFolder, Guid.NewGuid().ToString() + ".restore-local-file"), FileMode.Create, FileAccess.ReadWrite, FileShare.Read,
+            var file = SafeFileStream.Create(Path.Combine(tmpFolder, $"{Guid.NewGuid()}.restore-local-file"), FileMode.Create, FileAccess.ReadWrite, FileShare.Read,
                 32 * 1024, FileOptions.DeleteOnClose);
-            await stream.CopyToAsync(file);
-            file.Seek(0, SeekOrigin.Begin);
-            return file;
+
+            try
+            {
+                await stream.CopyToAsync(file);
+                file.Seek(0, SeekOrigin.Begin);
+                return file;
+            }
+            catch
+            {
+                try
+                {
+                    await file.DisposeAsync();
+                }
+                catch
+                {
+                    // nothing we can do
+                }
+                finally
+                {
+                    PosixFile.DeleteOnClose(file.Name);
+                }
+
+                throw;
+            }
+
         }
 
         protected abstract Task<Stream> GetStream(string path);
@@ -349,7 +372,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     {
                         try
                         {
-                            var deleteResult = await _serverStore.DeleteDatabaseAsync(RestoreFromConfiguration.DatabaseName, true, new[] {_serverStore.NodeTag},
+                            var deleteResult = await _serverStore.DeleteDatabaseAsync(RestoreFromConfiguration.DatabaseName, true, new[] { _serverStore.NodeTag },
                                 RaftIdGenerator.DontCareId);
                             await _serverStore.Cluster.WaitForIndexNotification(deleteResult.Index, TimeSpan.FromSeconds(60));
                         }
@@ -637,7 +660,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     database.DocumentsStorage.RevisionsStorage.InitializeFromDatabaseRecord(smugglerDatabaseRecord);
                 });
         }
-        
+
         private bool IsDefaultDataDirectory(string dataDirectory, string databaseName)
         {
             var defaultDataDirectory = RavenConfiguration.GetDataDirectoryPath(
