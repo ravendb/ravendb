@@ -5,16 +5,12 @@ namespace Raven.Server.Utils
 {
     public class DeleteOnCloseZipArchive : ZipArchive
     {
-        private readonly FileStream _stream;
-
-        public DeleteOnCloseZipArchive(Stream stream) : base(stream)
-        {
-            _stream = stream as FileStream;
-        }
+        private readonly string _filePath;
 
         public DeleteOnCloseZipArchive(Stream stream, ZipArchiveMode mode) : base(stream, mode)
         {
-            _stream = stream as FileStream;
+            if (stream is FileStream fs)
+                _filePath = fs.Name;
         }
 
         protected override void Dispose(bool disposing)
@@ -25,8 +21,8 @@ namespace Raven.Server.Utils
             }
             finally
             {
-                if (_stream != null)
-                    PosixFile.DeleteOnClose(_stream.Name);
+                if (_filePath != null)
+                    PosixFile.DeleteOnClose(_filePath);
             }
         }
     }
