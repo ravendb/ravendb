@@ -121,7 +121,7 @@ namespace Raven.Server.Web.System
             connectionStrings.TryGetValue(sinkReplication.ConnectionStringName, out var connection);
             sinkReplication.Database = connection?.Database;
             sinkReplication.ConnectionString = connection;
-            
+
             var tag = Database.WhoseTaskIsIt(dbTopology, sinkReplication, null);
 
             (string Url, OngoingTaskConnectionStatus Status) res = (null, OngoingTaskConnectionStatus.NotActive);
@@ -264,7 +264,7 @@ namespace Raven.Server.Web.System
             connectionStrings.TryGetValue(watcher.ConnectionStringName, out var connection);
             watcher.Database = connection?.Database;
             watcher.ConnectionString = connection;
-            
+
             var taskStatus = ReplicationLoader.GetExternalReplicationState(ServerStore, Database.Name, watcher.TaskId);
             var tag = Database.WhoseTaskIsIt(databaseTopology, watcher, taskStatus);
 
@@ -477,7 +477,7 @@ namespace Raven.Server.Web.System
                                     Thread.CurrentThread.Priority = ThreadPriority.BelowNormal;
                                     NativeMemory.EnsureRegistered();
 
-                                    using (Database.PreventFromUnloading())
+                                    using (Database.PreventFromUnloadingByIdleOperations())
                                     {
                                         var runningBackupStatus = new PeriodicBackupStatus { TaskId = 0, BackupType = backupConfiguration.BackupType };
                                         var backupResult = backupTask.RunPeriodicBackup(onProgress, ref runningBackupStatus);

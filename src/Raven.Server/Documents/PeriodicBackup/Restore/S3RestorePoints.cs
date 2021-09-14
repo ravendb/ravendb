@@ -4,18 +4,20 @@ using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
-using Raven.Server.Config.Categories;
 using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
     public class S3RestorePoints : RestorePointsBase
     {
+        private readonly Config.Categories.BackupConfiguration _configuration;
         private readonly RavenAwsS3Client _client;
 
         public S3RestorePoints(Config.Categories.BackupConfiguration configuration, SortedList<DateTime, RestorePoint> sortedList, TransactionOperationContext context, S3Settings s3Settings) : base(sortedList, context)
         {
+            _configuration = configuration;
             _client = new RavenAwsS3Client(s3Settings, configuration);
         }
 
@@ -70,7 +72,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         protected override async Task<ZipArchive> GetZipArchive(string filePath)
         {
             var blob = await _client.GetObjectAsync(filePath);
-            return new ZipArchive(blob.Data, ZipArchiveMode.Read);
+            var file = await RestoreBackupTaskBase.CopyRemoteStreamLocally(blob.Data, _configuration.TempPath);
+            return new DeleteOnCloseZipArchive(file, ZipArchiveMode.Read);
         }
 
         protected override string GetFileName(string fullPath)
