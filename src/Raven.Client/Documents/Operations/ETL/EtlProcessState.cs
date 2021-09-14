@@ -48,7 +48,9 @@ namespace Raven.Client.Documents.Operations.ETL
                 [nameof(ConfigurationName)] = ConfigurationName,
                 [nameof(TransformationName)] = TransformationName,
                 [nameof(LastProcessedEtagPerDbId)] = LastProcessedEtagPerDbId.ToJson(),
+#pragma warning disable 618
                 [nameof(LastProcessedEtagPerNode)] = LastProcessedEtagPerNode?.ToJson(),
+#pragma warning restore 618
                 [nameof(ChangeVector)] = ChangeVector,
                 [nameof(NodeTag)] = NodeTag
             };
