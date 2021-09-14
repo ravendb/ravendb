@@ -86,16 +86,9 @@ namespace Sparrow.Server.Utils
             _buffers = new BlockingCollection<byte[]>(_maxQueueDepth);
         }
 
-        // we override the xxxxAsync functions because the default base class shares state between ReadAsync and WriteAsync, which causes a hang if both are called at once
-        public new Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
             return Task.Run(() => Write(buffer, offset, count), cancellationToken);
-        }
-
-        // we override the xxxxAsync functions because the default base class shares state between ReadAsync and WriteAsync, which causes a hang if both are called at once
-        public new Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
-        {
-            return Task.Run(() => Read(buffer, offset, count), cancellationToken);
         }
 
         public override void Write(byte[] buffer, int offset, int count)
@@ -117,6 +110,11 @@ namespace Sparrow.Server.Utils
                 throw new TimeoutException("EchoStream Write() Timeout");
 
             _length += count;
+        }
+
+        public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        {
+            return Task.Run(() => Read(buffer, offset, count), cancellationToken);
         }
 
         public override int Read(byte[] buffer, int offset, int count)
