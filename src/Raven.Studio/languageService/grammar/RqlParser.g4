@@ -1,134 +1,115 @@
 parser grammar RqlParser;
 options { tokenVocab = RqlLexer; }
 
+@parser::members
+{
+    public from: boolean = false;
+    public where: boolean = false;
+    public groupBy: boolean = false;
+    public orderBy: boolean = false;
+    public select: boolean = false;
+    
+    public afterFrom()
+    {
+       this.from = false;
+    }
+      
+    public afterGroupBy()
+    {
+       this.afterFrom();
+       this.groupBy = false;
+    }
+    
+    public afterWhere()
+    {
+       this.where = false;
+       this.afterGroupBy();
+    }
+             
+    public afterLoad()
+    {
+       this.afterWhere();
+    }
+    
+    public afterOrderBy()
+    {
+       this.afterLoad();
+       this.orderBy = false;
+    }
+    
+    public afterSelect()
+    {
+       this.select = false;
+       this.afterOrderBy();
+    }
+    
+    public afterInclude()
+    {
+       this.afterSelect();
+    }
+    
+    public afterLimit()
+    {
+       this.afterInclude();
+    }
+}
+
 prog:
     (jsFunction)* 
     fromStatement 
-    loadStatement? 
     groupByStatement?
     whereStatement? 
     loadStatement? 
-    groupByStatement?
     orderByStatement? 
     selectStatement? 
-    limitStatement?
     includeStatement?
     limitStatement?
     EOF
     ;
+    
+//          FROM STATEMENT          //
+fromMode:
+    FROM
+    ;
 
 fromStatement:
-    FROM INDEX indexName fromAlias? #CollectionByIndex
-    | FROM ALL_DOCS #AllCollections
-    | FROM collectionName fromAlias? #CollectionByName 
-    ;
-
-indexName:
-    STRING
-    | WORD;
-
-loadStatement:
-    LOAD 
-    loadDocumentsByName
-    (COMMA loadDocumentsByName)*
-    ;
-
-loadDocumentsByName:
-    variable alias;
-
-selectStatement:
-    //  Select only individual fields e.g. "select Column1, Column2"
-     SELECT DISTINCT STAR #getAllDistinct
-    | SELECT DISTINCT?
-        projectField
-    (
-        COMMA projectField
-    )* 
-    #ProjectIndividualFields
-    | SELECT limitStatement? #javascriptCode
+    fromMode INDEX collection=collectionName fromAlias? #CollectionByIndex
+    |FROM ALL_DOCS #AllCollections
+    |fromMode collection=collectionName fromAlias? #CollectionByName 
     ;
     
-projectField:
+collectionName:
+    WORD
+    |STRING
+    |identifiersAllNames
+    ;
+
+//We can use aliases like:
+//from X as t
+//from X t
+fromAlias:
+    AS? 
     (
-        parameter
-        |specialFunctions
+    WORD
+    |STRING
+    |identifiersAllNames
     )
-    alias?
     ;
     
-jsFunction: 
-    (JS_FUNCTION_DECLARATION variable OP_PAR WORD (COMMA variable)* CL_PAR) //definition declare func(X,...y)
+//          GROUP BY STATEMENT          //    
+groupByMode:
+    GROUP_BY
+    {
+        this.afterFrom();
+        this.groupBy = true;
+        
+    }
     ;
-
-jsCode:
-    '{' jsCode '}'
-    | .*?;
-
-
-//tree with alias name in second node
-alias:
-    AS
-    (
-        WORD
-        |identifiersNames
-        | STRING
-    )
-    (OP_Q CL_Q)?
-    ;
-
-//Capture variable name (also accept aliased names).
-variable:
-    (
-        (
-        STRING
-        |((WORD | NUM)+ (PLUS | MINUS | AT | HASH | DOL | PERCENT | POWER | AMP | STAR | QUESTION_MARK | EXCLAMATION)*)+
-        |identifiersNames
-        ) 
-        (OP_Q CL_Q)? 
-        DOT?
-    )*
-    (
-    STRING
-    |((WORD | NUM)+ (PLUS | MINUS | AT | HASH | DOL | PERCENT | POWER | AMP | STAR | QUESTION_MARK | EXCLAMATION)*)+
-    |identifiersNames
-    ) 
-    | DOL (WORD(NUM)?)+
-    | SORTING
-        ;
-
-//Function definition. It accept function with aliases, params or param-free.
-function:
-    (
-        variable 
-        OP_PAR 
-        (
-            (
-                function
-                |variable
-                |STRING+
-                |NUM
-            ) //Parser should throw when comma occures at first place in parenthesis
-            (
-                COMMA 
-                (
-                    function
-                    |variable
-                    |STRING
-                    |NUM
-                )
-            )*
-        )? 
-        CL_PAR
-    );
-
-whereStatement:
-    WHERE expr
-    ; 
-
+    
 groupByStatement:
-    GROUP_BY 
+     groupByMode
     (
-        parameterWithOptionalAlias
+        value = parameterWithOptionalAlias
     )
     (
         COMMA 
@@ -137,54 +118,64 @@ groupByStatement:
         )
     )*
     ;
-
-orderByStatement:
-    ORDER_BY 
-        (
-            parameterWithOptionalAlias orderBySorting? SORTING?
-        )
-        (
-            COMMA 
-            (
-                parameterWithOptionalAlias orderBySorting? SORTING?
-            )
-        )* 
-    ;
-
-//Order sorting option keyword.
-orderBySorting:
-    AS 
-    (
-        STRING_W 
-        |ALPHANUMERIC
-        |LONG 
-        |DOUBLE
-    );
-
-expr:
-    specialFunctions
-    | inFuction
-    | betweenFunction
-    | OP_PAR expr CL_PAR
-    | expr EQUAL expr
-    | expr MATH expr
-    | expr AND NOT? expr
-    | expr OR NOT? expr
-    | ID OP_PAR CL_PAR
-    | STRING
-    | NUM
-    | (TRUE | FALSE)
-    | function
-    | variable
+    
+    
+//          WHERE STATEMENT         //
+whereMode:
+    WHERE
+    {
+        this.afterGroupBy();
+        this.where = true;
+    };
+    
+whereStatement:
+    whereMode 
+    expr
     ;
     
+expr:
+    left=expr binary right=expr #binaryExpression
+    | OP_PAR expr CL_PAR #oppar
+    |left=exprValue EQUAL right=exprValue #equalExpression
+    |left=exprValue MATH right=exprValue #mathExpression
+    |specialFunctions #specialFunctionst
+    | inFuction #inExpr
+    | betweenFunction #betweenExpr
+    | function #normalFunc
+    | TRUE AND NOT? expr #booleanExpression
+    ;
+
+binary:
+    AND NOT
+    |OR NOT
+    |AND
+    |OR
+    ;
+   
+exprValue:
+    
+     literal #parameterExpr
+    ;
+
 inFuction:
- (variable | ID OP_PAR CL_PAR) ALL? IN OP_PAR (STRING | NUM | variable) (COMMA (STRING | NUM | variable))* CL_PAR;
+    value=literal 
+    ALL? IN 
+    OP_PAR
+        first=literal 
+        (
+            COMMA 
+            next=literal
+        )* 
+    CL_PAR
+    ;
 
 betweenFunction:
-    (variable | ID OP_PAR CL_PAR) 
+    value=literal
     BETWEEN 
-        parameter AND parameter;
+        from=literal 
+    AND 
+        to=literal
+    ;
     
 //Functions like morelikethis() or intersect()
 specialFunctions:
@@ -197,19 +188,20 @@ specialFunctions:
         )* 
     )?
     CL_PAR
-;
+    ;
 
 specialFunctionName:
     ID
-        |FUZZY
-        |SEARCH
-        |FACET
-        |BOOST
-        |STARTS_WITH
-        |ENDS_WITH
-        |MORELIKETHIS
-        |INTERSECT
-        |EXACT;
+    |FUZZY
+    |SEARCH
+    |FACET
+    |BOOST
+    |STARTS_WITH
+    |ENDS_WITH
+    |MORELIKETHIS
+    |INTERSECT
+    |EXACT
+    ;
 
 specialParam:
      OP_PAR specialParam CL_PAR
@@ -224,46 +216,244 @@ specialParam:
     | date
     | function
     | variable
-    | identifiersNames
+    | identifiersAllNames
+    |NUM
+;
+
+//          LOAD STATEMENT          //
+//Accept:n
+// load x as X
+//also list of load eg (load x as y, y as p) etc 
+loadMode:
+    LOAD
+    {
+       this.afterWhere();
+    }
+    ;
+    
+loadStatement:
+    loadMode 
+    item=loadDocumentByName
+    (COMMA loadDocumentByName)*
+    ;
+
+loadDocumentByName:
+    name=variable 
+    as=alias
+    ;
+
+//          ORDER BY            //
+orderByMode:
+ORDER_BY
+{
+    this.afterGroupBy();
+    this.orderBy = true;
+};
+
+orderByStatement:
+    orderByMode 
+    value=orderByItem
+        (
+            COMMA 
+            (
+                orderByItem
+            )
+        )* 
+        
+    ;
+
+orderByItem:
+    value=literal
+    order=orderBySorting?
+    orderValueType=orderByOrder?
+    ;
+
+//Order sorting option keyword.
+orderBySorting:
+    AS 
+    sortingMode=orderBySortingAs 
+    
+    ;
+
+orderBySortingAs:
+    STRING_W 
+    |ALPHANUMERIC
+    |LONG 
+    |DOUBLE
+    ;
+orderByOrder:
+    SORTING
+    ;
+
+//          SELECT STATEMENT            //
+selectMode:
+    SELECT
+    {
+        this.afterOrderBy();
+        this.select = true;
+    }
+    ;
+    
+selectStatement:
+    //  Select only individual fields e.g. "select Column1 (as x)?, Column2"
+     selectMode DISTINCT STAR  limitStatement? #getAllDistinct
+    | selectMode DISTINCT?
+        projectField
+    (
+        COMMA projectField
+    )*  limitStatement?
+    #ProjectIndividualFields
+    // Please notice that JavaScript segment is on 2 channel so we don't get any information on first on about JS
+    // code so we accept "SELECT LIMIT $p1, $p2". To make sure it's correct we need check channel(2).IsEmpty or something like this.
+    | selectMode limitStatement? #javascriptCode
+    ;
+    
+projectField:
+    (
+        literal
+        |specialFunctions
+    )
+    alias?
+    ;
+
+//JS header
+//Accept declare function(params...). We don't get any JS CODE on first channel so we need to check it like in example from SELECT statement
+jsFunction: 
+    JS_FUNCTION_DECLARATION variable 
+        OP_PAR 
+            WORD 
+                (
+                    COMMA 
+                    variable
+                )* 
+        CL_PAR
+    //definition declare func(X,...y)
+    ;
+
+alias:
+    AS
+    (
+        WORD
+        |identifiersAllNames
+        | STRING
+    )
+    asArray?
+    ;
+    
+// @metadata.
+// array like Array[].Empty[]. etc
+prealias:
+    METADATA DOT
+    | (WORD asArray? DOT)+
+    ;
+asArray:
+    OP_Q CL_Q
+    ;
+
+
+//          INCLUDE STATEMENT           //
+includeMode:
+    INCLUDE
+    {
+        this.afterSelect();
+    }
+    ;
+    
+includeStatement:
+    includeMode 
+    literal 
+    (
+        COMMA 
+        literal
+    )*
+        ;
+
+
+//          LIMIT STATEMENT          //
+limitStatement:
+        LIMIT     
+        variable 
+        (
+            (COMMA | OFFSET) 
+            variable
+        )?
+        ;
+
+
+//          UTILS SEGMENT           //
+    
+//Capture variable name (also accept aliased names).
+variable:
+    prealias*
+    (
+      cacheParam
+     |param
+    )
+    ; 
+    
+param:
+    (
+    NUM
+    | WORD
+    | date
     | STRING
-    | NUM;
+    | ID OP_PAR CL_PAR
+    | identifiersAllNames
+    ) 
+    asArray?
+    ;
+
+literal:
+    DOL? 
+    (
+         function
+         |variable
+    ) 
+    ;
+cacheParam:
+    DOL WORD
+    ;
+
 
 parameterWithOptionalAlias:
-      (
-        variable
-        |function
-      ) 
-    alias?;
+    value=variableOrFunction
+    as=alias?
+    ;
 
-parameter:
-        DOL? (
-             function
-             |variable
-        ) 
-;
-collectionName:
-    WORD
-    |STRING
-    |identifiersNames;
+variableOrFunction:
+    variable
+    |function
+    ;
 
-includeStatement:
-    INCLUDE parameter (COMMA parameter)*;
+//Function definition. It accept function with aliases, params or param-free.
+function:
+    (
+        variable 
+        OP_PAR 
+        (
+            (
+                literal
+            ) //Parser should throw when comma occures at first place in parenthesis
+            (
+                COMMA 
+                (
+                    literal
+                )
+            )*
+        )? 
+        CL_PAR
+    )
+    ;
 
-fromAlias:
-    AS? (WORD|STRING);
-
-limitStatement:
-    LIMIT variable (COMMA variable)?;
-    
-identifiersNames:
+//Use tokens like string
+   
+identifiersAllNames:
     ALL
-    |ALPHANUMERIC
     |AND
     |AS
     |BETWEEN
     |DECLARE
     |DISTINCT
-    |DOUBLE
     |ENDS_WITH
     |STARTS_WITH
     |FALSE
@@ -272,18 +462,14 @@ identifiersNames:
     |IN
     |ID
     |INCLUDE
-    |INDEX
     |INTERSECT
     |LOAD
     |LONG
     |MATCH
     |MORELIKETHIS
-    |NOT
     |NULL
     |OR
     |ORDER_BY
-    |SELECT
-    |SORTING
     |STRING_W
     |TRUE
     |WHERE
@@ -291,10 +477,18 @@ identifiersNames:
     |EXACT
     |BOOST
     |SEARCH
-    |LIMIT
     |FUZZY
     |METADATA
-    |TO;
+    |TO
+    |{!this.select}? LIMIT
+    |{!this.groupBy}? GROUP_BY
+    |{!this.where}? NOT
+    |{!this.orderBy}? SORTING
+    |{!this.orderBy}? ALPHANUMERIC
+    |{!this.orderBy}? DOUBLE
+    ;
+    
+//Accept date range [DATE TO DATE]
 date:
     OP_Q 
     (NULL | dateString)
@@ -303,4 +497,4 @@ date:
     CL_Q
     ;
     
-dateString: NUM+ MINUS NUM+ MINUS (NUM | WORD)+ MINUS NUM+ MINUS NUM;
+dateString: WORD DOT NUM;
