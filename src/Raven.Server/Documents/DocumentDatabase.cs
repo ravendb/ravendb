@@ -389,7 +389,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IDisposable PreventFromUnloading()
+        public IDisposable PreventFromUnloadingByIdleOperations()
         {
             Interlocked.Increment(ref _preventUnloadCounter);
 

@@ -33,7 +33,7 @@ namespace SlowTests.Issues
                         Disabled = false
                     }
                 });
-                var user = new User() {Name = "Toli"};
+                var user = new User() { Name = "Toli" };
                 using (var session = store.OpenAsyncSession())
                 {
                     for (int i = 0; i < 3; i++)
@@ -113,7 +113,7 @@ namespace SlowTests.Issues
                 }
 
                 db = await GetDocumentDatabaseInstanceFor(store2, store2.Database);
-                await WaitForValueAsync(async () =>
+                await WaitForValueAsync(() =>
                     {
                         using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                         using (ctx.OpenReadTransaction())

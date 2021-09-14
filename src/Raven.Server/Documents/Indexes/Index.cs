@@ -2184,7 +2184,7 @@ namespace Raven.Server.Documents.Indexes
 
             bool mightBeMore = false;
 
-            using (DocumentDatabase.PreventFromUnloading())
+            using (DocumentDatabase.PreventFromUnloadingByIdleOperations())
             using (CultureHelper.EnsureInvariantCulture())
             using (var context = QueryOperationContext.Allocate(DocumentDatabase, this))
             using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
