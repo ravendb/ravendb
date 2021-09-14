@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Documents.PeriodicBackup.GoogleCloud;
 using Raven.Server.ServerWide;
+using Raven.Server.Utils;
 using Sparrow.Server.Utils;
 
 namespace Raven.Server.Documents.PeriodicBackup.Restore
@@ -30,7 +31,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         {
             Stream stream = _client.DownloadObject(path);
             var file = await CopyRemoteStreamLocally(stream);
-            return new ZipArchive(file, ZipArchiveMode.Read);
+            return new DeleteOnCloseZipArchive(file, ZipArchiveMode.Read);
         }
 
         protected override async Task<List<string>> GetFilesForRestore()

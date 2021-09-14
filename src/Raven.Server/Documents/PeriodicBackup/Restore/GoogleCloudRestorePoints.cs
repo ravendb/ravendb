@@ -8,6 +8,7 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.PeriodicBackup.GoogleCloud;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
@@ -58,7 +59,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         {
             Stream downloadObject = _client.DownloadObject(filePath);
             var file = await RestoreBackupTaskBase.CopyRemoteStreamLocally(downloadObject, _configuration.TempPath);
-            return new ZipArchive(downloadObject, ZipArchiveMode.Read);
+            return new DeleteOnCloseZipArchive(downloadObject, ZipArchiveMode.Read);
         }
 
         protected override string GetFileName(string fullPath)
