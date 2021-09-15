@@ -138,12 +138,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
             try
             {
-                Debug.Assert(stream.Position == 0, "stream.Position == 0");
-                
                 await stream.CopyToAsync(file);
                 file.Seek(0, SeekOrigin.Begin);
-
-                Debug.Assert(stream.Length == file.Length, "stream.Length == file.Length");
 
                 return file;
             }
