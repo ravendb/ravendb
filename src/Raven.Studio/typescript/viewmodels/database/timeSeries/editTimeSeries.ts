@@ -575,7 +575,7 @@ class editTimeSeries extends viewModelBase {
                                   <small> The raw data can be aggregated per time period that is configured in the <a href="${timeseriesSettingsUrl}">Time Series Settings</a> view.</small>
                               </li>
                           </ul>`,
-                placement: "right",
+                placement: "bottom",
                 html: true,
                 container: ".edit-time-series"
             });
