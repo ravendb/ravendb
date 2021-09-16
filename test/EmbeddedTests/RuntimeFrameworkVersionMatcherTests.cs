@@ -106,7 +106,12 @@ namespace EmbeddedTests
             Assert.Equal("3.1.1+", runtime.ToString());
             Assert.Equal("3.1.3", RuntimeFrameworkVersionMatcher.Match(runtime, runtimes));
 
-            var e = Assert.Throws<InvalidOperationException>(() => new RuntimeFrameworkVersionMatcher.RuntimeFrameworkVersion("6.0.0+-preview.6.21352.12"));
+            runtime = new RuntimeFrameworkVersionMatcher.RuntimeFrameworkVersion("3.1.4+");
+            Assert.Equal("3.1.4+", runtime.ToString());
+            var e = Assert.Throws<InvalidOperationException>(() => RuntimeFrameworkVersionMatcher.Match(runtime, runtimes));
+            Assert.Contains("Could not find a matching runtime for '3.1.4+'. Available runtimes:", e.Message);
+
+            e = Assert.Throws<InvalidOperationException>(() => new RuntimeFrameworkVersionMatcher.RuntimeFrameworkVersion("6.0.0+-preview.6.21352.12"));
             Assert.Equal("Cannot set 'Patch' with value '0+' because '+' is not allowed when Suffix ('preview.6.21352.12') is set.", e.Message);
 
             e = Assert.Throws<InvalidOperationException>(() => new RuntimeFrameworkVersionMatcher.RuntimeFrameworkVersion("6+"));
