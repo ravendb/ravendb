@@ -1,9 +1,6 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Linq.Expressions;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
@@ -13,7 +10,7 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Indexes
 {
-    public class DynamicDictionaryIndexesTests :RavenTestBase
+    public class DynamicDictionaryIndexesTests : RavenTestBase
     {
         public DynamicDictionaryIndexesTests(ITestOutputHelper output) : base(output)
         {
@@ -29,8 +26,8 @@ namespace SlowTests.Tests.Indexes
             public FirstOrDefaultOnDictionary_Index()
             {
                 Map = items => from item in items
-                    let node = item.Nodes.FirstOrDefault()
-                    select new { Path = node.Value };
+                               let node = item.Nodes.FirstOrDefault()
+                               select new { Path = node.Value };
 
                 Store("Path", FieldStorage.Yes);
             }
@@ -46,8 +43,8 @@ namespace SlowTests.Tests.Indexes
             public FirstOrDefaultOnDictionaryWithPredicate_Index()
             {
                 Map = items => from item in items
-                    let node = item.Nodes.FirstOrDefault(x => x.Key == item.Id)
-                    select new { Path = node.Value };
+                               let node = item.Nodes.FirstOrDefault(x => x.Key == item.Id)
+                               select new { Path = node.Value };
 
                 Store("Path", FieldStorage.Yes);
             }
@@ -63,8 +60,8 @@ namespace SlowTests.Tests.Indexes
             public FirstOnDictionary_Index()
             {
                 Map = items => from item in items
-                    let node = item.Nodes.First()
-                    select new { Path = node.Value };
+                               let node = item.Nodes.First()
+                               select new { Path = node.Value };
 
                 Store("Path", FieldStorage.Yes);
             }
@@ -80,8 +77,8 @@ namespace SlowTests.Tests.Indexes
             public FirstOnDictionaryWithPredicate_Index()
             {
                 Map = items => from item in items
-                    let node = item.Nodes.First(x => x.Key == item.Id)
-                    select new { Path = node.Value };
+                               let node = item.Nodes.First(x => x.Key == item.Id)
+                               select new { Path = node.Value };
 
                 Store("Path", FieldStorage.Yes);
             }
@@ -90,15 +87,15 @@ namespace SlowTests.Tests.Indexes
         [Fact]
         public void IndexWithSingleOrDefaultOnDictionary()
         {
-            IndexWithDynamicSource<SingleOrDefaultOnDictionary_Index>();
+            IndexWithDynamicSource<SingleOrDefaultOnDictionary_Index>(waitForErrors: true);
         }
         public class SingleOrDefaultOnDictionary_Index : AbstractIndexCreationTask<Item>
         {
             public SingleOrDefaultOnDictionary_Index()
             {
                 Map = items => from item in items
-                    let node = item.Nodes.SingleOrDefault()
-                    select new { Path = node.Value };
+                               let node = item.Nodes.SingleOrDefault()
+                               select new { Path = node.Value };
 
                 Store("Path", FieldStorage.Yes);
             }
@@ -114,8 +111,8 @@ namespace SlowTests.Tests.Indexes
             public SingleOrDefaultOnDictionaryWithPredicate_Index()
             {
                 Map = items => from item in items
-                    let node = item.Nodes.SingleOrDefault(x => x.Key == item.Id)
-                    select new { Path = node.Value };
+                               let node = item.Nodes.SingleOrDefault(x => x.Key == item.Id)
+                               select new { Path = node.Value };
 
                 Store("Path", FieldStorage.Yes);
             }
@@ -124,15 +121,15 @@ namespace SlowTests.Tests.Indexes
         [Fact]
         public void IndexWithSingleOnDictionary()
         {
-            IndexWithDynamicSource<SingleOnDictionary_Index>();
+            IndexWithDynamicSource<SingleOnDictionary_Index>(waitForErrors: true);
         }
         public class SingleOnDictionary_Index : AbstractIndexCreationTask<Item>
         {
             public SingleOnDictionary_Index()
             {
                 Map = items => from item in items
-                    let node = item.Nodes.Single()
-                    select new { Path = node.Value };
+                               let node = item.Nodes.Single()
+                               select new { Path = node.Value };
 
                 Store("Path", FieldStorage.Yes);
             }
@@ -148,8 +145,8 @@ namespace SlowTests.Tests.Indexes
             public SingleOnDictionaryWithPredicate_Index()
             {
                 Map = items => from item in items
-                    let node = item.Nodes.Single(x => x.Key == item.Id)
-                    select new { Path = node.Value };
+                               let node = item.Nodes.Single(x => x.Key == item.Id)
+                               select new { Path = node.Value };
 
                 Store("Path", FieldStorage.Yes);
             }
@@ -165,8 +162,8 @@ namespace SlowTests.Tests.Indexes
             public LastOrDefaultOnDictionary_Index()
             {
                 Map = items => from item in items
-                    let node = item.Nodes.Last()
-                    select new { Path = node.Value };
+                               let node = item.Nodes.Last()
+                               select new { Path = node.Value };
 
                 Store("Path", FieldStorage.Yes);
             }
@@ -182,8 +179,8 @@ namespace SlowTests.Tests.Indexes
             public LastOrDefaultOnDictionaryWithPredicate_Index()
             {
                 Map = items => from item in items
-                    let node = item.Nodes.LastOrDefault(x => x.Key == item.Id)
-                    select new { Path = node.Value };
+                               let node = item.Nodes.LastOrDefault(x => x.Key == item.Id)
+                               select new { Path = node.Value };
 
                 Store("Path", FieldStorage.Yes);
             }
@@ -199,8 +196,8 @@ namespace SlowTests.Tests.Indexes
             public LastOnDictionary_Index()
             {
                 Map = items => from item in items
-                    let node = item.Nodes.Last()
-                    select new { Path = node.Value };
+                               let node = item.Nodes.Last()
+                               select new { Path = node.Value };
 
                 Store("Path", FieldStorage.Yes);
             }
@@ -216,14 +213,14 @@ namespace SlowTests.Tests.Indexes
             public LastOnDictionaryWithPredicate_Index()
             {
                 Map = items => from item in items
-                    let node = item.Nodes.Last(x => x.Key == item.Id)
-                    select new { Path = node.Value };
+                               let node = item.Nodes.Last(x => x.Key == item.Id)
+                               select new { Path = node.Value };
 
                 Store("Path", FieldStorage.Yes);
             }
         }
 
-        public void IndexWithDynamicSource<T>() where T : AbstractIndexCreationTask<Item>, new()
+        public void IndexWithDynamicSource<T>(bool waitForErrors = false) where T : AbstractIndexCreationTask<Item>, new()
         {
             var index = new T();
             using (var store = GetDocumentStore())
@@ -236,14 +233,26 @@ namespace SlowTests.Tests.Indexes
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
-                
-                var errors = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { index.IndexName }))
-                    .SelectMany(e => e.Errors)
-                    .Select(e => e.Error)
-                    .ToArray();
+                string[] errors;
+                if (waitForErrors == false)
+                {
+                    WaitForIndexing(store);
+
+                    errors = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { index.IndexName }))
+                        .SelectMany(e => e.Errors)
+                        .Select(e => e.Error)
+                        .ToArray();
+                }
+                else
+                {
+                    errors = WaitForIndexingErrors(store, new[] { index.IndexName })
+                        .SelectMany(e => e.Errors)
+                        .Select(e => e.Error)
+                        .ToArray();
+                }
+
                 var errorsString = string.Join("\n", errors);
-                
+
                 using (var session = store.OpenSession())
                 {
 
@@ -282,7 +291,7 @@ namespace SlowTests.Tests.Indexes
         {
             public string Path { get; set; }
         }
-        
+
         public class Item
         {
             public string Id { get; set; }

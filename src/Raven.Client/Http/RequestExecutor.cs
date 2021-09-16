@@ -2126,14 +2126,14 @@ namespace Raven.Client.Http
             }
         }
 
-        public async Task<(int, ServerNode)> GetRequestedNode(string nodeTag)
+        public async Task<(int Index, ServerNode Node)> GetRequestedNode(string nodeTag)
         {
             await EnsureNodeSelector().ConfigureAwait(false);
 
             return _nodeSelector.GetRequestedNode(nodeTag);
         }
 
-        public async Task<(int, ServerNode)> GetPreferredNode()
+        public async Task<(int Index, ServerNode Node)> GetPreferredNode()
         {
             await EnsureNodeSelector().ConfigureAwait(false);
 

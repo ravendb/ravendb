@@ -481,12 +481,13 @@ class importDatabaseFromSql extends viewModelBase {
     exportConfiguration() {
         const exportFileName = `Sql-import-${moment().format("YYYY-MM-DD-HH-mm")}`;
 
-        const exportData = {
+        const exportData: exportDataDto = {
             Schema: this.model.dbSchema,
             Configuration: this.model.toDto(),
             Advanced: this.model.advancedSettingsDto(),
-            BinaryToAttachment: this.model.binaryToAttachment()
-        } as exportDataDto;
+            BinaryToAttachment: this.model.binaryToAttachment(),
+            DatabaseName: undefined
+        };
         
         fileDownloader.downloadAsJson(exportData, exportFileName + ".json", exportFileName);
     }

@@ -9,6 +9,7 @@ using Amazon.Glacier.Model;
 using Amazon.Runtime;
 using Amazon.Runtime.Internal.Util;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Server.Config.Categories;
 using Sparrow;
 using Sparrow.Binary;
 
@@ -28,8 +29,13 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
         private readonly Progress _progress;
         private readonly CancellationToken _cancellationToken;
 
-        public RavenAwsGlacierClient(GlacierSettings glacierSettings, Progress progress = null, CancellationToken cancellationToken = default)
+        public RavenAwsGlacierClient(GlacierSettings glacierSettings, Config.Categories.BackupConfiguration configuration, Progress progress = null, CancellationToken cancellationToken = default)
         {
+            if (glacierSettings == null)
+                throw new ArgumentNullException(nameof(glacierSettings));
+            if (configuration == null)
+                throw new ArgumentNullException(nameof(configuration));
+
             if (string.IsNullOrWhiteSpace(glacierSettings.AwsAccessKey))
                 throw new ArgumentException("AWS Access Key cannot be null or empty");
 
@@ -50,7 +56,12 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             else
                 credentials = new SessionAWSCredentials(glacierSettings.AwsAccessKey, glacierSettings.AwsSecretKey, glacierSettings.AwsSessionToken);
 
-            _client = new AmazonGlacierClient(credentials, region);
+            _client = new AmazonGlacierClient(credentials, new AmazonGlacierConfig
+            {
+                RegionEndpoint = region,
+                Timeout = configuration.CloudStorageOperationTimeout.AsTimeSpan
+            });
+
             _region = glacierSettings.AwsRegionName;
             _vaultName = glacierSettings.VaultName;
             _progress = progress;
@@ -105,7 +116,12 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                             VaultName = _vaultName,
                             AccountId = "-",
                             Body = partStream,
-                            StreamTransferProgress = (_, args) => _progress?.UploadProgress.UpdateUploaded(args.IncrementTransferred),
+                            StreamTransferProgress = (_, args) =>
+                            {
+                                _progress?.UploadProgress.ChangeState(UploadState.Uploading);
+                                _progress?.UploadProgress.UpdateUploaded(args.IncrementTransferred);
+                                _progress?.OnUploadProgress?.Invoke();
+                            },
                             Checksum = partChecksum
                         };
 
@@ -134,7 +150,12 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                     ArchiveDescription = archiveDescription,
                     Body = stream,
                     VaultName = _vaultName,
-                    StreamTransferProgress = (_, args) => _progress?.UploadProgress.UpdateUploaded(args.IncrementTransferred),
+                    StreamTransferProgress = (_, args) =>
+                    {
+                        _progress?.UploadProgress.ChangeState(UploadState.Uploading);
+                        _progress?.UploadProgress.UpdateUploaded(args.IncrementTransferred);
+                        _progress?.OnUploadProgress?.Invoke();
+                    },
                     Checksum = TreeHashGenerator.CalculateTreeHash(stream)
                 }, _cancellationToken);
 

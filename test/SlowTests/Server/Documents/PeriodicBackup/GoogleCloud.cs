@@ -12,7 +12,7 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.PeriodicBackup
 {
-    public class GoogleStorage : RavenTestBase
+    public class GoogleStorage : CloudBackupTestBase
     {
         public GoogleStorage(ITestOutputHelper output) : base(output)
         {
@@ -21,7 +21,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [GoogleCloudFact]
         public void list_buckets()
         {
-            using (var client = new RavenGoogleCloudClient(GoogleCloudFactAttribute.GoogleCloudSettings))
+            using (var client = new RavenGoogleCloudClient(GoogleCloudFactAttribute.GoogleCloudSettings, DefaultConfiguration))
             {
                 var buckets = client.ListBuckets();
                 foreach (var b in buckets)
@@ -35,7 +35,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         public async Task uploading_objects()
         {
             var fileName = Guid.NewGuid().ToString();
-            using (var client = new RavenGoogleCloudClient(GoogleCloudFactAttribute.GoogleCloudSettings))
+            using (var client = new RavenGoogleCloudClient(GoogleCloudFactAttribute.GoogleCloudSettings, DefaultConfiguration))
             {
                 try
                 {
@@ -56,7 +56,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         public async Task download_objects()
         {
             var fileName = Guid.NewGuid().ToString();
-            using (var client = new RavenGoogleCloudClient(GoogleCloudFactAttribute.GoogleCloudSettings))
+            using (var client = new RavenGoogleCloudClient(GoogleCloudFactAttribute.GoogleCloudSettings, DefaultConfiguration))
             {
                 try
                 {
@@ -83,7 +83,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         public async Task delete_objects()
         {
             var fileName = Guid.NewGuid().ToString();
-            using (var client = new RavenGoogleCloudClient(GoogleCloudFactAttribute.GoogleCloudSettings))
+            using (var client = new RavenGoogleCloudClient(GoogleCloudFactAttribute.GoogleCloudSettings, DefaultConfiguration))
             {
                 await client.UploadObjectAsync(
                     fileName,
@@ -111,7 +111,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         public async Task upload_object_with_metadata()
         {
             var fileName = Guid.NewGuid().ToString();
-            using (var client = new RavenGoogleCloudClient(GoogleCloudFactAttribute.GoogleCloudSettings))
+            using (var client = new RavenGoogleCloudClient(GoogleCloudFactAttribute.GoogleCloudSettings, DefaultConfiguration))
             {
                 try
                 {
@@ -140,7 +140,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         {
             var file1 = "file1.txt";
             var file2 = "folder1/file2.txt";
-            using (var client = new RavenGoogleCloudClient(GoogleCloudFactAttribute.GoogleCloudSettings))
+            using (var client = new RavenGoogleCloudClient(GoogleCloudFactAttribute.GoogleCloudSettings, DefaultConfiguration))
             {
                 try
                 {

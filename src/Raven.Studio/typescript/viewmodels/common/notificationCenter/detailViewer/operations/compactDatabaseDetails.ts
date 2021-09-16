@@ -70,7 +70,7 @@ class compactDatabaseDetails extends abstractOperationDetails {
                 return previousMessages.concat(...errors);
             } else if (this.op.isCompleted()) {
                 const result = this.op.result() as Raven.Client.ServerWide.Operations.CompactionResult;
-                const messages = [] as string[];
+                const messages: string[] = [];
 
                 if (result) {
                     if (result.IndexesResults) {

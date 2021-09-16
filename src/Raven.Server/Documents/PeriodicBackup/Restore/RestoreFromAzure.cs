@@ -6,16 +6,17 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Documents.PeriodicBackup.Azure;
 using Raven.Server.ServerWide;
+using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
     public class RestoreFromAzure : RestoreBackupTaskBase
     {
-        private readonly RavenAzureClient _client;
+        private readonly IRavenAzureClient _client;
         private readonly string _remoteFolderName;
         public RestoreFromAzure(ServerStore serverStore, RestoreFromAzureConfiguration restoreFromConfiguration, string nodeTag, OperationCancelToken operationCancelToken) : base(serverStore, restoreFromConfiguration, nodeTag, operationCancelToken)
         {
-            _client = new RavenAzureClient(restoreFromConfiguration.Settings);
+            _client = RavenAzureClient.Create(restoreFromConfiguration.Settings, serverStore.Configuration.Backup);
             _remoteFolderName = restoreFromConfiguration.Settings.RemoteFolderName;
         }
 
@@ -28,7 +29,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         protected override async Task<ZipArchive> GetZipArchiveForSnapshot(string path)
         {
             var blob = await _client.GetBlobAsync(path);
-            return new ZipArchive(blob.Data, ZipArchiveMode.Read);
+            var file = await CopyRemoteStreamLocally(blob.Data);
+            return new DeleteOnCloseZipArchive(file, ZipArchiveMode.Read);
         }
 
         protected override async Task<List<string>> GetFilesForRestore()

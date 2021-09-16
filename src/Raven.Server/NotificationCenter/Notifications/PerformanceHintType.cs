@@ -10,6 +10,7 @@
         UnusedCapacity,
         SlowIO,
         SqlEtl_SlowSql,
-        HugeDocuments
+        HugeDocuments,
+        Indexing_References
     }
 }

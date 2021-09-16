@@ -241,6 +241,10 @@ namespace Raven.Server.Documents.Indexes
             Suggestion = "Please verify index definitions and consider a re-design of your entities or indexes for better indexing performance."
         };
 
+        private IndexingReferenceLoadWarning.WarningDetails _referenceLoadWarning;
+
+        private bool _updateReferenceLoadWarning;
+
         private static readonly Size DefaultMaximumMemoryAllocation = new Size(32, SizeUnit.Megabytes);
 
         public long? LastTransactionId => _environment?.CurrentReadTransactionId;
@@ -2180,7 +2184,7 @@ namespace Raven.Server.Documents.Indexes
 
             bool mightBeMore = false;
 
-            using (DocumentDatabase.PreventFromUnloading())
+            using (DocumentDatabase.PreventFromUnloadingByIdleOperations())
             using (CultureHelper.EnsureInvariantCulture())
             using (var context = QueryOperationContext.Allocate(DocumentDatabase, this))
             using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
@@ -2228,11 +2232,11 @@ namespace Raven.Server.Documents.Indexes
                                     entriesCount = writeOperation.Value.EntriesCount();
                                 }
 
-                                UpdateThreadAllocations(indexContext, null, null, false);
+                                UpdateThreadAllocations(indexContext, null, null, IndexingWorkType.None);
                             }
 
                             IndexFieldsPersistence.Persist(indexContext);
-                            _indexStorage.WriteReferences(CurrentIndexingScope.Current, tx);
+                            HandleReferences(tx);
                         }
 
                         using (stats.For(IndexingOperation.Storage.Commit))
@@ -2281,6 +2285,18 @@ namespace Raven.Server.Documents.Indexes
                     return mightBeMore;
                 }
             }
+        }
+
+        private void HandleReferences(RavenTransaction tx)
+        {
+            _indexStorage.WriteReferences(CurrentIndexingScope.Current, tx);
+
+            if (_updateReferenceLoadWarning == false)
+                return;
+            
+            DocumentDatabase.NotificationCenter.Indexing.AddWarning(Name, _referenceLoadWarning);
+
+            _updateReferenceLoadWarning = false;
         }
 
         private void DisposeIndexWriterOnError(Lazy<IndexWriteOperation> writeOperation)
@@ -4029,6 +4045,17 @@ namespace Raven.Server.Documents.Indexes
             DocumentDatabase.NotificationCenter.Indexing.AddWarning(Name, _indexOutputsPerDocumentWarning);
         }
 
+        public void CheckReferenceLoadsPerformanceHintLimit(HandleReferencesBase.Reference reference, int numberOfLoads)
+        {
+            if (numberOfLoads < PerformanceHintsConfig.MaxNumberOfLoadsPerReference)
+                return;
+
+            _referenceLoadWarning ??= new IndexingReferenceLoadWarning.WarningDetails();
+
+            if (_referenceLoadWarning.Add(reference, numberOfLoads))
+                _updateReferenceLoadWarning = true;
+        }
+
         public virtual Dictionary<string, HashSet<CollectionName>> GetReferencedCollections()
         {
             return null;
@@ -4135,31 +4162,29 @@ namespace Raven.Server.Documents.Indexes
             RenewTransaction
         }
 
-        public CanContinueBatchResult CanContinueBatch(IndexingStatsScope stats, QueryOperationContext queryContext, TransactionOperationContext indexingContext,
-            Lazy<IndexWriteOperation> indexWriteOperation, long currentEtag, long maxEtag, long count,
-            Stopwatch sw, ref TimeSpan maxTimeForDocumentTransactionToRemainOpen)
+        public CanContinueBatchResult CanContinueBatch(in CanContinueBatchParameters parameters, ref TimeSpan maxTimeForDocumentTransactionToRemainOpen)
         {
-            if (Configuration.MapBatchSize.HasValue && count >= Configuration.MapBatchSize.Value)
+            if (Configuration.MapBatchSize.HasValue && parameters.Count >= Configuration.MapBatchSize.Value)
             {
-                stats.RecordMapCompletedReason($"Reached maximum configured map batch size ({Configuration.MapBatchSize.Value:#,#;;0}).");
+                parameters.Stats.RecordMapCompletedReason($"Reached maximum configured map batch size ({Configuration.MapBatchSize.Value:#,#;;0}).");
                 return CanContinueBatchResult.False;
             }
 
-            if (currentEtag >= maxEtag && stats.Duration >= Configuration.MapTimeoutAfterEtagReached.AsTimeSpan)
+            if (parameters.CurrentEtag >= parameters.MaxEtag && parameters.Stats.Duration >= Configuration.MapTimeoutAfterEtagReached.AsTimeSpan)
             {
-                stats.RecordMapCompletedReason($"Reached maximum etag that was seen when batch started ({maxEtag:#,#;;0}) and map duration ({stats.Duration}) exceeded configured limit ({Configuration.MapTimeoutAfterEtagReached.AsTimeSpan})");
+                parameters.Stats.RecordMapCompletedReason($"Reached maximum etag that was seen when batch started ({parameters.MaxEtag:#,#;;0}) and map duration ({parameters.Stats.Duration}) exceeded configured limit ({Configuration.MapTimeoutAfterEtagReached.AsTimeSpan})");
                 return CanContinueBatchResult.False;
             }
 
-            if (count % 128 != 0)
+            if (parameters.Count % 128 != 0)
             {
                 // do the actual check only every N ops
                 return CanContinueBatchResult.True;
             }
 
-            if (sw.Elapsed > maxTimeForDocumentTransactionToRemainOpen)
+            if (parameters.Sw.Elapsed > maxTimeForDocumentTransactionToRemainOpen)
             {
-                if (queryContext.Documents.ShouldRenewTransactionsToAllowFlushing())
+                if (parameters.QueryContext.Documents.ShouldRenewTransactionsToAllowFlushing())
                     return CanContinueBatchResult.RenewTransaction;
 
                 // if we haven't had writes in the meantime, there is no point
@@ -4170,53 +4195,53 @@ namespace Raven.Server.Documents.Indexes
                         Configuration.MaxTimeForDocumentTransactionToRemainOpen.AsTimeSpan);
             }
 
-            if (stats.Duration >= Configuration.MapTimeout.AsTimeSpan)
+            if (parameters.Stats.Duration >= Configuration.MapTimeout.AsTimeSpan)
             {
-                stats.RecordMapCompletedReason($"Exceeded maximum configured map duration ({Configuration.MapTimeout.AsTimeSpan}). Was {stats.Duration}");
+                parameters.Stats.RecordMapCompletedReason($"Exceeded maximum configured map duration ({Configuration.MapTimeout.AsTimeSpan}). Was {parameters.Stats.Duration}");
                 return CanContinueBatchResult.False;
             }
 
-            if (ShouldReleaseTransactionBecauseFlushIsWaiting(stats))
+            if (ShouldReleaseTransactionBecauseFlushIsWaiting(parameters.Stats))
             {
-                stats.RecordMapCompletedReason("Releasing the transaction because we have a pending flush");
+                parameters.Stats.RecordMapCompletedReason("Releasing the transaction because we have a pending flush");
                 return CanContinueBatchResult.False;
             }
 
-            var txAllocationsInBytes = UpdateThreadAllocations(indexingContext, indexWriteOperation, stats, updateReduceStats: false);
+            var txAllocationsInBytes = UpdateThreadAllocations(parameters.IndexingContext, parameters.IndexWriteOperation, parameters.Stats, parameters.WorkType);
 
             // we need to take the read transaction encryption size into account as we might read a lot of documents and produce very little indexing output.
-            txAllocationsInBytes += queryContext.Documents.Transaction.InnerTransaction.LowLevelTransaction.AdditionalMemoryUsageSize.GetValue(SizeUnit.Bytes);
+            txAllocationsInBytes += parameters.QueryContext.Documents.Transaction.InnerTransaction.LowLevelTransaction.AdditionalMemoryUsageSize.GetValue(SizeUnit.Bytes);
 
             if (_indexDisabled)
             {
-                stats.RecordMapCompletedReason("Index was disabled");
+                parameters.Stats.RecordMapCompletedReason("Index was disabled");
                 return CanContinueBatchResult.False;
             }
 
             var cpuCreditsAlertFlag = DocumentDatabase.ServerStore.Server.CpuCreditsBalance.BackgroundTasksAlertRaised;
             if (cpuCreditsAlertFlag.IsRaised())
             {
-                HandleStoppedBatchesConcurrently(stats, count,
+                HandleStoppedBatchesConcurrently(parameters.Stats, parameters.Count,
                    canContinue: () => cpuCreditsAlertFlag.IsRaised() == false,
                    reason: "CPU credits balance is low");
 
-                stats.RecordMapCompletedReason($"The batch was stopped after processing {count:#,#;;0} documents because the CPU credits balance is almost completely used");
+                parameters.Stats.RecordMapCompletedReason($"The batch was stopped after processing {parameters.Count:#,#;;0} documents because the CPU credits balance is almost completely used");
                 return CanContinueBatchResult.False;
             }
 
-            if (_lowMemoryFlag.IsRaised() && count > MinBatchSize)
+            if (_lowMemoryFlag.IsRaised() && parameters.Count > MinBatchSize)
             {
-                HandleStoppedBatchesConcurrently(stats, count,
+                HandleStoppedBatchesConcurrently(parameters.Stats, parameters.Count,
                     canContinue: () => _lowMemoryFlag.IsRaised() == false,
                     reason: "low memory");
 
-                stats.RecordMapCompletedReason($"The batch was stopped after processing {count:#,#;;0} documents because of low memory");
+                parameters.Stats.RecordMapCompletedReason($"The batch was stopped after processing {parameters.Count:#,#;;0} documents because of low memory");
                 return CanContinueBatchResult.False;
             }
 
-            if (_firstBatchTimeout.HasValue && stats.Duration > _firstBatchTimeout)
+            if (_firstBatchTimeout.HasValue && parameters.Stats.Duration > _firstBatchTimeout)
             {
-                stats.RecordMapCompletedReason(
+                parameters.Stats.RecordMapCompletedReason(
                     $"Stopping the first batch after {_firstBatchTimeout} to ensure just created index has some results");
 
                 _firstBatchTimeout = null;
@@ -4224,28 +4249,28 @@ namespace Raven.Server.Documents.Indexes
                 return CanContinueBatchResult.False;
             }
 
-            if (stats.ErrorsCount >= IndexStorage.MaxNumberOfKeptErrors)
+            if (parameters.Stats.ErrorsCount >= IndexStorage.MaxNumberOfKeptErrors)
             {
-                stats.RecordMapCompletedReason(
-                    $"Number of errors ({stats.ErrorsCount}) reached maximum number of allowed errors per batch ({IndexStorage.MaxNumberOfKeptErrors})");
+                parameters.Stats.RecordMapCompletedReason(
+                    $"Number of errors ({parameters.Stats.ErrorsCount}) reached maximum number of allowed errors per batch ({IndexStorage.MaxNumberOfKeptErrors})");
                 return CanContinueBatchResult.False;
             }
 
             if (DocumentDatabase.Is32Bits)
             {
-                IPagerLevelTransactionState pagerLevelTransactionState = queryContext.Documents.Transaction?.InnerTransaction?.LowLevelTransaction;
+                IPagerLevelTransactionState pagerLevelTransactionState = parameters.QueryContext.Documents.Transaction?.InnerTransaction?.LowLevelTransaction;
                 var total32BitsMappedSize = pagerLevelTransactionState?.GetTotal32BitsMappedSize();
                 if (total32BitsMappedSize > MappedSizeLimitOn32Bits)
                 {
-                    stats.RecordMapCompletedReason($"Running in 32 bits and have {total32BitsMappedSize} mapped in docs ctx");
+                    parameters.Stats.RecordMapCompletedReason($"Running in 32 bits and have {total32BitsMappedSize} mapped in docs ctx");
                     return CanContinueBatchResult.False;
                 }
 
-                pagerLevelTransactionState = indexingContext.Transaction?.InnerTransaction?.LowLevelTransaction;
+                pagerLevelTransactionState = parameters.IndexingContext.Transaction?.InnerTransaction?.LowLevelTransaction;
                 total32BitsMappedSize = pagerLevelTransactionState?.GetTotal32BitsMappedSize();
                 if (total32BitsMappedSize > MappedSizeLimitOn32Bits)
                 {
-                    stats.RecordMapCompletedReason($"Running in 32 bits and have {total32BitsMappedSize} mapped in index ctx");
+                    parameters.Stats.RecordMapCompletedReason($"Running in 32 bits and have {total32BitsMappedSize} mapped in index ctx");
                     return CanContinueBatchResult.False;
                 }
             }
@@ -4255,7 +4280,7 @@ namespace Raven.Server.Documents.Indexes
                 var txAllocations = new Size(txAllocationsInBytes, SizeUnit.Bytes);
                 if (txAllocations > TransactionSizeLimit.Value)
                 {
-                    stats.RecordMapCompletedReason($"Reached transaction size limit ({TransactionSizeLimit.Value}). Allocated {new Size(txAllocationsInBytes, SizeUnit.Bytes)} in current transaction");
+                    parameters.Stats.RecordMapCompletedReason($"Reached transaction size limit ({TransactionSizeLimit.Value}). Allocated {new Size(txAllocationsInBytes, SizeUnit.Bytes)} in current transaction");
                     return CanContinueBatchResult.False;
                 }
             }
@@ -4264,21 +4289,21 @@ namespace Raven.Server.Documents.Indexes
             {
                 var currentManagedAllocations = new Size(GC.GetAllocatedBytesForCurrentThread(), SizeUnit.Bytes);
                 var diff = currentManagedAllocations - _initialManagedAllocations;
-                stats.AddAllocatedBytes(diff.GetValue(SizeUnit.Bytes));
+                parameters.Stats.AddAllocatedBytes(diff.GetValue(SizeUnit.Bytes));
 
                 if (diff > Configuration.ManagedAllocationsBatchLimit.Value)
                 {
-                    stats.RecordMapCompletedReason($"Reached managed allocations limit ({Configuration.ManagedAllocationsBatchLimit.Value}). Allocated {diff} in current batch");
+                    parameters.Stats.RecordMapCompletedReason($"Reached managed allocations limit ({Configuration.ManagedAllocationsBatchLimit.Value}). Allocated {diff} in current batch");
                     return CanContinueBatchResult.False;
                 }
             }
 
             if (Configuration.ScratchSpaceLimit != null &&
-                _environment.Options.ScratchSpaceUsage.ScratchSpaceInBytes > Configuration.ScratchSpaceLimit.Value.GetValue(SizeUnit.Bytes) && count > MinBatchSize)
+                _environment.Options.ScratchSpaceUsage.ScratchSpaceInBytes > Configuration.ScratchSpaceLimit.Value.GetValue(SizeUnit.Bytes) && parameters.Count > MinBatchSize)
             {
                 _scratchSpaceLimitExceeded = true;
 
-                stats.RecordMapCompletedReason(
+                parameters.Stats.RecordMapCompletedReason(
                     $"Reached scratch space limit ({Configuration.ScratchSpaceLimit.Value}). Current scratch space is {new Size(_environment.Options.ScratchSpaceUsage.ScratchSpaceInBytes, SizeUnit.Bytes)}");
 
                 return CanContinueBatchResult.False;
@@ -4286,11 +4311,11 @@ namespace Raven.Server.Documents.Indexes
 
             var globalIndexingScratchSpaceUsage = DocumentDatabase.ServerStore.GlobalIndexingScratchSpaceMonitor;
 
-            if (globalIndexingScratchSpaceUsage?.IsLimitExceeded == true && count > MinBatchSize)
+            if (globalIndexingScratchSpaceUsage?.IsLimitExceeded == true && parameters.Count > MinBatchSize)
             {
                 _scratchSpaceLimitExceeded = true;
 
-                stats.RecordMapCompletedReason(
+                parameters.Stats.RecordMapCompletedReason(
                     $"Reached global scratch space limit for indexing ({globalIndexingScratchSpaceUsage.LimitAsSize}). Current scratch space is {globalIndexingScratchSpaceUsage.ScratchSpaceAsSize}");
 
                 return CanContinueBatchResult.False;
@@ -4311,10 +4336,10 @@ namespace Raven.Server.Documents.Indexes
                 {
                     Interlocked.Increment(ref _allocationCleanupNeeded);
 
-                    queryContext.Documents.DoNotReuse = true;
-                    indexingContext.DoNotReuse = true;
+                    parameters.QueryContext.Documents.DoNotReuse = true;
+                    parameters.IndexingContext.DoNotReuse = true;
 
-                    if (stats.MapAttempts >= Configuration.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory)
+                    if (parameters.Stats.MapAttempts >= Configuration.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory)
                     {
                         if (_logger.IsInfoEnabled)
                         {
@@ -4331,17 +4356,27 @@ namespace Raven.Server.Documents.Indexes
                             _logger.Info(message);
                         }
 
-                        HandleStoppedBatchesConcurrently(stats, count,
+                        HandleStoppedBatchesConcurrently(parameters.Stats, parameters.Count,
                             canContinue: MemoryUsageGuard.CanIncreaseMemoryUsageForThread,
                             reason: "cannot budget additional memory");
 
-                        stats.RecordMapCompletedReason("Cannot budget additional memory for batch");
+                        parameters.Stats.RecordMapCompletedReason("Cannot budget additional memory for batch");
                         canContinue = false;
                     }
                 }
 
                 if (memoryUsage != null)
-                    stats.RecordMapMemoryStats(memoryUsage.WorkingSet, memoryUsage.PrivateMemory, _currentMaximumAllowedMemory.GetValue(SizeUnit.Bytes));
+                {
+                    switch (parameters.WorkType)
+                    {
+                        case IndexingWorkType.Map:
+                            parameters.Stats.RecordMapMemoryStats(memoryUsage.WorkingSet, memoryUsage.PrivateMemory, _currentMaximumAllowedMemory.GetValue(SizeUnit.Bytes));
+                            break;
+                        case IndexingWorkType.References:
+                            parameters.Stats.RecordReferenceMemoryStats(memoryUsage.WorkingSet, memoryUsage.PrivateMemory, _currentMaximumAllowedMemory.GetValue(SizeUnit.Bytes));
+                            break;
+                    }
+                }
 
                 return canContinue ? CanContinueBatchResult.True : CanContinueBatchResult.False;
             }
@@ -4353,7 +4388,7 @@ namespace Raven.Server.Documents.Indexes
             TransactionOperationContext indexingContext,
             Lazy<IndexWriteOperation> indexWriteOperation,
             IndexingStatsScope stats,
-            bool updateReduceStats)
+            IndexingWorkType workType)
         {
             var threadAllocations = _threadAllocations.TotalAllocated;
             var txAllocations = indexingContext.Transaction.InnerTransaction.LowLevelTransaction.NumberOfModifiedPages
@@ -4376,13 +4411,18 @@ namespace Raven.Server.Documents.Indexes
             if (stats != null)
             {
                 var allocatedForStats = threadAllocations + totalTxAllocations + indexWriterAllocations;
-                if (updateReduceStats)
+
+                switch (workType)
                 {
-                    stats.RecordReduceAllocations(allocatedForStats);
-                }
-                else
-                {
-                    stats.RecordMapAllocations(allocatedForStats);
+                    case IndexingWorkType.References:
+                        stats.RecordReferenceAllocations(allocatedForStats);
+                        break;
+                    case IndexingWorkType.Map:
+                        stats.RecordMapAllocations(allocatedForStats);
+                        break;
+                    case IndexingWorkType.Reduce:
+                        stats.RecordReduceAllocations(allocatedForStats);
+                        break;
                 }
             }
 

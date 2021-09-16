@@ -26,7 +26,7 @@ namespace SlowTests.Issues
                     database))
                 {
 
-                    index.IndexPersistence.LuceneDirectory.TempFileCache.SetMemoryStreamCapacity(1);
+                    index.IndexPersistence.TempFileCache.SetMemoryStreamCapacity(1);
                     testingStuff.RunFakeIndex(index);
 
                     using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
@@ -78,7 +78,7 @@ namespace SlowTests.Issues
                         },
                         database))
                     {
-                        newIndex.IndexPersistence.LuceneDirectory.TempFileCache.SetMemoryStreamCapacity(1);
+                        newIndex.IndexPersistence.TempFileCache.SetMemoryStreamCapacity(1);
                         testingStuff.RunFakeIndex(newIndex);
 
                         Assert.True(await mre.WaitAsync(TimeSpan.FromSeconds(15)), "Index wasn't replaced");

@@ -112,7 +112,7 @@ namespace Sparrow.Utils
             return value;
         }
 
-        public static async Task WaitFor(TimeSpan duration, CancellationToken token = default(CancellationToken))
+        public static async Task WaitFor(TimeSpan duration, CancellationToken token = default)
         {
             if (duration == TimeSpan.Zero)
                 return;

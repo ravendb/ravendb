@@ -225,7 +225,7 @@ class dashboardChart {
             return {
                 date: this.data[0].values[bestIndex].x,
                 values: values
-            } as dashboardChartTooltipProviderArgs;
+            };
         }
     }
     
@@ -382,15 +382,15 @@ class dashboardChart {
             return input;
         }
         
-        const firstElement = {
+        const firstElement: chartItemData = {
             x: input[0].x,
             y: 0
-        } as chartItemData;
+        };
         
-        const lastElement = {
+        const lastElement: chartItemData = {
             x: _.last(input).x,
             y: 0
-        } as chartItemData;
+        };
         
         return [firstElement].concat(input, [lastElement]);
     } 

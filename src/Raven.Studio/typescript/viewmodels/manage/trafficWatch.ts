@@ -39,11 +39,11 @@ class trafficWatch extends viewModelBase {
     static dateTimeFormat = "YYYY-MM-DD HH:mm:ss.SSS";
     
     private liveClient = ko.observable<trafficWatchWebSocketClient>();
-    private allData = [] as Raven.Client.Documents.Changes.TrafficWatchChangeBase[];
+    private allData: Raven.Client.Documents.Changes.TrafficWatchChangeBase[] = [];
     
-    private filteredData = [] as Raven.Client.Documents.Changes.TrafficWatchChangeBase[];
-    private filteredDataHttp = [] as Raven.Client.Documents.Changes.TrafficWatchHttpChange[];
-    private filteredDataTcp = [] as Raven.Client.Documents.Changes.TrafficWatchTcpChange[];
+    private filteredData: Raven.Client.Documents.Changes.TrafficWatchChangeBase[] = [];
+    private filteredDataHttp: Raven.Client.Documents.Changes.TrafficWatchHttpChange[] = [];
+    private filteredDataTcp: Raven.Client.Documents.Changes.TrafficWatchTcpChange[] = [];
 
     private sourceIps: string[] = [];
 
@@ -290,7 +290,7 @@ class trafficWatch extends viewModelBase {
             }
     
     private updatePercentiles(data: Raven.Client.Documents.Changes.TrafficWatchHttpChange[]): void {
-        const timings = [] as number[];
+        const timings: number[] = [];
 
         for (let i = data.length - 1; i >= 0; i--) {
             const item = data[i];

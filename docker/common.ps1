@@ -53,6 +53,15 @@ function GetUbuntuImageTags($repo, $version, $arch) {
             )
             break;
         }
+        "arm64v8" {
+            return @(
+                "$($repo):ubuntu-arm64v8-latest",
+                "$($repo):ubuntu-arm64v8-latest-lts",
+                "$($repo):5.2-ubuntu-arm64v8-latest",
+                "$($repo):$($version)-ubuntu.20.04-arm64v8"
+                )
+                break;
+        }
         Default {
             throw "Arch not supported."
         }

@@ -131,7 +131,10 @@ namespace rvn
                         switch (delimiter)
                         {
                             case RavenCli.Delimiter.ReadLine:
-                                writer.WriteLine(Console.ReadLine());
+                                var readValue = Console.ReadLine();
+                                if (readValue == null)
+                                    Environment.Exit(0);
+                                writer.WriteLine(readValue);
                                 break;
                             case RavenCli.Delimiter.ReadKey:
                                 writer.Write(Console.ReadKey().KeyChar);

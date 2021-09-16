@@ -453,7 +453,7 @@ namespace Raven.Server.Web.System
 
                 try
                 {
-                    SecretProtection.ValidateKeyUsages("Setup Wizard", certificate);
+                    SecretProtection.ValidateKeyUsages("Setup Wizard", certificate, ServerStore.Configuration.Security.CertificateValidationKeyUsages);
                 }
                 catch (Exception e)
                 {

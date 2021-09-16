@@ -1,0 +1,64 @@
+<div class="modal-dialog modal-lg indexingReferencesDetails" id="js-indexing-references-details" role="document">
+    <div class="modal-content force-text-wrap-word" tabindex="-1">
+        <div class="modal-header">
+            <button type="button" class="close" data-bind="click: close" aria-hidden="true">
+                <i class="icon-cancel"></i>
+            </button>
+            <div data-bind="with: hint">
+                <h3 class="modal-title" id="myModalLabel" data-bind="text: title, attr:{ class: 'modal-title ' + headerClass() }"></h3>
+                <div class="notification-time" data-bind="text: displayDate().format('LLL')"></div>
+            </div>
+        </div>
+        <div class="modal-body">
+            <h3 data-bind="html: hint.message"></h3>
+            <div class="margin-bottom" style="position: relative; height: 300px">
+                <virtual-grid style="height: 300px" class="resizable flex-window" params="controller: gridController"></virtual-grid>
+            </div>
+            <div data-bind="with: currentDetails">
+                <div class="flex-horizontal">
+                    <h3>Details:</h3>
+                </div>
+                <div class="modal-details">
+                    <div class="details-item">
+                        <div class="row">
+                            <div class="col-sm-3 text-right">
+                                Index Name
+                            </div>
+                            <div class="col-sm-9 details-value">
+                                <span data-bind="text: indexName"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="details-item">
+                        <div class="row">
+                            <div class="col-sm-3 text-right">
+                                Last warning time
+                            </div>
+                            <div class="col-sm-9 details-value">
+                                <span data-bind="text: lastWarningTime"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Reference ID</th>
+                                <th>Number of loads</th>
+                            </tr>
+                        </thead>
+                        <tbody data-bind="foreach: details">
+                            <tr>
+                                <td data-bind="text: referenceId"></td>
+                                <td data-bind="text: numberOfLoads.toLocaleString()"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer" data-bind="compose: 'common/notificationCenter/detailViewer/performanceHint/footerPartial.html'">
+        </div>
+    </div>
+</div>
+<div class="tooltip json-preview js-indexing-references-details-tooltip" style="opacity: 0">
+</div>

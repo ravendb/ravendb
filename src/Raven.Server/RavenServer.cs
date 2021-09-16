@@ -297,7 +297,7 @@ namespace Raven.Server
                         Logger.Operations("Could not open the server store", e);
                     throw;
                 }
-
+                
                 ServerStore.TriggerDatabases();
 
                 StartSnmp();
@@ -1795,6 +1795,10 @@ namespace Raven.Server
                         errors.Add(new IOException(msg, ex));
                         if (Logger.IsOperationsEnabled)
                             Logger.Operations(msg, ex);
+                        
+                        ServerStore.NotificationCenter.Add(AlertRaised.Create(Notification.ServerWide, "Unable to start tcp listener", msg,
+                            AlertType.TcpListenerError, NotificationSeverity.Error, key: $"tcp/listener/{ipAddress}/{port}", details: new ExceptionDetails(ex)));
+                        
                         continue;
                     }
 
@@ -1886,7 +1890,7 @@ namespace Raven.Server
                 EndPoint remoteEndPoint = null;
                 X509Certificate2 cert = null;
                 TcpConnectionHeaderMessage header = null;
-
+                
                 try
                 {
                     remoteEndPoint = tcpClient.Client.RemoteEndPoint;
@@ -2029,14 +2033,14 @@ namespace Raven.Server
                         {
                             throw new InvalidOperationException($"TCP negotiation dropped after reaching {maxRetries} retries, header:{headerJson}, this is probably a bug.");
                         }
-
+                        
                         header = JsonDeserializationClient.TcpConnectionHeaderMessage(headerJson);
 
                         if (Logger.IsInfoEnabled)
                         {
                             Logger.Info($"New {header.Operation} TCP connection to {header.DatabaseName ?? "the cluster node"} from {tcpClient.Client.RemoteEndPoint}");
                         }
-
+                        
                         //In the case where we have mismatched version but the other side doesn't know how to handle it.
                         if (header.Operation == TcpConnectionHeaderMessage.OperationTypes.Drop)
                         {
@@ -2053,7 +2057,7 @@ namespace Raven.Server
                             return header;
                         }
                     }
-
+                    
                     var status = TcpConnectionHeaderMessage.OperationVersionSupported(header.Operation, header.OperationVersion, out supported);
                     if (status == TcpConnectionHeaderMessage.SupportedStatus.Supported)
                         break;
@@ -2080,15 +2084,16 @@ namespace Raven.Server
                             $"Got a request to establish TCP connection to {header.DatabaseName ?? "the cluster node"} from {tcpClient.Client.RemoteEndPoint} " +
                             $"Didn't agree on {header.Operation} protocol version: {header.OperationVersion} will request to use version: {supported}.");
                     }
-
+                    
                     await RespondToTcpConnection(stream, context, $"Not supporting version {header.OperationVersion} for {header.Operation}", TcpConnectionStatus.TcpVersionMismatch,
                         supported);
                 }
 
-                bool authSuccessful = TryAuthorize(Configuration, tcp.Stream, header, tcpClient, out var err);
+                bool authSuccessful = TryAuthorize(Configuration, tcp.Stream, header, tcpClient, out var err, out TcpConnectionStatus statusResult);
                 //At this stage the error is not relevant.
-                await RespondToTcpConnection(stream, context, null,
-                    authSuccessful ? TcpConnectionStatus.Ok : TcpConnectionStatus.AuthorizationFailed,
+                
+                await RespondToTcpConnection(stream, context, err,
+                    authSuccessful ? TcpConnectionStatus.Ok : statusResult,
                     supported);
 
                 tcp.ProtocolVersion = supported;
@@ -2401,9 +2406,18 @@ namespace Raven.Server
             return (stream, null);
         }
 
-        private bool TryAuthorize(RavenConfiguration configuration, Stream stream, TcpConnectionHeaderMessage header, TcpClient tcpClient, out string msg)
+        private bool TryAuthorize(RavenConfiguration configuration, Stream stream, TcpConnectionHeaderMessage header, TcpClient tcpClient, out string msg, out TcpConnectionStatus statusResult)
         {
             msg = null;
+            if (header.ServerId != null && header.ServerId != ServerStore.ServerId.ToString())
+            {
+                msg = $"Tried to connect to server with Id {header.ServerId} at {tcpClient.Client.LocalEndPoint} "+
+                      $" but instead reached a server with Id {ServerStore.ServerId}. Check your network configuration.";
+                statusResult = TcpConnectionStatus.InvalidNetworkTopology;
+                return false;
+            }
+
+            statusResult = TcpConnectionStatus.AuthorizationFailed;
 
             if (configuration.Security.AuthenticationEnabled == false)
                 return true;

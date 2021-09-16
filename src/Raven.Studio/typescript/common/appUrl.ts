@@ -478,7 +478,7 @@ class appUrl {
         let indexToQueryComponent = indexNameOrHashToQuery as string;
         if (typeof indexNameOrHashToQuery === "number") {
             indexToQueryComponent = "recentquery-" + indexNameOrHashToQuery;
-        } 
+        }
 
         const indexPart = indexToQueryComponent ? "/" + encodeURIComponent(indexToQueryComponent) : "";
         return "#databases/query/index" + indexPart + "?" + databasePart + extraParameters;

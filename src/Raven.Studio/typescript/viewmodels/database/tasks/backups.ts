@@ -164,9 +164,9 @@ class backups extends viewModelBase {
     }
     
     private processTasksResult(result: Raven.Server.Web.System.OngoingTasksResult) {
-        const oldTasks = [
+        const oldTasks: Array<{ taskId: number }> = [
             ...this.periodicBackupTasks()
-            ] as Array<{ taskId: number }>;
+        ];
 
         const oldTaskIds = oldTasks.map(x => x.taskId);
         const newTaskIds = result.OngoingTasksList.map(x => x.TaskId);
