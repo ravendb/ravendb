@@ -15,9 +15,9 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
 
         private readonly DynamicAttachment _attachment;
 
-        public static InternalHandle CreateObjectBinder(V8EngineEx engine, AttachmentObjectInstance oi) 
+        public static InternalHandle CreateObjectBinder(V8EngineEx engine, AttachmentObjectInstance oi, bool keepAlive = false) 
         {
-            return engine.CreateObjectBinder<AttachmentObjectInstance.CustomBinder>(oi, engine.TypeBinderAttachmentObjectInstance);
+            return engine.CreateObjectBinder<AttachmentObjectInstance.CustomBinder>(oi, engine.TypeBinderAttachmentObjectInstance, keepAlive: keepAlive);
         }
 
         public AttachmentObjectInstance(DynamicAttachment attachment) : base()
@@ -72,7 +72,7 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
                 return engine.CreateValue(_attachment.Size);
             
             if (propertyName == GetContentAsStringMethodName)
-                return engine.CreateCLRCallBack(GetContentAsString, false)._;
+                return engine.CreateCLRCallBack(GetContentAsString, false);
 
             return InternalHandle.Empty;
         }

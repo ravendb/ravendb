@@ -377,9 +377,8 @@ namespace Raven.Server.Documents.Patch
 
         private void WriteJsInstance(InternalHandle jsObj, bool isRoot, bool filterProperties)
         {
-            var bo = jsObj.BoundObject;
             //using (var jsStrRes = jsObj.Engine.Execute("JSON.stringify").StaticCall(new InternalHandle(ref jsObj, true))) var strRes = jsStrRes.AsString;
-            var properties = (bo != null) ? GetBoundObjectProperties(bo) : jsObj.GetOwnProperties(); // TODO GetBoundObjectProperties could be prepaired and written avoiding toJs, fromJs translations
+            var properties = jsObj.IsBinder ? GetBoundObjectProperties(jsObj.BoundObject) : jsObj.GetOwnProperties(); // TODO GetBoundObjectProperties could be prepaired and written avoiding toJs, fromJs translations
             foreach (var (propertyName, jsPropertyValue) in properties)
             {
                 using (jsPropertyValue) {
@@ -414,36 +413,48 @@ namespace Raven.Server.Documents.Patch
             if (obj is Task task &&
                 task.IsCompleted == false)
             {
-                foreach (var property in type.GetProperties(BindingFlags.Instance | BindingFlags.Public))
+
+                using (InternalHandle jsObj = TaskCustomBinder.CreateObjectBinder(_engine, task, keepAlive: false))
                 {
-                    if (property.CanRead == false)
-                        continue;
-
-                    if (property.Name == nameof(Task<int>.Result))
+                    var binder = (ObjectBinder)jsObj.Object;
+                    foreach (var property in type.GetProperties(BindingFlags.Instance | BindingFlags.Public))
                     {
-                        yield return new KeyValuePair<string, InternalHandle>(property.Name, TaskCustomBinder.GetRunningTaskResult(_engine, task));
-                        continue;
-                    }
+                        if (property.CanRead == false)
+                            continue;
 
-                    InternalHandle jsRes = InternalHandle.Empty;
-                    yield return new KeyValuePair<string, InternalHandle>(property.Name, TaskCustomBinder.CreateObjectBinder(_engine, task));
+                        if (property.Name == nameof(Task<int>.Result))
+                        {
+                            yield return new KeyValuePair<string, InternalHandle>(property.Name, TaskCustomBinder.GetRunningTaskResult(_engine, task));
+                            continue;
+                        }
+
+                        InternalHandle jsRes = InternalHandle.Empty;
+                        string name = property.Name;
+                        yield return new KeyValuePair<string, InternalHandle>(property.Name, binder.NamedPropertyGetter(ref name));
+                    }
                 }
                 yield break;
             }
 
-            // look for properties
-            foreach (var property in type.GetProperties(BindingFlags.Instance | BindingFlags.Public))
+            using (InternalHandle jsObj = _engine.CreateObjectBinder(obj, keepAlive: false))
             {
-                if (property.CanRead == false)
-                    continue;
-    
-                yield return new KeyValuePair<string, InternalHandle>(property.Name, _engine.CreateObjectBinder(obj));
-            }
+                var binder = (ObjectBinder)jsObj.Object;
+                // look for properties
+                foreach (var property in type.GetProperties(BindingFlags.Instance | BindingFlags.Public))
+                {
+                    if (property.CanRead == false)
+                        continue;
+        
+                    string name = property.Name;
+                    yield return new KeyValuePair<string, InternalHandle>(property.Name, binder.NamedPropertyGetter(ref name));
+                }
 
-            // look for fields
-            foreach (var field in type.GetFields(BindingFlags.Instance | BindingFlags.Public))
-            {
-                yield return new KeyValuePair<string, InternalHandle>(field.Name, _engine.CreateObjectBinder(obj));
+                // look for fields
+                foreach (var field in type.GetFields(BindingFlags.Instance | BindingFlags.Public))
+                {
+                    string name = field.Name;
+                    yield return new KeyValuePair<string, InternalHandle>(field.Name, binder.NamedPropertyGetter(ref name));
+                }
             }
         }
 

@@ -15,14 +15,14 @@ namespace Raven.Server.Documents.Patch
             get { return base.Object as T; }
         }
 
-        public override void OnDispose()
+        /*public override void OnDispose() // moved to base class
         {
             if (base.Object is IDisposable r) {
                 r.Dispose();
             }
 
             base.OnDispose();
-        }
+        }*/
 
     }
 

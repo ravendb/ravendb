@@ -13,9 +13,9 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
     {
         private readonly BlittableJsonReaderObject _attachmentName;
 
-        public static InternalHandle CreateObjectBinder(V8EngineEx engine, AttachmentNameObjectInstance oi) 
+        public static InternalHandle CreateObjectBinder(V8EngineEx engine, AttachmentNameObjectInstance oi, bool keepAlive = false) 
         {
-            return engine.CreateObjectBinder<AttachmentNameObjectInstance.CustomBinder>(oi, engine.TypeBinderAttachmentNameObjectInstance);
+            return engine.CreateObjectBinder<AttachmentNameObjectInstance.CustomBinder>(oi, engine.TypeBinderAttachmentNameObjectInstance, keepAlive: keepAlive);
         }
 
         public AttachmentNameObjectInstance(BlittableJsonReaderObject attachmentName) : base()

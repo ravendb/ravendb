@@ -12,6 +12,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Platform;
 using Voron.Impl;
+using V8.Net;
 
 namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 {
@@ -163,6 +164,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
                                 stats.AddReduceError($"Failed to build document ID based on provided pattern for output to collection references. {e}");
                         }
                     }
+                    if (value is InternalHandle jsValue)
+                        jsValue.Dispose();
                 }
 
                 if (referenceDocIdBuilder != null && patternPropertiesAddedSuccessfully)

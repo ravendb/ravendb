@@ -196,7 +196,7 @@ function map(name, lambda) {
                 var scope = CurrentIndexingScope.Current;
                 scope.RegisterJavaScriptUtils(JavaScriptUtils);
 
-                return JavaScriptUtils.GetMetadata(engine, isConstructCall, self, args);
+                return JavaScriptUtils.GetMetadata(engine, isConstructCall, self, args).KeepAlive();
             }
             catch (Exception e) 
             {
@@ -575,7 +575,7 @@ function map(name, lambda) {
                 }
 
                 object doc = CurrentIndexingScope.Current.LoadDocument(null, args[0].AsString, args[1].AsString);
-                if (JavaScriptIndexUtils.GetValue(doc, out InternalHandle jsItem))
+                if (JavaScriptIndexUtils.GetValue(doc, out InternalHandle jsItem, keepAlive: true))
                     return jsItem;
 
                 return _engine.ImplicitNull.CreateHandle();

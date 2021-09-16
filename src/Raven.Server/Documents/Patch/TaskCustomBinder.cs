@@ -11,9 +11,9 @@ namespace Raven.Server.Documents.Patch
 
     public class TaskCustomBinder : ObjectBinderEx<Task>
     {
-        public static InternalHandle CreateObjectBinder(V8EngineEx engine, Task oi) 
+        public static InternalHandle CreateObjectBinder(V8EngineEx engine, Task oi, bool keepAlive = false) 
         {
-            return engine.CreateObjectBinder<TaskCustomBinder>(oi, engine.TypeBinderTask);
+            return engine.CreateObjectBinder<TaskCustomBinder>(oi, engine.TypeBinderTask, keepAlive: keepAlive);
         }
 
         public static InternalHandle GetRunningTaskResult(V8Engine engine, Task task)

@@ -102,7 +102,7 @@ var process = {
                 InternalHandle[] jsItems = new InternalHandle[arrayLength];
                 for (int i = 0; i < arrayLength; i++) {
                     var anoi = new AttachmentNameObjectInstance((BlittableJsonReaderObject)attachments[i]);
-                    jsItems[i] = AttachmentNameObjectInstance.CreateObjectBinder(engineEx, anoi);
+                    jsItems[i] = AttachmentNameObjectInstance.CreateObjectBinder(engineEx, anoi, keepAlive: true);
                 }
 
                 return engineEx.CreateArrayWithDisposal(jsItems);
@@ -150,7 +150,7 @@ var process = {
                     return engineEx.ImplicitNull.CreateHandle();
 
                 var aoi = new AttachmentObjectInstance((DynamicAttachment)attachment);
-                return AttachmentObjectInstance.CreateObjectBinder(engineEx, aoi);
+                return AttachmentObjectInstance.CreateObjectBinder(engineEx, aoi, keepAlive: true);
             }
             catch (Exception e) 
             {
@@ -193,7 +193,7 @@ var process = {
                 var jsItems = new InternalHandle[attachments.Count];
                 for (int i = 0; i < arrayLength; i++) {
                     var aoi = new AttachmentObjectInstance((DynamicAttachment)attachments[i]);
-                    jsItems[i] = AttachmentObjectInstance.CreateObjectBinder(engineEx, aoi);
+                    jsItems[i] = AttachmentObjectInstance.CreateObjectBinder(engineEx, aoi, keepAlive: true);
                 }
 
                 return engineEx.CreateArrayWithDisposal(jsItems);
@@ -464,24 +464,21 @@ var process = {
 
     public class V8EngineEx : V8Engine
     {
-        private List<V8Function> _CLRCallBacks;
-
         public DynamicJsNull ImplicitNull;
         public DynamicJsNull ExplicitNull;
 
-        public V8Function CreateCLRCallBack(JSFunction func, bool keepAlive = true)
+        public InternalHandle CreateCLRCallBack(JSFunction func, bool keepAlive = true)
         {
-            var jsFunc = CreateFunctionTemplate().GetFunctionObject<V8Function>(func);
+            var jsFunc = CreateFunctionTemplate().GetFunctionObject<V8Function>(func)._;
             if (keepAlive)
-                jsFunc._.KeepAlive();
+                jsFunc.KeepAlive();
             return jsFunc;
         }
 
         public void SetGlobalCLRCallBack(string propertyName, JSFunction func)
         {
-            V8Function jsFunc = CreateCLRCallBack(func, false);
-            _CLRCallBacks.Add(jsFunc);
-            if (!GlobalObject.SetProperty(propertyName, jsFunc._))
+            var jsFunc = CreateCLRCallBack(func, true);
+            if (!GlobalObject.SetProperty(propertyName, jsFunc))
             {
                 throw new InvalidOperationException($"Failed to set CLR callback global property {propertyName}");
             }
@@ -491,7 +488,7 @@ var process = {
         {
             for (int i = 0; i < jsItems.Length; ++i)
             {
-                jsItems[i].Dispose();
+                jsItems[i].KeepAlive().Dispose();
             }
         }
 
@@ -510,13 +507,12 @@ var process = {
         public readonly TypeBinder TypeBinderCounterEntryObjectInstance;
         public readonly TypeBinder TypeBinderAttachmentNameObjectInstance;
         public readonly TypeBinder TypeBinderAttachmentObjectInstance;
+        public readonly TypeBinder TypeBinderLazyNumberValue;
 
         public readonly InternalHandle JsonStringify;
 
         public V8EngineEx(bool autoCreateGlobalContext = true) : base(autoCreateGlobalContext)
         {
-
-            _CLRCallBacks = new List<V8Function>();
 
             ImplicitNull = new DynamicJsNull(this, isExplicitNull: false);
             ExplicitNull = new DynamicJsNull(this, isExplicitNull: true);
@@ -552,47 +548,50 @@ var process = {
 
             TypeBinderBlittableObjectInstance = RegisterType<BlittableObjectInstance>(null, true);
             TypeBinderBlittableObjectInstance.OnGetObjectBinder = (tb, obj, initializeBinder)
-                => tb.CreateObjectBinder<BlittableObjectInstance.CustomBinder, BlittableObjectInstance>((BlittableObjectInstance)obj, initializeBinder);
+                => tb.CreateObjectBinder<BlittableObjectInstance.CustomBinder, BlittableObjectInstance>((BlittableObjectInstance)obj, initializeBinder, keepAlive: true);
             GlobalObject.SetProperty(typeof(BlittableObjectInstance));
 
             TypeBinderTask = RegisterType<Task>(null, true, ScriptMemberSecurity.ReadWrite);
             TypeBinderTask.OnGetObjectBinder = (tb, obj, initializeBinder)
-                => tb.CreateObjectBinder<TaskCustomBinder, Task>((Task)obj, initializeBinder);
+                => tb.CreateObjectBinder<TaskCustomBinder, Task>((Task)obj, initializeBinder, keepAlive: true);
             GlobalObject.SetProperty(typeof(Task));
 
 
             TypeBinderTimeSeriesSegmentObjectInstance = RegisterType<TimeSeriesSegmentObjectInstance>(null, false);
             TypeBinderTimeSeriesSegmentObjectInstance.OnGetObjectBinder = (tb, obj, initializeBinder)
-                => tb.CreateObjectBinder<TimeSeriesSegmentObjectInstance.CustomBinder, TimeSeriesSegmentObjectInstance>((TimeSeriesSegmentObjectInstance)obj, initializeBinder);
+                => tb.CreateObjectBinder<TimeSeriesSegmentObjectInstance.CustomBinder, TimeSeriesSegmentObjectInstance>((TimeSeriesSegmentObjectInstance)obj, initializeBinder, keepAlive: true);
             GlobalObject.SetProperty(typeof(TimeSeriesSegmentObjectInstance));
 
             TypeBinderDynamicTimeSeriesEntries = RegisterType<DynamicArray>(null, false);
             TypeBinderDynamicTimeSeriesEntries.OnGetObjectBinder = (tb, obj, initializeBinder)
-                => tb.CreateObjectBinder<DynamicTimeSeriesEntriesCustomBinder, DynamicArray>((DynamicArray)obj, initializeBinder);
+                => tb.CreateObjectBinder<DynamicTimeSeriesEntriesCustomBinder, DynamicArray>((DynamicArray)obj, initializeBinder, keepAlive: true);
             GlobalObject.SetProperty(typeof(DynamicArray));
 
             TypeBinderDynamicTimeSeriesEntry = RegisterType<DynamicTimeSeriesSegment.DynamicTimeSeriesEntry>(null, false);
             TypeBinderDynamicTimeSeriesEntry.OnGetObjectBinder = (tb, obj, initializeBinder)
-                => tb.CreateObjectBinder<DynamicTimeSeriesEntryCustomBinder, DynamicTimeSeriesSegment.DynamicTimeSeriesEntry>((DynamicTimeSeriesSegment.DynamicTimeSeriesEntry)obj, initializeBinder);
+                => tb.CreateObjectBinder<DynamicTimeSeriesEntryCustomBinder, DynamicTimeSeriesSegment.DynamicTimeSeriesEntry>((DynamicTimeSeriesSegment.DynamicTimeSeriesEntry)obj, initializeBinder, keepAlive: true);
             GlobalObject.SetProperty(typeof(DynamicTimeSeriesSegment.DynamicTimeSeriesEntry));
 
 
             TypeBinderCounterEntryObjectInstance = RegisterType<CounterEntryObjectInstance>(null, false);
             TypeBinderCounterEntryObjectInstance.OnGetObjectBinder = (tb, obj, initializeBinder)
-                => tb.CreateObjectBinder<CounterEntryObjectInstance.CustomBinder, CounterEntryObjectInstance>((CounterEntryObjectInstance)obj, initializeBinder);
+                => tb.CreateObjectBinder<CounterEntryObjectInstance.CustomBinder, CounterEntryObjectInstance>((CounterEntryObjectInstance)obj, initializeBinder, keepAlive: true);
             GlobalObject.SetProperty(typeof(CounterEntryObjectInstance));
 
             TypeBinderAttachmentNameObjectInstance = RegisterType<AttachmentNameObjectInstance>(null, false);
             TypeBinderAttachmentNameObjectInstance.OnGetObjectBinder = (tb, obj, initializeBinder)
-                => tb.CreateObjectBinder<AttachmentNameObjectInstance.CustomBinder, AttachmentNameObjectInstance>((AttachmentNameObjectInstance)obj, initializeBinder);
+                => tb.CreateObjectBinder<AttachmentNameObjectInstance.CustomBinder, AttachmentNameObjectInstance>((AttachmentNameObjectInstance)obj, initializeBinder, keepAlive: true);
             GlobalObject.SetProperty(typeof(AttachmentNameObjectInstance));
 
             TypeBinderAttachmentObjectInstance = RegisterType<AttachmentObjectInstance>(null, false);
             TypeBinderAttachmentObjectInstance.OnGetObjectBinder = (tb, obj, initializeBinder)
-                => tb.CreateObjectBinder<AttachmentObjectInstance.CustomBinder, AttachmentObjectInstance>((AttachmentObjectInstance)obj, initializeBinder);
+                => tb.CreateObjectBinder<AttachmentObjectInstance.CustomBinder, AttachmentObjectInstance>((AttachmentObjectInstance)obj, initializeBinder, keepAlive: true);
             GlobalObject.SetProperty(typeof(AttachmentObjectInstance));
 
-            //GlobalObject.SetProperty(typeof(Hash<Handle>));
+            TypeBinderLazyNumberValue = RegisterType<LazyNumberValue>(null, false);
+            TypeBinderLazyNumberValue.OnGetObjectBinder = (tb, obj, initializeBinder)
+                => tb.CreateObjectBinder<ObjectBinder, LazyNumberValue>((LazyNumberValue)obj, initializeBinder, keepAlive: true);
+            GlobalObject.SetProperty(typeof(LazyNumberValue));
 
             JsonStringify = this.Execute("JSON.stringify", "JSON.stringify", true, 0, false);
         }
@@ -677,7 +676,7 @@ Array.prototype.reverse = function(...args) {
 
         public InternalHandle CreateObjectBinder(object obj, TypeBinder tb = null, bool keepAlive = false)
         {
-            return CreateObjectBinder<ObjectBinder>(obj, tb, keepAlive);
+            return CreateObjectBinder<ObjectBinder>(obj, tb, keepAlive: keepAlive);
         }
 
         public InternalHandle CreateObjectBinder<TObjectBinder>(object obj, TypeBinder tb = null, bool keepAlive = false)
@@ -691,12 +690,12 @@ Array.prototype.reverse = function(...args) {
                 tb = GetTypeBinder(type);
             }
 
-            ObjectBinder binder = tb.CreateObjectBinder<TObjectBinder, object>(obj, true, keepAlive);
+            ObjectBinder binder = tb.CreateObjectBinder<TObjectBinder, object>(obj, true, keepAlive: keepAlive);
             bool isLocked = binder._.IsLocked; // for debugging
             return binder._; //new InternalHandle(ref binder._, true);
         }
 
-        public InternalHandle FromObject(object obj)
+        public InternalHandle FromObject(object obj, bool keepAlive = false)
         {
             if (obj == null)
             {
@@ -772,7 +771,7 @@ Array.prototype.reverse = function(...args) {
                 return this.CreateFunctionTemplate().GetFunctionObject<V8Function>(f)._;
 
             // if no known type could be guessed, wrap it as an ObjectBinder
-            return CreateObjectBinder(obj);
+            return CreateObjectBinder(obj, keepAlive: keepAlive);
         }
 
         private InternalHandle Convert(object v)

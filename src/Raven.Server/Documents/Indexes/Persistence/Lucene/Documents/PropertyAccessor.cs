@@ -245,7 +245,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                     }
                     //ThrowInvalidObject(jsValue);
                 }
-                return jsValue;
+                return new InternalHandle(ref jsValue, true);
             }
 
             if (jsValue.IsUndefined)

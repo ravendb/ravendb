@@ -256,54 +256,56 @@ namespace Raven.Server.Utils
                 case BlittableSupportedReturnType.Javascript:
                 {
                     var jsValue = (InternalHandle)value;
-                    //using (var jsStrRes = jsValue.Engine.Execute("JSON.stringify").StaticCall(new InternalHandle(ref jsValue, true))) var strRes = jsStrRes.AsString;
-                    if (jsValue.IsNull)
                     {
-                        if (forIndexing && jsValue.BoundObject is DynamicJsNull dynamicJsNull)
-                            return dynamicJsNull.IsExplicitNull ? DynamicNullObject.ExplicitNull : DynamicNullObject.Null;
-
-                        return null;
-                    }
-
-                    if (jsValue.IsUndefined)
-                        return null;
-                    if (jsValue.IsStringEx())
-                        return jsValue.AsString;
-                    if (jsValue.IsRegExp)              // added, check
-                        return jsValue.AsString;
-                    if (jsValue.IsBoolean)
-                        return jsValue.AsBoolean;
-                    if (jsValue.IsInt32)               // added, check
-                        return jsValue.AsInt32;
-                    if (jsValue.IsNumberEx())
-                        return jsValue.AsDouble;
-                    if (jsValue.IsDate)
-                        return jsValue.AsDate;
-                    if (jsValue.IsArray)
-                    {
-                        var convertedArray = EnumerateArray(root, jsValue, flattenArrays, forIndexing, recursiveLevel + 1, engine, context);
-                        return new DynamicJsonArray(flattenArrays ? Flatten(convertedArray) : convertedArray);
-                    }                
-                    if (jsValue.IsObject)
-                    {
-                        object boundObject = jsValue.BoundObject;
-                        if (boundObject != null)
+                        //using (var jsStrRes = jsValue.Engine.Execute("JSON.stringify").StaticCall(new InternalHandle(ref jsValue, true))) var strRes = jsStrRes.AsString;
+                        if (jsValue.IsNull)
                         {
-                            switch (boundObject)
-                            {
-                                case LazyStringValue lsv:
-                                    return lsv;
-                                case LazyCompressedStringValue lcsv:
-                                    return lcsv;
-                                case LazyNumberValue lnv:
-                                    return lnv; //should be already blittable supported type.
-                            }
-                            //ThrowInvalidObject(jsValue);
+                            if (forIndexing && jsValue.BoundObject is DynamicJsNull dynamicJsNull)
+                                return dynamicJsNull.IsExplicitNull ? DynamicNullObject.ExplicitNull : DynamicNullObject.Null;
+
+                            return null;
                         }
-                        return JsBlittableBridge.Translate(context, engine, jsValue, isRoot: isRoot);
+
+                        if (jsValue.IsUndefined)
+                            return null;
+                        if (jsValue.IsStringEx())
+                            return jsValue.AsString;
+                        if (jsValue.IsRegExp)              // added, check
+                            return jsValue.AsString;
+                        if (jsValue.IsBoolean)
+                            return jsValue.AsBoolean;
+                        if (jsValue.IsInt32)               // added, check
+                            return jsValue.AsInt32;
+                        if (jsValue.IsNumberEx())
+                            return jsValue.AsDouble;
+                        if (jsValue.IsDate)
+                            return jsValue.AsDate;
+                        if (jsValue.IsArray)
+                        {
+                            var convertedArray = EnumerateArray(root, jsValue, flattenArrays, forIndexing, recursiveLevel + 1, engine, context);
+                            return new DynamicJsonArray(flattenArrays ? Flatten(convertedArray) : convertedArray);
+                        }                
+                        if (jsValue.IsObject)
+                        {
+                            object boundObject = jsValue.BoundObject;
+                            if (boundObject != null)
+                            {
+                                switch (boundObject)
+                                {
+                                    case LazyStringValue lsv:
+                                        return lsv;
+                                    case LazyCompressedStringValue lcsv:
+                                        return lcsv;
+                                    case LazyNumberValue lnv:
+                                        return lnv; //should be already blittable supported type.
+                                }
+                                //ThrowInvalidObject(jsValue);
+                            }
+                            return JsBlittableBridge.Translate(context, engine, jsValue, isRoot: isRoot);
+                        }
+                        ThrowInvalidObject(jsValue);
+                        return null;
                     }
-                    ThrowInvalidObject(jsValue);
-                    return null;
                 }
                 case BlittableSupportedReturnType.Enumerable:
                 {

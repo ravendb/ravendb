@@ -276,11 +276,11 @@ namespace Raven.Server.Documents.Indexes.Static
                         {
                             BlittableJsonReaderObject bjro => ((Func<BlittableJsonReaderObject, InternalHandle>)((BlittableJsonReaderObject bjro) => {
                                 var boi = new BlittableObjectInstance(JavaScriptUtils, null, bjro, null, null, null);
-                                return boi.CreateObjectBinder(); // maybe better move to FromObject?
+                                return boi.CreateObjectBinder(true); // maybe better move to FromObject?
                             }))(bjro),
                             Document doc => ((Func<Document, InternalHandle>)((Document doc) => {
                                 var boi = new BlittableObjectInstance(JavaScriptUtils, null, doc.Data, doc);
-                                return boi.CreateObjectBinder(); // maybe better  move to FromObject?
+                                return boi.CreateObjectBinder(true); // maybe better  move to FromObject?
                             }))(doc),
                             LazyNumberValue lnv => Engine.CreateValue(lnv.ToDouble(CultureInfo.InvariantCulture)), // maybe better  move to FromObject?
                             _ =>  Engine.FromObject(value)

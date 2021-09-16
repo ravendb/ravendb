@@ -100,7 +100,7 @@ namespace Raven.Server.Documents.Indexes.Static.Utils
             }
         }
 
-        public bool GetValue(object item, out InternalHandle jsItem, bool isMapReduce = false)
+        public bool GetValue(object item, out InternalHandle jsItem, bool isMapReduce = false, bool keepAlive = false)
         {
             jsItem = InternalHandle.Empty;
             string changeVector = null;
@@ -118,7 +118,7 @@ namespace Raven.Server.Documents.Indexes.Static.Utils
                     if (dbj.TryGetDocument(out var doc))
                     {
                         BlittableObjectInstance boi = new BlittableObjectInstance(JavaScriptUtils, null, dbj.BlittableJson, doc);
-                        jsItem = boi.CreateObjectBinder();
+                        jsItem = boi.CreateObjectBinder(keepAlive);
                     }
                     else
                     {
@@ -129,25 +129,25 @@ namespace Raven.Server.Documents.Indexes.Static.Utils
                             changeVector = cv;
 
                         var boi = new BlittableObjectInstance(JavaScriptUtils, null, dbj.BlittableJson, id, lastModified, changeVector);
-                        jsItem = boi.CreateObjectBinder();
+                        jsItem = boi.CreateObjectBinder(keepAlive);
                     }
 
                     return true;
                 }
                 case DynamicTimeSeriesSegment dtss: {
                     var bo = new TimeSeriesSegmentObjectInstance(dtss);
-                    jsItem = TimeSeriesSegmentObjectInstance.CreateObjectBinder(Engine, bo);
+                    jsItem = TimeSeriesSegmentObjectInstance.CreateObjectBinder(Engine, bo, keepAlive: keepAlive);
                     return true;
                 }
                 case DynamicCounterEntry dce: {
                     var bo = new CounterEntryObjectInstance(dce);
-                    jsItem = CounterEntryObjectInstance.CreateObjectBinder(Engine, bo);
+                    jsItem = CounterEntryObjectInstance.CreateObjectBinder(Engine, bo, keepAlive: keepAlive);
                     return true;
                 }
                 case BlittableJsonReaderObject bjro: {
                     //This is the case for map-reduce
                     BlittableObjectInstance bo = new BlittableObjectInstance(JavaScriptUtils, null, bjro, null, null, null);
-                    jsItem = bo.CreateObjectBinder();
+                    jsItem = bo.CreateObjectBinder(keepAlive);
                     return true;
                 }
             }

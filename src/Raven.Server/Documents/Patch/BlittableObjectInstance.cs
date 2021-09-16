@@ -24,6 +24,49 @@ namespace Raven.Server.Documents.Patch
     //[ScriptObject("BlittableObjectInstance", ScriptMemberSecurity.NoAcccess)]
     public class BlittableObjectInstance : IDisposable
     {
+        public class CustomBinder : ObjectBinderEx<BlittableObjectInstance>
+        {
+            public CustomBinder() : base()
+            {
+            }
+
+            public override void OnEngineRootedStatusChange(bool isRooted)
+            {
+                ObjCLR.OnEngineRootedStatusChange(isRooted);
+                return;
+            }
+
+            public override InternalHandle NamedPropertyGetter(ref string propertyName)
+            {
+                return ObjCLR.GetOwnPropertyJs(propertyName);
+            }
+
+            public override InternalHandle NamedPropertySetter(ref string propertyName, InternalHandle jsValue, V8PropertyAttributes attributes = V8PropertyAttributes.Undefined)
+            {
+                return ObjCLR.SetOwnProperty(propertyName, jsValue, attributes);
+            }
+
+            public override bool? NamedPropertyDeleter(ref string propertyName)
+            {
+                return ObjCLR.DeleteOwnProperty(propertyName);
+            }
+
+            public override V8PropertyAttributes? NamedPropertyQuery(ref string propertyName)
+            {
+                /*V8PropertyAttributes? res = base.NamedPropertyQuery(ref propertyName);
+                if (res != null)
+                    return res;*/
+
+                return ObjCLR.QueryOwnProperty(propertyName);
+            }
+
+            public override InternalHandle NamedPropertyEnumerator()
+            {
+                return ObjCLR.EnumerateOwnPropertiesJs();
+            }
+
+        }
+
         private bool _disposed = false;
 
         public JavaScriptUtils JavaScriptUtils;
@@ -31,6 +74,7 @@ namespace Raven.Server.Documents.Patch
 
         public bool Changed;
         private BlittableObjectInstance _parent;
+        private bool _isEngineRooted;
         private Document _doc;
         private bool _set;
 
@@ -55,12 +99,12 @@ namespace Raven.Server.Documents.Patch
         private Int32 ObjectID; // just for debugging
 
         public InternalHandle CreateObjectBinder(bool keepAlive = false) {
-            return BlittableObjectInstance.CreateObjectBinder(Engine, this, keepAlive);
+            return BlittableObjectInstance.CreateObjectBinder(Engine, this, keepAlive: keepAlive);
         }
 
         public static InternalHandle CreateObjectBinder(V8EngineEx engine, BlittableObjectInstance boi, bool keepAlive = false)
         {
-            InternalHandle jsBinder = engine.CreateObjectBinder<BlittableObjectInstance.CustomBinder>(boi, engine.TypeBinderBlittableObjectInstance, keepAlive);
+            InternalHandle jsBinder = engine.CreateObjectBinder<BlittableObjectInstance.CustomBinder>(boi, engine.TypeBinderBlittableObjectInstance, keepAlive: keepAlive);
 
             boi.HandleID = jsBinder.ID;
             boi.ObjectID = jsBinder.ObjectID;
@@ -86,6 +130,7 @@ namespace Raven.Server.Documents.Patch
             Engine = (V8EngineEx)JavaScriptUtils.Engine;
 
             _parent = parent;
+            _isEngineRooted = false;
             blittable.NoCache = true;
             LastModified = lastModified;
             ChangeVector = changeVector;
@@ -107,6 +152,11 @@ namespace Raven.Server.Documents.Patch
         }
 
 
+        public void OnEngineRootedStatusChange(bool isRooted)
+        {
+            _isEngineRooted = isRooted;
+        }
+
         public void Dispose()
         {  
             Dispose(true);
@@ -116,6 +166,29 @@ namespace Raven.Server.Documents.Patch
         {
             if (_disposed)
                 return;
+
+            if (Deletes != null) {
+                Deletes.Clear();
+            }
+
+            if (OwnValues != null) {
+                foreach (var val in OwnValues.Values) {
+                    val.Dispose();
+                }
+                OwnValues.Clear();
+            }
+
+
+            if (OriginalPropertiesTypes != null) {
+                OriginalPropertiesTypes.Clear();
+            }
+
+            LuceneDocument = null;
+            LuceneState = null;
+
+            if (LuceneIndexFields != null) {
+                LuceneIndexFields.Clear();
+            }
 
             if (disposing) {
                 JavaScriptUtils = null;
@@ -127,34 +200,12 @@ namespace Raven.Server.Documents.Patch
                 LastModified = null;
                 Blittable = null;
                 
-                if (Deletes != null) {
-                    Deletes.Clear();
-                    Deletes = null;
-                }
-
-                if (OwnValues != null) {
-                    foreach (var val in OwnValues.Values) {
-                        val.Dispose();
-                    }
-                    OwnValues.Clear();
-                    OwnValues = null;
-                }
-
-
-                if (OriginalPropertiesTypes != null) {
-                    OriginalPropertiesTypes.Clear();
-                    OriginalPropertiesTypes = null;
-                }
-
-                LuceneDocument = null;
-                LuceneState = null;
-
-                if (LuceneIndexFields != null) {
-                    LuceneIndexFields.Clear();
-                    LuceneIndexFields = null;
-                }
-
+                LuceneIndexFields = null;
+                OriginalPropertiesTypes = null;
                 Projection = null;
+
+                Deletes = null;
+                OwnValues = null;
 
                 GC.SuppressFinalize(this);
             }
@@ -162,6 +213,13 @@ namespace Raven.Server.Documents.Patch
             _disposed = true;
         }
 
+
+        bool IsRooted
+        {
+            get {
+                return _isEngineRooted || (_parent?._isEngineRooted ?? false);
+            }
+        }
 
         public InternalHandle GetOwnPropertyJs(string propertyName)
         {
@@ -172,8 +230,17 @@ namespace Raven.Server.Documents.Patch
             return InternalHandle.Empty;
         }
 
+        private void _CheckIsNotDisposed(string descCtx)
+        {
+            if (_disposed) {
+                throw new InvalidOperationException($"BOI has been disposed: DocumentId=${DocumentId}, HandleID=${HandleID}, ObjectID=${ObjectID}, context: ${descCtx}");
+            }
+        }
+
         public BlittableObjectProperty GetOwnProperty(string propertyName)
         {
+            _CheckIsNotDisposed($"GetOwnProperty: ${propertyName}");
+
             BlittableObjectProperty val = null;
             if (OwnValues?.TryGetValue(propertyName, out val) == true &&
                 val != null)
@@ -181,7 +248,7 @@ namespace Raven.Server.Documents.Patch
                 return val;
             }
 
-            if (propertyName == Constants.Documents.Metadata.Key && IsDocument()) {
+            if (propertyName == Constants.Documents.Metadata.Key && IsRoot()) {
                 var scope = CurrentIndexingScope.Current;
                 scope.RegisterJavaScriptUtils(JavaScriptUtils);
                 GetMetadata();
@@ -214,8 +281,10 @@ namespace Raven.Server.Documents.Patch
             return val;
         }
 
-        public InternalHandle SetOwnProperty(string propertyName, InternalHandle value, V8PropertyAttributes attributes = V8PropertyAttributes.Undefined)
+        public InternalHandle SetOwnProperty(string propertyName, InternalHandle jsValue, V8PropertyAttributes attributes = V8PropertyAttributes.Undefined, bool toReturnCopy = true)
         {
+            _CheckIsNotDisposed($"SetOwnProperty: ${propertyName}");
+
             _set = true;
             try
             {
@@ -223,20 +292,18 @@ namespace Raven.Server.Documents.Patch
                 if (OwnValues?.TryGetValue(propertyName, out val) == true &&
                     val != null)
                 {
-                    val.Value = value;
-                    return value;
+                    val.Value = jsValue;
+                    return jsValue;
                 }
                 
-                InternalHandle jsRes = InternalHandle.Empty;
                 Deletes?.Remove(propertyName);
 
-                jsRes = new InternalHandle(ref value, true);
-                val = new BlittableObjectProperty(this, propertyName, jsRes);
+                val = new BlittableObjectProperty(this, propertyName, jsValue);
                 val.Changed = true;
                 MarkChanged();
                 OwnValues ??= new Dictionary<string, BlittableObjectProperty>(Blittable.Count);
                 OwnValues[propertyName] = val;
-                return jsRes;
+                return toReturnCopy ? val.ValueCopy() : val.Value;
             }
             finally
             {
@@ -246,6 +313,8 @@ namespace Raven.Server.Documents.Patch
 
         public bool? DeleteOwnProperty(string propertyName)
         {
+            _CheckIsNotDisposed($"DeleteOwnProperty: ${propertyName}");
+
             if (Deletes == null)
                 Deletes = new HashSet<string>();
 
@@ -268,6 +337,8 @@ namespace Raven.Server.Documents.Patch
 
         public IEnumerable<string> EnumerateOwnPropertiesAux()
         {
+            _CheckIsNotDisposed($"EnumerateOwnPropertiesAux");
+
             if (OwnValues != null)
             {
                 foreach (var value in OwnValues)
@@ -294,6 +365,8 @@ namespace Raven.Server.Documents.Patch
 
         public InternalHandle EnumerateOwnPropertiesJs()
         {
+            _CheckIsNotDisposed($"EnumerateOwnPropertiesJs");
+
             var list = Engine.CreateArray(Array.Empty<InternalHandle>());
             void pushKey(string value) {
                 using (var jsResPush = list.StaticCall("push", Engine.CreateValue(value)))
@@ -328,14 +401,15 @@ namespace Raven.Server.Documents.Patch
             return list;
         }
 
-        public bool IsDocument()
+        public bool IsRoot()
         {
-            var propertyName = Constants.Documents.Metadata.Key;
-            return Blittable[propertyName] is BlittableJsonReaderObject metadata;
+            return _parent == null;
         }
 
         public InternalHandle GetMetadata()
         {
+            _CheckIsNotDisposed($"GetMetadata");
+
             try {
                 var propertyName = Constants.Documents.Metadata.Key;
                 if (!(Blittable[propertyName] is BlittableJsonReaderObject metadata))
@@ -358,55 +432,18 @@ namespace Raven.Server.Documents.Patch
                 //using (var old = metadata)
                 {
                     metadata = JavaScriptUtils.Context.ReadObject(metadata, DocumentId);
-                    InternalHandle metadataJs = JavaScriptUtils.TranslateToJs(JavaScriptUtils.Context, metadata, true);
-                    if (metadataJs.IsError)
-                        return metadataJs;
-                    SetOwnProperty(propertyName, metadataJs);
-
-                    return metadataJs;
+                    using (InternalHandle metadataJs = JavaScriptUtils.TranslateToJs(JavaScriptUtils.Context, metadata, false))
+                    {
+                        if (metadataJs.IsError)
+                            return metadataJs;
+                        return SetOwnProperty(propertyName, metadataJs, toReturnCopy: false);
+                    }
                 }
             }
             catch (Exception e) 
             {
                 return Engine.CreateError(e.Message, JSValueType.ExecutionError);
             }
-        }
-
-        public class CustomBinder : ObjectBinderEx<BlittableObjectInstance>
-        {
-            public CustomBinder() : base()
-            {
-            }
-
-            public override InternalHandle NamedPropertyGetter(ref string propertyName)
-            {
-                return ObjCLR.GetOwnPropertyJs(propertyName);
-            }
-
-            public override InternalHandle NamedPropertySetter(ref string propertyName, InternalHandle value, V8PropertyAttributes attributes = V8PropertyAttributes.Undefined)
-            {
-                return ObjCLR.SetOwnProperty(propertyName, value, attributes);
-            }
-
-            public override bool? NamedPropertyDeleter(ref string propertyName)
-            {
-                return ObjCLR.DeleteOwnProperty(propertyName);
-            }
-
-            public override V8PropertyAttributes? NamedPropertyQuery(ref string propertyName)
-            {
-                /*V8PropertyAttributes? res = base.NamedPropertyQuery(ref propertyName);
-                if (res != null)
-                    return res;*/
-
-                return ObjCLR.QueryOwnProperty(propertyName);
-            }
-
-            public override InternalHandle NamedPropertyEnumerator()
-            {
-                return ObjCLR.EnumerateOwnPropertiesJs();
-            }
-
         }
 
         public InternalHandle GetOrCreate(InternalHandle key)
@@ -416,13 +453,12 @@ namespace Raven.Server.Documents.Patch
 
         public InternalHandle GetOrCreate(string strKey)
         {
+            _CheckIsNotDisposed($"GetOrCreate: ${strKey}");
+
             BlittableObjectProperty property = null;
             if (OwnValues?.TryGetValue(strKey, out property) == true &&
                 property != null) 
             {
-                if (property.Value.IsEmpty) {
-                    throw new InvalidOperationException($"property's {property.Name} value has got disposed");
-                }
                 return property.ValueCopy();
             }
 
@@ -481,8 +517,11 @@ namespace Raven.Server.Documents.Patch
             public V8EngineEx Engine;
             private InternalHandle _value = InternalHandle.Empty;
             public bool Changed;
-            private int HandleID; // just for debugging
-            private int ObjectID; // just for debugging
+
+             // just for debugging
+            private string DocumentId; 
+            private int HandleID;
+            private int ObjectID;
 
             public string Name
             {
@@ -493,6 +532,7 @@ namespace Raven.Server.Documents.Patch
             {
                 get 
                 {
+                    _CheckIsNotDisposed($"Value");
                     return _value;
                 }
 
@@ -509,6 +549,8 @@ namespace Raven.Server.Documents.Patch
 
             public InternalHandle ValueCopy()
             {
+                _CheckIsNotDisposed($"ValueCopy");
+
                 if (_value.IsEmpty) {
                     return InternalHandle.Empty;
                 }
@@ -520,24 +562,29 @@ namespace Raven.Server.Documents.Patch
                 if (!_value.IsEmpty) {
                     HandleID = _value.ID;
                     ObjectID = _value.ObjectID;
-                    /*if (_value.Object is ObjectBinder ob) {
-                        ObjectBinder = ob;
-                    }*/
+
+                    //if (_parent.IsRooted) {
+                        _value.IncAppRooted();
+                    //}
                 }
             }
 
             private void Init(BlittableObjectInstance parent, string propertyName)
             {
                 _parent = parent;
+                DocumentId = _parent.DocumentId;
                 _propertyName = propertyName;
                 JavaScriptUtils = _parent.JavaScriptUtils;
                 Engine = _parent.Engine;
+
+                HandleID = -1;
+                ObjectID = -1;
             }
 
             public BlittableObjectProperty(BlittableObjectInstance parent, string propertyName, InternalHandle jsValue)
             {
                 Init(parent, propertyName);
-                _value = jsValue;
+                _value = new InternalHandle(ref jsValue, true);
                 OnSetValue();
             }
 
@@ -585,6 +632,15 @@ namespace Raven.Server.Documents.Patch
                 if (_disposed)
                     return;
 
+#if DEBUG
+                if (_value.IsEmpty && HandleID >= 0)
+                    throw new InvalidOperationException($"Property's internal handle is empty on disposal: propertyName={_propertyName}, handleID={HandleID}, objectID={ObjectID}, parentHandleID={_parent.HandleID}, parentObjectID={_parent.ObjectID}");
+#endif                
+
+                //if (_parent.IsRooted) {
+                    _value.DecAppRooted();
+                //}
+
                 if (disposing) {
                     // releasing managed resources
                     _parent = null;
@@ -597,9 +653,16 @@ namespace Raven.Server.Documents.Patch
                 
                 // releasing unmanaged resources
                 // ...
-                _value.Dispose(); // we forcely dispose of all the child nodes and leaves, so they are not to be used on the native side any more 
+                _value.Dispose();
 
                 _disposed = true;
+            }
+
+            private void _CheckIsNotDisposed(string descCtx)
+            {
+                if (_disposed) {
+                    throw new InvalidOperationException($"BlittableObjectProperty has been disposed: DocumentId=${DocumentId}, propertyName=${_propertyName}, HandleID=${HandleID}, ObjectID=${ObjectID}, context: ${descCtx}");
+                }
             }
 
             private bool TryGetValueFromDocument(BlittableObjectInstance parent, string propertyName, out InternalHandle jsValue)
@@ -797,7 +860,7 @@ namespace Raven.Server.Documents.Patch
                                     owner,
                                     blittable, null, null, null
                                 );
-                                return boi.CreateObjectBinder();
+                                return boi.CreateObjectBinder(false);
                         }
 
                     case BlittableJsonToken.StartArray:
@@ -823,7 +886,7 @@ namespace Raven.Server.Documents.Patch
                 }
 
                 // If number is not in double boundaries, we return the LazyNumberValue
-                return engine.CreateObjectBinder(value);
+                return engine.CreateObjectBinder(value, keepAlive: false);
             }
         }
     }

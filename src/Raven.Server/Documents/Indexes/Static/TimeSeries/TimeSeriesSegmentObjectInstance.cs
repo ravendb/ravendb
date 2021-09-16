@@ -21,8 +21,8 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             _segment = segment ?? throw new ArgumentNullException(nameof(segment));
         }
 
-        public static InternalHandle CreateObjectBinder(V8EngineEx engine, TimeSeriesSegmentObjectInstance bo) {
-            return engine.CreateObjectBinder<TimeSeriesSegmentObjectInstance.CustomBinder>(bo, engine.TypeBinderTimeSeriesSegmentObjectInstance);
+        public static InternalHandle CreateObjectBinder(V8EngineEx engine, TimeSeriesSegmentObjectInstance bo, bool keepAlive = false) {
+            return engine.CreateObjectBinder<TimeSeriesSegmentObjectInstance.CustomBinder>(bo, engine.TypeBinderTimeSeriesSegmentObjectInstance, keepAlive: keepAlive);
         }
 
         public override InternalHandle NamedPropertyGetterOnce(V8EngineEx engine, ref string propertyName)

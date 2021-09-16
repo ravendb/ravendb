@@ -236,30 +236,37 @@ namespace Raven.Server.Documents.Patch
                 //console.log
                 using (var consoleObject = ScriptEngine.CreateObject())
                 {
-                    consoleObject.FastAddProperty("log", ScriptEngine.CreateCLRCallBack(OutputDebug, true)._, false, false, false);
+                    using (var jsFuncLog = ScriptEngine.CreateCLRCallBack(OutputDebug, true)) {
+                        consoleObject.FastAddProperty("log", jsFuncLog, false, false, false);
+                    }
                     ScriptEngine.GlobalObject.SetProperty("console", consoleObject);
                 }
 
                 //spatial.distance
                 using (var spatialObject = ScriptEngine.CreateObject())
                 {
-                    var spatialFunc = ScriptEngine.CreateCLRCallBack(Spatial_Distance, true);
-                    spatialObject.FastAddProperty("distance", spatialFunc._, false, false, false);
                     ScriptEngine.GlobalObject.SetProperty("spatial", spatialObject);
-                    ScriptEngine.GlobalObject.SetProperty("spatial.distance", spatialFunc._);
+                    using (var jsFuncSpatial = ScriptEngine.CreateCLRCallBack(Spatial_Distance, true)) {
+                        spatialObject.FastAddProperty("distance", jsFuncSpatial, false, false, false);
+                        //ScriptEngine.GlobalObject.SetProperty("spatial.distance", jsFuncSpatial);
+                    }
                 }
 
                 // includes
                 using (var includesObject = ScriptEngine.CreateObject())
                 {
-                    var includeDocumentFunc = ScriptEngine.CreateCLRCallBack(IncludeDoc, true);
-                    includesObject.FastAddProperty("document", includeDocumentFunc._, false, false, false);
-                    includesObject.FastAddProperty("cmpxchg", ScriptEngine.CreateCLRCallBack(IncludeCompareExchangeValue, true)._, false, false, false);
-                    includesObject.FastAddProperty("revisions", ScriptEngine.CreateCLRCallBack(IncludeRevisions, true)._, false, false, false);
                     ScriptEngine.GlobalObject.SetProperty("includes", includesObject);
-
-                    // includes - backward compatibility
-                    ScriptEngine.GlobalObject.SetProperty("include", includeDocumentFunc);
+                    using (var jsFuncIncludeDocument = ScriptEngine.CreateCLRCallBack(IncludeDoc, true)) {
+                        includesObject.FastAddProperty("document", jsFuncIncludeDocument, false, false, false);
+                        // includes - backward compatibility
+                        ScriptEngine.GlobalObject.SetProperty("include", jsFuncIncludeDocument);
+                    }
+                    using (var jsFuncIncludeCompareExchangeValue = ScriptEngine.CreateCLRCallBack(IncludeCompareExchangeValue, true)) {                    
+                        includesObject.FastAddProperty("cmpxchg", jsFuncIncludeCompareExchangeValue, false, false, false);
+                    }
+                    using (var jsFuncIncludeRevisions = ScriptEngine.CreateCLRCallBack(IncludeRevisions, true)) {                    
+                        includesObject.FastAddProperty("revisions", jsFuncIncludeRevisions, false, false, false);
+                    }
                 }
 
                 ScriptEngine.SetGlobalCLRCallBack("load", LoadDocument);
@@ -384,12 +391,20 @@ namespace Raven.Server.Documents.Patch
                         throw new ArgumentException($"{_timeSeriesSignature}: This method requires 2 arguments but was called with {args.Length}");
 
                     var obj = ScriptEngine.CreateObject();
-                    obj.SetProperty("append", ScriptEngine.CreateCLRCallBack(AppendTimeSeries, true)._);
-                    obj.SetProperty("delete", ScriptEngine.CreateCLRCallBack(DeleteRangeTimeSeries, true)._);
-                    obj.SetProperty("get", ScriptEngine.CreateCLRCallBack(GetRangeTimeSeries, true)._);
+                    using (var jsFuncAppend = ScriptEngine.CreateCLRCallBack(AppendTimeSeries, true)) {
+                        obj.SetProperty("append", jsFuncAppend);
+                    }
+                    using (var jsFuncDelete = ScriptEngine.CreateCLRCallBack(DeleteRangeTimeSeries, true)) {
+                        obj.SetProperty("delete", jsFuncDelete);
+                    }
+                    using (var jsFuncGetRange = ScriptEngine.CreateCLRCallBack(GetRangeTimeSeries, true)) {
+                        obj.SetProperty("get", jsFuncGetRange);
+                    }
+                    using (var jsFuncGetStats = ScriptEngine.CreateCLRCallBack(GetStatsTimeSeries, true)) {
+                        obj.SetProperty("getStats", jsFuncGetStats);
+                    }
                     obj.SetProperty("doc", args[0]);
                     obj.SetProperty("name", args[1]);
-                    obj.SetProperty("getStats", ScriptEngine.CreateCLRCallBack(GetStatsTimeSeries, true)._);
 
                     return obj;
                 }
@@ -1916,7 +1931,7 @@ namespace Raven.Server.Documents.Patch
                     throw new InvalidOperationException("scalarToRawString(document, lambdaToField) may be called on with two parameters only");
 
                 var firstParam = args[0];
-                if (firstParam.BoundObject != null && args[0].BoundObject is BlittableObjectInstance selfInstance)
+                if (firstParam.IsBinder && firstParam.BoundObject is BlittableObjectInstance selfInstance)
                 {
                     var secondParam = args[1];
                     if (secondParam.IsObject && secondParam.Object is V8Function lambda) // Jint: is ScriptFunctionInstance lambda)
@@ -2129,7 +2144,7 @@ namespace Raven.Server.Documents.Patch
 
             public object TranslateToJs(JsonOperationContext context, object o, bool keepAlive = false)
             {
-                return JavaScriptUtils.TranslateToJs(context, o, keepAlive);
+                return JavaScriptUtils.TranslateToJs(context, o, keepAlive: keepAlive);
             }
 
             public object CreateEmptyObject()

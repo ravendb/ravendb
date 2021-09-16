@@ -557,6 +557,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                         {
                             var value = property.Value;
                             var blittableValue = TypeConverter.ToBlittableSupportedType(value, context: _parent._indexContext, isRoot: false);
+                            if (value is InternalHandle jsValue)
+                                jsValue.Dispose();
+                                
                             _propertyQueue.Enqueue((property.Key, blittableValue));
 
                             if (property.IsGroupByField)
