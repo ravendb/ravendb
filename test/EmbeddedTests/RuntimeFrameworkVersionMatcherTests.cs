@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
+using Raven.Client.Documents;
 using Raven.Embedded;
 using Xunit;
 
@@ -13,7 +14,14 @@ namespace EmbeddedTests
         public async Task MatchTest1()
         {
             var options = new ServerOptions();
-            Assert.Equal(ServerOptions.Default.FrameworkVersion, await RuntimeFrameworkVersionMatcher.MatchAsync(options));
+
+            var defaultFrameworkVersion = ServerOptions.Default.FrameworkVersion;
+            Assert.True(defaultFrameworkVersion.EndsWith(RuntimeFrameworkVersionMatcher.GreaterOrEqual.ToString()));
+
+            var expectedVersion = new Version(defaultFrameworkVersion.Substring(0, defaultFrameworkVersion.Length - 1));
+            var actualVersion = new Version(await RuntimeFrameworkVersionMatcher.MatchAsync(options));
+
+            Assert.True(actualVersion.CompareTo(expectedVersion) > 0);
 
             options.FrameworkVersion = null;
             Assert.Null(await RuntimeFrameworkVersionMatcher.MatchAsync(options));
@@ -89,6 +97,25 @@ namespace EmbeddedTests
             Assert.Equal("5.0.0-rc.2.20475.17", runtime.ToString());
         }
 
+        [Fact]
+        public void MatchTest4()
+        {
+            var runtimes = GetRuntimes();
+
+            var runtime = new RuntimeFrameworkVersionMatcher.RuntimeFrameworkVersion("3.1.1+");
+            Assert.Equal("3.1.1+", runtime.ToString());
+            Assert.Equal("3.1.3", RuntimeFrameworkVersionMatcher.Match(runtime, runtimes));
+
+            var e = Assert.Throws<InvalidOperationException>(() => new RuntimeFrameworkVersionMatcher.RuntimeFrameworkVersion("6.0.0+-preview.6.21352.12"));
+            Assert.Equal("Cannot set 'Patch' with value '0+' because '+' is not allowed when Suffix ('preview.6.21352.12') is set.", e.Message);
+
+            e = Assert.Throws<InvalidOperationException>(() => new RuntimeFrameworkVersionMatcher.RuntimeFrameworkVersion("6+"));
+            Assert.Equal("Cannot set 'Major' with value '6+' because '+' is not allowed.", e.Message);
+
+            e = Assert.Throws<InvalidOperationException>(() => new RuntimeFrameworkVersionMatcher.RuntimeFrameworkVersion("3.1+"));
+            Assert.Equal("Cannot set 'Minor' with value '1+' because '+' is not allowed.", e.Message);
+        }
+
         private static List<RuntimeFrameworkVersionMatcher.RuntimeFrameworkVersion> GetRuntimes()
         {
             return new()
@@ -105,7 +132,9 @@ namespace EmbeddedTests
                 new RuntimeFrameworkVersionMatcher.RuntimeFrameworkVersion("3.2.3"),
                 new RuntimeFrameworkVersionMatcher.RuntimeFrameworkVersion("5.0.0-rc.2.20475.17"),
                 new RuntimeFrameworkVersionMatcher.RuntimeFrameworkVersion("5.0.3"),
-                new RuntimeFrameworkVersionMatcher.RuntimeFrameworkVersion("5.0.4")
+                new RuntimeFrameworkVersionMatcher.RuntimeFrameworkVersion("5.0.4"),
+                new RuntimeFrameworkVersionMatcher.RuntimeFrameworkVersion("6.0.0-preview.6.21352.12"),
+                new RuntimeFrameworkVersionMatcher.RuntimeFrameworkVersion("6.0.0-rc.1.21451.13")
             };
         }
     }
