@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
+using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Queries;
@@ -22,10 +23,11 @@ namespace FastTests.Server.Documents.Indexing.Static
         {
         }
 
-        [Fact]
-        public async Task The_simpliest_static_map_reduce_index()
+        [Theory]
+        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        public async Task The_simpliest_static_map_reduce_index(string searchEngineType)
         {
-            using (var database = CreateDocumentDatabase())
+            using (var database = CreateDocumentDatabase(modifyConfiguration: dictionary => dictionary[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType))
             {
                 using (var index = MapReduceIndex.CreateNew<MapReduceIndex>(new IndexDefinition()
                 {
@@ -114,13 +116,14 @@ namespace FastTests.Server.Documents.Indexing.Static
             }
         }
 
-        [Fact]
-        public async Task CanPersist()
+        [Theory]
+        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        public async Task CanPersist(string searchEngineType)
         {
             IndexDefinition defOne, defTwo;
             string dbName;
 
-            using (CreatePersistentDocumentDatabase(NewDataPath(), out var database))
+            using (CreatePersistentDocumentDatabase(NewDataPath(), out var database, modifyConfiguration: dictionary => dictionary[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType))
             {
                 dbName = database.Name;
 

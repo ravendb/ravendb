@@ -78,13 +78,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         public readonly LuceneDocument Document = new LuceneDocument();
 
         private readonly List<int> _multipleItemsSameFieldCount = new List<int>();
-
-        private readonly bool _indexImplicitNull;
-        private readonly bool _indexEmptyEntries;
-        private readonly int _numberOfBaseFields;
-        private readonly string _keyFieldName;
-        protected readonly bool _storeValue;
-
+        
         public void Clean()
         {
             if (_fieldsCache.Count > 256)
@@ -133,14 +127,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
              int numberOfBaseFields,
              string keyFieldName = null,
              bool storeValue = false,
-             string storeValueFieldName = Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName) : base(index, storeValue, fields)
+             string storeValueFieldName = Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName) : base(index, storeValue, indexImplicitNull, indexEmptyEntries, numberOfBaseFields, keyFieldName, storeValueFieldName, fields)
         {
-            _indexImplicitNull = indexImplicitNull;
-            _indexEmptyEntries = indexEmptyEntries;
-
-            _numberOfBaseFields = numberOfBaseFields;
-            _keyFieldName = keyFieldName ?? (storeValue ? Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName : Constants.Documents.Indexing.Fields.DocumentIdFieldName);
-            _storeValue = storeValue;
             _storeValueField = new Field(storeValueFieldName, new byte[0], 0, 0, Field.Store.YES);
 
             Scope = new ConversionScope(this);

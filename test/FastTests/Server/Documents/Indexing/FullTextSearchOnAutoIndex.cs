@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
+using Raven.Server.Config;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
@@ -14,10 +15,11 @@ namespace FastTests.Server.Documents.Indexing
         {
         }
 
-        [Fact]
-        public async Task CanUseFullTextSearchInAutoIndex()
+        [Theory]
+        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        public async Task CanUseFullTextSearchInAutoIndex(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = searchEngineType}))
             {
                 using (var s = store.OpenAsyncSession())
                 {
@@ -57,10 +59,11 @@ namespace FastTests.Server.Documents.Indexing
             }
         }
 
-        [Fact]
-        public async Task CanUseFullTextSearchInAutoMapReduceIndex()
+        [Theory]
+        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        public async Task CanUseFullTextSearchInAutoMapReduceIndex(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = searchEngineType}))
             {
                 using (var s = store.OpenAsyncSession())
                 {

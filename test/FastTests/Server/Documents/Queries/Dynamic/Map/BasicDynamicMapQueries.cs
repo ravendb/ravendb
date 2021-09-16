@@ -2,11 +2,13 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading.Tasks;
+using FastTests.Server.Documents.Indexing;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Raven.Client.Documents.Linq;
+using Raven.Server.Config;
 using Tests.Infrastructure.Entities;
 using Xunit.Abstractions;
 
@@ -19,10 +21,11 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         {
         }
 
-        [Fact]
-        public async Task String_where_clause()
+        [Theory]
+        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        public async Task String_where_clause(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = searchEngineType}))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -42,10 +45,11 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             }
         }
 
-        [Fact]
-        public async Task Numeric_where_equals_clause()
+        [Theory]
+        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        public async Task Numeric_where_equals_clause(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = searchEngineType}))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -65,10 +69,11 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             }
         }
 
-        [Fact]
-        public async Task Numeric_between_clause()
+        [Theory]
+        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        public async Task Numeric_between_clause(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = searchEngineType}))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -94,10 +99,11 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             }
         }
 
-        [Fact]
-        public async Task Numeric_range_where_clause()
+        [Theory]
+        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        public async Task Numeric_range_where_clause(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = searchEngineType}))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -127,10 +133,11 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             }
         }
 
-        [Fact]
-        public async Task Where_clause_and_sorting()
+        [Theory]
+        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        public async Task Where_clause_and_sorting(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = searchEngineType}))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -161,10 +168,11 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             }
         }
 
-        [Fact]
-        public async Task Sorting_by_doubles()
+        [Theory]
+        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        public async Task Sorting_by_doubles(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = searchEngineType}))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -187,10 +195,11 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             }
         }
 
-        [Fact]
-        public async Task Sorting_by_integers()
+        [Theory]
+        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        public async Task Sorting_by_integers(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = searchEngineType}))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -213,10 +222,11 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             }
         }
 
-        [Fact]
-        public async Task Sorting_by_nested_string_field()
+        [Theory]
+        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        public async Task Sorting_by_nested_string_field(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = searchEngineType}))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -251,10 +261,11 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             }
         }
 
-        [Fact]
-        public async Task Sorting_by_nested_integer_field()
+        [Theory]
+        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        public async Task Sorting_by_nested_integer_field(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = searchEngineType}))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -289,10 +300,11 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             }
         }
 
-        [Fact]
-        public async Task Sorting_by_strings()
+        [Theory]
+        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        public async Task Sorting_by_strings(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = searchEngineType}))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -320,10 +332,11 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             }
         }
 
-        [Fact]
-        public async Task Partial_match()
+        [Theory]
+        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        public async Task Partial_match(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = searchEngineType}))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -358,10 +371,11 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             }
         }
 
-        [Fact]
-        public async Task Empty_query()
+        [Theory]
+        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        public async Task Empty_query(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = searchEngineType}))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -397,10 +411,11 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             }
         }
 
-        [Fact]
-        public async Task Can_project_in_map()
+        [Theory]
+        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        public async Task Can_project_in_map(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = searchEngineType}))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -459,10 +474,11 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             }
         }
 
-        [Fact]
-        public void Collection_query()
+        [Theory]
+        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        public void Collection_query(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = searchEngineType}))
             {
                 using (var session = store.OpenSession())
                 {
@@ -493,10 +509,11 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             }
         }
 
-        [Fact]
-        public void Can_query_on_dictionary()
+        [Theory]
+        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        public void Can_query_on_dictionary(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = searchEngineType}))
             {
                 using (var session = store.OpenSession())
                 {

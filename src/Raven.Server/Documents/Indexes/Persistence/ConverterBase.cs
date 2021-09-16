@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using Lucene.Net.Documents;
+using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Json;
@@ -16,11 +17,23 @@ namespace Raven.Server.Documents.Indexes.Persistence
         protected readonly BlittableJsonTraverser _blittableTraverser;
         protected readonly Index _index;
         protected readonly Dictionary<string, IndexField> _fields;
+        protected readonly bool _indexImplicitNull;
+        protected readonly bool _indexEmptyEntries;
+        protected readonly string _keyFieldName;
+        protected readonly bool _storeValue;
+        protected readonly string _storeValueFieldName;
+        protected readonly int _numberOfBaseFields;
 
-        public ConverterBase(Index index, bool storeValue, ICollection<IndexField> fields = null)
+        public ConverterBase(Index index, bool storeValue, bool indexImplicitNull, bool indexEmptyEntries, int numberOfBaseFields, string keyFieldName, string storeValueFieldName, ICollection<IndexField> fields = null)
         {
             _index = index ?? throw new ArgumentNullException(nameof(index));
             _blittableTraverser = storeValue ? BlittableJsonTraverser.FlatMapReduceResults : BlittableJsonTraverser.Default;
+            _indexImplicitNull = indexImplicitNull;
+            _indexEmptyEntries = indexEmptyEntries;
+            _keyFieldName = keyFieldName ?? (storeValue ? Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName : Constants.Documents.Indexing.Fields.DocumentIdFieldName);
+            _storeValueFieldName = storeValueFieldName;
+            _storeValue = storeValue;
+            _numberOfBaseFields = numberOfBaseFields;
             
             if (fields == null)
                 fields = index.Definition.IndexFields.Values;

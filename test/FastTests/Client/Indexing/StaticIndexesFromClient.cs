@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
+using FastTests.Server.Documents.Indexing;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
+using Raven.Server.Config;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
@@ -15,10 +17,11 @@ namespace FastTests.Client.Indexing
         {
         }
 
-        [Fact]
-        public async Task Can_Put()
+        [Theory]
+        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        public async Task Can_Put(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType}))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -53,10 +56,11 @@ namespace FastTests.Client.Indexing
             public int Age { set; get; }
         }
 
-        [Fact]
-        public async Task Can_Put_And_Replace()
+        [Theory]
+        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        public async Task Can_Put_And_Replace(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType}))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -106,10 +110,11 @@ namespace FastTests.Client.Indexing
             }
         }
 
-        [Fact]
-        public async Task Can_Put_Replace_And_Back_To_Original()
+        [Theory]
+        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        public async Task Can_Put_Replace_And_Back_To_Original(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType}))
             {
                 using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(90)))
                 {
@@ -172,10 +177,11 @@ namespace FastTests.Client.Indexing
             }
         }
 
-        [Fact]
-        public async Task Can_start_and_stop_index()
+        [Theory]
+        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        public async Task Can_start_and_stop_index(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType}))
             {
                 using (var session = store.OpenAsyncSession())
                 {

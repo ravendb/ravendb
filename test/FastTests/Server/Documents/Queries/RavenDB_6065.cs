@@ -1,4 +1,6 @@
-﻿using Raven.Client.Documents.Queries;
+﻿using FastTests.Server.Documents.Indexing;
+using Raven.Client.Documents.Queries;
+using Raven.Server.Config;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -17,10 +19,11 @@ namespace FastTests.Server.Documents.Queries
             public int Age { get; set; }
         }
 
-        [Fact]
-        public void QueryWithOrOperators()
+        [Theory]
+        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        public void QueryWithOrOperators(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = searchEngineType}))
             {
                 using (var session = store.OpenSession())
                 {
@@ -34,7 +37,6 @@ namespace FastTests.Server.Documents.Queries
                 }
 
                 WaitForIndexing(store);
-
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.DocumentQuery<Person>()

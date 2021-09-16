@@ -10,6 +10,30 @@ namespace Corax.Queries
 {
     partial struct SortingMatch
     {                     
+        private static class BasicComparers
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            internal static int CompareAscending(ReadOnlySpan<byte> x, ReadOnlySpan<byte> y)
+            {
+                return x.SequenceCompareTo(y);
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            internal static int CompareAscending<T>(T x, T y)
+            {
+                if (typeof(T) == typeof(long))
+                {
+                    return Math.Sign((long)(object)x - (long)(object)y);
+                }
+                else if (typeof(T) == typeof(double))
+                {
+                    return Math.Sign((double)(object)x - (double)(object)y);
+                }
+                
+                throw new NotSupportedException("Not supported");
+            }
+        }
+
         public unsafe struct CustomMatchComparer : IMatchComparer
         {
             private readonly IndexSearcher _searcher;
@@ -211,8 +235,8 @@ namespace Corax.Queries
                         return comparer.CompareSequence(resultX, resultY);
                     }
                     else if (readX)
-                        return 1;
-                    return -1;
+                        return -1;
+                    return 1;
                 }
 
                 static int CompareWithLoadNumerical<T>(ref DescendingMatchComparer comparer, long x, long y) where T : unmanaged
@@ -228,8 +252,8 @@ namespace Corax.Queries
                         return comparer.CompareNumerical(resultX, resultY);
                     }
                     else if (readX)
-                        return 1;
-                    return -1;
+                        return -1;
+                    return 1;
                 }
 
                 _compareFunc = entryFieldType switch

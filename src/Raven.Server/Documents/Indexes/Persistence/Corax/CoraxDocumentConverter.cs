@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using Corax;
 using Raven.Client;
+using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes;
 using Raven.Server.Json;
 using Raven.Server.Utils;
@@ -24,18 +25,18 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         private readonly ByteStringContext _allocator;
         private readonly List<IDisposable> _slicesToDispose;
         private readonly Dictionary<Slice, int> _knownFields;
-        private static readonly byte[] _trueLiteral = Encoding.UTF8.GetBytes("true"); 
-        private static readonly byte[] _falseLiteral = Encoding.UTF8.GetBytes("false");
+        private static readonly Memory<byte> _trueLiteral = new Memory<byte>(Encoding.UTF8.GetBytes("true"));
+        private static readonly Memory<byte> _falseLiteral = new Memory<byte>(Encoding.UTF8.GetBytes("false"));
         private static readonly StandardFormat _standardFormat = new StandardFormat('g');
         private static readonly StandardFormat _timeSpanFormat = new StandardFormat('c');
         public CoraxDocumentConverter(
                 Index index, 
                 bool indexImplicitNull = false, 
                 bool indexEmptyEntries = true, 
-                string keyFieldName = null, 
+                string keyFieldName = null,
                 bool storeValue = false, 
                 string storeValueFieldName = Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName) :
-            base(index, storeValue)
+            base(index, storeValue, indexImplicitNull, indexEmptyEntries, 1, keyFieldName, storeValueFieldName)
         {
             _allocator = new ByteStringContext(SharedMultipleUseFlag.None);
             _slicesToDispose = new();
@@ -49,13 +50,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             var knownFields = new Dictionary<Slice, int>();
             
             //todo maciej: will optimize it while doing static indexes.
-            _slicesToDispose.Add(Slice.From(_allocator, Constants.Documents.Indexing.Fields.DocumentIdFieldName, ByteStringType.Immutable, out var value));
+            _slicesToDispose.Add(Slice.From(_allocator, _index.Type.IsMapReduce() ? Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName : Constants.Documents.Indexing.Fields.DocumentIdFieldName, ByteStringType.Immutable, out var value));
             knownFields.Add(value, 0);
             foreach (var field in _fields.Values)
             {
                 _slicesToDispose.Add(Slice.From(_allocator, field.Name, ByteStringType.Immutable, out value));
                 //offset for ID()
-                knownFields.Add(value, field.Id + 1);
+                knownFields.Add(value, field.Id);
             }
 
             return knownFields;
@@ -67,7 +68,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             using ( _allocator.Allocate(document.Data.Size * 2, out ByteString buffer))
             {
                 var entryWriter = new IndexEntryWriter(buffer.ToSpan(), _knownFields);
-                id = document.LowerId;
+                id = document.LowerId ?? key;
                 bool shouldSkip;
                 
                 
@@ -77,6 +78,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 // Where should we put this and when release it?
                 List<int> stringsLength = new List<int>(128);
                 var scope = new SingleEntryWriterScope(stringsLength, _allocator);
+                scope.Write(0, id.AsSpan(), ref entryWriter);
                 foreach (var indexField in _fields.Values)
                 {
                     if (BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, indexField.OriginalName ?? indexField.Name, out var value))
@@ -175,7 +177,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     return;
 
                 case ValueType.Boolean:
-                    scope.Write(field.Id, (bool)value ? _trueLiteral : _falseLiteral, ref entryWriter);
+                    scope.Write(field.Id, ((bool)value ? _trueLiteral : _falseLiteral).Span, ref entryWriter);
                     return;
 
                 case ValueType.DateTime:
@@ -202,7 +204,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     return;
 
                 case ValueType.Convertible:
-                    scope.Write(field.Id, ((IConvertible)value).ToString(CultureInfo.InvariantCulture), ref entryWriter);
+                    var iConvertible = (IConvertible)value;
+                    @long = iConvertible.ToInt64(CultureInfo.InvariantCulture);
+                    @double = iConvertible.ToDouble(CultureInfo.InvariantCulture);
+                    
+                    scope.Write(field.Id, iConvertible.ToString(CultureInfo.InvariantCulture), @long, @double, ref entryWriter);
                     return;
 
                 case ValueType.Enumerable:

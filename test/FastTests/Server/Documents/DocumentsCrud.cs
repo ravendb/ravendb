@@ -23,7 +23,7 @@ namespace FastTests.Server.Documents
 
         public void Initialize([CallerMemberName]string caller = null)
         {
-            _disposeDatabase = CreatePersistentDocumentDatabase(NewDataPath(prefix: "DocumentsCrud"), out _documentDatabase, caller);
+            _disposeDatabase = CreatePersistentDocumentDatabase(NewDataPath(prefix: "DocumentsCrud"), out _documentDatabase, caller: caller);
         }
 
         [Theory]

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Util;
+using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
@@ -26,10 +27,11 @@ namespace FastTests.Server.Documents.Indexing.Auto
         {
         }
 
-        [Fact]
-        public async Task CanUseSimpleReduction()
+        [Theory]
+        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        public async Task CanUseSimpleReduction(string searchEngineType)
         {
-            using (var db = CreateDocumentDatabase())
+            using (var db = CreateDocumentDatabase(modifyConfiguration: dictionary => dictionary[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = searchEngineType))
             using (var mri = AutoMapReduceIndex.CreateNew(GetUsersCountByLocationIndexDefinition(), db))
             {
                 CreateUsers(db, 2, "Poland");
@@ -115,12 +117,13 @@ namespace FastTests.Server.Documents.Indexing.Auto
             }
         }
 
-        [Fact]
-        public async Task CanDelete()
+        [Theory]
+        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        public async Task CanDelete(string searchEngineType)
         {
             const long numberOfUsers = 10;
 
-            using (var db = CreateDocumentDatabase())
+            using (var db = CreateDocumentDatabase(modifyConfiguration: dictionary => dictionary[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = searchEngineType))
             using (var index = AutoMapReduceIndex.CreateNew(GetUsersCountByLocationIndexDefinition(), db))
             {
 
@@ -227,12 +230,13 @@ namespace FastTests.Server.Documents.Indexing.Auto
             }
         }
 
-        [Fact]
-        public async Task DefinitionOfAutoMapReduceIndexIsPersisted()
+        [Theory]
+        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        public async Task DefinitionOfAutoMapReduceIndexIsPersisted(string searchEngineType)
         {
             string dbName;
 
-            using (CreatePersistentDocumentDatabase(NewDataPath(), out var database))
+            using (CreatePersistentDocumentDatabase(NewDataPath(), out var database, modifyConfiguration: dictionary => dictionary[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = searchEngineType))
             {
                 dbName = database.Name;
 
@@ -326,10 +330,11 @@ namespace FastTests.Server.Documents.Indexing.Auto
             }
         }
 
-        [Fact]
-        public async Task CanGroupByNestedFieldAndAggregateOnCollection()
+        [Theory]
+        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        public async Task CanGroupByNestedFieldAndAggregateOnCollection(string searchEngineType)
         {
-            using (var db = CreateDocumentDatabase())
+            using (var db = CreateDocumentDatabase(modifyConfiguration: dictionary => dictionary[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = searchEngineType))
             using (var mri = AutoMapReduceIndex.CreateNew(new AutoMapReduceIndexDefinition(
                 "Orders",
                 new[]
@@ -384,10 +389,11 @@ namespace FastTests.Server.Documents.Indexing.Auto
             }
         }
 
-        [Fact]
-        public void CanStoreAndReadReduceStats()
+        [Theory]
+        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        public void CanStoreAndReadReduceStats(string searchEngineType)
         {
-            using (var db = CreateDocumentDatabase())
+            using (var db = CreateDocumentDatabase(modifyConfiguration: dictionary => dictionary[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = searchEngineType))
             using (var index = AutoMapReduceIndex.CreateNew(GetUsersCountByLocationIndexDefinition(), db))
             {
                 index._indexStorage.UpdateStats(SystemTime.UtcNow, new IndexingRunStats
@@ -433,10 +439,11 @@ namespace FastTests.Server.Documents.Indexing.Auto
             }
         }
 
-        [Fact]
-        public async Task CanUpdateByChangingValue()
+        [Theory]
+        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        public async Task CanUpdateByChangingValue(string searchEngineType)
         {
-            using (var db = CreateDocumentDatabase())
+            using (var db = CreateDocumentDatabase(modifyConfiguration: dictionary => dictionary[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = searchEngineType))
             using (var index = AutoMapReduceIndex.CreateNew(new AutoMapReduceIndexDefinition("Users", new[]
             {
                 new AutoIndexField
@@ -508,10 +515,11 @@ namespace FastTests.Server.Documents.Indexing.Auto
             }
         }
 
-        [Fact]
-        public async Task CanUpdateByChangingReduceKey()
+        [Theory]
+        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        public async Task CanUpdateByChangingReduceKey(string searchEngineType)
         {
-            using (var db = CreateDocumentDatabase())
+            using (var db = CreateDocumentDatabase(modifyConfiguration: dictionary => dictionary[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = searchEngineType))
             using (var index = AutoMapReduceIndex.CreateNew(new AutoMapReduceIndexDefinition("Users", new[]
             {
                 new AutoIndexField
@@ -586,10 +594,11 @@ namespace FastTests.Server.Documents.Indexing.Auto
             }
         }
 
-        [Fact]
-        public async Task GroupByMultipleFields()
+        [Theory]
+        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        public async Task GroupByMultipleFields(string searchEngineType)
         {
-            using (var db = CreateDocumentDatabase())
+            using (var db = CreateDocumentDatabase(modifyConfiguration: dictionary => dictionary[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = searchEngineType))
             using (var index = AutoMapReduceIndex.CreateNew(new AutoMapReduceIndexDefinition("Orders", new[]
             {
                 new AutoIndexField

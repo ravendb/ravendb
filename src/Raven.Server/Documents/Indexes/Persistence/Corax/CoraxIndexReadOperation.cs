@@ -49,11 +49,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             var position = query.Start;
             long readCounter = 0;
 
-            IQueryMatch result = _coraxQueryEvaluator.Search(query.Metadata, fieldsToFetch);
+            IQueryMatch result = _coraxQueryEvaluator.Search(query, fieldsToFetch);
             if (result == null)
                 yield break;
-
-            totalResults.Value = Convert.ToInt32(result.Count);
+            
             var ids = ArrayPool<long>.Shared.Rent(BufferSize);
             try
             {
@@ -79,7 +78,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     else
                         ids[0] = ids[position];
                     read -= position;
-                    skippedResults.Value = -1; // docsToLoad * _bufferSize + position;
+                    skippedResults.Value = Convert.ToInt32(readCounter); // docsToLoad * _bufferSize + position;
                 }
 
                 // first Fill operation would be done outside loop because we need to check if there is already some data read.
@@ -105,11 +104,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     readCounter += read;
                 }
 
-                //special value for studio. We have unbounded set and don't know how much items is in index so it should count it during loading.
-                if (totalResults.Value == 0)
-                {
-                    totalResults.Value = Convert.ToInt32(readCounter);
-                }
+                if (result is SortingMatch sm)
+                    totalResults.Value = Convert.ToInt32(sm.TotalResults);
+                else
+                    totalResults.Value = Convert.ToInt32(result.Count);
             }
             finally
             {

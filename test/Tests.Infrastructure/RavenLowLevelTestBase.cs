@@ -38,9 +38,9 @@ namespace FastTests
             Assert.True(SpinWait.SpinUntil(() => index.GetLastMappedEtagsForDebug().Values.Min() == etag, timeout));
         }
 
-        protected IDisposable CreatePersistentDocumentDatabase(string dataDirectory, out DocumentDatabase db, [CallerMemberName]string caller = null)
+        protected IDisposable CreatePersistentDocumentDatabase(string dataDirectory, out DocumentDatabase db, Action<Dictionary<string, string>> modifyConfiguration = null, [CallerMemberName]string caller = null)
         {
-            var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: dataDirectory, caller: caller);
+            var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: dataDirectory, caller: caller, modifyConfiguration: modifyConfiguration);
             db = database;
             Debug.Assert(database != null);
             return new DisposableAction(() =>
