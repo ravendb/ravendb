@@ -140,6 +140,10 @@ h6 {
     display: inline !important;
 }
 
+.word-break {
+    word-break: break-word;
+}
+
 .small-properties {
     font-size: 11px;
     text-transform: uppercase;
@@ -436,12 +440,12 @@ i {
         }
     }
 
-    &:not(.btn-sm .btn-xs) {
+    &:not(.btn-sm, .btn-xs) {
         [class*=" icon-"],
         [class^="icon-"] {
-            font-size: 170%;
+            font-size: 140%;
             line-height: 60%;
-            top: 4px;
+            top: 3px;
             margin-left: -3px;
         }
     }
