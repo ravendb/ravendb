@@ -1,5 +1,7 @@
 ﻿using System.Linq;
+using FastTests.Server.Documents.Indexing;
 using Raven.Client.Documents.Linq;
+using Raven.Server.Config;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -11,10 +13,11 @@ namespace FastTests.Client.Queries
         {
         }
 
-        [Fact]
-        public void QueryingUsingInShouldYieldDistinctResults()
+        [Theory]
+        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        public void QueryingUsingInShouldYieldDistinctResults(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = searchEngineType}))
             {
                 using (var session = store.OpenSession())
                 {

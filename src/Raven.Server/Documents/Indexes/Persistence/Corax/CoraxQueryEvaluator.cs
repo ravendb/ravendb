@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Runtime.CompilerServices;
 using Corax;
 using Corax.Queries;
@@ -11,6 +12,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
     public class CoraxQueryEvaluator
     {
         private readonly IndexSearcher _searcher;
+        private IndexQueryServerSide _query;
 
         public CoraxQueryEvaluator(IndexSearcher searcher)
         {
@@ -22,13 +24,15 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             return Search(query.Where);
         }
 
-        public IQueryMatch Search(QueryMetadata query, FieldsToFetch fieldsToFetch)
+        public IQueryMatch Search(IndexQueryServerSide query, FieldsToFetch fieldsToFetch)
         {
+            _query = query;
             IQueryMatch result = null;
-            if (query.Query.Where != null)
-                result = Evaluate(query.Query.Where);
-            if (query.Query.OrderBy != null)
-                result = OrderByEvaluate(result, fieldsToFetch, query.Query.OrderBy);
+            if (query.Metadata.Query.Where is null)
+                throw new NotImplementedException("Corax all docs.");
+            result = Evaluate(query.Metadata.Query.Where);
+            if (query.Metadata.Query.OrderBy != null)
+                result = OrderByEvaluate(result, fieldsToFetch, query.Metadata.Query.OrderBy);
             return result;
         }
         public IQueryMatch Search(QueryExpression where)
@@ -41,6 +45,15 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         private string GetField(FieldExpression f)
         {
             return f.FieldValue.Length != 0 ? f.FieldValue : f.FieldValueWithoutAlias;
+        }
+
+        private string GetFieldValue(ValueExpression f)
+        {
+            object value = f.Token.Value;
+            if (f.Value == ValueTokenType.Parameter)
+                 if (_query.QueryParameters.TryGet(f.Token.Value, out value) == false)
+                     throw new InvalidDataException($"Cannot find {f.Token.Value} parameter. Please check your query.");
+            return value.ToString();
         }
 
         private IQueryMatch Evaluate(QueryExpression where)
@@ -56,9 +69,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                         default:
                             return null;
                     }
-                case TrueExpression _:
                 case null:
-                    return null;
+                    throw new NotSupportedException();
                 case InExpression ie:
                     return (ie.Source, ie.Values) switch
                     {
@@ -68,13 +80,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 case BinaryExpression be:
                     return (be.Operator, be.Left, be.Right) switch
                     {
-                        (OperatorType.Equal, FieldExpression f, ValueExpression v) => _searcher.TermQuery(GetField(f), v.Token.Value),
+                        (OperatorType.Equal, FieldExpression f, ValueExpression v) => _searcher.TermQuery(GetField(f), GetFieldValue(v)),
                         (OperatorType.And, QueryExpression q1, QueryExpression q2) => _searcher.And(Evaluate(q1), Evaluate(q2)),
                         (OperatorType.Or, QueryExpression q1, QueryExpression q2) => _searcher.Or(Evaluate(q1), Evaluate(q2)),
-                        _ => throw new NotSupportedException()
+                        _ => throw new NotSupportedException($"Method {be} is not supported.")
                     };
                 default:
-                    return null;
+                    throw new NotSupportedException();
             }
         }
 

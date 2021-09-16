@@ -28,7 +28,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
         public AutoIndexDefinitionBase CreateAutoIndexDefinition()
         {
-            int id = 0;
+            int id = 1;
             if (IsGroupBy == false)
             {
                 return new AutoMapIndexDefinition(ForCollection, MapFields.Values.Select(field =>

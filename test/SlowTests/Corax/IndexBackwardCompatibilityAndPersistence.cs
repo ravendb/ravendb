@@ -11,6 +11,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Configuration;
+using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Utils;
 using Xunit;
@@ -45,9 +46,8 @@ namespace SlowTests.Corax
         {
             using (var server = GetNewServer(new ServerCreationOptions { DataDirectory = _serverPath, RunInMemory = false }))
             {
-                using (var store = GetDocumentStore(new Options { Server = server, RunInMemory = false, Path = _databasePath }))
+                using (var store = GetDocumentStore(new Options { Server = server, RunInMemory = false, Path = _databasePath, ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = beginType.ToString() }))
                 {
-                    PutConfigurationSettings(store, "Indexing.Auto.SearchEngine", beginType);
                     _databaseName = store.Database;
                     using (var session = store.OpenSession())
                         _ = session.Query<Order>().Where(x => x.OrderedAt == DateTime.Now).ToList();

@@ -134,9 +134,8 @@ namespace Raven.Server.Documents.Indexes
             public const long TimeTicks = 50_000;
 
             public const long Analyzers = 52_000;
-
-            //todo maciej
-            public const long Corax = 52_300;
+            
+            public const long Corax = 60_000;
             /// <summary>
             /// Remember to bump this
             /// </summary>

@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using FastTests.Server.Documents.Indexing;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Raven.Server.Config;
 using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
@@ -16,10 +18,11 @@ namespace FastTests.Client.Indexing
         {
         }
 
-        [Fact]
-        public void CanUseJavaScriptIndex()
+        [Theory]
+        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        public void CanUseJavaScriptIndex(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType}))
             {
                 store.ExecuteIndex(new UsersByName());
                 using (var session = store.OpenSession())
@@ -38,10 +41,11 @@ namespace FastTests.Client.Indexing
         }
 
 
-        [Fact]
-        public void CanIndexTimeSpan()
+        [Theory]
+        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        public void CanIndexTimeSpan(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType}))
             {
                 store.ExecuteIndex(new TeemoByDuration());
                 using (var session = store.OpenSession())
@@ -65,10 +69,11 @@ namespace FastTests.Client.Indexing
             public TimeSpan Duration { get; set; }
         }
 
-        [Fact]
-        public void CanUseJavaScriptIndexWithAdditionalSources()
+        [Theory]
+        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        public void CanUseJavaScriptIndexWithAdditionalSources(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType}))
             {
                 store.ExecuteIndex(new UsersByNameWithAdditionalSources());
                 using (var session = store.OpenSession())
@@ -86,10 +91,11 @@ namespace FastTests.Client.Indexing
             }
         }
 
-        [Fact]
-        public void CanIndexArrayProperties()
+        [Theory]
+        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        public void CanIndexArrayProperties(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType}))
             {
                 store.ExecuteIndex(new UsersByPhones());
                 using (var session = store.OpenSession())
@@ -116,10 +122,11 @@ namespace FastTests.Client.Indexing
             public int[] Numbers { get; set; }
         }
 
-        [Fact]
-        public void CanIndexMapWithFanout()
+        [Theory]
+        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        public void CanIndexMapWithFanout(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType}))
             {
                 store.ExecuteIndex(new FanoutByNumbers());
                 using (var session = store.OpenSession())
@@ -146,10 +153,11 @@ namespace FastTests.Client.Indexing
             }
         }
 
-        [Fact]
-        public void CanIndexMapReduceWithFanoutWhenOutputingBlittableObjectInstance()
+        [Theory]
+        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        public void CanIndexMapReduceWithFanoutWhenOutputingBlittableObjectInstance(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType}))
             {
                 store.ExecuteIndex(new FanoutByPaymentsWithReduce());
                 using (var session = store.OpenSession())
@@ -177,10 +185,12 @@ namespace FastTests.Client.Indexing
                 }
             }
         }
-        [Fact]
-        public void CanIndexMapReduceWithFanout()
+        
+        [Theory]
+        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        public void CanIndexMapReduceWithFanout(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType}))
             {
                 store.ExecuteIndex(new FanoutByNumbersWithReduce());
                 using (var session = store.OpenSession())
@@ -207,10 +217,11 @@ namespace FastTests.Client.Indexing
             }
         }
 
-        [Fact]
-        public void CanUseJavaScriptIndexWithDynamicFields()
+        [Theory]
+        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        public void CanUseJavaScriptIndexWithDynamicFields(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType}))
             {
                 store.ExecuteIndex(new UsersByNameAndAnalyzedName());
                 using (var session = store.OpenSession())
@@ -230,10 +241,11 @@ namespace FastTests.Client.Indexing
             }
         }
 
-        [Fact]
-        public void CanUseJavaScriptMultiMapIndex()
+        [Theory]
+        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        public void CanUseJavaScriptMultiMapIndex(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType}))
             {
                 store.ExecuteIndex(new UsersAndProductsByName());
                 using (var session = store.OpenSession())
@@ -256,21 +268,23 @@ namespace FastTests.Client.Indexing
             }
         }
 
-        [Fact]
-        public void CanUseJavaScriptIndexWithLoadDocument()
+        [Theory]
+        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        public void CanUseJavaScriptIndexWithLoadDocument(string searchEngineType)
         {
-            CanUseJavaScriptIndexWithLoadInternal<UsersWithProductsByName>();
+            CanUseJavaScriptIndexWithLoadInternal<UsersWithProductsByName>(searchEngineType);
         }
 
-        [Fact]
-        public void CanUseJavaScriptIndexWithExternalLoadDocument()
+        [Theory]
+        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        public void CanUseJavaScriptIndexWithExternalLoadDocument(string searchEngineType)
         {
-            CanUseJavaScriptIndexWithLoadInternal<UsersWithProductsByNameWithExternalLoad>();
+            CanUseJavaScriptIndexWithLoadInternal<UsersWithProductsByNameWithExternalLoad>(searchEngineType);
         }
 
-        private void CanUseJavaScriptIndexWithLoadInternal<T>() where T : AbstractJavaScriptIndexCreationTask, new()
+        private void CanUseJavaScriptIndexWithLoadInternal<T>(string searchEngineType) where T : AbstractJavaScriptIndexCreationTask, new()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType}))
             {
                 var index = new T();
                 store.ExecuteIndex(index);
@@ -295,10 +309,11 @@ namespace FastTests.Client.Indexing
             }
         }
 
-        [Fact]
-        public void CanElivateSimpleFunctions()
+        [Theory]
+        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        public void CanElivateSimpleFunctions(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType}))
             {
                 store.ExecuteIndex(new UsersByNameAndIsActive());
                 using (var session = store.OpenSession())
@@ -316,10 +331,12 @@ namespace FastTests.Client.Indexing
 
             }
         }
-        [Fact]
-        public void CanUseJavaScriptMapReduceIndex()
+        
+        [Theory]
+        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        public void CanUseJavaScriptMapReduceIndex(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType}))
             {
                 store.ExecuteIndex(new UsersAndProductsByNameAndCount());
                 using (var session = store.OpenSession())
@@ -341,22 +358,24 @@ namespace FastTests.Client.Indexing
             }
         }
 
-        [Fact]
-        public void CanUseSpatialFields()
+        [Theory]
+        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        public void CanUseSpatialFields(string searchEngineType)
         {
             var kalab = 10;
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType}))
             {
                 store.ExecuteIndex(new Spatial());
                 CanUseSpatialFieldsInternal(kalab, store, "Spatial");
             }
         }
 
-        [Fact]
-        public void CanUseDynamicSpatialFields()
+        [Theory]
+        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        public void CanUseDynamicSpatialFields(string searchEngineType)
         {
             var kalab = 10;
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType}))
             {
                 store.ExecuteIndex(new DynamicSpatial());
                 CanUseSpatialFieldsInternal(kalab, store, "DynamicSpatial");
@@ -388,11 +407,12 @@ namespace FastTests.Client.Indexing
             }
         }
 
-        [Fact]
-        public void CanReduceNullValues()
+        [Theory]
+        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        public void CanReduceNullValues(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
-            using (var store2 = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType}))
+            using (var store2 = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType}))
             {
                 ReduceNullValuesInternal(store);
             }
@@ -415,10 +435,11 @@ namespace FastTests.Client.Indexing
             }
         }
 
-        [Fact]
-        public void CanReduceWithReturnSyntax()
+        [Theory]
+        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        public void CanReduceWithReturnSyntax(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType}))
             {
                 store.ExecuteIndex(new UsersReducedByNameReturnSyntax());
                 using (var session = store.OpenSession())
@@ -438,10 +459,11 @@ namespace FastTests.Client.Indexing
             }
         }
         
-        [Fact]
-        public void CanUseJsIndexWithArrowObjectFunctionInMap()
+        [Theory]
+        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        public void CanUseJsIndexWithArrowObjectFunctionInMap(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType}))
             {
                 store.ExecuteIndex(new UsersByNameMapArrowSyntax());
                 using (var session = store.OpenSession())
@@ -463,21 +485,23 @@ namespace FastTests.Client.Indexing
             }
         }
 
-        [Fact]
-        public void IdenticalMapReduceIndexWillGenerateDiffrentIndexInstance()
+        [Theory]
+        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        public void IdenticalMapReduceIndexWillGenerateDiffrentIndexInstance(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
-            using (var store2 = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType}))
+            using (var store2 = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType}))
             {
                 ReduceNullValuesInternal(store);
                 ReduceNullValuesInternal(store2);
             }
         }
 
-        [Fact]
-        public void OutputReduceToCollection()
+        [Theory]
+        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        public void OutputReduceToCollection(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType}))
             {
                 store.ExecuteIndex(new Products_ByCategory());
                 using (var session = store.OpenSession())
@@ -499,10 +523,11 @@ namespace FastTests.Client.Indexing
             }
         }
 
-        [Fact]
-        public void DateCheckMapReduce()
+        [Theory]
+        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        public void DateCheckMapReduce(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType}))
             {
                 store.ExecuteIndex(new Product_Sales_ByMonth());
                 using (var session = store.OpenSession())
@@ -548,8 +573,9 @@ namespace FastTests.Client.Indexing
             }
         }
 
-        [Fact]
-        public void CanQueryBySubObjectAsString()
+        [Theory]
+        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        public void CanQueryBySubObjectAsString(string searchEngineType)
         {
             var address = new Address
             {
@@ -557,7 +583,7 @@ namespace FastTests.Client.Indexing
                 Line2 = "sweet home"
             };
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType}))
             {
                 store.ExecuteIndex(new Users_ByAddress());
                 using (var session = store.OpenSession())
@@ -576,10 +602,11 @@ namespace FastTests.Client.Indexing
             public int Duration { get; set; }
         }
 
-        [Fact]
-        public void CanIndexSwitchCases()
+        [Theory]
+        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        public void CanIndexSwitchCases(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType}))
             {
                 store.ExecuteIndex(new ProductsWarrenty());
                 using (var session = store.OpenSession())

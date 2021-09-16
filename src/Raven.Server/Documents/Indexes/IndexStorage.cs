@@ -145,7 +145,7 @@ namespace Raven.Server.Documents.Indexes
                 {
                     var configurationTree = tx.InnerTransaction.CreateTree(IndexSchema.ConfigurationTree);
                     PersistSearchEngine(configurationTree, nameof(SearchEngineType), 
-                        _index.Type.IsAuto() ? _index.Configuration.AutoIndexingEngineType : _index.Configuration.StaticIndexingEngineType);
+                        _index.Type.IsAuto()  ? _index.Configuration.AutoIndexingEngineType : _index.Configuration.StaticIndexingEngineType);
                     AssertAndPersistAnalyzer(configurationTree, RavenConfiguration.GetKey(x => x.Indexing.DefaultAnalyzer), _index.Configuration.DefaultAnalyzer, Raven.Client.Constants.Documents.Indexing.Analyzers.Default);
                     AssertAndPersistAnalyzer(configurationTree, RavenConfiguration.GetKey(x => x.Indexing.DefaultExactAnalyzer), _index.Configuration.DefaultExactAnalyzer, Raven.Client.Constants.Documents.Indexing.Analyzers.DefaultExact);
                     AssertAndPersistAnalyzer(configurationTree, RavenConfiguration.GetKey(x => x.Indexing.DefaultSearchAnalyzer), _index.Configuration.DefaultSearchAnalyzer, Raven.Client.Constants.Documents.Indexing.Analyzers.DefaultSearch);
@@ -174,6 +174,8 @@ namespace Raven.Server.Documents.Indexes
 
                 void PersistSearchEngine(Tree configurationTree,  string configurationKey, SearchEngineType defaultEngineType)
                 {
+                    if(defaultEngineType == SearchEngineType.None)
+                        throw new InvalidDataException($"Default search engine is {SearchEngineType.None}. Please set {configurationKey}.");
                     var result = configurationTree.Read(configurationKey);
                     if (result != null)
                     {
@@ -913,16 +915,15 @@ namespace Raven.Server.Documents.Indexes
         {
             using (var tx = environment.ReadTransaction())
             {
-                var statsTree = tx.ReadTree(IndexSchema.ConfigurationTree);
-                if (statsTree == null)
+                var configurationTree = tx.ReadTree(IndexSchema.ConfigurationTree);
+                if (configurationTree == null)
                 {
                     throw new InvalidOperationException($"Index '{name}' does not contain {nameof(IndexSchema.ConfigurationTree)}' tree.");
                 }
 
-                var result = statsTree.Read(IndexSchema.SearchEngineType);
+                var result = configurationTree.Read(IndexSchema.SearchEngineType);
                 if (result == null)
                 {
-                    // lucene backward compability
                     return SearchEngineType.None;
                 }
 

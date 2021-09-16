@@ -809,6 +809,8 @@ namespace Raven.Server.Documents.Indexes
                     IndexPersistence = new CoraxIndexPersistence(this);
                     SearchEngineType = SearchEngineType.Corax;
                     break;
+                default:
+                    throw new InvalidDataException($"Cannot read search engine type for {Name}. Please reset the index.");
             }
             
             IndexPersistence.Initialize(environment);

@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Raven.Server.Config;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -19,10 +20,11 @@ namespace FastTests.Server.Documents.Indexing.Static
             public int Fax { get; set; }
         }
 
-        [Fact]
-        public async Task CanUseIdMethodInJavascriptIndex()
+        [Theory]
+        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        public async Task CanUseIdMethodInJavascriptIndex(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType}))
             {
                 new JavaScriptIndexWithIdMethod().Execute(store);
 
@@ -58,10 +60,11 @@ namespace FastTests.Server.Documents.Indexing.Static
             }
         }
 
-        [Fact]
-        public async Task CanUseGetMetadataMethodInJavascriptIndex()
+        [Theory]
+        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]        
+        public async Task CanUseGetMetadataMethodInJavascriptIndex(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType}))
             {
                 new JavaScriptIndexWithGetMetadataMethod().Execute(store);
 

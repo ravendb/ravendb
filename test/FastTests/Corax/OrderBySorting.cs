@@ -29,7 +29,7 @@ namespace FastTests.Corax
         {
             PrepareData();
             IndexEntries();
-            longList.Sort(CompareReversed);
+            longList.Sort(CompareDescending);
             using var searcher = new IndexSearcher(Env);
             {
                 var match1 = searcher.StartWithQuery("Id", "l");
@@ -48,16 +48,20 @@ namespace FastTests.Corax
 
                 for (int i = 0; i < longList.Count; ++i)
                     Assert.Equal(longList[i].Id, sortedByCorax[i]);
-
+                
                 Assert.Equal(1000, sortedByCorax.Count);
             }
         }
 
-        private static int CompareReversed(IndexSingleNumericalEntry<long> value1, IndexSingleNumericalEntry<long> value2)
+        private static int CompareAscending(IndexSingleNumericalEntry<long> value1, IndexSingleNumericalEntry<long> value2)
         {
             return value1.Content.CompareTo(value2.Content);
         }
 
+        private static int CompareDescending(IndexSingleNumericalEntry<long> value1, IndexSingleNumericalEntry<long> value2)
+        {
+            return value2.Content.CompareTo(value1.Content);
+        }
         private void PrepareData()
         {
             for (int i = 0; i < 1000; ++i)
@@ -65,7 +69,7 @@ namespace FastTests.Corax
                 longList.Add(new IndexSingleNumericalEntry<long>
                 {
                     Id = $"list/{i}",
-                    Content = 1234 - i
+                    Content = i
                 });
             }
         }

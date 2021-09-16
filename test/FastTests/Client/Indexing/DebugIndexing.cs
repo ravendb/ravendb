@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
+using FastTests.Server.Documents.Indexing;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries;
+using Raven.Server.Config;
 using Raven.Server.Documents.Queries;
 using Raven.Server.ServerWide;
 using Sparrow;
@@ -25,10 +27,11 @@ namespace FastTests.Client.Indexing
             public string Name { get; set; }
         }
 
-        [Fact]
-        public async Task QueriesRunning()
+        [Theory]
+        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        public async Task QueriesRunning(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = searchEngineType}))
             {
                 IndexQuery q;
                 using (var session = store.OpenSession())

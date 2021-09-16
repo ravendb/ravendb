@@ -2,6 +2,7 @@
 using System.Linq;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Raven.Server.Config;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
@@ -14,10 +15,11 @@ namespace FastTests.Server.Documents.Indexing.Static
         {
         }
 
-        [Fact]
-        public void CanIndexDictionaryDirectly()
+        [Theory]
+        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        public void CanIndexDictionaryDirectly(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType}))
             {
                 new IndexReturningDictionary_MethodSyntax().Execute(store);
                 new IndexReturningDictionary_QuerySyntax().Execute(store);
@@ -55,10 +57,11 @@ namespace FastTests.Server.Documents.Indexing.Static
             }
         }
 
-        [Fact]
-        public void CanMapReduceIndexDictionaryDirectly()
+        [Theory]
+        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        public void CanMapReduceIndexDictionaryDirectly(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType}))
             {
                 new MapReduceIndexReturningDictionary_MethodSyntax().Execute(store);
                 new MapReduceIndexReturningDictionary_QuerySyntax().Execute(store);
@@ -96,10 +99,11 @@ namespace FastTests.Server.Documents.Indexing.Static
             }
         }
 
-        [Fact]
-        public void CanIndexDictionaryWithComplexObjectsDirectly()
+        [Theory]
+        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        public void CanIndexDictionaryWithComplexObjectsDirectly(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType}))
             {
                 new IndexReturningDictionaryWithComplexObjects_MethodSyntax().Execute(store);
                 new IndexReturningDictionaryWithComplexObjects_QuerySyntax().Execute(store);
@@ -195,10 +199,11 @@ namespace FastTests.Server.Documents.Indexing.Static
             }
         }
 
-        [Fact]
-        public void CanMapReduceIndexDictionaryWithComplexObjectsDirectly()
+        [Theory]
+        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        public void CanMapReduceIndexDictionaryWithComplexObjectsDirectly(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType}))
             {
                 new MapReduceIndexReturningDictionaryWithComplexObjects_MethodSyntax().Execute(store);
                 new MapReduceIndexReturningDictionaryWithComplexObjects_QuerySyntax().Execute(store);
@@ -268,10 +273,11 @@ namespace FastTests.Server.Documents.Indexing.Static
             }
         }
 
-        [Fact]
-        public void CanIndexUsingDictionaryOutputPreceededBySelectWithAnonnymus()
+        [Theory]
+        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        public void CanIndexUsingDictionaryOutputPreceededBySelectWithAnonnymus(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType}))
             {
                 new MixedSelectWithAnonymusAndDictionary().Execute(store);
 

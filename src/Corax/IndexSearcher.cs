@@ -170,19 +170,6 @@ namespace Corax
             return MultiTermMatch.Create(new MultiTermMatch<StartWithTermProvider>(_transaction.Allocator, new StartWithTermProvider(this, _transaction.Allocator, terms, field, 0, startWith)));
         }
 
-        //[Obsolete("Untested.")]
-        //public MultiTermMatch AllQuery()
-        //{
-        //    // TODO: The IEnumerable<string> will die eventually, this is for prototyping only. 
-        //    var fields = _transaction.ReadTree(_transaction.Trees.First());
-
-        //    var terms = fields.CompactTreeFor(field);
-        //    if (terms == null)
-        //        return MultiTermMatch.CreateEmpty(_transaction.Allocator);
-
-        //    return MultiTermMatch.Create(new MultiTermMatch<AllTermsProvider>(_transaction.Allocator, new AllTermsProvider(this, _transaction.Allocator, terms, field)));
-        //}
-
         public SortingMatch OrderByAscending<TInner>(in TInner set, int fieldId, MatchCompareFieldType entryFieldType = MatchCompareFieldType.Sequence, int take = -1)
             where TInner : IQueryMatch
         {
