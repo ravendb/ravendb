@@ -429,6 +429,9 @@ namespace Raven.Server.Monitoring.Snmp
             store.Add(new TotalDatabaseMapReduceIndexMappedPerSecond(server.ServerStore));
             store.Add(new TotalDatabaseMapReduceIndexReducedPerSecond(server.ServerStore));
 
+            store.Add(new TotalDatabaseWritesPerSecond(server.ServerStore));
+            store.Add(new TotalDatabaseDataWrittenPerSecond(server.ServerStore));
+
             store.Add(new ClusterNodeState(server.ServerStore));
             store.Add(new ClusterNodeTag(server.ServerStore));
 
