@@ -468,11 +468,12 @@ namespace SlowTests.Client.Attachments
                             attachmentDictionary[$"{attachmentResult.Details.Name}"].Read(buffer1, 0, s);
 
                             var toRead = s;
-                            var r = 0;
+                            var read = 0;
                             while (toRead > 0)
                             {
-                                r = attachmentResult.Stream.Read(buffer2, 0 + r, toRead);
+                                var r = attachmentResult.Stream.Read(buffer2, 0 + read, toRead);
                                 toRead -= r;
+                                read += r;
                             }
 
                             Assert.True(buffer1.SequenceEqual(buffer2));
