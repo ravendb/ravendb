@@ -459,6 +459,12 @@ namespace Raven.Server.Monitoring.Snmp
                 [Description("Number of reduces per second for map-reduce indexes (one minute rate) in all loaded databases")]
                 public const string TotalMapReduceIndexReducedPerSecond = "5.1.8.3";
 
+                [Description("Number of writes (documents, attachments, counters) in all loaded databases")]
+                public const string TotalWritesPerSecond = "5.1.9.1";
+
+                [Description("Number of bytes written (documents, attachments, counters) in all loaded databases")]
+                public const string TotalDataWrittenPerSecond = "5.1.9.2";
+
                 public static DynamicJsonArray ToJson()
                 {
                     var array = new DynamicJsonArray();
