@@ -22,6 +22,7 @@ using Sparrow.Server;
 using Sparrow.Server.Utils;
 using Voron;
 using Voron.Data.Tables;
+using Voron.Exceptions;
 using Voron.Impl;
 using static Raven.Server.Documents.DocumentsStorage;
 using Constants = Raven.Client.Constants;
@@ -753,7 +754,7 @@ namespace Raven.Server.Documents.Revisions
 
         public void DeleteRevision(DocumentsOperationContext context, Slice key, string collection, string changeVector, long lastModifiedTicks)
         {
-            var collectionName = new CollectionName(collection);
+            var collectionName = _documentsStorage.ExtractCollectionName(context, collection);
             var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
 
             long revisionEtag;
@@ -766,6 +767,18 @@ namespace Raven.Server.Documents.Revisions
                 }
 
                 revisionEtag = TableValueToEtag((int)RevisionsTable.Etag, ref tvr);
+
+                if (table.IsOwned(tvr.Id) == false) 
+                {
+                    // We request to delete revision with the wrong collection
+                    var revision = TableValueToRevision(context, ref tvr);
+                    var currentCollection = _documentsStorage.ExtractCollectionName(context, revision.Data);
+                    table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, currentCollection);
+
+                    if (table.IsOwned(tvr.Id) == false) // this shouldn't happened
+                        throw new VoronErrorException(
+                            $"Failed to remove revision {key} (id:{revision.Id}) of collection '{currentCollection}' from table '{table.Name}', in order to replace with the collection '{collection}'");
+                }
                 table.Delete(tvr.Id);
             }
             else
@@ -956,7 +969,7 @@ namespace Raven.Server.Documents.Revisions
                 tvb.Add(idSlice);
                 tvb.Add(revision.Data.BasePointer, revision.Data.Size);
                 tvb.Add((int)flags);
-                tvb.Add(deletedEtag);
+                tvb.Add(Bits.SwapBytes(deletedEtag));
                 tvb.Add(revision.LastModified.Ticks);
                 tvb.Add(context.GetTransactionMarker());
                 tvb.Add((int)resolvedFlag);
@@ -1293,7 +1306,7 @@ namespace Raven.Server.Documents.Revisions
                 if (currentRevisionsCount == 0)
                 {
                     var res = _documentsStorage.GetDocumentOrTombstone(context, lowerId, throwOnConflict: false);
-                    // need to strip the HasRevisions flag from the document
+                    // need to strip the HasRevisions flag from the document/tombstone
                     if (res.Tombstone != null)
                         _documentsStorage.Delete(context, lowerId, id, null, nonPersistentFlags: NonPersistentDocumentFlags.ByEnforceRevisionConfiguration);
 
@@ -1647,7 +1660,7 @@ namespace Raven.Server.Documents.Revisions
 
                 var etag = TableValueToEtag((int)RevisionsTable.Etag, ref tvr.Reader);
                 var flags = TableValueToFlags((int)RevisionsTable.Flags, ref tvr.Reader);
-                Debug.Assert(revisionsBinEntryEtag <= etag, "Revisions bin entry etag candidate cannot meet a bigger etag.");
+                Debug.Assert(revisionsBinEntryEtag <= etag, $"Revisions bin entry for '{lowerId}' etag candidate ({etag}) cannot meet a bigger etag ({revisionsBinEntryEtag}).");
                 return (flags & DocumentFlags.DeleteRevision) == DocumentFlags.DeleteRevision && revisionsBinEntryEtag >= etag;
             }
         }

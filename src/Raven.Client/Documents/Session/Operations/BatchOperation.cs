@@ -402,12 +402,15 @@ namespace Raven.Client.Documents.Session.Operations
             if (_session.DocumentsById.TryGetValue(id, out var documentInfo) == false)
                 return;
 
-            _session.DocumentsById.Remove(id);
-
-            if (documentInfo.Entity != null)
+            using (documentInfo)
             {
-                _session.DocumentsByEntity.Remove(documentInfo.Entity);
-                _session.DeletedEntities.Remove(documentInfo.Entity);
+                _session.DocumentsById.Remove(id);
+
+                if (documentInfo.Entity != null)
+                {
+                    _session.DocumentsByEntity.Remove(documentInfo.Entity);
+                    _session.DeletedEntities.Remove(documentInfo.Entity);
+                }
             }
         }
 

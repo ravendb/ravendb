@@ -11,12 +11,12 @@ namespace Raven.Server.Documents.Queries
 
         private readonly QueryMetadata[] _cache = new QueryMetadata[CacheSize];
 
-        public bool TryGetMetadata(IndexQueryBase<BlittableJsonReaderObject> query, out ulong metadataHash, out QueryMetadata metadata)
+        public bool TryGetMetadata(IndexQueryBase<BlittableJsonReaderObject> query, bool addSpatialProperties, out ulong metadataHash, out QueryMetadata metadata)
         {
             metadataHash = 0;
             metadata = null;
 
-            if (query == null || query.Query == null)
+            if (query == null || query.Query == null || addSpatialProperties)
                 return false;
 
             metadataHash = GetQueryMetadataHash(query);

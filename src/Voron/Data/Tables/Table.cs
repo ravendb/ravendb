@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.CompilerServices;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
@@ -411,6 +412,7 @@ namespace Voron.Data.Tables
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool IsOwned(long id)
         {
             var posInPage = id % Constants.Storage.PageSize;
@@ -428,6 +430,9 @@ namespace Voron.Data.Tables
 
         public void Delete(long id)
         {
+            if (IsOwned(id) == false)
+                ThrowNotOwned(id);
+
             AssertWritableTable();
 
             var ptr = DirectReadRaw(id, out int size, out bool compressed);
@@ -534,6 +539,12 @@ namespace Voron.Data.Tables
             }
 
             ActiveDataSmallSection.DeleteSection(sectionPageNumber);
+        }
+
+        private void ThrowNotOwned(long id)
+        {
+            Debug.Assert(false, $"Trying to delete a value (id:{id}) from the wrong table ('{Name}')");
+            throw new VoronErrorException($"Trying to delete a value (id:{id}) from the wrong table ('{Name}')");
         }
 
         private void ThrowInvalidAttemptToRemoveValueFromIndexAndNotFindingIt(long id, Slice indexDefName)

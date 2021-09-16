@@ -16,13 +16,13 @@ namespace SlowTests.Issues
         {
             var cache = new QueryMetadataCache();
 
-            Assert.False(cache.TryGetMetadata(new IndexQueryServerSide("from Users order by Name"), out var metadataHash, out var metadata));
+            Assert.False(cache.TryGetMetadata(new IndexQueryServerSide("from Users order by Name"), addSpatialProperties: false, out var metadataHash, out var metadata));
 
             Assert.NotEqual((ulong)0, metadataHash);
 
             cache.MaybeAddToCache(new QueryMetadata("from Users order by Name", null, metadataHash), "test");
 
-            Assert.True(cache.TryGetMetadata(new IndexQueryServerSide("from Users order by Name"), out metadataHash, out metadata));
+            Assert.True(cache.TryGetMetadata(new IndexQueryServerSide("from Users order by Name"), addSpatialProperties: false, out metadataHash, out metadata));
         }
     }
 }

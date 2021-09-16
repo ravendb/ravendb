@@ -540,21 +540,29 @@ namespace SlowTests.Issues
 
                 index0.SetState(IndexState.Idle);
                 var count = 0;
-
+                string info = "";
                 await WaitForValueAsync(async () =>
                 {
+                    info = "";
                     count = 0;
                     foreach (var server in Servers)
                     {
                         documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
-                        if (documentDatabase.IndexStore.GetIndex(indexName).State == IndexState.Idle)
+                        var index = documentDatabase.IndexStore.GetIndex(indexName);
+                        var state = index.State;
+                        info += $"Index state for node {server.ServerStore.NodeTag} is {state} in definition {index.Definition.State}, ";
+                        foreach (var error in index.GetErrors())
+                        {
+                            info += $"{error.Error} , ";
+                        }
+                        if (state == IndexState.Idle)
                             count++;
                     }
 
                     return count;
                 }, 1);
 
-                Assert.Equal(1, count);
+                Assert.True(1 == count, info);
 
                 await ActionWithLeader((l) => l.ServerStore.Engine.PutAsync(new SetIndexStateCommand(indexName, IndexState.Disabled, database, Guid.NewGuid().ToString())),
                     Servers);
@@ -571,22 +579,32 @@ namespace SlowTests.Issues
 
 
                 index0 = documentDatabase.IndexStore.GetIndex(indexName);
-                index0.SetState(IndexState.Idle);
+                index0.SetState(IndexState.Normal);
 
                 count = 0;
 
-                foreach (var server in Servers)
+                await WaitForValueAsync(async () =>
                 {
-                    await WaitForValueAsync(async () =>
+                    count = 0;
+                    info = "";
+                    foreach (var server in Servers)
                     {
                         documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
-                        return documentDatabase.IndexStore.GetIndex(indexName).State;
-                    }, IndexState.Idle, 3000);
-                    if (documentDatabase.IndexStore.GetIndex(indexName).State == IndexState.Idle)
-                        count++;
-                }
+                        var index = documentDatabase.IndexStore.GetIndex(indexName);
+                        var state = index.State;
+                        info += $"Index state for node {server.ServerStore.NodeTag} is {state} in definition {index.Definition.State}.  ";
+                        foreach (var error in index.GetErrors())
+                        {
+                            info += $"{error.Error} , ";
+                        }
+                        if ( state == IndexState.Normal)
+                            count++;
+                    }
 
-                Assert.Equal(1, count);
+                    return count;
+                }, 1);
+
+                Assert.True(1 == count, info);
             }
         }
 

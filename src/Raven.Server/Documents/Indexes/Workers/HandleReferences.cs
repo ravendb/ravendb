@@ -217,6 +217,9 @@ namespace Raven.Server.Documents.Indexes.Workers
                                         }
 
                                         var items = GetItemsFromCollectionThatReference(queryContext, indexContext, collection, referencedItem, lastIndexedEtag, indexed, referenceState);
+
+                                        var numberOfReferencedItemLoad = 0;
+
                                         using (var itemsEnumerator = _index.GetMapEnumerator(items, collection, indexContext, collectionStats, _index.Type))
                                         {
                                             long lastIndexedParentEtag = 0;
@@ -237,6 +240,8 @@ namespace Raven.Server.Documents.Indexes.Workers
                                                 totalProcessedCount++;
                                                 collectionStats.RecordMapReferenceAttempt();
                                                 stats.RecordDocumentSize(current.Size);
+
+                                                numberOfReferencedItemLoad++;
 
                                                 try
                                                 {
@@ -259,9 +264,12 @@ namespace Raven.Server.Documents.Indexes.Workers
                                                         $"Failed to execute mapping function on {current.Id}. Exception: {e}");
                                                 }
 
-                                                _index.UpdateThreadAllocations(indexContext, writeOperation, stats, updateReduceStats: false);
+                                                _index.UpdateThreadAllocations(indexContext, writeOperation, stats, IndexingWorkType.References);
                                             }
                                         }
+
+                                        if (numberOfReferencedItemLoad > 0) 
+                                            _index.CheckReferenceLoadsPerformanceHintLimit(referencedItem, numberOfReferencedItemLoad);
 
                                         if (earlyExit)
                                             break;
@@ -280,8 +288,10 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                             bool CanContinueReferenceBatch()
                             {
-                                batchContinuationResult = _index.CanContinueBatch(stats, queryContext, indexContext, writeOperation, 
-                                    lastEtag, lastCollectionEtag, totalProcessedCount, sw, ref maxTimeForDocumentTransactionToRemainOpen);
+                                var parameters = new CanContinueBatchParameters(stats, IndexingWorkType.References, queryContext, indexContext, writeOperation,
+                                    lastEtag, lastCollectionEtag, totalProcessedCount, sw);
+
+                                batchContinuationResult = _index.CanContinueBatch(in parameters, ref maxTimeForDocumentTransactionToRemainOpen);
                                 if (batchContinuationResult != Index.CanContinueBatchResult.True)
                                 {
                                     keepRunning = batchContinuationResult == Index.CanContinueBatchResult.RenewTransaction;

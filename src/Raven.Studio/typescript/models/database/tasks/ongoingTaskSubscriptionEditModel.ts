@@ -30,6 +30,7 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
         
         this.dirtyFlag = new ko.DirtyFlag([
             this.taskName,
+            this.taskState,
             this.mentorNode,
             this.manualChooseMentor,
             this.query,

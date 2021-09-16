@@ -185,6 +185,10 @@ namespace Raven.Client.Documents
 
         BulkInsertOperation BulkInsert(string database = null, CancellationToken token = default);
 
+        BulkInsertOperation BulkInsert(string database, BulkInsertOptions options, CancellationToken token = default);
+
+        BulkInsertOperation BulkInsert(BulkInsertOptions options, CancellationToken token = default);
+
         /// <summary>
         /// Provides methods to manage data subscriptions.
         /// </summary>

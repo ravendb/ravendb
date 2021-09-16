@@ -77,7 +77,7 @@ class messagePublisher {
     static createRecentError(severity: Raven.Server.NotificationCenter.Notifications.NotificationSeverity, title: string, details: string, httpStatus: string) {
         const messageAndException = recentError.tryExtractMessageAndException(details);
 
-        const dto = {
+        const dto: recentErrorDto = {
             CreatedAt: null,
             IsPersistent: false,
             Title: title,
@@ -87,7 +87,8 @@ class messagePublisher {
             Details: messageAndException.error,
             HttpStatus: httpStatus,
             Severity: severity,
-        } as recentErrorDto;
+            Database: undefined
+        };
 
         if (httpStatus === "Payment Required") {
             const licenseType = recentLicenseLimitError.tryExtractLicenseLimitType(details);

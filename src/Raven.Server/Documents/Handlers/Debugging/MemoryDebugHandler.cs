@@ -14,6 +14,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.LowMemory;
 using Sparrow.Platform;
 using Sparrow.Platform.Posix;
+using Sparrow.Server;
 using Sparrow.Server.Platform.Win32;
 using Sparrow.Utils;
 using Voron.Impl;
@@ -50,24 +51,35 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     [nameof(info.Concurrent)] = info.Concurrent,
                     [nameof(info.FinalizationPendingCount)] = info.FinalizationPendingCount,
                     [nameof(info.FragmentedBytes)] = info.FragmentedBytes,
+                    ["FragmentedHumane"] = Size.Humane(info.FragmentedBytes),
                     [nameof(info.Generation)] = info.Generation,
                     [nameof(info.GenerationInfo)] = new DynamicJsonArray(info.GenerationInfo.ToArray().Select(x => new DynamicJsonValue
                     {
                         [nameof(x.FragmentationAfterBytes)] = x.FragmentationAfterBytes,
+                        ["FragmentationAfterHumane"] = Size.Humane(x.FragmentationAfterBytes),
                         [nameof(x.FragmentationBeforeBytes)] = x.FragmentationBeforeBytes,
+                        ["FragmentationBeforeHumane"] = Size.Humane(x.FragmentationBeforeBytes),
                         [nameof(x.SizeAfterBytes)] = x.SizeAfterBytes,
-                        [nameof(x.SizeBeforeBytes)] = x.SizeBeforeBytes
+                        ["SizeAfterHumane"] = Size.Humane(x.SizeAfterBytes),
+                        [nameof(x.SizeBeforeBytes)] = x.SizeBeforeBytes,
+                        ["SizeBeforeHumane"] = Size.Humane(x.SizeBeforeBytes)
                     })),
                     [nameof(info.HeapSizeBytes)] = info.HeapSizeBytes,
+                    ["HeapSizeHumane"] = Size.Humane(info.HeapSizeBytes),
                     [nameof(info.HighMemoryLoadThresholdBytes)] = info.HighMemoryLoadThresholdBytes,
+                    ["HighMemoryLoadThresholdHumane"] = Size.Humane(info.HighMemoryLoadThresholdBytes),
                     [nameof(info.Index)] = info.Index,
                     [nameof(info.MemoryLoadBytes)] = info.MemoryLoadBytes,
+                    ["MemoryLoadHumane"] = Size.Humane(info.MemoryLoadBytes),
                     [nameof(info.PauseDurations)] = new DynamicJsonArray(info.PauseDurations.ToArray().Cast<object>()),
                     [nameof(info.PauseTimePercentage)] = info.PauseTimePercentage,
                     [nameof(info.PinnedObjectsCount)] = info.PinnedObjectsCount,
                     [nameof(info.PromotedBytes)] = info.PromotedBytes,
+                    ["PromotedHumane"] = Size.Humane(info.PromotedBytes),
                     [nameof(info.TotalAvailableMemoryBytes)] = info.TotalAvailableMemoryBytes,
-                    [nameof(info.TotalCommittedBytes)] = info.TotalCommittedBytes
+                    ["TotalAvailableMemoryHumane"] = Size.Humane(info.TotalAvailableMemoryBytes),
+                    [nameof(info.TotalCommittedBytes)] = info.TotalCommittedBytes,
+                    ["TotalCommittedHumane"] = Size.Humane(info.TotalCommittedBytes)
                 };
             }
         }
@@ -305,6 +317,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 [nameof(MemoryInfo.UnmanagedAllocations)] = Size.Humane(totalUnmanagedAllocations),
                 [nameof(MemoryInfo.EncryptionBuffersInUse)] = Size.Humane(encryptionBuffers.CurrentlyInUseSize),
                 [nameof(MemoryInfo.EncryptionBuffersPool)] = Size.Humane(encryptionBuffers.TotalPoolSize),
+                [nameof(MemoryInfo.EncryptionLockedMemory)] = Size.Humane(Sodium.LockedBytes),
                 [nameof(MemoryInfo.MemoryMapped)] = Size.Humane(totalMapping),
                 [nameof(MemoryInfo.ScratchDirtyMemory)] = memInfo.TotalScratchDirtyMemory.ToString(),
                 [nameof(MemoryInfo.IsHighDirty)] = dirtyMemoryState.IsHighDirty,
@@ -514,6 +527,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             public string UnmanagedAllocations { get; set; }
             public string EncryptionBuffersInUse { get; set; }
             public string EncryptionBuffersPool { get; set; }
+            public string EncryptionLockedMemory { get; set; }
             public string MemoryMapped { get; set; }
             public string ScratchDirtyMemory { get; set; }
             public bool IsHighDirty { get; set; }

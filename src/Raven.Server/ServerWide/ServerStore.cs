@@ -2175,6 +2175,8 @@ namespace Raven.Server.ServerWide
             return _env.DbId;
         }
 
+        public Guid ServerId => GetServerId();
+
         public void Dispose()
         {
             if (_shutdownNotification.IsCancellationRequested || _disposed)
@@ -3040,9 +3042,9 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public async Task WaitForCommitIndexChange(RachisConsensus.CommitIndexModification modification, long value)
+        public async Task WaitForCommitIndexChange(RachisConsensus.CommitIndexModification modification, long value, CancellationToken token = default)
         {
-            await _engine.WaitForCommitIndexChange(modification, value);
+            await _engine.WaitForCommitIndexChange(modification, value, token);
         }
 
         public string LastStateChangeReason()
@@ -3175,7 +3177,8 @@ namespace Raven.Server.ServerWide
             {
                 [nameof(TcpConnectionInfo.Url)] = tcpServerUrl,
                 [nameof(TcpConnectionInfo.Certificate)] = _server.Certificate.CertificateForClients,
-                [nameof(TcpConnectionInfo.NodeTag)] = NodeTag
+                [nameof(TcpConnectionInfo.NodeTag)] = NodeTag,
+                [nameof(TcpConnectionInfo.ServerId)] = ServerId.ToString()
             };
 
             var urls = GetNodeClusterTcpServerUrls(clientRequestedNodeUrl, forExternalUse);

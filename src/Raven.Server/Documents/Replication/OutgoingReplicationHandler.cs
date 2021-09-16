@@ -9,6 +9,7 @@ using System.Runtime.CompilerServices;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using JetBrains.Annotations;
+using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Replication;
@@ -108,7 +109,7 @@ namespace Raven.Server.Documents.Replication
             _external = external;
             _log = LoggingSource.Instance.GetLogger<OutgoingReplicationHandler>(_database.Name);
             _tcpConnectionOptions = tcpConnectionOptions ??
-                                    new TcpConnectionOptions {DocumentDatabase = database, Operation = TcpConnectionHeaderMessage.OperationTypes.Replication};
+                                    new TcpConnectionOptions { DocumentDatabase = database, Operation = TcpConnectionHeaderMessage.OperationTypes.Replication };
             _connectionInfo = connectionInfo;
             _database.Changes.OnDocumentChange += OnDocumentChange;
             _database.Changes.OnCounterChange += OnCounterChange;
@@ -123,9 +124,12 @@ namespace Raven.Server.Documents.Replication
 
         public override bool Equals(object obj)
         {
-            if (ReferenceEquals(null, obj)) return false;
-            if (ReferenceEquals(this, obj)) return true;
-            if (obj.GetType() != GetType()) return false;
+            if (ReferenceEquals(null, obj))
+                return false;
+            if (ReferenceEquals(this, obj))
+                return true;
+            if (obj.GetType() != GetType())
+                return false;
             return Equals((OutgoingReplicationHandler)obj);
         }
 
@@ -222,40 +226,43 @@ namespace Raven.Server.Documents.Replication
                 }
             }
 
-            var task = TcpUtils.ConnectSocketAsync(_connectionInfo, _parent._server.Engine.TcpConnectionTimeout, _log, CancellationToken);
-            task.Wait(CancellationToken);
-            TcpClient tcpClient;
-            string url;
-            (tcpClient, url) = task.Result;
-            using (Interlocked.Exchange(ref _tcpClient, tcpClient))
+            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            using (context.GetMemoryBuffer(out _buffer))
             {
-                var wrapSsl = TcpUtils.WrapStreamWithSslAsync(_tcpClient, _connectionInfo, certificate, _parent._server.Server.CipherSuitesPolicy, _parent._server.Engine.TcpConnectionTimeout, CancellationToken);
-                wrapSsl.Wait(CancellationToken);
+                var task = TcpUtils.ConnectSecuredTcpSocketAsReplication(_connectionInfo, certificate, _parent._server.Server.CipherSuitesPolicy,
+                    (_, info, s, _, _) => NegotiateReplicationVersion(info, s, authorizationInfo),
+                    _parent._server.Engine.TcpConnectionTimeout, _log, CancellationToken);
+                task.Wait(CancellationToken);
 
-                _stream = wrapSsl.Result;
-                _interruptibleRead = new InterruptibleRead(_database.DocumentsStorage.ContextPool, _stream);
+                var socketResult = task.Result;
+                
+                _stream = socketResult.Stream;
 
-                using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-                using (context.GetMemoryBuffer(out _buffer))
+                if (SupportedFeatures.ProtocolVersion <= 0)
                 {
-                    var supportedFeatures = NegotiateReplicationVersion(authorizationInfo);
-                    if (supportedFeatures.Replication.PullReplication)
+                    throw new InvalidOperationException(
+                        $"{OutgoingReplicationThreadName}: TCP negotiation resulted with an invalid protocol version:{SupportedFeatures.ProtocolVersion}");
+                }
+
+                using (Interlocked.Exchange(ref _tcpClient, socketResult.TcpClient))
+                {
+                    if (socketResult.SupportedFeatures.Replication.PullReplication)
                     {
                         SendPreliminaryData();
                         if (Destination is PullReplicationAsSink sink && (sink.Mode & PullReplicationMode.HubToSink) == PullReplicationMode.HubToSink)
                         {
-                            if (supportedFeatures.Replication.PullReplication == false)
+                            if (socketResult.SupportedFeatures.Replication.PullReplication == false)
                                 throw new InvalidOperationException("Other side does not support pull replication " + Destination);
-                            InitiatePullReplicationAsSink(supportedFeatures, certificate);
+                            InitiatePullReplicationAsSink(socketResult.SupportedFeatures, certificate);
                             return;
                         }
                     }
                     
                     AddReplicationPulse(ReplicationPulseDirection.OutgoingInitiate);
                     if (_log.IsInfoEnabled)
-                        _log.Info($"Will replicate to {Destination.FromString()} via {url}");
+                        _log.Info($"Will replicate to {Destination.FromString()} via {socketResult.Url}");
 
-                    _tcpConnectionOptions.TcpClient = tcpClient;
+                    _tcpConnectionOptions.TcpClient = socketResult.TcpClient;
 
                     using (_stream) // note that _stream is being disposed by the interruptible read
                     using (_interruptibleRead)
@@ -306,10 +313,26 @@ namespace Raven.Server.Documents.Replication
                 Certificate = certificate
             };
 
-            using (_parent._server.Server._tcpContextPool.AllocateOperationContext(out var ctx))
-            using (ctx.GetMemoryBuffer(out _buffer))
+            try
             {
-                _parent.RunPullReplicationAsSink(tcpOptions, _buffer, Destination as PullReplicationAsSink, this);
+                using (_parent._server.Server._tcpContextPool.AllocateOperationContext(out var ctx))
+                using (ctx.GetMemoryBuffer(out _buffer))
+                {
+                    _parent.RunPullReplicationAsSink(tcpOptions, _buffer, Destination as PullReplicationAsSink, this);
+                }
+            }
+            catch
+            {
+                try
+                {
+                    tcpOptions.Dispose();
+                }
+                catch
+                {
+                    // nothing we can do
+                }
+
+                throw;
             }
         }
 
@@ -358,7 +381,7 @@ namespace Raven.Server.Documents.Replication
             {
                 if (_log.IsInfoEnabled)
                     _log.Info($"Operation canceled on replication thread ({FromToString}). " +
-                              $"This is not necessary due to an issue. Stopped the thread.");
+                              $"This is not necessarily due to an issue. Stopped the thread.");
                 if (_cts.IsCancellationRequested == false)
                 {
                     Failed?.Invoke(this, e);
@@ -680,7 +703,7 @@ namespace Raven.Server.Documents.Replication
                     AlertTitle, msg, AlertType.Replication, NotificationSeverity.Warning, key: FromToString, details: new ExceptionDetails(e)));
         }
 
-        private TcpConnectionHeaderMessage.SupportedFeatures NegotiateReplicationVersion(TcpConnectionHeaderMessage.AuthorizationInfo authorizationInfo)
+        private Task<TcpConnectionHeaderMessage.SupportedFeatures> NegotiateReplicationVersion(TcpConnectionInfo info, Stream stream, TcpConnectionHeaderMessage.AuthorizationInfo authorizationInfo)
         {
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
             {
@@ -693,24 +716,22 @@ namespace Raven.Server.Documents.Replication
                     DestinationUrl = Destination.Url,
                     ReadResponseAndGetVersionCallback = ReadHeaderResponseAndThrowIfUnAuthorized,
                     Version = TcpConnectionHeaderMessage.ReplicationTcpVersion,
-                    AuthorizeInfo = authorizationInfo
+                    AuthorizeInfo = authorizationInfo,
+                    DestinationServerId = info?.ServerId
                 };
 
                 //This will either throw or return acceptable protocol version.
-                SupportedFeatures = TcpNegotiation.Sync.NegotiateProtocolVersion(documentsContext, _stream, parameters);
-
-                if (SupportedFeatures.ProtocolVersion <= 0)
-                {
-                    throw new InvalidOperationException(
-                        $"{OutgoingReplicationThreadName}: TCP negotiation resulted with an invalid protocol version:{SupportedFeatures.ProtocolVersion}");
-                }
-
-                return SupportedFeatures;
+                SupportedFeatures = TcpNegotiation.Sync.NegotiateProtocolVersion(documentsContext, stream, parameters);
+                
+                return Task.FromResult(SupportedFeatures);
             }
         }
 
         private int ReadHeaderResponseAndThrowIfUnAuthorized(JsonOperationContext context, BlittableJsonTextWriter writer, Stream stream, string url)
         {
+            _interruptibleRead?.Dispose();
+            _interruptibleRead = new InterruptibleRead(_database.DocumentsStorage.ContextPool, stream);
+
             const int timeout = 2 * 60 * 1000;
 
             using (var replicationTcpConnectReplyMessage = _interruptibleRead.ParseToMemory(
@@ -744,6 +765,8 @@ namespace Raven.Server.Documents.Replication
                         //Kindly request the server to drop the connection
                         SendDropMessage(context, writer, headerResponse);
                         throw new InvalidOperationException($"{Destination.FromString()} replied with failure {headerResponse.Message}");
+                    case TcpConnectionStatus.InvalidNetworkTopology:
+                        throw new InvalidNetworkTopologyException($"{Destination.FromString()} replied with failure {headerResponse.Message}");
                     default:
                         throw new InvalidOperationException($"{Destination.FromString()} replied with unknown status {headerResponse.Status}, message:{headerResponse.Message}");
                 }

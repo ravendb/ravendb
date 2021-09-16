@@ -131,16 +131,16 @@ class ravenTaskTestMode {
         if (testValid && parentValid) {
             this.spinners.test(true);
 
-            const dto = {
+            const dto: Raven.Server.Documents.ETL.Providers.Raven.Test.TestRavenEtlScript = {
                 DocumentId: this.documentId(),
                 IsDelete: this.testDelete(),
                 Configuration: this.configurationProvider()
-            } as Raven.Server.Documents.ETL.Providers.Raven.Test.TestRavenEtlScript;
+            };
 
             new testRavenEtlCommand(this.db(), dto)
                 .execute()
                 .done(simulationResult => {
-                    this.testResults(simulationResult.Commands.map((command: Raven.Client.Documents.Commands.Batches.ICommandData) => {
+                    this.testResults(simulationResult.Commands.map((command: Raven.Client.Documents.Commands.Batches.ICommandData): resultItem => {
 
                         const json = JSON.stringify(command, null, 4);
                         const html = Prism.highlight(json, (Prism.languages as any).javascript);
@@ -148,7 +148,7 @@ class ravenTaskTestMode {
                         return {
                             header: command.Type + " " + command.Id,
                             payload: html
-                        } as resultItem;
+                        };
                     }));
                     this.debugOutput(simulationResult.DebugOutput);
                     this.transformationErrors(simulationResult.TransformationErrors);
@@ -204,7 +204,7 @@ class editRavenEtlTask extends viewModelBase {
         aceEditorBindingHandler.install();
         this.bindToCurrentInstance("useConnectionString", "onTestConnectionRaven", "removeTransformationScript",
                                    "cancelEditedTransformation", "saveEditedTransformation", "syntaxHelp",
-                                   "toggleTestArea", "toggleAdvancedArea");
+                                   "toggleTestArea", "toggleAdvancedArea", "setState");
     }
 
     activate(args: any) {
@@ -229,7 +229,7 @@ class editRavenEtlTask extends viewModelBase {
             // 2. Creating a New task
             this.isAddingNewRavenEtlTask(true);
             this.editedRavenEtl(ongoingTaskRavenEtlEditModel.empty());
-            this.editedRavenEtl().editedTransformationScriptSandbox(ongoingTaskRavenEtlTransformationModel.empty());
+            this.editedRavenEtl().editedTransformationScriptSandbox(ongoingTaskRavenEtlTransformationModel.empty(this.findNameForNewTransformation()));
             deferred.resolve();
         }
 
@@ -421,7 +421,7 @@ class editRavenEtlTask extends viewModelBase {
 
     addNewTransformation() {
         this.editedRavenEtl().transformationScriptSelectedForEdit(null);
-        this.editedRavenEtl().editedTransformationScriptSandbox(ongoingTaskRavenEtlTransformationModel.empty());
+        this.editedRavenEtl().editedTransformationScriptSandbox(ongoingTaskRavenEtlTransformationModel.empty(this.findNameForNewTransformation()));
     }
 
     cancelEditedTransformation() {
@@ -439,7 +439,7 @@ class editRavenEtlTask extends viewModelBase {
         
         if (transformation.isNew()) {
             const newTransformationItem = new ongoingTaskRavenEtlTransformationModel(transformation.toDto(), true, false); 
-            newTransformationItem.name(this.findNameForNewTransformation());
+            newTransformationItem.name(transformation.name());
             newTransformationItem.dirtyFlag().forceDirty();
             this.editedRavenEtl().transformationScripts.push(newTransformationItem);
         } else {
@@ -522,6 +522,10 @@ class editRavenEtlTask extends viewModelBase {
     
     toggleAdvancedArea() {
         this.showAdvancedOptions.toggle();
+    }
+
+    setState(state: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskState): void {
+        this.editedRavenEtl().taskState(state);
     }
 }
 

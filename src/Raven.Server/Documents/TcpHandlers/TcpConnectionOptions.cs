@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
+using System.Text;
 using System.Threading;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Server.Utils;
@@ -56,7 +57,18 @@ namespace Raven.Server.Documents.TcpHandlers
 
         public override string ToString()
         {
-            return $"TCP Connection ('{Operation}') {_debugTag}";
+            var sb = new StringBuilder();
+            sb.Append($"TCP Connection ('{Operation}')");
+
+            var debugTag = _debugTag;
+            if (debugTag != null)
+                sb.Append($" with Debug Tag: '{debugTag}'");
+
+            var database = DocumentDatabase;
+            if (database != null)
+                sb.Append($" for database '{database.Name}'");
+
+            return sb.ToString();
         }
 
         public IDisposable ConnectionProcessingInProgress(string debugTag)

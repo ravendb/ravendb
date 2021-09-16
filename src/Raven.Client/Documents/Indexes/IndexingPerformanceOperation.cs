@@ -28,5 +28,7 @@ namespace Raven.Client.Documents.Indexes
         public StorageCommitDetails CommitDetails { get; set; } 
 
         public IndexingPerformanceOperation[] Operations { get; set; }
+
+        public ReferenceRunDetails ReferenceDetails { get; set; }
     }
 }

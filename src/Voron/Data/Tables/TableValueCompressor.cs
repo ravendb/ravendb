@@ -20,7 +20,7 @@ namespace Voron.Data.Tables
         // resources by needlessly compressing data
         private const int OverheadSize = 32;
 
-        private const string CompressionRecoveryExtension = ".compression-recovery";
+        internal const string CompressionRecoveryExtension = ".compression-recovery";
         public const string CompressionRecoveryExtensionGlob = "*" + CompressionRecoveryExtension;
         private readonly TableValueBuilder _builder;
 
@@ -113,7 +113,7 @@ namespace Voron.Data.Tables
 
                 long lastEtag = it.CurrentKey;
 
-                return (lastEtag & 1024) == 0;
+                return (lastEtag % 1024) == 0;
             }
         }
 

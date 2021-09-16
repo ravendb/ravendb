@@ -19,15 +19,16 @@
                             <div class="flex-start" >
                                 <div class="checkbox">
                                     <input id="specifyDeleteFrequency" class="styled" type="checkbox"
-                                           data-bind="checked: specifyDeleteFrequency, enable: enabled">
+                                           data-bind="checked: specifyDeleteFrequency, enable: enabled, requiredAccess: 'DatabaseAdmin', requiredAccessOptions: { strategy: 'disable' }">
                                     <label for="specifyDeleteFrequency">
-                                        Manually specify delete frequency
+                                        Set delete frequency
                                     </label>
                                 </div>
                             </div>
                             <div class="flex-grow" data-bind="validationElement: deleteFrequencyInSec">
                                 <div class="input-group">
-                                    <input class="form-control" type="number" min="0" placeholder="Default (60)" data-bind="numericInput: deleteFrequencyInSec, enable: specifyDeleteFrequency" />
+                                    <input class="form-control" type="number" min="0" placeholder="Default (60)"
+                                           data-bind="numericInput: deleteFrequencyInSec, enable: specifyDeleteFrequency, requiredAccess: 'DatabaseAdmin', requiredAccessOptions: { strategy: 'disable' }" />
                                     <div class="input-group-addon">
                                         seconds
                                     </div>

@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using Lucene.Net.Store;
 using Raven.Client.Util;
-using Raven.Server.Documents.Indexes;
-using Raven.Server.Documents.Indexes.Persistence;
 using Voron;
 using Voron.Impl;
 
@@ -13,9 +11,9 @@ namespace Raven.Server.Indexing
     public sealed unsafe class LuceneVoronDirectory : Lucene.Net.Store.Directory
     {
         private readonly StorageEnvironment _environment;
+        private readonly TempFileCache _tempFileCache;
         private readonly string _name;
         private readonly IndexOutputFilesSummary _indexOutputFilesSummary;
-        internal readonly TempFileCache TempFileCache;
 
         public string Name => _name;
 
@@ -23,15 +21,16 @@ namespace Raven.Server.Indexing
 
         public string TempFullPath => _environment.Options.TempPath.FullPath;
 
-        public LuceneVoronDirectory(Transaction tx, StorageEnvironment environment) : this(tx, environment, "Files")
+        public LuceneVoronDirectory(Transaction tx, StorageEnvironment environment, TempFileCache tempFileCache) : this(tx, environment, tempFileCache, "Files")
         { }
 
-        public LuceneVoronDirectory(Transaction tx, StorageEnvironment environment, string name)
+        public LuceneVoronDirectory(Transaction tx, StorageEnvironment environment, TempFileCache tempFileCache, string name)
         {
             if (tx.IsWriteTransaction == false)
                 throw new InvalidOperationException($"Creation of the {nameof(LuceneVoronDirectory)} must be done under a write transaction.");
 
             _environment = environment;
+            _tempFileCache = tempFileCache;
             _name = name;
 
             SetLockFactory(NoLockFactory.Instance);
@@ -39,8 +38,6 @@ namespace Raven.Server.Indexing
             tx.CreateTree(_name);
 
             _indexOutputFilesSummary = new IndexOutputFilesSummary();
-
-            TempFileCache = new TempFileCache(environment.Options);
         }
 
         public override bool FileExists(string name, IState s)
@@ -196,7 +193,7 @@ namespace Raven.Server.Indexing
             if (state == null)
                 throw new ArgumentNullException(nameof(s));
 
-            return new VoronIndexOutput(TempFileCache, name, state.Transaction, _name, _indexOutputFilesSummary);
+            return new VoronIndexOutput(_tempFileCache, name, state.Transaction, _name, _indexOutputFilesSummary);
         }
 
         public IDisposable SetTransaction(Transaction tx, out IState state)
@@ -221,7 +218,6 @@ namespace Raven.Server.Indexing
 
         protected override void Dispose(bool disposing)
         {
-            TempFileCache.Dispose();
         }
     }
 }

@@ -21,11 +21,12 @@ class serverWideExternalReplicationEditModel extends serverWideConfigurationMode
         this.showDelayTime(dto.DelayReplicationFor != null && delayTime !== 0);
         this.delayTime(dto.DelayReplicationFor ? delayTime : null);
        
-        const connectionStringObject = {
+        const connectionStringObject: Raven.Client.Documents.Operations.ETL.RavenConnectionString = {
             Database: "server-wide",
             TopologyDiscoveryUrls: dto.TopologyDiscoveryUrls,
-            Type: "Raven"
-        } as Raven.Client.Documents.Operations.ETL.RavenConnectionString;
+            Type: "Raven",
+            Name: undefined
+        };
         this.connectionString(new connectionStringRavenEtlModel(connectionStringObject, false, []))
         
         this.initObservables();
@@ -41,6 +42,7 @@ class serverWideExternalReplicationEditModel extends serverWideConfigurationMode
         
         this.dirtyFlag = new ko.DirtyFlag([
             this.taskName,
+            this.disabled,
             this.delayTime,
             this.showDelayTime,
             this.manualChooseMentor,

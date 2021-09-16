@@ -91,7 +91,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     },
                     async databaseName =>
                     {
-                        using (var client = new RavenAwsS3Client(settings))
+                        using (var client = new RavenAwsS3Client(settings, DefaultConfiguration))
                         {
                             var folders = await client.ListObjectsAsync($"{client.RemoteFolderName}/", "/", listFolders: true);
                             return folders.FileInfoDetails.Count;
@@ -248,7 +248,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var directoriesCount = await getDirectoriesCount(store.Database);
                 var expectedNumberOfDirectories = checkIncremental ? 2 : 1;
                 Assert.True(expectedNumberOfDirectories == directoriesCount, 
-                    $"SaveChanges() duration: {sp1}, GetStatisticsOperation duration: {sp2}, RunBackupAndReturnStatusAsync duration: {sp3}," +
+                    $"ExpectedNumberOfDirectories: {expectedNumberOfDirectories}, ActualNumberOfDirectories: {directoriesCount}, SaveChanges() duration: {sp1.Elapsed}, GetStatisticsOperation duration: {sp2.Elapsed}, RunBackupAndReturnStatusAsync duration: {sp3.Elapsed}," +
                     $" Backup duration: {status.DurationInMs}, LocalRetentionDurationInMs: {status.LocalRetentionDurationInMs}");
 
                 if (PeriodicBackupConfiguration.CanBackupUsing(config.LocalSettings))

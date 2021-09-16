@@ -29,7 +29,7 @@ class customColumn<T> extends textColumn<T> {
     tryGuessRequiredProperties(): string[] {
         const fieldsRegexp = /this\.(\w+)/g;
 
-        const result = [] as string[];
+        const result: string[] = [];
 
         let match: RegExpExecArray;
         while ((match = fieldsRegexp.exec(this.jsCode)) !== null) {
