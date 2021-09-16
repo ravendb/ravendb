@@ -150,7 +150,7 @@ class groupedTimeSeriesContainer extends timeSeriesContainer<dataRangePoint> {
                         return {
                             series: x,
                             closestIndex: approxIndex - 1
-                        } as closestItem<dataRangePoint>;    
+                        };    
                     }
                 }
                 return undefined;
@@ -206,7 +206,7 @@ class rawTimeSeriesContainer extends timeSeriesContainer<dataPoint> {
                 return {
                     series: x,
                     closestIndex: effectiveIndex
-                } as closestItem<dataPoint>;
+                };
             });
     }
 }
@@ -690,7 +690,7 @@ class timeSeriesPlotDetails extends viewModelBase {
     private tooltipContents(rangeItems: closestItem<dataRangePoint>[], pointItems: closestItem<dataPoint>[]) {
         const formatDate = (d: Date) => moment.utc(d).local().format(timeSeriesContainer.dateFormat);
         
-        const mappedRange = rangeItems.map(x => {
+        const mappedRange: tooltipItem[] = rangeItems.map(x => {
             const closestItem = x.series.points[x.closestIndex];
             const date = formatDate(closestItem.from) + " - " + formatDate(closestItem.to);
             
@@ -700,10 +700,10 @@ class timeSeriesPlotDetails extends viewModelBase {
                 dateDescription: date,
                 type: "grouped",
                 value: typeof closestItem.value !== "undefined" ? closestItem.value.toLocaleString() : "N/A"
-            } as tooltipItem;
+            };
         });
         
-        const mappedPoints = pointItems.map(x => {
+        const mappedPoints: tooltipItem[] = pointItems.map(x => {
             const closestItem = x.series.points[x.closestIndex];
             const date = formatDate(closestItem.date);
 
@@ -713,7 +713,7 @@ class timeSeriesPlotDetails extends viewModelBase {
                 dateDescription: date,
                 type: "raw",
                 value: typeof closestItem.value !== "undefined" ? closestItem.value.toLocaleString() : "N/A"
-            } as tooltipItem;
+            };
         });
         
         return genUtils.inMemoryRender("time-series-graph-tooltip", {

@@ -177,7 +177,7 @@ class timeSeriesPolicy {
     }
     
     private getPreviousItems() {
-        const result = [] as timeSeriesPolicy[];
+        const result: timeSeriesPolicy[] = [];
         
         let previous = this.previous();
         while (previous != null) {

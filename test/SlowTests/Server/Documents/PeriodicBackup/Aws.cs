@@ -29,7 +29,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         public async Task put_object()
         {
             var settings = GetS3Settings();
-            using (var client = new RavenAwsS3Client(settings))
+            using (var client = new RavenAwsS3Client(settings, DefaultConfiguration))
             {
                 var blobs = GenerateBlobNames(settings, 1, out _);
                 Assert.Equal(1, blobs.Count);
@@ -64,7 +64,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             string region1 = settings.AwsRegionName;
             string region2 = settings.AwsRegionName = WestRegion2;
             var bucketName = settings.BucketName;
-            using (var clientRegion2 = new RavenAwsS3Client(settings))
+            using (var clientRegion2 = new RavenAwsS3Client(settings, DefaultConfiguration))
             {
                 var sb = new StringBuilder();
                 for (var i = 0; i < 1 * 1024 * 1024; i++)
@@ -109,7 +109,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 key += "/";
 
             var progress = new Progress();
-            using (var client = new RavenAwsS3Client(settings, progress))
+            using (var client = new RavenAwsS3Client(settings, DefaultConfiguration, progress))
             {
                 client.MaxUploadPutObject = new Sparrow.Size(10, SizeUnit.Megabytes);
                 client.MinOnePartUploadSizeLimit = new Sparrow.Size(7, SizeUnit.Megabytes);
@@ -162,7 +162,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         {
             var vaultName = $"testing-{Guid.NewGuid()}";
 
-            using (var client = new RavenAwsGlacierClient(GetGlacierSettings(region, vaultName)))
+            using (var client = new RavenAwsGlacierClient(GetGlacierSettings(region, vaultName), DefaultConfiguration))
             {
                 await client.PutVaultAsync();
 
@@ -183,7 +183,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
             var glacierSettings = GetGlacierSettings(region, vaultName);
             glacierSettings.RemoteFolderName = Guid.NewGuid().ToString();
-            using (var client = new RavenAwsGlacierClient(glacierSettings))
+            using (var client = new RavenAwsGlacierClient(glacierSettings, DefaultConfiguration))
             {
                 await client.PutVaultAsync();
 
@@ -203,8 +203,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             var vaultName1 = $"testing-{Guid.NewGuid()}";
             var vaultName2 = $"testing-{Guid.NewGuid()}";
 
-            using (var clientRegion1 = new RavenAwsGlacierClient(GetGlacierSettings(region1, vaultName1)))
-            using (var clientRegion2 = new RavenAwsGlacierClient(GetGlacierSettings(region2, vaultName2)))
+            using (var clientRegion1 = new RavenAwsGlacierClient(GetGlacierSettings(region1, vaultName1), DefaultConfiguration))
+            using (var clientRegion2 = new RavenAwsGlacierClient(GetGlacierSettings(region2, vaultName2), DefaultConfiguration))
             {
                 var e = Assert.Throws<VaultNotFoundException>(() =>
                 {
@@ -259,7 +259,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
             var progress = new Progress();
 
-            using (var client = new RavenAwsGlacierClient(GetGlacierSettings(region, vaultName), progress))
+            using (var client = new RavenAwsGlacierClient(GetGlacierSettings(region, vaultName), DefaultConfiguration, progress))
             {
                 client.MaxUploadArchiveSize = new Size(9, SizeUnit.Megabytes);
                 client.MinOnePartUploadSizeLimit = new Size(minOnePartSizeInMB, SizeUnit.Megabytes);

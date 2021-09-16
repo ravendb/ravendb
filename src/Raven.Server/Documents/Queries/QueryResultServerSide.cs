@@ -63,7 +63,7 @@ namespace Raven.Server.Documents.Queries
 
         public void RegisterSpatialProperties(IndexQueryServerSide query)
         {
-            if (query.AddSpatialProperties == false)
+            if (query.Metadata.AddSpatialProperties == false)
                 return;
 
             if (query.Metadata.SpatialProperties != null)

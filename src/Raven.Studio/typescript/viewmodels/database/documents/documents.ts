@@ -180,7 +180,10 @@ class documents extends viewModelBase {
 
     refresh() {
         eventsCollector.default.reportEvent("documents", "refresh");
-        this.columnsSelector.reset();
+
+        const documentsProvider = this.getDocumentsProvider();
+        this.tryInitializeColumns(documentsProvider);
+
         this.gridController().reset(true);
         this.setCurrentAsNotDirty();
     }
@@ -203,11 +206,9 @@ class documents extends viewModelBase {
         const grid = this.gridController();
 
         grid.headerVisible(true);
-
-        const documentsProvider = new documentBasedColumnsProvider(this.activeDatabase(), grid, 
-            { showRowSelectionCheckbox: true, enableInlinePreview: false, showSelectAllCheckbox: true, showFlags: true });
-
-        this.columnsSelector.tryInitializeWithSavedDefault(source => documentsProvider.reviver(source));
+        
+        const documentsProvider = this.getDocumentsProvider();
+        this.tryInitializeColumns(documentsProvider);
 
         this.columnsSelector.init(grid, 
                                   (s, t, previewCols, fullCols) => this.fetchDocs(s, t, previewCols, fullCols),
@@ -255,6 +256,15 @@ class documents extends viewModelBase {
                 }
             }
         });
+    }
+
+    private getDocumentsProvider() {
+        return new documentBasedColumnsProvider(this.activeDatabase(), this.gridController(),
+            { showRowSelectionCheckbox: true, enableInlinePreview: false, showSelectAllCheckbox: true, showFlags: true });
+    }
+    
+    private tryInitializeColumns(documentsProvider: documentBasedColumnsProvider) {
+        this.columnsSelector.tryInitializeWithSavedDefault(source => documentsProvider.reviver(source));
     }
 
     private onCollectionSelected(newCollection: collection) {
@@ -312,7 +322,7 @@ class documents extends viewModelBase {
                     if (deleteWasRequested) {
                         this.spinners.delete(true);
 
-                        const collectionName = this.currentCollection().name === collection.allDocumentsCollectionName ? "@all_docs" : this.currentCollection().name;                        
+                        const collectionName = this.currentCollection().name === collection.allDocumentsCollectionName ? "@all_docs" : this.currentCollection().name;
                         new deleteCollectionCommand(collectionName, this.activeDatabase(), excludedIds)
                             .execute()
                             .done((result: operationIdDto) => {

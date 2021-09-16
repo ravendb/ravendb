@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Documents.PeriodicBackup.GoogleCloud;
 using Raven.Server.ServerWide;
+using Raven.Server.Utils;
 using Sparrow.Server.Utils;
 
 namespace Raven.Server.Documents.PeriodicBackup.Restore
@@ -17,7 +18,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
         public RestoreFromGoogleCloud(ServerStore serverStore, RestoreFromGoogleCloudConfiguration restoreFromConfiguration, string nodeTag, OperationCancelToken operationCancelToken) : base(serverStore, restoreFromConfiguration, nodeTag, operationCancelToken)
         {
-            _client = new RavenGoogleCloudClient(restoreFromConfiguration.Settings);
+            _client = new RavenGoogleCloudClient(restoreFromConfiguration.Settings, serverStore.Configuration.Backup);
             _remoteFolderName = restoreFromConfiguration.Settings.RemoteFolderName;
         }
 
@@ -26,9 +27,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             return Task.FromResult(_client.DownloadObject(path));
         }
 
-        protected override Task<ZipArchive> GetZipArchiveForSnapshot(string path)
+        protected override async Task<ZipArchive> GetZipArchiveForSnapshot(string path)
         {
-            return Task.FromResult(new ZipArchive(_client.DownloadObject(path), ZipArchiveMode.Read));
+            Stream stream = _client.DownloadObject(path);
+            var file = await CopyRemoteStreamLocally(stream);
+            return new DeleteOnCloseZipArchive(file, ZipArchiveMode.Read);
         }
 
         protected override async Task<List<string>> GetFilesForRestore()

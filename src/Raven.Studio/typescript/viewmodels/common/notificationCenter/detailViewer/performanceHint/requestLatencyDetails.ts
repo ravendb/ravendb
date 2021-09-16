@@ -9,9 +9,8 @@ import generalUtils = require("common/generalUtils");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 
 class requestLatencyDetails extends abstractPerformanceHintDetails {
-
     
-    tableItems = [] as Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyInfo[];
+    tableItems: Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyInfo[] = [];
     private gridController = ko.observable<virtualGridController<Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyInfo>>();
     private columnPreview = new columnPreviewPlugin<Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyInfo>();
 

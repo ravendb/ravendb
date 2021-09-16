@@ -14,7 +14,7 @@ interface indexingDetailsItemDto extends Raven.Server.NotificationCenter.Notific
 
 class indexingDetails extends abstractPerformanceHintDetails {
 
-    tableItems = [] as indexingDetailsItemDto[];
+    tableItems: indexingDetailsItemDto[] = [];
     suggestions = ko.observableArray<string>([]);
     
     private gridController = ko.observable<virtualGridController<indexingDetailsItemDto>>();

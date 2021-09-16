@@ -294,7 +294,7 @@ class editOlapEtlTask extends viewModelBase {
             this.isAddingNewOlapEtlTask(true);
             this.editedOlapEtl(ongoingTaskOlapEtlEditModel.empty());
             
-            this.editedTransformationScriptSandbox(ongoingTaskOlapEtlTransformationModel.empty());
+            this.editedTransformationScriptSandbox(ongoingTaskOlapEtlTransformationModel.empty(this.findNameForNewTransformation()));
             
             deferred.resolve();
         }
@@ -637,7 +637,7 @@ class editOlapEtlTask extends viewModelBase {
     
     addNewTransformation() {
         this.transformationScriptSelectedForEdit(null);
-        this.editedTransformationScriptSandbox(ongoingTaskOlapEtlTransformationModel.empty());
+        this.editedTransformationScriptSandbox(ongoingTaskOlapEtlTransformationModel.empty(this.findNameForNewTransformation()));
     }
 
     cancelEditedTransformation() {
@@ -656,8 +656,10 @@ class editOlapEtlTask extends viewModelBase {
 
         if (transformation.isNew()) {
             const newTransformationItem = new ongoingTaskOlapEtlTransformationModel(transformation.toDto(), false, false);
-            newTransformationItem.name(this.findNameForNewTransformation());
+            
+            newTransformationItem.name(transformation.name());
             newTransformationItem.dirtyFlag().forceDirty();
+            
             this.editedOlapEtl().transformationScripts.push(newTransformationItem);
         } else {
             const oldItem = this.editedOlapEtl().transformationScripts().find(x => x.name() === transformation.name());

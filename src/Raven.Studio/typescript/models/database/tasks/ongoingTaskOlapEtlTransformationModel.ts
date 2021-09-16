@@ -1,6 +1,8 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
 import jsonUtil = require("common/jsonUtil");
+import validateNameCommand = require("commands/resources/validateNameCommand");
+import generalUtils = require("common/generalUtils");
 
 class ongoingTaskOlapEtlTransformationModel {
 
@@ -47,13 +49,13 @@ class ongoingTaskOlapEtlTransformationModel {
        ], false, jsonUtil.newLineNormalizingHashFunction);
     }
    
-    static empty(): ongoingTaskOlapEtlTransformationModel {
+    static empty(name?: string): ongoingTaskOlapEtlTransformationModel {
         return new ongoingTaskOlapEtlTransformationModel(
             {
                 ApplyToAllDocuments: false, 
                 Collections: [],
                 Disabled: false,
-                Name: "",
+                Name: name || "",
                 Script: ""
             }, true, false);
     }
@@ -74,6 +76,30 @@ class ongoingTaskOlapEtlTransformationModel {
             aceValidation: true
         });
 
+        const checkScriptName = (val: string,
+                                 params: any,
+                                 callback: (currentValue: string, errorMessageOrValidationResult: string | boolean) => void) => {
+            new validateNameCommand('Script', val)
+                .execute()
+                .done((result) => {
+                    if (result.IsValid) {
+                        callback(this.name(), true);
+                    } else {
+                        callback(this.name(), result.ErrorMessage);
+                    }
+                })
+        };
+        
+        this.name.extend({
+            required: true,
+            validation: [
+                {
+                    async: true,
+                    validator: generalUtils.debounceAndFunnel(checkScriptName)
+                }
+            ]
+        });
+
         this.transformScriptCollections.extend({
             validation: [
                 {
@@ -84,6 +110,7 @@ class ongoingTaskOlapEtlTransformationModel {
         });
 
         this.validationGroup = ko.validatedObservable({
+            name: this.name,
             script: this.script,
             transformScriptCollections: this.transformScriptCollections,
         });

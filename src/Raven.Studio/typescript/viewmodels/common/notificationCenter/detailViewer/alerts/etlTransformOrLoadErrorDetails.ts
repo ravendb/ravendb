@@ -14,7 +14,7 @@ class etlTransformOrLoadErrorDetails extends abstractAlertDetails {
 
     currentDetails = ko.observable<Raven.Server.NotificationCenter.Notifications.Details.EtlErrorInfo>();
     
-    tableItems = [] as Raven.Server.NotificationCenter.Notifications.Details.EtlErrorInfo[];
+    tableItems: Raven.Server.NotificationCenter.Notifications.Details.EtlErrorInfo[] = [];
     private gridController = ko.observable<virtualGridController<Raven.Server.NotificationCenter.Notifications.Details.EtlErrorInfo>>();
     private columnPreview = new columnPreviewPlugin<Raven.Server.NotificationCenter.Notifications.Details.EtlErrorInfo>();
 

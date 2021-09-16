@@ -9,13 +9,13 @@ type cronPeriod = "minute" | "hour" | "day" | "week" | "month" | "year" | "custo
 class cronEditor {
     targetField: KnockoutObservable<string>;
     
-    static periods = ["minute", "hour", "day", "week", "month", "year", "custom"] as cronPeriod[];
+    static periods: cronPeriod[] = ["minute", "hour", "day", "week", "month", "year", "custom"];
     
-    static hours = [] as valueAndLabelItem<string, string>[];
-    static minutes = [] as number[];
-    static daysOfWeek = [] as valueAndLabelItem<string, string>[];
-    static daysOfMonth = [] as number[];
-    static months = [] as valueAndLabelItem<string, string>[];
+    static hours:  valueAndLabelItem<string, string>[] = [];
+    static minutes: number[] = [];
+    static daysOfWeek: valueAndLabelItem<string, string>[] = [];
+    static daysOfMonth: number[] = [];
+    static months: valueAndLabelItem<string, string>[] = [];
     
     period = ko.observable<cronPeriod>("minute");
     minutes = ko.observable<string>("0");

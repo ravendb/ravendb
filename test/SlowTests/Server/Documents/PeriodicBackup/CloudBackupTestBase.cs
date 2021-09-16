@@ -3,12 +3,25 @@ using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Server.Config;
+using Raven.Server.Config.Categories;
+using Raven.Server.ServerWide;
 using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.PeriodicBackup
 {
     public abstract class CloudBackupTestBase : RavenTestBase
     {
+        protected static readonly Raven.Server.Config.Categories.BackupConfiguration DefaultConfiguration;
+
+        static CloudBackupTestBase()
+        {
+            var configuration = RavenConfiguration.CreateForTesting("foo", ResourceType.Database);
+            configuration.Initialize();
+
+            DefaultConfiguration = configuration.Backup;
+        }
+
         protected CloudBackupTestBase(ITestOutputHelper output) : base(output)
         {
         }
