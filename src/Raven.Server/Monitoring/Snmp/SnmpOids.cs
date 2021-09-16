@@ -337,6 +337,12 @@ namespace Raven.Server.Monitoring.Snmp
             [Description("Number of error indexes")]
             public const string NumberOfErrorIndexes = "5.2.{0}.5.6";
 
+            [Description("Number of writes (documents, attachments, counters)")]
+            public const string WritesPerSecond = "5.2.{0}.6.1";
+
+            [Description("Number of bytes written (documents, attachments, counters)")]
+            public const string DataWrittenPerSecond = "5.2.{0}.6.2";
+
             public class Indexes
             {
                 private Indexes()
