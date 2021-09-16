@@ -13,19 +13,23 @@ namespace Raven.Server.NotificationCenter
     public class Indexing : IDisposable
     {
         private static readonly string Source = "Indexing";
-        private static readonly string IndexingTableId = PerformanceHint.GetKey(PerformanceHintType.Indexing, Source);
+        private static readonly string HighOutputsRate = PerformanceHint.GetKey(PerformanceHintType.Indexing, Source);
+        private static readonly string ReferencesLoad = PerformanceHint.GetKey(PerformanceHintType.Indexing_References, Source);
 
         private readonly NotificationCenter _notificationCenter;
         private readonly NotificationsStorage _notificationsStorage;
         private readonly string _database;
 
         private DateTime _warningUpdateTime = new DateTime();
-        private ConcurrentQueue<(string indexName, WarnIndexOutputsPerDocument.WarningDetails warningDetails)> _warningQueue = 
-            new ConcurrentQueue<(string indexName, WarnIndexOutputsPerDocument.WarningDetails warningDetails)>();
-        
+        private readonly ConcurrentQueue<(string indexName, WarnIndexOutputsPerDocument.WarningDetails warningDetails)> _warningIndexOutputsPerDocumentQueue =  new();
+
+        private readonly ConcurrentQueue<(string indexName, IndexingReferenceLoadWarning.WarningDetails warningDetails)> _warningReferenceDocumentLoadsQueue =  new();
+
         private Timer _indexingTimer;
         private readonly Logger _logger;
         private readonly object _locker = new object();
+
+        internal TimeSpan MinUpdateInterval = TimeSpan.FromSeconds(15);
 
         public Indexing(NotificationCenter notificationCenter, NotificationsStorage notificationsStorage, string database)
         {
@@ -35,22 +39,49 @@ namespace Raven.Server.NotificationCenter
             _logger = LoggingSource.Instance.GetLogger(database, GetType().FullName);
         }
 
-        public void AddWarning(string indexName, WarnIndexOutputsPerDocument.WarningDetails _indexOutputsWarning)
+        public void AddWarning(string indexName, WarnIndexOutputsPerDocument.WarningDetails indexOutputsWarning)
         {
-            var now = SystemTime.UtcNow;
+            if (CanAdd(out DateTime now) == false) 
+                return;
+
+            indexOutputsWarning.LastWarningTime = now;
+            _warningIndexOutputsPerDocumentQueue.Enqueue((indexName, indexOutputsWarning));
+
+            while (_warningIndexOutputsPerDocumentQueue.Count > 50)
+                _warningIndexOutputsPerDocumentQueue.TryDequeue(out _);
+
+            EnsureTimer();
+        }
+
+        public void AddWarning(string indexName, IndexingReferenceLoadWarning.WarningDetails referenceLoadsWarning)
+        {
+            if (CanAdd(out DateTime now) == false)
+                return;
+
+            referenceLoadsWarning.LastWarningTime = now;
+            _warningReferenceDocumentLoadsQueue.Enqueue((indexName, referenceLoadsWarning));
+
+            while (_warningReferenceDocumentLoadsQueue.Count > 50)
+                _warningReferenceDocumentLoadsQueue.TryDequeue(out _);
+
+            EnsureTimer();
+        }
+
+        private bool CanAdd(out DateTime now)
+        {
+            now = SystemTime.UtcNow;
             var update = _warningUpdateTime;
 
-            if (now - update < TimeSpan.FromSeconds(15))
-                return;
+            if (now - update < MinUpdateInterval)
+                return false;
 
             _warningUpdateTime = now;
             
-            _indexOutputsWarning.LastWarningTime = now;
-            _warningQueue.Enqueue((indexName, _indexOutputsWarning));
+            return true;
+        }
 
-            while (_warningQueue.Count > 50)
-                _warningQueue.TryDequeue(out _);
-
+        private void EnsureTimer()
+        {
             if (_indexingTimer != null)
                 return;
 
@@ -63,26 +94,38 @@ namespace Raven.Server.NotificationCenter
             }
         }
 
-        private void UpdateIndexing(object state)
+        internal void UpdateIndexing(object state)
         {
             try
             {
-                if (_warningQueue.IsEmpty)
+                if (_warningIndexOutputsPerDocumentQueue.IsEmpty && _warningReferenceDocumentLoadsQueue.IsEmpty)
                     return;
 
-                PerformanceHint indexingWarnings = null;
+                PerformanceHint indexOutputPerDocumentHint = null;
 
-                while (_warningQueue.TryDequeue(
+                while (_warningIndexOutputsPerDocumentQueue.TryDequeue(
                     out (string indexName, WarnIndexOutputsPerDocument.WarningDetails warningDetails) tuple))
                 {
-                    if (indexingWarnings == null)
-                        indexingWarnings = GetIndexingPerformanceHint(IndexingTableId);
+                    indexOutputPerDocumentHint ??= GetIndexOutputPerDocumentPerformanceHint();
 
-                    ((WarnIndexOutputsPerDocument)indexingWarnings.Details).Update(tuple.indexName, tuple.warningDetails);
+                    ((WarnIndexOutputsPerDocument)indexOutputPerDocumentHint.Details).Update(tuple.indexName, tuple.warningDetails);
                 }
 
-                if (indexingWarnings != null)
-                    _notificationCenter.Add(indexingWarnings);
+                PerformanceHint referenceLoadsHint = null;
+
+                while (_warningReferenceDocumentLoadsQueue.TryDequeue(
+                    out (string indexName, IndexingReferenceLoadWarning.WarningDetails warningDetails) tuple))
+                {
+                    referenceLoadsHint ??= GetReferenceLoadsPerformanceHint();
+
+                    ((IndexingReferenceLoadWarning)referenceLoadsHint.Details).Update(tuple.indexName, tuple.warningDetails);
+                }
+
+                if (indexOutputPerDocumentHint != null)
+                    _notificationCenter.Add(indexOutputPerDocumentHint);
+
+                if (referenceLoadsHint != null)
+                    _notificationCenter.Add(referenceLoadsHint);
             }
             catch (Exception e)
             {
@@ -91,19 +134,36 @@ namespace Raven.Server.NotificationCenter
             }
         }
 
-        private PerformanceHint GetIndexingPerformanceHint(string IndexingTableId)
+        private PerformanceHint GetIndexOutputPerDocumentPerformanceHint()
         {
-            using (_notificationsStorage.Read(IndexingTableId, out NotificationTableValue ntv))
+            using (_notificationsStorage.Read(HighOutputsRate, out NotificationTableValue ntv))
             {
                 WarnIndexOutputsPerDocument details;
                 if (ntv == null || ntv.Json.TryGet(nameof(PerformanceHint.Details), out BlittableJsonReaderObject detailsJson) == false || detailsJson == null)
                     details = new WarnIndexOutputsPerDocument();
                 else
-                    details = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.FromBlittable<WarnIndexOutputsPerDocument>(detailsJson, IndexingTableId);
+                    details = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.FromBlittable<WarnIndexOutputsPerDocument>(detailsJson, HighOutputsRate);
 
                 return PerformanceHint.Create(_database, "High indexing fanout ratio",
                     "Number of map results produced by an index exceeds the performance hint configuration key (MaxIndexOutputsPerDocument).",
                     PerformanceHintType.Indexing, NotificationSeverity.Warning, Source, details);
+            }
+        }
+
+        private PerformanceHint GetReferenceLoadsPerformanceHint()
+        {
+            using (_notificationsStorage.Read(ReferencesLoad, out NotificationTableValue ntv))
+            {
+                IndexingReferenceLoadWarning details;
+                if (ntv == null || ntv.Json.TryGet(nameof(PerformanceHint.Details), out BlittableJsonReaderObject detailsJson) == false || detailsJson == null)
+                    details = new IndexingReferenceLoadWarning();
+                else
+                    details = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.FromBlittable<IndexingReferenceLoadWarning>(detailsJson, ReferencesLoad);
+
+                return PerformanceHint.Create(_database, "High indexing load reference rate",
+                    "We have detected high number of LoadDocument() / LoadCompareExchangeValue() calls per single reference item. The update of a reference will result in reindexing all documents that reference it. " +
+                    "Please see Indexing Performance graph to check the performance of your indexes.",
+                    PerformanceHintType.Indexing_References, NotificationSeverity.Warning, Source, details);
             }
         }
 

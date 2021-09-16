@@ -225,7 +225,7 @@ class indexDefinition {
     }
     
     private parseConfiguration(config: Raven.Client.Documents.Indexes.IndexConfiguration): Array<configurationItem> {
-        const configurations = [] as configurationItem[];
+        const configurations: configurationItem[] = [];
 
         if (config) {
             _.forIn(config, (value, key) => {

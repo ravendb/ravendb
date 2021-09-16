@@ -68,7 +68,7 @@ class documentItem extends layoutableItem {
     color: string;
     drawOffset: number;
 
-    connectedEntries = [] as entryItem[];
+    connectedEntries: entryItem[] = [];
 
     constructor(name: string) {
         super();

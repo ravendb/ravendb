@@ -35,7 +35,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 {
     public class BackupTask
     {
-        public const string DateTimeFormat = "yyyy-MM-dd-HH-mm-ss";
+        public static string DateTimeFormat = "yyyy-MM-dd-HH-mm-ss";
         private const string LegacyDateTimeFormat = "yyyy-MM-dd-HH-mm";
         private const string InProgressExtension = ".in-progress";
 
@@ -811,7 +811,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             TaskCancelToken.Token.ThrowIfCancellationRequested();
 
-            var uploaderSettings = new UploaderSettings
+            var uploaderSettings = new UploaderSettings(_database.Configuration.Backup)
             {
                 S3Settings = s3Settings,
                 GlacierSettings = glacierSettings,

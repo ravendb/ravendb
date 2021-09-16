@@ -1,4 +1,6 @@
-﻿using System.Net;
+﻿using System;
+using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Server.Commercial;
 using Raven.Server.Config.Categories;
@@ -125,6 +127,48 @@ namespace Raven.Server.Web.Studio
             {
                 var renewLicense = await ServerStore.LicenseManager.RenewLicense();
                 context.Write(writer, renewLicense.ToJson());
+            }
+        }
+
+        [RavenAction("/license-server/connectivity", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
+        public async Task CheckConnectivityToLicenseServer()
+        {
+            var result = new ConnectivityToLicenseServer();
+
+            using (var cts = new CancellationTokenSource(5000))
+            {
+                try
+                {
+                    var response = await ApiHttpClient.Instance.GetAsync("api/v2/alive", cts.Token);
+                    result.StatusCode = response.StatusCode;
+                }
+                catch (Exception e)
+                {
+                    result.StatusCode = HttpStatusCode.BadRequest;
+                    result.Exception = e.Message;
+                }
+
+                using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    context.Write(writer, result.ToJson());
+                }
+            }
+        }
+
+        public class ConnectivityToLicenseServer : IDynamicJson
+        {
+            public HttpStatusCode StatusCode { get; set; }
+
+            public string Exception { get; set; }
+
+            public DynamicJsonValue ToJson()
+            {
+                return new DynamicJsonValue
+                {
+                    [nameof(StatusCode)] = StatusCode,
+                    [nameof(Exception)] = Exception
+                };
             }
         }
     }

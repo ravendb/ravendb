@@ -40,6 +40,7 @@ using Sparrow.Json;
 using Sparrow.Server.Json.Sync;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
+using Voron.Data.Tables;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -477,7 +478,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var config = Backup.CreateBackupConfiguration(backupPath, backupType: BackupType.Snapshot);
-                config.SnapshotSettings = new SnapshotSettings {CompressionLevel = compressionLevel};
+                config.SnapshotSettings = new SnapshotSettings { CompressionLevel = compressionLevel };
                 var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
                 using (var session = store.OpenAsyncSession())
@@ -529,6 +530,63 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         Assert.Contains($"A:8-{originalDatabase.DbBase64Id}", databaseChangeVector);
                         Assert.Contains($"A:10-{restoredDatabase.DbBase64Id}", databaseChangeVector);
                     }
+                }
+            }
+        }
+
+        [Fact, Trait("Category", "Smuggler")]
+        public async Task can_backup_and_restore_snapshot_with_compression()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            using (var store = GetDocumentStore(new Options
+            {
+                RunInMemory = false,
+                ModifyDatabaseRecord = record =>
+                {
+                    record.DocumentsCompression = new DocumentsCompressionConfiguration
+                    {
+                        Collections = new[] { "Orders" },
+                        CompressRevisions = true
+                    };
+                }
+            }))
+            {
+                await store.Maintenance.SendAsync(new CreateSampleDataOperation());
+
+                var sourceStats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
+
+                var database = await GetDocumentDatabaseInstanceFor(store);
+                var databasePath = database.Configuration.Core.DataDirectory.FullPath;
+                var compressionRecovery = Directory.GetFiles(databasePath, TableValueCompressor.CompressionRecoveryExtensionGlob);
+                Assert.Equal(2, compressionRecovery.Length);
+
+                var config = Backup.CreateBackupConfiguration(backupPath, backupType: BackupType.Snapshot);
+                config.SnapshotSettings = new SnapshotSettings { CompressionLevel = CompressionLevel.NoCompression };
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+
+                var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
+                await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
+
+                // restore the database with a different name
+                string restoredDatabaseName = $"restored_database_snapshot-{Guid.NewGuid()}";
+                var backupLocation = Directory.GetDirectories(backupPath).First();
+                using (ReadOnly(backupLocation))
+                using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
+                {
+                    BackupLocation = backupLocation,
+                    DatabaseName = restoredDatabaseName
+                }))
+                {
+                    // exception was throw during restore that compression recovery files were already existing
+
+                    var restoreStats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
+
+                    Assert.Equal(sourceStats.CountOfDocuments, restoreStats.CountOfDocuments);
+
+                    database = await GetDocumentDatabaseInstanceFor(store, restoredDatabaseName);
+                    databasePath = database.Configuration.Core.DataDirectory.FullPath;
+                    compressionRecovery = Directory.GetFiles(databasePath, TableValueCompressor.CompressionRecoveryExtensionGlob);
+                    Assert.Equal(2, compressionRecovery.Length);
                 }
             }
         }
@@ -2308,7 +2366,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             if (incremental)
             {
                 Debug.Assert(status.LastIncrementalBackup.HasValue);
-                datePrefix = status.LastIncrementalBackup.Value.ToLocalTime().ToString("yyyy-MM-dd-HH-mm-ss");
+                datePrefix = status.LastIncrementalBackup.Value.ToLocalTime().ToString(BackupTask.DateTimeFormat);
             }
             else
             {

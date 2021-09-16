@@ -53,10 +53,10 @@ class serverWideTasks extends viewModelBase {
     }
     
     private processTasksResult(result: Raven.Server.Web.System.AdminStudioServerWideHandler.ServerWideTasksResult) {
-        const oldTasks = [
+        const oldTasks: Array<{ taskId: number }> = [
             ...this.serverWideExternalReplicationTasks(),
             ...this.serverWideBackupTasks()
-           ] as Array<{ taskId: number }>;
+        ];
         
         const oldTaskIds = oldTasks.map(x => x.taskId);
         const newTaskIds = result.Tasks.map(x => x.TaskId);

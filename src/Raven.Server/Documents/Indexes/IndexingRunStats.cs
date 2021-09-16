@@ -31,6 +31,8 @@ namespace Raven.Server.Documents.Indexes
 
         public MapRunDetails MapDetails;
 
+        public ReferenceRunDetails ReferenceDetails;
+
         public StorageCommitDetails CommitDetails;
 
         public List<IndexingError> Errors;

@@ -49,8 +49,10 @@ abstract class websocketBasedWidget<TData, TConfig = unknown, TState = unknown> 
         for (const ws of this.configuredFor()) {
             ws.sendCommand({
                 Command: "unwatch",
-                Id: this.id
-            } as Raven.Server.Dashboard.Cluster.WidgetRequest);
+                Id: this.id,
+                Type: undefined,
+                Config: undefined
+            });
         }
     }
 }

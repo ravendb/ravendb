@@ -43,11 +43,11 @@ class enforceRevisionsConfigurationDetail extends abstractOperationDetails {
 
         this.progress.subscribe(result => {
             if (result) {
-                this.allWarnings(_.map(result.Warnings, (value, key) => {
+                this.allWarnings(_.map(result.Warnings, (value, key): gridItem => {
                     return {
                         Id: key,
                         Description: value
-                    } as gridItem
+                    }
                 }));
 
                 if (this.allWarnings().length) {

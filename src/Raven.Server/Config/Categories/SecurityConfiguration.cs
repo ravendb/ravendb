@@ -167,6 +167,11 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Security.TlsCipherSuites", ConfigurationEntryScope.ServerWideOnly)]
         public TlsCipherSuite[] TlsCipherSuites { get; set; }
 
+        [Description("EXPERT: Indicates if 'KeyUsage' validation of certificates should be turned on or off")]
+        [DefaultValue(true)]
+        [ConfigurationEntry("Security.Certificate.Validation.KeyUsages", ConfigurationEntryScope.ServerWideOnly)]
+        public bool CertificateValidationKeyUsages { get; set; }
+
         internal bool? IsUnsecureAccessSetupValid { get; private set; }
 
         internal string UnsecureAccessWarningMessage { get; private set; }

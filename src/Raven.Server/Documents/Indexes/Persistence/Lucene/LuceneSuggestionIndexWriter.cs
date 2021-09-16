@@ -172,6 +172,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     if (_alreadySeen.Contains(word))
                         continue;
 
+                    _indexSearcher ??= new IndexSearcher(_directory, true, state);
                     if (_indexSearcher.DocFreq(_fWordTerm.CreateTerm(word), state) <= 0)
                     {
                         // the word does not exist in the gramindex
@@ -200,6 +201,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 LuceneIndexWriter.TryThrowingBetterException(e, _directory);
 
                 throw;
+            }
+            finally
+            {
+                _indexSearcher?.Dispose();
+                _indexSearcher = null;
             }
         }
 
@@ -272,15 +278,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _indexWriter.SetMaxBufferedDocs(IndexWriter.DISABLE_AUTO_FLUSH);
             _indexWriter.SetRAMBufferSizeMB(50);
             _indexWriter.MergeFactor = 300;
-
-            _indexSearcher = new IndexSearcher(_directory, true, state);
-
         }
 
         private void DisposeIndexWriter(bool waitForMerges = true)
         {
             if (_indexWriter == null)
                 return;
+
+            _alreadySeen.Clear();
 
             var searcher = _indexSearcher;
             _indexSearcher = null;

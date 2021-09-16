@@ -19,13 +19,14 @@ using Sparrow;
 using Sparrow.Collections;
 using Sparrow.Logging;
 using Sparrow.Utils;
+using BackupConfiguration = Raven.Client.Documents.Operations.Backups.BackupConfiguration;
 using Size = Sparrow.Size;
 
 namespace Raven.Server.Documents.PeriodicBackup
 {
     public class BackupUploader
     {
-        private readonly UploaderSettings _uploaderSettings;
+        private readonly UploaderSettings _settings;
         private readonly List<PoolOfThreads.LongRunningWork> _threads;
         private readonly ConcurrentSet<Exception> _exceptions;
 
@@ -45,9 +46,9 @@ namespace Raven.Server.Documents.PeriodicBackup
         private const string GoogleCloudName = "Google Cloud";
         private const string FtpName = "FTP";
 
-        public BackupUploader(UploaderSettings uploaderSettings, RetentionPolicyBaseParameters retentionPolicyParameters, Logger logger, BackupResult backupResult, Action<IOperationProgress> onProgress, OperationCancelToken taskCancelToken)
+        public BackupUploader(UploaderSettings settings, RetentionPolicyBaseParameters retentionPolicyParameters, Logger logger, BackupResult backupResult, Action<IOperationProgress> onProgress, OperationCancelToken taskCancelToken)
         {
-            _uploaderSettings = uploaderSettings;
+            _settings = settings ?? throw new ArgumentNullException(nameof(settings));
             _threads = new List<PoolOfThreads.LongRunningWork>();
             _exceptions = new ConcurrentSet<Exception>();
 
@@ -60,19 +61,19 @@ namespace Raven.Server.Documents.PeriodicBackup
             _onProgress = onProgress;
         }
 
-        public bool AnyUploads => BackupConfiguration.CanBackupUsing(_uploaderSettings.S3Settings)
-                                   || BackupConfiguration.CanBackupUsing(_uploaderSettings.GlacierSettings)
-                                   || BackupConfiguration.CanBackupUsing(_uploaderSettings.AzureSettings)
-                                   || BackupConfiguration.CanBackupUsing(_uploaderSettings.GoogleCloudSettings)
-                                   || BackupConfiguration.CanBackupUsing(_uploaderSettings.FtpSettings);
+        public bool AnyUploads => BackupConfiguration.CanBackupUsing(_settings.S3Settings)
+                                   || BackupConfiguration.CanBackupUsing(_settings.GlacierSettings)
+                                   || BackupConfiguration.CanBackupUsing(_settings.AzureSettings)
+                                   || BackupConfiguration.CanBackupUsing(_settings.GoogleCloudSettings)
+                                   || BackupConfiguration.CanBackupUsing(_settings.FtpSettings);
 
         public void ExecuteUpload()
         {
-            CreateUploadTaskIfNeeded(_uploaderSettings.S3Settings, UploadToS3, _backupResult.S3Backup, S3Name);
-            CreateUploadTaskIfNeeded(_uploaderSettings.GlacierSettings, UploadToGlacier, _backupResult.GlacierBackup, GlacierName);
-            CreateUploadTaskIfNeeded(_uploaderSettings.AzureSettings, UploadToAzure, _backupResult.AzureBackup, AzureName);
-            CreateUploadTaskIfNeeded(_uploaderSettings.GoogleCloudSettings, UploadToGoogleCloud, _backupResult.GoogleCloudBackup, GoogleCloudName);
-            CreateUploadTaskIfNeeded(_uploaderSettings.FtpSettings, UploadToFtp, _backupResult.FtpBackup, FtpName);
+            CreateUploadTaskIfNeeded(_settings.S3Settings, UploadToS3, _backupResult.S3Backup, S3Name);
+            CreateUploadTaskIfNeeded(_settings.GlacierSettings, UploadToGlacier, _backupResult.GlacierBackup, GlacierName);
+            CreateUploadTaskIfNeeded(_settings.AzureSettings, UploadToAzure, _backupResult.AzureBackup, AzureName);
+            CreateUploadTaskIfNeeded(_settings.GoogleCloudSettings, UploadToGoogleCloud, _backupResult.GoogleCloudBackup, GoogleCloudName);
+            CreateUploadTaskIfNeeded(_settings.FtpSettings, UploadToFtp, _backupResult.FtpBackup, FtpName);
 
             Execute();
         }
@@ -95,9 +96,9 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         public void ExecuteDelete()
         {
-            CreateDeletionTaskIfNeeded(_uploaderSettings.S3Settings, DeleteFromS3, S3Name);
-            CreateDeletionTaskIfNeeded(_uploaderSettings.AzureSettings, DeleteFromAzure, AzureName);
-            CreateDeletionTaskIfNeeded(_uploaderSettings.GoogleCloudSettings, DeleteFromGoogleCloud, GoogleCloudName);
+            CreateDeletionTaskIfNeeded(_settings.S3Settings, DeleteFromS3, S3Name);
+            CreateDeletionTaskIfNeeded(_settings.AzureSettings, DeleteFromAzure, AzureName);
+            CreateDeletionTaskIfNeeded(_settings.GoogleCloudSettings, DeleteFromGoogleCloud, GoogleCloudName);
 
             // deletion from Glacier and FTP destinations is not supported
 
@@ -106,7 +107,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private void UploadToS3(S3Settings settings, Stream stream, Progress progress)
         {
-            using (var client = new RavenAwsS3Client(settings, progress, TaskCancelToken.Token))
+            using (var client = new RavenAwsS3Client(settings, _settings.Configuration, progress, TaskCancelToken.Token))
             {
                 var key = CombinePathAndKey(settings.RemoteFolderName);
                 client.PutObject(key, stream, new Dictionary<string, string>
@@ -127,9 +128,9 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private void UploadToGlacier(GlacierSettings settings, Stream stream, Progress progress)
         {
-            using (var client = new RavenAwsGlacierClient(settings, progress, TaskCancelToken.Token))
+            using (var client = new RavenAwsGlacierClient(settings, _settings.Configuration, progress, TaskCancelToken.Token))
             {
-                var key = CombinePathAndKey(settings.RemoteFolderName ?? _uploaderSettings.DatabaseName);
+                var key = CombinePathAndKey(settings.RemoteFolderName ?? _settings.DatabaseName);
                 var archiveId = client.UploadArchive(stream, key);
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"{ReportSuccess(GlacierName)}, archive ID: {archiveId}");
@@ -146,7 +147,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         {
             using (var client = new RavenFtpClient(settings, progress, TaskCancelToken.Token))
             {
-                client.UploadFile(_uploaderSettings.FolderName, _uploaderSettings.FileName, stream);
+                client.UploadFile(_settings.FolderName, _settings.FileName, stream);
 
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"{ReportSuccess(FtpName)} server");
@@ -161,7 +162,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private void UploadToAzure(AzureSettings settings, Stream stream, Progress progress)
         {
-            using (var client = new RavenAzureClient(settings, progress, TaskCancelToken.Token))
+            using (var client = RavenAzureClient.Create(settings, _settings.Configuration, progress, TaskCancelToken.Token))
             {
                 var key = CombinePathAndKey(settings.RemoteFolderName);
                 client.PutBlob(key, stream, new Dictionary<string, string>
@@ -182,7 +183,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private void UploadToGoogleCloud(GoogleCloudSettings settings, Stream stream, Progress progress)
         {
-            using (var client = new RavenGoogleCloudClient(settings, progress, TaskCancelToken.Token))
+            using (var client = new RavenGoogleCloudClient(settings, _settings.Configuration, progress, TaskCancelToken.Token))
             {
                 var key = CombinePathAndKey(settings.RemoteFolderName);
                 client.UploadObject(key, stream, new Dictionary<string, string>
@@ -203,7 +204,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private void DeleteFromS3(S3Settings settings)
         {
-            using (var client = new RavenAwsS3Client(settings, progress: null, TaskCancelToken.Token))
+            using (var client = new RavenAwsS3Client(settings, _settings.Configuration, progress: null, TaskCancelToken.Token))
             {
                 var key = CombinePathAndKey(settings.RemoteFolderName);
                 client.DeleteObject(key);
@@ -215,10 +216,10 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private void DeleteFromAzure(AzureSettings settings)
         {
-            using (var client = new RavenAzureClient(settings, progress : null, TaskCancelToken.Token))
+            using (var client = RavenAzureClient.Create(settings, _settings.Configuration, progress: null, TaskCancelToken.Token))
             {
                 var key = CombinePathAndKey(settings.RemoteFolderName);
-                client.DeleteBlobs(new List<string>{ key });
+                client.DeleteBlobs(new List<string> { key });
 
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"{ReportDeletion(AzureName)} container: {settings.StorageContainer}, with key: {key}");
@@ -227,7 +228,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private void DeleteFromGoogleCloud(GoogleCloudSettings settings)
         {
-            using (var client = new RavenGoogleCloudClient(settings, progress: null, TaskCancelToken.Token))
+            using (var client = new RavenGoogleCloudClient(settings, _settings.Configuration, progress: null, TaskCancelToken.Token))
             {
                 var key = CombinePathAndKey(settings.RemoteFolderName);
                 client.DeleteObject(key);
@@ -244,14 +245,14 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             var prefix = string.IsNullOrWhiteSpace(path) == false ? $"{path}/" : string.Empty;
 
-            return $"{prefix}{_uploaderSettings.FolderName}/{_uploaderSettings.FileName}";
+            return $"{prefix}{_settings.FolderName}/{_settings.FileName}";
         }
 
         private void CreateUploadTaskIfNeeded<S, T>(S settings, Action<S, FileStream, Progress> uploadToServer, T uploadStatus, string targetName)
             where S : BackupSettings
             where T : CloudUploadStatus
         {
-            if (BackupConfiguration.CanBackupUsing(settings) == false)
+            if (Client.Documents.Operations.Backups.BackupConfiguration.CanBackupUsing(settings) == false)
                 return;
 
             Debug.Assert(uploadStatus != null);
@@ -265,7 +266,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     NativeMemory.EnsureRegistered();
 
                     using (localUploadStatus.UpdateStats(_isFullBackup))
-                    using (var fileStream = File.OpenRead(_uploaderSettings.FilePath))
+                    using (var fileStream = File.OpenRead(_settings.FilePath))
                     {
                         var uploadProgress = localUploadStatus.UploadProgress;
                         try
@@ -324,7 +325,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     localUploadStatus.Exception = (exception ?? e).ToString();
                     _exceptions.Add(exception ?? new InvalidOperationException(error, e));
                 }
-            }, null, $"Upload backup file of database '{_uploaderSettings.DatabaseName}' to {targetName} (task: '{_uploaderSettings.TaskName}')");
+            }, null, $"Upload backup file of database '{_settings.DatabaseName}' to {targetName} (task: '{_settings.TaskName}')");
 
             _threads.Add(thread);
         }
@@ -358,7 +359,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                     _exceptions.Add(exception ?? new InvalidOperationException(error, e));
                 }
-            }, null, $"Delete backup file of database '{_uploaderSettings.DatabaseName}' from {targetName} (task: '{_uploaderSettings.TaskName}')");
+            }, null, $"Delete backup file of database '{_settings.DatabaseName}' from {targetName} (task: '{_settings.TaskName}')");
 
             _threads.Add(thread);
         }
@@ -371,7 +372,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private string GetArchiveDescription()
         {
-            var backupType = _uploaderSettings.BackupType;
+            var backupType = _settings.BackupType;
             string description;
 
             if (backupType.HasValue)
@@ -381,10 +382,10 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
             else
             {
-                description = $"OLAP ETL {_uploaderSettings.TaskName}";
+                description = $"OLAP ETL {_settings.TaskName}";
             }
 
-            return $"{description} for db {_uploaderSettings.DatabaseName} at {SystemTime.UtcNow}";
+            return $"{description} for db {_settings.DatabaseName} at {SystemTime.UtcNow}";
         }
 
         private static string MsToHumanReadableString(long milliseconds)
@@ -435,17 +436,24 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private string ReportSuccess(string name)
         {
-            return $"Successfully uploaded backup file '{_uploaderSettings.FileName}' to {name}";
+            return $"Successfully uploaded backup file '{_settings.FileName}' to {name}";
         }
 
         private string ReportDeletion(string name)
         {
-            return $"Successfully deleted backup file '{_uploaderSettings.FileName}' to {name}";
+            return $"Successfully deleted backup file '{_settings.FileName}' to {name}";
         }
     }
 
     public class UploaderSettings
     {
+        public readonly Config.Categories.BackupConfiguration Configuration;
+
+        public UploaderSettings(Config.Categories.BackupConfiguration configuration)
+        {
+            Configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+        }
+
         public S3Settings S3Settings;
         public GlacierSettings GlacierSettings;
         public AzureSettings AzureSettings;

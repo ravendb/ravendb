@@ -47,6 +47,8 @@ namespace Raven.Client.ServerWide.Tcp
 
         public string SourceNodeTag { get; set; }
 
+        public string ServerId;
+
         public OperationTypes Operation { get; set; }
 
         public int OperationVersion { get; set; }

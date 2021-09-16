@@ -87,7 +87,7 @@ loadToOrders(partitionBy(key),
 
                     etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                    using (var client = new RavenAzureClient(settings))
+                    using (var client = RavenAzureClient.Create(settings, DefaultBackupConfiguration))
                     {
                         var prefix = $"{settings.RemoteFolderName}/{CollectionName}";
                         var result = await client.ListBlobsAsync(prefix, delimiter: string.Empty, listFolders: false);
@@ -153,7 +153,7 @@ loadToOrders(partitionBy(key),
 
                     etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                    using (var client = new RavenAzureClient(settings))
+                    using (var client = RavenAzureClient.Create(settings, DefaultBackupConfiguration))
                     {
                         var prefix = $"{settings.RemoteFolderName}/{CollectionName}";
                         var result = await client.ListBlobsAsync(prefix, delimiter: string.Empty, listFolders: false);
@@ -322,7 +322,7 @@ loadToOrders(partitionBy(key), orderData);
                     SetupAzureEtl(store, script, settings);
                     etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                    using (var client = new RavenAzureClient(settings))
+                    using (var client = RavenAzureClient.Create(settings, DefaultBackupConfiguration))
                     {
                         var prefix = $"{settings.RemoteFolderName}/{CollectionName}";
                         var result = await client.ListBlobsAsync(prefix, delimiter: string.Empty, listFolders: false);
@@ -355,7 +355,7 @@ loadToOrders(partitionBy(key), orderData);
                     }
 
                     //sales
-                    using (var client = new RavenAzureClient(settings))
+                    using (var client = RavenAzureClient.Create(settings, DefaultBackupConfiguration))
                     {
                         var prefix = $"{settings.RemoteFolderName}/{salesTableName}";
                         var result = await client.ListBlobsAsync(prefix, delimiter: string.Empty, listFolders: false);
@@ -471,12 +471,12 @@ loadToOrders(partitionBy(['order_date', key]),
 
                     etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                    using (var client = new RavenAzureClient(settings))
+                    using (var client = RavenAzureClient.Create(settings, DefaultBackupConfiguration))
                     {
                         var prefix = $"{settings.RemoteFolderName}/{CollectionName}";
                         var cloudObjects = await client.ListBlobsAsync(prefix, string.Empty, false);
                         var list = cloudObjects.List.ToList();
-                        
+
                         Assert.Equal(2, list.Count);
                         Assert.Contains($"{partitionColumn}=2020-01-01", list[0].Name);
                         Assert.Contains($"{partitionColumn}=2020-02-01", list[1].Name);
@@ -530,7 +530,7 @@ loadToOrders(noPartition(),
 
                     etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                    using (var client = new RavenAzureClient(settings))
+                    using (var client = RavenAzureClient.Create(settings, DefaultBackupConfiguration))
                     {
                         var prefix = $"{settings.RemoteFolderName}/{CollectionName}";
 
@@ -666,7 +666,7 @@ loadToOrders(partitionBy(
 
                     var expectedFields = new[] { "RequireAt", "ShipVia", "Company", ParquetTransformedItems.DefaultIdColumn, ParquetTransformedItems.LastModifiedColumn };
 
-                    using (var client = new RavenAzureClient(settings))
+                    using (var client = RavenAzureClient.Create(settings, DefaultBackupConfiguration))
                     {
                         var cloudObjects = await client.ListBlobsAsync(prefix, delimiter: "/", listFolders: true);
                         var list = cloudObjects.List.ToList();
@@ -790,7 +790,7 @@ loadToOrders(partitionBy(['year', year], ['month', month], ['source', $customPar
 
                     etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                    using (var client = new RavenAzureClient(settings))
+                    using (var client = RavenAzureClient.Create(settings, DefaultBackupConfiguration))
                     {
                         var prefix = $"{settings.RemoteFolderName}/{CollectionName}";
                         var cloudObjects = await client.ListBlobsAsync(prefix, delimiter: string.Empty, listFolders: false);
@@ -889,7 +889,7 @@ loadToOrders(partitionBy(['year', year], ['month', month], ['source', $customPar
 
             try
             {
-                using (var client = new RavenAzureClient(azureSettings))
+                using (var client = RavenAzureClient.Create(azureSettings, DefaultBackupConfiguration))
                 {
                     var result = await client.ListBlobsAsync(prefix, delimiter, listFolder);
                     List<string> filesToDelete;
@@ -915,7 +915,7 @@ loadToOrders(partitionBy(['year', year], ['month', month], ['source', $customPar
             }
         }
 
-        private static async Task<List<string>> ListAllFilesInFolders(RavenAzureClient client, IEnumerable<RavenStorageClient.BlobProperties> folders)
+        private static async Task<List<string>> ListAllFilesInFolders(IRavenAzureClient client, IEnumerable<RavenStorageClient.BlobProperties> folders)
         {
             var files = new List<string>();
             foreach (var folder in folders)

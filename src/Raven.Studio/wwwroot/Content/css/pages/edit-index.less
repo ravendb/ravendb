@@ -29,8 +29,8 @@
     
     .history-dropdown-container {
         background-color: @gray-darker;
-        max-height: 700px;
-        height: 700px;
+        max-height: 730px;
+        height: 730px;
         width: 1000px;
         
         h3 {
@@ -47,7 +47,7 @@
         background-color: @well-bg;
         padding: @grid-gutter-width/4;
         position: relative;
-        height: 600px;
+        height: 630px;
         padding: 0;
     }
     
@@ -85,8 +85,26 @@
         }
     }
 
-    .history-preview-area {
-        height: 600px !important;
+    #definition-preview.has-rolling-info {
+        .history-preview-area:not(.fullScreen-editor) {
+            height: 400px !important;
+        }
+    }
+
+    #definition-preview.no-rolling-info {
+        .history-preview-area:not(.fullScreen-editor) {
+            height: 630px !important;
+        }
+    }
+
+    .history-rolling-deployment-area {
+        max-height: 160px;
+        overflow: auto;
+
+        .tooltip-inner {
+            min-width: 260px;
+            text-align: left;
+        }
     }
     
     .analyzer-dropdown {

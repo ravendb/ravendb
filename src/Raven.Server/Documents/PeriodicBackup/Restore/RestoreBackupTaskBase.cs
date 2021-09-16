@@ -31,6 +31,8 @@ using Raven.Server.Web.System;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Platform;
+using Sparrow.Utils;
+using Voron.Data.Tables;
 using Voron.Impl.Backup;
 using Voron.Util.Settings;
 
@@ -114,6 +116,51 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 RestoreFromConfiguration.DataDirectory = GetDataDirectory();
 
             _restoringToDefaultDataDirectory = IsDefaultDataDirectory(RestoreFromConfiguration.DataDirectory, RestoreFromConfiguration.DatabaseName);
+        }
+
+        protected async Task<Stream> CopyRemoteStreamLocally(Stream stream)
+        {
+            return await CopyRemoteStreamLocally(stream, _serverStore.Configuration.Storage.TempPath);
+        }
+
+        public static async Task<Stream> CopyRemoteStreamLocally(Stream stream, PathSetting tempPath)
+        {
+            if (stream.CanSeek)
+                return stream;
+
+            // This is meant to be used by ZipArchive, which will copy the data locally because is *must* be seekable.
+            // To avoid reading everything to memory, we copy to a local file instead. Note that this also ensure that we
+            // can process files > 2GB in size. https://github.com/dotnet/runtime/issues/59027
+            var basePath = tempPath?.FullPath ?? Path.GetTempPath();
+            var filePath = Path.Combine(basePath, $"{Guid.NewGuid()}.restore-local-file");
+            var file = SafeFileStream.Create(filePath, FileMode.Create, FileAccess.ReadWrite, FileShare.Read,
+                32 * 1024, FileOptions.DeleteOnClose);
+
+            try
+            {
+                await stream.CopyToAsync(file);
+                file.Seek(0, SeekOrigin.Begin);
+
+                return file;
+            }
+            catch
+            {
+                try
+                {
+                    await file.DisposeAsync();
+                }
+                catch
+                {
+                    // nothing we can do
+                }
+                finally
+                {
+                    PosixFile.DeleteOnClose(filePath);
+                }
+
+                throw;
+            }
+
         }
 
         protected abstract Task<Stream> GetStream(string path);
@@ -487,6 +534,25 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                         ? restorePath
                         : restorePath.Combine(directory);
 
+                    var isSubDirectory = PathUtil.IsSubDirectory(restoreDirectory.FullPath, restorePath.FullPath);
+                    if (isSubDirectory == false)
+                    {
+                        var extensions = zipEntries
+                            .Select(x => Path.GetExtension(x.Name))
+                            .Distinct()
+                            .ToArray();
+
+                        if (extensions.Length != 1 || string.Equals(extensions[0], TableValueCompressor.CompressionRecoveryExtension, StringComparison.OrdinalIgnoreCase) == false)
+                            throw new InvalidOperationException($"Encountered invalid directory '{directory}' in snapshot file with following file extensions: {string.Join(", ", extensions)}");
+
+                        // this enables backward compatibility of snapshot backups with compression recovery files before fix was made in RavenDB-17173
+                        // the underlying issue was that we were putting full path when compression recovery files were backed up using snapshot
+                        // because of that the end restore directory was not a sub-directory of a restore path
+                        // which could result in a file already exists exception
+                        // since restoring of compression recovery files is not mandatory then it is safe to skip them
+                        continue;
+                    }
+
                     BackupMethods.Full.Restore(
                         zipEntries,
                         restoreDirectory,
@@ -817,5 +883,5 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         {
             _operationCancelToken.Dispose();
         }
-        }
     }
+}

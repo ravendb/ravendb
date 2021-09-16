@@ -123,10 +123,10 @@ class documentBasedColumnsProvider {
             initialColumns.push(flags);
         }
 
-        const tsOptions = {
+        const tsOptions: timeSeriesColumnOpts<any> = {
             ...this.columnOptions,
             handler: this.timeSeriesActionHandler
-        } as timeSeriesColumnOpts<any>;
+        };
 
         const initialColumnsWidth = _.sumBy(initialColumns, x => virtualGridUtils.widthToPixels(x));
         const rightScrollWidth = 5;

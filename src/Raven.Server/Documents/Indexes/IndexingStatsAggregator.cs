@@ -188,6 +188,10 @@ namespace Raven.Server.Documents.Indexes
         public void RecordMapReferenceAttempt()
         {
             _stats.MapReferenceAttempts++;
+
+            _stats.ReferenceDetails ??= new ReferenceRunDetails();
+
+            _stats.ReferenceDetails.ReferenceAttempts++;
         }
 
         public void RecordMapSuccess()
@@ -198,6 +202,10 @@ namespace Raven.Server.Documents.Indexes
         public void RecordMapReferenceSuccess()
         {
             _stats.MapReferenceSuccesses++;
+
+            _stats.ReferenceDetails ??= new ReferenceRunDetails();
+
+            _stats.ReferenceDetails.ReferenceSuccesses++;
         }
 
         public void RecordMapError()
@@ -208,6 +216,10 @@ namespace Raven.Server.Documents.Indexes
         public void RecordMapReferenceError()
         {
             _stats.MapReferenceErrors++;
+
+            _stats.ReferenceDetails ??= new ReferenceRunDetails();
+
+            _stats.ReferenceDetails.ReferenceErrors++;
         }
 
         public void RecordIndexingOutput()
@@ -290,6 +302,9 @@ namespace Raven.Server.Documents.Indexes
                     TreesReduceDetails = _stats.ReduceDetails.TreesReduceDetails
                 };
             }
+
+            if (_stats.ReferenceDetails != null && name == "References")
+                operation.ReferenceDetails = _stats.ReferenceDetails;
 
             if (_stats.MapDetails != null && name == "Map")
                 operation.MapDetails = _stats.MapDetails;
@@ -382,6 +397,22 @@ namespace Raven.Server.Documents.Indexes
             _stats.LuceneMergeDetails.MergedFilesCount += mergeStats.NumberOfFiles;
             _stats.LuceneMergeDetails.MergedDocumentsCount += mergeStats.TotalDocuments;
             _stats.LuceneMergeDetails.ExecutedMergesCount++;
+        }
+
+        public void RecordReferenceAllocations(long allocated)
+        {
+            _stats.ReferenceDetails ??= new ReferenceRunDetails();
+
+            _stats.ReferenceDetails.CurrentlyAllocated = allocated;
+        }
+
+        public void RecordReferenceMemoryStats(long currentProcessWorkingSet, long currentProcessPrivateMemorySize, long currentBudget)
+        {
+            _stats.ReferenceDetails ??= new ReferenceRunDetails();
+
+            _stats.ReferenceDetails.AllocationBudget = currentBudget;
+            _stats.ReferenceDetails.ProcessPrivateMemory = currentProcessPrivateMemorySize;
+            _stats.ReferenceDetails.ProcessWorkingSet = currentProcessWorkingSet;
         }
     }
 }

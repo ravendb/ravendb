@@ -3152,6 +3152,15 @@ namespace Raven.Server.ServerWide
                 return items.VerifyKeyExists(key);
         }
 
+        public bool DatabaseExists(string name)
+        {
+            using (ContextPoolForReadOnlyOperations.AllocateOperationContext(out ClusterOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                return DatabaseExists(context, name);
+            }
+        }
+
         public DatabaseRecord ReadDatabase<TTransaction>(TransactionOperationContext<TTransaction> context, string name, out long etag)
             where TTransaction : RavenTransaction
         {
@@ -3420,6 +3429,8 @@ namespace Raven.Server.ServerWide
                             [nameof(TcpConnectionHeaderMessage.Info)] = $"Couldn't agree on cluster tcp version ours:{TcpConnectionHeaderMessage.ClusterTcpVersion} theirs:{reply.Version}"
                         });
                         throw new InvalidOperationException($"Unable to access  {url} because {reply.Message}");
+                    case TcpConnectionStatus.InvalidNetworkTopology:
+                        throw new InvalidNetworkTopologyException($"Unable to access {url} because {reply.Message}");
                 }
             }
 
@@ -3442,30 +3453,22 @@ namespace Raven.Server.ServerWide
 
                 info = await ReplicationUtils.GetTcpInfoAsync(url, null, "Cluster", certificate, cts.Token);
             }
-
+            
             TcpClient tcpClient = null;
             Stream stream = null;
             try
             {
-                string choosenUrl = null;
-                (tcpClient, choosenUrl) = await TcpUtils.ConnectAsyncWithPriority(info, _parent.TcpConnectionTimeout, token).ConfigureAwait(false);
-                stream = await TcpUtils.WrapStreamWithSslAsync(tcpClient, info, _parent.ClusterCertificate, _parent.CipherSuitesPolicy, _parent.TcpConnectionTimeout, token);
-
-                var parameters = new AsyncTcpNegotiateParameters
-                {
-                    Database = null,
-                    Operation = TcpConnectionHeaderMessage.OperationTypes.Cluster,
-                    Version = TcpConnectionHeaderMessage.ClusterTcpVersion,
-                    ReadResponseAndGetVersionCallbackAsync = ClusterReadResponseAndGetVersion,
-                    DestinationUrl = choosenUrl,
-                    DestinationNodeTag = tag,
-                    SourceNodeTag = _parent.Tag
-                };
-
                 TcpConnectionHeaderMessage.SupportedFeatures supportedFeatures;
                 using (ContextPoolForReadOnlyOperations.AllocateOperationContext(out JsonOperationContext context))
                 {
-                    supportedFeatures = await TcpNegotiation.NegotiateProtocolVersionAsync(context, stream, parameters);
+                    var result = await TcpUtils.ConnectSecuredTcpSocket(info, _parent.ClusterCertificate, _parent.CipherSuitesPolicy,
+                        TcpConnectionHeaderMessage.OperationTypes.Cluster, 
+                        (string destUrl, TcpConnectionInfo tcpInfo, Stream conn, JsonOperationContext ctx, List<string> _) => NegotiateProtocolVersionAsyncForCluster(destUrl, tcpInfo, conn, ctx, tag), 
+                        context, _parent.TcpConnectionTimeout, null, token);
+
+                    tcpClient = result.TcpClient;
+                    stream = result.Stream;
+                    supportedFeatures = result.SupportedFeatures;
 
                     if (supportedFeatures.ProtocolVersion <= 0)
                     {
@@ -3500,6 +3503,23 @@ namespace Raven.Server.ServerWide
                 tcpClient?.Dispose();
                 throw;
             }
+        }
+
+        private async Task<TcpConnectionHeaderMessage.SupportedFeatures> NegotiateProtocolVersionAsyncForCluster(string url, TcpConnectionInfo info, Stream stream, JsonOperationContext ctx, string tag)
+        {
+            var parameters = new AsyncTcpNegotiateParameters
+            {
+                Database = null,
+                Operation = TcpConnectionHeaderMessage.OperationTypes.Cluster,
+                Version = TcpConnectionHeaderMessage.ClusterTcpVersion,
+                ReadResponseAndGetVersionCallbackAsync = ClusterReadResponseAndGetVersion,
+                DestinationUrl = url,
+                DestinationNodeTag = tag,
+                SourceNodeTag = _parent.Tag,
+                DestinationServerId = info.ServerId
+            };
+
+            return await TcpNegotiation.NegotiateProtocolVersionAsync(ctx, stream, parameters);
         }
 
         private void ToggleDatabasesState(BlittableJsonReaderObject cmd, ClusterOperationContext context, string type, long index)

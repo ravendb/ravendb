@@ -123,8 +123,10 @@ namespace Raven.Server.Documents.Indexes.Workers
                                                                                 $"Exception: {e}");
                                     }
 
-                                    batchContinuationResult = _index.CanContinueBatch(collectionStats, queryContext, indexContext, writeOperation, 
-                                        lastEtag, lastCollectionEtag, totalProcessedCount, sw, ref maxTimeForDocumentTransactionToRemainOpen);
+                                    var parameters = new CanContinueBatchParameters(collectionStats, IndexingWorkType.Map, queryContext, indexContext, writeOperation,
+                                        lastEtag, lastCollectionEtag, totalProcessedCount, sw);
+
+                                    batchContinuationResult = _index.CanContinueBatch(in parameters, ref maxTimeForDocumentTransactionToRemainOpen);
                                     if (batchContinuationResult != Index.CanContinueBatchResult.True)
                                     {
                                         keepRunning = batchContinuationResult == Index.CanContinueBatchResult.RenewTransaction;

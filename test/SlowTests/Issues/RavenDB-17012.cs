@@ -4,6 +4,7 @@ using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client.Documents;
 using Raven.Client.Documents.BulkInsert;
 using Raven.Client.Documents.Operations;
 using Raven.Tests.Core.Utils.Entities;
@@ -24,7 +25,7 @@ namespace SlowTests.Issues
         [InlineData(5_000)]
         public async Task Can_SkipOverwriteIfUnchanged(int docsCount)
         {
-            using (var store = GetDocumentStore())
+            using (IDocumentStore store = GetDocumentStore())
             {
                 var docs = new List<User>();
 
@@ -64,7 +65,7 @@ namespace SlowTests.Issues
         [InlineData(5_000)]
         public async Task Can_SkipOverwriteIfUnchanged_SomeDocuments(int docsCount)
         {
-            using (var store = GetDocumentStore())
+            using (IDocumentStore store = GetDocumentStore())
             {
                 var docs = new List<User>();
 
@@ -104,7 +105,7 @@ namespace SlowTests.Issues
         [Fact]
         public async Task Can_SkipOverwriteIfUnchanged_With_Attachment()
         {
-            using (var store = GetDocumentStore())
+            using (IDocumentStore store = GetDocumentStore())
             {
                 var docId = Guid.NewGuid().ToString();
                 var attachmentName = Guid.NewGuid().ToString();
@@ -147,7 +148,7 @@ namespace SlowTests.Issues
         [Fact]
         public async Task Can_SkipOverwriteIfUnchanged_With_Counter()
         {
-            using (var store = GetDocumentStore())
+            using (IDocumentStore store = GetDocumentStore())
             {
                 var docId = Guid.NewGuid().ToString();
                 var counterName = Guid.NewGuid().ToString();
@@ -190,7 +191,7 @@ namespace SlowTests.Issues
         [Fact]
         public async Task Can_SkipOverwriteIfUnchanged_With_TimeSeries()
         {
-            using (var store = GetDocumentStore())
+            using (IDocumentStore store = GetDocumentStore())
             {
                 var docId = Guid.NewGuid().ToString();
                 var timeSeriesName = Guid.NewGuid().ToString();

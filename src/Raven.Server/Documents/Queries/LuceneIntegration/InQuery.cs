@@ -161,15 +161,19 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
         {
             private FastBitArray _docs;
             private IEnumerator<int> _enum;
+            private int _currentDocId;
             internal EagerInScorer(InQuery parent, IndexReader reader, IState state, Similarity similarity) : base(similarity)
             {
                 _docs = new FastBitArray(reader.MaxDoc);
 
+                _currentDocId = NO_MORE_DOCS;
                 foreach (string match in parent.Matches)
                 {
                     using var termDocs = reader.TermDocs(new Term(parent.Field, match), state);
                     while (termDocs.Next(state))
                     {
+                        if (_currentDocId != NO_MORE_DOCS)
+                            _currentDocId = termDocs.Doc; // we may be called on the first value
                         _docs.Set(termDocs.Doc);
                     }
                 }
@@ -179,17 +183,21 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
 
             public override int DocID()
             {
-                return _enum?.Current ?? NO_MORE_DOCS;
+                return _currentDocId;
             }
 
             public override int NextDoc(IState state)
             {
                 if (_enum?.MoveNext() == true)
-                    return _enum.Current;
+                {
+                    _currentDocId = _enum.Current;
+                    return _currentDocId;
+                }
                 _enum?.Dispose();
                 _enum = null;
                 _docs.Dispose();
-                return NO_MORE_DOCS;
+                 _currentDocId = NO_MORE_DOCS;
+                 return NO_MORE_DOCS;
             }
 
             public override int Advance(int target, IState state)

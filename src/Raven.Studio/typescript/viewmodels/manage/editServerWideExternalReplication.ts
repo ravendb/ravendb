@@ -32,7 +32,7 @@ class editServerWideExternalReplication extends viewModelBase {
     
     constructor() {
         super();
-        this.bindToCurrentInstance("onTestConnection");
+        this.bindToCurrentInstance("onTestConnection", "setState");
     }
     
     activate(args: any) {
@@ -151,6 +151,10 @@ class editServerWideExternalReplication extends viewModelBase {
                 this.spinners.test(false);
                 this.fullErrorDetailsVisible(false);
             });
+    }
+
+    setState(state: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskState): void {
+        this.editedTask().disabled(state === "Disabled");
     }
 }
 

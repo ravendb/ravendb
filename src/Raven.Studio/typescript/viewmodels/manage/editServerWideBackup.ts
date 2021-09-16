@@ -32,7 +32,7 @@ class editServerWideBackup extends viewModelBase {
     
     constructor() {
         super();
-        this.bindToCurrentInstance("testCredentials");
+        this.bindToCurrentInstance("testCredentials", "setState");
     }
     
     activate(args: any) {
@@ -252,6 +252,10 @@ class editServerWideBackup extends viewModelBase {
             valid = false;
         
         return valid;
+    }
+    
+    setState(state: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskState): void {
+        this.editedTask().setState(state);
     }
 }
 

@@ -13,10 +13,23 @@
                 <div class="panel">
                     <div class="panel-body" data-bind="with: editedRavenEtl">
                         <h3 data-bind="text: $parent.isAddingNewRavenEtlTask() ? `New RavenDB ETL` : `Edit RavenDB ETL`"></h3>
-                        <div class="form-group">
+                        <div class="form-group margin-top margin-top-lg">
                             <label for="taskName" class="control-label">Task Name</label>
                             <div class="flex-grow">
                                 <input type="text" class="form-control" id="taskName" placeholder="Enter a descriptive name for the RavenDB ETL task (optional)" data-bind="textInput: taskName">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="control-label">Task State</label>
+                            <div class="flex-grow">
+                                <button type="button" class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown" aria-expanded="false">
+                                    <span data-bind="text: stateText()"></span>
+                                    <span class="caret"></span>
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><a href="#" data-bind="click: _.partial($root.setState, 'Enabled')"><span>Enabled</span></a></li>
+                                    <li><a href="#" data-bind="click: _.partial($root.setState, 'Disabled')"><span>Disabled</span></a></li>
+                                </ul>
                             </div>
                         </div>
                         <div data-bind="if: $root.activeDatabase() && $root.activeDatabase().isEncrypted"> 
@@ -96,7 +109,7 @@
                             </div>
                         </div>
                         <div class="flex-horizontal">
-                            <div class="flex-grow">
+                            <div class="flex-grow margin-top">
                                 <button type="button" class="btn btn-info" data-bind="click: $root.toggleAdvancedArea">
                                     <i class="icon-settings"></i><span>Advanced</span>
                                 </button>
@@ -157,7 +170,7 @@
                     </div>
                 </div>
                 <div class="flex-header">
-                    <div class="flex-row">
+                    <div class="flex-row margin-top margin-top-lg">
                         <h3>Transform Scripts:</h3>
                         <button type="button" id="addNewScript" data-bind="click: addNewTransformation" title="Add a new transformation script for this ETL task" class="btn btn-info pull-right">
                             <i class="icon-plus"></i><span>Add New Script</span>
@@ -167,8 +180,11 @@
                 <div class="scroll">
                     <div class="etl-list" id="transformsList" data-bind="with: editedRavenEtl">
                         <div data-bind="if: transformationScripts().length === 0 && !editedTransformationScriptSandbox()">
-                            <div>
-                                <h3 class="text-center text-muted" data-bind="css: { 'text-danger': !transformationScripts.isValid() && transformationScripts.isModified() }">No transformation scripts have been defined.</h3>
+                            <div class="text-center text-muted">
+                                <i class="icon-lg icon-empty-set"></i>
+                                <h3 class="margin-top margin-top-sm"
+                                    data-bind="css: { 'text-danger': !transformationScripts.isValid() && transformationScripts.isModified() }">No transformation scripts have been defined.
+                                </h3>
                             </div>
                         </div>
                         <div data-bind="foreach: transformationScripts">
@@ -204,12 +220,14 @@
         </div>
         <div class="col-xs-12 col-lg-6 flex-vertical" data-bind="with: editedRavenEtl()">
             <div class="flex-grow">
-                <div id="editTransform" class="panel" data-bind="if: showEditTransformationArea">
-                    <div class="padding padding-sm" data-bind="with: editedTransformationScriptSandbox">
-                        <div data-bind="visible: !isNew()">
-                            <label>
-                                <strong>Name:</strong> <span data-bind="text: name"></span>
-                            </label>
+                <div id="editTransform" class="panel padding" data-bind="if: showEditTransformationArea">
+                    <div data-bind="with: editedTransformationScriptSandbox">
+                        <div class="flex-horizontal margin-bottom" data-bind="validationElement: name">
+                            <label class="control-label"><strong>Name:</strong></label>
+                            <div class="flex-grow margin-left">
+                                <input type="text" class="form-control" placeholder="Enter script name" autocomplete="off"
+                                       data-bind="textInput: name, disable: $root.enableTestArea() || !isNew()" />
+                            </div>
                         </div>
                         <label><strong>Script:</strong> <small>(leave empty to send documents without any modifications)</small></label>
                         <span class="pull-right"><a href="#" data-bind="click: $root.syntaxHelp"><small>Syntax <i class="icon-help"></i></small></a></span>
@@ -221,11 +239,7 @@
                                 <div class="help-block" data-bind="validationMessage: script"></div>
                             </div>
                         </div>
-                        <div class="toggle margin-top" data-bind="visible: !isNew()">
-                            <input id="reset" type="checkbox" data-bind="checked: resetScript">
-                            <label for="reset">Apply script to documents from beginning of time (Reset)</label>
-                        </div>
-                        <div class="margin-bottom margin-top">
+                        <div class="margin-bottom margin-top margin-top-lg">
                             <div class="flex-horizontal">
                                 <div class="flex-grow">
                                     <div class="dropdown btn-block flex-grow">
@@ -260,13 +274,19 @@
                                 </ul>
                             </div>
                         </div>
-                        <div class="flex-horizontal">
-                            <button class="btn btn-success" data-bind="click: $root.saveEditedTransformation, attr: { title : (isNew() ? 'Add' : 'Update') + ' this transformation script' }">
-                                <i class="icon-tick"></i> <span data-bind="text: isNew() ? 'Add' : 'Update'"></span>
-                            </button>
-                            <button title="Cancel" class="btn btn-default" data-bind="click: $root.cancelEditedTransformation"><i class="icon-cancel"></i> <span>Cancel</span></button>
+                        <div class="toggle margin-top margin-top-lg" data-bind="visible: !isNew() && !$root.enableTestArea()">
+                            <input id="reset" type="checkbox" data-bind="checked: resetScript">
+                            <label for="reset">Apply script to documents from beginning of time (Reset)</label>
+                        </div>
+                        <div class="flex-horizontal margin-top margin-top-lg">
+                            <div data-bind="visible: !$root.enableTestArea()">
+                                <button class="btn btn-success" data-bind="click: $root.saveEditedTransformation, attr: { title : (isNew() ? 'Add' : 'Update') + ' this transformation script' }">
+                                    <i class="icon-tick"></i> <span data-bind="text: isNew() ? 'Add' : 'Update'"></span>
+                                </button>
+                                <button title="Cancel" class="btn btn-default" data-bind="click: $root.cancelEditedTransformation"><i class="icon-cancel"></i> <span>Cancel</span></button>
+                            </div>
                             <div class="flex-separator"></div>
-                            <button type="button" class="btn btn-info" data-bind="click: $root.toggleTestArea, visible: !$root.enableTestArea()">
+                            <button type="button" class="btn btn-info" data-bind="click: $root.toggleTestArea, visible: !$root.enableTestArea()" title="Click to open the test area">
                                 <i class="icon-rocket"></i> <span>Test script</span>
                             </button>
                         </div>
@@ -275,7 +295,7 @@
                 <div class="js-test-area" data-bind="collapse: $root.enableTestArea()">
                     <div class="panel">
                         <div class="panel-body flex-form" data-bind="with: $root.test">
-                            <div class="form-group flex-horizontal">
+                            <div class="form-group flex-horizontal margin-top">
                                 <label class="control-label">Document ID</label>
                                 <div class="flex-grow" data-bind="validationElement: documentId">
                                     <input type="text" id="documentId" data-bind="textInput: documentId" class="form-control" placeholder="Document ID" autocomplete="off"

@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using FastTests.Client;
 using Newtonsoft.Json;
 using Parquet;
 using Parquet.Data;
@@ -14,6 +13,7 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.OLAP;
+using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Server.Documents.ETL.Providers.OLAP;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Platform;
@@ -2207,13 +2207,12 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()], ['location', $custom
                 }
             }
         }
-
+        
         [Fact]
         public async Task CanUpdateLocalSettings()
         {
             using (var store = GetDocumentStore())
             {
-
                 var dt = new DateTime(2020, 1, 1);
 
                 using (var session = store.OpenAsyncSession())
@@ -2315,8 +2314,10 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
                 update = store.Maintenance.Send(new UpdateEtlOperation<OlapConnectionString>(taskId, configuration));
                 Assert.NotNull(update.RaftCommandIndex);
 
-                // add more data
+                var ongoingTask = store.Maintenance.Send(new GetOngoingTaskInfoOperation(update.TaskId, OngoingTaskType.OlapEtl));
+                Assert.Equal(OngoingTaskState.Enabled, ongoingTask.TaskState);
 
+                // add more data
                 using (var session = store.OpenAsyncSession())
                 {
                     for (int i = 6; i <= 10; i++)
@@ -2338,7 +2339,8 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
                 }
 
                 etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
-                Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
+                var timeout = TimeSpan.FromSeconds(65);
+                Assert.True(etlDone.Wait(timeout), $"waited for etl for {timeout} but it hasn't finished");
 
                 files = Directory.GetFiles(newPath, searchPattern: AllFilesPattern, SearchOption.AllDirectories).OrderBy(x => x).ToList();
                 Assert.Equal(5, files.Count);

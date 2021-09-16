@@ -24,7 +24,7 @@ class storageReport extends viewModelBase {
     static readonly maxChildrenToShow = 1000;
 
     basePath: string;
-    private rawData = [] as storageReportItemDto[];
+    private rawData: storageReportItemDto[] = [];
 
     private currentPath: KnockoutComputed<Array<storageReportItem>>;
 

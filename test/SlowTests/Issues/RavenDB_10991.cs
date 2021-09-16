@@ -44,7 +44,7 @@ namespace SlowTests.Issues
 
                     database.LastAccessTime = DateTime.MinValue;
 
-                    using (database.PreventFromUnloading()) // should prevent from unloading
+                    using (database.PreventFromUnloadingByIdleOperations()) // should prevent from unloading
                         Server.ServerStore.IdleOperations(null);
 
                     Assert.True(landlord.LastRecentlyUsed.TryGetValue(name, out _));

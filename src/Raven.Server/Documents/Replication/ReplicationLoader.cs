@@ -497,7 +497,7 @@ namespace Raven.Server.Documents.Replication
                 using (tcpConnectionOptions)
                 using (outgoingReplication)
                 {
-                    
+
                 }
                 return;
             }
@@ -511,46 +511,50 @@ namespace Raven.Server.Documents.Replication
         }
 
         public void RunPullReplicationAsSink(
-            TcpConnectionOptions tcpConnectionOptions, 
-            JsonOperationContext.MemoryBuffer buffer, 
-            PullReplicationAsSink destination, 
+            TcpConnectionOptions tcpConnectionOptions,
+            JsonOperationContext.MemoryBuffer buffer,
+            PullReplicationAsSink destination,
             OutgoingReplicationHandler source)
         {
-            string[] allowedPaths = DetailedReplicationHubAccess.Preferred(destination.AllowedHubToSinkPaths, destination.AllowedSinkToHubPaths);
-            var incomingPullParams = new PullReplicationParams
+            using (source)
             {
-                Name = destination.HubName,
-                AllowedPaths = allowedPaths,
-                Mode = PullReplicationMode.HubToSink,
-                PreventDeletionsMode = null,
-                Type = PullReplicationParams.ConnectionType.Incoming
-            };
-            var newIncoming = CreateIncomingReplicationHandler(tcpConnectionOptions, buffer, incomingPullParams);
-            newIncoming.Failed += RetryPullReplication;
-            _outgoing.TryRemove(source); // we are pulling and therefore incoming, upon failure 'RetryPullReplication' will put us back as an outgoing
-
-            PoolOfThreads.PooledThread.ResetCurrentThreadName();
-            Thread.CurrentThread.Name = $"Pull Replication as Sink from {destination.Database} at {destination.Url}";
-
-            _incoming[newIncoming.ConnectionInfo.SourceDatabaseId] = newIncoming;
-            IncomingReplicationAdded?.Invoke(newIncoming);
-            newIncoming.DoIncomingReplication();
-
-            void RetryPullReplication(IncomingReplicationHandler instance, Exception e)
-            {
-                using (instance)
+                string[] allowedPaths = DetailedReplicationHubAccess.Preferred(destination.AllowedHubToSinkPaths, destination.AllowedSinkToHubPaths);
+                var incomingPullParams = new PullReplicationParams
                 {
-                    if (_incoming.TryRemove(instance.ConnectionInfo.SourceDatabaseId, out _))
-                        IncomingReplicationRemoved?.Invoke(instance);
+                    Name = destination.HubName,
+                    AllowedPaths = allowedPaths,
+                    Mode = PullReplicationMode.HubToSink,
+                    PreventDeletionsMode = null,
+                    Type = PullReplicationParams.ConnectionType.Incoming
+                };
+                var newIncoming = CreateIncomingReplicationHandler(tcpConnectionOptions, buffer, incomingPullParams);
+                newIncoming.Failed += RetryPullReplication;
 
-                    instance.Failed -= RetryPullReplication;
-                    instance.DocumentsReceived -= OnIncomingReceiveSucceeded;
-                    if (_log.IsInfoEnabled)
-                        _log.Info($"Pull replication Sink handler has thrown an unhandled exception. ({instance.FromToString})", e);
+                _outgoing.TryRemove(source); // we are pulling and therefore incoming, upon failure 'RetryPullReplication' will put us back as an outgoing
+
+                PoolOfThreads.PooledThread.ResetCurrentThreadName();
+                Thread.CurrentThread.Name = $"Pull Replication as Sink from {destination.Database} at {destination.Url}";
+
+                _incoming[newIncoming.ConnectionInfo.SourceDatabaseId] = newIncoming;
+                IncomingReplicationAdded?.Invoke(newIncoming);
+                newIncoming.DoIncomingReplication();
+
+                void RetryPullReplication(IncomingReplicationHandler instance, Exception e)
+                {
+                    using (instance)
+                    {
+                        if (_incoming.TryRemove(instance.ConnectionInfo.SourceDatabaseId, out _))
+                            IncomingReplicationRemoved?.Invoke(instance);
+
+                        instance.Failed -= RetryPullReplication;
+                        instance.DocumentsReceived -= OnIncomingReceiveSucceeded;
+                        if (_log.IsInfoEnabled)
+                            _log.Info($"Pull replication Sink handler has thrown an unhandled exception. ({instance.FromToString})", e);
+                    }
+
+                    // if the stream closed, it is our duty to reconnect
+                    AddAndStartOutgoingReplication(destination, true);
                 }
-
-                // if the stream closed, it is our duty to reconnect
-                AddAndStartOutgoingReplication(destination, true);
             }
         }
 
@@ -1441,7 +1445,7 @@ namespace Raven.Server.Documents.Replication
                 switch (node)
                 {
                     case ExternalReplicationBase exNode:
-                        {
+                    {
                             var database = exNode.ConnectionString.Database;
                             if (node is PullReplicationAsSink sink)
                             {
@@ -1450,17 +1454,17 @@ namespace Raven.Server.Documents.Replication
 
                             // normal external replication
                             return GetExternalReplicationTcpInfo(exNode as ExternalReplication, certificate, database);
-                        }
+                    }
                     case InternalReplication internalNode:
+                    {
+                        using (var cts = CancellationTokenSource.CreateLinkedTokenSource(_shutdownToken))
                         {
-                            using (var cts = CancellationTokenSource.CreateLinkedTokenSource(_shutdownToken))
-                            {
-                                cts.CancelAfter(_server.Engine.TcpConnectionTimeout);
-                                return ReplicationUtils.GetTcpInfo(internalNode.Url, internalNode.Database, Database.DbId.ToString(), Database.ReadLastEtag(),
-                                    "Replication",
-                            certificate, cts.Token);
-                            }
+                            cts.CancelAfter(_server.Engine.TcpConnectionTimeout);
+                            return ReplicationUtils.GetTcpInfo(internalNode.Url, internalNode.Database, Database.DbId.ToString(), Database.ReadLastEtag(),
+                                "Replication",
+                        certificate, cts.Token);
                         }
+                    }
                     default:
                         throw new InvalidOperationException(
                             $"Unexpected replication node type, Expected to be '{typeof(ExternalReplication)}' or '{typeof(InternalReplication)}', but got '{node.GetType()}'");

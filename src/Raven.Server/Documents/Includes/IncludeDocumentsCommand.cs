@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -34,6 +35,8 @@ namespace Raven.Server.Documents.Includes
             _isProjection = isProjection;
         }
 
+        internal bool HasIncludesIds() => _includedIds?.Count > 0;
+        
         public void AddRange(HashSet<string> ids, string documentId)
         {
             AddToIgnore(documentId);
