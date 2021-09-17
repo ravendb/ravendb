@@ -205,6 +205,10 @@ namespace Raven.Server.Documents.Indexes.Static
                         jsRes.Dispose();
                         throw new JavaScriptIndexFuncException($"Failed to execute {ReduceString}", e);
                     }
+                    finally
+                    {
+                        Engine.ForceV8GarbageCollection();
+                    }
                     yield return jsRes;
                 }
             }

@@ -82,6 +82,7 @@ namespace Raven.Server.Documents.Indexes.Static
                         catch (V8Exception jse)
                         {
                             var (message, success) = JavaScriptIndexFuncException.PrepareErrorMessageForJavaScriptIndexFuncException(MapString, jse);
+                            jsRes.Dispose();
                             if (success == false)
                                 throw new JavaScriptIndexFuncException($"Failed to execute {MapString}", jse);
                             throw new JavaScriptIndexFuncException($"Failed to execute map script, {message}", jse);
@@ -90,6 +91,9 @@ namespace Raven.Server.Documents.Indexes.Static
                         {
                             jsRes.Dispose();
                             throw new JavaScriptIndexFuncException($"Failed to execute {MapString}", e);
+                        }
+                        finally {
+                            _engine.ForceV8GarbageCollection();
                         }
 
                         //jsRes.SetReadyToDisposal();
