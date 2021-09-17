@@ -187,16 +187,19 @@ namespace Raven.Server.ServerWide
 
             CatastrophicFailureNotification = new CatastrophicFailureNotification((envId, path, exception, stacktrace) =>
             {
+                var message = $"Catastrophic failure in server storage located at '{path}', StackTrace: '{stacktrace}'";
+
                 try
                 {
                     if (Logger.IsOperationsEnabled)
-                        Logger.OperationsAsync($"Catastrophic failure in server storage located at '{path}', StackTrace:'{stacktrace}'", exception).Wait(TimeSpan.FromSeconds(1));
+                        Logger.OperationsAsync(message, exception).Wait(TimeSpan.FromSeconds(1));
                 }
                 catch
                 {
                     // nothing we can do
                 }
 
+                Console.Error.WriteLine($"{message}. Exception: {exception}");
                 Environment.Exit(29); // ERROR_WRITE_FAULT
             });
         }
