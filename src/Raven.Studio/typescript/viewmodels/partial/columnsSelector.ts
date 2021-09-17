@@ -132,6 +132,12 @@ class customColumnForm {
 
 class columnsSelector<T> {
 
+    view = require("views/partial/columnsSelector.html");
+    
+    getView() {
+        return this.view;
+    }
+    
     static readonly storagePrefix = "custom-columns-";
     
     static readonly defaultWidth = "200px";

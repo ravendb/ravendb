@@ -11,7 +11,7 @@ class importParent {
             .map([
                 {
                     route: 'databases/tasks/import/file',
-                    moduleId: 'viewmodels/database/tasks/importDatabaseFromFile',
+                    moduleId: require('viewmodels/database/tasks/importDatabaseFromFile'),
                     title: 'Import database from file',
                     nav: true,
                     tabName: "From file (.ravendbdump)",
@@ -20,7 +20,7 @@ class importParent {
                 },
                 {
                     route: 'databases/tasks/import/migrateRavenDB',
-                    moduleId: 'viewmodels/database/tasks/migrateRavenDbDatabase',
+                    moduleId: require('viewmodels/database/tasks/migrateRavenDbDatabase'),
                     title: 'Import database from another RavenDB',
                     tabName: "From RavenDB Server",
                     nav: true,
@@ -29,7 +29,7 @@ class importParent {
                 },
                 {
                     route: 'databases/tasks/import/csv',
-                    moduleId: 'viewmodels/database/tasks/importCollectionFromCsv',
+                    moduleId: require('viewmodels/database/tasks/importCollectionFromCsv'),
                     title: 'Import collection from CSV file',
                     tabName: "From CSV File",
                     nav: true,
@@ -38,7 +38,7 @@ class importParent {
                 },
                 {
                     route: 'databases/tasks/import/sql',
-                    moduleId: 'viewmodels/database/tasks/importDatabaseFromSql',
+                    moduleId: require('viewmodels/database/tasks/importDatabaseFromSql'),
                     title: 'Import from SQL Database',
                     tabName: "From SQL",
                     nav: true,
@@ -47,7 +47,7 @@ class importParent {
                 },
                 {
                     route: 'databases/tasks/import/migrate',
-                    moduleId: 'viewmodels/database/tasks/migrateDatabase',
+                    moduleId: require('viewmodels/database/tasks/migrateDatabase'),
                     title: 'Migrate database',
                     tabName: "From NoSQL",
                     nav: true,

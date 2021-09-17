@@ -50,6 +50,8 @@ class adminJsConsole extends viewModelBase {
     static readonly allPatchOptions: Array<jsConsolePatchOption> = ["Server", "Database"];
     static readonly predefinedSamples = ko.observableArray<consoleJsSampleDto>([]);
 
+    view = require("views/manage/adminJsConsole.html");
+
     model = ko.observable<adminJsModel>();
     executionResult = ko.observable<string>();
     previewItem = ko.observable<consoleJsSampleDto>();
