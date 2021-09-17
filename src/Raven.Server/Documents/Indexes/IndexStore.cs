@@ -1006,7 +1006,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 throw new ArgumentException((errorMessage));
             }
-            
+
             _serverStore.LicenseManager.AssertCanAddAdditionalAssembliesFromNuGet(definition);
 
             var safeFileSystemIndexName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(definition.Name);
@@ -1836,14 +1836,37 @@ namespace Raven.Server.Documents.Indexes
 
                 var configuration = new FaultyInMemoryIndexConfiguration(path, _documentDatabase.Configuration);
 
-                var fakeIndex = autoIndexDefinition != null
+                var faultyIndex = autoIndexDefinition != null
                     ? new FaultyInMemoryIndex(e, name, configuration, CreateAutoDefinition(autoIndexDefinition, IndexDeploymentMode.Parallel))
                     : new FaultyInMemoryIndex(e, name, configuration, staticIndexDefinition);
 
-                var message = $"Could not open index at '{indexPath}'. Created in-memory, fake instance: {fakeIndex.Name}";
+                var message = $"Could not open index at '{indexPath}'. Created in-memory, fake instance: {faultyIndex.Name}";
 
                 if (Logger.IsInfoEnabled)
                     Logger.Info(message, e);
+
+                _indexes.Add(faultyIndex);
+
+                switch (_documentDatabase.Configuration.Indexing.ErrorIndexStartupBehavior)
+                {
+                    case IndexingConfiguration.IndexStartupBehavior.ResetAndStart:
+                        {
+                            try
+                            {
+                                ResetIndexInternal(faultyIndex);
+                                return;
+                            }
+                            catch (Exception ex)
+                            {
+                                if (Logger.IsOperationsEnabled)
+                                    Logger.Operations($"Failed to reset and start faulty index '{faultyIndex.Name}' at '{indexPath}'", ex);
+
+                                // make sure that if this fail, faulty index will be on the list of indexes
+                                _indexes.Add(faultyIndex);
+                            }
+                        }
+                        break;
+                }
 
                 _documentDatabase.NotificationCenter.Add(AlertRaised.Create(
                     _documentDatabase.Name,
@@ -1851,9 +1874,8 @@ namespace Raven.Server.Documents.Indexes
                     message,
                     AlertType.IndexStore_IndexCouldNotBeOpened,
                     NotificationSeverity.Error,
-                    key: fakeIndex.Name,
+                    key: faultyIndex.Name,
                     details: new ExceptionDetails(e)));
-                _indexes.Add(fakeIndex);
             }
         }
 
