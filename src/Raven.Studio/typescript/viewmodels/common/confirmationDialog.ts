@@ -6,6 +6,9 @@ import dialog = require("plugins/dialog");
  * message box doesn't handle keyboard shortcuts like ESC and Enter.
  */
 class confirmationDialog extends dialogViewModelBase {
+
+    view = require("views/common/confirmationDialog.html");
+    
     constructor(private confirmationMessageAsHtml: string, private title: string, private options: string[]) {
         super();
     }

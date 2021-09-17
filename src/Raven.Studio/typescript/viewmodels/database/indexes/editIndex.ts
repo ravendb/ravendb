@@ -42,6 +42,8 @@ import getServerWideCustomAnalyzersCommand = require("commands/serverWide/analyz
 import getIndexDefaultsCommand = require("commands/database/index/getIndexDefaultsCommand");
 
 class editIndex extends viewModelBase {
+    
+    view = require('views/database/indexes/editIndex.html');
 
     static readonly $body = $("body");
     static readonly ContainerSelector = ".edit-index";

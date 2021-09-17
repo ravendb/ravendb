@@ -33,6 +33,8 @@ type databaseState = "errored" | "disabled" | "online" | "offline" | "remote";
 
 class databases extends viewModelBase {
     
+    view = require("views/resources/databases.html")
+    
     static readonly sizeLimits = {
         databaseName: {
             min: 150,

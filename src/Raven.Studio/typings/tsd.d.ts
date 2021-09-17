@@ -5,7 +5,6 @@
 /// <reference path="index.d.ts"/>
 /// <reference path="server/include.ts"/>
 
-
 declare module "*.html" {
     var _temp: string;
     export = _temp;

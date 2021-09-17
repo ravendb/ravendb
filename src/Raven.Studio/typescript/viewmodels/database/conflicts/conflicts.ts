@@ -59,6 +59,8 @@ class conflictItem {
 
 class conflicts extends viewModelBase {
 
+    view = require("views/database/conflicts/conflicts.html");
+
     hasDetailsLoaded = ko.observable<boolean>(false);
     detailsVisible = ko.observable<boolean>(false);
 
