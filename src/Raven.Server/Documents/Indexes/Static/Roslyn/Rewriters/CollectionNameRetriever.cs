@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Linq.Indexing;
 using Raven.Server.Documents.Indexes.Static.Extensions;
 
 namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
@@ -33,7 +35,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                 if (nodeToCheck.Expression is MemberAccessExpressionSyntax maes)
                     methodName = maes.Name.ToString();
 
-                if (methodName == nameof(MetadataExtensions.WhereEntityIs))
+                if (methodName == nameof(IndexingLinqExtensions.WhereEntityIs))
                 {
                     CollectionNames = ExtractCollectionNamesFromWhereEntityIs(nodeToCheck);
                     return SyntaxFactory.ParseExpression(node.ToString().Replace(nodeToCheck.ToString(), nodePrefix));
@@ -126,7 +128,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                 }
 
                 if (collections == null)
-                    throw new InvalidOperationException($"Couldn't extract any collections from '{nameof(MetadataExtensions.WhereEntityIs)}' arguments.");
+                    throw new InvalidOperationException($"Couldn't extract any collections from '{nameof(IndexingLinqExtensions.WhereEntityIs)}' arguments.");
 
                 return collections;
             }

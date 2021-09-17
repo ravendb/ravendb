@@ -15,6 +15,19 @@ namespace Raven.Server.Documents.Indexes.Static.Extensions
             };
         }
 
+        public static dynamic IfEntityIs(dynamic o, string collection)
+        {
+            var document = o as DynamicBlittableJson;
+            if (document == null)
+                return DynamicNullObject.Null;
+
+            var collectionName = CollectionName.GetCollectionName(document);
+            if (string.Equals(collection, collectionName, StringComparison.OrdinalIgnoreCase) == false)
+                return DynamicNullObject.Null;
+
+            return document;
+        }
+
         public static dynamic ParseInt(dynamic o)
         {
             return ParseInt(o, default(int));
