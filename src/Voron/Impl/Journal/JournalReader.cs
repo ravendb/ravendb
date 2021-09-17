@@ -241,7 +241,12 @@ namespace Voron.Impl.Journal
             var transactionSizeIn4Kb = GetTransactionSizeIn4Kb(current);
 
             _readAt4Kb += transactionSizeIn4Kb;
-            LastTransactionHeader = current;
+
+            if (LastTransactionHeader == null || LastTransactionHeader->TransactionId < current->TransactionId) // precaution
+            {
+                if (current->TransactionId > _journalInfo.LastSyncedTransactionId)
+                    LastTransactionHeader = current;
+            }
         }
 
         private bool IsAlreadySyncTransaction(TransactionHeader* current)
@@ -281,7 +286,8 @@ namespace Voron.Impl.Journal
             {
                 Debug.Assert(transactionHeaders.Count == 0 || LastTransactionHeader->TransactionId > transactionHeaders.Last().TransactionId);
 
-                transactionHeaders.Add(*LastTransactionHeader);
+                if (LastTransactionHeader != null)
+                    transactionHeaders.Add(*LastTransactionHeader);
             }
             ZeroRecoveryBufferIfNeeded(this, options);
 
@@ -376,6 +382,9 @@ namespace Voron.Impl.Journal
             if (current->TransactionId < 0)
                 return false;
 
+            if (IsOldTransactionFromRecycledJournal(current))
+                return false;
+
             current = EnsureTransactionMapped(current, pageNumber, positionInsidePage);
             bool hashIsValid;
             if (options.Encryption.IsEnabled)
@@ -444,6 +453,8 @@ namespace Voron.Impl.Journal
                         return true;
                     }
 
+                    AssertValidLastPageNumber(current);
+
                     if (hashIsValid && _firstValidTransactionHeader == null)
                         _firstValidTransactionHeader = current;
 
@@ -463,7 +474,7 @@ namespace Voron.Impl.Journal
                     if (CanIgnoreDataIntegrityErrorBecauseTxWasSynced(current, options))
                     {
                         options.InvokeIntegrityErrorOfAlreadySyncedData(this,
-                            $"Encountered integrity error of transaction data which has been already synced (tx id: {current->TransactionId}, last synced tx: {_journalInfo.LastSyncedTransactionId}, journal: {_journalInfo.CurrentJournal}). Negative tx id diff: {txIdDiff}. " +
+                            $"Encountered integrity error of transaction data which has been already synced  when reading {_journalPager.FileName} file (tx id: {current->TransactionId}, current journal: {_journalInfo.CurrentJournal}, last synced tx: {_journalInfo.LastSyncedTransactionId}, last synced journal: {_journalInfo.LastSyncedJournal}). Negative tx id diff: {txIdDiff}. " +
                             "Safely continuing the startup recovery process.", null);
 
                         return true;
@@ -503,20 +514,7 @@ namespace Voron.Impl.Journal
                     }
                 }
 
-                // if (txIdDiff == 1) :
-                if (current->LastPageNumber <= 0)
-                {
-                    if (CanIgnoreDataIntegrityErrorBecauseTxWasSynced(current, options))
-                    {
-                        options.InvokeIntegrityErrorOfAlreadySyncedData(this,
-                            $"Invalid last page number ({current->LastPageNumber}) in the header of transaction which has been already synced (tx id: {current->TransactionId}, last synced tx: {_journalInfo.LastSyncedTransactionId}, journal: {_journalInfo.CurrentJournal}). " +
-                            $"Safely continuing the startup recovery process. Debug details - file header {_currentFileHeader}", null);
-
-                        return true;
-                    }
-
-                    throw new InvalidDataException("Last page number after committed transaction must be greater than 0. Debug details - file header {_currentFileHeader}");
-                }
+                AssertValidLastPageNumber(current);
             }
 
             if (hashIsValid == false)
@@ -538,6 +536,24 @@ namespace Voron.Impl.Journal
                 _firstValidTransactionHeader = current;
 
             return true;
+
+            void AssertValidLastPageNumber(TransactionHeader* transactionHeader)
+            {
+                if (transactionHeader->LastPageNumber <= 0)
+                {
+                    if (CanIgnoreDataIntegrityErrorBecauseTxWasSynced(transactionHeader, options))
+                    {
+                        options.InvokeIntegrityErrorOfAlreadySyncedData(this,
+                            $"Invalid last page number ({transactionHeader->LastPageNumber}) in the header of transaction which has been already synced (tx id: {transactionHeader->TransactionId}, last synced tx: {_journalInfo.LastSyncedTransactionId}, journal: {_journalInfo.CurrentJournal}). " +
+                            $"Safely continuing the startup recovery process. Debug details - file header {_currentFileHeader}", null);
+                    }
+                    else
+                    {
+                        throw new InvalidDataException(
+                            $"Last page number after committed transaction must be greater than 0. Debug details - file header {_currentFileHeader}");
+                    }
+                }
+            }
         }
 
         private bool CanIgnoreDataIntegrityErrorBecauseTxWasSynced(TransactionHeader* currentTx, StorageEnvironmentOptions options)
@@ -546,8 +562,22 @@ namespace Voron.Impl.Journal
             // then we can continue the recovery regardless encountered errors
 
             return options.IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions &&
-                   IsAlreadySyncTransaction(currentTx) &&
-                   (_firstValidTransactionHeader == null || currentTx->TransactionId > _firstValidTransactionHeader->TransactionId); // when reusing journal we might encounter a transaction with valid Id but it comes from already deleted (and reused journal)
+                   IsAlreadySyncTransaction(currentTx); 
+        }
+
+        private bool IsOldTransactionFromRecycledJournal(TransactionHeader* currentTx)
+        {
+            // when reusing journal we might encounter a transaction with valid Id but it comes from already deleted (and reused journal - recyclable one)
+
+            if (_firstValidTransactionHeader != null && currentTx->TransactionId < _firstValidTransactionHeader->TransactionId)
+                return true;
+
+            if (LastTransactionHeader != null && currentTx->TransactionId < LastTransactionHeader->TransactionId)
+                return true;
+
+
+
+            return false;
         }
 
         private TransactionHeader* EnsureTransactionMapped(TransactionHeader* current, long pageNumber, long positionInsidePage)
