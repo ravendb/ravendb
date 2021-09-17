@@ -92,6 +92,9 @@ namespace Raven.Server.Monitoring.Snmp
             _objectStore.Add(new DatabaseTotalStorageSize(_databaseName, _databaseLandlord, _databaseIndex));
             _objectStore.Add(new DatabaseStorageDiskRemainingSpace(_databaseName, _databaseLandlord, _databaseIndex));
 
+            _objectStore.Add(new DatabaseWritesPerSecond(_databaseName, _databaseLandlord, _databaseIndex));
+            _objectStore.Add(new DatabaseDataWrittenPerSecond(_databaseName, _databaseLandlord, _databaseIndex));
+
             //AddIndexesFromMappingDocument();
         }
 
