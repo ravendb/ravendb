@@ -74,7 +74,7 @@ namespace Voron.Data.Containers
             return size;
         }
 
-        private Container(Page page)
+        public Container(Page page)
         {
             _page = page;
         }
@@ -280,36 +280,56 @@ namespace Voron.Data.Containers
 
         public static List<long> GetAllIds(LowLevelTransaction llt, long containerId)
         {
-            var set = GetAllPagesList(llt, containerId);
+            var set = GetAllPagesSet(llt, containerId);
             using var it = set.Iterate();
             var list = new List<long>();
             if (it.Seek(0) == false)
                 return list;
+            Span<long> items = stackalloc long[256];
             do
             {
                 var page = llt.GetPage(it.Current);
-                if (page.IsOverflow)
+                int offset = 0;
+                int count;
+                do
                 {
-                    list.Add(page.PageNumber * Constants.Storage.PageSize);
-                    continue;
-                }
-                var container = new Container(page);
-                int numberOfOffsets = container.Offsets.Length;
-                int i = 0;
-                
-                if (it.Current == containerId)
-                    i += 2; // skip the free list and all pages list entries
-                
-                for (; i < numberOfOffsets; i++)
-                {
-                    list.Add(page.PageNumber * Constants.Storage.PageSize + IndexToOffset(i));
-                }
+                    count = GetEntriesInto(containerId, offset, page, items);
+                    for (int i = 0; i < count; i++)
+                    {
+                        list.Add(items[i]);
+                    }
+                    offset += count;
+                } while (count != items.Length);
             } while (it.MoveNext());
 
             return list;
         }
 
-        private static Set GetAllPagesList(LowLevelTransaction llt, long containerId)
+        public static int GetEntriesInto(long containerId, int offset, Page page, Span<long> ids)
+        {
+            var results = 0;
+            if (page.IsOverflow)
+            {
+                ids[results++] = page.PageNumber * Constants.Storage.PageSize;
+                return results;
+            }
+
+            var container = new Container(page);
+            int numberOfOffsets = container.Offsets.Length;
+            int i = offset;
+
+            if (page.PageNumber == containerId)
+                i += 2; // skip the free list and all pages list entries
+
+            for (; i < numberOfOffsets && results < ids.Length; i++)
+            {
+                ids[results++] = page.PageNumber * Constants.Storage.PageSize + IndexToOffset(i);
+            }
+
+            return results;
+        }
+
+        public static Set GetAllPagesSet(LowLevelTransaction llt, long containerId)
         {
             var rootPage = llt.GetPage(containerId);
             var rootContainer = new Container(rootPage);

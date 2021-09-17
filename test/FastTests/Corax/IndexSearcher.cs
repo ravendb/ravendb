@@ -824,6 +824,39 @@ namespace FastTests.Corax
                 Assert.Equal(3, match.TotalResults);
             }
         }
+        
+        [Fact]
+        public void CanGetAllEntries()
+        {
+            var entry1 = new IndexSingleEntry
+            {
+                Id = "entry/1",
+                Content = "3"
+            };
+            var entry2 = new IndexEntry
+            {
+                Id = "entry/2",
+                Content = new string[] { "4", "2" },
+            };
+            var entry3 = new IndexSingleEntry
+            {
+                Id = "entry/3",
+                Content = "1"
+            };
+
+            IndexEntries(new[] { entry1, entry3 });
+            IndexEntries(new[] { entry2 });
+
+            using var searcher = new IndexSearcher(Env);
+            {
+                var all = searcher.AllEntries();
+                
+                Span<long> ids = stackalloc long[2];
+                Assert.Equal(2, all.Fill(ids));
+                Assert.Equal(1, all.Fill(ids));
+                Assert.Equal(0, all.Fill(ids));
+            }
+        }
 
         
         [Fact]

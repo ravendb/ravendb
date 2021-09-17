@@ -61,6 +61,11 @@ namespace Corax
             return Encoding.UTF8.GetString(data.Slice(len, size));
         }
 
+        public AllEntriesMatch AllEntries()
+        {
+            return new AllEntriesMatch(_transaction);
+        }
+
         // foreach term in 2010 .. 2020
         //     yield return TermMatch(field, term)// <-- one term , not sorted
 
