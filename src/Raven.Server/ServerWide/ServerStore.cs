@@ -189,18 +189,33 @@ namespace Raven.Server.ServerWide
             {
                 var message = $"Catastrophic failure in server storage located at '{path}', StackTrace: '{stacktrace}'";
 
-                try
+                if (Logger.IsOperationsEnabled)
                 {
-                    if (Logger.IsOperationsEnabled)
+                    ExecuteSafely(() =>
+                    {
                         Logger.OperationsAsync(message, exception).Wait(TimeSpan.FromSeconds(1));
-                }
-                catch
-                {
-                    // nothing we can do
+                    });
                 }
 
-                Console.Error.WriteLine($"{message}. Exception: {exception}");
+                ExecuteSafely(() =>
+                {
+                    Console.Error.WriteLine($"{message}. Exception: {exception}");
+                    Console.Error.Flush();
+                });
+
                 Environment.Exit(29); // ERROR_WRITE_FAULT
+
+                static void ExecuteSafely(Action action)
+                {
+                    try
+                    {
+                        action();
+                    }
+                    catch
+                    {
+                        // nothing we can do
+                    }
+                }
             });
         }
 
