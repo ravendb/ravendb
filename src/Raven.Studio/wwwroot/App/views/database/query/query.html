@@ -173,7 +173,7 @@
                             <span class="caret"></span>
                         </button>
                         <ul class="dropdown-menu colselect-dropdown colselect-sm slidein-style" role="menu" data-bind="dropdownPanel: true">
-                            <div data-bind="compose: $root.columnsSelector"></div>
+                            <div data-bind="compose: { model: $root.columnsSelector }"></div>
                         </ul>
                     </div>
                     <button class="btn btn-default btn-sm" data-bind="click: toggleResults">

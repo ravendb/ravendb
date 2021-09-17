@@ -12,6 +12,8 @@ import getDatabaseCommand = require("commands/resources/getDatabaseCommand");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
 
 class createSampleData extends viewModelBase {
+    
+    view = require("views/database/tasks/createSampleData.html");
 
     classData = ko.observable<string>();
     canCreateSampleData = ko.observable<boolean>(false);

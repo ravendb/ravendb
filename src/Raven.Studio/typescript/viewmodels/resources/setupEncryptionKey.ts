@@ -4,6 +4,8 @@ import copyToClipboard = require("common/copyToClipboard");
 import fileDownloader = require("common/fileDownloader");
 
 abstract class setupEncryptionKey {
+
+    setupEncryptionKeyView = require("views/resources/setupEncryptionKey.html");
     
     protected readonly key: KnockoutObservable<string>;
     private readonly keyConfirmation: KnockoutObservable<boolean>;

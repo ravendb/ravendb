@@ -726,6 +726,8 @@ class driveUsageSection {
 
 class serverDashboard extends viewModelBase {
     
+    view = require("views/resources/serverDashboard.html");
+    
     static readonly dateFormat = generalUtils.dateFormat;
     static readonly timeFormat = "h:mm:ss A";
     liveClient = ko.observable<serverDashboardWebSocketClient>();

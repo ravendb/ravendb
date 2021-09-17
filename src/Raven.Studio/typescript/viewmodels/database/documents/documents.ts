@@ -32,6 +32,8 @@ import queryUtil = require("common/queryUtil");
 import endpoints = require("endpoints");
 
 class documents extends viewModelBase {
+    
+    view = require("views/database/documents/documents.html");
 
     static readonly copyLimit = 100;
     static readonly allDocumentCollectionName = "__all_docs";

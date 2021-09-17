@@ -17,7 +17,7 @@ function aboutItem() {
 function serverDashboard() {
     return new leafMenuItem({
         route: ["", "dashboard"],
-        moduleId: 'viewmodels/resources/serverDashboard',
+        moduleId: require('viewmodels/resources/serverDashboard'),
         title: 'Server Dashboard',
         tooltip: "Server Dashboard",
         nav: true,

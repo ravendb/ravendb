@@ -8,7 +8,7 @@ class Routes {
             {
                 route: "databases/edit",
                 title: "Edit Document",
-                moduleId: "viewmodels/database/documents/editDocument",
+                moduleId: require("viewmodels/database/documents/editDocument"),
                 nav: false
             }
         ];

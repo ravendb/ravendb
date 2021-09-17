@@ -7,7 +7,7 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
     let indexesItems = [
         new leafMenuItem({
             route: 'databases/query/index(/:indexNameOrRecentQueryIndex)',
-            moduleId: 'viewmodels/database/query/query',
+            moduleId: require('viewmodels/database/query/query'),
             title: 'Query',
             nav: true,
             css: 'icon-indexes-query',
@@ -17,13 +17,13 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
             title: "List of Indexes",
             nav: true,
             route: "databases/indexes",
-            moduleId: "viewmodels/database/indexes/indexes",
+            moduleId: require("viewmodels/database/indexes/indexes"),
             css: 'icon-indexing',
             dynamicHash: appUrls.indexes
         }),
         new leafMenuItem({
             route: 'databases/indexes/performance',
-            moduleId: 'viewmodels/database/indexes/indexPerformance',
+            moduleId: require('viewmodels/database/indexes/indexPerformance'),
             title: 'Indexing Performance',
             tooltip: "Shows details about indexing peformance",
             nav: true,
@@ -32,7 +32,7 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: 'databases/indexes/visualizer',
-            moduleId: 'viewmodels/database/indexes/visualizer/visualizer',
+            moduleId: require('viewmodels/database/indexes/visualizer/visualizer'),
             title: 'Map-Reduce Visualizer',
             nav: true,
             css: 'icon-map-reduce-visualizer',
@@ -40,7 +40,7 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: 'databases/indexes/indexErrors',
-            moduleId: 'viewmodels/database/indexes/indexErrors',
+            moduleId: require('viewmodels/database/indexes/indexErrors'),
             title: 'Index Errors',
             nav: true,
             css: 'icon-index-errors',
@@ -50,7 +50,7 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             title: 'Edit Index',
             route: 'databases/indexes/edit(/:indexName)',
-            moduleId: 'viewmodels/database/indexes/editIndex',
+            moduleId: require('viewmodels/database/indexes/editIndex'),
             css: 'icon-edit',
             nav: false,
             itemRouteToHighlight: 'databases/indexes'
@@ -58,7 +58,7 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             title: 'Terms',
             route: 'databases/indexes/terms/(:indexName)',
-            moduleId: 'viewmodels/database/indexes/indexTerms',
+            moduleId: require('viewmodels/database/indexes/indexTerms'),
             css: 'icon-terms',
             nav: false
         })

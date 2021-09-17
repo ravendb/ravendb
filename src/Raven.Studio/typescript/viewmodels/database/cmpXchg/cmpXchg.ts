@@ -16,6 +16,8 @@ import actionColumn = require("widgets/virtualGrid/columns/actionColumn");
 
 class cmpXchg extends viewModelBase {
 
+    view = require("views/database/cmpXchg/cmpXchg.html");
+
     filter = ko.observable<string>();
     deleteEnabled: KnockoutComputed<boolean>;
     selectedItemsCount: KnockoutComputed<number>;

@@ -289,8 +289,7 @@
     <div id="page-host-root" class="content-container">
         <div id="page-host" class="page-host" data-bind="router: { cacheViews: false }" style="overflow-y: scroll"></div>
     </div>
-    <div class="notification-center-container" data-bind="compose: 'notifications/notificationCenter.html'"></div>
-
+    <div class="notification-center-container" data-bind="compose: notificationCenterView"></div>
 
     <footer class="status-footer" data-bind="with: $root.footer">
         <div class="footer-left" data-bind="with: stats(), visible: stats">

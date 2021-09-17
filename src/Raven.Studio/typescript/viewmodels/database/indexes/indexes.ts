@@ -31,6 +31,8 @@ type indexGroup = {
 
 class indexes extends viewModelBase {
 
+    view = require("views/database/indexes/indexes.html");
+
     indexGroups = ko.observableArray<indexGroup>();
     sortedGroups: KnockoutComputed<indexGroup[]>;
     newIndexUrl = appUrl.forCurrentDatabase().newIndex;

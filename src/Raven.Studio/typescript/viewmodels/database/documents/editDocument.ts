@@ -51,6 +51,8 @@ interface revisionToCompare {
 
 class editDocument extends viewModelBase {
 
+    view = require("views/database/documents/editDocument.html");
+
     static editDocSelector = ".edit-document";
     static documentNameSelector = "#documentName";
     static docEditorSelector = "#docEditor";

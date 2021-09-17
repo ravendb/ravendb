@@ -58,6 +58,11 @@ import leafMenuItem = require("common/shell/menu/leafMenuItem");
 class shell extends viewModelBase {
 
     private router = router;
+    view = require("views/shell.html");
+    
+    notificationCenterView = require("views/notifications/notificationCenter.html");
+    graphHelperView = require("views/common/graphHelper.html");
+    
     static studioConfigDocumentId = "Raven/StudioConfig";
 
     notificationCenter = notificationCenter.instance;

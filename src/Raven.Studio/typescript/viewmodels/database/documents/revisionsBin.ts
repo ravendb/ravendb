@@ -17,6 +17,8 @@ import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 
 class revisionsBin extends viewModelBase {
 
+    view = require("views/database/documents/revisionsBin.html");
+    
     dirtyResult = ko.observable<boolean>(false);
     dataChanged: KnockoutComputed<boolean>;
     selectedItemsCount: KnockoutComputed<number>;
