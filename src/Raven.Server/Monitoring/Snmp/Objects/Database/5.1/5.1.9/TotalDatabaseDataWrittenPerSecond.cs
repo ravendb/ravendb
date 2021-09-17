@@ -26,7 +26,8 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
         {
             var value = database.Metrics.Docs.BytesPutsPerSec.OneMinuteRate
                         + database.Metrics.Attachments.BytesPutsPerSec.OneMinuteRate
-                        + database.Metrics.Counters.BytesPutsPerSec.OneMinuteRate;
+                        + database.Metrics.Counters.BytesPutsPerSec.OneMinuteRate
+                        + database.Metrics.TimeSeries.BytesPutsPerSec.OneMinuteRate;
 
             return (int)value;
         }
