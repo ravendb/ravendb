@@ -52,7 +52,7 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: "databases/ts/edit",
             title: "Edit Time Series",
-            moduleId: "viewmodels/database/timeSeries/editTimeSeries",
+            moduleId: require("viewmodels/database/timeSeries/editTimeSeries"),
             nav: false,
             itemRouteToHighlight: "databases/documents"
         }),

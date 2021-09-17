@@ -7,7 +7,7 @@ class routes {
             {
                 route: ["", "license"],
                 title: "RavenDB EULA",
-                moduleId: "viewmodels/eula/license",
+                moduleId: require("viewmodels/eula/license"),
                 nav: false
             }
         ];
