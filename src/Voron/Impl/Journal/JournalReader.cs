@@ -71,7 +71,7 @@ namespace Voron.Impl.Journal
                     {
                         if (CanIgnoreDataIntegrityErrorBecauseTxWasSynced(current, options))
                         {
-                            SkipCurrentTransaction(current);
+                            SkipCurrentTransaction(current); // TODO arek - I have some doubts whether this should set LastTransactionHeader under the covers in this case
                             return true;
                         }
 
@@ -376,6 +376,9 @@ namespace Voron.Impl.Journal
             if (current->TransactionId < 0)
                 return false;
 
+            if (IsOldTransactionFromRecycledJournal(current))
+                return false;
+
             current = EnsureTransactionMapped(current, pageNumber, positionInsidePage);
             bool hashIsValid;
             if (options.Encryption.IsEnabled)
@@ -463,7 +466,7 @@ namespace Voron.Impl.Journal
                     if (CanIgnoreDataIntegrityErrorBecauseTxWasSynced(current, options))
                     {
                         options.InvokeIntegrityErrorOfAlreadySyncedData(this,
-                            $"Encountered integrity error of transaction data which has been already synced (tx id: {current->TransactionId}, last synced tx: {_journalInfo.LastSyncedTransactionId}, journal: {_journalInfo.CurrentJournal}). Negative tx id diff: {txIdDiff}. " +
+                            $"Encountered integrity error of transaction data which has been already synced  when reading {_journalPager.FileName} file (tx id: {current->TransactionId}, current journal: {_journalInfo.CurrentJournal}, last synced tx: {_journalInfo.LastSyncedTransactionId}, last synced journal: {_journalInfo.LastSyncedJournal}). Negative tx id diff: {txIdDiff}. " +
                             "Safely continuing the startup recovery process.", null);
 
                         return true;
@@ -546,8 +549,20 @@ namespace Voron.Impl.Journal
             // then we can continue the recovery regardless encountered errors
 
             return options.IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions &&
-                   IsAlreadySyncTransaction(currentTx) &&
-                   (_firstValidTransactionHeader == null || currentTx->TransactionId > _firstValidTransactionHeader->TransactionId); // when reusing journal we might encounter a transaction with valid Id but it comes from already deleted (and reused journal)
+                   IsAlreadySyncTransaction(currentTx); 
+        }
+
+        private bool IsOldTransactionFromRecycledJournal(TransactionHeader* currentTx)
+        {
+            // when reusing journal we might encounter a transaction with valid Id but it comes from already deleted (and reused journal - recyclable one)
+
+            if (_firstValidTransactionHeader != null && currentTx->TransactionId < _firstValidTransactionHeader->TransactionId)
+                return true;
+
+            if (LastTransactionHeader != null && currentTx->TransactionId < LastTransactionHeader->TransactionId)
+                return true;
+
+            return false;
         }
 
         private TransactionHeader* EnsureTransactionMapped(TransactionHeader* current, long pageNumber, long positionInsidePage)

@@ -211,6 +211,10 @@ namespace Voron.Impl.Journal
 
                             if (lastReadHeaderPtr != null)
                             {
+                                // TODO arek
+                                if (lastFlushedJournal != -1 && lastReadHeaderPtr->TransactionId < lastFlushedTxId)
+                                    throw new InvalidOperationException($"Last read transaction id: {lastFlushedTxId} (last flushed journal {lastFlushedJournal}) but got {lastReadHeaderPtr->TransactionId} tx from journal {journalNumber}");
+
                                 *txHeader = *lastReadHeaderPtr;
                                 lastFlushedTxId = txHeader->TransactionId;
 
@@ -361,10 +365,18 @@ namespace Voron.Impl.Journal
 #if DEBUG
                 if (instanceOfLastFlushedJournal == null)
                 {
-                    Debug.Assert(toDelete.Count == 0 || (toDelete.Count == 1 && deleteLastJournal),
-                        $"Last flushed journal (number: {lastFlushedJournal}) doesn't exist so we didn't call {nameof(_journalApplicator.SetLastFlushed)}" +
-                        $" and didn't mark to delete last journal but," +
-                        $" there are still some journals to delete ({string.Join(", ", toDelete.Select(x => x.Number))}. )");
+                    //Debug.Assert(toDelete.Count == 0 || (toDelete.Count == 1 && deleteLastJournal),
+                    //    $"Last flushed journal (number: {lastFlushedJournal}) doesn't exist so we didn't call {nameof(_journalApplicator.SetLastFlushed)}" +
+                    //    $" and didn't mark to delete last journal but," +
+                    //    $" there are still some journals to delete ({string.Join(", ", toDelete.Select(x => x.Number))}. )");
+
+                    if ((toDelete.Count == 0 || (toDelete.Count == 1 && deleteLastJournal)) == false)
+                    {
+                        throw new InvalidOperationException(
+                            $"Last flushed journal (number: {lastFlushedJournal}) doesn't exist so we didn't call {nameof(_journalApplicator.SetLastFlushed)}" +
+                            $" and didn't mark to delete last journal but," +
+                            $" there are still some journals to delete ({string.Join(", ", toDelete.Select(x => x.Number))}. )");
+                    }
                 }
 #endif
             }
