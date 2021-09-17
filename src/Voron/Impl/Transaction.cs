@@ -152,7 +152,13 @@ namespace Voron.Impl
         public long OpenContainer(Slice name)
         {
             var exists = LowLevelTransaction.RootObjects.Read(name);
-            return exists?.Reader.ReadLittleEndianInt64() ?? Container.Create(LowLevelTransaction);
+            if (exists != null)
+            {
+                return exists.Reader.ReadLittleEndianInt64();
+            }
+            var id = Container.Create(LowLevelTransaction);
+            LowLevelTransaction.RootObjects.Add(name, id);
+            return id;
         }
 
         public Set OpenSet(string name)

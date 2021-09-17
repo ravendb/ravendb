@@ -34,7 +34,7 @@ namespace Corax
 
         public readonly Transaction Transaction;        
 
-        public static readonly Slice PostingListsSlice, EntriesContainerSlice, FieldsSlice;
+        public static readonly Slice PostingListsSlice, EntriesContainerSlice, FieldsSlice, NumberOfEntriesSlice;
 
         private Queue<long> _lastEntries; // keep last 256 items
 
@@ -45,6 +45,7 @@ namespace Corax
                 Slice.From(ctx, "Fields", ByteStringType.Immutable, out FieldsSlice);
                 Slice.From(ctx, "PostingLists", ByteStringType.Immutable, out PostingListsSlice);
                 Slice.From(ctx, "Entries", ByteStringType.Immutable, out EntriesContainerSlice);
+                Slice.From(ctx, "NumberOfEntries", ByteStringType.Immutable, out NumberOfEntriesSlice);
             }
         }
 
@@ -79,6 +80,9 @@ namespace Corax
 
         public long Index(Slice id, Span<byte> data, Dictionary<Slice, int> knownFields)
         {
+            long entriesCount = Transaction.LowLevelTransaction.RootObjects.ReadInt64(NumberOfEntriesSlice) ?? 0;
+            Transaction.LowLevelTransaction.RootObjects.Add(NumberOfEntriesSlice, entriesCount + 1);
+
             Span<byte> buf = stackalloc byte[10];
             var idLen = ZigZagEncoding.Encode(buf, id.Size);
             var entryId = Container.Allocate(Transaction.LowLevelTransaction, _entriesContainerId, idLen + id.Size + data.Length, out var space);
