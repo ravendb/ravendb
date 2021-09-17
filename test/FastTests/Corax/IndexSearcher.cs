@@ -789,6 +789,43 @@ namespace FastTests.Corax
             }
         }
 
+        
+        [Fact]
+        public void WillGetTotalNumberOfResultsInPagedQuery()
+        {
+            var entry1 = new IndexSingleEntry
+            {
+                Id = "entry/1",
+                Content = "3"
+            };
+            var entry2 = new IndexEntry
+            {
+                Id = "entry/2",
+                Content = new string[] { "4", "2" },
+            };
+            var entry3 = new IndexSingleEntry
+            {
+                Id = "entry/3",
+                Content = "1"
+            };
+
+            IndexEntries(new[] { entry1, entry3 });
+            IndexEntries(new[] { entry2 });
+
+            using var searcher = new IndexSearcher(Env);
+            {
+                var match1 = searcher.StartWithQuery("Id", "e");
+                var match = searcher.OrderByAscending(match1, ContentIndex, take: 2);
+
+                Span<long> ids = stackalloc long[2];
+                Assert.Equal(2, match.Fill(ids));
+                Assert.Equal(0, match.Fill(ids));
+                
+                Assert.Equal(3, match.TotalResults);
+            }
+        }
+
+        
         [Fact]
         public void SimpleSortedMatchStatement()
         {

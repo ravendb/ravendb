@@ -8,7 +8,7 @@ using Sparrow;
 
 namespace Corax.Queries
 {
-    public unsafe partial struct SortingMatch<TInner, TComparer> : IQueryMatch
+    public unsafe struct SortingMatch<TInner, TComparer> : IQueryMatch
         where TInner : IQueryMatch
         where TComparer : struct, IMatchComparer
     {
@@ -16,7 +16,8 @@ namespace Corax.Queries
         private readonly IQueryMatch _inner;        
         private readonly TComparer _comparer;
         private readonly int _take;
-        private unsafe struct SequenceItem
+        public long TotalResults;
+        private struct SequenceItem
         {
             public readonly byte* Ptr;
             public readonly int Size;
@@ -95,11 +96,12 @@ namespace Corax.Queries
             _inner = inner;
             _take = take;
             _comparer = comparer;
+            TotalResults = 0;
         }
 
-        public long Count => _inner.Count;
+        public long Count => throw new NotSupportedException();
 
-        public QueryCountConfidence Confidence => _inner.Confidence;
+        public QueryCountConfidence Confidence => throw new NotSupportedException();
 
         public int AndWith(Span<long> prevMatches)
         {
@@ -108,13 +110,14 @@ namespace Corax.Queries
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int Fill(Span<long> matches)
-{
-            if (_comparer.FieldType == MatchCompareFieldType.Sequence)
-                return Fill<SequenceItem>(matches);
-            else if (_comparer.FieldType == MatchCompareFieldType.Integer)
-                return Fill<NumericalItem<long>>(matches);
-            else
-                return Fill<NumericalItem<double>>(matches);
+        {
+            return _comparer.FieldType switch
+            {
+                MatchCompareFieldType.Sequence => Fill<SequenceItem>(matches),
+                MatchCompareFieldType.Integer => Fill<NumericalItem<long>>(matches),
+                MatchCompareFieldType.Floating => Fill<NumericalItem<double>>(matches),
+                _ => throw new ArgumentOutOfRangeException(_comparer.FieldType.ToString())
+            };
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -174,6 +177,8 @@ namespace Corax.Queries
             if (totalMatches == 0)
                 return 0;
 
+            TotalResults += totalMatches;
+
             var searcher = _searcher;
             var fieldId = _comparer.FieldId;
             var comparer = new MatchComparer<TComparer, W>(_comparer);
@@ -192,7 +197,7 @@ namespace Corax.Queries
             {
                 // We get a new batch
                 int bTotalMatches = _inner.Fill(bValues);
-
+                TotalResults += bTotalMatches;
                 // When we don't have any new batch, we are done.
                 if (bTotalMatches == 0)
                     return totalMatches;

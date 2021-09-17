@@ -18,9 +18,11 @@ namespace Corax.Queries
             _functionTable = functionTable;
         }
 
-        public long Count => _functionTable.CountFunc(ref this);
+        public long TotalResults => _functionTable.TotalResultsFunc(ref this);
+        
+        public long Count => throw new NotSupportedException();
 
-        public QueryCountConfidence Confidence => _inner.Confidence;
+        public QueryCountConfidence Confidence => throw new NotSupportedException();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int Fill(Span<long> buffer)
@@ -37,14 +39,14 @@ namespace Corax.Queries
         internal class FunctionTable
         {
             public readonly delegate*<ref SortingMatch, Span<long>, int> FillFunc;
-            public readonly delegate*<ref SortingMatch, long> CountFunc;
+            public readonly delegate*<ref SortingMatch, long> TotalResultsFunc;
 
             public FunctionTable(
                 delegate*<ref SortingMatch, Span<long>, int> fillFunc,
-                delegate*<ref SortingMatch, long> countFunc)
+                delegate*<ref SortingMatch, long> totalResultsFunc)
             {
                 FillFunc = fillFunc;
-                CountFunc = countFunc;
+                TotalResultsFunc = totalResultsFunc;
             }
         }
 
@@ -58,7 +60,7 @@ namespace Corax.Queries
             {
                 static long CountFunc(ref SortingMatch match)
                 {
-                    return ((SortingMatch<TInner, TComparer>)match._inner).Count;
+                    return ((SortingMatch<TInner, TComparer>)match._inner).TotalResults;
                 }
                 static int FillFunc(ref SortingMatch match, Span<long> matches)
                 {
