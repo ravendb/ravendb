@@ -21,7 +21,7 @@ namespace EmbeddedTests
             var expectedVersion = new Version(defaultFrameworkVersion.Substring(0, defaultFrameworkVersion.Length - 1));
             var actualVersion = new Version(await RuntimeFrameworkVersionMatcher.MatchAsync(options));
 
-            Assert.True(actualVersion.CompareTo(expectedVersion) > 0);
+            Assert.True(actualVersion.CompareTo(expectedVersion) >= 0);
 
             options.FrameworkVersion = null;
             Assert.Null(await RuntimeFrameworkVersionMatcher.MatchAsync(options));
