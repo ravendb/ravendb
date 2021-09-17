@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Reflection;
 using Voron;
 using Voron.Data.Containers;
 using Voron.Data.Sets;
@@ -30,20 +31,20 @@ namespace Corax.Queries
         public QueryCountConfidence Confidence => QueryCountConfidence.High;
         public unsafe int Fill(Span<long> matches)
         {
+            var results = 0;
             while (true)
             {
                 if (_currentPage.IsValid == false)
                 {
                     if (_entriesPagesIt.MoveNext() == false)
                     {
-                        return 0;
+                        return results;
                     }
 
                     _currentPage = _tx.LowLevelTransaction.GetPage(_entriesPagesIt.Current);
                     _offset = 0;
                 }
             
-                var results = 0;
                 while (results + 1 < matches.Length)
                 {
                     var read = Container.GetEntriesInto(_entriesContainerId, _offset, _currentPage, matches);
@@ -55,6 +56,10 @@ namespace Corax.Queries
                     results += read;
                     _offset += read;
                 }
+
+                if (results < matches.Length)
+                    continue;
+                
                 return results;
             }
         }
