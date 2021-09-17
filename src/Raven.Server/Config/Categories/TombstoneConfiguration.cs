@@ -16,7 +16,7 @@ namespace Raven.Server.Config.Categories
 
         [DefaultValue(336)]
         [TimeUnit(TimeUnit.Hours)]
-        [ConfigurationEntry("Tombstones.RetentionTimeWithReplicationHubInHrs ", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        [ConfigurationEntry("Tombstones.RetentionTimeWithReplicationHubInHrs", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         [Description("Time (in hours) to save tombsones when we have hub replication definition.")]
         public TimeSetting RetentionTimeWithReplicationHub { get; set; }
 

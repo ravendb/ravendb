@@ -8,9 +8,9 @@ function UpdateCsprojTargetFrameworkVersion ( $csproj, $version ) {
 }
 
 function UpdateServerOptions ( $serverOptionsFile, $version ) {
-    $versionPattern = [regex]'(?sm)public string FrameworkVersion { get; set; } = "[A-Za-z0-9-\.\r\n\s]*";'
+    $versionPattern = [regex]'(?sm)public string FrameworkVersion { get; set; } = "[A-Za-z0-9-\.\r\n\s\+]*";'
     $result = [System.IO.File]::ReadAllText($serverOptionsFile)
-    $result = $versionPattern.Replace($result, "public string FrameworkVersion { get; set; } = ""$version"";")
+    $result = $versionPattern.Replace($result, "public string FrameworkVersion { get; set; } = ""$version+"";")
     [System.IO.File]::WriteAllText($serverOptionsFile, $result, [System.Text.Encoding]::UTF8)
 }
 
