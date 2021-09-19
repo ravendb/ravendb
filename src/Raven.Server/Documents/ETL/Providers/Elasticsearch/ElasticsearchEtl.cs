@@ -24,7 +24,6 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
         public ElasticSearchEtl(Transformation transformation, ElasticSearchEtlConfiguration configuration, DocumentDatabase database, ServerStore serverStore)
             : base(transformation, configuration, database, serverStore, ElasticSearchEtlTag)
         {
-            _client = ElasticSearchHelper.CreateClient(Configuration.Connection);
             Metrics = ElasticSearchMetrics;
         }
 
@@ -38,7 +37,7 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
 
         protected override bool ShouldTrackAttachmentTombstones() => false;
 
-        private readonly ElasticClient _client;
+        private ElasticClient _client;
 
         protected override EtlStatsScope CreateScope(EtlRunStats stats)
         {
@@ -90,7 +89,12 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
         protected override int LoadInternal(IEnumerable<ElasticSearchIndexWithRecords> records, DocumentsOperationContext context, EtlStatsScope scope)
         {
             int statsCounter = 0;
-            
+
+            if (_client == null)
+            {
+                _client = ElasticSearchHelper.CreateClient(Configuration.Connection);    
+            }
+
             StringBuilder deleteQuery = new StringBuilder();
             
             foreach (var index in records)
@@ -113,17 +117,17 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
 
                 if (string.IsNullOrWhiteSpace(deleteResponse.DebugInformation) == false)
                 {
-                    throw new ElasticSearchLoadException($"Index {index} error: {deleteResponse.DebugInformation}");
+                    throw new ElasticSearchLoadException($"Index {index}; Documents IDs: {deleteQuery}; error: {deleteResponse.DebugInformation}");
                 }
                 
                 if (deleteResponse.ServerError != null)
                 {
-                    throw new ElasticSearchLoadException($"Index {index} error: {deleteResponse.ServerError.Error}");
+                    throw new ElasticSearchLoadException($"Index {index}; Documents IDs: {deleteQuery}; error: {deleteResponse.ServerError.Error}");
                 }
                 
                 if (deleteResponse.OriginalException != null)
                 {
-                    throw new ElasticSearchLoadException($"Index {index} error: {deleteResponse.OriginalException.Message}");
+                    throw new ElasticSearchLoadException($"Index {index}; Documents IDs: {deleteQuery}; error: {deleteResponse.OriginalException}");
                 }
 
                 statsCounter += (int)deleteResponse.Deleted;
@@ -142,7 +146,7 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
                         {
                             throw new ElasticSearchLoadException($"Index {index} error: {deleteResponse.DebugInformation}");
                         }
-                        throw new ElasticSearchLoadException($"Index {index} error: {deleteResponse.OriginalException?.Message}");
+                        throw new ElasticSearchLoadException($"Index {index} error: {deleteResponse.OriginalException}");
                     }
 
                     statsCounter++;
