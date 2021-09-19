@@ -32,6 +32,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             get => _increments?.Values;
             private set
             {
+                if (value == null) return;
                 foreach (var incrementOperation in value)
                 {
                     Increment(incrementOperation);

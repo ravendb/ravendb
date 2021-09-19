@@ -113,77 +113,6 @@ namespace SlowTests.Client.TimeSeries.Issues
         [Fact]
         public async Task ReplicationShouldWorkWithMultiplyIncrementOperations()
         {
-            var m = 100;
-            var n = 100;
-            var baseline = DateTime.UtcNow;
-
-            using (var storeA = GetDocumentStore())
-            using (var storeB = GetDocumentStore())
-            {
-                using (var session = storeA.OpenSession())
-                {
-                    session.Store(new User{ Name = "Oren" }, "users/ayende");
-                    session.SaveChanges();
-                }
-                using (var session = storeB.OpenSession())
-                {
-                    session.Store(new User{ Name = "Oren" }, "users/ayende");
-                    session.SaveChanges();
-                }
-
-                for (int i = 0; i < m; i++)
-                {
-                    using (var session = storeA.OpenSession())
-                    {
-                        var ts = session.TimeSeriesFor("users/ayende", "HeartRate");
-                        for (int j = 0; j < n; j++)
-                        {
-                            ts.Increment(baseline.AddMinutes(i), _rng.Next(-10, 10));
-                        }
-                        session.SaveChanges();
-                    }
-                }
-
-                for (int i = 0; i < m; i++)
-                {
-                    using (var session = storeB.OpenSession())
-                    {
-                        var ts = session.TimeSeriesFor("users/ayende", "HeartRate");
-                        for (int j = 0; j < n; j++)
-                        {
-                            ts.Increment(baseline.AddMinutes(i), _rng.Next(-10, 10));
-                        }
-                        session.SaveChanges();
-                    }
-                }
-
-                await SetupReplicationAsync(storeA, storeB);
-                await SetupReplicationAsync(storeB, storeA);
-
-                await EnsureReplicatingAsync(storeA, storeB);
-                await EnsureReplicatingAsync(storeB, storeA);
-            
-                await EnsureNoReplicationLoop(Server, storeA.Database);
-                await EnsureNoReplicationLoop(Server, storeB.Database);
-
-                using (var sessionA = storeA.OpenSession())
-                using (var sessionB = storeB.OpenSession())
-                {
-                    var tsA = sessionA.TimeSeriesFor("users/ayende", "HeartRate").Get();
-                    var tsB = sessionB.TimeSeriesFor("users/ayende", "HeartRate").Get();
-
-                    Assert.Equal(tsA.Length, tsB.Length);
-                    for (int i = 0; i < tsA.Length; i++)
-                    {
-                        Assert.True(Equals(tsA[i], tsB[i]));
-                    }
-                }
-            }
-        }
-
-        [Fact]
-        public async Task ReplicationShouldWorkWithMultiplyIncrementOperations2()
-        {
             var baseline = DateTime.UtcNow;
 
             using (var storeA = GetDocumentStore())
@@ -352,6 +281,70 @@ namespace SlowTests.Client.TimeSeries.Issues
         }
 
         [Fact]
+        public async Task SplitSegmentSpecialCaseShouldWork()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Oren" }, "users/ayende");
+                    session.SaveChanges();
+                }
+
+                using (store.OpenSession())
+                {
+                    var db = await this.GetDocumentDatabaseInstanceFor(store);
+                    using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                    {
+                        var incrementOperations = new List<SingleResult>();
+
+                        for (int i = 0; i < 50; i++)
+                        {
+                            var singleResult = new SingleResult
+                            {
+                                Timestamp = baseline.EnsureUtc().EnsureMilliseconds(),
+                                Values = new double[] { 1 },
+                                Tag = context.GetLazyString("TC:INC-test-1-" + i.ToString("000"))
+                            };
+                            incrementOperations.Add(singleResult);
+                        }
+
+                        for (int i = 0; i < 90; i++)
+                        {
+                            var singleResult = new SingleResult
+                            {
+                                Timestamp = baseline.AddMinutes(1).EnsureUtc().EnsureMilliseconds(),
+                                Values = new double[] { 1 },
+                                Tag = context.GetLazyString("TC:INC-test-1-" + i.ToString("000"))
+                            };
+                            incrementOperations.Add(singleResult);
+                        }
+                        
+                        using (var tx = context.OpenWriteTransaction())
+                        {
+                            db.DocumentsStorage.TimeSeriesStorage.AppendTimestamp(context, "users/ayende", "Users",
+                                "HeartRate", incrementOperations);
+
+                            tx.Commit();
+                        }
+                    }
+                }
+                using (var session = store.OpenSession())
+                {
+                    var ts = session.TimeSeriesFor("users/ayende", "HeartRate").Get();
+
+                    Assert.Equal(140, ts.Length);
+                    foreach (var entry in ts)
+                    {
+                        Assert.Equal(1, entry.Value);
+                    }
+                }
+            }
+        }
+
+        [Fact]
         public void ShouldThrowIfIncrementContainBothPositiveNegativeValues()
         {
             using (var store = GetDocumentStore())
@@ -366,6 +359,67 @@ namespace SlowTests.Client.TimeSeries.Issues
                         session.SaveChanges();
                     });
                     Assert.True(e.Message.Contains("Cannot mix increment & decrement operations in a single call."));
+                }
+            }
+        }
+
+        [Fact]
+        public void ShouldThrowIfIncrementContainBothPositiveNegativeValues2()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    var e = Assert.Throws<RavenException>(() =>
+                    {
+                        session.Store(new User { Name = "Oren" }, "users/ayende");
+                        var ts = session.TimeSeriesFor("users/ayende", "HeartRate");
+                        ts.Increment(new double[] { 0, -2, 3 });
+                        session.SaveChanges();
+                    });
+                    Assert.True(e.Message.Contains("Cannot mix increment & decrement operations in a single call."));
+                }
+            }
+        }
+
+        [Fact]
+        public void ShouldThrowIfIncrementContainsZeroValue()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    var e = Assert.Throws<RavenException>(() =>
+                    {
+                        session.Store(new User { Name = "Oren" }, "users/ayende");
+                        var ts = session.TimeSeriesFor("users/ayende", "HeartRate");
+                        ts.Increment(new double[] { 0 });
+                        session.SaveChanges();
+                    });
+                    Assert.True(e.Message.Contains("Cannot receive a zero as a single value."));
+                }
+            }
+        }
+
+        [Fact]
+        public void IncrementShouldTakeSignFromNonZeroValue()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Oren" }, "users/ayende");
+                    var ts = session.TimeSeriesFor("users/ayende", "HeartRate");
+                    ts.Increment(new double[] { 0, -1, -4 });
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var ts = session.TimeSeriesFor("users/ayende", "HeartRate").Get();
+
+                    Assert.Equal(1, ts.Length);
+                    Assert.True(ts[0].Tag.Contains("TC:DEC-"));
                 }
             }
         }
