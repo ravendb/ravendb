@@ -621,6 +621,11 @@ declare module Raven.Server.Documents.ETL.Providers.OLAP.Test {
     }
 }
 
+declare module Raven.Server.Documents.ETL.Providers.ElasticSearch.Test {
+    interface ElasticSearchEtlTestScriptResult extends testEtlScriptResult {
+    }
+}
+
 type backupOptions = "None" | "Local" | "Azure" | "AmazonGlacier" | "AmazonS3" | "FTP" | "GoogleCloud";
 
 interface periodicBackupServerLimitsResponse {

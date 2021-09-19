@@ -24,16 +24,15 @@ import getDocumentsMetadataByIDPrefixCommand = require("commands/database/docume
 import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
 import popoverUtils = require("common/popoverUtils");
 import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
+import testElasticSearchEtlCommand = require("commands/database/tasks/testElasticSearchEtlCommand");
 
 class elasticSearchTaskTestMode {
 
-    performRolledBackTransaction = ko.observable<boolean>(false);
     documentId = ko.observable<string>();
     testDelete = ko.observable<boolean>(false);
     docsIdsAutocompleteResults = ko.observableArray<string>([]);
     db: KnockoutObservable<database>;
     configurationProvider: () => Raven.Client.Documents.Operations.ETL.ElasticSearch.ElasticSearchEtlConfiguration;
-    connectionProvider: () => Raven.Client.Documents.Operations.ETL.ElasticSearch.ElasticSearchEtlConfiguration;
 
     validationGroup: KnockoutValidationGroup;
     validateParent: () => boolean;
@@ -48,26 +47,22 @@ class elasticSearchTaskTestMode {
     loadedDocument = ko.observable<string>();
     loadedDocumentId = ko.observable<string>();
 
-    testResults = ko.observableArray<Raven.Server.Documents.ETL.Providers.SQL.Test.TableQuerySummary.CommandData>([]);
+    testResults = ko.observableArray<Raven.Server.Documents.ETL.Providers.ElasticSearch.Test.IndexSummary>([]);
     debugOutput = ko.observableArray<string>([]);
 
     // all kinds of alerts:
     transformationErrors = ko.observableArray<Raven.Server.NotificationCenter.Notifications.Details.EtlErrorInfo>([]);
-    loadErrors = ko.observableArray<Raven.Server.NotificationCenter.Notifications.Details.EtlErrorInfo>([]);
 
     warningsCount = ko.pureComputed(() => {
-        const transformationCount = this.transformationErrors().length;
-        const loadErrorCount = this.loadErrors().length;
-        return transformationCount + loadErrorCount;
+        return this.transformationErrors().length;
     });
 
-    constructor(db: KnockoutObservable<database>, validateParent: () => boolean,
-                configurationProvider: () => Raven.Client.Documents.Operations.ETL.ElasticSearch.ElasticSearchEtlConfiguration,
-                connectionProvider: () => Raven.Client.Documents.Operations.ETL.ElasticSearch.ElasticSearchEtlConfiguration) {
+    constructor(db: KnockoutObservable<database>,
+                validateParent: () => boolean,
+                configurationProvider: () => Raven.Client.Documents.Operations.ETL.ElasticSearch.ElasticSearchEtlConfiguration) {
         this.db = db;
         this.validateParent = validateParent;
         this.configurationProvider = configurationProvider;
-        this.connectionProvider = connectionProvider;
 
         _.bindAll(this, "onAutocompleteOptionSelected");
     }
@@ -127,40 +122,38 @@ class elasticSearchTaskTestMode {
     }
 
     runTest() {
-        // const testValid = viewHelpers.isValid(this.validationGroup, true);
-        // const parentValid = this.validateParent();
-        //
-        // if (testValid && parentValid) {
-        //     this.spinners.test(true);
-        //
-        //     const dto = {
-        //         DocumentId: this.documentId(),
-        //         IsDelete: this.testDelete(),
-        //         PerformRolledBackTransaction: this.performRolledBackTransaction(),
-        //         Configuration: this.configurationProvider(),
-        //         Connection: this.connectionProvider()
-        //     } as Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters.TestSqlEtlScript;
-        //
-        //     eventsCollector.default.reportEvent("sql-etl", "test-replication");
-        //
-        //     new testSqlReplicationCommand(this.db(), dto)
-        //         .execute()
-        //         .done((testResult: Raven.Server.Documents.ETL.Providers.SQL.Test.SqlEtlTestScriptResult) => {
-        //             this.testResults(_.flatMap(testResult.Summary, x => x.Commands));
-        //             this.debugOutput(testResult.DebugOutput);
-        //             this.loadErrors(testResult.LoadErrors);
-        //             this.transformationErrors(testResult.TransformationErrors);
-        //
-        //             if (this.warningsCount()) {
-        //                 $('.test-container a[href="#warnings"]').tab('show');
-        //             } else {
-        //                 $('.test-container a[href="#testResults"]').tab('show');
-        //             }
-        //
-        //             this.testAlreadyExecuted(true);
-        //         })
-        //         .always(() => this.spinners.test(false));
-        // }
+        const testValid = viewHelpers.isValid(this.validationGroup, true);
+        const parentValid = this.validateParent();
+
+        if (testValid && parentValid) {
+            this.spinners.test(true);
+
+            const dto: Raven.Server.Documents.ETL.Providers.ElasticSearch.Test.TestElasticSearchEtlScript = {
+                DocumentId: this.documentId(),
+                IsDelete: this.testDelete(),
+                Configuration: this.configurationProvider()
+            };
+
+            eventsCollector.default.reportEvent("elastic-search-etl", "test-replication");
+
+            new testElasticSearchEtlCommand(this.db(), dto)
+                .execute()
+                .done(simulationResult => {
+                    this.testResults(simulationResult.Summary);
+                    
+                    this.debugOutput(simulationResult.DebugOutput);
+                    this.transformationErrors(simulationResult.TransformationErrors);
+
+                    if (this.warningsCount()) {
+                        $('.test-container a[href="#warnings"]').tab('show');
+                    } else {
+                        $('.test-container a[href="#testResults"]').tab('show');
+                    }
+
+                    this.testAlreadyExecuted(true);
+                })
+                .always(() => this.spinners.test(false));
+        }
     }
 }
 
@@ -322,15 +315,6 @@ class editElasticSearchEtlTask extends viewModelBase {
             this.newConnectionString().connectionStringName(connectionStringName);
             this.editedElasticSearchEtl().connectionStringName(null);
         }
-        
-        // this.connectionStringDefined = ko.pureComputed(() => {
-        //     const editedEtl = this.editedElasticSearchEtl();
-        //     if (this.createNewConnectionString()) {
-        //         return !!this.newConnectionString().connectionString(); // ???
-        //     } else {
-        //         return !!editedEtl.connectionStringName();
-        //     }
-        // });
 
         this.enableTestArea.subscribe(testMode => {
             $("body").toggleClass('show-test', testMode);
@@ -345,7 +329,7 @@ class editElasticSearchEtlTask extends viewModelBase {
             dto.Transforms = [transformationScriptDto];
 
             if (!dto.Name) {
-                dto.Name = "Test Elastic Search Task"; // assign fake name
+                dto.Name = "Test Elasticsearch Task"; // assign fake name
             }
             return dto;
         };
@@ -358,30 +342,13 @@ class editElasticSearchEtlTask extends viewModelBase {
             }
         };
 
-        // this.test = new elasticSearchTaskTestMode(this.activeDatabase, () => {
-        //     const transformationValidationGroup = this.isValid(this.editedTransformationScriptSandbox().validationGroup);
-        //     const connectionStringValid = this.connectionStringDefined();
-        //
-        //     if (this.test.performRolledBackTransaction()) {
-        //         if (transformationValidationGroup && !connectionStringValid) {
-        //             // close test mode, as connection string is invalid, 
-        //             // but user requested rolled back transaction
-        //
-        //             // by closing we let user know that connection string is required
-        //             this.enableTestArea(false);
-        //             // run global validation - to show connection string errors
-        //             this.isValid(this.editedElasticSearchEtl().validationGroup);
-        //
-        //             return false;
-        //         }
-        //     }
-        //
-        //     return transformationValidationGroup && connectionStringValid;
-        // }, dtoProvider, connectionStringProvider);
+        this.test = new elasticSearchTaskTestMode(this.activeDatabase, () => {
+            return this.isValid(this.editedTransformationScriptSandbox().validationGroup);
+        }, dtoProvider);
+                
+        this.test.initObservables();
 
         this.initDirtyFlag();
-        
-        //this.test.initObservables();
     }
     
     private initDirtyFlag() {
@@ -464,6 +431,10 @@ class editElasticSearchEtlTask extends viewModelBase {
         this.spinners.save(true);
         
         // 1. Validate *edited elastic search index*
+        if (!this.editedElasticSearchEtl().elasticIndexes().length) {
+            hasAnyErrors = true;
+        }
+        
         if (this.showEditElasticSearchIndexArea()) {
             if (!this.isValid(this.editedElasticSearchIndexSandbox().validationGroup)) {
                 hasAnyErrors = true;
@@ -561,15 +532,6 @@ class editElasticSearchEtlTask extends viewModelBase {
                     this.saveEditedElasticSearchIndex();
                 } else {
                     hasErrors = true;
-                }
-            }
-
-            // validate connection string
-            if (this.createNewConnectionString()) {
-                if (!this.isValid(this.newConnectionString().validationGroup)) {
-                    hasErrors = true;
-                }  else {
-                    this.editedElasticSearchEtl().connectionStringName(this.newConnectionString().connectionStringName());
                 }
             }
 

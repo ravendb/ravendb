@@ -54,6 +54,7 @@ using Raven.Server.Dashboard;
 using Raven.Server.Dashboard.Cluster;
 using Raven.Server.Dashboard.Cluster.Notifications;
 using Raven.Server.Documents.ETL;
+using Raven.Server.Documents.ETL.Providers.ElasticSearch.Test;
 using Raven.Server.Documents.ETL.Providers.OLAP;
 using Raven.Server.Documents.ETL.Providers.OLAP.Test;
 using Raven.Server.Documents.ETL.Providers.Raven.Test;
@@ -461,7 +462,9 @@ namespace TypingsGenerator
             scripter.AddType(typeof(OngoingTaskElasticSearchEtlDetails));
             scripter.AddType(typeof(OngoingTaskElasticSearchEtlListView));
             scripter.AddType(typeof(ElasticSearchEtlConfiguration));
-            
+            scripter.AddType(typeof(ElasticSearchEtlTestScriptResult));
+            scripter.AddType(typeof(TestElasticSearchEtlScript));
+
             // connection strings
             scripter.AddType(typeof(ConnectionString));
             scripter.AddType(typeof(RavenConnectionString));

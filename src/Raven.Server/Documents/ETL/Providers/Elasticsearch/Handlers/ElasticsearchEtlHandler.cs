@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch.Handlers
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(result);
-                    writer.WriteObject(context.ReadObject(djv, "et/elasticsearch/test"));
+                    writer.WriteObject(context.ReadObject(djv, "etl/elasticsearch/test"));
                 }
             }
         }

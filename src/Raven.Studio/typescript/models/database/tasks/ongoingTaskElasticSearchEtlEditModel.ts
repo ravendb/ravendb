@@ -24,7 +24,6 @@ class ongoingTaskElasticSearchEtlEditModel extends ongoingTaskEditModel {
     protected initializeObservables() {
         super.initializeObservables();
         
-        // todo .. script dirty ?? check...
         this.dirtyFlag = new ko.DirtyFlag([ 
             this.taskName,
             this.taskState,
@@ -41,6 +40,15 @@ class ongoingTaskElasticSearchEtlEditModel extends ongoingTaskEditModel {
             required: true
         });
 
+        this.elasticIndexes.extend({
+            validation: [
+                {
+                    validator: () => this.elasticIndexes().length > 0,
+                    message: "Elasticsearch index is Not defined"
+                }
+            ]
+        });
+        
         this.transformationScripts.extend({
             validation: [
                 {
@@ -58,8 +66,7 @@ class ongoingTaskElasticSearchEtlEditModel extends ongoingTaskEditModel {
         });
         
         this.enterTestModeValidationGroup = ko.validatedObservable({
-            elasticIndexes: this.elasticIndexes,
-            transformationScripts: this.transformationScripts
+            elasticIndexes: this.elasticIndexes
         });
     }
 
