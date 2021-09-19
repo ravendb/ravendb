@@ -177,7 +177,6 @@ class editElasticSearchEtlTask extends viewModelBase {
     possibleMentors = ko.observableArray<string>([]);
     elasticSearchEtlConnectionStringsNames = ko.observableArray<string>([]);
 
-    //connectionStringDefined: KnockoutComputed<boolean>;
     testConnectionResult = ko.observable<Raven.Server.Web.System.NodeConnectionTestResult>();
     
     spinners = {
@@ -185,7 +184,6 @@ class editElasticSearchEtlTask extends viewModelBase {
         save: ko.observable<boolean>(false)
     };
     
-    // needed ??
     fullErrorDetailsVisible = ko.observable<boolean>(false);
     shortErrorText: KnockoutObservable<string>;
     
@@ -397,34 +395,6 @@ class editElasticSearchEtlTask extends viewModelBase {
     useConnectionString(connectionStringToUse: string) {
         this.editedElasticSearchEtl().connectionStringName(connectionStringToUse);
     }
-
-    // testConnection() {
-    //     eventsCollector.default.reportEvent("Elastic-Search-ETL-connection-string", "test-connection");
-    //     this.spinners.test(true);
-    //     this.testConnectionResult(null);
-    //
-    //     // New connection string
-    //     if (this.createNewConnectionString()) {
-    //         this.newConnectionString()
-    //             .testConnection(this.activeDatabase())
-    //             .done((testResult) => this.testConnectionResult(testResult))
-    //             .always(()=> {
-    //                 this.spinners.test(false);
-    //             });
-    //     } else {
-    //         // Existing connection string
-    //         getConnectionStringInfoCommand.forSqlEtl(this.activeDatabase(), this.editedElasticSearchEtl().connectionStringName())
-    //             .execute()
-    //             .done((result: Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult) => {
-    //                 new connectionStringElasticSearchEtlModel(result.ElasticsearchConnectionStrings[this.editedElasticSearchEtl().connectionStringName()], true, [])
-    //                     .testConnection(this.activeDatabase())
-    //                     .done((testResult) => this.testConnectionResult(testResult))
-    //                     .always(() => {
-    //                         this.spinners.test(false);
-    //                     });
-    //             });
-    //     }
-    // }
 
     saveElasticSearchEtl() {
         let hasAnyErrors = false;

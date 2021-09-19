@@ -473,7 +473,6 @@ class connectionStrings extends viewModelBase {
             });
     }
 
-    // todo.... ??? unite methods w/ raven ???
     onTestConnectionElasticSearch(urlToTest: discoveryUrl) {
         this.clearTestResult();
         const elasticConnectionString = this.editedElasticSearchEtlConnectionString();

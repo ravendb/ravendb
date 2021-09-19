@@ -192,7 +192,7 @@
                 </form>
                 <div class="panel-addon" data-bind="with: testConnectionResult">
                     <div class="padding bg-success small" data-bind="visible: Success">
-                        <div data-bind="visible: $root.editedRavenEtlConnectionString()">Successfully connected to the node</div>
+                        <div data-bind="visible: $root.editedRavenEtlConnectionString() || $root.editedElasticSearchEtlConnectionString()">Successfully connected to the node</div>
                         <div data-bind="visible: $root.editedSqlEtlConnectionString()">Successfully connected</div>
                     </div>
                     <div data-bind="if: !Success">

@@ -2,7 +2,6 @@
 import database = require("models/resources/database");
 import connectionStringModel = require("models/database/settings/connectionStringModel");
 import saveConnectionStringCommand = require("commands/database/settings/saveConnectionStringCommand");
-import testClusterNodeConnectionCommand = require("commands/database/cluster/testClusterNodeConnectionCommand");
 import jsonUtil = require("common/jsonUtil");
 import discoveryUrl = require("models/database/settings/discoveryUrl");
 import fileImporter = require("common/fileImporter");
@@ -10,6 +9,7 @@ import replicationCertificateModel = require("models/database/tasks/replicationC
 import forge = require("forge/forge");
 import certificateUtils = require("common/certificateUtils");
 import messagePublisher = require("common/messagePublisher");
+import testElasticSearchNodeConnectionCommand = require("commands/database/cluster/testElasticSearchNodeConnectionCommand");
 
 type authenticationMethod = "none" | "basic" | "apiKey" | "certificate";
 
@@ -305,9 +305,8 @@ class connectionStringElasticSearchEtlModel extends connectionStringModel {
         }
     }
 
-    testConnection(urlToTest: discoveryUrl) : JQueryPromise<Raven.Server.Web.System.NodeConnectionTestResult> {
-        // return new testClusterNodeConnectionCommand(urlToTest.discoveryUrlName(), this.database(), false)
-        return new testClusterNodeConnectionCommand(urlToTest.discoveryUrlName(), null, false) // TODO ... we need new ep...
+    testConnection(urlToTest: discoveryUrl): JQueryPromise<Raven.Server.Web.System.NodeConnectionTestResult> {
+        return new testElasticSearchNodeConnectionCommand(urlToTest.discoveryUrlName(), this.authentication().toDto())
             .execute()
             .done((result) => {
                 if (result.Error) {
