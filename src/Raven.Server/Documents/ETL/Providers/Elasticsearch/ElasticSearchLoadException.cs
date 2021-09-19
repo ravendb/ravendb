@@ -17,7 +17,5 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
             : base(message, inner)
         {
         }
-
-        public string Index { get; set; }
     }
 }
