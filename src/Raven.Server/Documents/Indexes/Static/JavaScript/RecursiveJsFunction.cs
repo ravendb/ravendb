@@ -66,7 +66,7 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
                 var current = NullIfEmptyEnumerable(jsRes);
                 if (current == null)
                 {
-                    using (var jsResPush = _result.Call("push", InternalHandle.Empty, _item))
+                    using (var jsResPush = _result.StaticCall("push", _item))
                         jsResPush.ThrowOnError(); // TODO check if is needed here
                     return _result;
                 }
@@ -95,7 +95,7 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
             if (_results.Add(current) == false)
                 return;
 
-            using (var jsResPush = _result.Call("push", InternalHandle.Empty, current))
+            using (var jsResPush = _result.StaticCall("push", current))
                 jsResPush.ThrowOnError(); // TODO check if is needed here
 
             using (var jsRes = _func.StaticCall(current))
