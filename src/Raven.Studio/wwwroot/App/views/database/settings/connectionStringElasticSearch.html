@@ -6,7 +6,7 @@
     </div>
 </div>
 <div class="form-group" data-bind="validationElement: inputUrl().discoveryUrlName"> 
-    <label class="control-label">Nodes URLs:</label>
+    <label class="control-label">Nodes URLs</label>
     <div class="flex-grow"> 
         <input class="form-control" placeholder="Enter node url to add" data-bind="textInput: inputUrl().discoveryUrlName" />
     </div>
@@ -29,7 +29,7 @@
                     <i class="icon-trash"></i>
                 </a>
                 
-<!--            todo remove disabled once we get new ep from dj-->
+<!--            todo remove disabled once we get new ep from DJ -->
                 <a class="btn btn-default" title="Test url connection" href="#" disabled
                    data-bind="click: _.partial($root.onTestConnectionElasticSearch, $data), disable: $root.spinners.test,
                               css: { 'btn-spinner': $root.spinners.test() && $parent.selectedUrlToTest() === $data.discoveryUrlName() }">
@@ -44,9 +44,109 @@
         </ul>
     </div>
 </div>
-<div class="form-group" data-bind="if: !nodesUrls.isValid()">
-    <label class="control-label">&nbsp;</label>
-    <span data-bind="validationElement: nodesUrls">
-        <span class="help-block" data-bind="validationMessage: nodesUrls"></span>
-    </span>
+<div data-bind="with: authentication">
+    <div class="form-group">
+        <label class="control-label">Authentication</label>
+        <div class="flex-grow">
+            <button type="button" class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown" aria-expanded="false">
+                <span data-bind="text: labelFor(authMethodUsed())"></span> <span class="caret"></span>
+            </button>
+            <ul class="dropdown-menu" data-bind="foreach: $data.constructor.authProviders">
+                <li><a href="#" data-bind="text: label, click: _.partial($parent.authMethodUsed, value)"></a></li>
+            </ul>
+        </div>
+    </div>
+    <div data-bind="visible: authMethodUsed() === 'basic'">
+        <div class="form-group" data-bind="validationElement: username">
+            <label class="control-label">Username <i class="required"></i></label>
+            <div class="flex-grow">
+                <input class="form-control" data-bind="textInput: username" placeholder="Enter username" />
+            </div>
+        </div>
+        <div class="form-group" data-bind="validationElement: password">
+            <label class="control-label">Password <i class="required"></i></label>
+            <div class="flex-grow">
+                <input class="form-control" data-bind="textInput: password" placeholder="Enter password" />
+            </div>
+        </div>
+    </div>
+    <div data-bind="visible: authMethodUsed() === 'apiKey'">
+        <div class="form-group" data-bind="validationElement: apiKeyId">
+            <label class="control-label">Api Key ID <i class="required"></i></label>
+            <div class="flex-grow">
+                <input class="form-control" data-bind="textInput: apiKeyId" placeholder="Enter Api Key ID" />
+            </div>
+        </div>
+        <div class="form-group" data-bind="validationElement: apiKey">
+            <label class="control-label">Api Key <i class="required"></i></label>
+            <div class="flex-grow">
+                <input class="form-control" data-bind="textInput: apiKey" placeholder="Enter Api Key" />
+            </div>
+        </div>
+    </div>
+    <div data-bind="visible: authMethodUsed() === 'certificate'">
+        <div class="input-group file-input">
+            <input type="file" id="elasticCertificateFilePicker" data-bind="event: { change: _.partial(uploadElasticCertificate, $element) }" />
+        </div>
+        <div class="form-group" data-bind="if: certificates().length === 0">
+            <label class="control-label">&nbsp</label>
+            <div class="flex-grow">
+                <label for="elasticCertificateFilePicker" class="btn btn-default">
+                    <i class="icon-import"></i><span>Upload existing certificate</span>
+                </label>
+            </div>
+        </div>
+        <div data-bind="foreach: certificates, validationElement: certificates">
+            <div class="form-group">
+                <label class="control-label">Certificate</label>
+                <div class="flex-grow">
+                    <div data-bind="if: $data">
+                        <div class="panel certificate-item margin-top margin-top-xs">
+                            <div class="padding padding-sm flex-horizontal">
+                                <div title="Certificate thumbprint">
+                                    <i class="icon-certificate"></i>
+                                    <span data-bind="text: $data.thumbprint()"></span>
+                                </div>
+                                <div class="flex-separator"></div>
+                                <button class="btn btn-sm btn-primary pull-right" title="Remove this certificate"
+                                        data-bind="click: $parent.removeCertificate.bind($parent, $data)">
+                                    <i class="icon-trash"></i>
+                                </button>
+                            </div>
+                            <div class="panel-addon padding padding-sm">
+                                <div class="flex-horizontal">
+                                    <span class="notBefore">
+                                        <span class="margin-right margin-right-sm"><i class="icon-clock"></i><span>Valid From</span></span>
+                                        <strong data-bind="text: $data.validFromText()"></strong>
+                                    </span>
+                                    <span class="expiration margin-left">
+                                        <span class="margin-right margin-right-sm"><i data-bind="attr: { class: $data.expirationIcon }"></i><span>Expiration</span></span>
+                                        <strong data-bind="attr: { class: $data.expirationClass }, text: $data.expirationText"></strong>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div data-bind="if: !nodesUrls.isValid()">
+    <div class="form-group">
+        <label class="control-label">&nbsp;</label>
+        <span data-bind="validationElement: nodesUrls">
+            <span class="help-block" data-bind="validationMessage: nodesUrls"></span>
+        </span>
+    </div>
+</div>
+<div data-bind="with: authentication">
+    <div data-bind="if: !certificates.isValid()">
+        <div class="form-group">
+            <label class="control-label">&nbsp;</label>
+            <span data-bind="validationElement: certificates">
+                <span class="help-block" data-bind="validationMessage: certificates"></span>
+            </span>
+        </div>
+    </div>
 </div>

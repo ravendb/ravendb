@@ -6,7 +6,6 @@ import database = require("models/resources/database");
 import ongoingTaskElasticSearchEtlEditModel = require("models/database/tasks/ongoingTaskElasticSearchEtlEditModel");
 import getOngoingTaskInfoCommand = require("commands/database/tasks/getOngoingTaskInfoCommand");
 import eventsCollector = require("common/eventsCollector");
-import getConnectionStringInfoCommand = require("commands/database/settings/getConnectionStringInfoCommand");
 import getConnectionStringsCommand = require("commands/database/settings/getConnectionStringsCommand");
 import saveEtlTaskCommand = require("commands/database/tasks/saveEtlTaskCommand");
 import generalUtils = require("common/generalUtils");
@@ -22,7 +21,6 @@ import document = require("models/database/documents/document");
 import viewHelpers = require("common/helpers/view/viewHelpers");
 import documentMetadata = require("models/database/documents/documentMetadata");
 import getDocumentsMetadataByIDPrefixCommand = require("commands/database/documents/getDocumentsMetadataByIDPrefixCommand");
-import testSqlReplicationCommand = require("commands/database/tasks/testSqlReplicationCommand");
 import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
 import popoverUtils = require("common/popoverUtils");
 import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
@@ -200,7 +198,6 @@ class editElasticSearchEtlTask extends viewModelBase {
     
     collectionNames: KnockoutComputed<string[]>;
 
-    //showAdvancedOptions = ko.observable<boolean>(false);
     showEditTransformationArea: KnockoutComputed<boolean>;
     showEditElasticSearchIndexArea: KnockoutComputed<boolean>;
 
@@ -486,11 +483,13 @@ class editElasticSearchEtlTask extends viewModelBase {
         
         // 3. Validate *new connection string* (if relevant..)
         if (this.createNewConnectionString()) {
-            if (!this.isValid(this.newConnectionString().validationGroup)) {
+            const newConnectionString = this.newConnectionString();
+            
+            if (!this.isValid(newConnectionString.validationGroup) || !this.isValid(newConnectionString.authentication().validationGroup)) {
                 hasAnyErrors = true;
             }  else {
                 // Use the new connection string
-                this.editedElasticSearchEtl().connectionStringName(this.newConnectionString().connectionStringName());
+                this.editedElasticSearchEtl().connectionStringName(newConnectionString.connectionStringName());
             }
         }
 
@@ -585,6 +584,10 @@ class editElasticSearchEtlTask extends viewModelBase {
         } else {
             this.enableTestArea(false);
         }
+    }
+
+    setState(state: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskState): void {
+        this.editedElasticSearchEtl().taskState(state);
     }
 
     /********************************************/
@@ -766,10 +769,6 @@ class editElasticSearchEtlTask extends viewModelBase {
     editElasticSearchIndex(elasticIndexModel: ongoingTaskElasticSearchEtlIndexModel) {
         this.elasticSearchIndexSelectedForEdit(elasticIndexModel);
         this.editedElasticSearchIndexSandbox(new ongoingTaskElasticSearchEtlIndexModel(elasticIndexModel.toDto(), false));
-    }
-
-    setState(state: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskState): void {
-        this.editedElasticSearchEtl().taskState(state);
     }
 }
 

@@ -5,11 +5,211 @@ import saveConnectionStringCommand = require("commands/database/settings/saveCon
 import testClusterNodeConnectionCommand = require("commands/database/cluster/testClusterNodeConnectionCommand");
 import jsonUtil = require("common/jsonUtil");
 import discoveryUrl = require("models/database/settings/discoveryUrl");
+import fileImporter = require("common/fileImporter");
+import replicationCertificateModel = require("models/database/tasks/replicationCertificateModel");
+import forge = require("forge/forge");
+import certificateUtils = require("common/certificateUtils");
+import messagePublisher = require("common/messagePublisher");
+
+type authenticationMethod = "none" | "basic" | "apiKey" | "certificate";
+
+class authenticationInfo {
+
+    static authProviders: Array<valueAndLabelItem<authenticationMethod, string>> = [
+        { value: "none", label: "No authentication" },
+        { value: "basic", label: "Basic" },
+        { value: "apiKey",label: "Api Key" },
+        { value: "certificate", label: "Certificate" }
+    ];
+    
+    authMethodUsed = ko.observable<authenticationMethod>();
+    
+    username = ko.observable<string>();
+    password = ko.observable<string>();
+
+    apiKeyId = ko.observable<string>();
+    apiKey = ko.observable<string>();
+
+    certificates = ko.observableArray<replicationCertificateModel>([]);
+    
+    dirtyFlag: () => DirtyFlag;
+    validationGroup: KnockoutValidationGroup;
+
+    constructor(dto: Raven.Client.Documents.Operations.ETL.ElasticSearch.Authentication) {
+        
+        if (dto.BasicAuth) {
+            this.username(dto.BasicAuth.Username);
+            this.password(dto.BasicAuth.Password);
+        }
+        
+        if (dto.ApiKeyAuth) {
+            this.apiKeyId(dto.ApiKeyAuth.ApiKeyId);
+            this.apiKey(dto.ApiKeyAuth.ApiKey);
+        }
+        
+        if (dto.CertificateAuth) {
+            dto.CertificateAuth.CertificatesBase64.forEach(x => {
+                const certificateModel = new replicationCertificateModel(x);
+                this.certificates.push(certificateModel);
+            });
+        }
+        
+        this.initObservables();
+        this.initValidation();
+    }
+    
+    private initObservables(): void {
+        
+        this.authMethodUsed(this.findMethodUsed());
+        
+        this.dirtyFlag = new ko.DirtyFlag([
+            this.username,
+            this.password,
+            this.apiKeyId,
+            this.apiKey,
+            this.certificates
+        ], false, jsonUtil.newLineNormalizingHashFunction);
+    }
+    
+    private findMethodUsed(): authenticationMethod {
+        if (this.username() && this.password()) {
+            return "basic";
+        }
+        
+        if (this.apiKeyId() && this.apiKey()) {
+            return "apiKey";
+        }
+        
+        if (this.certificates() && this.certificates().length) {
+            return "certificate";
+        }
+        
+        return "none";
+    }
+    
+    private initValidation(): void {
+        this.username.extend({
+            required: {
+                onlyIf: () => this.authMethodUsed() === "basic"
+            }
+        });
+        
+        this.password.extend({
+            required: {
+                onlyIf: () => this.authMethodUsed() === "basic"
+            }
+        });
+
+        this.apiKeyId.extend({
+            required: {
+                onlyIf: () => this.authMethodUsed() === "apiKey"
+            }
+        });
+
+        this.apiKey.extend({
+            required: {
+                onlyIf: () => this.authMethodUsed() === "apiKey"
+            }
+        });
+
+        this.certificates.extend({
+            validation: [
+                {
+                    validator: () => this.authMethodUsed() !== "certificate" || this.certificates().length > 0,
+                    message: `Certificate not uploaded`
+                }
+            ]
+        });
+        
+        this.validationGroup = ko.validatedObservable({
+            username: this.username,
+            password: this.password,
+            apiKeyId: this.apiKeyId,
+            apiKey: this.apiKey,
+            certificates: this.certificates
+        });
+    }
+
+    toDto(): Raven.Client.Documents.Operations.ETL.ElasticSearch.Authentication {
+        const methodUsed = this.authMethodUsed();
+
+        return {
+            BasicAuth: methodUsed === "basic" ? { Username: this.username(), Password: this.password() } : null,
+            ApiKeyAuth: methodUsed === "apiKey" ? { ApiKey: this.apiKey(), ApiKeyId: this.apiKeyId() } : null,
+            CertificateAuth: methodUsed === "certificate" ? { CertificatesBase64: this.certificates().map(x => x.publicKey()) } : null
+        }
+    }
+    
+    static empty(): authenticationInfo {
+        return new authenticationInfo({
+            BasicAuth: {
+                Username: null,
+                Password: null,
+            },
+            ApiKeyAuth: {
+                ApiKeyId: null,
+                ApiKey: null
+            },
+            CertificateAuth: {
+                CertificatesBase64: []
+            }
+        });
+    }
+
+    labelFor(input: string) {
+        const provider = authenticationInfo.authProviders.find(x => x.value === input);
+        return provider ? provider.label : null;
+    }
+
+    uploadElasticCertificate(fileInput: HTMLInputElement): void {
+        fileImporter.readAsBinaryString(fileInput, data => this.onCertificateUploaded(data));
+    }
+
+    private onCertificateUploaded(data: string): void {
+        
+        try {
+            // First detect the data format, pfx (binary) or crt/cer (text)
+            // The line bellow will throw if data is not pfx
+            forge.asn1.fromDer(data);
+
+            // *** Handle pfx ***
+            try {
+                const certAsBase64 = forge.util.encode64(data);
+                const certificatesArray = certificateUtils.extractCertificatesFromPkcs12(certAsBase64, undefined);
+                
+                certificatesArray.forEach(publicKey => {
+                    const certificateModel = new replicationCertificateModel(publicKey, certAsBase64);
+                    this.certificates.push(certificateModel);
+                });
+            } catch ($ex1) {
+                messagePublisher.reportError("Unable to upload certificate", $ex1);
+            }
+            
+        } catch {
+            
+            // *** Handle crt/cer *** 
+            try {
+                const certificateModel = new replicationCertificateModel(data);
+                this.certificates.push(certificateModel);
+            } catch ($ex2) {
+                messagePublisher.reportError("Unable to upload certificate", $ex2);
+            }
+        }
+    }
+
+    removeCertificate(certModel: replicationCertificateModel) {
+        const filtered = this.certificates().filter(x => x.thumbprint() !== certModel.thumbprint());
+        this.certificates(filtered);
+    }
+}
 
 class connectionStringElasticSearchEtlModel extends connectionStringModel {
+    
     nodesUrls = ko.observableArray<discoveryUrl>([]);
     inputUrl = ko.observable<discoveryUrl>(new discoveryUrl(""));
     selectedUrlToTest = ko.observable<string>();
+    
+    authentication = ko.observable<authenticationInfo>();
 
     validationGroup: KnockoutValidationGroup;
 
@@ -20,7 +220,37 @@ class connectionStringElasticSearchEtlModel extends connectionStringModel {
 
         this.update(dto);
         this.initValidation();
+        this.initObservables();
+    }
 
+    update(dto: Raven.Client.Documents.Operations.ETL.ElasticSearch.ElasticSearchConnectionString): void {
+        super.update(dto);
+
+        this.connectionStringName(dto.Name);
+        this.nodesUrls(dto.Nodes.map((x) => new discoveryUrl(x)));
+
+        this.authentication(new authenticationInfo(dto.Authentication));
+    }
+
+    initValidation(): void {
+        super.initValidation();
+
+        this.nodesUrls.extend({
+            validation: [
+                {
+                    validator: () => this.nodesUrls().length > 0,
+                    message: "At least one Elasticsearch node URL is required. Enter URL and click Add."
+                }
+            ]
+        });
+
+        this.validationGroup = ko.validatedObservable({
+            connectionStringName: this.connectionStringName,
+            nodesUrls: this.nodesUrls
+        });
+    }
+    
+    private initObservables(): void {
         const urlsCount = ko.pureComputed(() => this.nodesUrls().length);
         const urlsAreDirty = ko.pureComputed(() => {
             let anyDirty = false;
@@ -37,48 +267,26 @@ class connectionStringElasticSearchEtlModel extends connectionStringModel {
         this.dirtyFlag = new ko.DirtyFlag([
             this.connectionStringName,
             urlsCount,
-            urlsAreDirty
+            urlsAreDirty,
+            this.authentication().dirtyFlag().isDirty
         ], false, jsonUtil.newLineNormalizingHashFunction);
-    }
-
-    update(dto: Raven.Client.Documents.Operations.ETL.ElasticSearch.ElasticSearchConnectionString) {
-        super.update(dto);
-
-        this.connectionStringName(dto.Name);
-        this.nodesUrls(dto.Nodes.map((x) => new discoveryUrl(x)));
-    }
-
-    initValidation() {
-        super.initValidation();
-
-        this.nodesUrls.extend({
-            validation: [
-                {
-                    validator: () => this.nodesUrls().length > 0,
-                    message: "At least one Elasticsearch node url is required"
-                }
-            ]
-        });
-
-        this.validationGroup = ko.validatedObservable({
-            connectionStringName: this.connectionStringName,
-            topologyDiscoveryUrls: this.nodesUrls
-        });
     }
 
     static empty(): connectionStringElasticSearchEtlModel {
         return new connectionStringElasticSearchEtlModel({
             Type: "ElasticSearch",
             Name: "",
-            Nodes: []
+            Nodes: [],
+            Authentication: authenticationInfo.empty().toDto()
         } as Raven.Client.Documents.Operations.ETL.ElasticSearch.ElasticSearchConnectionString, true, []);
     }
 
-    toDto() {
+    toDto(): Raven.Client.Documents.Operations.ETL.ElasticSearch.ElasticSearchConnectionString {
         return {
-            Type: "Elasticsearch",
+            Type: "ElasticSearch",
             Name: this.connectionStringName(),
-            Nodes: this.nodesUrls().map((x) => x.discoveryUrlName())
+            Nodes: this.nodesUrls().map((x) => x.discoveryUrlName()),
+            Authentication: this.authentication().toDto()
         };
     }
 

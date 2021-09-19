@@ -30,13 +30,13 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
         {
             if (string.IsNullOrWhiteSpace(name))
             {
-                errorMessage = "Index name cannot be empty.";
+                errorMessage = "Index name cannot be empty";
                 return false;
             }
 
             if (name.Any(char.IsUpper))
             {
-                errorMessage = "Only lowercase are allowed.";
+                errorMessage = "Index name must be lowercase";
                 return false;
             }
 
@@ -50,13 +50,13 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
             if (NotAllowedIndexNameCharacters.Any(name.Contains))
             {
                 var notAllowedCharacters = $"('{string.Join("', '", NotAllowedIndexNameCharacters)}')";
-                errorMessage = $"Characters {notAllowedCharacters} are not allowed.";
+                errorMessage = $"Characters {notAllowedCharacters} are not allowed";
                 return false;
             }
 
             if (Encoding.UTF8.GetByteCount(name) > MaxIndexNameBytesLength)
             {
-                errorMessage = $"Index name cannot be longer than {MaxIndexNameBytesLength} bytes.";
+                errorMessage = $"Index name cannot be longer than {MaxIndexNameBytesLength} bytes";
                 return false;
             }
 
