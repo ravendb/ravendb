@@ -2071,6 +2071,7 @@ namespace Raven.Server.Documents.Patch
                 }
                 finally
                 {
+                    ScriptEngine.ForceV8GarbageCollection();
                     _scope = null;
                     _loadScope = null;
                     _docsCtx = null;
