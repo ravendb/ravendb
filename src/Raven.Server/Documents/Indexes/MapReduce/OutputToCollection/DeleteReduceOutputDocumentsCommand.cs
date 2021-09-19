@@ -8,20 +8,18 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 {
-    public class DeleteReduceOutputDocumentsCommand : TransactionOperationsMerger.MergedTransactionCommand
+    public class DeleteReduceOutputDocumentsCommand : OutputReduceAbstractCommand
     {
-        private readonly DocumentDatabase _database;
         private readonly string _documentsPrefix;
         private readonly int _batchSize;
         private readonly string _originalPattern = null;
         private readonly OutputReferencesPattern _originalPatternForReduceOutputReferences = null;
 
-        public DeleteReduceOutputDocumentsCommand(DocumentDatabase database, string documentsPrefix, string originalPattern, int batchSize)
+        public DeleteReduceOutputDocumentsCommand(DocumentDatabase database, string documentsPrefix, string originalPattern, int batchSize) : base(database)
         {
             if (OutputReduceToCollectionCommand.IsOutputDocumentPrefix(documentsPrefix) == false)
                 throw new ArgumentException($"Invalid prefix to delete: {documentsPrefix}", nameof(documentsPrefix));
 
-            _database = database;
             _documentsPrefix = documentsPrefix;
             _batchSize = batchSize;
 
@@ -126,9 +124,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
                             ThrowIdsPropertyNotFound(referenceDocument.Id);
 
                         if (updatedIds.Length == 0)
-                            _database.DocumentsStorage.Delete(context, referenceDocument.Id, null);
+                            ArtificialDelete(context, referenceDocument.Id);
                         else
-                            _database.DocumentsStorage.Put(context, referenceDocument.Id, null, doc);
+                            ArtificialPut(context, referenceDocument.Id, doc);
                     }
                 }
             }
