@@ -233,7 +233,7 @@ namespace Raven.Server.Documents.Patch
         private void _CheckIsNotDisposed(string descCtx)
         {
             if (_disposed) {
-                throw new InvalidOperationException($"BOI has been disposed: DocumentId=${DocumentId}, HandleID=${HandleID}, ObjectID=${ObjectID}, context: ${descCtx}");
+                throw new InvalidOperationException($"BOI has been disposed: DocumentId={DocumentId}, HandleID={HandleID}, ObjectID={ObjectID}, context: {descCtx}");
             }
         }
 
@@ -293,7 +293,7 @@ namespace Raven.Server.Documents.Patch
                     val != null)
                 {
                     val.Value = jsValue;
-                    return jsValue;
+                    return toReturnCopy ? val.ValueCopy() : val.Value;
                 }
                 
                 Deletes?.Remove(propertyName);
@@ -540,6 +540,7 @@ namespace Raven.Server.Documents.Patch
                 {
                     if (_value.Equals(value))
                         return;
+                    _value.DecAppRooted();
                     _value.Set(value);
                     OnSetValue();
                     _parent.MarkChanged();
@@ -661,7 +662,7 @@ namespace Raven.Server.Documents.Patch
             private void _CheckIsNotDisposed(string descCtx)
             {
                 if (_disposed) {
-                    throw new InvalidOperationException($"BlittableObjectProperty has been disposed: DocumentId=${DocumentId}, propertyName=${_propertyName}, HandleID=${HandleID}, ObjectID=${ObjectID}, context: ${descCtx}");
+                    throw new InvalidOperationException($"BlittableObjectProperty has been disposed: DocumentId={DocumentId}, propertyName={_propertyName}, HandleID={HandleID}, ObjectID={ObjectID}, context: {descCtx}");
                 }
             }
 
