@@ -105,6 +105,11 @@ namespace Raven.Server.ServerWide.Commands.ETL
             if (DbId != null)
                 etlState.LastProcessedEtagPerDbId[DbId] = LastProcessedEtag;
 
+#pragma warning disable 618
+            if (etlState.LastProcessedEtagPerNode?.Count > 0)
+                etlState.LastProcessedEtagPerNode[NodeTag] = LastProcessedEtag;
+#pragma warning restore 618
+
             etlState.ChangeVector = ChangeVector;
             etlState.NodeTag = NodeTag;
 
