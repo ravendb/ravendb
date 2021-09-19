@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 
 namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
 {
@@ -7,23 +8,23 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
     {
         private static int MaxIndexNameBytesLength = 255;
 
-        private static readonly List<char> NotAllowedIndexNameCharacters = new List<char>()
+        private static readonly List<string> NotAllowedIndexNameCharacters = new()
         {
-            '/',
-            '\\',
-            '*',
-            '?',
-            '"',
-            '<',
-            '>',
-            '|',
-            '\'',
-            ',',
-            '#',
-            ':'
+            "/",
+            "\\",
+            "*",
+            "?",
+            "\"",
+            "<",
+            ">",
+            "|",
+            " ",
+            ",",
+            "#",
+            ":"
         };
 
-        private static readonly List<char> NotAllowedIndexNameStartCharacters = new List<char>() { '-', '_', '+' };
+        private static readonly List<string> NotAllowedIndexNameStartCharacters = new() { "-", "_", "+" };
 
         public static bool IsValidIndexName(string name, out string errorMessage)
         {
@@ -39,40 +40,27 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
                 return false;
             }
 
-            if (NotAllowedIndexNameStartCharacters.Contains(name[0]))
+            if (NotAllowedIndexNameStartCharacters.Any(name.StartsWith))
             {
                 var notAllowedStartCharacters = $"('{string.Join("', '", NotAllowedIndexNameStartCharacters)}')";
                 errorMessage = $"Index name cannot start with {notAllowedStartCharacters}";
                 return false;
             }
 
-            if (IsValidCharactersUsed(name) == false)
+            if (NotAllowedIndexNameCharacters.Any(name.Contains))
             {
                 var notAllowedCharacters = $"('{string.Join("', '", NotAllowedIndexNameCharacters)}')";
                 errorMessage = $"Characters {notAllowedCharacters} are not allowed.";
                 return false;
             }
 
-            if (name.Length * sizeof(char) > MaxIndexNameBytesLength)
+            if (Encoding.UTF8.GetByteCount(name) > MaxIndexNameBytesLength)
             {
                 errorMessage = $"Index name cannot be longer than {MaxIndexNameBytesLength} bytes.";
                 return false;
             }
 
             errorMessage = null;
-            return true;
-        }
-
-        private static bool IsValidCharactersUsed(string name)
-        {
-            foreach (char c in name)
-            {
-                if (char.IsLetterOrDigit(c) == false && NotAllowedIndexNameCharacters.Contains(c))
-                {
-                    return false;
-                }
-            }
-
             return true;
         }
     }
