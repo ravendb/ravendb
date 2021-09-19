@@ -16,7 +16,7 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch.Handlers
 {
     public class ElasticSearchEtlHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/admin/etl/elasticsearch/test-connection", "POST", AuthorizationStatus.DatabaseAdmin)]
+        [RavenAction("/admin/etl/elasticsearch/test-connection", "POST", AuthorizationStatus.Operator)]
         public async Task GetTestSqlConnection()
         {
             try
