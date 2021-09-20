@@ -297,25 +297,8 @@ namespace Voron.Data.BTrees
         {
             tag = null;
 
-            var tree = FixedTreeFor(key, ChunkDetails.SizeOf);
-
-            if (tree.NumberOfEntries == 0)
+            if (TryGetLastChunkDetailsForStream(key, out var lastChunk) == false)
                 return null;
-
-            ChunkDetails lastChunk;
-            using (var it = tree.Iterate())
-            {
-                if (it.SeekToLast() == false)
-                    return null;
-
-                using (tree.Read(it.CurrentKey, out Slice slice))
-                {
-                    if (slice.HasValue == false)
-                        return null;
-
-                    lastChunk = *(ChunkDetails*)slice.Content.Ptr;
-                }
-            }
 
             var canRemovePage = CanRemovePage(lastChunk.PageNumber);
             var page = _llt.GetPage(lastChunk.PageNumber);
@@ -399,25 +382,8 @@ namespace Voron.Data.BTrees
 
         public StreamInfo* GetStreamInfo(Slice key, bool writable)
         {
-            var tree = FixedTreeFor(key, ChunkDetails.SizeOf);
-
-            if (tree.NumberOfEntries == 0)
+            if (TryGetLastChunkDetailsForStream(key, out var lastChunk) == false)
                 return null;
-
-            ChunkDetails lastChunk;
-            using (var it = tree.Iterate())
-            {
-                if (it.SeekToLast() == false)
-                    return null;
-
-                using (tree.Read(it.CurrentKey, out Slice slice))
-                {
-                    if (slice.HasValue == false)
-                        return null;
-
-                    lastChunk = *(ChunkDetails*)slice.Content.Ptr;
-                }
-            }
 
             var page = _llt.GetPage(lastChunk.PageNumber);
 
@@ -425,6 +391,30 @@ namespace Voron.Data.BTrees
                 page = _llt.ModifyPage(page.PageNumber);
 
             return (StreamInfo*)(page.DataPointer + lastChunk.ChunkSize);
+        }
+
+        private bool TryGetLastChunkDetailsForStream(Slice key, out ChunkDetails lastChunk)
+        {
+            lastChunk = default;
+            var tree = FixedTreeFor(key, ChunkDetails.SizeOf);
+
+            if (tree.NumberOfEntries == 0)
+                return false;
+
+            using (var it = tree.Iterate())
+            {
+                if (it.SeekToLast() == false)
+                    return false;
+
+                using (tree.Read(it.CurrentKey, out Slice slice))
+                {
+                    if (slice.HasValue == false)
+                        return false;
+
+                    lastChunk = *(ChunkDetails*)slice.Content.Ptr;
+                    return true;
+                }
+            }
         }
 
         internal FixedSizeTree GetStreamChunksTree(Slice key)
