@@ -1,17 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using Sparrow;
 using Sparrow.Server.Compression;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Sparrow
 {
-    public class Encoder3GramTests
+    public class Encoder3GramTests : NoDisposalNeeded
     {
-        public struct State : IEncoderState
+        public Encoder3GramTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
+        private struct State : IEncoderState
         {
             private readonly byte[] _value;
 
@@ -24,7 +27,7 @@ namespace FastTests.Sparrow
             public Span<byte> DecodingTable => new Span<byte>(_value).Slice(_value.Length / 2);
         }
 
-        public struct StringKeys : IReadOnlySpanEnumerator, ISpanEnumerator
+        private struct StringKeys : IReadOnlySpanEnumerator, ISpanEnumerator
         {
             private readonly byte[][] _values;
 
@@ -57,7 +60,7 @@ namespace FastTests.Sparrow
         }
 
 
-        public struct EmptyKeys : IReadOnlySpanEnumerator
+        private struct EmptyKeys : IReadOnlySpanEnumerator
         {
             public int Length => 0;
 
@@ -130,7 +133,7 @@ namespace FastTests.Sparrow
             }
 
             byte[][] key = new byte[1][];
-            key[0] = new byte[] {60, 61, 62};
+            key[0] = new byte[] { 60, 61, 62 };
 
             int dictSize = 128;
             StringKeys keys = new(key);

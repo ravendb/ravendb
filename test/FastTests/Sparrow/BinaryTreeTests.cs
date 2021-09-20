@@ -2,11 +2,16 @@
 using Sparrow.Server.Binary;
 using Sparrow.Server.Collections.Persistent;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Sparrow
 {
-    public class BinaryTreeTests
+    public class BinaryTreeTests : NoDisposalNeeded
     {
+        public BinaryTreeTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void EmptyTree()
         {
