@@ -45,7 +45,7 @@ namespace Corax.Queries
                     _offset = 0;
                 }
             
-                while (results + 1 < matches.Length)
+                while (results < matches.Length)
                 {
                     var read = Container.GetEntriesInto(_entriesContainerId, _offset, _currentPage, matches);
                     if (read == 0)
