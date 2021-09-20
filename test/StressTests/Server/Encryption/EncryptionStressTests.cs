@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Text;
 using System.Threading.Tasks;
 using FastTests.Graph;
 using Raven.Client.Documents;
@@ -24,10 +22,12 @@ namespace StressTests.Server.Encryption
         {
             using var process = Process.GetCurrentProcess();
             IntPtr minWorkingSet = default;
+            IntPtr maxWorkingSet = default;
 
             if (PlatformDetails.RunningOnPosix == false)
             {
                 minWorkingSet = process.MinWorkingSet;
+                maxWorkingSet = process.MaxWorkingSet;
             }
 
             try
@@ -56,11 +56,13 @@ namespace StressTests.Server.Encryption
             {
                 if (PlatformDetails.RunningOnPosix == false)
                 {
+#pragma warning disable CA1416 // Validate platform compatibility
                     process.MinWorkingSet = minWorkingSet;
-                    process.MaxWorkingSet = minWorkingSet;
+                    process.MaxWorkingSet = maxWorkingSet;
+#pragma warning restore CA1416 // Validate platform compatibility
                 }
             }
-            
+
         }
 
         private static async Task TrySavingDocument(DocumentStore store, int? replicas = null)

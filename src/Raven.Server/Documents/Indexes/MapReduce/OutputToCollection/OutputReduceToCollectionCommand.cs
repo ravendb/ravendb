@@ -199,11 +199,30 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
         }
     }
 
-    public class OutputReduceToCollectionCommand : TransactionOperationsMerger.MergedTransactionCommand
+    public abstract class OutputReduceAbstractCommand : TransactionOperationsMerger.MergedTransactionCommand
+    {
+        protected readonly DocumentDatabase _database;
+
+        protected OutputReduceAbstractCommand(DocumentDatabase database)
+        {
+            _database = database;
+        }
+
+        public void ArtificialDelete(DocumentsOperationContext context, string key)
+        {
+            _database.DocumentsStorage.Delete(context, key, DocumentFlags.Artificial | DocumentFlags.FromIndex);
+        }
+
+        public void ArtificialPut(DocumentsOperationContext context, string key, BlittableJsonReaderObject document)
+        {
+            _database.DocumentsStorage.Put(context, key, null, document, flags: DocumentFlags.Artificial | DocumentFlags.FromIndex);
+        }
+    }
+
+    public class OutputReduceToCollectionCommand : OutputReduceAbstractCommand
     {
         private const string MultipleOutputsForSameReduceKeyHashSeparator = "/";
 
-        private readonly DocumentDatabase _database;
         private readonly string _outputReduceToCollection;
         private readonly long? _reduceOutputIndex;
         private readonly OutputReferencesPattern _patternForReduceOutputReferences;
@@ -226,7 +245,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
             _indexWriteTxHolder = indexWriteTxHolder;
 
             if (_patternForReduceOutputReferences != null)
-                _outputToCollectionReferences = new OutputReduceToCollectionReferencesCommand(index, outputReduceToCollection, _patternForReduceOutputReferences.ReferencesCollectionName);
+                _outputToCollectionReferences = new OutputReduceToCollectionReferencesCommand(this, index, outputReduceToCollection, _patternForReduceOutputReferences.ReferencesCollectionName);
         }
 
         /// <summary>
@@ -239,9 +258,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
             _reduceDocumentsForReplayTransaction = reduceDocuments;
         }
 
-        private OutputReduceToCollectionCommand(DocumentDatabase database, string outputReduceToCollection, long? reduceOutputIndex)
+        private OutputReduceToCollectionCommand(DocumentDatabase database, string outputReduceToCollection, long? reduceOutputIndex) : base(database)
         {
-            _database = database;
             _outputReduceToCollection = outputReduceToCollection;
             _reduceOutputIndex = reduceOutputIndex;
         }
@@ -307,7 +325,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
                     var item = output.Value[i];
                     var doc = item.Json;
 
-                    _database.DocumentsStorage.Put(context, id, null, doc, flags: DocumentFlags.Artificial | DocumentFlags.FromIndex);
+                    ArtificialPut(context, id, doc);
                     context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(id, doc.Size);
 
                     if (item.ReferenceDocId != null)
@@ -344,7 +362,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 
                     using (item.Json) // TODO arek item.ReferenceDocumentId
                     {
-                        _database.DocumentsStorage.Put(context, key, null, item.Json, flags: DocumentFlags.Artificial | DocumentFlags.FromIndex);
+                        ArtificialPut(context, key, item.Json);
                         context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(key, item.Json.Size);
                     }
                 }
@@ -417,6 +435,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 
         public class OutputReduceToCollectionReferencesCommand
         {
+            private readonly OutputReduceToCollectionCommand _parent;
             private readonly MapReduceIndex _index;
             private readonly string _outputReduceToCollection;
             private readonly string _referencesCollectionName;
@@ -425,8 +444,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
             private readonly List<string> _deletedReduceOutputs = new List<string>();
             private readonly Dictionary<string, HashSet<string>> _idsToDeleteByReferenceDocumentId = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
 
-            public OutputReduceToCollectionReferencesCommand(MapReduceIndex index, string outputReduceToCollection, string referencesCollectionName)
+            public OutputReduceToCollectionReferencesCommand(OutputReduceToCollectionCommand outputReduceToCollectionCommand, MapReduceIndex index,
+                string outputReduceToCollection, string referencesCollectionName)
             {
+                _parent = outputReduceToCollectionCommand;
                 _index = index;
                 _outputReduceToCollection = outputReduceToCollection;
                 _referencesCollectionName = referencesCollectionName;
@@ -492,7 +513,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
                                 _index.OutputReduceToCollection.DeletePatternGeneratedIdForReduceOutput(indexWriteTransaction, deletedId.ToString());
                             }
 
-                            _database.DocumentsStorage.Delete(context, referenceDocument.Id, null);
+                            _parent.ArtificialDelete(context, referenceDocument.Id);
                             continue;
                         }
 
@@ -519,7 +540,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 
                         using (var doc = context.ReadObject(referenceDocument.Data, referenceDocument.Id))
                         {
-                            _database.DocumentsStorage.Put(context, referenceDocument.Id, null, doc);
+                            _parent.ArtificialPut(context, referenceDocument.Id, doc);
 
                             foreach (var idToRemove in idsToRemove)
                             {
@@ -559,10 +580,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 
                         using (var referenceJson = context.ReadObject(referenceDoc, "reference-of-reduce-output", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                         {
-                            _database.DocumentsStorage.Delete(context, referencesOfReduceOutput.Key, null);
-
-                            _database.DocumentsStorage.Put(context, referencesOfReduceOutput.Key, null, referenceJson,
-                                flags: DocumentFlags.Artificial | DocumentFlags.FromIndex);
+                            _parent.ArtificialDelete(context, referencesOfReduceOutput.Key);
+                            _parent.ArtificialPut(context, referencesOfReduceOutput.Key, referenceJson);
 
                             foreach (var reduceOutputId in referencesOfReduceOutput.Value)
                             {
