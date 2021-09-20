@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields
             get
             {
                 if (_hashKey == 0)
-                    _hashKey = GetHashCode(_name, _index, _store, _termVector, _multipleItemsSameField);
+                    _hashKey = CalculateHashCode(_name, _index, _store, _termVector, _multipleItemsSameField);
 
                 return _hashKey;
             }
@@ -85,7 +85,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields
             return result;
         }
 
-        public static int GetHashCode(string name, Field.Index? index, Field.Store store, Field.TermVector termVector, int[] multipleItemsSameField)
+        public static int CalculateHashCode(string name, Field.Index? index, Field.Store store, Field.TermVector termVector, int[] multipleItemsSameField)
         {
             ulong tmpHash = Hashing.Marvin32.CalculateInline(name) << 32;
             int field = ((index != null ? (byte)index : 0xFF) << 16 | ((byte)store << 8) | (byte)termVector);
@@ -99,7 +99,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields
             return (int)Hashing.Combine(hash, Hashing.Marvin32.CalculateInline(multipleItemsSameField));
         }
 
-        public static int GetHashCode(string name, Field.Index? index, Field.Store store, Field.TermVector termVector, List<int> multipleItemsSameField)
+        public static int CalculateHashCode(string name, Field.Index? index, Field.Store store, Field.TermVector termVector, List<int> multipleItemsSameField)
         {
             ulong tmpHash = Hashing.Marvin32.CalculateInline(name) << 32;
             int field = ((index != null ? (byte)index : 0xFF) << 16 | ((byte)store << 8) | (byte)termVector);

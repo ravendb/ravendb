@@ -631,7 +631,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         protected Field GetOrCreateField(string name, string value, LazyStringValue lazyValue, Stream streamValue, BlittableJsonReaderObject blittableValue, Field.Store store, Field.Index index, Field.TermVector termVector)
         {
-            int cacheKey = FieldCacheKey.GetHashCode(name, index, store, termVector, _multipleItemsSameFieldCount);
+            int cacheKey = FieldCacheKey.CalculateHashCode(name, index, store, termVector, _multipleItemsSameFieldCount);
 
             Field field;
             if (_fieldsCache.TryGetValue(cacheKey, out CachedFieldItem<Field> cached) == false ||
@@ -764,7 +764,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         private NumericField GetNumericFieldFromCache(string name, Field.Index? index, Field.Store store, Field.TermVector termVector)
         {
-            int cacheKey = FieldCacheKey.GetHashCode(name, index, store, termVector, _multipleItemsSameFieldCount);
+            int cacheKey = FieldCacheKey.CalculateHashCode(name, index, store, termVector, _multipleItemsSameFieldCount);
 
             NumericField numericField;
             if (_numericFieldsCache.TryGetValue(cacheKey, out CachedFieldItem<NumericField> cached) == false ||

@@ -1261,7 +1261,9 @@ namespace Raven.Server.ServerWide
 
                 public override int GetHashCode()
                 {
+#pragma warning disable RS1024 // Compare symbols correctly
                     return Arrays.GetHashCode(id);
+#pragma warning restore RS1024 // Compare symbols correctly
                 }
 
                 public override bool Equals(
