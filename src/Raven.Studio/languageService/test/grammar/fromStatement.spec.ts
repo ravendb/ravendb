@@ -72,7 +72,7 @@ describe("FROM statement parser", function() {
         const from = parseTree.fromStatement();
 
         expect(from)
-        .toBeInstanceOf(CollectionByIndexContext);
+            .toBeInstanceOf(CollectionByIndexContext);
     });
 
     it("from index d", function() {
@@ -85,5 +85,10 @@ describe("FROM statement parser", function() {
 
         expect(from)
             .toBeInstanceOf(CollectionByIndexContext);
+        
+        const indexContext = from as CollectionByIndexContext;
+        
+        expect(indexContext._collection.text)
+            .toEqual("d")
     });
 });

@@ -35,12 +35,14 @@ export function parseRql(input: string, opts: parseRqlOptions = {}): ParsedRql {
             syntaxError: opts.onSyntaxError
         });
     }
-
+    const jsLexer = new RqlLexer(chars);
+    const jsTokenStream = new CommonTokenStream(jsLexer, 3);
     const parseTree = parser.prog();
     
     return {
         parser, 
         parseTree,
-        tokenStream
+        tokenStream,
+        jsTokenStream
     }
 }

@@ -1,12 +1,12 @@
-﻿import {parseRql} from "../../src/parser";
+﻿import { parseRql } from "../../src/parser";
 import {
     GroupByStatementContext,
     ParameterWithOptionalAliasContext,
 } from "../../src/generated/RqlParser";
 
-describe("GROUP BY statement parser", function () {
-    it("single", function () {
-        const {parseTree, parser} = parseRql("from test group by zebra");
+describe("GROUP BY statement parser", function() {
+    it("single", function() {
+        const { parseTree, parser } = parseRql("from test group by zebra");
 
         expect(parser.numberOfSyntaxErrors)
             .toEqual(0);
@@ -22,8 +22,8 @@ describe("GROUP BY statement parser", function () {
         expect(value.text).toEqual("zebra");
     });
 
-    it("with alias", function () {
-        const {parseTree, parser} = parseRql("from test group by zebra as Double");
+    it("with alias", function() {
+        const { parseTree, parser } = parseRql("from test group by zebra as Double");
 
         expect(parser.numberOfSyntaxErrors)
             .toEqual(0);
@@ -40,8 +40,8 @@ describe("GROUP BY statement parser", function () {
         expect(value._as.text).toEqual("asDouble")
     });
     
-    it("unexpected comma before alias", function () {
-        const {parseTree, parser} = parseRql("from test group by zebra, as Double");
+    it("unexpected comma before alias", function() {
+        const { parseTree, parser } = parseRql("from test group by zebra, as Double");
 
         expect(parser.numberOfSyntaxErrors)
             .toEqual(1);
