@@ -135,14 +135,14 @@ whereStatement:
     
 expr:
     left=expr binary right=expr #binaryExpression
-    | OP_PAR expr CL_PAR #oppar
+    | OP_PAR expr CL_PAR #opPar
     |left=exprValue EQUAL right=exprValue #equalExpression
     |left=exprValue MATH right=exprValue #mathExpression
     |specialFunctions #specialFunctionst
-    | inFuction #inExpr
-    | betweenFunction #betweenExpr
-    | function #normalFunc
-    | TRUE AND NOT? expr #booleanExpression
+    |inFunction #inExpr
+    |betweenFunction #betweenExpr
+    |function #normalFunc
+    |TRUE AND NOT? expr #booleanExpression
     ;
 
 binary:
@@ -153,11 +153,10 @@ binary:
     ;
    
 exprValue:
-    
-     literal #parameterExpr
+    literal #parameterExpr
     ;
 
-inFuction:
+inFunction:
     value=literal 
     ALL? IN 
     OP_PAR
@@ -191,7 +190,7 @@ specialFunctions:
     ;
 
 specialFunctionName:
-    ID
+     ID
     |FUZZY
     |SEARCH
     |FACET
@@ -206,17 +205,17 @@ specialFunctionName:
 specialParam:
      OP_PAR specialParam CL_PAR
     |specialParam EQUAL specialParam
-    | variable BETWEEN specialParam
-    | specialParam AND specialParam
-    | specialParam OR specialParam
-    | specialParam MATH specialParam
-    | inFuction
-    | betweenFunction
-    | specialFunctions
-    | date
-    | function
-    | variable
-    | identifiersAllNames
+    |variable BETWEEN specialParam
+    |specialParam AND specialParam
+    |specialParam OR specialParam
+    |specialParam MATH specialParam
+    |inFunction
+    |betweenFunction
+    |specialFunctions
+    |date
+    |function
+    |variable
+    |identifiersAllNames
     |NUM
 ;
 
@@ -244,11 +243,11 @@ loadDocumentByName:
 
 //          ORDER BY            //
 orderByMode:
-ORDER_BY
-{
-    this.afterGroupBy();
-    this.orderBy = true;
-};
+    ORDER_BY
+    {
+        this.afterGroupBy();
+        this.orderBy = true;
+    };
 
 orderByStatement:
     orderByMode 
@@ -297,15 +296,15 @@ selectMode:
 selectStatement:
     //  Select only individual fields e.g. "select Column1 (as x)?, Column2"
      selectMode DISTINCT STAR  limitStatement? #getAllDistinct
-    | selectMode DISTINCT?
-        projectField
+    |selectMode DISTINCT?
+        field=projectField
     (
         COMMA projectField
     )*  limitStatement?
     #ProjectIndividualFields
     // Please notice that JavaScript segment is on 2 channel so we don't get any information on first on about JS
     // code so we accept "SELECT LIMIT $p1, $p2". To make sure it's correct we need check channel(2).IsEmpty or something like this.
-    | selectMode limitStatement? #javascriptCode
+    |selectMode limitStatement? #javascriptCode
     ;
     
 projectField:
@@ -332,19 +331,23 @@ jsFunction:
 
 alias:
     AS
+    name=aliasName
+    asArray?
+    ;
+    
+aliasName:
     (
         WORD
         |identifiersAllNames
-        | STRING
+        |STRING
     )
-    asArray?
     ;
     
 // @metadata.
 // array like Array[].Empty[]. etc
 prealias:
     METADATA DOT
-    | (WORD asArray? DOT)+
+    |(WORD asArray? DOT)+
     ;
 asArray:
     OP_Q CL_Q
@@ -374,7 +377,10 @@ limitStatement:
         LIMIT     
         variable 
         (
-            (COMMA | OFFSET) 
+            (
+             COMMA
+             |OFFSET
+             ) 
             variable
         )?
         ;
@@ -394,11 +400,11 @@ variable:
 param:
     (
     NUM
-    | WORD
-    | date
-    | STRING
-    | ID OP_PAR CL_PAR
-    | identifiersAllNames
+    |WORD
+    |date
+    |STRING
+    |ID OP_PAR CL_PAR
+    |identifiersAllNames
     ) 
     asArray?
     ;
@@ -491,10 +497,17 @@ identifiersAllNames:
 //Accept date range [DATE TO DATE]
 date:
     OP_Q 
-    (NULL | dateString)
+    (
+        NULL
+        |dateString
+    )
     TO
-    (NULL | dateString) 
+    (
+        NULL
+        |dateString
+    )
     CL_Q
     ;
     
-dateString: WORD DOT NUM;
+dateString: 
+    WORD DOT NUM;

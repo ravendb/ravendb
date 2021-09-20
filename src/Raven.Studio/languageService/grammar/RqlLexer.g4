@@ -71,11 +71,10 @@ SEARCH:         S E A R C H;
 LIMIT:          L I M I T;
 FUZZY:          F U Z Z Y;
 RQLJS:          AT R Q L J S;
-JAVASCRIPT: '{' ( JAVASCRIPT | ~'{'  | ~'}' )*? '}'   -> channel(2);
+JAVASCRIPT: ('{' ( JAVASCRIPT | ~'{'  | ~'}' )*? '}')   -> channel(3);
 //Literals
 JS_FUNCTION_DECLARATION: 'declare function';
 NUM: DIGIT+ (DOT DIGIT+)?;
-//STRING : ('"' ( '\\"' | . )*? '"' ) | ('\'' ( '\\"' | . )*? '\'' ) ;
 STRING: SINGLE_QUOTE_STRING
         | ('"' ( '\\"' | . )*? '"' ) | ('\'' ( '\\"' | . )*?  '\'' )
         | '"' UTFEscape '"' 

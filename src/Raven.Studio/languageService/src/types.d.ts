@@ -9,4 +9,5 @@ export interface ParsedRql {
     parser: RqlParser;
     parseTree: ProgContext;
     tokenStream: CommonTokenStream;
+    jsTokenStream: CommonTokenStream;
 }
