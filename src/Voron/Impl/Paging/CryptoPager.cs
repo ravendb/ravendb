@@ -39,6 +39,11 @@ namespace Voron.Impl.Paging
             return _loadedBuffers.TryGetValue(i, out value);
         }
 
+        public bool Remove(long i)
+        {
+            return _loadedBuffers.Remove(i);
+        }
+
         public EncryptionBuffer this[long index]
         {
             get => _loadedBuffers[index];
@@ -367,7 +372,7 @@ namespace Voron.Impl.Paging
             }
         }
 
-        private void ReturnBuffer(EncryptionBuffer buffer)
+        internal void ReturnBuffer(EncryptionBuffer buffer)
         {
             if (buffer.OriginalSize != null && buffer.OriginalSize != 0)
             {
