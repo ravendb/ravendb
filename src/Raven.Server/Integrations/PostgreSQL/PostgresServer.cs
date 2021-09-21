@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Raven.Server.Integrations.PostgreSQL
 {
-    public class PgRvnServer
+    public class PostgresServer
     {
         private readonly RavenServer _server;
         private readonly ConcurrentDictionary<TcpClient, Task> _connections = new();
@@ -19,11 +19,11 @@ namespace Raven.Server.Integrations.PostgreSQL
         private readonly int _processId;
         private readonly int _port;
 
-        public PgRvnServer(RavenServer server)
+        public PostgresServer(RavenServer server)
         {
             _server = server;
             _processId = Process.GetCurrentProcess().Id;
-            _port = 5433;
+            _port = _server.Configuration.Integrations.PostgreSQL.Port;
         }
 
         public void Execute()
