@@ -201,7 +201,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         {
             //using (var jsStrRes = jsValue.Engine.Execute("JSON.stringify").StaticCall(new InternalHandle(ref jsValue, true))) var strRes = jsStrRes.AsString;
             if (jsValue.IsNull) {
-                jsValue.Dispose();
                 return null;
             }
             if (jsValue.IsStringEx())
@@ -222,7 +221,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 for (int i = 0; i < arrayLength; i++)
                 {
                     using (var value = jsValue.GetProperty(i))
-                        array[i++] = GetValue(value);
+                        array[i] = GetValue(value);
                 }
                 return array;
             }
