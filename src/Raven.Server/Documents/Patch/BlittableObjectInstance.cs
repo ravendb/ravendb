@@ -30,12 +30,6 @@ namespace Raven.Server.Documents.Patch
             {
             }
 
-            public override void OnEngineRootedStatusChange(bool isRooted)
-            {
-                ObjCLR.OnEngineRootedStatusChange(isRooted);
-                return;
-            }
-
             public override InternalHandle NamedPropertyGetter(ref string propertyName)
             {
                 return ObjCLR.GetOwnPropertyJs(propertyName);
@@ -153,11 +147,6 @@ namespace Raven.Server.Documents.Patch
             Dispose(false);
         }
 
-
-        public void OnEngineRootedStatusChange(bool isRooted)
-        {
-            _isEngineRooted = isRooted;
-        }
 
         public void Dispose()
         {  
@@ -545,7 +534,6 @@ namespace Raven.Server.Documents.Patch
                 {
                     if (_value.Equals(value))
                         return;
-                    _value.DecAppRooted();
                     _value.Set(value);
                     OnSetValue();
                     _parent.MarkChanged();
@@ -568,10 +556,6 @@ namespace Raven.Server.Documents.Patch
                 if (!_value.IsEmpty) {
                     HandleID = _value.ID;
                     ObjectID = _value.ObjectID;
-
-                    //if (_parent.IsRooted) {
-                        _value.IncAppRooted();
-                    //}
                 }
             }
 
@@ -644,10 +628,6 @@ namespace Raven.Server.Documents.Patch
                 if (_value.IsEmpty && HandleID >= 0)
                     throw new InvalidOperationException($"Property's internal handle is empty on disposal: propertyName={_propertyName}, handleID={HandleID}, objectID={ObjectID}, parentHandleID={_parent.HandleID}, parentObjectID={_parent.ObjectID}");
 #endif                
-
-                //if (_parent.IsRooted) {
-                    _value.DecAppRooted();
-                //}
 
                 if (disposing) {
                     // releasing managed resources
