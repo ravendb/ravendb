@@ -108,6 +108,7 @@ namespace Raven.Server.Documents.Patch
 
             boi.HandleID = jsBinder.ID;
             boi.ObjectID = jsBinder.ObjectID;
+            GC.SuppressFinalize(boi);
 
             return jsBinder;
         }
@@ -144,6 +145,7 @@ namespace Raven.Server.Documents.Patch
             Document doc) : this(javaScriptUtils, parent, blittable, doc.Id, doc.LastModified, doc.ChangeVector)
         {
             _doc = doc;
+            //GC.SuppressFinalize(this); // seems to be ignored here
         }
 
         ~BlittableObjectInstance()
@@ -207,7 +209,7 @@ namespace Raven.Server.Documents.Patch
                 Deletes = null;
                 OwnValues = null;
 
-                GC.SuppressFinalize(this);
+                //GC.SuppressFinalize(this);
             }
 
             _disposed = true;
@@ -265,6 +267,7 @@ namespace Raven.Server.Documents.Patch
             Deletes?.Remove(propertyName);
 
             val = new BlittableObjectProperty(this, propertyName);
+            //GC.SuppressFinalize(val);
 
             if (val.Value.IsEmpty &&
                 DocumentId == null &&
@@ -299,6 +302,7 @@ namespace Raven.Server.Documents.Patch
                 Deletes?.Remove(propertyName);
 
                 val = new BlittableObjectProperty(this, propertyName, jsValue);
+                //GC.SuppressFinalize(val);
                 val.Changed = true;
                 MarkChanged();
                 OwnValues ??= new Dictionary<string, BlittableObjectProperty>(Blittable.Count);
@@ -477,6 +481,7 @@ namespace Raven.Server.Documents.Patch
                 var propertyIndex = Blittable.GetPropertyIndex(propertyName);
 
                 var prop = new BlittableObjectProperty(this, propertyName);
+                //GC.SuppressFinalize(prop);
                 if (propertyIndex == -1)
                 {
                     using (var jsValue = Engine.CreateObject())
@@ -580,6 +585,8 @@ namespace Raven.Server.Documents.Patch
 
                 HandleID = -1;
                 ObjectID = -1;
+
+                GC.SuppressFinalize(this);
             }
 
             public BlittableObjectProperty(BlittableObjectInstance parent, string propertyName, InternalHandle jsValue)
@@ -649,7 +656,7 @@ namespace Raven.Server.Documents.Patch
                     JavaScriptUtils = null;
                     Engine = null;
 
-                    GC.SuppressFinalize(this); 
+                    //GC.SuppressFinalize(this); 
                 }
                 
                 // releasing unmanaged resources
