@@ -828,36 +828,41 @@ namespace FastTests.Corax
         [Fact]
         public void CanGetAllEntries()
         {
-            var entry1 = new IndexSingleEntry
+            var list = new List<IndexSingleEntry>();
+            int i;
+            for (i = 0; i < 1024; ++i)
             {
-                Id = "entry/1",
-                Content = "3"
-            };
-            var entry2 = new IndexEntry
+                list.Add(new IndexSingleEntry()
+                {
+                    Id = $"entry/{i+1}",
+                    Content = i.ToString()
+                });
+            }
+            IndexEntries(list);
+            IndexEntries(new []{ new IndexEntry()
             {
-                Id = "entry/2",
-                Content = new string[] { "4", "2" },
-            };
-            var entry3 = new IndexSingleEntry
-            {
-                Id = "entry/3",
-                Content = "1"
-            };
-
-            IndexEntries(new[] { entry1, entry3 });
-            IndexEntries(new[] { entry2 });
-
+                Id = $"entry/{i+1}"
+            }});
+            list.Add(new IndexSingleEntry(){Id = $"entry/{i+1}"});
+            
             using var searcher = new IndexSearcher(Env);
             {
                 var all = searcher.AllEntries();
-                
-                Span<long> ids = stackalloc long[2];
-                Assert.Equal(2, all.Fill(ids));
-                Assert.Equal(1, all.Fill(ids));
-                Assert.Equal(0, all.Fill(ids));
+                var results = new List<string>();
+                int read;
+                Span<long> ids = stackalloc long[256];
+                while ((read = all.Fill(ids)) != 0)
+                {
+                    for(i = 0; i < read; ++i)
+                        results.Add(searcher.GetIdentityFor(ids[i]));
+                }
+                results.Sort();
+                list.Sort((x,y) => x.Id.CompareTo(y.Id));
+                Assert.Equal(list.Count, results.Count);
+                for (i = 0; i < all.Count; ++i)
+                    Assert.Equal(list[i].Id, results[i]);
             }
         }
-
         
         [Fact]
         public void SimpleSortedMatchStatement()

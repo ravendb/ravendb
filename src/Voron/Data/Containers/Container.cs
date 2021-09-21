@@ -283,37 +283,42 @@ namespace Voron.Data.Containers
             var set = GetAllPagesSet(llt, containerId);
             using var it = set.Iterate();
             var list = new List<long>();
+            var itemsLeftOnCurrentPage = 0;
+            var count = 0;
+            var offset = 0;
             if (it.Seek(0) == false)
                 return list;
             Span<long> items = stackalloc long[256];
+
             do
             {
                 var page = llt.GetPage(it.Current);
-                int offset = 0;
-                int count;
+                offset = 0;
                 do
                 {
-                    count = GetEntriesInto(containerId, offset, page, items);
-                    for (int i = 0; i < count; i++)
-                    {
+                    count = GetEntriesInto(containerId, offset, page, items, 0, out itemsLeftOnCurrentPage);
+                    
+                    for(int i = 0; i < count; ++i)
                         list.Add(items[i]);
-                    }
+                    
                     offset += count;
-                } while (count != items.Length);
+                    //need read to the end of page
+                } while (itemsLeftOnCurrentPage > 0);
+                
             } while (it.MoveNext());
 
             return list;
         }
 
-        public static int GetEntriesInto(long containerId, int offset, Page page, Span<long> ids)
+        public static int GetEntriesInto(long containerId, int offset, Page page, Span<long> ids, int writingBufferOffset, out int itemsLeftOnCurrentPage)
         {
             var results = 0;
             if (page.IsOverflow)
             {
                 ids[results++] = page.PageNumber * Constants.Storage.PageSize;
+                itemsLeftOnCurrentPage = 0;
                 return results;
             }
-
             var container = new Container(page);
             int numberOfOffsets = container.Offsets.Length;
             int i = offset;
@@ -321,11 +326,12 @@ namespace Voron.Data.Containers
             if (page.PageNumber == containerId)
                 i += 2; // skip the free list and all pages list entries
 
-            for (; i < numberOfOffsets && results < ids.Length; i++)
+            for (; writingBufferOffset < ids.Length && i < numberOfOffsets; i++, results++)
             {
-                ids[results++] = page.PageNumber * Constants.Storage.PageSize + IndexToOffset(i);
+                ids[writingBufferOffset++] = page.PageNumber * Constants.Storage.PageSize + IndexToOffset(i);
             }
 
+            itemsLeftOnCurrentPage = numberOfOffsets - i;
             return results;
         }
 
