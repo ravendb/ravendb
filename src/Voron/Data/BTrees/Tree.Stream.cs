@@ -363,15 +363,11 @@ namespace Voron.Data.BTrees
                     if (buffer.Pointer != page.Pointer)
                         continue;
 
-                    if (buffer.OriginalSize != null && buffer.OriginalSize == 0)
-                    {
-                        // Pages that are marked with OriginalSize = 0 were separated from a larger allocation, we cannot free them directly.
-                        // The first page of the section will be returned and when it will be freed, all the other parts will be freed as well.
+                    if (CryptoPager.CanReturnBuffer(buffer) == false)
                         return;
-                    }
 
                     _llt._pageLocator.Reset(page.PageNumber);
-                    pagerStates.Remove(page.PageNumber);
+                    pagerStates.RemoveBuffer(page.PageNumber);
 
                     var cryptoPager = (CryptoPager)pager;
                     cryptoPager.ReturnBuffer(buffer);
