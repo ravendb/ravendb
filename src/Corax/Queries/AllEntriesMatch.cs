@@ -14,6 +14,7 @@ namespace Corax.Queries
         private readonly long _count;
         private Set.Iterator _entriesPagesIt;
         private int _offset;
+        private int _itemsLeftOnCurrentPage;
         private Page _currentPage;
         private long _entriesContainerId;
 
@@ -24,6 +25,7 @@ namespace Corax.Queries
             _entriesContainerId = tx.OpenContainer(IndexWriter.EntriesContainerSlice);
             _entriesPagesIt = Container.GetAllPagesSet(tx.LowLevelTransaction, _entriesContainerId).Iterate();
             _offset = 0;
+            _itemsLeftOnCurrentPage = 0;
             _currentPage = new Page(null);
         }
 
@@ -34,7 +36,7 @@ namespace Corax.Queries
             var results = 0;
             while (true)
             {
-                if (_currentPage.IsValid == false)
+                if (_currentPage.IsValid == false || _itemsLeftOnCurrentPage == 0)
                 {
                     if (_entriesPagesIt.MoveNext() == false)
                     {
@@ -47,7 +49,7 @@ namespace Corax.Queries
             
                 while (results < matches.Length)
                 {
-                    var read = Container.GetEntriesInto(_entriesContainerId, _offset, _currentPage, matches);
+                    var read = Container.GetEntriesInto(_entriesContainerId, _offset, _currentPage, matches, results, out _itemsLeftOnCurrentPage);
                     if (read == 0)
                     {
                         _currentPage = new Page(null);
@@ -57,10 +59,8 @@ namespace Corax.Queries
                     _offset += read;
                 }
 
-                if (results < matches.Length)
-                    continue;
-                
-                return results;
+                if (results == matches.Length)
+                    return results;
             }
         }
 
