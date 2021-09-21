@@ -1,6 +1,7 @@
 ﻿using System;
 using Lucene.Net.Store;
 using Raven.Client;
+using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide.Context;
@@ -14,8 +15,8 @@ namespace Raven.Server.Documents.Queries.Results
         private readonly DocumentsOperationContext _context;
         private QueryTimingsScope _storageScope;
 
-        public MapQueryResultRetriever(DocumentDatabase database, IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsStorage documentsStorage, DocumentsOperationContext context, FieldsToFetch fieldsToFetch, IncludeDocumentsCommand includeDocumentsCommand, IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand, IncludeRevisionsCommand includeRevisionsCommand )
-            : base(database, query, queryTimings, fieldsToFetch, documentsStorage, context, false, includeDocumentsCommand, includeCompareExchangeValuesCommand, includeRevisionsCommand: includeRevisionsCommand)
+        public MapQueryResultRetriever(DocumentDatabase database, IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsStorage documentsStorage, DocumentsOperationContext context, SearchEngineType searchEngineType, FieldsToFetch fieldsToFetch, IncludeDocumentsCommand includeDocumentsCommand, IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand, IncludeRevisionsCommand includeRevisionsCommand )
+            : base(database, query, queryTimings, searchEngineType, fieldsToFetch, documentsStorage, context, false, includeDocumentsCommand, includeCompareExchangeValuesCommand, includeRevisionsCommand: includeRevisionsCommand)
         {
             _context = context;
         }
@@ -26,11 +27,16 @@ namespace Raven.Server.Documents.Queries.Results
             using (RetrieverScope?.Start())
             {
                 string id = string.Empty;
-                if (retrieverInput.DocumentId != string.Empty)
-                    id = retrieverInput.DocumentId;
-                else if (retrieverInput.LuceneDocument != null && TryGetKey(ref retrieverInput, out id) == false)
+                switch (SearchEngineType)
                 {
-                    throw new InvalidOperationException($"Could not extract '{Constants.Documents.Indexing.Fields.DocumentIdFieldName}' from index.");
+                    case SearchEngineType.Corax:
+                        id = retrieverInput.DocumentId;
+                        break;
+                    case SearchEngineType.None:
+                    case SearchEngineType.Lucene:
+                        if (TryGetKey(ref retrieverInput, out id) == false)
+                            throw new InvalidOperationException($"Could not extract '{Constants.Documents.Indexing.Fields.DocumentIdFieldName}' from index.");
+                        break;
                 }
 
                 if (FieldsToFetch.IsProjection)

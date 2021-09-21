@@ -54,7 +54,7 @@ namespace Raven.Server.Documents.Queries.Results
         public RetrieverInput(IndexEntryReader coraxEntry, string id)
         {
             CoraxEntry = coraxEntry;
-            LuceneDocument= null;
+            LuceneDocument = null;
             State = null;
             Score = null;
             DocumentId = id;

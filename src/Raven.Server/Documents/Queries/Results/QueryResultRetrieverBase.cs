@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using Corax;
 using Jint.Native;
@@ -52,6 +53,9 @@ namespace Raven.Server.Documents.Queries.Results
 
         protected readonly QueryTimingsScope RetrieverScope;
 
+        protected readonly SearchEngineType SearchEngineType;
+
+        
         private QueryTimingsScope _projectionScope;
         private QueryTimingsScope _projectionStorageScope;
         private QueryTimingsScope _functionScope;
@@ -60,7 +64,7 @@ namespace Raven.Server.Documents.Queries.Results
         private TimeSeriesRetriever _timeSeriesRetriever;
 
         protected QueryResultRetrieverBase(
-            DocumentDatabase database, IndexQueryServerSide query, QueryTimingsScope queryTimings, FieldsToFetch fieldsToFetch, DocumentsStorage documentsStorage,
+            DocumentDatabase database, IndexQueryServerSide query, QueryTimingsScope queryTimings, SearchEngineType searchEngineType, FieldsToFetch fieldsToFetch, DocumentsStorage documentsStorage,
             JsonOperationContext context, bool reduceResults, IncludeDocumentsCommand includeDocumentsCommand,
             IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand, IncludeRevisionsCommand includeRevisionsCommand)
         {
@@ -70,7 +74,8 @@ namespace Raven.Server.Documents.Queries.Results
             _includeDocumentsCommand = includeDocumentsCommand;
             _includeRevisionsCommand = includeRevisionsCommand;
             _includeCompareExchangeValuesCommand = includeCompareExchangeValuesCommand;
-
+            SearchEngineType = searchEngineType;
+            
             ValidateFieldsToFetch(fieldsToFetch);
             FieldsToFetch = fieldsToFetch;
 
@@ -142,7 +147,7 @@ namespace Raven.Server.Documents.Queries.Results
 
                 Dictionary<string, FieldsToFetch.FieldToFetch> fields = null;
 
-                if (retrieverInput.LuceneDocument != null)
+                if (SearchEngineType == SearchEngineType.Lucene)
                 {
 
                     if (FieldsToFetch.ExtractAllFromIndex)
@@ -173,14 +178,19 @@ namespace Raven.Server.Documents.Queries.Results
                 }
                 foreach (var fieldToFetch in fields.Values)
                 {
-                    //todo maciej: make it simpler
-                    if (retrieverInput.DocumentId == string.Empty)
+                    switch (SearchEngineType)
                     {
-                        if (TryExtractValueFromIndex(fieldToFetch, retrieverInput.LuceneDocument, result, retrieverInput.State))
-                            continue;
+                        case SearchEngineType.Corax:
+                            if(TryExtractValueFromIndexCorax(fieldToFetch, ref retrieverInput, result))
+                                continue;
+                            break;
+                        case SearchEngineType.Lucene:
+                            if (LuceneTryExtractValueFromIndex(fieldToFetch, retrieverInput.LuceneDocument, result, retrieverInput.State))
+                                continue;
+                            break;
+                        default:
+                            throw new InvalidDataException($"Unknown {nameof(Client.Documents.Indexes.SearchEngineType)}.");
                     }
-                    else if(TryExtractValueFromIndexCorax(fieldToFetch, ref retrieverInput, result))
-                        continue;
                     
                     if (FieldsToFetch.Projection.MustExtractFromIndex)
                     {
@@ -415,7 +425,7 @@ namespace Raven.Server.Documents.Queries.Results
             return doc;
         }
 
-        private bool TryExtractValueFromIndex(FieldsToFetch.FieldToFetch fieldToFetch, Lucene.Net.Documents.Document indexDocument, DynamicJsonValue toFill, IState state)
+        private bool LuceneTryExtractValueFromIndex(FieldsToFetch.FieldToFetch fieldToFetch, Lucene.Net.Documents.Document indexDocument, DynamicJsonValue toFill, IState state)
         {
             if (fieldToFetch.CanExtractFromIndex == false)
                 return false;
@@ -584,7 +594,6 @@ namespace Raven.Server.Documents.Queries.Results
                 return TryGetFieldValueFromDocument(document, fieldToFetch, out value);
             }
 
-            //todo maciej do it better retrieverInput.LuceneDocument != null &&
             if (fieldToFetch.QueryField.Function != null)
             {
                 var args = new object[fieldToFetch.QueryField.FunctionArgs.Length + 1];
@@ -699,24 +708,27 @@ namespace Raven.Server.Documents.Queries.Results
                 }
                 else if (fieldToFetch.CanExtractFromIndex)
                 {
-                    if (retrieverInput.LuceneDocument != null)
+                    switch (SearchEngineType)
                     {
-                        var fields = retrieverInput.LuceneDocument.GetFields(fieldToFetch.QueryField.SourceAlias);
-                        if (fields != null && fields.Length > 0)
-                        {
-                            foreach (var field in fields)
+                        case SearchEngineType.Lucene:
+                            var fields = retrieverInput.LuceneDocument.GetFields(fieldToFetch.QueryField.SourceAlias);
+                            if (fields != null && fields.Length > 0)
                             {
-                                if (field == null)
-                                    continue;
+                                foreach (var field in fields)
+                                {
+                                    if (field == null)
+                                        continue;
 
-                                var fieldValue = ConvertType(_context, field, GetFieldType(field.Name, retrieverInput.LuceneDocument), retrieverInput.State);
-                                _loadedDocumentIds.Add(fieldValue.ToString());
+                                    var fieldValue = ConvertType(_context, field, GetFieldType(field.Name, retrieverInput.LuceneDocument), retrieverInput.State);
+                                    _loadedDocumentIds.Add(fieldValue.ToString());
+                                }
                             }
-                        }
-                    }
-                    else
-                    {
-                        throw new NotImplementedException("Source");
+                            break;
+                        case SearchEngineType.Corax:
+                            throw new NotImplementedException("Extraction from Corax index is not supported yet.");
+                            break;
+                        case SearchEngineType.None:
+                            throw new InvalidDataException($"Unknown {nameof(Client.Documents.Indexes.SearchEngineType)}.");
                     }
                 }
                 else
