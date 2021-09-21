@@ -40,6 +40,7 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Https;
+using Raven.Server.Integrations.PostgreSQL;
 using Raven.Server.Json;
 using Raven.Server.Monitoring.Snmp;
 using Raven.Server.NotificationCenter.Notifications;
@@ -302,6 +303,7 @@ namespace Raven.Server
                 ServerStore.TriggerDatabases();
 
                 StartSnmp();
+                StartPgRvnServer();
 
                 if (Configuration.Server.CpuCreditsBase != null ||
                     Configuration.Server.CpuCreditsMax != null ||
@@ -1721,6 +1723,12 @@ namespace Raven.Server
             SnmpWatcher.Execute();
         }
 
+        private void StartPgRvnServer()
+        {
+            PgRvnServer = new PgRvnServer(this);
+            PgRvnServer.Execute();
+        }
+
         public TcpListenerStatus StartTcpListener()
         {
             var port = 0;
@@ -2269,6 +2277,7 @@ namespace Raven.Server
 
         private TcpListenerStatus _tcpListenerStatus;
         public SnmpWatcher SnmpWatcher;
+        public PgRvnServer PgRvnServer;
         private Timer _refreshClusterCertificate;
         private HttpsConnectionMiddleware _httpsConnectionMiddleware;
         private PoolOfThreads.LongRunningWork _cpuCreditsMonitoring;
