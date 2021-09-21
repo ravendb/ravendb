@@ -87,7 +87,7 @@ namespace Raven.Client.Documents.Operations.ConnectionStrings
         {
             var ravenConnections = new DynamicJsonValue();
             var sqlConnections = new DynamicJsonValue();
-            var elasticsearchConnections = new DynamicJsonValue();
+            var elasticSearchConnections = new DynamicJsonValue();
             var olapConnections = new DynamicJsonValue();
 
             foreach (var kvp in RavenConnectionStrings)
@@ -100,7 +100,7 @@ namespace Raven.Client.Documents.Operations.ConnectionStrings
             }
             foreach (var kvp in ElasticSearchConnectionStrings)
             {
-                elasticsearchConnections[kvp.Key] = kvp.Value.ToJson();
+                elasticSearchConnections[kvp.Key] = kvp.Value.ToJson();
             }
             foreach (var kvp in OlapConnectionStrings)
             {
@@ -112,7 +112,7 @@ namespace Raven.Client.Documents.Operations.ConnectionStrings
                 [nameof(RavenConnectionStrings)] = ravenConnections,
                 [nameof(SqlConnectionStrings)] = sqlConnections,
                 [nameof(OlapConnectionStrings)] = olapConnections,
-                [nameof(ElasticSearchConnectionStrings)] = elasticsearchConnections
+                [nameof(ElasticSearchConnectionStrings)] = elasticSearchConnections
             };
         }
     }

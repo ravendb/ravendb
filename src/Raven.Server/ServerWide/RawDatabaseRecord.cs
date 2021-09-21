@@ -468,7 +468,7 @@ namespace Raven.Server.ServerWide
             }
         }
         
-        private List<ElasticSearchEtlConfiguration> _elasticsearchEtls;
+        private List<ElasticSearchEtlConfiguration> _elasticSearchEtls;
 
         public List<ElasticSearchEtlConfiguration> ElasticSearchEtls
         {
@@ -477,17 +477,17 @@ namespace Raven.Server.ServerWide
                 if (_materializedRecord != null)
                     return _materializedRecord.ElasticSearchEtls;
 
-                if (_elasticsearchEtls == null)
+                if (_elasticSearchEtls == null)
                 {
-                    _elasticsearchEtls = new List<ElasticSearchEtlConfiguration>();
+                    _elasticSearchEtls = new List<ElasticSearchEtlConfiguration>();
                     if (_record.TryGet(nameof(DatabaseRecord.ElasticSearchEtls), out BlittableJsonReaderArray bjra) && bjra != null)
                     {
                         foreach (BlittableJsonReaderObject element in bjra)
-                            _elasticsearchEtls.Add(JsonDeserializationCluster.ElasticSearchEtlConfiguration(element));
+                            _elasticSearchEtls.Add(JsonDeserializationCluster.ElasticSearchEtlConfiguration(element));
                     }
                 }
 
-                return _elasticsearchEtls;
+                return _elasticSearchEtls;
             }
         }
 
@@ -816,7 +816,7 @@ namespace Raven.Server.ServerWide
             }
         }
         
-        private Dictionary<string, ElasticSearchConnectionString> _elasticsearchConnectionStrings;
+        private Dictionary<string, ElasticSearchConnectionString> _elasticSearchConnectionStrings;
 
         public Dictionary<string, ElasticSearchConnectionString> ElasticSearchConnectionStrings
         {
@@ -825,9 +825,9 @@ namespace Raven.Server.ServerWide
                 if (_materializedRecord != null)
                     return _materializedRecord.ElasticSearchConnectionStrings;
 
-                if (_elasticsearchConnectionStrings == null)
+                if (_elasticSearchConnectionStrings == null)
                 {
-                    _elasticsearchConnectionStrings = new Dictionary<string, ElasticSearchConnectionString>();
+                    _elasticSearchConnectionStrings = new Dictionary<string, ElasticSearchConnectionString>();
                     if (_record.TryGet(nameof(DatabaseRecord.ElasticSearchConnectionStrings), out BlittableJsonReaderObject obj) && obj != null)
                     {
                         var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
@@ -839,12 +839,12 @@ namespace Raven.Server.ServerWide
                                 continue;
 
                             if (propertyDetails.Value is BlittableJsonReaderObject bjro)
-                                _elasticsearchConnectionStrings[propertyDetails.Name] = JsonDeserializationCluster.ElasticSearchConnectionString(bjro);
+                                _elasticSearchConnectionStrings[propertyDetails.Name] = JsonDeserializationCluster.ElasticSearchConnectionString(bjro);
                         }
                     }
                 }
 
-                return _elasticsearchConnectionStrings;
+                return _elasticSearchConnectionStrings;
             }
         }
 

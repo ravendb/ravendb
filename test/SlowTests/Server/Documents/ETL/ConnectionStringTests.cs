@@ -41,13 +41,13 @@ namespace SlowTests.Server.Documents.ETL
                 var result1 = store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString));
                 Assert.NotNull(result1.RaftCommandIndex);
                 
-                var elasticsearchConnectionString = new ElasticSearchConnectionString
+                var elasticSearchConnectionString = new ElasticSearchConnectionString
                 {
                     Name = "ElasticSearchConnectionString",
                     Nodes = new[]{"http://127.0.0.1:8080" },
                 };
 
-                var result2 = store.Maintenance.Send(new PutConnectionStringOperation<ElasticSearchConnectionString>(elasticsearchConnectionString));
+                var result2 = store.Maintenance.Send(new PutConnectionStringOperation<ElasticSearchConnectionString>(elasticSearchConnectionString));
                 Assert.NotNull(result2.RaftCommandIndex);
 
                 DatabaseRecord record;
@@ -67,14 +67,14 @@ namespace SlowTests.Server.Documents.ETL
                 Assert.Equal(sqlConnectionString.ConnectionString, record.SqlConnectionStrings["SqlConnectionString"].ConnectionString);
                 
                 Assert.True(record.ElasticSearchConnectionStrings.ContainsKey("ElasticSearchConnectionString"));
-                Assert.Equal(elasticsearchConnectionString.Name , record.ElasticSearchConnectionStrings["ElasticSearchConnectionString"].Name);
-                Assert.Equal(elasticsearchConnectionString.Nodes, record.ElasticSearchConnectionStrings["ElasticSearchConnectionString"].Nodes);
+                Assert.Equal(elasticSearchConnectionString.Name , record.ElasticSearchConnectionStrings["ElasticSearchConnectionString"].Name);
+                Assert.Equal(elasticSearchConnectionString.Nodes, record.ElasticSearchConnectionStrings["ElasticSearchConnectionString"].Nodes);
 
                 var result3 = store.Maintenance.Send(new RemoveConnectionStringOperation<RavenConnectionString>(ravenConnectionString));
                 Assert.NotNull(result3.RaftCommandIndex);
                 var result4 = store.Maintenance.Send(new RemoveConnectionStringOperation<SqlConnectionString>(sqlConnectionString));
                 Assert.NotNull(result4.RaftCommandIndex);
-                var result5 = store.Maintenance.Send(new RemoveConnectionStringOperation<ElasticSearchConnectionString>(elasticsearchConnectionString));
+                var result5 = store.Maintenance.Send(new RemoveConnectionStringOperation<ElasticSearchConnectionString>(elasticSearchConnectionString));
                 Assert.NotNull(result5.RaftCommandIndex);
 
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -113,13 +113,13 @@ namespace SlowTests.Server.Documents.ETL
                 var result2 = store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString));
                 Assert.NotNull(result2.RaftCommandIndex);
                 
-                var elasticConnectionString = new ElasticSearchConnectionString
+                var elasticSearchConnectionString = new ElasticSearchConnectionString
                 {
                     Name = "ElasticConnectionString",
                     Nodes = new[]{"http://127.0.0.1:8080" },
                 };
                 
-                var result3 = store.Maintenance.Send(new PutConnectionStringOperation<ElasticSearchConnectionString>(elasticConnectionString));
+                var result3 = store.Maintenance.Send(new PutConnectionStringOperation<ElasticSearchConnectionString>(elasticSearchConnectionString));
                 Assert.NotNull(result3.RaftCommandIndex);
 
                 //update url
@@ -135,8 +135,8 @@ namespace SlowTests.Server.Documents.ETL
                 Assert.NotNull(result6.RaftCommandIndex);
                 
                 //update url
-                elasticConnectionString.Nodes = new[]{"http://127.0.0.1:8081"};
-                var result7 = store.Maintenance.Send(new PutConnectionStringOperation<ElasticSearchConnectionString>(elasticConnectionString));
+                elasticSearchConnectionString.Nodes = new[]{"http://127.0.0.1:8081"};
+                var result7 = store.Maintenance.Send(new PutConnectionStringOperation<ElasticSearchConnectionString>(elasticSearchConnectionString));
                 Assert.NotNull(result7.RaftCommandIndex);
 
                 DatabaseRecord record;
@@ -165,7 +165,7 @@ namespace SlowTests.Server.Documents.ETL
             {
                 var ravenConnectionStrings = new List<RavenConnectionString>();
                 var sqlConnectionStrings = new List<SqlConnectionString>();
-                var elasticConnectionStrings = new List<ElasticSearchConnectionString>();
+                var elasticSearchConnectionStrings = new List<ElasticSearchConnectionString>();
                 for (var i = 0; i < 5; i++)
                 {
                     var ravenConnectionStr = new RavenConnectionString()
@@ -187,7 +187,7 @@ namespace SlowTests.Server.Documents.ETL
 
                     ravenConnectionStrings.Add(ravenConnectionStr);
                     sqlConnectionStrings.Add(sqlConnectionStr);
-                    elasticConnectionStrings.Add(elasticConnectionStr);
+                    elasticSearchConnectionStrings.Add(elasticConnectionStr);
 
                     var result1 = store.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(ravenConnectionStr));
                     Assert.NotNull(result1.RaftCommandIndex);
@@ -208,7 +208,7 @@ namespace SlowTests.Server.Documents.ETL
                     Assert.Equal(sql?.ConnectionString, sqlConnectionStrings[i].ConnectionString);
                     
                     result.ElasticSearchConnectionStrings.TryGetValue($"ElasticConnectionString{i}", out var elastic);
-                    Assert.Equal(elastic?.Nodes, elasticConnectionStrings[i].Nodes);
+                    Assert.Equal(elastic?.Nodes, elasticSearchConnectionStrings[i].Nodes);
 
                     result.RavenConnectionStrings.TryGetValue($"RavenConnectionString{i}", out var raven);
                     Assert.Equal(raven?.TopologyDiscoveryUrls, ravenConnectionStrings[i].TopologyDiscoveryUrls);

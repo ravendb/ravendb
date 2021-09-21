@@ -645,7 +645,7 @@ namespace Raven.Server.Web.System
                 Dictionary<string, RavenConnectionString> ravenConnectionStrings;
                 Dictionary<string, SqlConnectionString> sqlConnectionStrings;
                 Dictionary<string, OlapConnectionString> olapConnectionStrings;
-                Dictionary<string, ElasticSearchConnectionString> elasticsearchConnectionStrings;
+                Dictionary<string, ElasticSearchConnectionString> elasticSearchConnectionStrings;
 
                 using (context.OpenReadTransaction())
                 using (var rawRecord = ServerStore.Cluster.ReadRawDatabaseRecord(context, Database.Name))
@@ -659,14 +659,14 @@ namespace Raven.Server.Web.System
                             throw new NotSupportedException($"Unknown connection string type: {connectionStringType}");
 
 
-                        (ravenConnectionStrings, sqlConnectionStrings, olapConnectionStrings, elasticsearchConnectionStrings) = GetConnectionString(rawRecord, connectionStringName, connectionStringType);
+                        (ravenConnectionStrings, sqlConnectionStrings, olapConnectionStrings, elasticSearchConnectionStrings) = GetConnectionString(rawRecord, connectionStringName, connectionStringType);
                     }
                     else
                     {
                         ravenConnectionStrings = rawRecord.RavenConnectionStrings;
                         sqlConnectionStrings = rawRecord.SqlConnectionStrings;
                         olapConnectionStrings = rawRecord.OlapConnectionString;
-                        elasticsearchConnectionStrings = rawRecord.ElasticSearchConnectionStrings;
+                        elasticSearchConnectionStrings = rawRecord.ElasticSearchConnectionStrings;
                     }
                 }
 
@@ -677,7 +677,7 @@ namespace Raven.Server.Web.System
                         RavenConnectionStrings = ravenConnectionStrings,
                         SqlConnectionStrings = sqlConnectionStrings,
                         OlapConnectionStrings = olapConnectionStrings,
-                        ElasticSearchConnectionStrings = elasticsearchConnectionStrings
+                        ElasticSearchConnectionStrings = elasticSearchConnectionStrings
                     };
                     context.Write(writer, result.ToJson());
                 }
@@ -690,7 +690,7 @@ namespace Raven.Server.Web.System
             var ravenConnectionStrings = new Dictionary<string, RavenConnectionString>();
             var sqlConnectionStrings = new Dictionary<string, SqlConnectionString>();
             var olapConnectionStrings = new Dictionary<string, OlapConnectionString>();
-            var elasticsearchConnectionStrings = new Dictionary<string, ElasticSearchConnectionString>();
+            var elasticSearchConnectionStrings = new Dictionary<string, ElasticSearchConnectionString>();
 
             switch (connectionStringType)
             {
@@ -725,7 +725,7 @@ namespace Raven.Server.Web.System
                     var recordElasticConnectionStrings = rawRecord.ElasticSearchConnectionStrings;
                     if (recordElasticConnectionStrings != null && recordElasticConnectionStrings.TryGetValue(connectionStringName, out var elasticConnectionString))
                     {
-                        elasticsearchConnectionStrings.TryAdd(connectionStringName, elasticConnectionString);
+                        elasticSearchConnectionStrings.TryAdd(connectionStringName, elasticConnectionString);
                     }
 
                     break;
@@ -734,7 +734,7 @@ namespace Raven.Server.Web.System
                     throw new NotSupportedException($"Unknown connection string type: {connectionStringType}");
             }
 
-            return (ravenConnectionStrings, sqlConnectionStrings, olapConnectionStrings, elasticsearchConnectionStrings);
+            return (ravenConnectionStrings, sqlConnectionStrings, olapConnectionStrings, elasticSearchConnectionStrings);
         }
 
         [RavenAction("/databases/*/admin/connection-strings", "PUT", AuthorizationStatus.DatabaseAdmin)]

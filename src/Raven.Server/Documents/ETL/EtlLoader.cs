@@ -210,7 +210,7 @@ namespace Raven.Server.Documents.ETL
                 SqlEtlConfiguration sqlConfig = null;
                 RavenEtlConfiguration ravenConfig = null;
                 OlapEtlConfiguration olapConfig = null;
-                ElasticSearchEtlConfiguration elasticsearchConfig = null;
+                ElasticSearchEtlConfiguration elasticSearchConfig = null;
 
                 var connectionStringNotFound = false;
 
@@ -241,9 +241,9 @@ namespace Raven.Server.Documents.ETL
                             connectionStringNotFound = true;
                         break;
                     case EtlType.ElasticSearch:
-                        elasticsearchConfig = config as ElasticSearchEtlConfiguration;
-                        if (_databaseRecord.ElasticSearchConnectionStrings.TryGetValue(config.ConnectionStringName, out var elasticsearchConnection))
-                            elasticsearchConfig.Initialize(elasticsearchConnection);
+                        elasticSearchConfig = config as ElasticSearchEtlConfiguration;
+                        if (_databaseRecord.ElasticSearchConnectionStrings.TryGetValue(config.ConnectionStringName, out var elasticSearchConnection))
+                            elasticSearchConfig.Initialize(elasticSearchConnection);
                         else
                             connectionStringNotFound = true;
 
@@ -284,8 +284,8 @@ namespace Raven.Server.Documents.ETL
                     if (olapConfig != null)
                         process = new OlapEtl(transform, olapConfig, _database, _serverStore);
 
-                    if (elasticsearchConfig != null)
-                        process = new ElasticSearchEtl(transform, elasticsearchConfig, _database, _serverStore);
+                    if (elasticSearchConfig != null)
+                        process = new ElasticSearchEtl(transform, elasticSearchConfig, _database, _serverStore);
 
                     yield return process;
                 }
@@ -555,12 +555,12 @@ namespace Raven.Server.Documents.ETL
 
                             break;
                         }
-                    case ElasticSearchEtl elasticsearchEtl:
+                    case ElasticSearchEtl elasticSearchEtl:
                         {
                             ElasticSearchEtlConfiguration existing = null;
                             foreach (var config in myElasticSearchEtl)
                             {
-                                var diff = elasticsearchEtl.Configuration.Compare(config);
+                                var diff = elasticSearchEtl.Configuration.Compare(config);
 
                                 if (diff == EtlConfigurationCompareDifferences.None)
                                 {
@@ -644,12 +644,12 @@ namespace Raven.Server.Documents.ETL
                 if (existing != null)
                     differences = sqlEtl.Configuration.Compare(existing, transformationDiffs);
             }
-            else if (process is ElasticSearchEtl elasticsearchEtl)
+            else if (process is ElasticSearchEtl elasticSearchEtl)
             {
-                var existing = myElasticSearchEtl.FirstOrDefault(x => x.Name.Equals(elasticsearchEtl.ConfigurationName, StringComparison.OrdinalIgnoreCase));
+                var existing = myElasticSearchEtl.FirstOrDefault(x => x.Name.Equals(elasticSearchEtl.ConfigurationName, StringComparison.OrdinalIgnoreCase));
 
                 if (existing != null)
-                    differences = elasticsearchEtl.Configuration.Compare(existing, transformationDiffs);
+                    differences = elasticSearchEtl.Configuration.Compare(existing, transformationDiffs);
             }
             else
             {
@@ -712,7 +712,7 @@ namespace Raven.Server.Documents.ETL
             else
             {
                 var sqlEtls = _databaseRecord.SqlEtls;
-                var elasticsearchEtls = _databaseRecord.ElasticSearchEtls;
+                var elasticSearchEtls = _databaseRecord.ElasticSearchEtls;
 
                 foreach (var config in ravenEtls)
                     MarkDocumentTombstonesForDeletion(config, lastProcessedTombstones);
@@ -720,7 +720,7 @@ namespace Raven.Server.Documents.ETL
                 foreach (var config in sqlEtls)
                     MarkDocumentTombstonesForDeletion(config, lastProcessedTombstones);
 
-                foreach (var config in elasticsearchEtls)
+                foreach (var config in elasticSearchEtls)
                     MarkDocumentTombstonesForDeletion(config, lastProcessedTombstones);
             }
             return lastProcessedTombstones;

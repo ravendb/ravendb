@@ -1142,17 +1142,17 @@ namespace Raven.Server.Documents.ETL
                         }
 
                     case EtlType.ElasticSearch:
-                        using (var elasticsearchEtl = new ElasticSearchEtl(testScript.Configuration.Transforms[0], testScript.Configuration as ElasticSearchEtlConfiguration, database, database.ServerStore))
-                        using (elasticsearchEtl.EnterTestMode(out debugOutput))
+                        using (var elasticSearchEtl = new ElasticSearchEtl(testScript.Configuration.Transforms[0], testScript.Configuration as ElasticSearchEtlConfiguration, database, database.ServerStore))
+                        using (elasticSearchEtl.EnterTestMode(out debugOutput))
                         {
-                            elasticsearchEtl.EnsureThreadAllocationStats();
+                            elasticSearchEtl.EnsureThreadAllocationStats();
 
-                            var elasticsearchItem = testScript.IsDelete ? new ElasticSearchItem(tombstone, docCollection) : new ElasticSearchItem(document, docCollection);
+                            var elasticSearchItem = testScript.IsDelete ? new ElasticSearchItem(tombstone, docCollection) : new ElasticSearchItem(document, docCollection);
 
-                            var results = elasticsearchEtl.Transform(new[] { elasticsearchItem }, context, new EtlStatsScope(new EtlRunStats()),
+                            var results = elasticSearchEtl.Transform(new[] { elasticSearchItem }, context, new EtlStatsScope(new EtlRunStats()),
                                 new EtlProcessState());
 
-                            var result = elasticsearchEtl.RunTest(results);
+                            var result = elasticSearchEtl.RunTest(results);
                             result.DebugOutput = debugOutput;
 
                             return result;
