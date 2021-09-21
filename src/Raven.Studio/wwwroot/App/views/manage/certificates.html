@@ -288,10 +288,16 @@
                                 <label class="control-label">
                                     Expire in
                                 </label>
-                                <div class="input-group btn-block">
-                                    <input type="number" min="1" class="form-control" data-bind="numericInput: validityPeriod"
-                                           placeholder="Validity period (Default: 60)" />
-                                    <div class="input-group-addon">months</div>
+                                <div class="input-group btn-block" data-bind="validationOptions: { insertMessages: false }">
+                                    <input type="number" min="1" class="form-control" data-bind="numericInput: validityPeriod" placeholder="Validity period (Default: 60 months)" />
+                                    <button class="btn btn-default dropdown-toggle input-group-addon" data-toggle="dropdown">
+                                        <span data-bind="text: validityPeriodUnitsLabel"></span> <i class="caret"></i>
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li data-bind="foreach: constructor.allTimeUnits">
+                                            <a href="#" data-bind="text: label, click: _.partial($parent.changeValidityPeriodUnits, value)"></a>
+                                        </li>
+                                    </ul>
                                 </div>
                             </div>
                             <div class="bg-info padding padding-sm flex-horizontal" data-bind="visible: thumbprints().length > 1">
