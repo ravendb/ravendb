@@ -143,12 +143,14 @@ namespace Raven.Server.Extensions
 
         public static void ResetCallStack(this V8Engine engine)
         {
-            // TODO ??? should be done something
+            engine?.ForceV8GarbageCollection();
+
+            // TODO need something ???
         }
 
         public static void ResetConstraints(this V8Engine engine)
         {
-            // TODO ??? should be done something
+            // TODO need something ???
         }
 
         public static void ExecuteWithReset(this V8Engine engine, string source, string sourceName = "V8.NET", bool throwExceptionOnError = true, int timeout = 0, bool trackReturn = false)

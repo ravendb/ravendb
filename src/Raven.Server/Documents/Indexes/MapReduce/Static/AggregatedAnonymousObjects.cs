@@ -5,6 +5,7 @@ using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Sparrow.Json.Parsing;
 using Raven.Server.Utils;
 using V8.Net;
+using Raven.Server.Documents.Patch;
 
 namespace Raven.Server.Documents.Indexes.MapReduce.Static
 {
@@ -77,9 +78,13 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
                 for (int i = _outputs.Count - 1; i >= 0; i--)
                 {
+                    V8Engine engine = null;
                     if (_outputs[i] is InternalHandle h) {
+                        if (engine == null)
+                            engine = h.Engine;
                         h.Dispose();
                     }
+                    engine?.ForceV8GarbageCollection();
                 }
                 _outputs.Clear();
                 _outputs = null;

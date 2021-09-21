@@ -128,6 +128,7 @@ namespace Raven.Server.Documents.Indexes.Static
                         // we ignore everything else by design, we support only
                         // objects and arrays, anything else is discarded
                     }
+                    _engine.ForceV8GarbageCollection();
                 }
                 else {
                     throw new JavaScriptIndexFuncException($"Failed to execute {MapString}", new Exception($"Entry item is not document: {jsItem.ToString()}"));
