@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Lucene.Net.Store;
 using Raven.Client;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Includes;
@@ -29,7 +30,7 @@ namespace Raven.Server.Documents.Queries.Results
             IncludeDocumentsCommand includeDocumentsCommand,
             IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand,
             IncludeRevisionsCommand includeRevisionsCommand)
-            : base(database, query, queryTimings, fieldsToFetch, documentsStorage, context, false, includeDocumentsCommand, includeCompareExchangeValuesCommand, includeRevisionsCommand)
+            : base(database, query, queryTimings, SearchEngineType.Lucene, fieldsToFetch, documentsStorage, context, false, includeDocumentsCommand, includeCompareExchangeValuesCommand, includeRevisionsCommand)
         {
             _graphQuery = graphQuery;
             _context = context;

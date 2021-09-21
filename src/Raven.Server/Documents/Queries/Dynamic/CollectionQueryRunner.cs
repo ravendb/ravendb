@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Raven.Client;
 using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Server.Documents.Includes;
@@ -145,7 +146,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                 if (pulseReadingTransaction == false)
                 {
-                    var documents = new CollectionQueryEnumerable(Database, Database.DocumentsStorage, fieldsToFetch, collection, query, queryScope, context.Documents, includeDocumentsCommand, includeRevisionsCommand: includeRevisionsCommand, includeCompareExchangeValuesCommand, totalResults);
+                    var documents = new CollectionQueryEnumerable(Database, Database.DocumentsStorage, SearchEngineType.None, fieldsToFetch, collection, query, queryScope, context.Documents, includeDocumentsCommand, includeRevisionsCommand: includeRevisionsCommand, includeCompareExchangeValuesCommand, totalResults);
                     
                     documents.SkippedResults = skippedResults;
                     enumerator = documents.GetEnumerator();
@@ -157,7 +158,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                         {
                             query.Start = state.Start;
                             query.PageSize = state.Take;
-                            var documents = new CollectionQueryEnumerable(Database, Database.DocumentsStorage, fieldsToFetch, collection, query, queryScope, context.Documents, includeDocumentsCommand, includeRevisionsCommand, includeCompareExchangeValuesCommand, totalResults);
+                            var documents = new CollectionQueryEnumerable(Database, Database.DocumentsStorage, SearchEngineType.None, fieldsToFetch, collection, query, queryScope, context.Documents, includeDocumentsCommand, includeRevisionsCommand, includeCompareExchangeValuesCommand, totalResults);
 
                             return documents;
                         },
