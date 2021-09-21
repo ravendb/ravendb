@@ -59,19 +59,19 @@ namespace Raven.Client.Documents.Operations.ETL.ElasticSearch
             json[nameof(Nodes)] = new DynamicJsonArray(Nodes);
             json[nameof(Authentication)] = Authentication == null ? null : new DynamicJsonValue()
             {
-                [nameof(Authentication.BasicAuth)] = Authentication.BasicAuth == null ? null : new DynamicJsonValue()
+                [nameof(Authentication.Basic)] = Authentication.Basic == null ? null : new DynamicJsonValue()
                 {
-                    [nameof(Authentication.BasicAuth.Username)] = Authentication?.BasicAuth?.Username,
-                    [nameof(Authentication.BasicAuth.Password)] = Authentication?.BasicAuth?.Password
+                    [nameof(Authentication.Basic.Username)] = Authentication?.Basic?.Username,
+                    [nameof(Authentication.Basic.Password)] = Authentication?.Basic?.Password
                 },
-                [nameof(Authentication.ApiKeyAuth)] = Authentication.ApiKeyAuth == null ? null : new DynamicJsonValue()
+                [nameof(Authentication.ApiKey)] = Authentication.ApiKey == null ? null : new DynamicJsonValue()
                 {
-                    [nameof(Authentication.ApiKeyAuth.ApiKeyId)] = Authentication?.ApiKeyAuth?.ApiKeyId,
-                    [nameof(Authentication.ApiKeyAuth.ApiKey)] = Authentication?.ApiKeyAuth?.ApiKey
+                    [nameof(Authentication.ApiKey.ApiKeyId)] = Authentication?.ApiKey?.ApiKeyId,
+                    [nameof(Authentication.ApiKey.ApiKey)] = Authentication?.ApiKey?.ApiKey
                 },
-                [nameof(Authentication.CertificateAuth)] = Authentication.CertificateAuth == null ? null : new DynamicJsonValue()
+                [nameof(Authentication.Certificate)] = Authentication.Certificate == null ? null : new DynamicJsonValue()
                 {
-                    [nameof(Authentication.CertificateAuth.CertificatesBase64)] = new DynamicJsonArray(Authentication?.CertificateAuth?.CertificatesBase64)
+                    [nameof(Authentication.Certificate.CertificatesBase64)] = new DynamicJsonArray(Authentication?.Certificate?.CertificatesBase64)
                 },
             };
 
@@ -81,25 +81,25 @@ namespace Raven.Client.Documents.Operations.ETL.ElasticSearch
     
     public class Authentication
     {
-        public ApiKeyAuth ApiKeyAuth { get; set; }
-        public BasicAuth BasicAuth { get; set; }
-        public CertificateAuth CertificateAuth { get; set; }
+        public ApiKeyAuthentication ApiKey { get; set; }
+        public BasicAuthentication Basic { get; set; }
+        public CertificateAuthentication Certificate { get; set; }
     }
 
-    public class ApiKeyAuth
+    public class ApiKeyAuthentication
     {
         public string ApiKeyId { get; set; }
         
         public string ApiKey { get; set; }
     }
     
-    public class BasicAuth
+    public class BasicAuthentication
     {
         public string Username { get; set; }
         public string Password { get; set; }
     }
     
-    public class CertificateAuth
+    public class CertificateAuthentication
     {
         public string[] CertificatesBase64 { get; set; }
     }

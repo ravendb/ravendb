@@ -18,26 +18,26 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
 
             if (connectionString.Authentication != null)
             {
-                if (connectionString.Authentication.BasicAuth != null)
+                if (connectionString.Authentication.Basic != null)
                 {
-                    settings.BasicAuthentication(connectionString.Authentication.BasicAuth.Username, connectionString.Authentication.BasicAuth.Password);
+                    settings.BasicAuthentication(connectionString.Authentication.Basic.Username, connectionString.Authentication.Basic.Password);
                 }
-                else if (connectionString.Authentication.ApiKeyAuth != null)
+                else if (connectionString.Authentication.ApiKey != null)
                 {
-                    settings.ApiKeyAuthentication(connectionString.Authentication.ApiKeyAuth.ApiKeyId, connectionString.Authentication.ApiKeyAuth.ApiKey);
+                    settings.ApiKeyAuthentication(connectionString.Authentication.ApiKey.ApiKeyId, connectionString.Authentication.ApiKey.ApiKey);
                 }
-                else if (connectionString.Authentication.CertificateAuth != null)
+                else if (connectionString.Authentication.Certificate != null)
                 {
-                    if (connectionString.Authentication.CertificateAuth.CertificatesBase64.Length == 1)
+                    if (connectionString.Authentication.Certificate.CertificatesBase64.Length == 1)
                     {
-                        var cert = new X509Certificate2(Convert.FromBase64String(connectionString.Authentication.CertificateAuth.CertificatesBase64.First()));
+                        var cert = new X509Certificate2(Convert.FromBase64String(connectionString.Authentication.Certificate.CertificatesBase64.First()));
                         settings.ClientCertificate(cert);
                     }
                     else
                     {
                         var certificates = new X509CertificateCollection();
 
-                        foreach (var certificateBase64 in connectionString.Authentication.CertificateAuth.CertificatesBase64)
+                        foreach (var certificateBase64 in connectionString.Authentication.Certificate.CertificatesBase64)
                         {
                             certificates.Add(new X509Certificate2(Convert.FromBase64String(certificateBase64)));
                         }
