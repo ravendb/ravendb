@@ -462,7 +462,7 @@ function map(name, lambda) {
                 foreach (var kvpScript in definition.AdditionalSources)
                 {
                     var script = kvpScript.Value;
-                    _engine.ExecuteWithReset(script, $"/{definition.Name}/additionalSource[{kvpScript.Key}]");
+                    _engine.ExecuteWithReset(script, $"./{definition.Name}/additionalSource/{kvpScript.Key}");
                     _engineJint.ExecuteWithReset(script);
                     sb.Append(Environment.NewLine);
                     sb.AppendLine(script);
@@ -571,7 +571,7 @@ function map(name, lambda) {
                 if (args[0].IsStringEx() == false ||
                     args[1].IsStringEx() == false)
                 {
-                    throw new ArgumentException($"The load(id, collection) method expects two string arguments, but got: load({args[0]}, {args[1]})");
+                    throw new ArgumentException($"The load(id, collection) method expects two string arguments, but got: load({args[0].ValueType}, {args[1].ValueType})");
                 }
 
                 object doc = CurrentIndexingScope.Current.LoadDocument(null, args[0].AsString, args[1].AsString);
