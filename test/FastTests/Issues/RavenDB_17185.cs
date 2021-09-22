@@ -1,4 +1,6 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
+using System.Text;
 using Sparrow;
 using Sparrow.Server.Platform.Posix;
 using Xunit;
@@ -71,7 +73,15 @@ namespace FastTests.Issues
             var memInfo = MemInfoReader.Read();
 
             Assert.True(memInfo.MemTotal.GetValue(SizeUnit.Bytes) > 0);
-            Assert.Equal(0, memInfo.Other.Count); // we do not want any unmapped values
+
+            if (memInfo.Other.Count > 0)
+            {
+                var sb = new StringBuilder("Following properties were not mapped:");
+                foreach (var kvp in memInfo.Other)
+                    sb.AppendLine($"{kvp.Key}: {kvp.Value.GetValue(SizeUnit.Kilobytes)} kB");
+
+                throw new InvalidOperationException(sb.ToString());
+            }
         }
 
         private static Stream GetContent(string name)
