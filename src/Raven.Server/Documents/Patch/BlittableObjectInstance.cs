@@ -255,9 +255,13 @@ namespace Raven.Server.Documents.Patch
             
             Deletes?.Remove(propertyName);
 
+            /*var propertyIndex = Blittable.GetPropertyIndex(propertyName);
+            if (propIndex == -1)
+                return null;*/
+
             val = new BlittableObjectProperty(this, propertyName);
             //GC.SuppressFinalize(val);
-
+            
             if (val.Value.IsEmpty &&
                 DocumentId == null &&
                 _set == false)
@@ -390,7 +394,7 @@ namespace Raven.Server.Documents.Patch
                 pushKey(key);
             }*/
 
-            //using (var jsStrList2 = Engine.Execute("JSON.stringify").StaticCall(new InternalHandle(ref list, true))) var strList1 = jsStrList2.AsString;
+            //using (var jsStrList2 = Engine.JsonStringify.StaticCall(list)) var strList1 = jsStrList2.AsString;
             return list;
         }
 
@@ -468,15 +472,15 @@ namespace Raven.Server.Documents.Patch
             BlittableObjectProperty GenerateProperty(string propertyName)
             {
                 var propertyIndex = Blittable.GetPropertyIndex(propertyName);
-
-                var prop = new BlittableObjectProperty(this, propertyName);
+                BlittableObjectProperty prop = null;
                 //GC.SuppressFinalize(prop);
-                if (propertyIndex == -1)
-                {
+                if (propertyIndex == -1) {
                     using (var jsValue = Engine.CreateObject())
-                        prop.Value = jsValue;
+                        prop = new BlittableObjectProperty(this, propertyName, jsValue);
                 }
-
+                else {
+                    prop = new BlittableObjectProperty(this, propertyName);
+                }
                 return prop;
             }
         }

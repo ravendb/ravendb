@@ -159,7 +159,7 @@ namespace Raven.Server.Documents.Indexes.Static.Utils
         public InternalHandle StringifyObject(InternalHandle jsValue)
         {
             // json string of the object
-            return Engine.GlobalObject.GetProperty("JSON").StaticCall("Stringify", jsValue);
+            return Engine.JsonStringify.StaticCall(jsValue);
         }
 
         public readonly JavaScriptUtils JavaScriptUtils;

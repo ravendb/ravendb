@@ -146,7 +146,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             IDisposable setDocument;
             using (Stats.ConvertStats.Start())
                 /*if (document is InternalHandle jsDoc) {
-                    using (var jsStrRes = jsDoc.Engine.Execute("JSON.stringify").StaticCall(new InternalHandle(ref jsDoc, true))) var strRes = jsStrRes.AsString;
+                    using (var jsStrRes = jsDoc.Engine.JsonStringify.StaticCall(jsDoc)) var strRes = jsStrRes.AsString;
                 }*/
                 setDocument = _converter.SetDocument(key, sourceDocumentId, document, indexContext, this, out shouldSkip);
 

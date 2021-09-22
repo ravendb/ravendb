@@ -73,8 +73,7 @@ namespace Raven.Server.Documents.Indexes.Static
                             }
                             jsRes = MapFunc.StaticCall(jsItem);
 
-                            //using (var jsRes1 = new InternalHandle(ref jsRes, true)) {}
-                            /*using (var jsStrRes = _engine.JsonStringify.StaticCall(new InternalHandle(ref jsRes, true))) {
+                            /*using (var jsStrRes = _engine.JsonStringify.StaticCall(jsRes)) {
                                 var strRes = jsStrRes.AsString; // for debugging 
                             }*/
                             jsRes.ThrowOnError();

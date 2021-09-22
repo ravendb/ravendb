@@ -185,9 +185,9 @@ namespace Raven.Server.Documents.Indexes.Static
                         using (var jsGrouping = ConstructGrouping(item))
                         {
                             bool res = false;
-                            //using (var jsStrGrouping = Engine.Execute("JSON.stringify").StaticCall(new InternalHandle(ref jsGrouping, true))) var strGrouping = jsStrGrouping.AsString;
+                            //using (var jsStrGrouping = Engine.JsonStringify.StaticCall(jsGrouping)) var strGrouping = jsStrGrouping.AsString;
                             jsRes = ReduceFunc.StaticCall(jsGrouping);
-                            //using (var jsStrRes = Engine.Execute("JSON.stringify").StaticCall(new InternalHandle(ref jsRes, true))) var strRes = jsStrRes.AsString;
+                            //using (var jsStrRes = Engine.JsonStringify.StaticCall(jsRes)) var strRes = jsStrRes.AsString;
                             jsRes.ThrowOnError();
                             if (jsRes.IsObject == false)
                                 throw new JavaScriptIndexFuncException($"Failed to execute {ReduceString}", new Exception($"ReduceFunc result is not object: {jsRes.ToString()}"));
