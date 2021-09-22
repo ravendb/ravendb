@@ -1725,7 +1725,7 @@ namespace Raven.Server
 
         private void StartPostgresServer()
         {
-            PostgresServer = new PostgresServer(this);
+            PostgresServer = new PgServer(this);
             PostgresServer.Execute();
         }
 
@@ -2275,7 +2275,7 @@ namespace Raven.Server
 
         private TcpListenerStatus _tcpListenerStatus;
         public SnmpWatcher SnmpWatcher;
-        public PostgresServer PostgresServer;
+        public PgServer PostgresServer;
         private Timer _refreshClusterCertificate;
         private HttpsConnectionMiddleware _httpsConnectionMiddleware;
         private PoolOfThreads.LongRunningWork _cpuCreditsMonitoring;
@@ -2397,7 +2397,7 @@ namespace Raven.Server
             return false;
         }
 
-        private async Task<(Stream Stream, X509Certificate2 Certificate)> AuthenticateAsServerIfSslNeeded(Stream stream)
+        internal async Task<(Stream Stream, X509Certificate2 Certificate)> AuthenticateAsServerIfSslNeeded(Stream stream)
         {
             if (Certificate.Certificate != null)
             {

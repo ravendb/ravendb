@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Raven.Server.Integrations.PostgreSQL
 {
-    public class PostgresServer
+    public class PgServer
     {
         private readonly RavenServer _server;
         private readonly ConcurrentDictionary<TcpClient, Task> _connections = new();
@@ -19,7 +19,7 @@ namespace Raven.Server.Integrations.PostgreSQL
         private readonly int _processId;
         private readonly int _port;
 
-        public PostgresServer(RavenServer server)
+        public PgServer(RavenServer server)
         {
             _server = server;
             _processId = Process.GetCurrentProcess().Id;
@@ -67,8 +67,13 @@ namespace Raven.Server.Integrations.PostgreSQL
         {
             try
             {
-                var session = new Session(client, _cts.Token, Interlocked.Increment(ref _sessionIdentifier),
-                    _processId);
+                var session = new Session(
+                    client,
+                    _server.AuthenticateAsServerIfSslNeeded,
+                    Interlocked.Increment(ref _sessionIdentifier),
+                    _processId,
+                    _cts.Token);
+
                 await session.Run();
             }
             catch (Exception e)
