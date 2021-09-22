@@ -377,7 +377,7 @@ namespace Raven.Server.Documents.Patch
 
         private void WriteJsInstance(InternalHandle jsObj, bool isRoot, bool filterProperties)
         {
-            //using (var jsStrRes = jsObj.Engine.Execute("JSON.stringify").StaticCall(new InternalHandle(ref jsObj, true))) var strRes = jsStrRes.AsString;
+            //using (var jsStrRes = jsObj.Engine.JsonStringify.StaticCall(jsObj)) var strRes = jsStrRes.AsString;
             var properties = jsObj.IsBinder ? GetBoundObjectProperties(jsObj.BoundObject) : jsObj.GetOwnProperties(); // TODO GetBoundObjectProperties could be prepaired and written avoiding toJs, fromJs translations
             foreach (var (propertyName, jsPropertyValue) in properties)
             {
@@ -467,8 +467,15 @@ namespace Raven.Server.Documents.Patch
             if (obj.DocumentId != null &&
                 _usageMode == BlittableJsonDocumentBuilder.UsageMode.None)
             {
-                using (InternalHandle metadata = obj.GetOrCreate(Constants.Documents.Metadata.Key)) // not disposing as we use the cached value
-                    metadata.SetProperty(Constants.Documents.Metadata.Id, obj.DocumentId);
+                using (InternalHandle metadata = obj.GetOrCreate(Constants.Documents.Metadata.Key))
+                {
+                    if (metadata.IsBinder && metadata.BoundObject is BlittableObjectInstance boi) { // to avoid V8 participation
+                        using (var jsDocId = jsObj.Engine.CreateValue(obj.DocumentId))
+                            boi.SetOwnProperty(Constants.Documents.Metadata.Id, jsDocId, toReturnCopy: false);
+                    }
+                    else
+                        metadata.SetProperty(Constants.Documents.Metadata.Id, obj.DocumentId);
+                }
             }
             if (obj.Blittable != null)
             {
@@ -553,7 +560,7 @@ namespace Raven.Server.Documents.Patch
             if (objectInstance.IsUndefined || objectInstance.IsNull)
                 return null;
 
-            //using (var jsStrRes = objectInstance.Engine.Execute("JSON.stringify").StaticCall(new InternalHandle(ref objectInstance, true))) var strRes = jsStrRes.AsString;
+            //using (var jsStrRes = objectInstance.Engine.JsonStringify.StaticCall(objectInstance)) var strRes = jsStrRes.AsString;
             object boundObject = objectInstance.BoundObject;
             if (boundObject != null && boundObject is BlittableObjectInstance boi && boi.Changed == false)
                 return boi.Blittable.Clone(context);
