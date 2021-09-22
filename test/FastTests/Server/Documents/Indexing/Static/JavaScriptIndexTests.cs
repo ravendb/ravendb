@@ -21,10 +21,10 @@ namespace FastTests.Server.Documents.Indexing.Static
         }
 
         [Theory]
-        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
         public async Task CanUseIdMethodInJavascriptIndex(string searchEngineType)
         {
-            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType}))
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 new JavaScriptIndexWithIdMethod().Execute(store);
 
@@ -61,10 +61,10 @@ namespace FastTests.Server.Documents.Indexing.Static
         }
 
         [Theory]
-        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]        
+        [SearchEngineClassData(SearchEngineType.Lucene)]        
         public async Task CanUseGetMetadataMethodInJavascriptIndex(string searchEngineType)
         {
-            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType}))
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 new JavaScriptIndexWithGetMetadataMethod().Execute(store);
 

@@ -36,10 +36,10 @@ namespace FastTests.Server.Documents.Indexing.Auto
         }
 
         [Theory]
-        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        [SearchEngineClassData]
         public async Task CheckDispose(string searchEngineType)
         {
-            using (var database = CreateDocumentDatabase(modifyConfiguration: dictionary => dictionary[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = searchEngineType))
+            using (var database = CreateDocumentDatabaseForSearchEngine(searchEngineType))
             {
                 var index = AutoMapIndex.CreateNew(new AutoMapIndexDefinition("Users", new[] { new AutoIndexField
                 {
@@ -80,7 +80,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
         }
         
         [Theory]
-        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        [SearchEngineClassData]
         public async Task CanPersist(string searchEngineType)
         {
             using (CreatePersistentDocumentDatabase(NewDataPath(), out var database, modifyConfiguration: dictionary => dictionary[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = searchEngineType ))
@@ -142,7 +142,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
         }
 
         [Theory]
-        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        [SearchEngineClassData]
         public async Task CanDelete(string searchEngineType)
         {
             using (var database = CreateDocumentDatabase(modifyConfiguration: dictionary => dictionary[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = searchEngineType ))
@@ -196,13 +196,13 @@ namespace FastTests.Server.Documents.Indexing.Auto
         }
 
         [Theory]
-        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        [SearchEngineClassData]
         public async Task CanReset(string searchEngineType)
         {
-            using (var database = CreateDocumentDatabase(modifyConfiguration: dictionary => dictionary[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = searchEngineType))
+            using (var database = CreateDocumentDatabaseForSearchEngine(searchEngineType))
                 await CanResetInternal(database);
 
-            using (CreatePersistentDocumentDatabase(NewDataPath(), out var database, modifyConfiguration: dictionary => dictionary[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = searchEngineType))
+            using (CreatePersistentDocumentDatabase(NewDataPath(), out var database, modifyConfiguration: dictionary => GetModificationDictionaryForSearchEngine(dictionary, searchEngineType)))
                 await CanResetInternal(database);
         }
 
@@ -252,10 +252,10 @@ namespace FastTests.Server.Documents.Indexing.Auto
         }
 
         [Theory]
-        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
         public void SimpleIndexing(string searchEngineType)
         {
-            using (var database = CreateDocumentDatabase(modifyConfiguration: dictionary => dictionary[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = searchEngineType))
+            using (var database = CreateDocumentDatabaseForSearchEngine(searchEngineType))
             {
                 using (var index = AutoMapIndex.CreateNew(new AutoMapIndexDefinition("Users", new[] { new AutoIndexField
                 {
@@ -415,10 +415,10 @@ namespace FastTests.Server.Documents.Indexing.Auto
         }
 
         [Theory]
-        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        [SearchEngineClassData]
         public void WriteErrors(string searchEngineType)
         {
-            using (var database = CreateDocumentDatabase(modifyConfiguration: dictionary => dictionary[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = searchEngineType))
+            using (var database = CreateDocumentDatabaseForSearchEngine(searchEngineType))
             {
                 using (var index = AutoMapIndex.CreateNew(
                     new AutoMapIndexDefinition(
@@ -454,7 +454,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
         }
 
         [Theory]
-        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        [SearchEngineClassData]
         public void Errors2(string searchEngineType)
         {
             var times = new[]
@@ -878,7 +878,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 "2016-04-15T15:49:27.4750453Z",
                 "2016-04-15T15:49:27.4750453Z",
             };
-            using (var database = CreateDocumentDatabase(modifyConfiguration: dictionary => dictionary[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = searchEngineType))
+            using (var database = CreateDocumentDatabaseForSearchEngine(searchEngineType))
             {
                 using (var index = AutoMapIndex.CreateNew(
                     new AutoMapIndexDefinition(
@@ -903,10 +903,10 @@ namespace FastTests.Server.Documents.Indexing.Auto
         }
 
         [Theory]
-        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        [SearchEngineClassData]
         public void Errors(string searchEngineType)
         {
-            using (var database = CreateDocumentDatabase(modifyConfiguration: dictionary => dictionary[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = searchEngineType))
+            using (var database = CreateDocumentDatabaseForSearchEngine(searchEngineType))
             {
                 using (var index = AutoMapIndex.CreateNew(
                     new AutoMapIndexDefinition(
@@ -946,7 +946,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
         }
 
         [Theory]
-        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
         public async Task AutoIndexesShouldBeMarkedAsIdleAndDeleted(string searchEngineType)
         {
             void WaitForIndexDeletion(DocumentDatabase database, string indexName)
@@ -960,7 +960,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
             }
 
             DoNotReuseServer();
-            using (var database = CreateDocumentDatabase(modifyConfiguration: dictionary => dictionary[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = searchEngineType))
+            using (var database = CreateDocumentDatabaseForSearchEngine(searchEngineType))
             {
                 Assert.Equal(searchEngineType, database.Configuration.Indexing.AutoIndexingEngineType.ToString());
                 var index0 = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new AutoIndexField { Name = "Job", Storage = FieldStorage.No, Id = 1 } }), Guid.NewGuid().ToString());
@@ -1262,10 +1262,10 @@ namespace FastTests.Server.Documents.Indexing.Auto
         }
 
         [Theory]
-        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        [SearchEngineClassData]
         public async Task IndexCreationOptions(string searchEngineType)
         {
-            using (var database = CreateDocumentDatabase(modifyConfiguration: dictionary => dictionary[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = searchEngineType))
+            using (var database = CreateDocumentDatabaseForSearchEngine(searchEngineType))
             {
                 var definition1 = new AutoMapIndexDefinition("Users", new[] { new AutoIndexField { Name = "Name", Storage = FieldStorage.No } });
                 var definition2 = new AutoMapIndexDefinition("Users", new[] { new AutoIndexField { Name = "Name", Storage = FieldStorage.No } });
@@ -1287,10 +1287,10 @@ namespace FastTests.Server.Documents.Indexing.Auto
         }
 
         [Theory]
-        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        [SearchEngineClassData]
         public async Task LockMode(string searchEngineType)
         {
-            using (var database = CreateDocumentDatabase(modifyConfiguration: dictionary => dictionary[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = searchEngineType))
+            using (var database = CreateDocumentDatabaseForSearchEngine(searchEngineType))
             {
                 var definition1 = new AutoMapIndexDefinition("Users", new[] { new AutoIndexField { Name = "Name", Storage = FieldStorage.No } });
                 var definition2 = new AutoMapIndexDefinition("Users", new[] { new AutoIndexField { Name = "Name", Storage = FieldStorage.No } });
@@ -1314,14 +1314,14 @@ namespace FastTests.Server.Documents.Indexing.Auto
         }
 
         [Theory]
-        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        [SearchEngineClassData]
         public async Task IndexLoadErrorCreatesFaultyInMemoryIndexFakeAndAddsAlert(string searchEngineType)
         {
             string indexStoragePath;
             string indexName;
             string dbName;
 
-            using (CreatePersistentDocumentDatabase(NewDataPath(), out var database, modifyConfiguration: dictionary => dictionary[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = searchEngineType))
+            using (CreatePersistentDocumentDatabase(NewDataPath(), out var database, modifyConfiguration: dictionary => GetModificationDictionaryForSearchEngine(dictionary, searchEngineType)))
             {
                 dbName = database.Name;
                 var name1 = new AutoIndexField
@@ -1370,10 +1370,10 @@ namespace FastTests.Server.Documents.Indexing.Auto
         }
 
         [Theory]
-        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        [SearchEngineClassData]
         public async Task CanDeleteFaultyIndex(string searchEngineType)
         {
-            using (CreatePersistentDocumentDatabase(NewDataPath(), out var database, modifyConfiguration: dictionary => dictionary[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = searchEngineType))
+            using (CreatePersistentDocumentDatabase(NewDataPath(), out var database, modifyConfiguration: dictionary => GetModificationDictionaryForSearchEngine(dictionary, searchEngineType)))
             {
                 var dbName = database.Name;
                 var name1 = new AutoIndexField
@@ -1437,6 +1437,11 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 var (etag, _) = await Server.ServerStore.WriteDatabaseRecordAsync(databaseName, databaseRecord, null, Guid.NewGuid().ToString());
                 await Server.ServerStore.Cluster.WaitForIndexNotification(etag);
             }
+        }
+
+        private static void GetModificationDictionaryForSearchEngine(Dictionary<string, string> dictionary, string searchEngineType)
+        {
+            dictionary[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = searchEngineType;
         }
     }
 }

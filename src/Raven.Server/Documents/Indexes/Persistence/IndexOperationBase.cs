@@ -37,7 +37,6 @@ namespace Raven.Server.Documents.Indexes.Persistence
             _logger = logger;
         }
 
-        //todo maciej: switch implementation when using corax (maybe switch on type)
         protected static RavenPerFieldAnalyzerWrapper CreateAnalyzer(Index index, IndexDefinitionBase indexDefinition, bool forQuerying = false)
         {
             if (indexDefinition.IndexFields.ContainsKey(Constants.Documents.Indexing.Fields.AllFields))

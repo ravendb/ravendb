@@ -70,7 +70,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                             return null;
                     }
                 case null:
-                    throw new NotSupportedException();
+                    return _searcher.AllEntries();
                 case InExpression ie:
                     return (ie.Source, ie.Values) switch
                     {

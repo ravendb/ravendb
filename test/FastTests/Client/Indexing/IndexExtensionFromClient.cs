@@ -26,11 +26,11 @@ namespace FastTests.Client.Indexing
         }
 
         [Theory]
-        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
         public void CanCompileIndexWithExtensions(string searchEngineType)
         {
             CopyNodaTimeIfNeeded();
-            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType}))
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 store.ExecuteIndex(new PeopleByEmail());
                 using (var session = store.OpenSession())
@@ -46,10 +46,10 @@ namespace FastTests.Client.Indexing
         }
 
         [Theory]
-        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
         public async Task CanUpdateIndexExtensions(string searchEngineType)
         {
-            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType}))
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 var getRealCountry = @"
 using System.Globalization;
@@ -89,10 +89,10 @@ namespace My.Crazy.Namespace
         }
 
         [Theory]
-        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
         public void CanUseMethodFromExtensionsInIndex_List(string searchEngineType)
         {
-            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType}))
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 store.ExecuteIndex(new PeopleIndex1());
 
@@ -130,10 +130,10 @@ namespace My.Crazy.Namespace
         }
 
         [Theory]
-        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
         public void CanUseMethodFromExtensionsInIndex_Dictionary(string searchEngineType)
         {
-            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType}))
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 store.ExecuteIndex(new PeopleIndex2());
 
@@ -185,10 +185,10 @@ namespace My.Crazy.Namespace
         }
 
         [Theory]
-        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
         public void CanUseMethodFromExtensionsInIndex_ICollection(string searchEngineType)
         {
-            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType}))
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 store.ExecuteIndex(new PeopleIndex3());
 
@@ -230,10 +230,10 @@ namespace My.Crazy.Namespace
         }
 
         [Theory]
-        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
         public void CanUseMethodFromExtensionsInIndex_Hashset(string searchEngineType)
         {
-            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType}))
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 store.ExecuteIndex(new PeopleIndex4());
 
@@ -275,10 +275,10 @@ namespace My.Crazy.Namespace
         }
 
         [Theory]
-        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
         public void CanUseMethodFromExtensionsInIndex_ListOfUsers(string searchEngineType)
         {
-            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType}))
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 store.ExecuteIndex(new PeopleIndex5());
 
@@ -331,10 +331,10 @@ namespace My.Crazy.Namespace
         }
 
         [Theory]
-        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
         public void CanUseMethodFromExtensionsInIndex_Array(string searchEngineType)
         {
-            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType}))
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 store.ExecuteIndex(new PeopleIndex6());
 
@@ -387,10 +387,10 @@ namespace My.Crazy.Namespace
         }
 
         [Theory]
-        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
         public void CanUseMethodFromExtensionsInIndex_MyList(string searchEngineType)
         {
-            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType}))
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 store.ExecuteIndex(new PeopleIndex7());
 
@@ -428,10 +428,10 @@ namespace My.Crazy.Namespace
         }
 
         [Theory]
-        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
         public void CanUseMethodFromExtensionsInIndex_MyEnumerable(string searchEngineType)
         {
-            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType}))
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 store.ExecuteIndex(new PeopleIndex8());
 
@@ -469,10 +469,10 @@ namespace My.Crazy.Namespace
         }
 
         [Theory]
-        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
         public void CanUseMethodFromExtensionsInIndex_DateTime(string searchEngineType)
         {
-            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType}))
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 store.ExecuteIndex(new PeopleIndex9());
 
@@ -569,10 +569,10 @@ namespace My.Crazy.Namespace
         }
 
         [Theory]
-        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
         public void CanUseMethodFromExtensionsInIndex_WithIEnumerableReturnType(string searchEngineType)
         {
-            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType}))
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 var index = new PeopleIndex11();
                 store.ExecuteIndex(index);
@@ -619,10 +619,10 @@ namespace My.Crazy.Namespace
         }
 
         [Theory]
-        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
         public void CanUseMethodFromExtensionsInIndex_WithIEnumerableParameterAndIEnumerableReturnType(string searchEngineType)
         {
-            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType}))
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 var index = new PeopleIndex12();
                 store.ExecuteIndex(index);
@@ -663,10 +663,10 @@ namespace My.Crazy.Namespace
         }
 
         [Theory]
-        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
         public void CanUseMethodFromExtensionsInIndex_WithUintReturnType(string searchEngineType)
         {
-            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType}))
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 var index = new PeopleIndex13();
                 store.ExecuteIndex(index);
@@ -703,10 +703,10 @@ namespace My.Crazy.Namespace
         }
 
         [Theory]
-        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
         public void CanUseMethodFromExtensionsInIndex_WithListReturnType(string searchEngineType)
         {
-            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType}))
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 var index = new PeopleIndex14();
                 store.ExecuteIndex(index);
@@ -750,10 +750,10 @@ namespace My.Crazy.Namespace
         }
 
         [Theory]
-        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
         public void CanUseMethodFromExtensionsInIndex_WithHashsetReturnType(string searchEngineType)
         {
-            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType}))
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 var index = new PeopleIndex15();
                 store.ExecuteIndex(index);
@@ -797,10 +797,10 @@ namespace My.Crazy.Namespace
         }
 
         [Theory]
-        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
         public void CanUseMethodFromExtensionsInIndex_WithArrayReturnType(string searchEngineType)
         {
-            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType}))
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 var index = new PeopleIndex16();
                 store.ExecuteIndex(index);
@@ -845,10 +845,10 @@ namespace My.Crazy.Namespace
         }
 
         [Theory]
-        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
         public void CanUseMethodFromExtensionsInIndex_WithMyListReturnType(string searchEngineType)
         {
-            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType}))
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 var index = new PeopleIndex17();
                 store.ExecuteIndex(index);
@@ -891,10 +891,10 @@ namespace My.Crazy.Namespace
         }
 
         [Theory]
-        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
         public void CanUseMethodFromExtensionsInIndex_WithMyEnumerableReturnType(string searchEngineType)
         {
-            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType}))
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 var index = new PeopleIndex18();
                 store.ExecuteIndex(index);
@@ -937,10 +937,10 @@ namespace My.Crazy.Namespace
         }
 
         [Theory]
-        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
         public void CanUseMethodFromExtensionsInIndex_WithListParameterAndListReturnType(string searchEngineType)
         {
-            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType}))
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 var index = new PeopleIndex19();
                 store.ExecuteIndex(index);
@@ -989,10 +989,10 @@ namespace My.Crazy.Namespace
         }
 
         [Theory]
-        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
         public void CanUseMethodFromExtensionsInIndex_WithValueTypeListReturnType(string searchEngineType)
         {
-            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType}))
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 var index = new PeopleIndex20();
                 store.ExecuteIndex(index);
@@ -1029,10 +1029,10 @@ namespace My.Crazy.Namespace
 
 
         [Theory]
-        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
         public void CanUseMethodFromExtensionsInIndex_WithVoidReturnType(string searchEngineType)
         {
-            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType}))
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 var index = new PeopleIndex21();
                 store.ExecuteIndex(index);
@@ -1064,10 +1064,10 @@ namespace My.Crazy.Namespace
         }
 
         [Theory]
-        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
         public void CanUseMethodFromExtensionsInIndex_WithXmlComments(string searchEngineType)
         {
-            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType}))
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 var index = new PeopleIndex22();
                 store.ExecuteIndex(index);

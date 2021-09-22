@@ -276,7 +276,7 @@ namespace FastTests
 
             return message;
         }
-
+        
         protected virtual DocumentStore GetDocumentStore(Options options = null, [CallerMemberName] string caller = null)
         {
             try
@@ -1203,6 +1203,16 @@ namespace FastTests
             {
             }
 
+            public static Options ForSearchEngine(string searchEngineType)
+            {
+                return new Options() { ModifyDatabaseRecord = d =>
+                    {
+                        d.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = searchEngineType;
+                        d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType;
+                    }
+                };
+            }
+
             private Options(bool frozen)
             {
                 DeleteDatabaseOnDispose = true;
@@ -1397,7 +1407,7 @@ namespace FastTests
                 session.SaveChanges();
             }
         }
-
+        
         protected static void CreateDogDataWithCycle(IDocumentStore store)
         {
             using (var session = store.OpenSession())

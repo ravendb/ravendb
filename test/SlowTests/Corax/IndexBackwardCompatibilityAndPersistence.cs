@@ -44,9 +44,9 @@ namespace SlowTests.Corax
         [InlineData(SearchEngineType.Lucene, SearchEngineType.Corax)]
         public async Task AutoPersistIndexConfiguration(SearchEngineType beginType, SearchEngineType endType)
         {
-            using (var server = GetNewServer(new ServerCreationOptions { DataDirectory = _serverPath, RunInMemory = false }))
+            using (var server = GetNewServer(new ServerCreationOptions { DataDirectory = NewDataPath(), RunInMemory = false }))
             {
-                using (var store = GetDocumentStore(new Options { Server = server, RunInMemory = false, Path = _databasePath, ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = beginType.ToString() }))
+                using (var store = GetDocumentStore(new Options { Server = server, RunInMemory = false, Path = NewDataPath(), ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = beginType.ToString() }))
                 {
                     _databaseName = store.Database;
                     using (var session = store.OpenSession())
@@ -55,14 +55,15 @@ namespace SlowTests.Corax
                     var index = database.IndexStore.GetIndex("Auto/Orders/ByOrderedAt");
 
                     Assert.Equal(beginType, index.SearchEngineType);
-                    PutConfigurationSettings(store, "Indexing.Auto.SearchEngine", beginType);
-                    Assert.Equal(beginType, index.SearchEngineType);
+                    PutConfigurationSettings(store, "Indexing.Auto.SearchEngine", endType);
+                    var index2 = database.IndexStore.GetIndex("Auto/Orders/ByOrderedAt");
+
+                    Assert.Equal(beginType, index2.SearchEngineType);
                 }
             }
         }
 
         //todo maciej: There will be tests for StaticIndexes
-
         [Fact]
         public async Task LoadOldIndexWithoutRebuildingForNewIndexingEngine()
         {

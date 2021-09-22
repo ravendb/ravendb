@@ -16,10 +16,10 @@ namespace FastTests.Server.Documents.Indexing.Static
         }
 
         [Theory]
-        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
         public void CanIndexDictionaryDirectly(string searchEngineType)
         {
-            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType}))
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 new IndexReturningDictionary_MethodSyntax().Execute(store);
                 new IndexReturningDictionary_QuerySyntax().Execute(store);
@@ -58,10 +58,10 @@ namespace FastTests.Server.Documents.Indexing.Static
         }
 
         [Theory]
-        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
         public void CanMapReduceIndexDictionaryDirectly(string searchEngineType)
         {
-            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType}))
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 new MapReduceIndexReturningDictionary_MethodSyntax().Execute(store);
                 new MapReduceIndexReturningDictionary_QuerySyntax().Execute(store);
@@ -100,10 +100,10 @@ namespace FastTests.Server.Documents.Indexing.Static
         }
 
         [Theory]
-        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
         public void CanIndexDictionaryWithComplexObjectsDirectly(string searchEngineType)
         {
-            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType}))
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 new IndexReturningDictionaryWithComplexObjects_MethodSyntax().Execute(store);
                 new IndexReturningDictionaryWithComplexObjects_QuerySyntax().Execute(store);
@@ -200,10 +200,10 @@ namespace FastTests.Server.Documents.Indexing.Static
         }
 
         [Theory]
-        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
         public void CanMapReduceIndexDictionaryWithComplexObjectsDirectly(string searchEngineType)
         {
-            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType}))
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 new MapReduceIndexReturningDictionaryWithComplexObjects_MethodSyntax().Execute(store);
                 new MapReduceIndexReturningDictionaryWithComplexObjects_QuerySyntax().Execute(store);
@@ -274,10 +274,10 @@ namespace FastTests.Server.Documents.Indexing.Static
         }
 
         [Theory]
-        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
         public void CanIndexUsingDictionaryOutputPreceededBySelectWithAnonnymus(string searchEngineType)
         {
-            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType}))
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 new MixedSelectWithAnonymusAndDictionary().Execute(store);
 
