@@ -18,10 +18,10 @@ namespace FastTests.Client.Indexing
         }
 
         [Theory]
-        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        [SearchEngineClassData]
         public async Task Can_Put(string searchEngineType)
         {
-            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType}))
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -57,10 +57,10 @@ namespace FastTests.Client.Indexing
         }
 
         [Theory]
-        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
         public async Task Can_Put_And_Replace(string searchEngineType)
         {
-            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType}))
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -111,10 +111,10 @@ namespace FastTests.Client.Indexing
         }
 
         [Theory]
-        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        [SearchEngineClassData]
         public async Task Can_Put_Replace_And_Back_To_Original(string searchEngineType)
         {
-            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType}))
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(90)))
                 {
@@ -178,10 +178,10 @@ namespace FastTests.Client.Indexing
         }
 
         [Theory]
-        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
         public async Task Can_start_and_stop_index(string searchEngineType)
         {
-            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType}))
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 using (var session = store.OpenAsyncSession())
                 {

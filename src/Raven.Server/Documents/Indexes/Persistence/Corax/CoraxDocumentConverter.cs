@@ -55,7 +55,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             foreach (var field in _fields.Values)
             {
                 _slicesToDispose.Add(Slice.From(_allocator, field.Name, ByteStringType.Immutable, out value));
-                //offset for ID()
                 knownFields.Add(value, field.Id);
             }
 
@@ -72,7 +71,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 bool shouldSkip;
                 
                 
-                //TODO maciej - please look at this.
                 // this is reference to list for EnumerableWritingScope due to making it persistence during indexing document. 
                 // We want avoid allocation for every enumerable in doc, but if think it should be persistence during whole indexing process.
                 // Where should we put this and when release it?
@@ -235,10 +233,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     HandleObject((BlittableJsonReaderObject)value, field, indexContext, out _, ref entryWriter, scope);
                     return; 
 
+                case ValueType.Null:
+                    return;                
                 case ValueType.BoostedValue:
                 case ValueType.Stream:
                 case ValueType.DynamicNull:
-                case ValueType.Null:
+                
                 default:
                     throw new NotImplementedException();
             }
@@ -276,17 +276,18 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         public override void Dispose()
         {
             var exceptionAggregator = new ExceptionAggregator($"Could not dispose {nameof(CoraxDocumentConverter)} of {_index.Name}");
-            foreach(var disposableItem in _slicesToDispose)
+            
+            exceptionAggregator.Execute(() =>
             {
-                exceptionAggregator.Execute(() =>
-                {
+                foreach(var disposableItem in _slicesToDispose)
                     disposableItem?.Dispose();
-                });
-            }
+            });
+
             exceptionAggregator.Execute(() =>
             {
                 _allocator?.Dispose();
             });
+            
             exceptionAggregator.ThrowIfNeeded();
         }
     }

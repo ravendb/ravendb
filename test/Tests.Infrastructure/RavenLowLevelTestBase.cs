@@ -49,6 +49,12 @@ namespace FastTests
             });
         }
 
+        protected DocumentDatabase CreateDocumentDatabaseForSearchEngine(string searchEngineType)
+        {
+            return CreateDocumentDatabase(modifyConfiguration: dictionary =>
+                dictionary[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = searchEngineType);
+        }
+        
         protected DocumentDatabase CreateDocumentDatabase([CallerMemberName] string caller = null, bool runInMemory = true, string dataDirectory = null, Action<Dictionary<string, string>> modifyConfiguration = null)
         {
             var name = GetDatabaseName(caller);

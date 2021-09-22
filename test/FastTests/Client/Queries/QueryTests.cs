@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using FastTests.Server.Documents.Indexing;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
@@ -43,10 +44,10 @@ namespace FastTests.Client.Queries
         }
         
         [Theory]
-        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
         public  void Query_CreateClausesForQueryDynamicallyWithOnBeforeQueryEvent(string searchEngineType)
         {
-            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = searchEngineType}))
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 const string id1 = "users/1";
                 const string id2 = "users/2";
@@ -93,10 +94,10 @@ namespace FastTests.Client.Queries
             }
         }
         [Theory]
-        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        [SearchEngineClassData]
         public async Task Query_CreateClausesForQueryDynamicallyWhenTheQueryEmpty(string searchEngineType)
         {
-            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = searchEngineType}))
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 const string id1 = "users/1";
                 const string id2 = "users/2";
@@ -136,10 +137,10 @@ namespace FastTests.Client.Queries
         }
         
         [Theory]
-        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
         public  void Query_CreateClausesForQueryDynamically(string searchEngineType)
         {
-            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = searchEngineType}))
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 const string id1 = "users/1";
                 const string id2 = "users/2";
@@ -182,10 +183,10 @@ namespace FastTests.Client.Queries
         }
         
         [Theory]
-        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
         public async Task Query_CreateClausesForQueryDynamicallyAsyncWithOnBeforeQueryEvent(string searchEngineType)
         {
-            using (var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = searchEngineType}))
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 const string id1 = "users/1";
                 const string id2 = "users/2";
@@ -234,10 +235,10 @@ namespace FastTests.Client.Queries
         }
         
         [Theory]
-        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        [SearchEngineClassData]
         public async Task Query_WhenCompareObjectWithUlongInWhereClause_ShouldWork(string searchEngineType)
         {
-            using var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = searchEngineType});
+            using var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType));
 
             using (var session = store.OpenAsyncSession())
             {
@@ -262,10 +263,10 @@ namespace FastTests.Client.Queries
         }
 
         [Theory]
-        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
         public async Task Query_WhenUsingDateTimeNowInWhereClause_ShouldSendRequestForEachQuery(string searchEngineType)
         {
-            using var store = GetDocumentStore(new Options(){ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = searchEngineType});
+            using var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType));
 
             using (var session = store.OpenAsyncSession())
             {

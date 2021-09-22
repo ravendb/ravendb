@@ -28,10 +28,10 @@ namespace FastTests.Server.Documents.Indexing.Auto
         }
 
         [Theory]
-        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
         public async Task CanUseSimpleReduction(string searchEngineType)
         {
-            using (var db = CreateDocumentDatabase(modifyConfiguration: dictionary => dictionary[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = searchEngineType))
+            using (var db = CreateDocumentDatabaseForSearchEngine(searchEngineType))
             using (var mri = AutoMapReduceIndex.CreateNew(GetUsersCountByLocationIndexDefinition(), db))
             {
                 CreateUsers(db, 2, "Poland");
@@ -118,12 +118,12 @@ namespace FastTests.Server.Documents.Indexing.Auto
         }
 
         [Theory]
-        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
         public async Task CanDelete(string searchEngineType)
         {
             const long numberOfUsers = 10;
 
-            using (var db = CreateDocumentDatabase(modifyConfiguration: dictionary => dictionary[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = searchEngineType))
+            using (var db = CreateDocumentDatabaseForSearchEngine(searchEngineType))
             using (var index = AutoMapReduceIndex.CreateNew(GetUsersCountByLocationIndexDefinition(), db))
             {
 
@@ -231,7 +231,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
         }
 
         [Theory]
-        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        [SearchEngineClassData]
         public async Task DefinitionOfAutoMapReduceIndexIsPersisted(string searchEngineType)
         {
             string dbName;
@@ -242,6 +242,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 var count = new AutoIndexField
                 {
+                    Id = 1,
                     Name = "Count",
                     Storage = FieldStorage.Yes,
                     Aggregation = AggregationOperation.Count
@@ -249,6 +250,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 var location = new AutoIndexField
                 {
+                    Id = 2,
                     Name = "Location",
                     Storage = FieldStorage.Yes,
                     Indexing = AutoFieldIndexing.Search | AutoFieldIndexing.Exact | AutoFieldIndexing.Default,
@@ -259,6 +261,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 var sum = new AutoIndexField
                 {
+                    Id = 3,
                     Name = "Sum",
                     Storage = FieldStorage.Yes,
                     Aggregation = AggregationOperation.Sum
@@ -331,10 +334,10 @@ namespace FastTests.Server.Documents.Indexing.Auto
         }
 
         [Theory]
-        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
         public async Task CanGroupByNestedFieldAndAggregateOnCollection(string searchEngineType)
         {
-            using (var db = CreateDocumentDatabase(modifyConfiguration: dictionary => dictionary[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = searchEngineType))
+            using (var db = CreateDocumentDatabaseForSearchEngine(searchEngineType))
             using (var mri = AutoMapReduceIndex.CreateNew(new AutoMapReduceIndexDefinition(
                 "Orders",
                 new[]
@@ -343,13 +346,15 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     {
                         Name = "Lines[].Quantity",
                         Aggregation = AggregationOperation.Sum,
-                        Storage = FieldStorage.Yes
+                        Storage = FieldStorage.Yes,
+                        Id = 1
                     },
                     new AutoIndexField
                     {
                         Name = "Lines[].Price",
                         Aggregation = AggregationOperation.Sum,
-                        Storage = FieldStorage.Yes
+                        Storage = FieldStorage.Yes,
+                        Id = 2
                     }
                 },
                 new[]
@@ -357,7 +362,8 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     new AutoIndexField
                     {
                         Name = "ShipTo.Country",
-                        Storage = FieldStorage.Yes
+                        Storage = FieldStorage.Yes,
+                        Id = 3
                     },
                 }), db))
             {
@@ -390,10 +396,10 @@ namespace FastTests.Server.Documents.Indexing.Auto
         }
 
         [Theory]
-        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
         public void CanStoreAndReadReduceStats(string searchEngineType)
         {
-            using (var db = CreateDocumentDatabase(modifyConfiguration: dictionary => dictionary[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = searchEngineType))
+            using (var db = CreateDocumentDatabaseForSearchEngine(searchEngineType))
             using (var index = AutoMapReduceIndex.CreateNew(GetUsersCountByLocationIndexDefinition(), db))
             {
                 index._indexStorage.UpdateStats(SystemTime.UtcNow, new IndexingRunStats
@@ -440,24 +446,26 @@ namespace FastTests.Server.Documents.Indexing.Auto
         }
 
         [Theory]
-        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
         public async Task CanUpdateByChangingValue(string searchEngineType)
         {
-            using (var db = CreateDocumentDatabase(modifyConfiguration: dictionary => dictionary[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = searchEngineType))
+            using (var db = CreateDocumentDatabaseForSearchEngine(searchEngineType))
             using (var index = AutoMapReduceIndex.CreateNew(new AutoMapReduceIndexDefinition("Users", new[]
             {
                 new AutoIndexField
                 {
                     Name = "Age",
                     Aggregation = AggregationOperation.Sum,
-                    Storage = FieldStorage.Yes
+                    Storage = FieldStorage.Yes,
+                    Id = 1
                 }
             }, new[]
                     {
                 new AutoIndexField
                 {
                     Name = "Location",
-                    Storage = FieldStorage.Yes
+                    Storage = FieldStorage.Yes,
+                    Id = 2
                 },
             }), db))
             {
@@ -516,24 +524,26 @@ namespace FastTests.Server.Documents.Indexing.Auto
         }
 
         [Theory]
-        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
         public async Task CanUpdateByChangingReduceKey(string searchEngineType)
         {
-            using (var db = CreateDocumentDatabase(modifyConfiguration: dictionary => dictionary[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = searchEngineType))
+            using (var db = CreateDocumentDatabaseForSearchEngine(searchEngineType))
             using (var index = AutoMapReduceIndex.CreateNew(new AutoMapReduceIndexDefinition("Users", new[]
             {
                 new AutoIndexField
                 {
                     Name = "Age",
                     Aggregation = AggregationOperation.Sum,
-                    Storage = FieldStorage.Yes
+                    Storage = FieldStorage.Yes,
+                    Id = 1
                 }
             }, new[]
             {
                     new AutoIndexField
                     {
                         Name = "Location",
-                        Storage = FieldStorage.Yes
+                        Storage = FieldStorage.Yes,
+                        Id = 2
                     },
             }), db))
             {
@@ -595,29 +605,32 @@ namespace FastTests.Server.Documents.Indexing.Auto
         }
 
         [Theory]
-        [MemberData(nameof(SearchEngineTypeValue.Data), MemberType= typeof(SearchEngineTypeValue))]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
         public async Task GroupByMultipleFields(string searchEngineType)
         {
-            using (var db = CreateDocumentDatabase(modifyConfiguration: dictionary => dictionary[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = searchEngineType))
+            using (var db = CreateDocumentDatabaseForSearchEngine(searchEngineType))
             using (var index = AutoMapReduceIndex.CreateNew(new AutoMapReduceIndexDefinition("Orders", new[]
             {
                 new AutoIndexField
                 {
                     Name = "Count",
                     Aggregation = AggregationOperation.Count,
-                    Storage = FieldStorage.Yes
+                    Storage = FieldStorage.Yes,
+                    Id = 1
                 }
             }, new[]
             {
                     new AutoIndexField
                     {
                         Name = "Employee",
-                        Storage = FieldStorage.Yes
+                        Storage = FieldStorage.Yes,
+                        Id = 2
                     },
                     new AutoIndexField
                     {
                         Name = "Company",
-                        Storage = FieldStorage.Yes
+                        Storage = FieldStorage.Yes,
+                        Id = 3
                     },
             }), db))
             {
@@ -710,6 +723,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 new AutoIndexField
                 {
                     Name = "Count",
+                    Id = 1,
                     Aggregation = AggregationOperation.Count,
                     Storage = FieldStorage.Yes
                 }
@@ -718,6 +732,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 new AutoIndexField
                 {
                     Name = "Location",
+                    Id = 2,
                     Storage = FieldStorage.Yes
                 },
             });

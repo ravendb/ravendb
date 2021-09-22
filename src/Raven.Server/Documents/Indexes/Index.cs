@@ -4922,7 +4922,6 @@ namespace Raven.Server.Documents.Indexes
         {
             if (IndexPersistence is CoraxIndexPersistence)
             {
-                //todo maciej
                 return 0;
             }
 

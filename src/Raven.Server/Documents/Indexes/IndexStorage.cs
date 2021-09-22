@@ -144,8 +144,7 @@ namespace Raven.Server.Documents.Indexes
                 void PersistConfiguration()
                 {
                     var configurationTree = tx.InnerTransaction.CreateTree(IndexSchema.ConfigurationTree);
-                    PersistSearchEngine(configurationTree, nameof(SearchEngineType), 
-                        _index.Type.IsAuto()  ? _index.Configuration.AutoIndexingEngineType : _index.Configuration.StaticIndexingEngineType);
+                    PersistSearchEngine(configurationTree);
                     AssertAndPersistAnalyzer(configurationTree, RavenConfiguration.GetKey(x => x.Indexing.DefaultAnalyzer), _index.Configuration.DefaultAnalyzer, Raven.Client.Constants.Documents.Indexing.Analyzers.Default);
                     AssertAndPersistAnalyzer(configurationTree, RavenConfiguration.GetKey(x => x.Indexing.DefaultExactAnalyzer), _index.Configuration.DefaultExactAnalyzer, Raven.Client.Constants.Documents.Indexing.Analyzers.DefaultExact);
                     AssertAndPersistAnalyzer(configurationTree, RavenConfiguration.GetKey(x => x.Indexing.DefaultSearchAnalyzer), _index.Configuration.DefaultSearchAnalyzer, Raven.Client.Constants.Documents.Indexing.Analyzers.DefaultSearch);
@@ -172,10 +171,16 @@ namespace Raven.Server.Documents.Indexes
                     configurationTree.Add(configurationKey, expectedAnalyzer);
                 }
 
-                void PersistSearchEngine(Tree configurationTree,  string configurationKey, SearchEngineType defaultEngineType)
+                void PersistSearchEngine(Tree configurationTree)
                 {
+                    string configurationKey = nameof(SearchEngineType);
+                    string configurationName = _index.Type.IsAuto() ? RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType) : RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType);
+                   
+                    SearchEngineType defaultEngineType =
+                        _index.Type.IsAuto() ? _index.Configuration.AutoIndexingEngineType : _index.Configuration.StaticIndexingEngineType;
+                    
                     if(defaultEngineType == SearchEngineType.None)
-                        throw new InvalidDataException($"Default search engine is {SearchEngineType.None}. Please set {configurationKey}.");
+                        throw new InvalidDataException($"Default search engine is {SearchEngineType.None}. Please set {configurationName}.");
                     var result = configurationTree.Read(configurationKey);
                     if (result != null)
                     {
