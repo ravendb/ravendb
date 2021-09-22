@@ -2,9 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Pipelines;
-using System.Net.Security;
 using System.Net.Sockets;
-using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
@@ -17,17 +15,24 @@ namespace Raven.Server.Integrations.PostgreSQL
     public class Session
     {
         private readonly TcpClient _client;
-        private readonly CancellationToken _token;
+        private readonly Func<Stream, Task<(Stream, X509Certificate2)>> _authenticateAsServerIfSslNeeded;
         private readonly int _identifier;
         private readonly int _processId;
+        private readonly CancellationToken _token;
         private Dictionary<string, string> _clientOptions;
 
-        public Session(TcpClient client, CancellationToken token, int identifier, int processId)
+        public Session(
+            TcpClient client,
+            Func<Stream, Task<(Stream, X509Certificate2)>> authenticateAsServerIfSslNeeded,
+            int identifier,
+            int processId,
+            CancellationToken token)
         {
             _client = client;
-            _token = token;
+            _authenticateAsServerIfSslNeeded = authenticateAsServerIfSslNeeded;
             _identifier = identifier;
             _processId = processId;
+            _token = token;
             _clientOptions = null;
         }
 
@@ -39,10 +44,21 @@ namespace Raven.Server.Integrations.PostgreSQL
 
             if (initialMessage is SSLRequest)
             {
-                var sslStream = await TryHandleTlsConnection(stream, writer, messageBuilder, _token);
-                var encryptedReader = PipeReader.Create(sslStream);
+                X509Certificate2 certificate;
 
-                initialMessage = await messageReader.ReadInitialMessage(encryptedReader, _token);
+                (stream, certificate) = await _authenticateAsServerIfSslNeeded(stream);
+
+                if (certificate == null)
+                {
+                    await writer.WriteAsync(messageBuilder.SSLResponse(false), _token);
+                    initialMessage = await messageReader.ReadInitialMessage(reader, _token);
+                }
+                else
+                {
+                    await writer.WriteAsync(messageBuilder.SSLResponse(true), _token);
+                    var encryptedReader = PipeReader.Create(stream);
+                    initialMessage = await messageReader.ReadInitialMessage(encryptedReader, _token);
+                }
             }
 
             switch (initialMessage)
@@ -167,26 +183,6 @@ namespace Raven.Server.Integrations.PostgreSQL
                     // ignored
                 }
             }
-        }
-        
-        private async Task<SslStream> TryHandleTlsConnection(Stream stream, PipeWriter writer, MessageBuilder builder, CancellationToken token)
-        {
-            await writer.WriteAsync(builder.SSLResponse(true), token);
-            
-            var sslStream = new SslStream(stream, false);
-            const SslProtocols SupportedSslProtocols = SslProtocols.Tls13 | SslProtocols.Tls12;
-
-            await sslStream.AuthenticateAsServerAsync(new SslServerAuthenticationOptions
-            {
-                ServerCertificate = X509Certificate.CreateFromCertFile(@"C:\temp\cluster.server.certificate.pgrvn.pfx"), //new X509Certificate2(@"C:\temp\cluster.server.certificate.pgrvn.pfx"),
-                ClientCertificateRequired = false,
-                CertificateRevocationCheckMode = X509RevocationMode.NoCheck,
-                EncryptionPolicy = EncryptionPolicy.RequireEncryption,
-                EnabledSslProtocols = SupportedSslProtocols,
-                CipherSuitesPolicy = null
-            }, _token);
-
-            return sslStream;
         }
     }
 }
