@@ -7,10 +7,13 @@ namespace Raven.Server.Integrations.PostgreSQL
 {
     public static class CsvToPg
     {
-        public static PgTable Convert(string filePath, Dictionary<string, PgColumn> columns)
+        public static PgTable Convert(string fileName, Dictionary<string, PgColumn> columns)
         {
+            var assembly = typeof(CsvToPg).Assembly;
             var table = new PgTable();
-            using (var parser = new TextFieldParser(filePath))
+
+            using (var fs = assembly.GetManifestResourceStream("Raven.Server.Integrations.PostgreSQL.Npgsql." + fileName))
+            using (var parser = new TextFieldParser(fs))
             {
                 parser.TextFieldType = FieldType.Delimited;
                 parser.SetDelimiters(",");
