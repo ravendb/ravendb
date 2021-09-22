@@ -12,19 +12,19 @@ namespace Raven.Server.Extensions
 {
     public static class JsV8Extensions
     {
-        public static bool IsNumberEx(this InternalHandle value) 
+        public static bool IsNumberEx(this InternalHandle jsValue) 
         {
-            return value.IsNumber || value.IsNumberObject;
+            return jsValue.IsNumber || jsValue.IsNumberObject;
         }
 
-        public static bool IsNumberOrIntEx(this InternalHandle value) 
+        public static bool IsNumberOrIntEx(this InternalHandle jsValue) 
         {
-            return value.IsNumberEx() || value.IsInt32;
+            return jsValue.IsNumberEx() || jsValue.IsInt32;
         }
 
-        public static bool IsStringEx(this InternalHandle value) 
+        public static bool IsStringEx(this InternalHandle jsValue) 
         {
-            return value.IsString || value.IsStringObject;
+            return jsValue.IsString || jsValue.IsStringObject;
         }
 
         public static InternalHandle GetOwnProperty(this InternalHandle obj, string name)
@@ -37,11 +37,11 @@ namespace Raven.Server.Extensions
             return obj.GetProperty(index);
         }
 
-        public static IEnumerable<KeyValuePair<string, InternalHandle>> GetOwnProperties(this InternalHandle value)
+        public static IEnumerable<KeyValuePair<string, InternalHandle>> GetOwnProperties(this InternalHandle jsValue)
         {
-            if (value.IsObject) {
+            if (jsValue.IsObject) {
                 IEnumerable<string> propertyNames;
-                if (value.BoundObject is BlittableObjectInstance boi) { // for optimisation to avoid V8 participation
+                if (jsValue.BoundObject is BlittableObjectInstance boi) { // for optimisation to avoid V8 participation
                     propertyNames = boi.EnumerateOwnProperties();
                     foreach (var propertyName in propertyNames)
                     {
@@ -49,52 +49,52 @@ namespace Raven.Server.Extensions
                     }
                 }
                 else {
-                    propertyNames = value.GetOwnPropertyNames();
+                    propertyNames = jsValue.GetOwnPropertyNames();
                     foreach (var propertyName in propertyNames)
                     {
-                        InternalHandle jsProp = value.GetProperty(propertyName);
+                        InternalHandle jsProp = jsValue.GetProperty(propertyName);
                         yield return new KeyValuePair<string, InternalHandle>(propertyName, jsProp);
                     }
                 }
             }
         }
 
-        public static IEnumerable<KeyValuePair<string, InternalHandle>> GetProperties(this InternalHandle value)
+        public static IEnumerable<KeyValuePair<string, InternalHandle>> GetProperties(this InternalHandle jsValue)
         {
-            if (value.BoundObject is BlittableObjectInstance boi) { // for optimisation to avoid V8 participation
-                return GetOwnProperties(value);
+            if (jsValue.BoundObject is BlittableObjectInstance boi) { // for optimisation to avoid V8 participation
+                return GetOwnProperties(jsValue);
             }
             else {
-                return GetPropertiesAux(value);
+                return GetPropertiesAux(jsValue);
             }
         }
 
-        private static IEnumerable<KeyValuePair<string, InternalHandle>> GetPropertiesAux(this InternalHandle value)
+        private static IEnumerable<KeyValuePair<string, InternalHandle>> GetPropertiesAux(this InternalHandle jsValue)
         {
-            if (value.IsObject) {
-                var propertyNames = value.GetPropertyNames();
+            if (jsValue.IsObject) {
+                var propertyNames = jsValue.GetPropertyNames();
                 foreach (var propertyName in propertyNames)
                 {
-                    InternalHandle jsProp = value.GetProperty(propertyName);
+                    InternalHandle jsProp = jsValue.GetProperty(propertyName);
                     yield return new KeyValuePair<string, InternalHandle>(propertyName, jsProp);
                 }
             }
         }
 
-        public static bool HasOwnProperty (this InternalHandle value, string name)
+        public static bool HasOwnProperty (this InternalHandle jsValue, string name)
         {
-            return value.HasProperty(name);
+            return jsValue.HasProperty(name);
         }
 
-        public static bool HasProperty (this InternalHandle value, string name)
+        public static bool HasProperty (this InternalHandle jsValue, string name)
         {
-            /*var attr = value.GetPropertyAttributes(name);
+            /*var attr = jsValue.GetPropertyAttributes(name);
             return attr != V8PropertyAttributes.Undefined;*/
             /*using (var jsHasOwn = Execute("Object.hasOwn"))
             {
                 jsHasOwn.StaticCall()
             }*/
-            using (var jsRes = value.GetProperty(name))
+            using (var jsRes = jsValue.GetProperty(name))
                 return !jsRes.IsUndefined;
         }
 
@@ -108,9 +108,9 @@ namespace Raven.Server.Extensions
             return true;
         }
 
-        public static void FastAddProperty(this InternalHandle obj, string name, InternalHandle value, bool writable, bool enumerable, bool configurable)
+        public static void FastAddProperty(this InternalHandle obj, string name, InternalHandle jsValue, bool writable, bool enumerable, bool configurable)
         {
-            if (obj.SetProperty(name, value) == false)
+            if (obj.SetProperty(name, jsValue) == false)
             {
                 throw new InvalidOperationException($"Failed to fast add property {name}");
             }
