@@ -22,6 +22,14 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
+    <EmbeddedResource Include="Integrations\PostgreSQL\Npgsql\npgsql_types_3.csv" />
+    <EmbeddedResource Include="Integrations\PostgreSQL\Npgsql\npgsql_types_4.csv" />
+    <EmbeddedResource Include="Integrations\PostgreSQL\Npgsql\npgsql_types_4_0_0.csv" />
+    <EmbeddedResource Include="Integrations\PostgreSQL\Npgsql\npgsql_types_4_0_3.csv" />
+    <EmbeddedResource Include="Integrations\PostgreSQL\Npgsql\npgsql_types_4_1_2.csv" />
+    <EmbeddedResource Include="Integrations\PostgreSQL\Npgsql\npgsql_types_5.csv" />
+    <EmbeddedResource Include="Integrations\PostgreSQL\Npgsql\types_query.csv" />
+    <EmbeddedResource Include="Integrations\PostgreSQL\Npgsql\version_query.csv" />
     <EmbeddedResource Include="Web\Assets\Unsafe.html" />
     <EmbeddedResource Include="Web\Assets\AuthError.html" />
     <EmbeddedResource Include="..\..\LICENSE.txt" Link="Commercial\RavenDB.license.txt" />
@@ -32,6 +40,16 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Remove="Web\Studio\EmbeddedData\NorthwindModel.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Remove="Integrations\PostgreSQL\Npgsql\npgsql_types_3.csv" />
+    <None Remove="Integrations\PostgreSQL\Npgsql\npgsql_types_4.csv" />
+    <None Remove="Integrations\PostgreSQL\Npgsql\npgsql_types_4_0_0.csv" />
+    <None Remove="Integrations\PostgreSQL\Npgsql\npgsql_types_4_0_3.csv" />
+    <None Remove="Integrations\PostgreSQL\Npgsql\npgsql_types_4_1_2.csv" />
+    <None Remove="Integrations\PostgreSQL\Npgsql\npgsql_types_5.csv" />
+    <None Remove="Integrations\PostgreSQL\Npgsql\types_query.csv" />
+    <None Remove="Integrations\PostgreSQL\Npgsql\version_query.csv" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Web\Studio\EmbeddedData\NorthwindModel.cs" />
