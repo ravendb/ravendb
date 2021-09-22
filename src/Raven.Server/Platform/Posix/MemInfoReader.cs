@@ -71,7 +71,7 @@ namespace Raven.Server.Platform.Posix
 
     public class MemInfo
     {
-        private static readonly Dictionary<string, PropertyInfo> Properties = new();
+        public static readonly Dictionary<string, PropertyInfo> AllProperties = new();
 
         public static readonly MemInfo Invalid = new MemInfo();
 
@@ -87,7 +87,7 @@ namespace Raven.Server.Platform.Posix
                 if (indexes.Add(index) == false)
                     throw new InvalidOperationException($"{nameof(MemInfo)} property '{property.Name}' must have a unique SNMP index.");
 
-                Properties[NormalizePropertyName(property)] = property;
+                AllProperties[NormalizePropertyName(property)] = property;
             }
 
             static string NormalizePropertyName(MemberInfo memberInfo)
@@ -250,7 +250,7 @@ namespace Raven.Server.Platform.Posix
         {
             Size size = new(value, unit);
 
-            if (Properties.TryGetValue(name, out PropertyInfo property))
+            if (AllProperties.TryGetValue(name, out PropertyInfo property))
             {
                 property.SetValue(this, size);
                 return;
