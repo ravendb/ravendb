@@ -1,4 +1,5 @@
 ﻿using System;
+using Raven.Server.Platform.Posix;
 using Raven.Server.Utils;
 using Sparrow.LowMemory;
 using Sparrow.Platform;
@@ -26,6 +27,7 @@ namespace Raven.Server.ServerWide
             Register(MetricCacher.Keys.Server.MemoryInfo, TimeSpan.FromSeconds(1), CalculateMemoryInfo);
             Register(MetricCacher.Keys.Server.MemoryInfoExtended, TimeSpan.FromSeconds(15), CalculateMemoryInfoExtended);
             Register(MetricCacher.Keys.Server.DiskSpaceInfo, TimeSpan.FromSeconds(15), CalculateDiskSpaceInfo);
+            Register(MetricCacher.Keys.Server.MemInfo, TimeSpan.FromSeconds(15), CalculateMemInfo);
         }
 
         private object CalculateMemoryInfo()
@@ -41,6 +43,14 @@ namespace Raven.Server.ServerWide
         private DiskSpaceResult CalculateDiskSpaceInfo()
         {
             return DiskSpaceChecker.GetDiskSpaceInfo(_server.ServerStore.Configuration.Core.DataDirectory.FullPath);
+        }
+
+        private static MemInfo CalculateMemInfo()
+        {
+            if (PlatformDetails.RunningOnPosix == false)
+                return MemInfo.Invalid;
+
+            return MemInfoReader.Read();
         }
     }
 }

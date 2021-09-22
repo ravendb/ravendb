@@ -73,6 +73,8 @@ namespace Raven.Server.Platform.Posix
     {
         private static readonly Dictionary<string, PropertyInfo> Properties = new();
 
+        public static readonly MemInfo Invalid = new MemInfo();
+
         static MemInfo()
         {
             var indexes = new HashSet<int>();
