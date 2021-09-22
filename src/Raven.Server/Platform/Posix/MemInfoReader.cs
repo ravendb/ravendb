@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Reflection;
+using Raven.Server.Monitoring.Snmp;
+using Sparrow;
 using Sparrow.Platform;
 
-namespace Sparrow.Server.Platform.Posix
+namespace Raven.Server.Platform.Posix
 {
     public static class MemInfoReader
     {
@@ -73,16 +75,35 @@ namespace Sparrow.Server.Platform.Posix
 
         static MemInfo()
         {
+            var indexes = new HashSet<int>();
             foreach (PropertyInfo property in typeof(MemInfo).GetProperties(BindingFlags.Public | BindingFlags.Instance))
-                Properties[NormalizeName(property)] = property;
-
-            static string NormalizeName(MemberInfo propertyInfo)
             {
-                var displayNameAttribute = propertyInfo.GetCustomAttribute<DisplayNameAttribute>();
+                if (property.Name == nameof(Other))
+                    continue;
+
+                var index = GetPropertySnmpIndex(property);
+                if (indexes.Add(index) == false)
+                    throw new InvalidOperationException($"{nameof(MemInfo)} property '{property.Name}' must have a unique SNMP index.");
+
+                Properties[NormalizePropertyName(property)] = property;
+            }
+
+            static string NormalizePropertyName(MemberInfo memberInfo)
+            {
+                var displayNameAttribute = memberInfo.GetCustomAttribute<DisplayNameAttribute>();
                 if (displayNameAttribute == null)
-                    return propertyInfo.Name;
+                    return memberInfo.Name;
 
                 return displayNameAttribute.DisplayName;
+            }
+
+            static int GetPropertySnmpIndex(MemberInfo memberInfo)
+            {
+                var snmpIndexAttribute = memberInfo.GetCustomAttribute<SnmpIndexAttribute>();
+                if (snmpIndexAttribute is not { Index: > 0 })
+                    throw new InvalidOperationException($"{nameof(MemInfo)} property '{memberInfo.Name}' must have {nameof(SnmpIndexAttribute)}");
+
+                return snmpIndexAttribute.Index;
             }
         }
 
@@ -91,57 +112,136 @@ namespace Sparrow.Server.Platform.Posix
             Other = new Dictionary<string, Size>();
         }
 
+        [SnmpIndex(1)]
         public Size MemTotal { get; set; }
+
+        [SnmpIndex(2)]
         public Size MemFree { get; set; }
+
+        [SnmpIndex(3)]
         public Size Buffers { get; set; }
+
+        [SnmpIndex(4)]
         public Size Cached { get; set; }
+
+        [SnmpIndex(5)]
         public Size SwapCached { get; set; }
+
+        [SnmpIndex(6)]
         public Size Active { get; set; }
+
+        [SnmpIndex(7)]
         public Size Inactive { get; set; }
 
+        [SnmpIndex(8)]
         [DisplayName("Active(anon)")]
         public Size Active_anon { get; set; }
 
+        [SnmpIndex(9)]
         [DisplayName("Inactive(anon)")]
         public Size Inactive_anon { get; set; }
 
+        [SnmpIndex(10)]
         [DisplayName("Active(file)")]
         public Size Active_file { get; set; }
 
+        [SnmpIndex(11)]
         [DisplayName("Inactive(file)")]
         public Size Inactive_file { get; set; }
 
+        [SnmpIndex(12)]
         public Size Unevictable { get; set; }
+
+        [SnmpIndex(13)]
         public Size Mlocked { get; set; }
+
+        [SnmpIndex(14)]
         public Size SwapTotal { get; set; }
+
+        [SnmpIndex(15)]
         public Size SwapFree { get; set; }
+
+        [SnmpIndex(16)]
         public Size Dirty { get; set; }
+
+        [SnmpIndex(17)]
         public Size Writeback { get; set; }
+
+        [SnmpIndex(18)]
         public Size AnonPages { get; set; }
+
+        [SnmpIndex(19)]
         public Size Mapped { get; set; }
+
+        [SnmpIndex(20)]
         public Size Shmem { get; set; }
+
+        [SnmpIndex(21)]
         public Size Slab { get; set; }
+
+        [SnmpIndex(22)]
         public Size SReclaimable { get; set; }
+
+        [SnmpIndex(23)]
         public Size SUnreclaim { get; set; }
+
+        [SnmpIndex(24)]
         public Size KernelStack { get; set; }
+
+        [SnmpIndex(25)]
         public Size PageTables { get; set; }
+
+        [SnmpIndex(26)]
         public Size NFS_Unstable { get; set; }
+
+        [SnmpIndex(27)]
         public Size Bounce { get; set; }
+
+        [SnmpIndex(28)]
         public Size WritebackTmp { get; set; }
+
+        [SnmpIndex(29)]
         public Size CommitLimit { get; set; }
+
+        [SnmpIndex(30)]
         public Size Committed_AS { get; set; }
+
+        [SnmpIndex(31)]
         public Size VmallocTotal { get; set; }
+
+        [SnmpIndex(32)]
         public Size VmallocUsed { get; set; }
+
+        [SnmpIndex(33)]
         public Size VmallocChunk { get; set; }
+
+        [SnmpIndex(34)]
         public Size HardwareCorrupted { get; set; }
+
+        [SnmpIndex(35)]
         public Size AnonHugePages { get; set; }
+
+        [SnmpIndex(36)]
         public Size HugePages_Total { get; set; }
+
+        [SnmpIndex(37)]
         public Size HugePages_Free { get; set; }
+
+        [SnmpIndex(38)]
         public Size HugePages_Rsvd { get; set; }
+
+        [SnmpIndex(39)]
         public Size HugePages_Surp { get; set; }
+
+        [SnmpIndex(40)]
         public Size Hugepagesize { get; set; }
+
+        [SnmpIndex(41)]
         public Size DirectMap4k { get; set; }
+
+        [SnmpIndex(42)]
         public Size DirectMap4M { get; set; }
+
         public Dictionary<string, Size> Other { get; set; }
 
         public void Set(string name, long value, SizeUnit unit)
