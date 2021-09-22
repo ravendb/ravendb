@@ -291,9 +291,11 @@ class indexes extends viewModelBase {
             const indexId = `index_${indexToHighlight}`;
             
             const indexElement = document.getElementById(indexId);
-            generalUtils.scrollToElement(indexElement);
-            
-            this.highlightIndexElement(indexElement);
+
+            if (indexElement) {
+                generalUtils.scrollToElement(indexElement);
+                this.highlightIndexElement(indexElement);
+            }
         }
     }
     
