@@ -535,7 +535,7 @@ namespace Raven.Server.Documents.Patch
                     if (_value.Equals(value))
                         return;
                     _value.Set(value);
-                    OnSetValue();
+                    _OnSetValue();
                     _parent.MarkChanged();
                     Changed = true;
                 }
@@ -551,7 +551,7 @@ namespace Raven.Server.Documents.Patch
                 return new InternalHandle(ref _value, true);
             }
 
-            private void OnSetValue()
+            private void _OnSetValue()
             {
                 if (!_value.IsEmpty) {
                     HandleID = _value.ID;
@@ -577,7 +577,7 @@ namespace Raven.Server.Documents.Patch
             {
                 Init(parent, propertyName);
                 _value = new InternalHandle(ref jsValue, true);
-                OnSetValue();
+                _OnSetValue();
             }
 
             public BlittableObjectProperty(BlittableObjectInstance parent, string propertyName)
@@ -606,7 +606,7 @@ namespace Raven.Server.Documents.Patch
                         _value = InternalHandle.Empty;
                     }
                 }
-                OnSetValue();
+                _OnSetValue();
             }
 
             ~BlittableObjectProperty()
