@@ -568,11 +568,9 @@ function map(name, lambda) {
                 if (args[0].IsNull || args[0].IsUndefined)
                     return _engine.ImplicitNull.CreateHandle();
 
-                if (args[0].IsStringEx() == false ||
-                    args[1].IsStringEx() == false)
-                {
-                    throw new ArgumentException($"The load(id, collection) method expects two string arguments, but got: load({args[0].ValueType}, {args[1].ValueType})");
-                }
+                var argsMsgPrefix = "The load(id, collection) method expects the ";
+                CheckIsString(args[0], args[1], $"{argsMsgPrefix}first");
+                CheckIsString(args[1], args[0], $"{argsMsgPrefix}second");
 
                 object doc = CurrentIndexingScope.Current.LoadDocument(null, args[0].AsString, args[1].AsString);
                 if (JavaScriptIndexUtils.GetValue(doc, out InternalHandle jsItem, keepAlive: true))
@@ -583,6 +581,16 @@ function map(name, lambda) {
             catch (Exception e) 
             {
                 return engine.CreateError(e.Message, JSValueType.ExecutionError);
+            }
+        }
+
+        private void CheckIsString(InternalHandle jsValue, InternalHandle jsValueNext, string prefix)
+        {
+            if (!jsValue.IsStringEx())
+            {
+                using (var jsStrRes = _engine.JsonStringify.StaticCall(jsValue))
+                using (var jsStrResNext = _engine.JsonStringify.StaticCall(jsValueNext))
+                    throw new ArgumentException($"{prefix} string argument, but got: {jsStrRes.AsString}, next argument is: {jsStrResNext.AsString}");
             }
         }
 
