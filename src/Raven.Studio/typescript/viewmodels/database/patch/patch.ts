@@ -20,6 +20,8 @@ import patchTester = require("viewmodels/database/patch/patchTester");
 import savedPatchesStorage = require("common/storage/savedPatchesStorage");
 import queryUtil = require("common/queryUtil");
 import generalUtils = require("common/generalUtils");
+import queryCommand = require("commands/database/query/queryCommand");
+import queryCriteria = require("models/database/query/queryCriteria");
 
 type fetcherType = (skip: number, take: number, previewCols: string[], fullCols: string[]) => JQueryPromise<pagedResult<document>>;
 
@@ -29,7 +31,7 @@ class patchList {
 
     previewItem = ko.observable<storedPatchDto>();
 
-    allPatches = ko.observableArray<storedPatchDto>([]);  
+    allPatches = ko.observableArray<storedPatchDto>([]);
 
     private readonly useHandler: (patch: storedPatchDto) => void;
     private readonly removeHandler: (patch: storedPatchDto) => void;
@@ -125,7 +127,7 @@ class patch extends viewModelBase {
     staleTimeout = ko.observable<number>(60);
 
     maxOperationsPerSecond = ko.observable<number>();
-    defineMaxOperationsPerSecond = ko.observable<boolean>(false);    
+    defineMaxOperationsPerSecond = ko.observable<boolean>(false);
     
     static readonly recentKeyword = 'Recent Patch';
 
@@ -289,8 +291,11 @@ class patch extends viewModelBase {
     }
 
     runPatch() {
+        this.patchDocument().queryHasError(false);
+        
         if (this.isValid(this.patchDocument().validationGroup)) {
-            this.patchOnQuery();
+            this.getMatchingDocumentsNumber()
+                .done((matchingDocs: number) => this.executePatch(matchingDocs));
         }
     }
 
@@ -313,13 +318,13 @@ class patch extends viewModelBase {
                         });
                 } else {
                     this.savePatchToStorage();
-                }                
+                }
                 
                 this.inSaveMode(false);
             }
         } else {
             if (this.isValid(this.patchDocument().validationGroup)) {
-                this.inSaveMode(true);    
+                this.inSaveMode(true);
             }
         }
     }
@@ -364,12 +369,43 @@ class patch extends viewModelBase {
         return type !== "unknown" ? patch.recentKeyword + " (" + collectionIndexName + ")" : patch.recentKeyword;
     }
 
-    private patchOnQuery() {
+    private getMatchingDocumentsNumber(): JQueryPromise<number> {
+        const patchScript = this.patchDocument().query();
+        const queryPartOfPatchScript = patchScript.split("update")[0];
+        
+        const matchingDocs = $.Deferred<number>();
+        
+        let query = queryCriteria.empty();
+        query.queryText(queryPartOfPatchScript);
+        
+        new queryCommand(this.activeDatabase(), 0, 0, query)
+            .execute()
+            .done((queryResults: pagedResultExtended<document>) => matchingDocs.resolve(queryResults.totalResultCount))
+            .fail(() => this.patchDocument().queryHasError(true));
+        
+        return matchingDocs;
+    }
+    
+    private executePatch(matchingDocuments: number): void {
         eventsCollector.default.reportEvent("patch", "run");
-        const message = `Are you sure you want to apply this patch to matching documents?`;
 
-        this.confirmationMessage("Patch", message, {
-            buttons: ["Cancel", "Patch all"]
+        const infoMessage = `<li>
+                                 <small>Actual number of processed documents might be smaller if documents are filtered by the 'update' script</small>
+                             </li>`;
+        
+        const patchMessage = `<div class="margin-bottom margin-bottom-lg text-info bg-info padding padding-xs">
+                                 <ul class="margin-top">
+                                     <li>
+                                         <small>Number of documents matching the Patch Query: <strong class="margin-left margin-left-sm">${matchingDocuments}</strong></small>
+                                     </li>
+                                     ${matchingDocuments > 0 ? infoMessage : ''}
+                                 </ul>
+                              </div>
+                              <div>Are you sure you want to apply this patch to matching documents?</div>`;
+
+        this.confirmationMessage("Patch", patchMessage, {
+            buttons: ["Cancel", "Patch all"],
+            html: true
         })
             .done(result => {
                 if (result.can) {
