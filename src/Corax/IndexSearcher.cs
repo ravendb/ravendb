@@ -359,6 +359,40 @@ namespace Corax
             return UnaryMatch.Create(UnaryMatch<TInner, double>.YieldLessThanOrEqualMatch(set, this, fieldId, value, take));
         }
 
+        public UnaryMatch Equals<TInner>(in TInner set, int fieldId, Slice value, int take = -1)
+            where TInner : struct, IQueryMatch
+        {
+            return UnaryMatch.Create(UnaryMatch<TInner, Slice>.YieldEqualsMatch(set, this, fieldId, value, take));
+        }
+
+        public UnaryMatch Equals<TInner>(in TInner set, int fieldId, float value, int take = -1)
+            where TInner : struct, IQueryMatch
+        {
+            return UnaryMatch.Create(UnaryMatch<TInner, float>.YieldEqualsMatch(set, this, fieldId, value, take));
+        }
+
+        public UnaryMatch Equals<TInner>(in TInner set, int fieldId, double value, int take = -1)
+            where TInner : struct, IQueryMatch
+        {
+            return UnaryMatch.Create(UnaryMatch<TInner, double>.YieldEqualsMatch(set, this, fieldId, value, take));
+        }
+
+        public UnaryMatch NotEquals<TInner>(in TInner set, int fieldId, Slice value, int take = -1)
+            where TInner : struct, IQueryMatch
+        {
+            return UnaryMatch.Create(UnaryMatch<TInner, Slice>.YieldNotEqualsMatch(set, this, fieldId, value, take));
+        }
+        public UnaryMatch NotEquals<TInner>(in TInner set, int fieldId, float value, int take = -1)
+            where TInner : struct, IQueryMatch
+        {
+            return UnaryMatch.Create(UnaryMatch<TInner, float>.YieldNotEqualsMatch(set, this, fieldId, value, take));
+        }
+        public UnaryMatch NotEquals<TInner>(in TInner set, int fieldId, double value, int take = -1)
+            where TInner : struct, IQueryMatch
+        {
+            return UnaryMatch.Create(UnaryMatch<TInner, double>.YieldNotEqualsMatch(set, this, fieldId, value, take));
+        }
+
         public void Dispose()
         {
             _transaction?.Dispose();

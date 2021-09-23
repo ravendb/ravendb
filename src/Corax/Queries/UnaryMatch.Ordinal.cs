@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -7,7 +7,7 @@ using Voron;
 namespace Corax.Queries
 {
     unsafe partial struct UnaryMatch<TInner, TValueType>
-    {               
+    {
         private interface IUnaryMatchComparer
         {
             bool Compare(ReadOnlySpan<byte> sx, ReadOnlySpan<byte> sy);
@@ -107,7 +107,7 @@ namespace Corax.Queries
                         if (read)
                             isMatch = comparer.Compare((double)(object)currentType, resultX);
                     }
-                       
+
                     if (isMatch)
                     {
                         // We found a match.
@@ -169,6 +169,30 @@ namespace Corax.Queries
             else
             {
                 return new UnaryMatch<TInner, TValueType>(in inner, UnaryMatchOperation.LessThanOrEqual, searcher, fieldId, value, &FillFuncNumerical<LessThanOrEqualMatchComparer>, &AndWith, inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal));
+            }
+        }
+
+        public static UnaryMatch<TInner, TValueType> YieldNotEqualsMatch(in TInner inner, IndexSearcher searcher, int fieldId, TValueType value, int take = -1)
+        {
+            if (typeof(TValueType) == typeof(Slice))
+            {
+                return new UnaryMatch<TInner, TValueType>(in inner, UnaryMatchOperation.NotEquals, searcher, fieldId, value, &FillFuncSequence<NotEqualsMatchComparer>, &AndWith, inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal));
+            }
+            else
+            {
+                return new UnaryMatch<TInner, TValueType>(in inner, UnaryMatchOperation.NotEquals, searcher, fieldId, value, &FillFuncNumerical<NotEqualsMatchComparer>, &AndWith, inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal));
+            }
+        }
+
+        public static UnaryMatch<TInner, TValueType> YieldEqualsMatch(in TInner inner, IndexSearcher searcher, int fieldId, TValueType value, int take = -1)
+        {
+            if (typeof(TValueType) == typeof(Slice))
+            {
+                return new UnaryMatch<TInner, TValueType>(in inner, UnaryMatchOperation.Equals, searcher, fieldId, value, &FillFuncSequence<EqualsMatchComparer>, &AndWith, inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal));
+            }
+            else
+            {
+                return new UnaryMatch<TInner, TValueType>(in inner, UnaryMatchOperation.Equals, searcher, fieldId, value, &FillFuncNumerical<EqualsMatchComparer>, &AndWith, inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal));
             }
         }
 
@@ -242,6 +266,44 @@ namespace Corax.Queries
                     return ((long)(object)sy - (long)(object)sx) <= 0;
                 if (typeof(T) == typeof(double))
                     return ((double)(object)sy - (double)(object)sx) <= 0;
+
+                throw new NotSupportedException($"MatchComparer does not support type {nameof(T)}");
+            }
+        }
+
+        private struct NotEqualsMatchComparer : IUnaryMatchComparer
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+            public bool Compare(ReadOnlySpan<byte> sx, ReadOnlySpan<byte> sy)
+            {
+                return sy.SequenceCompareTo(sx) != 0;
+            }
+            [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+            public bool Compare<T>(T sx, T sy) where T : unmanaged
+            {
+                if (typeof(T) == typeof(long))
+                    return ((long)(object)sy != (long)(object)sx);
+                if (typeof(T) == typeof(double))
+                    return ((double)(object)sy != (double)(object)sx);
+
+                throw new NotSupportedException($"MatchComparer does not support type {nameof(T)}");
+            }
+        }
+
+        private struct EqualsMatchComparer : IUnaryMatchComparer
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+            public bool Compare(ReadOnlySpan<byte> sx, ReadOnlySpan<byte> sy)
+            {
+                return sy.SequenceCompareTo(sx) == 0;
+            }
+            [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+            public bool Compare<T>(T sx, T sy) where T : unmanaged
+            {
+                if (typeof(T) == typeof(long))
+                    return ((long)(object)sy == (long)(object)sx);
+                if (typeof(T) == typeof(double))
+                    return ((double)(object)sy == (double)(object)sx);
 
                 throw new NotSupportedException($"MatchComparer does not support type {nameof(T)}");
             }
