@@ -46,6 +46,9 @@ namespace Corax.Queries
                 }
 
                 totalResults += storeIdx;
+                if (totalResults > match._take)
+                    break;
+
                 currentMatches = currentMatches.Slice(storeIdx);
             }
 
@@ -102,6 +105,9 @@ namespace Corax.Queries
                 }
 
                 totalResults += storeIdx;
+                if (totalResults > match._take)
+                    break;
+
                 currentMatches = currentMatches.Slice(storeIdx);
             }
 
@@ -121,7 +127,11 @@ namespace Corax.Queries
                     value1 = aux;
                 }
 
-                return new UnaryMatch<TInner, TValueType>(in inner, UnaryMatchOperation.Between, searcher, fieldId, value1, value2, &FillFuncBetweenSequence, &AndWith, inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal));
+                return new UnaryMatch<TInner, TValueType>(
+                    in inner, UnaryMatchOperation.Between, 
+                    searcher, fieldId, value1, value2, 
+                    &FillFuncBetweenSequence, &AndWith, 
+                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), take);
             }
             else if (typeof(TValueType) == typeof(long))
             {
@@ -134,7 +144,11 @@ namespace Corax.Queries
                     value1 = aux;
                 }
 
-                return new UnaryMatch<TInner, TValueType>(in inner, UnaryMatchOperation.Between, searcher, fieldId, value1, value2, &FillFuncBetweenNumerical, &AndWith, inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal));
+                return new UnaryMatch<TInner, TValueType>(
+                    in inner, UnaryMatchOperation.Between, 
+                    searcher, fieldId, value1, value2, 
+                    &FillFuncBetweenNumerical, &AndWith, 
+                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), take);
             }
             else
             {
@@ -146,7 +160,11 @@ namespace Corax.Queries
                     value2 = value1;
                     value1 = aux;
                 }
-                return new UnaryMatch<TInner, TValueType>(in inner, UnaryMatchOperation.NotBetween, searcher, fieldId, value1, value2, &FillFuncBetweenNumerical, &AndWith, inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal));
+                return new UnaryMatch<TInner, TValueType>(
+                    in inner, UnaryMatchOperation.NotBetween, 
+                    searcher, fieldId, value1, value2, 
+                    &FillFuncBetweenNumerical, &AndWith, 
+                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), take);
             }
         }
 
@@ -186,6 +204,9 @@ namespace Corax.Queries
                 }
 
                 totalResults += storeIdx;
+                if (totalResults > match._take)
+                    break;
+
                 currentMatches = currentMatches.Slice(storeIdx);
             }
 
@@ -242,6 +263,9 @@ namespace Corax.Queries
                 }
 
                 totalResults += storeIdx;
+                if (totalResults > match._take)
+                    break;                    
+
                 currentMatches = currentMatches.Slice(storeIdx);
             }
 
@@ -261,7 +285,11 @@ namespace Corax.Queries
                     value1 = aux;
                 }
 
-                return new UnaryMatch<TInner, TValueType>(in inner, UnaryMatchOperation.NotBetween, searcher, fieldId, value1, value2, &FillFuncNotBetweenSequence, &AndWith, inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal));
+                return new UnaryMatch<TInner, TValueType>(
+                    in inner, UnaryMatchOperation.NotBetween, 
+                    searcher, fieldId, value1, value2, 
+                    &FillFuncNotBetweenSequence, &AndWith, 
+                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), take);
             }
             else if (typeof(TValueType) == typeof(long))
             {
@@ -274,7 +302,11 @@ namespace Corax.Queries
                     value1 = aux;
                 }
 
-                return new UnaryMatch<TInner, TValueType>(in inner, UnaryMatchOperation.NotBetween, searcher, fieldId, value1, value2, &FillFuncNotBetweenNumerical, &AndWith, inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal));
+                return new UnaryMatch<TInner, TValueType>(
+                    in inner, UnaryMatchOperation.NotBetween, 
+                    searcher, fieldId, value1, value2, 
+                    &FillFuncNotBetweenNumerical, &AndWith, 
+                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), take);
             }
             else
             {
@@ -286,7 +318,11 @@ namespace Corax.Queries
                     value2 = value1;
                     value1 = aux;
                 }
-                return new UnaryMatch<TInner, TValueType>(in inner, UnaryMatchOperation.NotBetween, searcher, fieldId, value1, value2, &FillFuncNotBetweenNumerical, &AndWith, inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal));
+                return new UnaryMatch<TInner, TValueType>(
+                    in inner, UnaryMatchOperation.NotBetween, 
+                    searcher, fieldId, value1, value2, 
+                    &FillFuncNotBetweenNumerical, &AndWith, 
+                    inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), take);
             }
         }
     }
