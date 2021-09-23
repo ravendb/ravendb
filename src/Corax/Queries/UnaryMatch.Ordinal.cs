@@ -82,7 +82,9 @@ namespace Corax.Queries
             var searcher = match._searcher;
             var currentMatches = matches;
             int totalResults = 0;
-            while (currentMatches.Length < matches.Length / 8)
+
+            int maxUnusedMatchesSlots = matches.Length >= 64 ? matches.Length / 8 : 1;
+            while (currentMatches.Length > maxUnusedMatchesSlots)
             {
                 var results = match._inner.Fill(currentMatches);
                 if (results == 0)
