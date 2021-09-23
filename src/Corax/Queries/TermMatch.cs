@@ -240,7 +240,7 @@ namespace Corax.Queries
                 long* inputEndPtr = inputPtr + matches.Length;                
                
                 long* blockStartPtr = stackalloc long[BlockSize]; // The size of this array is fixed to improve cache locality.
-                Span<long> tmpMatches = new Span<long>(blockStartPtr, BlockSize);
+                var tmpMatches = new Span<long>(blockStartPtr, BlockSize);
 
                 int matchesLength = matches.Length;
                 long* dstPtr = inputPtr;

@@ -1,9 +1,8 @@
 ﻿using System;
-using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using System.Text.RegularExpressions;
+using System.Runtime.InteropServices;
 using Sparrow;
 
 namespace Corax.Queries
@@ -42,12 +41,6 @@ namespace Corax.Queries
             where T : IMatchComparer
             where W : struct
         {
-            [ThreadStatic]
-            public static Item[] BKeysHolder;
-
-            [ThreadStatic]
-            public static Item[] MatchKeysHolder;
-
             public struct Item
             {
                 public long Key;
@@ -157,20 +150,13 @@ namespace Corax.Queries
             //            correct. 
             Debug.Assert(_take <= matches.Length);
 
-            Span<MatchComparer<TComparer, W>.Item> matchesKeys;
-            var matchesKeysHolder = MatchComparer<TComparer, W>.MatchKeysHolder;
-            if (matchesKeysHolder != null && matchesKeysHolder.Length > matches.Length)
-                matchesKeys = matchesKeysHolder.AsSpan(0, matches.Length);
-            else
-                matchesKeys = new MatchComparer<TComparer, W>.Item[matches.Length].AsSpan();
+            var matchesKeysHolder = QueryContext.MatchesPool.Rent(2 * Unsafe.SizeOf<MatchComparer<TComparer, W>.Item>() * matches.Length);
+            var itemKeys = MemoryMarshal.Cast<byte, MatchComparer<TComparer, W>.Item>(matchesKeysHolder);
 
-            Span<MatchComparer<TComparer, W>.Item> bKeys;
-            var bKeysHolder = MatchComparer<TComparer, W>.BKeysHolder;
-            if (bKeysHolder != null && bKeysHolder.Length > matches.Length)
-                bKeys = matchesKeysHolder.AsSpan(0, matches.Length);
-            else
-                bKeys = new MatchComparer<TComparer, W>.Item[matches.Length].AsSpan();
-            
+            // PERF: We want to avoid to share cache lines, that's why the second array will move toward the end of the array. 
+            var matchesKeys = itemKeys[0..matches.Length];            
+            var bKeys = itemKeys[^matches.Length..]; 
+
             int take = _take <= 0 ? matches.Length : Math.Min(matches.Length, _take);
 
             int totalMatches = _inner.Fill(matches);
@@ -292,6 +278,8 @@ namespace Corax.Queries
                 End:
                 totalMatches = kIdx;
             }
+
+            QueryContext.MatchesPool.Return(matchesKeysHolder);
         }
     }
 }
