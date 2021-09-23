@@ -243,12 +243,6 @@ namespace Raven.Server.Documents.Patch
                 var scope = CurrentIndexingScope.Current;
                 scope.RegisterJavaScriptUtils(JavaScriptUtils);
                 GetMetadata();
-                /*using (var jsGetMetadataFor = Engine.ExecuteExprWithReset("getMetadata", "getMetadata")) {
-                    if (jsGetMetadataFor.IsFunction) {
-                        InternalHandle jsMD = jsGetMetadataFor.StaticCall(Binder._);
-                        jsMD.Dispose(); // it has got hashed in OwnValues
-                    }
-                }*/
                 OwnValues?.TryGetValue(propertyName, out val);
                 return val;
             }
@@ -261,7 +255,7 @@ namespace Raven.Server.Documents.Patch
 
             val = new BlittableObjectProperty(this, propertyName);
             //GC.SuppressFinalize(val);
-            
+
             if (val.Value.IsEmpty &&
                 DocumentId == null &&
                 _set == false)
