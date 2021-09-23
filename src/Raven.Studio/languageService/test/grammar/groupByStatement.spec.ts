@@ -1,5 +1,6 @@
 ﻿import { parseRql } from "../../src/parser";
 import {
+    CollectionByNameContext,
     GroupByStatementContext,
     ParameterWithOptionalAliasContext,
 } from "../../src/generated/RqlParser";
@@ -45,5 +46,23 @@ describe("GROUP BY statement parser", function() {
 
         expect(parser.numberOfSyntaxErrors)
             .toEqual(1);
+    });
+
+    it("can't use `group by` as from alias", function () {
+        const { parseTree, parser } = parseRql("from test group by");
+
+        expect(parser.numberOfSyntaxErrors)
+            .toBeGreaterThanOrEqual(1);
+
+        const from = parseTree.fromStatement();
+        expect(from)
+            .toBeInstanceOf(CollectionByNameContext);
+        const collectionByName = from as CollectionByNameContext;
+        expect(collectionByName.fromAlias())
+            .toBeFalsy();
+
+        const groupBy = parseTree.groupByStatement();
+        expect(groupBy)
+            .toBeTruthy();
     });
 });

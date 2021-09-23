@@ -1,9 +1,9 @@
-import { TokenPosition } from "../types";
 import { CandidatesCollection } from "antlr4-c3/out/src/CodeCompletionCore";
-import { RqlParser } from "../generated/RqlParser";
+import { ProgContext, RqlParser } from "../generated/RqlParser";
+import { Scanner } from "../scanner";
 
 
 export interface AutocompleteProvider {
-    collect?: (position: TokenPosition, candidates: CandidatesCollection, parser: RqlParser) => autoCompleteWordList[]; 
-    collectAsync?: (position: TokenPosition, candidates: CandidatesCollection, parser: RqlParser) => Promise<autoCompleteWordList[]>;    
+    collect?: (scanner: Scanner, candidates: CandidatesCollection, parser: RqlParser, parseTree: ProgContext, writtenText: string) => autoCompleteWordList[]; 
+    collectAsync?: (scanner: Scanner, candidates: CandidatesCollection, parser: RqlParser, parseTree: ProgContext, writtenText: string) => Promise<autoCompleteWordList[]>;    
 }

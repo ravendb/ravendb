@@ -6,7 +6,6 @@ CL_PAR:     ')';
 CL_Q:       ']';
 COMMA:      ',';
 DOT:        '.';
-D_QUOTE:    '"';
 EQUAL:      '=' | '==' | '<>' | '!=';
 MATH:       '<' | '>'  | '<=' | '>=';
 OP_CUR:     '{';
@@ -70,7 +69,6 @@ BOOST:			B O O S T;
 SEARCH:         S E A R C H;
 LIMIT:          L I M I T;
 FUZZY:          F U Z Z Y;
-RQLJS:          AT R Q L J S;
 JAVASCRIPT: ('{' ( JAVASCRIPT | ~'{'  | ~'}' )*? '}')   -> channel(3);
 //Literals
 JS_FUNCTION_DECLARATION: 'declare function';

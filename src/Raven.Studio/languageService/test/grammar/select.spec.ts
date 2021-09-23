@@ -5,8 +5,8 @@ import {
     ProjectIndividualFieldsContext
 } from "../../src/generated/RqlParser";
 
-describe("SELECT statement parser", function() {
-    it("single", function() {
+describe("SELECT statement parser", function () {
+    it("single", function () {
         const { parseTree, parser } = parseRql("from test order by item as ALPHANUMERIC desc select x");
 
         expect(parser.numberOfSyntaxErrors)
@@ -21,7 +21,7 @@ describe("SELECT statement parser", function() {
             .toEqual("x");
     });
     
-    it("distinct", function() {
+    it("distinct", function () {
         const { parseTree, parser } = parseRql("from test order by item as ALPHANUMERIC desc select distinct *");
 
         expect(parser.numberOfSyntaxErrors)
@@ -33,8 +33,8 @@ describe("SELECT statement parser", function() {
             .toBeInstanceOf(GetAllDistinctContext);
     });
 
-    it("javascript", function() {
-        const { parseTree, parser, jsTokenStream } = parseRql("from test order by item as ALPHANUMERIC desc select {test;}");
+    it("javascript", function () {
+        const { parseTree, parser } = parseRql("from test order by item as ALPHANUMERIC desc select {test;}");
 
         expect(parser.numberOfSyntaxErrors)
             .toEqual(0);

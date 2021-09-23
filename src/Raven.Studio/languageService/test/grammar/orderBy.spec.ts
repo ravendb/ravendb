@@ -4,8 +4,8 @@ import {
     OrderByStatementContext
 } from "../../src/generated/RqlParser";
 
-describe("ORDER BY statement parser", function() {
-    it("single", function() {
+describe("ORDER BY statement parser", function () {
+    it("single", function () {
         const { parseTree, parser } = parseRql("from test order by item as ALPHANUMERIC desc");
 
         expect(parser.numberOfSyntaxErrors)

@@ -1,45 +1,33 @@
-import { TokenPosition } from "../types";
 import { CandidatesCollection } from "antlr4-c3/out/src/CodeCompletionCore";
-import { RqlParser } from "../generated/RqlParser";
+import { ProgContext, RqlParser } from "../generated/RqlParser";
 import { BaseAutocompleteProvider } from "./baseProvider";
+import { Scanner } from "../scanner";
+import { META_COLLECTION, META_INDEX, SCORING_COLLECTION, SCORING_INDEX } from "./scoring";
+
+const collections = ["Orders", "Products", "Employees"];
+const indexes = ['Orders/ByCompany', 'Product/Rating'];
 
 export class AutocompleteFrom extends BaseAutocompleteProvider {
     
-    async collectAsync(position: TokenPosition, candidates: CandidatesCollection, parser: RqlParser): Promise<autoCompleteWordList[]> {
+    async collectAsync(scanner: Scanner, candidates: CandidatesCollection, parser: RqlParser, parseTree: ProgContext, writtenPart: string): Promise<autoCompleteWordList[]> {
+        const quoteType = AutocompleteFrom.detectQuoteType(writtenPart);
+        
         if (candidates.rules.has(RqlParser.RULE_collectionName)) {
-            return [
-                {
-                    value: "Orders",
-                    caption: "Orders",
-                    score: 1000,
-                    meta: "collection"
-                }
-            ]
+            return collections.map(c => ({
+                meta: META_COLLECTION,
+                score: SCORING_COLLECTION,
+                caption: c,
+                value: AutocompleteFrom.quote(c, quoteType === "Single" ? "Single" : "Double") + " "
+            }));
         }
         
         if (candidates.rules.has(RqlParser.RULE_indexName)) {
-            const quoteMode = position.text[0];
-            switch (quoteMode) {
-                case "'":
-                    return [
-                        {
-                            value: `'Orders/ByName'`,
-                            caption: "Orders/ByName",
-                            score: 1000,
-                            meta: "index"
-                        }
-                    ];
-                case '"':
-                default:
-                    return [
-                        {
-                            value: `"Orders/ByName"`,
-                            caption: "Orders/ByName",
-                            score: 1000,
-                            meta: "index"
-                        }
-                    ]
-            }
+            return indexes.map(index => ({
+                meta: META_INDEX,
+                score: SCORING_INDEX,
+                caption: index,
+                value: AutocompleteFrom.quote(index, quoteType === "Single" ? "Single" : "Double") + " "
+            }));
         }
         
         return [];

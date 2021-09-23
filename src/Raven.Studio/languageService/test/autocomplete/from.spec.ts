@@ -1,4 +1,5 @@
 import { autocomplete } from "../autocompleteUtils";
+import { META_COLLECTION } from "../../src/providers/scoring";
 
 describe("can complete from", function () {
 
@@ -25,6 +26,24 @@ describe("can complete from", function () {
     });
     
     describe("from collection", function () {
+        
+        it("can complete @all_docs", async function() {
+            const suggestions = await autocomplete("from |");
+            const allDocs = suggestions.find(x => x.value.includes("@all_docs"));
+            expect(allDocs)
+                .toBeTruthy();
+            
+            expect(allDocs.meta)
+                .toEqual(META_COLLECTION);
+        });
+        
+        it("can complete collection", async function () {
+            const suggestions = await autocomplete("from Orders| ");
+
+            expect(suggestions.map(x => x.caption))
+                .toIncludeAllMembers(["Orders"]);
+        });
+        
         it("can complete quoted collection - open", async function () {
             const suggestions = await autocomplete("from 'Ord|");
             
@@ -52,15 +71,91 @@ describe("can complete from", function () {
             expect(suggestions.map(x => x.caption))
                 .not.toIncludeAllMembers(["Orders"]);
         });
+
+        it("can complete inside", async function () {
+            const suggestions = await autocomplete("from Ord|ers  ");
+
+            expect(suggestions.map(x => x.caption))
+                .toIncludeAllMembers(["Orders"]);
+        });
+        
+        it("doesn't suggest special function in alias", async function() {
+            const suggestions = await autocomplete("from Orders as |");
+            
+            const fuzzy = suggestions.find(x => x.value.includes("fuzzy"));
+            expect(fuzzy)
+                .toBeFalsy();
+
+            const search = suggestions.find(x => x.value.includes("search"));
+            expect(search)
+                .toBeFalsy();
+        })
     });
     
     describe("from index", function () {
-        it("can complete index name", async function () {
-            const suggestions = await autocomplete(`from
-             index "Product|`);
-            console.log(suggestions); //TODO:
+        it("doesn't repeat last token", async function () {
+            const suggestions = await autocomplete(`from index|`);
+            expect(suggestions.map(x => x.caption))
+                .not.toIncludeAllMembers(["index"]);
         });
         
-        //TODO: from index Produc --> add quotes
+        it("can complete index name - no index yet defined", async function () {
+            const suggestions = await autocomplete(`from index |`);
+            expect(suggestions.map(x => x.value))
+                .toIncludeAllMembers(['"Orders/ByCompany" ']);
+        });
+        
+        it("can complete index name - when open double quote", async function () {
+            const suggestions = await autocomplete(`from index "Orde|`);
+            expect(suggestions.map(x => x.value))
+                .toIncludeAllMembers(['"Orders/ByCompany" ']);
+        });
+
+        it("can complete index name - when open single quote", async function () {
+            const suggestions = await autocomplete(`from index 'Orde|`);
+            expect(suggestions.map(x => x.value))
+                .toIncludeAllMembers(["'Orders/ByCompany' "]);
+        });
+
+        it("can complete index name - when inside double quote", async function () {
+            const suggestions = await autocomplete(`from index "Orde|"`);
+            expect(suggestions.map(x => x.value))
+                .toIncludeAllMembers(['"Orders/ByCompany" ']);
+        });
+        
+        it("can complete index name - when inside single quote", async function () {
+            const suggestions = await autocomplete(`from index 'Orde|'`);
+            expect(suggestions.map(x => x.value))
+                .toIncludeAllMembers(["'Orders/ByCompany' "]);
+        });
+        
+        it("can complete index name - when where exists", async function () {
+            const suggestions = await autocomplete(`from index "| where`);
+            expect(suggestions.map(x => x.value))
+                .toIncludeAllMembers(['"Orders/ByCompany" ']);
+            expect(suggestions.map(x => x.value))
+                .not.toIncludeAllMembers(["Employees"]);
+        });
+    });
+    
+    describe("alias", function () {
+        it("has empty list when entering as alias", async function () {
+            const suggestions = await autocomplete(`from Orders as |`);
+            
+            expect(suggestions)
+                .toHaveLength(0);
+        });
+        
+        it("can complete keywords when no alias yet defined", async function () {
+            const suggestions = await autocomplete(`from Orders |`);
+            
+            const values = suggestions.map(x => x.value);
+            expect(values)
+                .toContain("as ");
+            
+            const whereSuggestion = suggestions.find(x => x.value.startsWith("where"));
+            expect(whereSuggestion)
+                .toBeTruthy();
+        });
     });
 })
