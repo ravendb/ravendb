@@ -287,6 +287,78 @@ namespace Corax
             return BinaryMatch.Create(BinaryMatch<TInner, TOuter>.YieldOr(in set1, in set2));
         }
 
+        public UnaryMatch GreaterThan<TInner>(in TInner set, int fieldId, Slice value, int take = -1)
+            where TInner : struct, IQueryMatch
+        {
+            return UnaryMatch.Create(UnaryMatch<TInner, Slice>.YieldGreaterThan(set, this, fieldId, value, take));
+        }
+
+        public UnaryMatch GreaterThan<TInner>(in TInner set, int fieldId, float value, int take = -1)
+            where TInner : struct, IQueryMatch
+        {
+            return UnaryMatch.Create(UnaryMatch<TInner, float>.YieldGreaterThan(set, this, fieldId, value, take));
+        }
+
+        public UnaryMatch GreaterThan<TInner>(in TInner set, int fieldId, double value, int take = -1)
+            where TInner : struct, IQueryMatch
+        {
+            return UnaryMatch.Create(UnaryMatch<TInner, double>.YieldGreaterThan(set, this, fieldId, value, take));
+        }
+
+        public UnaryMatch GreaterThanOrEqual<TInner>(in TInner set, int fieldId, Slice value, int take = -1)
+            where TInner : struct, IQueryMatch
+        {
+            return UnaryMatch.Create(UnaryMatch<TInner, Slice>.YieldGreaterThanOrEqualMatch(set, this, fieldId, value, take));
+        }
+
+        public UnaryMatch GreaterThanOrEqual<TInner>(in TInner set, int fieldId, float value, int take = -1)
+            where TInner : struct, IQueryMatch
+        {
+            return UnaryMatch.Create(UnaryMatch<TInner, float>.YieldGreaterThanOrEqualMatch(set, this, fieldId, value, take));
+        }
+
+        public UnaryMatch GreaterThanOrEqual<TInner>(in TInner set, int fieldId, double value, int take = -1)
+            where TInner : struct, IQueryMatch
+        {
+            return UnaryMatch.Create(UnaryMatch<TInner, double>.YieldGreaterThanOrEqualMatch(set, this, fieldId, value, take));
+        }
+
+        public UnaryMatch LessThan<TInner>(in TInner set, int fieldId, Slice value, int take = -1)
+            where TInner : struct, IQueryMatch
+        {
+            return UnaryMatch.Create(UnaryMatch<TInner, Slice>.YieldLessThan(set, this, fieldId, value, take));
+        }
+
+        public UnaryMatch LessThan<TInner>(in TInner set, int fieldId, float value, int take = -1)
+            where TInner : struct, IQueryMatch
+        {
+            return UnaryMatch.Create(UnaryMatch<TInner, float>.YieldLessThan(set, this, fieldId, value, take));
+        }
+
+        public UnaryMatch LessThan<TInner>(in TInner set, int fieldId, double value, int take = -1)
+            where TInner : struct, IQueryMatch
+        {
+            return UnaryMatch.Create(UnaryMatch<TInner, double>.YieldLessThan(set, this, fieldId, value, take));
+        }
+
+        public UnaryMatch LessThanOrEqual<TInner>(in TInner set, int fieldId, Slice value, int take = -1)
+            where TInner : struct, IQueryMatch
+        {
+            return UnaryMatch.Create(UnaryMatch<TInner, Slice>.YieldLessThanOrEqualMatch(set, this, fieldId, value, take));
+        }
+
+        public UnaryMatch LessThanOrEqual<TInner>(in TInner set, int fieldId, float value, int take = -1)
+            where TInner : struct, IQueryMatch
+        {
+            return UnaryMatch.Create(UnaryMatch<TInner, float>.YieldLessThanOrEqualMatch(set, this, fieldId, value, take));
+        }
+
+        public UnaryMatch LessThanOrEqual<TInner>(in TInner set, int fieldId, double value, int take = -1)
+            where TInner : struct, IQueryMatch
+        {
+            return UnaryMatch.Create(UnaryMatch<TInner, double>.YieldLessThanOrEqualMatch(set, this, fieldId, value, take));
+        }
+
         public void Dispose()
         {
             _transaction?.Dispose();
