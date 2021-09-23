@@ -2,19 +2,12 @@ import { CharStreams, CommonTokenStream } from "antlr4ts";
 import { RqlLexer } from "./generated/RqlLexer";
 import { RqlParser } from "./generated/RqlParser";
 import { ParsedRql } from "./types";
-import { Recognizer } from "antlr4ts/Recognizer";
-import { RecognitionException } from "antlr4ts/RecognitionException";
+import { ANTLRErrorListener } from "antlr4ts/ANTLRErrorListener";
 import { Token } from "antlr4ts/Token";
 
 interface parseRqlOptions {
-    onSyntaxError?<T>(
-        recognizer: Recognizer<T, any>, 
-        offendingSymbol: T, 
-        line: number, 
-        charPositionInLine: number, 
-        msg: string, 
-        e: RecognitionException
-    ): void;
+    onLexerError?: ANTLRErrorListener<Token>["syntaxError"];
+    onParserError?: ANTLRErrorListener<Token>["syntaxError"];
 }
 
 export function parseRql(input: string, opts: parseRqlOptions = {}): ParsedRql {
@@ -27,22 +20,23 @@ export function parseRql(input: string, opts: parseRqlOptions = {}): ParsedRql {
     parser.buildParseTree = true;
     parser.removeErrorListeners();
     
-    if (opts.onSyntaxError) {
-        parser.addErrorListener({
-            syntaxError: opts.onSyntaxError
-        });
+    if (opts.onLexerError) {
         lexer.addErrorListener({
-            syntaxError: opts.onSyntaxError
+            syntaxError: opts.onLexerError
         });
     }
-    const jsLexer = new RqlLexer(chars);
-    const jsTokenStream = new CommonTokenStream(jsLexer, 3);
+    
+    if (opts.onParserError) {
+        parser.addErrorListener({
+            syntaxError: opts.onParserError
+        });
+    }
+
     const parseTree = parser.prog();
     
     return {
         parser, 
         parseTree,
-        tokenStream,
-        jsTokenStream
+        tokenStream
     }
 }

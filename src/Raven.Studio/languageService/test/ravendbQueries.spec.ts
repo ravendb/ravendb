@@ -14,10 +14,11 @@ describe("RavenDB Queries", function () {
             it("can parse - " + query, () => {
                 const errors: string[] = [];
                 
-                const { parser, tokenStream } = parseRql(query, {
-                    onSyntaxError: (recognizer, offendingSymbol, line, charPositionInLine, msg) => errors.push(msg)
+                const { parser, tokenStream, parseTree } = parseRql(query, {
+                    onLexerError: (recognizer, offendingSymbol, line, charPositionInLine, msg) => errors.push(msg),
+                    onParserError: (recognizer, offendingSymbol, line, charPositionInLine, msg) => errors.push(msg)
                 });
-
+                
                 expect(parser.numberOfSyntaxErrors)
                     .toEqual(0);
                 

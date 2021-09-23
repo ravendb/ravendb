@@ -1,59 +1,6 @@
 parser grammar RqlParser;
 options { tokenVocab = RqlLexer; }
 
-@parser::members
-{
-    public from: boolean = false;
-    public where: boolean = false;
-    public groupBy: boolean = false;
-    public orderBy: boolean = false;
-    public select: boolean = false;
-    
-    public afterFrom()
-    {
-       this.from = false;
-    }
-      
-    public afterGroupBy()
-    {
-       this.afterFrom();
-       this.groupBy = false;
-    }
-    
-    public afterWhere()
-    {
-       this.where = false;
-       this.afterGroupBy();
-    }
-             
-    public afterLoad()
-    {
-       this.afterWhere();
-    }
-    
-    public afterOrderBy()
-    {
-       this.afterLoad();
-       this.orderBy = false;
-    }
-    
-    public afterSelect()
-    {
-       this.select = false;
-       this.afterOrderBy();
-    }
-    
-    public afterInclude()
-    {
-       this.afterSelect();
-    }
-    
-    public afterLimit()
-    {
-       this.afterInclude();
-    }
-}
-
 prog:
     (jsFunction)* 
     fromStatement 
@@ -73,15 +20,21 @@ fromMode:
     ;
 
 fromStatement:
-    fromMode INDEX collection=collectionName fromAlias? #CollectionByIndex
+    fromMode INDEX collection=indexName fromAlias? #CollectionByIndex
     |FROM ALL_DOCS #AllCollections
     |fromMode collection=collectionName fromAlias? #CollectionByName 
+    ;
+    
+indexName:  
+    WORD
+    |STRING
+    |identifiersWithoutRootKeywords
     ;
     
 collectionName:
     WORD
     |STRING
-    |identifiersAllNames
+    |identifiersWithoutRootKeywords
     ;
 
 //We can use aliases like:
@@ -92,18 +45,13 @@ fromAlias:
     (
     WORD
     |STRING
-    |identifiersAllNames
+    | identifiersWithoutRootKeywords 
     )
     ;
     
 //          GROUP BY STATEMENT          //    
 groupByMode:
     GROUP_BY
-    {
-        this.afterFrom();
-        this.groupBy = true;
-        
-    }
     ;
     
 groupByStatement:
@@ -118,15 +66,13 @@ groupByStatement:
         )
     )*
     ;
-    
+
+suggestGroupBy:;
     
 //          WHERE STATEMENT         //
 whereMode:
     WHERE
-    {
-        this.afterGroupBy();
-        this.where = true;
-    };
+    ;
     
 whereStatement:
     whereMode 
@@ -225,9 +171,6 @@ specialParam:
 //also list of load eg (load x as y, y as p) etc 
 loadMode:
     LOAD
-    {
-       this.afterWhere();
-    }
     ;
     
 loadStatement:
@@ -244,10 +187,7 @@ loadDocumentByName:
 //          ORDER BY            //
 orderByMode:
     ORDER_BY
-    {
-        this.afterGroupBy();
-        this.orderBy = true;
-    };
+ ;
 
 orderByStatement:
     orderByMode 
@@ -287,10 +227,6 @@ orderByOrder:
 //          SELECT STATEMENT            //
 selectMode:
     SELECT
-    {
-        this.afterOrderBy();
-        this.select = true;
-    }
     ;
     
 selectStatement:
@@ -338,7 +274,7 @@ alias:
 aliasName:
     (
         WORD
-        |identifiersAllNames
+        |identifiersWithoutRootKeywords
         |STRING
     )
     ;
@@ -357,9 +293,6 @@ asArray:
 //          INCLUDE STATEMENT           //
 includeMode:
     INCLUDE
-    {
-        this.afterSelect();
-    }
     ;
     
 includeStatement:
@@ -452,47 +385,54 @@ function:
     ;
 
 //Use tokens like string
-   
-identifiersAllNames:
-    ALL
-    |AND
-    |AS
-    |BETWEEN
-    |DECLARE
-    |DISTINCT
-    |ENDS_WITH
-    |STARTS_WITH
-    |FALSE
-    |FACET
-    |FROM
-    |IN
-    |ID
-    |INCLUDE
-    |INTERSECT
-    |LOAD
-    |LONG
-    |MATCH
-    |MORELIKETHIS
-    |NULL
-    |OR
-    |ORDER_BY
-    |STRING_W
-    |TRUE
-    |WHERE
-    |WITH
-    |EXACT
-    |BOOST
-    |SEARCH
-    |FUZZY
-    |METADATA
-    |TO
-    |{!this.select}? LIMIT
-    |{!this.groupBy}? GROUP_BY
-    |{!this.where}? NOT
-    |{!this.orderBy}? SORTING
-    |{!this.orderBy}? ALPHANUMERIC
-    |{!this.orderBy}? DOUBLE
+
+identifiersWithoutRootKeywords:
+     ALL
+        |AND
+        |BETWEEN
+        |DECLARE
+        |DISTINCT
+        |ENDS_WITH
+        |STARTS_WITH
+        |FALSE
+        |FACET
+        |IN
+        |ID
+        |INTERSECT
+        |LONG
+        |MATCH
+        |MORELIKETHIS
+        |NULL
+        |OR
+        |STRING_W
+        |TRUE
+        |WITH
+        |EXACT
+        |BOOST
+        |SEARCH
+        |FUZZY
+        |METADATA
+        |TO
+        |NOT
+        |SORTING
+        |ALPHANUMERIC
+        |DOUBLE
+        ;
+    
+rootKeywords:
+    FROM 
+    | GROUP_BY
+    | WHERE
+    | LOAD
+    | ORDER_BY
+    | SELECT
+    | INCLUDE
+    | LIMIT
     ;
+
+identifiersAllNames:
+    identifiersWithoutRootKeywords
+    | rootKeywords;
     
 //Accept date range [DATE TO DATE]
 date:
