@@ -933,5 +933,69 @@ namespace FastTests.Corax
             }
         }
 
+
+        [Fact]
+        public void SimpleEqualityCompareStatement()
+        {
+            var entry1 = new IndexSingleEntry
+            {
+                Id = "entry/1",
+                Content = "1"
+            };
+            var entry2 = new IndexSingleEntry
+            {
+                Id = "entry/2",
+                Content = "2"
+            };
+            var entry3 = new IndexSingleEntry
+            {
+                Id = "entry/3",
+                Content = "1"
+            };
+
+            IndexEntries(new[] { entry1, entry2, entry3 });
+
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            using var searcher = new IndexSearcher(Env);
+
+            Slice.From(bsc, "1", out var one);
+            Slice.From(bsc, "4", out var four);
+
+            {
+                var match1 = searcher.StartWithQuery("Id", "e");
+                var match = searcher.Equals(match1, ContentIndex, one);
+
+                Span<long> ids = stackalloc long[16];
+                Assert.Equal(2, match.Fill(ids));
+                Assert.Equal(0, match.Fill(ids));
+            }
+
+            {
+                var match1 = searcher.StartWithQuery("Id", "e");
+                var match = searcher.NotEquals(match1, ContentIndex, one);
+
+                Span<long> ids = stackalloc long[16];
+                Assert.Equal(1, match.Fill(ids));
+                Assert.Equal(0, match.Fill(ids));
+            }
+
+            {
+                var match1 = searcher.StartWithQuery("Id", "e");
+                var match = searcher.Equals(match1, ContentIndex, four);
+
+                Span<long> ids = stackalloc long[16];
+                Assert.Equal(0, match.Fill(ids));
+            }
+
+            {
+                var match1 = searcher.StartWithQuery("Id", "e");
+                var match = searcher.NotEquals(match1, ContentIndex, four);
+
+                Span<long> ids = stackalloc long[16];
+                Assert.Equal(3, match.Fill(ids));
+                Assert.Equal(0, match.Fill(ids));
+            }
+        }
+
     }
 }

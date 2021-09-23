@@ -10,9 +10,8 @@ namespace Corax.Queries
         GreaterThanOrEqual,
         LessThan,
         LessThanOrEqual,
-        Equal,
-        NotEqual,
-        Not
+        Equals,
+        NotEquals
     }
 
     public unsafe partial struct UnaryMatch<TInner, TValueType> : IQueryMatch
