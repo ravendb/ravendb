@@ -138,9 +138,9 @@ namespace Raven.Server.Documents.Patch
             _writer.StartWriteArray();
             for (int i = 0; i < jsArr.ArrayLength; i++)
             {
-                using (var value = jsArr.GetProperty(i))
+                using (var jsValue = jsArr.GetProperty(i))
                 {
-                    WriteJsonValue(jsArr, false, false, i.ToString(), value);
+                    WriteJsonValue(jsArr, false, false, i.ToString(), jsValue);
                 }
             }
             _writer.WriteArrayEnd();
