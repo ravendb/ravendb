@@ -393,6 +393,38 @@ namespace Corax
             return UnaryMatch.Create(UnaryMatch<TInner, double>.YieldNotEqualsMatch(set, this, fieldId, value, take));
         }
 
+        public UnaryMatch Between<TInner>(in TInner set, int fieldId, Slice value1, Slice value2, int take = -1)
+            where TInner : struct, IQueryMatch
+        {
+            return UnaryMatch.Create(UnaryMatch<TInner, Slice>.YieldBetweenMatch(set, this, fieldId, value1, value2, take));
+        }
+        public UnaryMatch Between<TInner>(in TInner set, int fieldId, float value1, float value2, int take = -1)
+            where TInner : struct, IQueryMatch
+        {
+            return UnaryMatch.Create(UnaryMatch<TInner, float>.YieldBetweenMatch(set, this, fieldId, value1, value2, take));
+        }
+        public UnaryMatch Between<TInner>(in TInner set, int fieldId, double value1, double value2, int take = -1)
+            where TInner : struct, IQueryMatch
+        {
+            return UnaryMatch.Create(UnaryMatch<TInner, double>.YieldBetweenMatch(set, this, fieldId, value1, value2, take));
+        }
+
+        public UnaryMatch NotBetween<TInner>(in TInner set, int fieldId, Slice value1, Slice value2, int take = -1)
+            where TInner : struct, IQueryMatch
+        {
+            return UnaryMatch.Create(UnaryMatch<TInner, Slice>.YieldNotBetweenMatch(set, this, fieldId, value1, value2, take));
+        }
+        public UnaryMatch NotBetween<TInner>(in TInner set, int fieldId, float value1, float value2, int take = -1)
+            where TInner : struct, IQueryMatch
+        {
+            return UnaryMatch.Create(UnaryMatch<TInner, float>.YieldNotBetweenMatch(set, this, fieldId, value1, value2, take));
+        }
+        public UnaryMatch NotBetween<TInner>(in TInner set, int fieldId, double value1, double value2, int take = -1)
+            where TInner : struct, IQueryMatch
+        {
+            return UnaryMatch.Create(UnaryMatch<TInner, double>.YieldNotBetweenMatch(set, this, fieldId, value1, value2, take));
+        }
+
         public void Dispose()
         {
             _transaction?.Dispose();

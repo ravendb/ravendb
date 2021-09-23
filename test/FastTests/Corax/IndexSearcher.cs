@@ -997,5 +997,148 @@ namespace FastTests.Corax
             }
         }
 
+        [Fact]
+        public void SimpleBetweenCompareStatement()
+        {
+            var entry1 = new IndexSingleEntry
+            {
+                Id = "entry/1",
+                Content = "3"
+            };
+            var entry2 = new IndexSingleEntry
+            {
+                Id = "entry/2",
+                Content = "2"
+            };
+            var entry3 = new IndexSingleEntry
+            {
+                Id = "entry/3",
+                Content = "1"
+            };
+            var entry4 = new IndexSingleEntry
+            {
+                Id = "entry/4",
+                Content = "4"
+            };
+
+            IndexEntries(new[] { entry1, entry2, entry3, entry4 });
+
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            using var searcher = new IndexSearcher(Env);
+
+            Slice.From(bsc, "0", out var zero);
+            Slice.From(bsc, "1", out var one);
+            Slice.From(bsc, "2", out var two);
+            Slice.From(bsc, "3", out var three);
+            Slice.From(bsc, "4", out var four);
+
+            {
+                var match1 = searcher.StartWithQuery("Id", "e");
+                var match = searcher.Between(match1, ContentIndex, one, two);
+
+                Span<long> ids = stackalloc long[16];
+                Assert.Equal(2, match.Fill(ids));
+                Assert.Equal(0, match.Fill(ids));
+            }
+
+            {
+                var match1 = searcher.StartWithQuery("Id", "e");
+                var match = searcher.Between(match1, ContentIndex, zero, three);
+
+                Span<long> ids = stackalloc long[16];
+                Assert.Equal(3, match.Fill(ids));
+                Assert.Equal(0, match.Fill(ids));
+            }
+
+            {
+                var match1 = searcher.StartWithQuery("Id", "e");
+                var match = searcher.Between(match1, ContentIndex, zero, zero);
+
+                Span<long> ids = stackalloc long[16];
+                Assert.Equal(0, match.Fill(ids));
+            }
+
+            {
+                var match1 = searcher.StartWithQuery("Id", "e");
+                var match = searcher.Between(match1, ContentIndex, one, one);
+
+                Span<long> ids = stackalloc long[16];
+                Assert.Equal(1, match.Fill(ids));
+                Assert.Equal(0, match.Fill(ids));
+            }
+        }
+
+        [Fact]
+        public void SimpleNotBetweenCompareStatement()
+        {
+            var entry1 = new IndexSingleEntry
+            {
+                Id = "entry/1",
+                Content = "3"
+            };
+            var entry2 = new IndexSingleEntry
+            {
+                Id = "entry/2",
+                Content = "2"
+            };
+            var entry3 = new IndexSingleEntry
+            {
+                Id = "entry/3",
+                Content = "1"
+            };
+            var entry4 = new IndexSingleEntry
+            {
+                Id = "entry/4",
+                Content = "4"
+            };
+
+            IndexEntries(new[] { entry1, entry2, entry3, entry4 });
+
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            using var searcher = new IndexSearcher(Env);
+
+            Slice.From(bsc, "0", out var zero);
+            Slice.From(bsc, "1", out var one); //
+            Slice.From(bsc, "2", out var two); //
+            Slice.From(bsc, "3", out var three); //
+            Slice.From(bsc, "4", out var four); //
+            Slice.From(bsc, "5", out var five);
+
+            {
+                var match1 = searcher.StartWithQuery("Id", "e");
+                var match = searcher.NotBetween(match1, ContentIndex, two, three);
+
+                Span<long> ids = stackalloc long[16];
+                Assert.Equal(2, match.Fill(ids));
+                Assert.Equal(0, match.Fill(ids));
+            }
+
+            {
+                var match1 = searcher.StartWithQuery("Id", "e");
+                var match = searcher.NotBetween(match1, ContentIndex, two, two);
+
+                Span<long> ids = stackalloc long[16];
+                Assert.Equal(3, match.Fill(ids));
+                Assert.Equal(0, match.Fill(ids));
+            }
+
+            {
+                var match1 = searcher.StartWithQuery("Id", "e");
+                var match = searcher.NotBetween(match1, ContentIndex, one, four);
+
+                Span<long> ids = stackalloc long[16];
+                Assert.Equal(0, match.Fill(ids));
+            }
+
+            {
+                var match1 = searcher.StartWithQuery("Id", "e");
+                var match = searcher.NotBetween(match1, ContentIndex, zero, three);
+
+                Span<long> ids = stackalloc long[16];
+                Assert.Equal(1, match.Fill(ids));
+                Assert.Equal(0, match.Fill(ids));
+            }
+        }
+
     }
 }
