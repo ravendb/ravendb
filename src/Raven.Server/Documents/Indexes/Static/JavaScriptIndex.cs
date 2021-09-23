@@ -590,7 +590,7 @@ function map(name, lambda) {
             {
                 using (var jsStrRes = _engine.JsonStringify.StaticCall(jsValue))
                 using (var jsStrResNext = _engine.JsonStringify.StaticCall(jsValueNext))
-                    throw new ArgumentException($"{prefix} string argument, but got: {jsStrRes.AsString}, next argument is: {jsStrResNext.AsString}");
+                    throw new ArgumentException($"{prefix} string argument, but got: {jsValue.Summary}; \nnext argument is: {jsValueNext.Summary}");
             }
         }
 
