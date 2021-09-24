@@ -31,6 +31,8 @@ interface unifiedCertificateDefinitionWithCache extends unifiedCertificateDefini
 
 class certificates extends viewModelBase {
 
+    view = require("views/manage/certificates.html");
+
     spinners = {
         processing: ko.observable<boolean>(false)
     };

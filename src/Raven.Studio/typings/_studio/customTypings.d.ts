@@ -1,8 +1,15 @@
 /// QRCode
+/// <reference types="lodash" />
+
 declare const QRCode: any;
+
+declare var require: any;
 
 /// Sortable
 declare const Sortable: any;
+
+declare const _: LoDashStatic;
+
 
 ///
 /// JSZip
@@ -26,7 +33,7 @@ declare namespace moment {
 
 /// forge 
 
-declare module "forge/forge" {
+declare module "node-forge" {
     
     namespace util {
         function decode64(encoded: Base64): Bytes;
@@ -134,12 +141,6 @@ declare module "forge/forge" {
             function create(): any;
         }
     }
-}
-
-/// Cola.js
-
-declare module 'cola' {
-    export = cola;
 }
 
 /// Favico
@@ -317,6 +318,7 @@ interface DurandalRouteConfiguration {
     dynamicHash?: KnockoutObservable<string> | (() => string);
     tabName?: string;
     requiredAccess?: accessLevel;
+    moduleId: Function | string;
 }
 
 declare module AceAjax {
