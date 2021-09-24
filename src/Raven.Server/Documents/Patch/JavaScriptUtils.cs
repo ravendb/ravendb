@@ -397,7 +397,8 @@ var process = {
                 return Engine.FromObject(o);
             }
             if (o is V8NativeObject j) {
-                return j._;
+                InternalHandle h = j._;
+                return new InternalHandle(ref h, true);
             }
             if (o is bool b)
                 return Engine.CreateValue(b);
@@ -593,7 +594,7 @@ var process = {
                 => tb.CreateObjectBinder<ObjectBinder, LazyNumberValue>((LazyNumberValue)obj, initializeBinder, keepAlive: true);
             GlobalObject.SetProperty(typeof(LazyNumberValue));
 
-            JsonStringify = this.Execute("JSON.stringify", "JSON.stringify", true, 0, false);
+            JsonStringify = this.Execute("JSON.stringify", "JSON.stringify", true, 0);
         }
 
         ~V8EngineEx() 
