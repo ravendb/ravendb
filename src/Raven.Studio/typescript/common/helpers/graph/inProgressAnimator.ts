@@ -1,5 +1,7 @@
 /// <reference path="../../../../typings/tsd.d.ts" />
 
+import d3 = require("d3");
+
 class inProgressAnimator implements disposable {
 
     private inProgressArea: number[][] = [];

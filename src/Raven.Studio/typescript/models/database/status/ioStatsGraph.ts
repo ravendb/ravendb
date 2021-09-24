@@ -9,6 +9,7 @@ import liveIOStatsWebSocketClient = require("common/liveIOStatsWebSocketClient")
 import fileImporter = require("common/fileImporter");
 import viewHelpers = require("common/helpers/view/viewHelpers");
 import moment = require("moment");
+import d3 = require("d3");
 
 type rTreeLeaf = {
     minX: number;

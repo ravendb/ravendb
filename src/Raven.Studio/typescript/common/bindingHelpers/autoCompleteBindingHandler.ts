@@ -102,11 +102,11 @@ class autoCompleteBindingHandler {
         return resultContainer.children("li");
     }
 
-    findAutoCompleteItemMatching(resultContainer: JQuery, text: string): HTMLLIElement {
+    findAutoCompleteItemMatching(resultContainer: JQuery, text: string): HTMLElement {
         var textLower = text.toLowerCase();
         return this.getAllAutoCompleteItems(resultContainer)
             .toArray()
-            .filter((el: HTMLLIElement) => el.textContent && el.textContent.trim().toLowerCase().indexOf(textLower) >= 0)[0];
+            .filter((el: HTMLElement) => el.textContent && el.textContent.trim().toLowerCase().indexOf(textLower) >= 0)[0];
     }
 
     handleKeyPress(element: HTMLElement, $element: JQuery, $input: JQuery, args: JQueryEventObject) {

@@ -24,20 +24,32 @@
           "durandal",
           "jquery",
           "knockout",
+          "google.analytics",
           "moment",
           "knockout-postbox",
           "knockout.validation",
           "lodash",
+          "d3",
           "rbush",
           "requirejs",
           "webcola",
+          "jquery.blockui",
+          "prismjs",
+          "node-forge",
+          "toastr",
+          "diff",
+          "ace",
+          "jszip",
           "bootstrap",
-          "eonasdan-bootstrap-datetimepicker"
+          "eonasdan-bootstrap-datetimepicker",
+          "leaflet",
+          "leaflet.markercluster"
       ],
       "paths": {
           "webcola": ["node_modules/webcola/dist/index.d.ts"],
           "Favico":  ["node_modules/favico.js/favico.js"],
-          "moment": ["node_modules/moment/moment.d.ts"]
+          "moment": ["node_modules/moment/moment.d.ts"],
+          "jszip":  ["node_modules/jszip/index.d.ts"]
       }
   },
   "exclude": [

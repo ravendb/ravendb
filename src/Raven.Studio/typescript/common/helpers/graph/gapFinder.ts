@@ -1,5 +1,7 @@
 /// <reference path="../../../../typings/tsd.d.ts" />
 
+import d3 = require("d3");
+
 class gapFinder {
 
     domain: Date[] = []; // Activity Start & End times, i.e [start1, end1, start2, end2, etc...]
