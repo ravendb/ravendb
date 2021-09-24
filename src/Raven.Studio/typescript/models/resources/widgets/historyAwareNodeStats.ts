@@ -1,5 +1,7 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
 
+import moment = require("moment");
+
 class historyAwareNodeStats<T extends Raven.Server.Dashboard.Cluster.AbstractClusterDashboardNotification> {
     readonly tag: string;
 

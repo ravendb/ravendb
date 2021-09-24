@@ -12,6 +12,7 @@ import messagePublisher = require("common/messagePublisher");
 import getIndexesStatsCommand = require("commands/database/index/getIndexesStatsCommand");
 import colorsManager = require("common/colorsManager");
 import fileImporter = require("common/fileImporter");
+import moment = require("moment");
 
 type rTreeLeaf = {
     minX: number;

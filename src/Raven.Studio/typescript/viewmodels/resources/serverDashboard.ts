@@ -21,6 +21,7 @@ import accessManager = require("common/shell/accessManager");
 import driveUsageDetails = require("models/resources/serverDashboard/driveUsageDetails");
 import viewHelpers = require("common/helpers/view/viewHelpers");
 import timeHelpers = require("common/timeHelpers");
+import moment = require("moment");
 
 class machineResourcesSection {
 

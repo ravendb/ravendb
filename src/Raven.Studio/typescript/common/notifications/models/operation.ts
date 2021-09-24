@@ -4,6 +4,7 @@ import abstractNotification = require("common/notifications/models/abstractNotif
 import database = require("models/resources/database");
 import generalUtils = require("common/generalUtils");
 import timeHelpers = require("common/timeHelpers");
+import moment = require("moment");
 
 class operation extends abstractNotification {
 

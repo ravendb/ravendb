@@ -4,6 +4,7 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import deleteRevisionsForDocumentsCommand = require("commands/database/documents/deleteRevisionsForDocumentsCommand");
 import getRevisionsBinEntryCommand = require("commands/database/documents/getRevisionsBinEntryCommand");
 import generalUtils = require("common/generalUtils");
+import moment = require("moment");
 
 import document = require("models/database/documents/document");
 

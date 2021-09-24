@@ -5,6 +5,7 @@ import s3Settings = require("viewmodels/database/tasks/destinations/s3Settings")
 import getRestorePointsCommand = require("commands/resources/getRestorePointsCommand");
 import getFolderPathOptionsCommand = require("commands/resources/getFolderPathOptionsCommand");
 import commandBase = require("commands/commandBase");
+import moment = require("moment");
 
 export abstract class restoreSettings {
     backupStorageType: restoreSource;

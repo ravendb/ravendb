@@ -30,6 +30,7 @@ import queryCriteria = require("models/database/query/queryCriteria");
 import recentQueriesStorage = require("common/storage/savedQueriesStorage");
 import queryUtil = require("common/queryUtil");
 import endpoints = require("endpoints");
+import moment = require("moment");
 
 class documents extends viewModelBase {
     

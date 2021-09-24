@@ -11,6 +11,7 @@ import generalUtils = require("common/generalUtils");
 import getAdminLogsConfigurationCommand = require("commands/maintenance/getAdminLogsConfigurationCommand");
 import saveAdminLogsConfigurationCommand = require("commands/maintenance/saveAdminLogsConfigurationCommand");
 import adminLogsOnDiskConfig = require("models/database/debug/adminLogsOnDiskConfig");
+import moment = require("moment");
 
 class heightCalculator {
     

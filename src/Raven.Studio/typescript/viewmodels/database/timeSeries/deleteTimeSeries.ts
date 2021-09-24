@@ -5,6 +5,7 @@ import deleteTimeSeriesCommand = require("commands/database/documents/timeSeries
 import messagePublisher = require("common/messagePublisher");
 import datePickerBindingHandler = require("common/bindingHelpers/datePickerBindingHandler");
 import generalUtils = require("common/generalUtils");
+import moment = require("moment");
 
 class deleteTimeSeries extends dialogViewModelBase {
 

@@ -6,6 +6,7 @@ import ongoingTaskInfoCommand = require("commands/database/tasks/getOngoingTaskI
 import subscriptionConnectionDetailsCommand = require("commands/database/tasks/getSubscriptionConnectionDetailsCommand");
 import dropSubscriptionConnectionCommand = require("commands/database/tasks/dropSubscriptionConnectionCommand");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
+import moment = require("moment");
 
 type PerConnectionStats = {
     clientUri: string;

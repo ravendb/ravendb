@@ -3,6 +3,7 @@
 import getCronExpressionOccurrenceCommand = require("commands/database/tasks/getCronExpressionOccurrenceCommand");
 import generalUtils = require("common/generalUtils");
 import popoverUtils = require("common/popoverUtils");
+import moment = require("moment");
 
 type cronPeriod = "minute" | "hour" | "day" | "week" | "month" | "year" | "custom";
 

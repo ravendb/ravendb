@@ -1,4 +1,6 @@
 import viewModelBase = require("viewmodels/viewModelBase");
+import moment = require("moment");
+
 import app = require("durandal/app")
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");

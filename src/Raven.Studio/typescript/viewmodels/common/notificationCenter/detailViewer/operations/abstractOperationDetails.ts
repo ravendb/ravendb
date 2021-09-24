@@ -2,6 +2,7 @@ import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import operation = require("common/notifications/models/operation");
 import notificationCenter = require("common/notifications/notificationCenter");
 import generalUtils = require("common/generalUtils");
+import moment = require("moment");
 
 abstract class abstractOperationDetails extends dialogViewModelBase {
 

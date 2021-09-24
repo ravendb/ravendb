@@ -9,6 +9,7 @@ import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import generalUtils = require("common/generalUtils");
 import virtualUpdateByQuery = require("common/notifications/models/virtualUpdateByQuery");
+import moment = require("moment");
 
 class virtualUpdateByQueryDetails extends dialogViewModelBase {
 

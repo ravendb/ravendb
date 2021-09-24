@@ -21,6 +21,8 @@ import jsonUtil = require("common/jsonUtil");
 
 class manageDatabaseGroup extends viewModelBase {
 
+    view = require("views/resources/manageDatabaseGroup.html");
+
     dynamicDatabaseDistribution = ko.observable<boolean>(false);
     nodes = ko.observableArray<databaseGroupNode>([]);
     deletionInProgress = ko.observableArray<string>([]);

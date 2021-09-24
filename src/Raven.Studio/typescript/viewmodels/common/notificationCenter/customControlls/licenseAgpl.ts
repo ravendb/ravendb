@@ -2,6 +2,7 @@
 
 import registration = require("viewmodels/shell/registration");
 import license = require("models/auth/licenseModel");
+import moment = require("moment");
 
 class licenseAgpl  {
     

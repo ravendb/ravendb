@@ -2,6 +2,7 @@
 import database = require("models/resources/database");
 import generalUtils = require("common/generalUtils");
 import accessManager = require("common/shell/accessManager");
+import moment = require("moment");
 
 abstract class abstractNotification {
 

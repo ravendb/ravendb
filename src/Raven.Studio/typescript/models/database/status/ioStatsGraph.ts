@@ -8,6 +8,7 @@ import messagePublisher = require("common/messagePublisher");
 import liveIOStatsWebSocketClient = require("common/liveIOStatsWebSocketClient");
 import fileImporter = require("common/fileImporter");
 import viewHelpers = require("common/helpers/view/viewHelpers");
+import moment = require("moment");
 
 type rTreeLeaf = {
     minX: number;

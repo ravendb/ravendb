@@ -79,6 +79,7 @@
     "@types/lodash": "^4.14.150",
     "@types/requirejs": "^2.1.31",
     "durandal": "^2.2.0",
+    "favico.js": "^0.3.10",
     "knockout": "^3.4.0",
     "knockout-delegated-events": "^0.6.1",
     "knockout-postbox": "^0.5.2",
