@@ -21,6 +21,7 @@ import document = require("models/database/documents/document");
 import saveDocumentCommand = require("commands/database/documents/saveDocumentCommand");
 import changeVectorUtils = require("common/changeVectorUtils");
 import generalUtils = require("common/generalUtils");
+import moment = require("moment");
 
 class conflictItem {
     

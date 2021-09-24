@@ -6,6 +6,7 @@ import verifyDocumentsIDsCommand = require("commands/database/documents/verifyDo
 import getDocumentRevisionsCommand = require("commands/database/documents/getDocumentRevisionsCommand");
 import appUrl = require("common/appUrl");
 import endpoints = require("endpoints");
+import moment = require("moment");
 import generalUtils = require("common/generalUtils");
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");

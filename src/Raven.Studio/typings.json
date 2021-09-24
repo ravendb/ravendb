@@ -11,7 +11,6 @@
     "moment": "github:DefinitelyTyped/DefinitelyTyped/moment/moment.d.ts#56295f5058cac7ae458540423c50ac2dcf9fc711",
     "moment-node": "github:DefinitelyTyped/DefinitelyTyped/moment/moment-node.d.ts#8886ae591751e8a8237fa855617745768f0b1bdf",
     "prismjs": "github:DefinitelyTyped/DefinitelyTyped/prismjs/index.d.ts#49b1ac6a384fab428e0bad052b47f47ff8306193",
-    "require": "github:DefinitelyTyped/DefinitelyTyped/requirejs/require.d.ts#56295f5058cac7ae458540423c50ac2dcf9fc711",
     "toastr": "github:DefinitelyTyped/DefinitelyTyped/toastr/index.d.ts#daf9bd392f4c8469ddc8849ee198bbdd1e57c7f4",
     "typeahead": "github:DefinitelyTyped/DefinitelyTyped/typeahead/typeahead.d.ts#7de6c3dd94feaeb21f20054b9f30d5dabc5efabd"
   },

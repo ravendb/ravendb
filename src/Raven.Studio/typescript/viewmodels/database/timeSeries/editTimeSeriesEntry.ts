@@ -4,6 +4,7 @@ import database = require("models/resources/database");
 import timeSeriesEntryModel = require("models/database/timeSeries/timeSeriesEntryModel");
 import saveTimeSeriesCommand = require("commands/database/documents/timeSeries/saveTimeSeriesCommand");
 import popoverUtils = require("common/popoverUtils");
+import moment = require("moment");
 
 class editTimeSeriesEntry extends dialogViewModelBase {
 

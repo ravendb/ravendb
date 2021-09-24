@@ -7,6 +7,7 @@ import virtualGridController = require("widgets/virtualGrid/virtualGridControlle
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import generalUtils = require("common/generalUtils");
+import moment = require("moment");
 
 interface hugeDocumentsDetailsItemDto extends Raven.Server.NotificationCenter.Notifications.Details.HugeDocumentInfo {
     

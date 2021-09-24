@@ -3,6 +3,7 @@ import genericProgress = require("common/helpers/database/genericProgress");
 import serverTime = require("common/helpers/database/serverTime");
 import timeHelpers = require("common/timeHelpers");
 import generalUtils = require("common/generalUtils");
+import moment = require("moment");
 
 class progress extends genericProgress {
     

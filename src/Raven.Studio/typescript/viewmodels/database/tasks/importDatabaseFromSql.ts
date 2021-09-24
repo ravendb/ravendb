@@ -20,6 +20,7 @@ import showDataDialog = require("viewmodels/common/showDataDialog");
 import documentMetadata = require("models/database/documents/documentMetadata");
 import generalUtils = require("common/generalUtils");
 import fileImporter = require("common/fileImporter");
+import moment = require("moment");
 
 interface exportDataDto {
     Schema: Raven.Server.SqlMigration.Schema.DatabaseSchema,

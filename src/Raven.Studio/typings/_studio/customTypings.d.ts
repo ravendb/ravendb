@@ -23,14 +23,6 @@ declare module "jszip-utils" {
     export = JSZipUtils;
 }
 
-/// moment
-declare namespace moment {
-    interface Moment {
-        isUtc(): boolean;
-    }
-}
-
-
 /// forge 
 
 declare module "node-forge" {
@@ -147,7 +139,12 @@ declare module "node-forge" {
 ///
 /// Using *any* as official typings are broken
 
-declare const Favico: any;
+
+declare var FavicoStatic: any;
+
+declare module "Favico" {
+    export = FavicoStatic;
+}
 
 ///
 /// jQuery: 

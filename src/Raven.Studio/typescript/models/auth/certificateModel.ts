@@ -1,7 +1,7 @@
 /// <reference path="../../../typings/tsd.d.ts" />
 
 import certificatePermissionModel = require("models/auth/certificatePermissionModel");
-import genUtils = require("common/generalUtils");
+import moment = require("moment");
 
 class certificateModel {
 

@@ -10,6 +10,18 @@ type dialogViewModelBaseOptions = {
 
 abstract class dialogViewModelBase {
 
+    view: string;
+    
+    getView() {
+        if (!this.view) {
+            throw new Error("Looks like you forgot to define view in: " + this);
+        }
+        if (!this.view.startsWith("<")) {
+            console.warn("View doesn't start with '<'");
+        }
+        return this.view;
+    }
+    
     protected activeDatabase = activeDatabaseTracker.default.database;
     static readonly dialogSelector = ".modal-dialog";
 

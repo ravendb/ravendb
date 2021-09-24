@@ -7,6 +7,7 @@ import virtualGridController = require("widgets/virtualGrid/virtualGridControlle
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import generalUtils = require("common/generalUtils");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
+import moment = require("moment");
 
 class requestLatencyDetails extends abstractPerformanceHintDetails {
     

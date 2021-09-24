@@ -43,6 +43,7 @@ import spatialCircleModel = require("models/database/query/spatialCircleModel");
 import spatialPolygonModel = require("models/database/query/spatialPolygonModel");
 import rqlLanguageService = require("common/rqlLanguageService");
 import hyperlinkColumn = require("widgets/virtualGrid/columns/hyperlinkColumn");
+import moment = require("moment");
 
 type queryResultTab = "results" | "explanations" | "timings" | "graph" | "revisions";
 

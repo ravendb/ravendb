@@ -43,6 +43,7 @@ import getTimeSeriesStatsCommand = require("commands/database/documents/timeSeri
 import studioSettings = require("common/settings/studioSettings");
 import globalSettings = require("common/settings/globalSettings");
 import accessManager = require("common/shell/accessManager");
+import moment = require("moment");
 
 interface revisionToCompare {
     date: string;

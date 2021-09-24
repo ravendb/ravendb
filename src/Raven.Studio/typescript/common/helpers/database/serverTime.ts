@@ -1,5 +1,7 @@
 /// <reference path="../../../../typings/tsd.d.ts" />
 
+import moment = require("moment");
+
 class serverTime {
    
     static default = new serverTime();

@@ -4,6 +4,7 @@ import nodeInfo = require("models/wizard/nodeInfo");
 import serverSetup = require("models/wizard/serverSetup");
 import popoverUtils = require("common/popoverUtils");
 import ipEntry = require("models/wizard/ipEntry");
+import moment = require("moment");
 import databaseStudioConfigurationModel = require("models/database/settings/databaseStudioConfigurationModel");
 
 class nodes extends setupStep {

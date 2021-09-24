@@ -15,7 +15,7 @@ import messagePublisher = require("common/messagePublisher");
 /*
  * Base view model class that provides basic view model services, such as tracking the active database and providing a means to add keyboard shortcuts.
 */
-class viewModelBase {
+abstract class viewModelBase {
 
     protected activeDatabase = activeDatabaseTracker.default.database;
     
@@ -25,6 +25,18 @@ class viewModelBase {
     
     protected isOperatorOrAbove = accessManager.default.isOperatorOrAbove;
     protected isClusterAdminOrClusterNode = accessManager.default.isClusterAdminOrClusterNode;
+    
+    view: string;
+    
+    getView() {
+        if (!this.view) {
+            throw new Error("Looks like you forgot to define view in: " + this.constructor.name);
+        }
+        if (!this.view.startsWith("<")) {
+            console.warn("View doesn't start with '<'");
+        }
+        return this.view;
+    }
     
     downloader = new downloader();
 

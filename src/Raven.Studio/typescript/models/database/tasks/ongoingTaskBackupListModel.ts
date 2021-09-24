@@ -10,8 +10,8 @@ import generalUtils = require("common/generalUtils");
 import timeHelpers = require("common/timeHelpers");
 import notificationCenter = require("common/notifications/notificationCenter");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
-import shell = require("viewmodels/shell");
 import accessManager = require("common/shell/accessManager");
+import moment = require("moment");
 
 class ongoingTaskBackupListModel extends ongoingTaskListModel {
     private static neverBackedUpText = "Never backed up";

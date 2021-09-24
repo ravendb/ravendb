@@ -3,6 +3,7 @@ import abstractNotification = require("common/notifications/models/abstractNotif
 import notificationCenter = require("common/notifications/notificationCenter");
 import alert = require("common/notifications/models/alert");
 import abstractAlertDetails = require("viewmodels/common/notificationCenter/detailViewer/alerts/abstractAlertDetails");
+import moment = require("moment");
 
 class newVersionAvailableDetails extends abstractAlertDetails {
 
