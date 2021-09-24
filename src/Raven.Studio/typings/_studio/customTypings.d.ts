@@ -10,6 +10,10 @@ declare const Sortable: any;
 
 declare const _: LoDashStatic;
 
+declare const Prism: Prism;
+
+declare const L: L;
+
 
 ///
 /// JSZip

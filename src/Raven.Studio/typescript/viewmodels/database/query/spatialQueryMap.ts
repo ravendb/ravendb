@@ -2,14 +2,14 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import spatialMarkersLayerModel = require("models/database/query/spatialMarkersLayerModel");
 import document = require("models/database/documents/document");
 import documentMetadata = require("models/database/documents/documentMetadata");
-import { Control, IconOptions, MarkerClusterGroup, TileLayer } from "leaflet";
+import { Control, IconOptions, MarkerClusterGroup, Map, TileLayer } from "leaflet";
 import genUtils = require("common/generalUtils");
 import spatialCircleModel = require("models/database/query/spatialCircleModel");
 import spatialPolygonModel = require("models/database/query/spatialPolygonModel");
 
 class spatialQueryMap extends viewModelBase {
     
-    private map: L.Map;
+    private map: Map;
     
     markersLayers = ko.observableArray<spatialMarkersLayerModel>([]);
     circlesLayer = ko.observableArray<spatialCircleModel>([]);
