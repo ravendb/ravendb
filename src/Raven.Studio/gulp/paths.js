@@ -66,7 +66,6 @@ var paths = {
         'prism/components/prism-csharp.js',
         "blockUI/jquery.blockUI.js",
         "knockout/dist/knockout.debug.js",
-        "knockout-validation/dist/knockout.validation.js",
         "knockout.dirtyFlag/index.js",
         "knockout-delegatedEvents/build/knockout-delegatedEvents.js",
         "knockout-postbox/build/knockout-postbox.js",

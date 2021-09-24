@@ -19,7 +19,6 @@
         <meta name="theme-color" content="#2c343c">
 
         <!-- build:css Content/css/styles-common.css -->
-            <link rel="stylesheet" href="lib/Durandal/css/durandal.css" />
             <link rel="stylesheet" href="lib/eonasdan-bootstrap-datetimepicker/build/css/bootstrap-datetimepicker.css" />
             <link rel="stylesheet" href="lib/bootstrap-duration-picker/dist/bootstrap-duration-picker.css" />
             <link rel="stylesheet" href="lib/leaflet/dist/leaflet.css" />
@@ -70,26 +69,18 @@
     </div>
     <div class="processing-spinner"></div>
     <iframe id="downloadFrame" style="display: none" name="hidden-form"></iframe>
-
+    
+    <script type="text/javascript" src="dist/main.js"></script>
+    
     <!-- build:js App/external-libs.js -->
-        <script type="text/javascript" src="lib/es6-shim/es6-shim.js"></script>
         <script type="text/javascript" src="Content/modernizr.js"></script>
-        <script type="text/javascript" src="lib/jquery/dist/jquery.js"></script>
-        <script type="text/javascript" src="lib/lodash/dist/lodash.js"></script>
         <script type="text/javascript" src="lib/prism/prism.js"></script>
         <script type="text/javascript" src="lib/Sortable/Sortable.js"></script>
         <script type="text/javascript" src="lib/prism/components/prism-javascript.js"></script>
         <script type="text/javascript" src="lib/prism/components/prism-csharp.js"></script>
         <script type="text/javascript" src="lib/blockUI/jquery.blockUI.js"></script>
-        <script type="text/javascript" src="lib/knockout/dist/knockout.debug.js"></script>
-        <script type="text/javascript" src="lib/knockout-validation/dist/knockout.validation.js"></script>
-        <script type="text/javascript" src="lib/knockout.dirtyFlag/index.js"></script>
-        <script type="text/javascript" src="lib/knockout-delegatedEvents/build/knockout-delegatedEvents.js"></script>
-        <script type="text/javascript" src="lib/knockout-postbox/build/knockout-postbox.js"></script>
-        <script type="text/javascript" src="lib/moment/moment.js"></script>
         <script type="text/javascript" src="lib/cronstrue/dist/cronstrue.js"></script>
         <script type="text/javascript" src="lib/bootstrap/dist/js/bootstrap.js"></script>
-        <script type="text/javascript" src="lib/eonasdan-bootstrap-datetimepicker/build/js/bootstrap-datetimepicker.min.js"></script>
         <script type="text/javascript" src="lib/bootstrap-duration-picker/dist/bootstrap-duration-picker-debug.js"></script>
         <script type="text/javascript" src="lib/bootstrap-contextmenu/bootstrap-contextmenu.js"></script>
         <script type="text/javascript" src="lib/bootstrap-multiselect/dist/js/bootstrap-multiselect.js"></script>
@@ -106,10 +97,7 @@
         <script type="text/javascript" src="lib/packery/dist/packery.pkgd.js"></script>
         <script type="text/javascript" src="lib/draggabilly/dist/draggabilly.pkgd.js"></script>
     <!-- /build -->
-
-    <script data-main="App/main"></script>
     <!-- build:js App/main.js -->
-        <script type="text/javascript" src="lib/requirejs/require.js"></script>
         <script type="text/javascript" src="Content/ace/ace.js"></script>
         <script type="text/javascript" src="Content/ace/ext-language_tools.js"></script>
         <script type="text/javascript" src="Content/ace/worker-json.js"></script>

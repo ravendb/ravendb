@@ -6,6 +6,8 @@ import notificationCenter = require("common/notifications/notificationCenter");
 import appUrl = require("common/appUrl");
 
 class revertRevisions extends viewModelBase {
+    
+    view = require("views/database/settings/revertRevisions.html");
 
     model = new revertRevisionsRequest();
     revisionsUrl: KnockoutComputed<string>;
