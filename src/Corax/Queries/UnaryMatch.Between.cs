@@ -75,7 +75,6 @@ namespace Corax.Queries
                 if (results == 0)
                     return totalResults;
 
-                int currentIdx = 0;
                 int storeIdx = 0;
                 for (int i = 0; i < results; i++)
                 {
@@ -104,12 +103,11 @@ namespace Corax.Queries
                 }
 
                 totalResults += storeIdx;
-                if (totalResults > match._take)
+                if (totalResults >= match._take)
                     break;
 
             }
 
-            matches = currentMatches;
             return totalResults;
         }
 
@@ -203,7 +201,7 @@ namespace Corax.Queries
                 }
 
                 totalResults += storeIdx;
-                if (totalResults > match._take)
+                if (totalResults >= match._take)
                     break;
 
                 currentMatches = currentMatches.Slice(storeIdx);
@@ -232,7 +230,6 @@ namespace Corax.Queries
                 if (results == 0)
                     return totalResults;
 
-                int currentIdx = 0;
                 int storeIdx = 0;
                 for (int i = 0; i < results; i++)
                 {
@@ -261,8 +258,8 @@ namespace Corax.Queries
                 }
 
                 totalResults += storeIdx;
-                if (totalResults > match._take)
-                    break;
+                if (totalResults >= match._take)
+                    break;                    
 
             }
 
