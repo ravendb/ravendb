@@ -119,9 +119,13 @@ namespace Corax.Queries
                 // We get a new batch
                 int bTotalMatches = _inner.Fill(bValues);
                 TotalResults += bTotalMatches;
+
                 // When we don't have any new batch, we are done.
                 if (bTotalMatches == 0)
+                {
+                    QueryContext.MatchesPool.Return(matchesKeysHolder);
                     return totalMatches;
+                }
 
                 // We get the keys to sort.
                 for (int i = 0; i < bTotalMatches; i++)
@@ -213,8 +217,6 @@ namespace Corax.Queries
                 End:
                 totalMatches = kIdx;
             }
-
-            QueryContext.MatchesPool.Return(matchesKeysHolder);
         }
     }
 }
