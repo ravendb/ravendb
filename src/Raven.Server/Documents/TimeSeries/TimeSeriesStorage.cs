@@ -59,7 +59,7 @@ namespace Raven.Server.Documents.TimeSeries
         private HashSet<string> _tableCreated = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         public readonly TimeSeriesStats Stats;
         public readonly TimeSeriesRollups Rollups;
-
+        
         static TimeSeriesStorage()
         {
             using (StorageEnvironment.GetStaticContext(out ByteStringContext ctx))
@@ -117,6 +117,7 @@ namespace Raven.Server.Documents.TimeSeries
         }
 
         private readonly Logger _logger;
+        private readonly DocumentsOperationContext _context;
 
         public TimeSeriesStorage(DocumentDatabase documentDatabase, Transaction tx)
         {
@@ -129,6 +130,8 @@ namespace Raven.Server.Documents.TimeSeries
             Stats = new TimeSeriesStats(this, tx);
             Rollups = new TimeSeriesRollups(_documentDatabase);
             _logger = LoggingSource.Instance.GetLogger<TimeSeriesStorage>(documentDatabase.Name);
+
+            _documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out _context);
         }
 
         public static DateTime ExtractDateTimeFromKey(Slice key)
@@ -1040,7 +1043,8 @@ namespace Raven.Server.Documents.TimeSeries
             public bool AddNewValue(DateTime time, Span<double> values, Span<byte> tagSlice, ref TimeSeriesValuesSegment segment, ulong status)
             {
                 var retryAppend = AddValueInternal(time, values, tagSlice, ref segment, status);
-                _context.DocumentDatabase.TimeSeriesPolicyRunner?.MarkForPolicy(_context, SliceHolder, time, status);
+                if(retryAppend)
+                    _context.DocumentDatabase.TimeSeriesPolicyRunner?.MarkForPolicy(_context, SliceHolder, time, status);
                 return retryAppend;
             }
 
@@ -1069,7 +1073,8 @@ namespace Raven.Server.Documents.TimeSeries
 
                     if (segmentLastTimestamp == time) // special split segment case
                     {
-                        return _tss.SplitSegment(_context, this, trimSegmentToDate: true);
+                        TrimSegmentToDate(time);
+                        return true;
                     }
   
                     FlushCurrentSegment(ref segment, values, tagSlice, status);
@@ -1124,11 +1129,7 @@ namespace Raven.Server.Documents.TimeSeries
                 SliceHolder.SetBaselineToKey(BaselineDate);
             }
 
-            public bool TrimSegmentToDate(ref TimeSeriesValuesSegment splitSegment,
-                TimeSeriesValuesSegment readOnlySegment,
-                Span<double> localValues,
-                TimeSeriesValuesSegment.TagPointer localTag,
-                Span<TimestampState> localState)
+            public void TrimSegmentToDate(DateTime trimTimestamp)
             {
                 // we ran out of space (up to 2KB) and we need to split the segment. 
                 // last timestamp of current segment == baseline of next segment
@@ -1138,38 +1139,56 @@ namespace Raven.Server.Documents.TimeSeries
                 // from that point, we flush the segment and add the leftovers to a new segment
 
                 var originalBaseline = BaselineDate;
-                var nextSegmentBaseline = readOnlySegment.GetLastTimestamp(originalBaseline);
+                var segmentToSplit = ReadOnlySegment;
+                var valuesLength = segmentToSplit.NumberOfValues;
 
-                using (var enumerator = readOnlySegment.GetEnumerator(_context.Allocator))
+                using (_context.Allocator.Allocate(segmentToSplit.NumberOfBytes, out var currentSegmentBuffer))
                 {
-                    while (enumerator.MoveNext(out var localTimestamp, localValues, localState, ref localTag, out var localStatus))
+                    Memory.Copy(currentSegmentBuffer.Ptr, segmentToSplit.Ptr, segmentToSplit.NumberOfBytes);
+                    var readOnlySegment = new TimeSeriesValuesSegment(currentSegmentBuffer.Ptr, segmentToSplit.NumberOfBytes);
+                    var splitSegment = new TimeSeriesValuesSegment(SliceHolder.SegmentBuffer.Ptr, MaxSegmentSize);
+                    splitSegment.Initialize(valuesLength);
+
+                    using (_context.Allocator.Allocate(valuesLength * sizeof(double), out var valuesBuffer))
+                    using (_context.Allocator.Allocate(readOnlySegment.NumberOfValues * sizeof(TimestampState), out var stateBuffer))
                     {
-                        var currentLocalTime = originalBaseline.AddMilliseconds(localTimestamp);
-                        var timestampDiff = ((currentLocalTime - originalBaseline).Ticks / 10_000);
+                        Memory.Set(valuesBuffer.Ptr, 0, valuesBuffer.Length);
+                        Memory.Set(stateBuffer.Ptr, 0, stateBuffer.Length);
 
-                        if (currentLocalTime < nextSegmentBaseline)
+                        var localValues = new Span<double>(valuesBuffer.Ptr, readOnlySegment.NumberOfValues);
+                        var localState = new Span<TimestampState>(stateBuffer.Ptr, readOnlySegment.NumberOfValues);
+                        var localTag = new TimeSeriesValuesSegment.TagPointer();
+
+                        using (var enumerator = readOnlySegment.GetEnumerator(_context.Allocator))
                         {
-                            splitSegment.Append(_context.Allocator, (int)timestampDiff, localValues, localTag.AsSpan(), localStatus);
-                            continue;
+                            while (enumerator.MoveNext(out var localTimestamp, localValues, localState, ref localTag, out var localStatus))
+                            {
+                                var currentLocalTime = originalBaseline.AddMilliseconds(localTimestamp);
+                                var timestampDiff = ((currentLocalTime - originalBaseline).Ticks / 10_000);
+
+                                if (currentLocalTime < trimTimestamp)
+                                {
+                                    splitSegment.Append(_context.Allocator, (int)timestampDiff, localValues, localTag.AsSpan(), localStatus);
+                                    continue;
+                                }
+
+                                AppendExistingSegment(splitSegment);
+                                splitSegment.Initialize(localValues.Length);
+                                splitSegment.Append(_context.Allocator, 0, localValues, localTag.AsSpan(), localStatus);
+                                UpdateBaseline(timestampDiff);
+
+                                while (enumerator.MoveNext(out localTimestamp, localValues, localState, ref localTag, out localStatus))
+                                {
+                                    currentLocalTime = originalBaseline.AddMilliseconds(localTimestamp);
+                                    timestampDiff = ((currentLocalTime - BaselineDate).Ticks / 10_000);
+                                    splitSegment.Append(_context.Allocator, (int)timestampDiff, localValues, localTag.AsSpan(), localStatus);
+                                }
+
+                                AppendExistingSegment(splitSegment);
+                            }
                         }
-
-                        AppendExistingSegment(splitSegment);
-                        splitSegment.Initialize(localValues.Length);
-                        splitSegment.Append(_context.Allocator, 0, localValues, localTag.AsSpan(), localStatus);
-                        UpdateBaseline(timestampDiff);
-
-                        while (enumerator.MoveNext(out localTimestamp, localValues, localState, ref localTag, out localStatus))
-                        {
-                            currentLocalTime = originalBaseline.AddMilliseconds(localTimestamp);
-                            timestampDiff = ((currentLocalTime - BaselineDate).Ticks / 10_000);
-                            splitSegment.Append(_context.Allocator, (int)timestampDiff, localValues, localTag.AsSpan(), localStatus);
-                        }
-
-                        return true;
                     }
                 }
-
-                return false;
             }
 
             private void DiscardsAllEntriesAtSameTimestampToSingleDeadEntry(ref TimeSeriesValuesSegment timeSeriesSegment, Span<byte> currentTag, Span<double> values)
@@ -1231,12 +1250,13 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-
+        private Dictionary<string, List<LazyStringValue>> _timedCounterCacheTags;
         private static readonly byte[] TimedCounterPrefixBuffer = Encoding.UTF8.GetBytes(TimedCounterPrefix);
         private static readonly byte[] TimedCounterPositivePrefixBuffer = Encoding.UTF8.GetBytes(TimedCounterPositivePrefix);
         private const string TimedCounterPrefix = "TC:";
         private const string TimedCounterPositivePrefix = TimedCounterPrefix + "INC-";
         private const string TimedCounterNegativePrefix = TimedCounterPrefix + "DEC-";
+        
         public string IncrementTimestamp(
             DocumentsOperationContext context,
             string documentId,
@@ -1244,9 +1264,8 @@ namespace Raven.Server.Documents.TimeSeries
             string name,
             IEnumerable<TimeSeriesOperation.IncrementOperation> toIncrement)
         {
-#if DEBUG
-            DateTime prevTime = DateTime.MinValue;
-#endif
+            _timedCounterCacheTags ??= new Dictionary<string, List<LazyStringValue>>();
+            DateTime prevTimestamp = DateTime.MinValue;
 
             var holder = new SingleResult();
 
@@ -1255,43 +1274,63 @@ namespace Raven.Server.Documents.TimeSeries
 
             SingleResult ToResult(TimeSeriesOperation.IncrementOperation element)
             {
-#if DEBUG
-                if (element.Timestamp <= prevTime)
-                {
-                    throw new InvalidDataException(
-                        $"The order of increment operations must be sequential, but got previous operation {prevTime} and the current: {element.Timestamp}");
-                }
-
-                prevTime = element.Timestamp;
-#endif
-                var sign = Math.Sign(element.Values[0]);
-                if (sign == 0)
-                {
-                    for (int i = 1; i < element.Values.Length; i++)
-                    {
-                        if (Math.Sign(element.Values[i]) == 0) 
-                            continue;
-
-                        sign = Math.Sign(element.Values[i]);
-                        break;
-                    }
-
-                    if (sign == 0)
-                        throw new InvalidDataException("Cannot receive a zero as a single value. Increment/decrement operations must receive at least one positive/negative values");
-                } 
-                
-                for (int i = 1; i < element.Values.Length; i++)
-                {
-                    if (sign != Math.Sign(element.Values[i]))
-                        throw new InvalidDataException("Cannot mix increment & decrement operations in a single call. But got: " + string.Join(", ", element.Values));
-                }
+                ValidateTimestamp(prevTimestamp, element.Timestamp);
+                prevTimestamp = element.Timestamp;
 
                 holder.Values = element.Values;
-                holder.Tag = context.GetLazyString((sign > 0 ? TimedCounterPositivePrefix : TimedCounterNegativePrefix) + _documentDatabase.DbBase64Id);
+                holder.Tag = TryGetTimedCounterTag(_documentDatabase.DbBase64Id, element.Values);
                 holder.Timestamp = element.Timestamp.EnsureUtc().EnsureMilliseconds();
                 holder.Status = TimeSeriesValuesSegment.Live;
                 return holder;
             }
+        }
+
+        private static void ValidateTimestamp(DateTime prevTimestamp, DateTime elementTimestamp)
+        {
+            if (elementTimestamp <= prevTimestamp)
+            {
+                throw new InvalidDataException(
+                    $"The order of increment operations must be sequential, but got previous operation {prevTimestamp} and the current: {elementTimestamp}");
+            }
+        }
+
+        private static int TryGetValuesSign(IReadOnlyList<double> values)
+        {
+            int sign = 0;
+            foreach (var value in values)
+            {
+                sign = Math.Sign(value);
+                if (sign != 0)
+                    break;
+            }
+
+            if (sign != 0)
+            {
+                for (int i = 1; i < values.Count; i++)
+                {
+                    var currentSign = Math.Sign(values[i]);
+                    if (sign != currentSign && currentSign != 0)
+                        throw new InvalidDataException("Cannot mix increment & decrement operations in a single call. But got: " + string.Join(", ", values));
+                }
+            }
+
+            return sign;
+        }
+
+        private LazyStringValue TryGetTimedCounterTag(string key, IReadOnlyList<double> values)
+        {
+            var sign = TryGetValuesSign(values);
+
+            if (_timedCounterCacheTags.ContainsKey(key) == false)
+            {
+                _timedCounterCacheTags[key] = new List<LazyStringValue>()
+                {
+                    _context.GetLazyString(TimedCounterPositivePrefix + key),
+                    _context.GetLazyString(TimedCounterNegativePrefix + key)
+                };
+            }
+
+            return sign >= 0 ? _timedCounterCacheTags[key][0] : _timedCounterCacheTags[key][1];
         }
 
         private class AppendEnumerator : IEnumerator<SingleResult>
@@ -1438,7 +1477,7 @@ namespace Raven.Server.Documents.TimeSeries
                                 break;
                             }
 
-                            retry = SplitSegment(context, segmentHolder, reader: appendEnumerator, current: current);
+                            retry = SplitSegment(context, segmentHolder, appendEnumerator, current);
                         }
                     }
                 }
@@ -1583,12 +1622,11 @@ namespace Raven.Server.Documents.TimeSeries
         public bool SplitSegment(
            DocumentsOperationContext context,
             TimeSeriesSegmentHolder timeSeriesSegment, 
-           IEnumerator<SingleResult> reader = null,
-            SingleResult current = null,
-           bool trimSegmentToDate = false)
+           IEnumerator<SingleResult> reader,
+            SingleResult current)
         {
             var segmentToSplit = timeSeriesSegment.ReadOnlySegment;
-            var valuesLength = trimSegmentToDate ? segmentToSplit.NumberOfValues : current.Values.Span.Length;
+            var valuesLength = current.Values.Span.Length;
             var additionalValueSize = Math.Max(0, valuesLength - timeSeriesSegment.ReadOnlySegment.NumberOfValues);
             var newNumberOfValues = additionalValueSize + timeSeriesSegment.ReadOnlySegment.NumberOfValues;
 
@@ -1608,13 +1646,6 @@ namespace Raven.Server.Documents.TimeSeries
                     var currentValues = new Span<double>(valuesBuffer.Ptr, readOnlySegment.NumberOfValues);
                     var state = new Span<TimestampState>(stateBuffer.Ptr, readOnlySegment.NumberOfValues);
                     var currentTag = new TimeSeriesValuesSegment.TagPointer();
-
-                    if (trimSegmentToDate)
-                    {
-                        return timeSeriesSegment.TrimSegmentToDate(ref splitSegment, readOnlySegment, currentValues, currentTag, state);
-                    }
-
-
                     var updatedValues = new Span<double>(valuesBuffer.Ptr, newNumberOfValues);
                     for (int i = readOnlySegment.NumberOfValues; i < newNumberOfValues; i++)
                     {
