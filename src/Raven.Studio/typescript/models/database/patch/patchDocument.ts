@@ -9,6 +9,7 @@ class patchDocument {
     recentPatch = ko.observable<boolean>(false);
 
     queryHasError = ko.observable<boolean>(false);
+    updateHasError = ko.observable<boolean>(false);
     
     validationGroup: KnockoutValidationGroup;
 
@@ -29,6 +30,10 @@ class patchDocument {
                 {
                     validator: () => !this.queryHasError(),
                     message: "The query part of your patch script failed to execute. Please check the query syntax."
+                },
+                {
+                    validator: () => !this.updateHasError(),
+                    message: "Please check the update part of your patch script."
                 }]
         });
         
