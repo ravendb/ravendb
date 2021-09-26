@@ -60,6 +60,10 @@ namespace Raven.Server.Documents.Indexes.Static
                     continue;
                 }
 
+#if DEBUG
+                _engine.MakeSnapshot("map");
+#endif
+
                 if (jsItem.IsBinder)
                 {
                     //jsItem.SetReadyToDisposal();
@@ -128,6 +132,10 @@ namespace Raven.Server.Documents.Indexes.Static
                         // objects and arrays, anything else is discarded
                     }
                     _engine.ForceV8GarbageCollection();
+
+#if DEBUG
+                    _engine.CheckForMemoryLeaks("map");
+#endif
                 }
                 else {
                     throw new JavaScriptIndexFuncException($"Failed to execute {MapString}", new Exception($"Entry item is not document: {jsItem.ToString()}"));

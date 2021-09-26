@@ -85,6 +85,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                         h.Dispose();
                     }
                     engine?.ForceV8GarbageCollection();
+#if DEBUG
+                    engine?.CheckForMemoryLeaks("reduce");
+#endif
                 }
                 _outputs.Clear();
                 _outputs = null;

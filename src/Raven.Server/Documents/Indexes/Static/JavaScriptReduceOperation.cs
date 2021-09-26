@@ -184,6 +184,10 @@ namespace Raven.Server.Documents.Indexes.Static
                     {
                         using (var jsGrouping = ConstructGrouping(item))
                         {
+#if DEBUG
+                            Engine.MakeSnapshot("reduce");
+#endif
+
                             bool res = false;
                             //using (var jsStrGrouping = Engine.JsonStringify.StaticCall(jsGrouping)) var strGrouping = jsStrGrouping.AsString;
                             jsRes = ReduceFunc.StaticCall(jsGrouping);

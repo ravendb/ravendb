@@ -360,7 +360,8 @@ namespace Raven.Server.Documents.Patch
 
             var list = Engine.CreateArray(Array.Empty<InternalHandle>());
             void pushKey(string value) {
-                using (var jsResPush = list.StaticCall("push", Engine.CreateValue(value)))
+                using (var jsValue = Engine.CreateValue(value))
+                using (var jsResPush = list.StaticCall("push", jsValue))
                     jsResPush.ThrowOnError();
             }
 
