@@ -292,6 +292,7 @@ class patch extends viewModelBase {
 
     runPatch() {
         this.patchDocument().queryHasError(false);
+        this.patchDocument().updateHasError(false);
         
         if (this.isValid(this.patchDocument().validationGroup)) {
             this.getMatchingDocumentsNumber()
@@ -371,18 +372,23 @@ class patch extends viewModelBase {
 
     private getMatchingDocumentsNumber(): JQueryPromise<number> {
         const patchScript = this.patchDocument().query();
-        const queryPartOfPatchScript = patchScript.split("update")[0];
+        const patchScriptParts = patchScript.split("update");
         
         const matchingDocs = $.Deferred<number>();
         
-        let query = queryCriteria.empty();
-        query.queryText(queryPartOfPatchScript);
-        
-        new queryCommand(this.activeDatabase(), 0, 0, query)
-            .execute()
-            .done((queryResults: pagedResultExtended<document>) => matchingDocs.resolve(queryResults.totalResultCount))
-            .fail(() => this.patchDocument().queryHasError(true));
-        
+        if (patchScriptParts.length !== 2) {
+            this.patchDocument().updateHasError(true);
+            matchingDocs.fail();
+        } else {
+            let query = queryCriteria.empty();
+            query.queryText(patchScriptParts[0]);
+
+            new queryCommand(this.activeDatabase(), 0, 0, query)
+                .execute()
+                .done((queryResults: pagedResultExtended<document>) => matchingDocs.resolve(queryResults.totalResultCount))
+                .fail(() => this.patchDocument().queryHasError(true));
+        }
+
         return matchingDocs;
     }
     
