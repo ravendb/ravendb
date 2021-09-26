@@ -383,25 +383,6 @@ namespace SlowTests.Client.TimeSeries.Issues
         }
 
         [Fact]
-        public void ShouldThrowIfIncrementContainsZeroValue()
-        {
-            using (var store = GetDocumentStore())
-            {
-                using (var session = store.OpenSession())
-                {
-                    var e = Assert.Throws<RavenException>(() =>
-                    {
-                        session.Store(new User { Name = "Oren" }, "users/ayende");
-                        var ts = session.TimeSeriesFor("users/ayende", "HeartRate");
-                        ts.Increment(new double[] { 0 });
-                        session.SaveChanges();
-                    });
-                    Assert.True(e.Message.Contains("Cannot receive a zero as a single value."));
-                }
-            }
-        }
-
-        [Fact]
         public void IncrementShouldTakeSignFromNonZeroValue()
         {
             using (var store = GetDocumentStore())
@@ -484,6 +465,38 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                     Assert.Equal(1, ts.Length);
                     Assert.Equal(10, ts[0].Value);
+                }
+            }
+        }
+
+        [Fact]
+        public void ShouldIncrementValueOnEditIncrementEntry2()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Oren" }, "users/ayende");
+                    var ts = session.TimeSeriesFor("users/ayende", "VotesPerDistrict");
+                    ts.Increment(baseline, new double[] {1, 1, 1});
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var ts = session.TimeSeriesFor("users/ayende", "VotesPerDistrict");
+                    ts.Increment(baseline, new double[] { 0, 0, 9 });
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var ts = session.TimeSeriesFor("users/ayende", "VotesPerDistrict").Get(baseline);
+
+                    Assert.Equal(1, ts.Length);
+                    Assert.Equal(new double[] { 1, 1, 10 }, ts[0].Values);
                 }
             }
         }
