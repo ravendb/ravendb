@@ -30,6 +30,11 @@ namespace Raven.Server.Documents.Patch
             {
             }
 
+            public override string Summary()
+            {
+                return ObjCLR.Summary;
+            }
+
             public override InternalHandle NamedPropertyGetter(ref string propertyName)
             {
                 return ObjCLR.GetOwnPropertyJs(propertyName);
@@ -212,6 +217,21 @@ namespace Raven.Server.Documents.Patch
             }
         }
 
+        public string Summary
+        {
+            get {
+                string desc = "";
+                if (_parent != null) {
+                    desc = $"parentHandleID={_parent.HandleID}, parentObjectID={_parent.ObjectID}";
+                }
+                else {
+                    desc = "isRoot=true";
+                }
+                return desc;
+            }
+        }
+
+
         public InternalHandle GetOwnPropertyJs(string propertyName)
         {
             var desc = GetOwnProperty(propertyName);
@@ -306,16 +326,17 @@ namespace Raven.Server.Documents.Patch
         {
             _CheckIsNotDisposed($"DeleteOwnProperty: ${propertyName}");
 
-            if (Deletes == null)
-                Deletes = new HashSet<string>();
+            Deletes ??= new HashSet<string>();
 
-            var desc = GetOwnProperty(propertyName);
-            if (desc == null)
-                return InternalHandle.Empty;
+            var val = GetOwnProperty(propertyName);
+            if (val == null)
+                return false;
 
+            val.Dispose();
             MarkChanged();
             Deletes.Add(propertyName);
-            return OwnValues?.Remove(propertyName);
+            OwnValues.Remove(propertyName);
+            return true;
         }
 
         public V8PropertyAttributes? QueryOwnProperty(string propertyName)
@@ -424,11 +445,11 @@ namespace Raven.Server.Documents.Patch
                 //using (var old = metadata)
                 {
                     metadata = JavaScriptUtils.Context.ReadObject(metadata, DocumentId);
-                    using (InternalHandle metadataJs = JavaScriptUtils.TranslateToJs(JavaScriptUtils.Context, metadata, false))
+                    using (InternalHandle jsMetadata = JavaScriptUtils.TranslateToJs(JavaScriptUtils.Context, metadata, false))
                     {
-                        if (metadataJs.IsError)
-                            return metadataJs;
-                        return SetOwnProperty(propertyName, metadataJs, toReturnCopy: false);
+                        if (jsMetadata.IsError)
+                            return jsMetadata;
+                        return SetOwnProperty(propertyName, jsMetadata, toReturnCopy: false);
                     }
                 }
             }
