@@ -298,7 +298,7 @@ namespace Raven.Server.Documents.Queries.AST
 
       
 
-        private static object GetFieldValue(string value, ValueTokenType type, BlittableJsonReaderObject queryParameters)
+        public static object GetFieldValue(string value, ValueTokenType type, BlittableJsonReaderObject queryParameters)
         {
             switch (type)
             {

@@ -10,6 +10,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes;
 using Raven.Server.Json;
 using Raven.Server.Utils;
+using Sparrow.Binary;
 using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -22,6 +23,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 {
     public sealed class CoraxDocumentConverter : ConverterBase
     {
+         
         private readonly ByteStringContext _allocator;
         private readonly List<IDisposable> _slicesToDispose;
         private readonly Dictionary<Slice, int> _knownFields;
@@ -58,13 +60,19 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 knownFields.Add(value, field.Id);
             }
 
+            if (_index.Type.IsMapReduce())
+            {
+                _slicesToDispose.Add(Slice.From(_allocator, Constants.Documents.Indexing.Fields.AllStoredFields, ByteStringType.Immutable, out var storedKey));
+                knownFields.Add(storedKey, knownFields.Count);
+            }
+
             return knownFields;
         }
         
         public Span<byte> InsertDocumentFields(LazyStringValue key, LazyStringValue sourceDocumentId, object doc, JsonOperationContext indexContext, out LazyStringValue id)
         {
             var document = (Document)doc;
-            using ( _allocator.Allocate(document.Data.Size * 2, out ByteString buffer))
+            using ( _allocator.Allocate(document.Data.Size * 8, out ByteString buffer))
             {
                 var entryWriter = new IndexEntryWriter(buffer.ToSpan(), _knownFields);
                 id = document.LowerId ?? key;
@@ -77,11 +85,26 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 List<int> stringsLength = new List<int>(128);
                 var scope = new SingleEntryWriterScope(stringsLength, _allocator);
                 scope.Write(0, id.AsSpan(), ref entryWriter);
+                object value;
                 foreach (var indexField in _fields.Values)
                 {
-                    if (BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, indexField.OriginalName ?? indexField.Name, out var value))
+                    if (BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, indexField.OriginalName ?? indexField.Name, out value))
                     {
                         InsertRegularField(indexField, value, indexContext, out shouldSkip, ref entryWriter, scope);
+                    }
+                }
+
+                if (_index.Type.IsMapReduce())
+                {
+                    unsafe
+                    {
+                        using (_allocator.Allocate(document.Data.Size, out Span<byte> blittableBuffer))
+                        {
+                            fixed (byte* bPtr = blittableBuffer)
+                                document.Data.CopyTo(bPtr);
+                        
+                            scope.Write(_knownFields.Count - 1, blittableBuffer, ref entryWriter);
+                        }
                     }
                 }
 

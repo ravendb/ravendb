@@ -17,7 +17,7 @@ namespace Corax.Queries
     }
 
     public unsafe partial struct UnaryMatch<TInner, TValueType> : IQueryMatch
-        where TInner : struct, IQueryMatch
+        where TInner : IQueryMatch
     {
         private readonly delegate*<ref UnaryMatch<TInner, TValueType>, Span<long>, int> _fillFunc;
         private readonly delegate*<ref UnaryMatch<TInner, TValueType>, Span<long>, int> _andWith;

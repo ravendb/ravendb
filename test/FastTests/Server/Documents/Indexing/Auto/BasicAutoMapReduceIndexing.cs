@@ -28,7 +28,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public async Task CanUseSimpleReduction(string searchEngineType)
         {
             using (var db = CreateDocumentDatabaseForSearchEngine(searchEngineType))
@@ -118,7 +118,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public async Task CanDelete(string searchEngineType)
         {
             const long numberOfUsers = 10;
@@ -334,7 +334,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public async Task CanGroupByNestedFieldAndAggregateOnCollection(string searchEngineType)
         {
             using (var db = CreateDocumentDatabaseForSearchEngine(searchEngineType))
@@ -396,7 +396,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public void CanStoreAndReadReduceStats(string searchEngineType)
         {
             using (var db = CreateDocumentDatabaseForSearchEngine(searchEngineType))
@@ -446,7 +446,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public async Task CanUpdateByChangingValue(string searchEngineType)
         {
             using (var db = CreateDocumentDatabaseForSearchEngine(searchEngineType))
@@ -524,7 +524,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public async Task CanUpdateByChangingReduceKey(string searchEngineType)
         {
             using (var db = CreateDocumentDatabaseForSearchEngine(searchEngineType))
@@ -605,7 +605,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public async Task GroupByMultipleFields(string searchEngineType)
         {
             using (var db = CreateDocumentDatabaseForSearchEngine(searchEngineType))

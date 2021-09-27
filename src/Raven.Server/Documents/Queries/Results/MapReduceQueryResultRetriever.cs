@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
+using System.Text;
+using Corax;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
@@ -10,6 +12,9 @@ using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Newtonsoft.Json;
+using Raven.Client.Json.Serialization.NewtonsoftJson.Internal;
+using Raven.Server.Documents.Indexes;
 
 namespace Raven.Server.Documents.Queries.Results
 {
@@ -76,17 +81,33 @@ namespace Raven.Server.Documents.Queries.Results
 
             return djv;
         }
-
-        protected override unsafe Document DirectGet(Lucene.Net.Documents.Document input, string id, DocumentFields fields, IState state)
+        
+        protected override unsafe Document DirectGet(ref RetrieverInput retrieverInput,string id, DocumentFields fields)
         {
-            var storedValue = input.GetField(_storedValueFieldName).GetBinaryValue(state);
+            BlittableJsonReaderObject result;
+            if (retrieverInput.LuceneDocument is null)
+            {
+                //todo maciej: build own BlittableObject. For now we store whole BO as additional field in corax.
+                retrieverInput.CoraxEntry.Read(FieldsToFetch.IndexFields.Count + 1, out var value);
 
-            var allocation = _context.GetMemory(storedValue.Length);
+                var allocation = _context.GetMemory(value.Length);
+                var buffer = new UnmanagedWriteBuffer(_context, allocation);
+                
+                fixed (byte* ptr = value)
+                    buffer.Write(ptr, value.Length);
 
-            UnmanagedWriteBuffer buffer = new UnmanagedWriteBuffer(_context, allocation);
-            buffer.Write(storedValue, 0, storedValue.Length);
+                result = new BlittableJsonReaderObject(allocation.Address, value.Length, _context, buffer);
+            }
+            else
+            {
+                var storedValue = retrieverInput.LuceneDocument.GetField(_storedValueFieldName).GetBinaryValue(retrieverInput.State);
 
-            var result = new BlittableJsonReaderObject(allocation.Address, storedValue.Length, _context, buffer);
+                var allocation = _context.GetMemory(storedValue.Length);
+                var buffer = new UnmanagedWriteBuffer(_context, allocation);
+                buffer.Write(storedValue, 0, storedValue.Length);
+
+                result = new BlittableJsonReaderObject(allocation.Address, storedValue.Length, _context, buffer);
+            }
 
             return new Document
             {
@@ -101,7 +122,7 @@ namespace Raven.Server.Documents.Queries.Results
 
             using (_storageScope = _storageScope?.Start() ?? RetrieverScope?.For(nameof(QueryTimingsScope.Names.Storage)))
             {
-                var doc = DirectGet(retrieverInput.LuceneDocument, null, DocumentFields.All, retrieverInput.State);
+                var doc = DirectGet(ref retrieverInput, null, DocumentFields.All);
 
                 FinishDocumentSetup(doc, retrieverInput.Score);
 

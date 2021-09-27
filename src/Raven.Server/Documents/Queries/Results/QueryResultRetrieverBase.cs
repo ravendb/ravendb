@@ -114,7 +114,7 @@ namespace Raven.Server.Documents.Queries.Results
 
         public abstract bool TryGetKey(ref RetrieverInput retrieverInput, out string key);
 
-        protected abstract Document DirectGet(Lucene.Net.Documents.Document input, string id, DocumentFields fields, IState state);
+        protected abstract Document DirectGet(ref RetrieverInput retrieverInput, string id, DocumentFields fields);
 
         protected abstract Document LoadDocument(string id);
 
@@ -130,7 +130,7 @@ namespace Raven.Server.Documents.Queries.Results
                 if (FieldsToFetch.AnyExtractableFromIndex == false)
                 {
                     using (_projectionStorageScope = _projectionStorageScope?.Start() ?? _projectionScope?.For(nameof(QueryTimingsScope.Names.Storage)))
-                        doc = DirectGet(retrieverInput.LuceneDocument, lowerId, DocumentFields.All, retrieverInput.State);
+                        doc = DirectGet(ref retrieverInput, lowerId, DocumentFields.All);
 
                     if (doc == null)
                     {
@@ -206,7 +206,7 @@ namespace Raven.Server.Documents.Queries.Results
                     if (doc == null)
                     {
                         using (_projectionStorageScope = _projectionStorageScope?.Start() ?? _projectionScope?.For(nameof(QueryTimingsScope.Names.Storage)))
-                            doc = DirectGet(retrieverInput.LuceneDocument, lowerId, DocumentFields.All, retrieverInput.State);
+                            doc = DirectGet(ref retrieverInput, lowerId, DocumentFields.All);
 
                         if (doc == null)
                         {

@@ -98,19 +98,18 @@ namespace Corax.Queries
                     if (isMatch)
                     {
                         // We found a match.
-                        currentMatches[currentIdx] = currentMatches[storeIdx];
+                        matches[storeIdx] = currentMatches[i];
                         storeIdx++;
                     }
-                    currentIdx++;
                 }
 
                 totalResults += storeIdx;
                 if (totalResults > match._take)
                     break;
 
-                currentMatches = currentMatches.Slice(storeIdx);
             }
 
+            matches = currentMatches;
             return totalResults;
         }
 
@@ -256,19 +255,18 @@ namespace Corax.Queries
                     if (isMatch == false)
                     {
                         // We found a match.
-                        currentMatches[currentIdx] = currentMatches[storeIdx];
+                        matches[storeIdx] = currentMatches[i];
                         storeIdx++;
                     }
-                    currentIdx++;
                 }
 
                 totalResults += storeIdx;
                 if (totalResults > match._take)
-                    break;                    
+                    break;
 
-                currentMatches = currentMatches.Slice(storeIdx);
             }
 
+            matches = currentMatches;
             return totalResults;
         }
 

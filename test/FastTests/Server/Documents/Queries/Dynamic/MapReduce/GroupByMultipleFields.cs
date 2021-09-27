@@ -17,7 +17,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public void Group_by_multiple_fields(string searchEngineType)
         {
             using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
@@ -259,7 +259,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public void Select_composite_group_by_key(string searchEngineType)
         {
             using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))

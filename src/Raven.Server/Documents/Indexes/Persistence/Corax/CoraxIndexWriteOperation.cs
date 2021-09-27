@@ -26,6 +26,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             try
             { 
                 _indexWriter = new IndexWriter(writeTransaction);
+                _entriesCount = Convert.ToInt32(_indexWriter.GetNumberOfEntries());
             }
             catch (Exception e) when (e.IsOutOfMemory())
             {
