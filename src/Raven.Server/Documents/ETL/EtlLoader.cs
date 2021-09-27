@@ -343,6 +343,16 @@ namespace Raven.Server.Documents.ETL
                     });
                 return true;
             }
+            
+            if (_databaseRecord.Encrypted && config is ElasticSearchEtlConfiguration esConfig && esConfig.Connection.Authentication == null)
+            {
+                LogConfigurationWarning(config,
+                    new List<string>
+                    {
+                        $"{_database.Name} is encrypted and connection to ETL destination {config.GetDestination()} does not use authentication, but ETL is allowed."
+                    });
+                return true;
+            }
 
             if (uniqueNames.Add(config.Name) == false)
             {
