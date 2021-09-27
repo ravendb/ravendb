@@ -24,7 +24,7 @@ namespace Raven.Server.Integrations.PostgreSQL.Messages
         protected override async Task HandleMessage(Transaction transaction, MessageBuilder messageBuilder, PipeWriter writer, CancellationToken token)
         {
             // TODO: Maybe support multiple SELECT statements in one query - requires parsing the SQL
-            using var query = PgQuery.CreateInstance(QueryString, null, transaction.DocumentStore);
+            using var query = PgQuery.CreateInstance(QueryString, null, transaction.DocumentDatabase);
 
             var schema = await query.Init(true);
             if (schema.Count != 0)

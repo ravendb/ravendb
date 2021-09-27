@@ -69,9 +69,10 @@ namespace Raven.Server.Integrations.PostgreSQL
             {
                 var session = new Session(
                     client,
-                    _server.AuthenticateAsServerIfSslNeeded,
                     Interlocked.Increment(ref _sessionIdentifier),
                     _processId,
+                    _server.ServerStore.DatabasesLandlord,
+                    _server.AuthenticateAsServerIfSslNeeded,
                     _cts.Token);
 
                 await session.Run();

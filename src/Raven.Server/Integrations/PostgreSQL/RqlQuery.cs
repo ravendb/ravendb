@@ -2,14 +2,17 @@
 using System.Buffers;
 using System.Collections.Generic;
 using System.IO.Pipelines;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Documents;
-using Raven.Client.Documents.Queries;
-using Raven.Client.Documents.Session;
+using Raven.Server.Documents;
+using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Queries;
 using Raven.Server.Integrations.PostgreSQL.Messages;
 using Raven.Server.Integrations.PostgreSQL.Types;
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -17,15 +20,13 @@ namespace Raven.Server.Integrations.PostgreSQL
 {
     public class RqlQuery : PgQuery
     {
-        protected readonly IDocumentStore DocumentStore;
-        private readonly IAsyncDocumentSession _session;
-        private QueryResult _result;
+        protected readonly DocumentDatabase DocumentDatabase;
+        private List<Document> _result;
         private readonly int? _limit;
 
-        public RqlQuery(string queryString, int[] parametersDataTypes, IDocumentStore documentStore, int? limit = null) : base(queryString, parametersDataTypes)
+        public RqlQuery(string queryString, int[] parametersDataTypes, DocumentDatabase documentDatabase, int? limit = null) : base(queryString, parametersDataTypes)
         {
-            DocumentStore = documentStore;
-            _session = documentStore.OpenAsyncSession();
+            DocumentDatabase = documentDatabase;
             _result = null;
             _limit = limit;
         }
@@ -33,9 +34,7 @@ namespace Raven.Server.Integrations.PostgreSQL
         public override async Task<ICollection<PgColumn>> Init(bool allowMultipleStatements = false)
         {
             if (IsEmptyQuery)
-            {
                 return default;
-            }
 
             await RunRqlQuery();
             return GenerateSchema();
@@ -43,46 +42,47 @@ namespace Raven.Server.Integrations.PostgreSQL
 
         public async Task RunRqlQuery()
         {
-            var query = _session.Advanced.AsyncRawQuery<BlittableJsonReaderObject>(QueryString);
+            var queryContext = QueryOperationContext.Allocate(DocumentDatabase);
+
+            IndexQueryServerSide indexQuery;
+            using (var jsonOperationContext = JsonOperationContext.ShortTermSingleUse())
+            {
+                var parameters = DynamicJsonValue.Convert(Parameters);
+                indexQuery = new IndexQueryServerSide(QueryString,
+                    jsonOperationContext.ReadObject(parameters, "query/parameters"));
+            }
+
+            var documentQueryResult = await DocumentDatabase.QueryRunner
+                .ExecuteQuery(indexQuery, queryContext, null, OperationCancelToken.None);
+
+            _result = documentQueryResult.Results;
 
             // If limit is 0, fetch one document for the schema generation
             if (_limit != null)
-                query.Take(_limit.Value == 0 ? 1 : _limit.Value);
+                _result = _result.Take(_limit.Value == 0 ? 1 : _limit.Value).ToList();
 
             // TODO: Support skipping (check how/if PowerBI sends it, probably using the incremental refresh feature)
             // query.Skip(..)
-
-            var patchParams = new Raven.Client.Parameters();
-            if (Parameters != null)
-            {
-                foreach (var (key, value) in Parameters)
-                {
-                    query.AddParameter(key, value);
-                    patchParams.Add(key, value);
-                }
-            }
-
-            _result = await ((AsyncDocumentQuery<BlittableJsonReaderObject>)query).GetQueryResultAsync();
         }
 
         private ICollection<PgColumn> GenerateSchema()
         {
-            if (_result?.Results == null || _result?.Results.Length == 0)
-            {
+            if (_result == null || _result?.Count == 0)
                 return Array.Empty<PgColumn>();
-            }
 
             var resultsFormat = GetDefaultResultsFormat();
-            var sample = (BlittableJsonReaderObject)_result.Results[0];
+            var sample = _result[0].Data;
 
-            if (sample.TryGet("@metadata", out BlittableJsonReaderObject metadata) && metadata.TryGet("@id", out string _))
+            if (sample.TryGet("@metadata", out BlittableJsonReaderObject metadata)
+                && metadata.TryGet("@id", out string _))
             {
                 Columns["id()"] = new PgColumn("id()", (short)Columns.Count, PgText.Default, resultsFormat);
             }
 
+            BlittableJsonReaderObject.PropertyDetails prop = default;
+
             // Go over sample's columns
             var properties = sample.GetPropertyNames();
-            BlittableJsonReaderObject.PropertyDetails prop = default;
             for (var i = 0; i < properties.Length; i++)
             {
                 // Using GetPropertyIndex to get the properties in the right order
@@ -140,13 +140,13 @@ namespace Raven.Server.Integrations.PostgreSQL
             return Columns.Values;
         }
 
-        public static bool TryParse(string queryText, int[] parametersDataTypes, IDocumentStore documentStore, out RqlQuery rqlQuery)
+        public static bool TryParse(string queryText, int[] parametersDataTypes, DocumentDatabase documentDatabase, out RqlQuery rqlQuery)
         {
             // TODO: After integration - Use QueryParser to try and parse the query
             if (queryText.StartsWith("from", StringComparison.CurrentCultureIgnoreCase) ||
                 queryText.StartsWith("/*rql*/", StringComparison.CurrentCultureIgnoreCase))
             {
-                rqlQuery = new RqlQuery(queryText, parametersDataTypes, documentStore);
+                rqlQuery = new RqlQuery(queryText, parametersDataTypes, documentDatabase);
                 return true;
             }
 
@@ -183,11 +183,9 @@ namespace Raven.Server.Integrations.PostgreSQL
             }
 
             if (_result == null)
-            {
                 throw new InvalidOperationException("RqlQuery.Execute was called when _results = null");
-            }
 
-            if (_limit == 0 || _result.Results == null || _result.Results.Length == 0)
+            if (_limit == 0 || _result == null || _result.Count == 0)
             {
                 await writer.WriteAsync(builder.CommandComplete($"SELECT 0"), token);
                 return;
@@ -195,6 +193,7 @@ namespace Raven.Server.Integrations.PostgreSQL
 
             BlittableJsonReaderObject.PropertyDetails prop = default;
             var row = ArrayPool<ReadOnlyMemory<byte>?>.Shared.Rent(Columns.Count);
+
             try
             {
                 short? idIndex = null;
@@ -205,8 +204,9 @@ namespace Raven.Server.Integrations.PostgreSQL
 
                 var jsonIndex = Columns["json()"].ColumnIndex;
 
-                foreach (BlittableJsonReaderObject result in _result.Results)
+                for (int i = 0; i < _result.Count; i++)
                 {
+                    var result = _result[i].Data;
                     Array.Clear(row, 0, row.Length);
 
                     if (idIndex != null && 
@@ -223,6 +223,7 @@ namespace Raven.Server.Integrations.PostgreSQL
                         var index = result.GetPropertyIndex(key);
                         if (index == -1)
                             continue;
+
                         result.GetPropertyByIndex(index, ref prop);
 
                         ReadOnlyMemory<byte>? value = null;
@@ -305,8 +306,14 @@ namespace Raven.Server.Integrations.PostgreSQL
 
                     if (result.Modifications.Removals.Count != result.Count)
                     {
-                        var modified = _session.Advanced.Context.ReadObject(result, "renew");
-                        row[jsonIndex] = Encoding.UTF8.GetBytes(modified.ToString());
+                        using (DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                        using (context.OpenReadTransaction())
+                        {
+                            BlittableJsonReaderObject modified;
+
+                            modified = context.ReadObject(result, "renew");
+                            row[jsonIndex] = Encoding.UTF8.GetBytes(modified.ToString());
+                        }
                     }
 
                     await writer.WriteAsync(builder.DataRow(row[..Columns.Count]), token);
@@ -317,12 +324,12 @@ namespace Raven.Server.Integrations.PostgreSQL
                 ArrayPool<ReadOnlyMemory<byte>?>.Shared.Return(row);
             }
 
-            await writer.WriteAsync(builder.CommandComplete($"SELECT {_result.Results.Length}"), token);
+            await writer.WriteAsync(builder.CommandComplete($"SELECT {_result.Count}"), token);
         }
 
         public override void Dispose()
         {
-            _session?.Dispose();
+            //_session?.Dispose();
         }
     }
 }

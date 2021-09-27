@@ -11,10 +11,10 @@ namespace Raven.Server.Integrations.PostgreSQL.Messages
 
         protected override async Task HandleMessage(Transaction transaction, MessageBuilder messageBuilder, PipeWriter writer, CancellationToken token)
         {
-            if (!Password.Equals("12345678"))
-            {
-                throw new PgFatalException(PgErrorCodes.InvalidPassword, "Authentication failed, password is invalid.");
-            }
+            //if (!Password.Equals("12345678"))
+            //{
+                //throw new PgFatalException(PgErrorCodes.InvalidPassword, "Authentication failed, password is invalid.");
+            //}
 
             await writer.WriteAsync(messageBuilder.AuthenticationOk(), token);
         }
