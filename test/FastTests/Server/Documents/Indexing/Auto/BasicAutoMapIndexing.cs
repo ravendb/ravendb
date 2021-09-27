@@ -252,7 +252,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public void SimpleIndexing(string searchEngineType)
         {
             using (var database = CreateDocumentDatabaseForSearchEngine(searchEngineType))

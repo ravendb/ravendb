@@ -49,7 +49,7 @@ namespace Corax.Queries
         }
 
         private static class StaticFunctionCache<TInner, TValueType>
-            where TInner : struct, IQueryMatch
+            where TInner : IQueryMatch
         {
             public static readonly FunctionTable FunctionTable;
 
@@ -90,7 +90,7 @@ namespace Corax.Queries
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static UnaryMatch Create<TInner, TValueType>(in UnaryMatch<TInner, TValueType> query)
-            where TInner : struct, IQueryMatch
+            where TInner : IQueryMatch
         {
             return new UnaryMatch(query, StaticFunctionCache<TInner, TValueType>.FunctionTable);
         }

@@ -71,7 +71,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public async Task Numeric_between_clause(string searchEngineType)
         {
             using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
@@ -101,7 +101,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public async Task Numeric_range_where_clause(string searchEngineType)
         {
             using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
@@ -170,7 +170,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public async Task Sorting_by_doubles(string searchEngineType)
         {
             using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
@@ -197,7 +197,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public async Task Sorting_by_integers(string searchEngineType)
         {
             using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
@@ -224,7 +224,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public async Task Sorting_by_nested_string_field(string searchEngineType)
         {
             using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
@@ -263,7 +263,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public async Task Sorting_by_nested_integer_field(string searchEngineType)
         {
             using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
@@ -302,7 +302,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public async Task Sorting_by_strings(string searchEngineType)
         {
             using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
@@ -334,7 +334,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public async Task Partial_match(string searchEngineType)
         {
             using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
@@ -373,7 +373,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public async Task Empty_query(string searchEngineType)
         {
             using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
@@ -413,7 +413,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public async Task Can_project_in_map(string searchEngineType)
         {
             using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
@@ -511,7 +511,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public void Can_query_on_dictionary(string searchEngineType)
         {
             using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
@@ -549,7 +549,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
                 {
                     var items = session.Query<DictItem>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.StringDict["a"] == "b").ToList();
                     Assert.Equal(1, items.Count);
-
+                    WaitForUserToContinueTheTest(store);
                     items = session.Query<DictItem>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.StringDict.Any(y => y.Key == "a")).ToList();
                     Assert.Equal(2, items.Count);
 

@@ -697,7 +697,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         protected AbstractField GetStoredValueField(BlittableJsonReaderObject value, IWriteOperationBuffer writeBuffer)
         {
             _storeValueField.SetValue(GetStoredValue(value, writeBuffer), 0, value.Size);
-
+            
             return _storeValueField;
         }
 

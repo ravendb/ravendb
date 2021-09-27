@@ -35,6 +35,16 @@ namespace Corax
         public readonly Transaction Transaction;        
 
         public static readonly Slice PostingListsSlice, EntriesContainerSlice, FieldsSlice, NumberOfEntriesSlice;
+        
+        // CPU bound - embarassingly parallel
+        // 
+        // private readonly ConcurrentDictionary<Slice, Dictionary<Slice, ConcurrentQueue<long>>> _bufferConcurrent =
+        //     new ConcurrentDictionary<Slice, ConcurrentDictionary<Slice, ConcurrentQueue<long>>>(SliceComparer.Instance);
+
+        private readonly Dictionary<Slice, Dictionary<Slice, List<long>>> _buffer =
+            new Dictionary<Slice, Dictionary<Slice, List<long>>>(SliceComparer.Instance);
+
+        private readonly long _postingListContainerId, _entriesContainerId;
 
         private Queue<long> _lastEntries; // keep last 256 items
 
@@ -69,16 +79,6 @@ namespace Corax
             _postingListContainerId = Transaction.OpenContainer(PostingListsSlice);
             _entriesContainerId = Transaction.OpenContainer(EntriesContainerSlice);
         }
-
-        // CPU bound - embarassingly parallel
-        // 
-        // private readonly ConcurrentDictionary<Slice, Dictionary<Slice, ConcurrentQueue<long>>> _bufferConcurrent =
-        //     new ConcurrentDictionary<Slice, ConcurrentDictionary<Slice, ConcurrentQueue<long>>>(SliceComparer.Instance);
-
-        private readonly Dictionary<Slice, Dictionary<Slice, List<long>>> _buffer =
-            new Dictionary<Slice, Dictionary<Slice, List<long>>>(SliceComparer.Instance);
-
-        private readonly long _postingListContainerId, _entriesContainerId;
 
         public long Index(string id, Span<byte> data, Dictionary<Slice, int> knownFields)
         {
@@ -115,6 +115,11 @@ namespace Corax
             }
 
             return entryId;
+        }
+
+        public long GetNumberOfEntries()
+        {
+            return Transaction.LowLevelTransaction.RootObjects.ReadInt64(IndexWriter.NumberOfEntriesSlice) ?? 0;
         }
 
         private void InsertToken(ByteStringContext context, ref IndexEntryReader entryReader, int tokenField, Dictionary<Slice, List<long>> field, long entryId)

@@ -5,6 +5,7 @@ using System.Text;
 using Corax;
 using Corax.Queries;
 using FastTests.Voron;
+using Raven.Client.Documents.Indexes;
 using Sparrow;
 using Sparrow.Server;
 using Sparrow.Threading;
@@ -73,13 +74,8 @@ namespace FastTests.Corax
             Slice.From(ctx, "Id", ByteStringType.Immutable, out Slice idSlice);
             Slice.From(ctx, "Content", ByteStringType.Immutable, out Slice contentSlice);
 
-            return new Dictionary<Slice, int>
-            {
-                [idSlice] = IdIndex,
-                [contentSlice] = ContentIndex,
-            };
+            return new Dictionary<Slice, int> { [idSlice] = IdIndex, [contentSlice] = ContentIndex, };
         }
-
 
 
         public IndexSearcherTest(ITestOutputHelper output) : base(output)
@@ -103,6 +99,7 @@ namespace FastTests.Corax
                     var data = CreateIndexEntry(ref entryWriter, entry);
                     indexWriter.Index(entry.Id, data, knownFields);
                 }
+
                 indexWriter.Commit();
             }
         }
@@ -110,11 +107,7 @@ namespace FastTests.Corax
         [Fact]
         public void EmptyTerm()
         {
-            var entry = new IndexEntry
-            {
-                Id = "entry/1",
-                Content = new string[] { "road", "lake" },
-            };
+            var entry = new IndexEntry { Id = "entry/1", Content = new string[] { "road", "lake" }, };
             IndexEntries(new[] { entry });
 
             {
@@ -134,11 +127,7 @@ namespace FastTests.Corax
         [Fact]
         public void SingleTerm()
         {
-            var entry = new IndexEntry
-            {
-                Id = "entry/1",
-                Content = new string[] { "road", "lake" },
-            };
+            var entry = new IndexEntry { Id = "entry/1", Content = new string[] { "road", "lake" }, };
             IndexEntries(new[] { entry });
 
             {
@@ -158,12 +147,9 @@ namespace FastTests.Corax
             var entries = new IndexEntry[16];
             for (int i = 0; i < entries.Length; i++)
             {
-                entries[i] = new IndexEntry
-                {
-                    Id = $"entry/{i}",
-                    Content = new string[] { "road" },
-                };
+                entries[i] = new IndexEntry { Id = $"entry/{i}", Content = new string[] { "road" }, };
             }
+
             IndexEntries(entries);
 
             {
@@ -194,12 +180,9 @@ namespace FastTests.Corax
 
             for (int i = 0; i < entries.Length; i++)
             {
-                entries[i] = new IndexEntry
-                {
-                    Id = $"entry/{i}",
-                    Content = content,
-                };
+                entries[i] = new IndexEntry { Id = $"entry/{i}", Content = content, };
             }
+
             IndexEntries(entries);
 
             {
@@ -215,7 +198,7 @@ namespace FastTests.Corax
                 int total = 0;
                 do
                 {
-                    read = match.Fill(ids);                    
+                    read = match.Fill(ids);
                     if (read != 0)
                     {
                         Assert.Equal(1000, read);
@@ -224,9 +207,9 @@ namespace FastTests.Corax
 
                         ids.Fill(-1);
                     }
+
                     total += read;
-                }
-                while (read != 0);
+                } while (read != 0);
 
                 Assert.Equal(match.Count, total);
                 Assert.Equal(0, match.Fill(ids));
@@ -237,16 +220,8 @@ namespace FastTests.Corax
         [Fact]
         public void EmptyAnd()
         {
-            var entry1 = new IndexEntry
-            {
-                Id = "entry/1",
-                Content = new string[] { "road", "lake" },
-            };
-            var entry2 = new IndexEntry
-            {
-                Id = "entry/2",
-                Content = new string[] { "road", "mountain" },
-            };
+            var entry1 = new IndexEntry { Id = "entry/1", Content = new string[] { "road", "lake" }, };
+            var entry2 = new IndexEntry { Id = "entry/2", Content = new string[] { "road", "mountain" }, };
 
             IndexEntries(new[] { entry1, entry2 });
 
@@ -264,16 +239,8 @@ namespace FastTests.Corax
         [Fact]
         public void SingleAnd()
         {
-            var entry1 = new IndexEntry
-            {
-                Id = "entry/1",
-                Content = new string[] { "road", "lake" },
-            };
-            var entry2 = new IndexEntry
-            {
-                Id = "entry/1",
-                Content = new string[] { "road", "mountain" },
-            };
+            var entry1 = new IndexEntry { Id = "entry/1", Content = new string[] { "road", "lake" }, };
+            var entry2 = new IndexEntry { Id = "entry/1", Content = new string[] { "road", "mountain" }, };
 
             IndexEntries(new[] { entry1, entry2 });
 
@@ -292,16 +259,8 @@ namespace FastTests.Corax
         [Fact]
         public void AllAnd()
         {
-            var entry1 = new IndexEntry
-            {
-                Id = "entry/1",
-                Content = new string[] { "road", "lake", "mountain" },
-            };
-            var entry2 = new IndexEntry
-            {
-                Id = "entry/1",
-                Content = new string[] { "road", "mountain" },
-            };
+            var entry1 = new IndexEntry { Id = "entry/1", Content = new string[] { "road", "lake", "mountain" }, };
+            var entry2 = new IndexEntry { Id = "entry/1", Content = new string[] { "road", "mountain" }, };
 
             IndexEntries(new[] { entry1, entry2 });
 
@@ -320,16 +279,8 @@ namespace FastTests.Corax
         [Fact]
         public void EmptyOr()
         {
-            var entry1 = new IndexEntry
-            {
-                Id = "entry/1",
-                Content = new string[] { "road", "lake" },
-            };
-            var entry2 = new IndexEntry
-            {
-                Id = "entry/2",
-                Content = new string[] { "road", "mountain" },
-            };
+            var entry1 = new IndexEntry { Id = "entry/1", Content = new string[] { "road", "lake" }, };
+            var entry2 = new IndexEntry { Id = "entry/2", Content = new string[] { "road", "mountain" }, };
 
             IndexEntries(new[] { entry1, entry2 });
 
@@ -348,16 +299,8 @@ namespace FastTests.Corax
         [Fact]
         public void SingleOr()
         {
-            var entry1 = new IndexEntry
-            {
-                Id = "entry/1",
-                Content = new string[] { "road", "lake" },
-            };
-            var entry2 = new IndexEntry
-            {
-                Id = "entry/2",
-                Content = new string[] { "road", "mountain" },
-            };
+            var entry1 = new IndexEntry { Id = "entry/1", Content = new string[] { "road", "lake" }, };
+            var entry2 = new IndexEntry { Id = "entry/2", Content = new string[] { "road", "mountain" }, };
 
             IndexEntries(new[] { entry1, entry2 });
 
@@ -384,16 +327,8 @@ namespace FastTests.Corax
         [Fact]
         public void AllOr()
         {
-            var entry1 = new IndexEntry
-            {
-                Id = "entry/1",
-                Content = new string[] { "road", "lake" },
-            };
-            var entry2 = new IndexEntry
-            {
-                Id = "entry/2",
-                Content = new string[] { "road", "mountain" },
-            };
+            var entry1 = new IndexEntry { Id = "entry/1", Content = new string[] { "road", "lake" }, };
+            var entry2 = new IndexEntry { Id = "entry/2", Content = new string[] { "road", "mountain" }, };
 
             IndexEntries(new[] { entry1, entry2 });
 
@@ -413,21 +348,9 @@ namespace FastTests.Corax
         [Fact]
         public void AllOrInBatches()
         {
-            var entry1 = new IndexEntry
-            {
-                Id = "entry/1",
-                Content = new string[] { "road", "lake" },
-            };
-            var entry2 = new IndexEntry
-            {
-                Id = "entry/2",
-                Content = new string[] { "road", "mountain" },
-            };
-            var entry3 = new IndexEntry
-            {
-                Id = "entry/3",
-                Content = new string[] { "trail", "mountain" },
-            };
+            var entry1 = new IndexEntry { Id = "entry/1", Content = new string[] { "road", "lake" }, };
+            var entry2 = new IndexEntry { Id = "entry/2", Content = new string[] { "road", "mountain" }, };
+            var entry3 = new IndexEntry { Id = "entry/3", Content = new string[] { "trail", "mountain" }, };
 
             IndexEntries(new[] { entry1, entry2, entry3 });
 
@@ -447,21 +370,9 @@ namespace FastTests.Corax
         [Fact]
         public void SimpleAndOr()
         {
-            var entry1 = new IndexEntry
-            {
-                Id = "entry/1",
-                Content = new string[] { "road", "lake", "mountain" },
-            };
-            var entry2 = new IndexEntry
-            {
-                Id = "entry/2",
-                Content = new string[] { "road", "mountain" },
-            };
-            var entry3 = new IndexEntry
-            {
-                Id = "entry/3",
-                Content = new string[] { "sky", "space" },
-            };
+            var entry1 = new IndexEntry { Id = "entry/1", Content = new string[] { "road", "lake", "mountain" }, };
+            var entry2 = new IndexEntry { Id = "entry/2", Content = new string[] { "road", "mountain" }, };
+            var entry3 = new IndexEntry { Id = "entry/3", Content = new string[] { "sky", "space" }, };
 
             IndexEntries(new[] { entry1, entry2, entry3 });
 
@@ -535,31 +446,19 @@ namespace FastTests.Corax
                 do
                 {
                     read = orMatch.Fill(ids);
-                    count += read;                        
-                }
-                while (read != 0);
-                Assert.Equal((setSize  / 3) * 2, count);
+                    count += read;
+                } while (read != 0);
+
+                Assert.Equal((setSize / 3) * 2, count);
             }
         }
 
         [Fact]
         public void SimpleInStatement()
         {
-            var entry1 = new IndexEntry
-            {
-                Id = "entry/1",
-                Content = new string[] { "road", "lake", "mountain" },
-            };
-            var entry2 = new IndexEntry
-            {
-                Id = "entry/2",
-                Content = new string[] { "road", "mountain" },
-            };
-            var entry3 = new IndexEntry
-            {
-                Id = "entry/3",
-                Content = new string[] { "sky", "space" },
-            };
+            var entry1 = new IndexEntry { Id = "entry/1", Content = new string[] { "road", "lake", "mountain" }, };
+            var entry2 = new IndexEntry { Id = "entry/2", Content = new string[] { "road", "mountain" }, };
+            var entry3 = new IndexEntry { Id = "entry/3", Content = new string[] { "sky", "space" }, };
 
             IndexEntries(new[] { entry1, entry2, entry3 });
 
@@ -629,7 +528,6 @@ namespace FastTests.Corax
 
             using var searcher = new IndexSearcher(Env);
             {
-                
                 var match1 = searcher.InQuery("Content", new() { "lake", "mountain" });
                 var match2 = searcher.TermQuery("Content", "sky");
                 var andMatch = searcher.And(in match1, in match2);
@@ -641,14 +539,14 @@ namespace FastTests.Corax
                 {
                     read = andMatch.Fill(ids);
                     count += read;
-                }
-                while (read != 0);
+                } while (read != 0);
+
                 Assert.Equal((setSize / 3), count);
             }
 
             {
                 var match1 = searcher.TermQuery("Content", "sky");
-                var match2 = searcher.InQuery("Content", new() { "lake", "mountain" });                
+                var match2 = searcher.InQuery("Content", new() { "lake", "mountain" });
                 var andMatch = searcher.And(in match1, in match2);
 
                 Span<long> ids = stackalloc long[stackSize];
@@ -658,8 +556,8 @@ namespace FastTests.Corax
                 {
                     read = andMatch.Fill(ids);
                     count += read;
-                }
-                while (read != 0);
+                } while (read != 0);
+
                 Assert.Equal((setSize / 3), count);
             }
         }
@@ -667,21 +565,9 @@ namespace FastTests.Corax
         [Fact]
         public void SimpleStartWithStatement()
         {
-            var entry1 = new IndexEntry
-            {
-                Id = "entry/1",
-                Content = new string[] { "a road", "a lake", "the mountain" },
-            };
-            var entry2 = new IndexEntry
-            {
-                Id = "entry/2",
-                Content = new string[] { "a road", "the mountain" },
-            };
-            var entry3 = new IndexEntry
-            {
-                Id = "entry/3",
-                Content = new string[] { "the sky", "the space", "an animal" },
-            };
+            var entry1 = new IndexEntry { Id = "entry/1", Content = new string[] { "a road", "a lake", "the mountain" }, };
+            var entry2 = new IndexEntry { Id = "entry/2", Content = new string[] { "a road", "the mountain" }, };
+            var entry3 = new IndexEntry { Id = "entry/3", Content = new string[] { "the sky", "the space", "an animal" }, };
 
             IndexEntries(new[] { entry1, entry2, entry3 });
 
@@ -752,6 +638,7 @@ namespace FastTests.Corax
                     var data = CreateIndexEntry(ref entryWriter, entry);
                     indexWriter.Index(entry.Id, data, knownFields);
                 }
+
                 indexWriter.Commit();
             }
         }
@@ -759,21 +646,9 @@ namespace FastTests.Corax
         [Fact]
         public void MixedSortedMatchStatement()
         {
-            var entry1 = new IndexSingleEntry
-            {
-                Id = "entry/1",
-                Content = "3"
-            };
-            var entry2 = new IndexEntry
-            {
-                Id = "entry/2",
-                Content = new string[] { "4", "2" },
-            };
-            var entry3 = new IndexSingleEntry
-            {
-                Id = "entry/3",
-                Content = "1"
-            };
+            var entry1 = new IndexSingleEntry { Id = "entry/1", Content = "3" };
+            var entry2 = new IndexEntry { Id = "entry/2", Content = new string[] { "4", "2" }, };
+            var entry3 = new IndexSingleEntry { Id = "entry/3", Content = "1" };
 
             IndexEntries(new[] { entry1, entry3 });
             IndexEntries(new[] { entry2 });
@@ -789,25 +664,13 @@ namespace FastTests.Corax
             }
         }
 
-        
+
         [Fact]
         public void WillGetTotalNumberOfResultsInPagedQuery()
         {
-            var entry1 = new IndexSingleEntry
-            {
-                Id = "entry/1",
-                Content = "3"
-            };
-            var entry2 = new IndexEntry
-            {
-                Id = "entry/2",
-                Content = new string[] { "4", "2" },
-            };
-            var entry3 = new IndexSingleEntry
-            {
-                Id = "entry/3",
-                Content = "1"
-            };
+            var entry1 = new IndexSingleEntry { Id = "entry/1", Content = "3" };
+            var entry2 = new IndexEntry { Id = "entry/2", Content = new string[] { "4", "2" }, };
+            var entry3 = new IndexSingleEntry { Id = "entry/3", Content = "1" };
 
             IndexEntries(new[] { entry1, entry3 });
             IndexEntries(new[] { entry2 });
@@ -820,11 +683,11 @@ namespace FastTests.Corax
                 Span<long> ids = stackalloc long[2];
                 Assert.Equal(2, match.Fill(ids));
                 Assert.Equal(0, match.Fill(ids));
-                
+
                 Assert.Equal(3, match.TotalResults);
             }
         }
-        
+
         [Fact]
         public void CanGetAllEntries()
         {
@@ -832,19 +695,13 @@ namespace FastTests.Corax
             int i;
             for (i = 0; i < 1024; ++i)
             {
-                list.Add(new IndexSingleEntry()
-                {
-                    Id = $"entry/{i+1}",
-                    Content = i.ToString()
-                });
+                list.Add(new IndexSingleEntry() { Id = $"entry/{i + 1}", Content = i.ToString() });
             }
+
             IndexEntries(list);
-            IndexEntries(new []{ new IndexEntry()
-            {
-                Id = $"entry/{i+1}"
-            }});
-            list.Add(new IndexSingleEntry(){Id = $"entry/{i+1}"});
-            
+            IndexEntries(new[] { new IndexEntry() { Id = $"entry/{i + 1}" } });
+            list.Add(new IndexSingleEntry() { Id = $"entry/{i + 1}" });
+
             using var searcher = new IndexSearcher(Env);
             {
                 var all = searcher.AllEntries();
@@ -853,35 +710,24 @@ namespace FastTests.Corax
                 Span<long> ids = stackalloc long[256];
                 while ((read = all.Fill(ids)) != 0)
                 {
-                    for(i = 0; i < read; ++i)
+                    for (i = 0; i < read; ++i)
                         results.Add(searcher.GetIdentityFor(ids[i]));
                 }
+
                 results.Sort();
-                list.Sort((x,y) => x.Id.CompareTo(y.Id));
+                list.Sort((x, y) => x.Id.CompareTo(y.Id));
                 Assert.Equal(list.Count, results.Count);
                 for (i = 0; i < all.Count; ++i)
                     Assert.Equal(list[i].Id, results[i]);
             }
         }
-        
+
         [Fact]
         public void SimpleSortedMatchStatement()
         {
-            var entry1 = new IndexSingleEntry
-            {
-                Id = "entry/1",
-                Content = "3"
-            };
-            var entry2 = new IndexSingleEntry
-            {
-                Id = "entry/2",
-                Content = "2"
-            };
-            var entry3 = new IndexSingleEntry
-            {
-                Id = "entry/3",
-                Content = "1"
-            };
+            var entry1 = new IndexSingleEntry { Id = "entry/1", Content = "3" };
+            var entry2 = new IndexSingleEntry { Id = "entry/2", Content = "2" };
+            var entry3 = new IndexSingleEntry { Id = "entry/3", Content = "1" };
 
             IndexEntries(new[] { entry1, entry2, entry3 });
 
@@ -909,24 +755,126 @@ namespace FastTests.Corax
         }
 
 
+        private void IndexEntriesDouble(IEnumerable<IndexSingleEntryDouble> list)
+        {
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            Dictionary<Slice, int> knownFields = CreateKnownFields(bsc);
+
+            const int bufferSize = 4096;
+            using var _ = bsc.Allocate(bufferSize, out ByteString buffer);
+
+            {
+                using var indexWriter = new IndexWriter(Env);
+                foreach (var entry in list)
+                {
+                    var entryWriter = new IndexEntryWriter(buffer.ToSpan(), knownFields);
+                    var data = CreateIndexEntryDouble(ref entryWriter, entry);
+                    indexWriter.Index(entry.Id, data, knownFields);
+                }
+
+                indexWriter.Commit();
+            }
+        }
+
+        private static Span<byte> CreateIndexEntryDouble(ref IndexEntryWriter entryWriter, IndexSingleEntryDouble value)
+        {
+            Span<byte> PrepareString(string value)
+            {
+                if (value == null)
+                    return Span<byte>.Empty;
+                return Encoding.UTF8.GetBytes(value);
+            }
+
+            entryWriter.Write(IdIndex, PrepareString(value.Id));
+            entryWriter.Write(ContentIndex, PrepareString(value.Content.ToString()), Convert.ToInt64(value.Content), value.Content);
+
+            entryWriter.Finish(out var output);
+            return output;
+        }
+
+        private class IndexSingleEntryDouble
+        {
+            public string Id;
+            public double Content;
+        }
+
+        [Fact]
+        public void SimpleOrdinalCompareStatementWithLongValue()
+        {
+            var list = new List<IndexSingleEntryDouble>();
+            for (int i = 1; i < 1001; ++i)
+                list.Add(new IndexSingleEntryDouble() { Id = $"entry/{i}", Content = (double)i });
+            List<string> qids = new();
+            IndexEntriesDouble(list);
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            using var searcher = new IndexSearcher(Env);
+            Span<long> ids = stackalloc long[1024];
+
+            {
+                var match1 = searcher.AllEntries();
+                var match2 = searcher.LessThan(match1, ContentIndex, 25D);
+                
+                int read = 0;
+                while ((read = match2.Fill(ids)) != 0)
+                    while (--read >= 0)
+                        qids.Add(searcher.GetIdentityFor(ids[read]));
+
+                foreach (IndexSingleEntryDouble indexSingleEntryDouble in list)
+                {
+                    bool isIn = qids.Contains(indexSingleEntryDouble.Id);
+                    if (indexSingleEntryDouble.Content >= 25D)
+                        Assert.False(isIn);
+                    else
+                        Assert.True(isIn);
+                }
+            }
+
+            qids.Clear();
+            {
+                var matchBetween = searcher.Between(searcher.AllEntries(), ContentIndex, 100L, 200L);
+                var read = matchBetween.Fill(ids);
+                while (--read >= 0)
+                {
+                    qids.Add(searcher.GetIdentityFor(ids[read]));
+                }
+
+                foreach (IndexSingleEntryDouble indexSingleEntryDouble in list)
+                {
+                    bool isIn = qids.Contains(indexSingleEntryDouble.Id);
+                    if (indexSingleEntryDouble.Content is >= 100L and <= 200L)
+                        Assert.True(isIn);
+                    else
+                        Assert.False(isIn);
+                }
+            }
+
+            qids.Clear();
+            {
+                var matchBetween = searcher.NotBetween(searcher.AllEntries(), ContentIndex, 100L, 200L);
+                var read = matchBetween.Fill(ids);
+                while (--read >= 0)
+                {
+                    qids.Add(searcher.GetIdentityFor(ids[read]));
+                }
+
+                foreach (IndexSingleEntryDouble indexSingleEntryDouble in list)
+                {
+                    bool isIn = qids.Contains(indexSingleEntryDouble.Id);
+                    if (indexSingleEntryDouble.Content is < 100D or > 200D)
+                        Assert.True(isIn);
+                    else
+                        Assert.False(isIn);
+                }
+            }
+        }
+
+
         [Fact]
         public void SimpleOrdinalCompareStatement()
         {
-            var entry1 = new IndexSingleEntry
-            {
-                Id = "entry/1",
-                Content = "3"
-            };
-            var entry2 = new IndexSingleEntry
-            {
-                Id = "entry/2",
-                Content = "2"
-            };
-            var entry3 = new IndexSingleEntry
-            {
-                Id = "entry/3",
-                Content = "1"
-            };
+            var entry1 = new IndexSingleEntry { Id = "entry/1", Content = "3" };
+            var entry2 = new IndexSingleEntry { Id = "entry/2", Content = "2" };
+            var entry3 = new IndexSingleEntry { Id = "entry/3", Content = "1" };
 
             IndexEntries(new[] { entry1, entry2, entry3 });
 
@@ -936,7 +884,8 @@ namespace FastTests.Corax
             Slice.From(bsc, "1", out var one);
 
             {
-                var match1 = searcher.StartWithQuery("Id", "e");
+                //   var match1 = searcher.StartWithQuery("Id", "e");
+                var match1 = searcher.AllEntries();
                 var match = searcher.GreaterThan(match1, ContentIndex, one);
 
                 Span<long> ids = stackalloc long[16];
@@ -975,21 +924,9 @@ namespace FastTests.Corax
         [Fact]
         public void SimpleEqualityCompareStatement()
         {
-            var entry1 = new IndexSingleEntry
-            {
-                Id = "entry/1",
-                Content = "1"
-            };
-            var entry2 = new IndexSingleEntry
-            {
-                Id = "entry/2",
-                Content = "2"
-            };
-            var entry3 = new IndexSingleEntry
-            {
-                Id = "entry/3",
-                Content = "1"
-            };
+            var entry1 = new IndexSingleEntry { Id = "entry/1", Content = "1" };
+            var entry2 = new IndexSingleEntry { Id = "entry/2", Content = "2" };
+            var entry3 = new IndexSingleEntry { Id = "entry/3", Content = "1" };
 
             IndexEntries(new[] { entry1, entry2, entry3 });
 
@@ -1038,26 +975,10 @@ namespace FastTests.Corax
         [Fact]
         public void SimpleBetweenCompareStatement()
         {
-            var entry1 = new IndexSingleEntry
-            {
-                Id = "entry/1",
-                Content = "3"
-            };
-            var entry2 = new IndexSingleEntry
-            {
-                Id = "entry/2",
-                Content = "2"
-            };
-            var entry3 = new IndexSingleEntry
-            {
-                Id = "entry/3",
-                Content = "1"
-            };
-            var entry4 = new IndexSingleEntry
-            {
-                Id = "entry/4",
-                Content = "4"
-            };
+            var entry1 = new IndexSingleEntry { Id = "entry/1", Content = "3" };
+            var entry2 = new IndexSingleEntry { Id = "entry/2", Content = "2" };
+            var entry3 = new IndexSingleEntry { Id = "entry/3", Content = "1" };
+            var entry4 = new IndexSingleEntry { Id = "entry/4", Content = "4" };
 
             IndexEntries(new[] { entry1, entry2, entry3, entry4 });
 
@@ -1109,26 +1030,10 @@ namespace FastTests.Corax
         [Fact]
         public void SimpleNotBetweenCompareStatement()
         {
-            var entry1 = new IndexSingleEntry
-            {
-                Id = "entry/1",
-                Content = "3"
-            };
-            var entry2 = new IndexSingleEntry
-            {
-                Id = "entry/2",
-                Content = "2"
-            };
-            var entry3 = new IndexSingleEntry
-            {
-                Id = "entry/3",
-                Content = "1"
-            };
-            var entry4 = new IndexSingleEntry
-            {
-                Id = "entry/4",
-                Content = "4"
-            };
+            var entry1 = new IndexSingleEntry { Id = "entry/1", Content = "3" };
+            var entry2 = new IndexSingleEntry { Id = "entry/2", Content = "2" };
+            var entry3 = new IndexSingleEntry { Id = "entry/3", Content = "1" };
+            var entry4 = new IndexSingleEntry { Id = "entry/4", Content = "4" };
 
             IndexEntries(new[] { entry1, entry2, entry3, entry4 });
 
@@ -1177,6 +1082,5 @@ namespace FastTests.Corax
                 Assert.Equal(0, match.Fill(ids));
             }
         }
-
     }
 }

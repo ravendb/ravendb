@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -87,14 +88,13 @@ namespace Corax.Queries
             int totalResults = 0;
 
             int maxUnusedMatchesSlots = matches.Length >= 64 ? matches.Length / 8 : 1;
+            int currentIdx = 0;
             while (currentMatches.Length > maxUnusedMatchesSlots)
             {
                 var results = match._inner.Fill(currentMatches);
                 if (results == 0)
                     return totalResults;
-
-                int currentIdx = 0;
-                int storeIdx = 0;
+                
                 for (int i = 0; i < results; i++)
                 {
                     var reader = searcher.GetReaderFor(currentMatches[i]);
@@ -109,26 +109,26 @@ namespace Corax.Queries
                     else if (typeof(TValueType) == typeof(double))
                     {
                         var read = reader.Read<double>(match._fieldId, out var resultX);
+                        
                         if (read)
                             isMatch = comparer.Compare((double)(object)currentType, resultX);
                     }
-
+                    
                     if (isMatch)
                     {
                         // We found a match.
-                        currentMatches[currentIdx] = currentMatches[storeIdx];
-                        storeIdx++;
+                        currentMatches[currentIdx] = currentMatches[i];
+                        currentIdx++;
                     }
-                    currentIdx++;
                 }
 
-                totalResults += storeIdx;
+                totalResults = currentIdx;
                 if (totalResults > match._take)
                     break;
-
-                currentMatches = currentMatches.Slice(storeIdx);
             }
 
+            matches = currentMatches;
+            // currentMatches = currentMatches.Slice(0, currentIdx);
             return totalResults;
         }
 

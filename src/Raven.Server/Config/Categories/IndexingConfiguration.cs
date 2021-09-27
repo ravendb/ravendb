@@ -336,7 +336,7 @@ namespace Raven.Server.Config.Categories
         public TimeSetting? ThrottlingTimeInterval { get; protected set; }
 
         [Description("Search engine for auto indexes")]
-        [DefaultValue(SearchEngineType.Lucene)]
+        [DefaultValue(SearchEngineType.Corax)]
         [IndexUpdateType(IndexUpdateType.Reset)]
         [ConfigurationEntry("Indexing.Auto.SearchEngineType", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public SearchEngineType AutoIndexingEngineType { get; protected set; }

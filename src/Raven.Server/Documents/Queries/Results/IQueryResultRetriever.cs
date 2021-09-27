@@ -14,34 +14,15 @@ namespace Raven.Server.Documents.Queries.Results
 
     public ref struct RetrieverInput
     {
-        public IndexEntryReader CoraxEntry
-        {
-            get;
-            set;
-        }
+        public IndexEntryReader CoraxEntry;
 
-        public IState State
-        {
-            get; 
-            set;
-        }
-        public Lucene.Net.Documents.Document LuceneDocument 
-        { 
-            get; 
-            set;
-        }
+        public IState State;
+        
+        public Lucene.Net.Documents.Document LuceneDocument;
 
-        public string DocumentId
-        {
-            get; 
-            set;
-        }
+        public string DocumentId;
 
-        public ScoreDoc Score
-        {
-            get;
-            set;
-        }
+        public ScoreDoc Score;
 
         public RetrieverInput(Lucene.Net.Documents.Document luceneDocument, ScoreDoc score, IState state)
         {
