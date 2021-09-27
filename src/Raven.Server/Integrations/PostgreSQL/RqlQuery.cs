@@ -13,6 +13,7 @@ using Raven.Server.Integrations.PostgreSQL.Messages;
 using Raven.Server.Integrations.PostgreSQL.Types;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -114,7 +115,8 @@ namespace Raven.Server.Integrations.PostgreSQL
                     _ => null
                 };
 
-                if (processedString != null && TryConvertStringValue(processedString, out var output))
+                if (processedString != null 
+                    && TypeConverter.TryConvertStringValue(processedString, out var output))
                 {
                     pgType = output switch
                     {
@@ -152,26 +154,6 @@ namespace Raven.Server.Integrations.PostgreSQL
 
             rqlQuery = null;
             return false;
-        }
-
-        // TODO: Taken from TypeConverter.cs in Raven.Server - use that when migrating
-        private static unsafe bool TryConvertStringValue(string value, out object output)
-        {
-            output = null;
-
-            fixed (char* str = value)
-            {
-                var result = LazyStringParser.TryParseDateTime(str, value.Length, out DateTime dt, out DateTimeOffset dto);
-                if (result == LazyStringParser.Result.DateTime)
-                    output = dt;
-                if (result == LazyStringParser.Result.DateTimeOffset)
-                    output = dto;
-
-                if (LazyStringParser.TryParseTimeSpan(str, value.Length, out var ts))
-                    output = ts;
-            }
-
-            return output != null;
         }
 
         public override async Task Execute(MessageBuilder builder, PipeWriter writer, CancellationToken token)
@@ -247,7 +229,7 @@ namespace Raven.Server.Integrations.PostgreSQL
                             case (BlittableJsonToken.CompressedString, PgTypeOIDs.Interval):
                                 {
                                     if (((string)prop.Value).Length != 0 && 
-                                        TryConvertStringValue((string)prop.Value, out var obj))
+                                        TypeConverter.TryConvertStringValue((string)prop.Value, out var obj))
                                     {
                                         value = pgColumn.PgType.ToBytes(obj, pgColumn.FormatCode);
                                     }
@@ -258,7 +240,7 @@ namespace Raven.Server.Integrations.PostgreSQL
                             case (BlittableJsonToken.String, PgTypeOIDs.Interval):
                                 {
                                     if (((LazyStringValue)prop.Value).Length != 0 && 
-                                        TryConvertStringValue((string)(LazyStringValue)prop.Value, out object obj))
+                                        TypeConverter.TryConvertStringValue((LazyStringValue)prop.Value, out object obj))
                                     {
                                         // TODO: Make pretty
                                         // Check for mismatch between column type and our data type
