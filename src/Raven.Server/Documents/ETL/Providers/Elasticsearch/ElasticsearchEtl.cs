@@ -12,6 +12,7 @@ using Raven.Server.Documents.ETL.Providers.ElasticSearch.Test;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TimeSeries;
+using Raven.Server.Exceptions.ETL.ElasticSearch;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 
@@ -114,20 +115,34 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
                             .Query(deleteQuery.ToString()))
                     )
                 );
-
-                if (string.IsNullOrWhiteSpace(deleteResponse.DebugInformation) == false)
-                {
-                    throw new ElasticSearchLoadException($"Index {index}; Documents IDs: {deleteQuery}; error: {deleteResponse.DebugInformation}");
-                }
                 
+                // The request made it to the server but something went wrong in Elasticsearch (query parsing exception, non-existent index, etc)
                 if (deleteResponse.ServerError != null)
                 {
-                    throw new ElasticSearchLoadException($"Index {index}; Documents IDs: {deleteQuery}; error: {deleteResponse.ServerError.Error}");
+                    if (deleteResponse.ServerError.Error.Type != "index_not_found_exception")
+                    {
+                        var message = $"Index {index}; Documents IDs: {deleteQuery}; Error: {deleteResponse.ServerError.Error}";
+                    
+                        if (Logger.IsInfoEnabled)
+                        {
+                            Logger.Info($"{message}; Debug Information: {deleteResponse.DebugInformation}");
+                        }
+                    
+                        throw new ElasticSearchLoadException(message);
+                    }
                 }
                 
+                // Elasticsearch error occurred or a connection error (the server could not be reached, request timed out, etc)
                 if (deleteResponse.OriginalException != null)
                 {
-                    throw new ElasticSearchLoadException($"Index {index}; Documents IDs: {deleteQuery}; error: {deleteResponse.OriginalException}");
+                    var message = $"Index {index}; Documents IDs: {deleteQuery}; Error: {deleteResponse.OriginalException}";
+                    
+                    if (Logger.IsInfoEnabled)
+                    {
+                        Logger.Info($"{message}; Debug Information: {deleteResponse.DebugInformation}", deleteResponse.OriginalException);
+                    }
+                    
+                    throw new ElasticSearchLoadException(message);
                 }
 
                 statsCounter += (int)deleteResponse.Deleted;
