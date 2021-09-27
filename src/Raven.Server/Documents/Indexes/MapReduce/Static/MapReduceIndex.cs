@@ -557,8 +557,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                         {
                             var value = property.Value;
                             var blittableValue = TypeConverter.ToBlittableSupportedType(value, context: _parent._indexContext, isRoot: false);
-                            if (value is InternalHandle jsValue)
-                                jsValue.Dispose();
+                            DisposeJsObjectsIfNeeded(value);
                                 
                             _propertyQueue.Enqueue((property.Key, blittableValue));
 
@@ -745,5 +744,19 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                 }
             }
         }
+
+        public static void DisposeJsObjectsIfNeeded(object value)
+        {
+            if (value is InternalHandle jsValue) {
+                jsValue.Dispose();
+            }
+            else if (value is object[] arr) {
+                for(int i=0; i < arr.Length; i++) {
+                    if (arr[i] is InternalHandle jsItem)
+                        jsItem.Dispose();       
+                }
+            }
+        }
+
     }
 }
