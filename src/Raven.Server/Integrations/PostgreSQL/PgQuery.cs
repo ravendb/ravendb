@@ -4,7 +4,7 @@ using System.IO.Pipelines;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Documents;
+using Raven.Server.Documents;
 using Raven.Server.Integrations.PostgreSQL.Exceptions;
 using Raven.Server.Integrations.PostgreSQL.Messages;
 using Raven.Server.Integrations.PostgreSQL.PowerBI;
@@ -31,18 +31,15 @@ namespace Raven.Server.Integrations.PostgreSQL
             _resultColumnFormatCodes = Array.Empty<short>();
         }
 
-        public static PgQuery CreateInstance(string queryText, int[] parametersDataTypes, IDocumentStore documentStore)
+        public static PgQuery CreateInstance(string queryText, int[] parametersDataTypes, DocumentDatabase documentDatabase)
         {
             queryText = queryText.Trim();
-            if (RqlQuery.TryParse(queryText, parametersDataTypes, documentStore, out var rqlQuery))
-            {
-                return rqlQuery;
-            }
 
-            if (PowerBIQuery.TryParse(queryText, parametersDataTypes, documentStore, out var powerBiQuery))
-            {
+            if (RqlQuery.TryParse(queryText, parametersDataTypes, documentDatabase, out var rqlQuery))
+                return rqlQuery;
+
+            if (PowerBIQuery.TryParse(queryText, parametersDataTypes, documentDatabase, out var powerBiQuery))
                 return powerBiQuery;
-            }
 
             return new HardcodedQuery(queryText, parametersDataTypes);
         }

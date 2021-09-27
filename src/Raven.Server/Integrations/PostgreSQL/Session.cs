@@ -6,7 +6,7 @@ using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Documents;
+using Raven.Server.Documents;
 using Raven.Server.Integrations.PostgreSQL.Exceptions;
 using Raven.Server.Integrations.PostgreSQL.Messages;
 
@@ -18,20 +18,23 @@ namespace Raven.Server.Integrations.PostgreSQL
         private readonly Func<Stream, Task<(Stream, X509Certificate2)>> _authenticateAsServerIfSslNeeded;
         private readonly int _identifier;
         private readonly int _processId;
+        private readonly DatabasesLandlord _databasesLandlord;
         private readonly CancellationToken _token;
         private Dictionary<string, string> _clientOptions;
 
         public Session(
             TcpClient client,
-            Func<Stream, Task<(Stream, X509Certificate2)>> authenticateAsServerIfSslNeeded,
             int identifier,
             int processId,
+            DatabasesLandlord databasesLandlord,
+            Func<Stream, Task<(Stream, X509Certificate2)>> authenticateAsServerIfSslNeeded,
             CancellationToken token)
         {
             _client = client;
-            _authenticateAsServerIfSslNeeded = authenticateAsServerIfSslNeeded;
             _identifier = identifier;
             _processId = processId;
+            _databasesLandlord = databasesLandlord;
+            _authenticateAsServerIfSslNeeded = authenticateAsServerIfSslNeeded;
             _token = token;
             _clientOptions = null;
         }
@@ -99,29 +102,31 @@ namespace Raven.Server.Integrations.PostgreSQL
 
             await HandleInitialMessage(stream, reader, writer, messageBuilder);
 
-            DocumentStore docStore;
-            try
-            {
-                docStore = new DocumentStore
-                {
-                    Urls = new[] { "http://127.0.0.1:8080" },
-                    Database = _clientOptions["database"]
-                };
-                docStore.Initialize();
-            }
-            catch (Exception e)
+            if (_clientOptions.TryGetValue("database", out string databaseName) == false)
             {
                 await writer.WriteAsync(messageBuilder.ErrorResponse(
                     PgSeverity.Fatal,
                     PgErrorCodes.ConnectionFailure,
                     "Failed to connect to database",
-                    e.Message), _token);
+                    "Missing database name in the connection string"), _token);
+                return;
+            }
+
+            var database = await _databasesLandlord.TryGetOrCreateResourceStore(databaseName);
+
+            if (database == null)
+            {
+                await writer.WriteAsync(messageBuilder.ErrorResponse(
+                    PgSeverity.Fatal,
+                    PgErrorCodes.ConnectionFailure,
+                    "Failed to connect to database",
+                    $"Database '{databaseName}' does not exist"), _token);
                 return;
             }
 
             try
             {
-                using var transaction = new Transaction(docStore, new MessageReader());
+                using var transaction = new Transaction(database, new MessageReader());
 
                 // Authentication
                 await writer.WriteAsync(messageBuilder.AuthenticationCleartextPassword(), _token);

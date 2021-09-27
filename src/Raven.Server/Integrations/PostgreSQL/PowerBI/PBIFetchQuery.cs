@@ -1,9 +1,9 @@
-﻿using Raven.Client.Documents;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using Raven.Server.Documents;
 using Raven.Server.Integrations.PostgreSQL.Exceptions;
 
 namespace Raven.Server.Integrations.PostgreSQL.PowerBI
@@ -44,7 +44,7 @@ namespace Raven.Server.Integrations.PostgreSQL.PowerBI
             { "is not", "!=" },
         };
 
-        public static bool TryParse(string queryText, int[] parametersDataTypes, IDocumentStore documentStore, out PgQuery pgQuery)
+        public static bool TryParse(string queryText, int[] parametersDataTypes, DocumentDatabase documentDatabase, out PgQuery pgQuery)
         {
             // Match queries sent by PowerBI, either RQL queries wrapped in an SQL statement OR generic SQL queries
             if (!TryGetMatches(queryText, out var matches, out var rql))
@@ -140,7 +140,7 @@ namespace Raven.Server.Integrations.PostgreSQL.PowerBI
 
             var limit = matches[0].Groups["limit"];
 
-            pgQuery = new RqlQuery(newRql, parametersDataTypes, documentStore, limit.Success ? int.Parse(limit.Value) : null);
+            pgQuery = new RqlQuery(newRql, parametersDataTypes, documentDatabase, limit.Success ? int.Parse(limit.Value) : null);
             return true;
         }
 

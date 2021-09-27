@@ -1,5 +1,4 @@
-﻿using Raven.Client.Documents;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO.Pipelines;
 using System.Net;
@@ -7,6 +6,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Server.Documents;
 using Raven.Server.Integrations.PostgreSQL.Messages;
 using Raven.Server.Integrations.PostgreSQL.Types;
 
@@ -23,13 +23,13 @@ namespace Raven.Server.Integrations.PostgreSQL.PowerBI
         private static readonly Regex SqlRegex = new Regex(@"(?is)^\s*select\s+.*\s+from\s+INFORMATION_SCHEMA.columns\s+where\s+TABLE_SCHEMA\s+=\s+'public'\s+and\s+TABLE_NAME\s*=\s*'(?<table_name>[^']+)'\s+order\s+by\s+TABLE_SCHEMA\s*,\s*TABLE_NAME\s*,\s*ORDINAL_POSITION\s*$",
             RegexOptions.Compiled);
 
-        public PBIPreviewQuery(IDocumentStore documentStore, string tableName)
-            : base($"from {tableName} limit 1", Array.Empty<int>(), documentStore)
+        public PBIPreviewQuery(DocumentDatabase documentDatabase, string tableName)
+            : base($"from {tableName} limit 1", Array.Empty<int>(), documentDatabase)
         {
             _results = new List<PgDataRow>();
         }
 
-        public static bool TryParse(string queryText, IDocumentStore documentStore, out PgQuery pgQuery)
+        public static bool TryParse(string queryText, DocumentDatabase documentDatabase, out PgQuery pgQuery)
         {
             var match = SqlRegex.Match(queryText);
 
@@ -37,7 +37,7 @@ namespace Raven.Server.Integrations.PostgreSQL.PowerBI
             {
                 var tableName = match.Groups["table_name"].Value;
 
-                pgQuery = new PBIPreviewQuery(documentStore, tableName);
+                pgQuery = new PBIPreviewQuery(documentDatabase, tableName);
                 return true;
             }
 

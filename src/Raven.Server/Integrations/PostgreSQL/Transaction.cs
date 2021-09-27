@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Documents;
+using Raven.Server.Documents;
 using Raven.Server.Integrations.PostgreSQL.Messages;
 
 namespace Raven.Server.Integrations.PostgreSQL
@@ -18,14 +18,14 @@ namespace Raven.Server.Integrations.PostgreSQL
     public class Transaction : IDisposable
     {
         public TransactionState State { get; private set; } = TransactionState.Idle;
-        public IDocumentStore DocumentStore { get; }
+        public DocumentDatabase DocumentDatabase { get; }
         public MessageReader MessageReader { get; private set; }
         
         private PgQuery _currentQuery;
         
-        public Transaction(IDocumentStore documentStore, MessageReader messageReader)
+        public Transaction(DocumentDatabase documentDatabase, MessageReader messageReader)
         {
-            DocumentStore = documentStore;
+            DocumentDatabase = documentDatabase;
             MessageReader = messageReader;
         }
 
@@ -37,7 +37,7 @@ namespace Raven.Server.Integrations.PostgreSQL
             MessageReader = new MessageReader();
 
             _currentQuery?.Dispose();
-            _currentQuery = PgQuery.CreateInstance(cleanQueryText, parametersDataTypes, DocumentStore);
+            _currentQuery = PgQuery.CreateInstance(cleanQueryText, parametersDataTypes, DocumentDatabase);
         }
 
         public void Bind(ICollection<byte[]> parameters, short[] parameterFormatCodes, short[] resultColumnFormatCodes)
