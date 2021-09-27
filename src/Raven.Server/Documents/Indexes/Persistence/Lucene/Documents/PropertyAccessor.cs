@@ -220,8 +220,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 var array = new object[arrayLength];
                 for (int i = 0; i < arrayLength; i++)
                 {
-                    using (var value = jsValue.GetProperty(i))
-                        array[i] = GetValue(value);
+                    using (var jsItem = jsValue.GetProperty(i))
+                        array[i] = GetValue(jsItem);
                 }
                 return array;
             }
