@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
+namespace Raven.Server.Exceptions.ETL.ElasticSearch
 {
     public class ElasticSearchLoadException : Exception
     {
