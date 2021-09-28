@@ -22,7 +22,7 @@ namespace Raven.Server.Documents.Patch
 {
     [DebuggerDisplay("Blittable JS object")]
     //[ScriptObject("BlittableObjectInstance", ScriptMemberSecurity.NoAcccess)]
-    public class BlittableObjectInstance : IDisposable
+    public class BlittableObjectInstance : IV8TreeNode, IDisposable
     {
         public class CustomBinder : ObjectBinderEx<BlittableObjectInstance>
         {
@@ -94,8 +94,8 @@ namespace Raven.Server.Documents.Patch
         public SpatialResult? Distance => _doc?.Distance;
         public float? IndexScore => _doc?.IndexScore;
 
-        private int HandleID; // just for debugging
-        private Int32 ObjectID; // just for debugging
+        private Int32 HandleID;
+        private Int32 ObjectID;
 
         public InternalHandle CreateObjectBinder(bool keepAlive = false) {
             return BlittableObjectInstance.CreateObjectBinder(Engine, this, keepAlive: keepAlive);
@@ -217,12 +217,49 @@ namespace Raven.Server.Documents.Patch
             }
         }
 
+        public V8EntityID ParentID
+        {
+            get {
+                return new V8EntityID(_parent?.HandleID ?? -1, _parent?.ObjectID ?? -1);
+            } 
+        }
+
+        public List<V8EntityID> ChildIDs
+        {
+            get {
+                var res = new List<V8EntityID>();
+
+                var countProps = OwnValues?.Count ?? 0;
+                if (countProps <= 0)
+                    return res;
+
+                foreach (var kvp in OwnValues) {
+                    InternalHandle h = kvp.Value.Value;
+                    res.Add(new V8EntityID(h.HandleID, h.ObjectID));
+
+                    if (!(h.IsDisposed || h.IsCLRDisposed) && h.IsArray) {
+                        for (int j = 0; j < h.ArrayLength; j++)
+                        {
+                            using (var jsItem = h.GetProperty(j))
+                            {
+                                res.Add(new V8EntityID(jsItem.HandleID, jsItem.ObjectID));
+                            }
+                        }
+                    }
+                }
+                //Engine.ForceV8GarbageCollection();
+
+                return res;
+            } 
+        }
+
+
         public string Summary
         {
             get {
                 string desc = "";
                 if (_parent != null) {
-                    desc = $"parentHandleID={_parent.HandleID}, parentObjectID={_parent.ObjectID}";
+                    desc = $"parentHandleID={ParentID.HandleID}, parentObjectID={ParentID.ObjectID}";
                 }
                 else {
                     desc = "isRoot=true";
@@ -649,6 +686,8 @@ namespace Raven.Server.Documents.Patch
                     throw new InvalidOperationException($"Property's internal handle is empty on disposal: propertyName={_propertyName}, handleID={HandleID}, objectID={ObjectID}, parentHandleID={_parent.HandleID}, parentObjectID={_parent.ObjectID}");
 #endif                
 
+                _value.Dispose();
+
                 if (disposing) {
                     // releasing managed resources
                     _parent = null;
@@ -659,10 +698,6 @@ namespace Raven.Server.Documents.Patch
                     //GC.SuppressFinalize(this); 
                 }
                 
-                // releasing unmanaged resources
-                // ...
-                _value.Dispose();
-
                 _disposed = true;
             }
 

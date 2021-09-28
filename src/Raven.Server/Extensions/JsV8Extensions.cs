@@ -143,7 +143,7 @@ namespace Raven.Server.Extensions
 
         public static void ResetCallStack(this V8Engine engine)
         {
-            engine?.ForceV8GarbageCollection();
+            //engine?.ForceV8GarbageCollection();
 
             // TODO need something ???
         }
