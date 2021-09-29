@@ -32,7 +32,7 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
                 return IsImplicitNull ? engine.ImplicitNull.CreateHandle() : jsValue;
             }
 
-            return new InternalHandle(ref jsValue, true);
+            return jsValue;
         }
 
 
