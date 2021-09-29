@@ -15,6 +15,7 @@ type pagingDetailsItemDto = {
     Occurrence: string;
     Duration: number;
     Details: string;
+    TotalDocumentsSizeInBytes: number;
 }
 
 class pagingDetails extends abstractPerformanceHintDetails {
@@ -40,21 +41,25 @@ class pagingDetails extends abstractPerformanceHintDetails {
 
         grid.init((s, t) => this.fetcher(s, t), () => {
             return [
-                new textColumn<pagingDetailsItemDto>(grid, x => x.Action, "Action", "20%", {
+                new textColumn<pagingDetailsItemDto>(grid, x => x.Action, "Action", "13%", {
                     sortable: "string"
                 }),
                 new textColumn<pagingDetailsItemDto>(grid, x => x.NumberOfResults ? x.NumberOfResults.toLocaleString() : 'n/a', "# of results", "10%", {
                     sortable: x => x.NumberOfResults,
                     defaultSortOrder: "desc"
                 }),
-                new textColumn<pagingDetailsItemDto>(grid, x => x.PageSize ? x.PageSize.toLocaleString() : 'n/a', "Page size", "10%", {
+                new textColumn<pagingDetailsItemDto>(grid, x => x.PageSize ? x.PageSize.toLocaleString() : 'n/a', "Page size", "12%", {
                     sortable: x => x.PageSize,
                     defaultSortOrder: "desc"
                 }),
-                new textColumn<pagingDetailsItemDto>(grid, x => generalUtils.formatUtcDateAsLocal(x.Occurrence), "Date", "15%", {
+                new textColumn<pagingDetailsItemDto>(grid, x => x.TotalDocumentsSizeInBytes ? generalUtils.formatBytesToSize(x.TotalDocumentsSizeInBytes) : 'n/a', "Docs size", "12%", {
+                    sortable: x => x.TotalDocumentsSizeInBytes,
+                    defaultSortOrder: "desc"
+                }),
+                new textColumn<pagingDetailsItemDto>(grid, x => generalUtils.formatUtcDateAsLocal(x.Occurrence), "Date", "13%", {
                     sortable: x => x.Occurrence
                 }),
-                new textColumn<pagingDetailsItemDto>(grid, x => x.Duration, "Duration (ms)", "15%", {
+                new textColumn<pagingDetailsItemDto>(grid, x => x.Duration, "Duration (ms)", "10%", {
                     sortable: "number",
                     defaultSortOrder: "desc"
                 }),
@@ -91,7 +96,8 @@ class pagingDetails extends abstractPerformanceHintDetails {
                     Occurrence: item.Occurrence,
                     PageSize: item.PageSize,
                     Duration: item.Duration,
-                    Details: item.Details
+                    Details: item.Details,
+                    TotalDocumentsSizeInBytes: item.TotalDocumentsSizeInBytes
                 } as pagingDetailsItemDto));
         });
     }
