@@ -1043,7 +1043,7 @@ namespace Raven.Server.Documents.TimeSeries
             public bool AddNewValue(DateTime time, Span<double> values, Span<byte> tagSlice, ref TimeSeriesValuesSegment segment, ulong status)
             {
                 var retryAppend = AddValueInternal(time, values, tagSlice, ref segment, status);
-                if(retryAppend)
+                if(retryAppend == false)
                     _context.DocumentDatabase.TimeSeriesPolicyRunner?.MarkForPolicy(_context, SliceHolder, time, status);
                 return retryAppend;
             }
