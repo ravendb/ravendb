@@ -7,9 +7,6 @@ class patchDocument {
     name = ko.observable<string>("");
     query = ko.observable<string>("");
     recentPatch = ko.observable<boolean>(false);
-
-    queryHasError = ko.observable<boolean>(false);
-    updateHasError = ko.observable<boolean>(false);
     
     validationGroup: KnockoutValidationGroup;
 
@@ -25,16 +22,7 @@ class patchDocument {
     private initValidation() {
         this.query.extend({
             required: true,
-            aceValidation: true,
-            validation: [
-                {
-                    validator: () => !this.queryHasError(),
-                    message: "The query part of your patch script failed to execute. Please check the query syntax."
-                },
-                {
-                    validator: () => !this.updateHasError(),
-                    message: "Please check the update part of your patch script."
-                }]
+            aceValidation: true
         });
         
         this.validationGroup = ko.validatedObservable({
