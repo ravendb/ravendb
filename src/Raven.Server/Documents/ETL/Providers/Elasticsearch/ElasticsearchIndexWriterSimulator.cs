@@ -1,5 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Text;
+using NuGet.Protocol;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
 {
@@ -18,48 +22,49 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
             return result;
         }
 
-        private string GenerateDeleteItemsCommandText(string indexName, string idField, List<ElasticSearchItem> elasticItems)
+        private string GenerateDeleteItemsCommandText(string indexName, string idField, List<ElasticSearchItem> elasticSearchItems)
         {
             StringBuilder deleteQuery = new StringBuilder();
 
-            foreach (var t in elasticItems)
+            foreach (var item in elasticSearchItems)
             {
-                deleteQuery.Append($"{t.DocumentId},");
+                deleteQuery.Append($"{item.DocumentId},");
             }
 
-            // arek will sent example
-            var sb = new StringBuilder("POST ")
-                .Append(indexName)
-                .AppendLine("/_delete_by_query")
-                .AppendLine("{")
-                .AppendLine("    \"query\": {")
-                .AppendLine("      \"match\": {")
-                .Append("        \"")
-                .Append(idField)
-                .Append("\"")
-                .Append(":")
-                .Append("\"")
-                .Append(deleteQuery)
-                .AppendLine("\"")
-                .AppendLine("      }")
-                .AppendLine("    }")
-                .AppendLine("}");
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            {
+                var result = new DynamicJsonValue()
+                {
+                    ["query"] = new DynamicJsonValue()
+                    {
+                        ["match"] = new DynamicJsonValue()
+                        {
+                            [idField] = deleteQuery.ToString()
+                        }
+                    }
+                };
 
-            return sb.ToString();
+                var resultJson = context.ReadObject(result, "").ToString();
+
+                var sb = new StringBuilder("POST ")
+                    .Append(indexName)
+                    .AppendLine("/_delete_by_query")
+                    .AppendLine(resultJson);
+
+                return sb.ToString();
+            }
         }
 
-        private IEnumerable<string> GenerateInsertItemsCommandText(string indexName, List<ElasticSearchItem> elasticsearchItems)
+        private IEnumerable<string> GenerateInsertItemsCommandText(string indexName, List<ElasticSearchItem> elasticSearchItems)
         {
             var result = new List<string>();
 
-            foreach (var item in elasticsearchItems)
+            foreach (var item in elasticSearchItems)
             {
                 var sb = new StringBuilder("POST ")
                     .Append(indexName)
                     .AppendLine("/_doc")
-                    .AppendLine("{")
-                    .AppendLine(item.Property.RawValue.ToString().Replace("{", "").Replace("}", ""))
-                    .AppendLine("}");
+                    .AppendLine(item.Property.RawValue.ToString());
 
                 result.Add(sb.ToString());
             }

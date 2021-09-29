@@ -819,7 +819,8 @@ loadToOrders(orderData);
             }
         }
 
-        protected void SetupElasticEtl(DocumentStore store, string script, IEnumerable<string> collections = null, bool applyToAllDocuments = false)
+        protected void SetupElasticEtl(DocumentStore store, string script, IEnumerable<string> collections = null, bool applyToAllDocuments = false,
+            global::Raven.Client.Documents.Operations.ETL.ElasticSearch.Authentication authentication = null)
         {
             var connectionStringName = $"{store.Database}@{store.Urls.First()} to ELASTIC";
 
@@ -845,9 +846,8 @@ loadToOrders(orderData);
                         }
                     }
                 },
-                // todo: separate tests for API key?                
-                new ElasticSearchConnectionString {Name = connectionStringName, Nodes = new[] {"http://localhost:9200"}, Authentication = new global::Raven.Client.Documents.Operations.ETL.ElasticSearch.Authentication(){BasicAuth = new BasicAuth(){Username = "elastic", Password = "password123"}}});
-                //new ElasticSearchConnectionString {Name = connectionStringName, Nodes = new[] {"http://localhost:9200"}, Authentication = new global::Raven.Client.Documents.Operations.ETL.ElasticSearch.Authentication(){ApiKeyAuth = new ApiKeyAuth(){ApiKeyId = "seMIv3sBeqCmaBgzhCGX", ApiKey = "mUILNrauSsmgOgrRvFXMdw"}}});
+                                
+                new ElasticSearchConnectionString {Name = connectionStringName, Nodes = new[] {"http://localhost:9200"}, Authentication = authentication });
         }
 
         private class Order
