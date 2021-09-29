@@ -6,9 +6,11 @@ using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
+using Newtonsoft.Json;
 using Orders;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Exceptions;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Server.Config;
@@ -44,14 +46,14 @@ namespace SlowTests.Corax
         [InlineData(SearchEngineType.Lucene, SearchEngineType.Corax)]
         public async Task AutoPersistIndexConfiguration(SearchEngineType beginType, SearchEngineType endType)
         {
-            using (var server = GetNewServer(new ServerCreationOptions { DataDirectory = NewDataPath(), RunInMemory = false }))
-            {
-                using (var store = GetDocumentStore(new Options { Server = server, RunInMemory = false, Path = NewDataPath(), ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = beginType.ToString() }))
+            // using (var server = GetNewServer(new ServerCreationOptions { DataDirectory = NewDataPath(), RunInMemory = false }))
+            // {
+                using (var store = GetDocumentStore(new Options {RunInMemory = false, Path = NewDataPath(), ModifyDatabaseRecord = d => d.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = beginType.ToString() }))
                 {
                     _databaseName = store.Database;
                     using (var session = store.OpenSession())
                         _ = session.Query<Order>().Where(x => x.OrderedAt == DateTime.Now).ToList();
-                    var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                    var database = await GetDatabase(store.Database); //await store.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
                     var index = database.IndexStore.GetIndex("Auto/Orders/ByOrderedAt");
 
                     Assert.Equal(beginType, index.SearchEngineType);
@@ -60,7 +62,7 @@ namespace SlowTests.Corax
 
                     Assert.Equal(beginType, index2.SearchEngineType);
                 }
-            }
+           // }
         }
 
         //todo maciej: There will be tests for StaticIndexes
@@ -114,10 +116,24 @@ namespace SlowTests.Corax
 
         private void PutConfigurationSettings(DocumentStore store, string key, SearchEngineType changedTo)
         {
-            var settings = new Dictionary<string, string>() { [key] = changedTo.ToString() };
-            store.Maintenance.Send(new PutDatabaseSettingsOperation(store.Database, settings));
-            store.Maintenance.Server.Send(new ToggleDatabasesStateOperation(store.Database, true));
-            store.Maintenance.Server.Send(new ToggleDatabasesStateOperation(store.Database, false));
+            var record = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(store.Database));
+            try
+            {
+                var settings = new Dictionary<string, string>() { [key] = changedTo.ToString() };
+                store.Maintenance.Send(new PutDatabaseSettingsOperation(store.Database, settings));
+                store.Maintenance.Server.Send(new ToggleDatabasesStateOperation(store.Database, true));
+                store.Maintenance.Server.Send(new ToggleDatabasesStateOperation(store.Database, false));
+            }
+            catch(ConcurrencyException)
+            {
+                var recordJson = JsonConvert.SerializeObject(record);
+                Console.WriteLine($"Original: {recordJson}");
+                var record2 = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(store.Database));
+                var recordJson2 = JsonConvert.SerializeObject(record2);
+                Console.WriteLine($"\nModified: {recordJson2}");
+
+                throw;
+            }
         }
 
         private static void DeleteAndExtractFiles(string destination, string zipPathInAssembly)
