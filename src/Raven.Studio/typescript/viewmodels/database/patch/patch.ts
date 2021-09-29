@@ -291,9 +291,6 @@ class patch extends viewModelBase {
     }
 
     runPatch() {
-        this.patchDocument().queryHasError(false);
-        this.patchDocument().updateHasError(false);
-        
         if (this.isValid(this.patchDocument().validationGroup)) {
             this.getMatchingDocumentsNumber()
                 .done((matchingDocs: number) => this.executePatch(matchingDocs));
@@ -376,17 +373,16 @@ class patch extends viewModelBase {
         
         const matchingDocs = $.Deferred<number>();
         
-        if (patchScriptParts.length !== 2) {
-            this.patchDocument().updateHasError(true);
-            matchingDocs.fail();
-        } else {
+        if (patchScriptParts.length === 2) {
             let query = queryCriteria.empty();
             query.queryText(patchScriptParts[0]);
 
             new queryCommand(this.activeDatabase(), 0, 0, query)
                 .execute()
                 .done((queryResults: pagedResultExtended<document>) => matchingDocs.resolve(queryResults.totalResultCount))
-                .fail(() => this.patchDocument().queryHasError(true));
+                .fail(() => matchingDocs.resolve(-1))
+        } else {
+            matchingDocs.resolve(-1);
         }
 
         return matchingDocs;
@@ -395,19 +391,22 @@ class patch extends viewModelBase {
     private executePatch(matchingDocuments: number): void {
         eventsCollector.default.reportEvent("patch", "run");
 
-        const infoMessage = `<li>
+        const patchQuestion = `<div>Are you sure you want to apply this patch to matching documents?</div>`;
+        
+        const warningMessage = `<li>
                                  <small>Actual number of processed documents might be smaller if documents are filtered by the 'update' script</small>
                              </li>`;
         
-        const patchMessage = `<div class="margin-bottom margin-bottom-lg text-info bg-info padding padding-xs">
+        const patchMessage = matchingDocuments > -1 ?
+                             `<div class="margin-bottom margin-bottom-lg text-info bg-info padding padding-xs">
                                  <ul class="margin-top">
                                      <li>
                                          <small>Number of documents matching the Patch Query: <strong class="margin-left margin-left-sm">${matchingDocuments}</strong></small>
                                      </li>
-                                     ${matchingDocuments > 0 ? infoMessage : ''}
+                                     ${matchingDocuments > 0 ? warningMessage : ''}
                                  </ul>
                               </div>
-                              <div>Are you sure you want to apply this patch to matching documents?</div>`;
+                              ${patchQuestion}` : `${patchQuestion}`;
 
         this.confirmationMessage("Patch", patchMessage, {
             buttons: ["Cancel", "Patch all"],
