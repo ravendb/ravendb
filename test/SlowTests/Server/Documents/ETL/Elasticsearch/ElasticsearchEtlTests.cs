@@ -836,9 +836,6 @@ loadToOrders(orderData);
                     ConnectionStringName = connectionStringName,
                     ElasticIndexes =
                     {
-                        /*new ElasticSearchIndex {IndexName = $"{caller}-orders", IndexIdProperty = "Id"},
-                        new ElasticSearchIndex {IndexName = $"{caller}-orderlines", IndexIdProperty = "OrderId"},
-                        new ElasticSearchIndex {IndexName = $"{caller}-users", IndexIdProperty = "UserId"},*/
                         new ElasticSearchIndex {IndexName = $"Orders", IndexIdProperty = "Id"},
                         new ElasticSearchIndex {IndexName = $"OrderLines", IndexIdProperty = "OrderId"},
                         new ElasticSearchIndex {IndexName = $"Users", IndexIdProperty = "UserId"},
