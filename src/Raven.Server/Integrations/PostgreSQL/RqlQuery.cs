@@ -22,12 +22,15 @@ namespace Raven.Server.Integrations.PostgreSQL
     public class RqlQuery : PgQuery
     {
         protected readonly DocumentDatabase DocumentDatabase;
+        private readonly QueryOperationContext _queryOperationContext;
         private List<Document> _result;
         private readonly int? _limit;
 
         public RqlQuery(string queryString, int[] parametersDataTypes, DocumentDatabase documentDatabase, int? limit = null) : base(queryString, parametersDataTypes)
         {
             DocumentDatabase = documentDatabase;
+
+            _queryOperationContext = QueryOperationContext.Allocate(DocumentDatabase);
             _result = null;
             _limit = limit;
         }
@@ -43,18 +46,13 @@ namespace Raven.Server.Integrations.PostgreSQL
 
         public async Task RunRqlQuery()
         {
-            var queryContext = QueryOperationContext.Allocate(DocumentDatabase);
+            var parameters = DynamicJsonValue.Convert(Parameters);
+            var queryParameters = _queryOperationContext.Documents.ReadObject(parameters, "query/parameters");
 
-            IndexQueryServerSide indexQuery;
-            using (var jsonOperationContext = JsonOperationContext.ShortTermSingleUse())
-            {
-                var parameters = DynamicJsonValue.Convert(Parameters);
-                indexQuery = new IndexQueryServerSide(QueryString,
-                    jsonOperationContext.ReadObject(parameters, "query/parameters"));
-            }
+            var indexQuery = new IndexQueryServerSide(QueryString, queryParameters);
 
-            var documentQueryResult = await DocumentDatabase.QueryRunner
-                .ExecuteQuery(indexQuery, queryContext, null, OperationCancelToken.None);
+            var documentQueryResult =
+                await DocumentDatabase.QueryRunner.ExecuteQuery(indexQuery, _queryOperationContext, null, OperationCancelToken.None);
 
             _result = documentQueryResult.Results;
 
@@ -74,11 +72,7 @@ namespace Raven.Server.Integrations.PostgreSQL
             var resultsFormat = GetDefaultResultsFormat();
             var sample = _result[0].Data;
 
-            if (sample.TryGet("@metadata", out BlittableJsonReaderObject metadata)
-                && metadata.TryGet("@id", out string _))
-            {
-                Columns["id()"] = new PgColumn("id()", (short)Columns.Count, PgText.Default, resultsFormat);
-            }
+            Columns["id()"] = new PgColumn("id()", (short)Columns.Count, PgText.Default, resultsFormat);
 
             BlittableJsonReaderObject.PropertyDetails prop = default;
 
@@ -311,7 +305,7 @@ namespace Raven.Server.Integrations.PostgreSQL
 
         public override void Dispose()
         {
-            //_session?.Dispose();
+            _queryOperationContext?.Dispose();
         }
     }
 }
