@@ -37,18 +37,18 @@ class authenticationInfo {
 
     constructor(dto: Raven.Client.Documents.Operations.ETL.ElasticSearch.Authentication) {
         
-        if (dto.BasicAuth) {
-            this.username(dto.BasicAuth.Username);
-            this.password(dto.BasicAuth.Password);
+        if (dto.Basic) {
+            this.username(dto.Basic.Username);
+            this.password(dto.Basic.Password);
         }
         
-        if (dto.ApiKeyAuth) {
-            this.apiKeyId(dto.ApiKeyAuth.ApiKeyId);
-            this.apiKey(dto.ApiKeyAuth.ApiKey);
+        if (dto.ApiKey) {
+            this.apiKeyId(dto.ApiKey.ApiKeyId);
+            this.apiKey(dto.ApiKey.ApiKey);
         }
         
-        if (dto.CertificateAuth) {
-            dto.CertificateAuth.CertificatesBase64.forEach(x => {
+        if (dto.Certificate) {
+            dto.Certificate.CertificatesBase64.forEach(x => {
                 const certificateModel = new replicationCertificateModel(x);
                 this.certificates.push(certificateModel);
             });
@@ -134,23 +134,23 @@ class authenticationInfo {
         const methodUsed = this.authMethodUsed();
 
         return {
-            BasicAuth: methodUsed === "basic" ? { Username: this.username(), Password: this.password() } : null,
-            ApiKeyAuth: methodUsed === "apiKey" ? { ApiKey: this.apiKey(), ApiKeyId: this.apiKeyId() } : null,
-            CertificateAuth: methodUsed === "certificate" ? { CertificatesBase64: this.certificates().map(x => x.publicKey()) } : null
+            Basic: methodUsed === "basic" ? { Username: this.username(), Password: this.password() } : null,
+            ApiKey: methodUsed === "apiKey" ? { ApiKey: this.apiKey(), ApiKeyId: this.apiKeyId() } : null,
+            Certificate: methodUsed === "certificate" ? { CertificatesBase64: this.certificates().map(x => x.publicKey()) } : null
         }
     }
     
     static empty(): authenticationInfo {
         return new authenticationInfo({
-            BasicAuth: {
+            Basic: {
                 Username: null,
                 Password: null,
             },
-            ApiKeyAuth: {
+            ApiKey: {
                 ApiKeyId: null,
                 ApiKey: null
             },
-            CertificateAuth: {
+            Certificate: {
                 CertificatesBase64: []
             }
         });
