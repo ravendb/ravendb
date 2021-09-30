@@ -22,17 +22,15 @@ namespace Raven.Server.Documents.Patch
 {
     [DebuggerDisplay("Blittable JS object")]
     //[ScriptObject("BlittableObjectInstance", ScriptMemberSecurity.NoAcccess)]
-    public class BlittableObjectInstance : IV8TreeNode, IDisposable
+    public class BlittableObjectInstance : IDisposable
+#if DEBUG
+    , IV8DebugInfo
+#endif
     {
         public class CustomBinder : ObjectBinderEx<BlittableObjectInstance>
         {
             public CustomBinder() : base()
             {
-            }
-
-            public override string Summary()
-            {
-                return ObjCLR.Summary;
             }
 
             public override InternalHandle NamedPropertyGetter(ref string propertyName)
@@ -94,8 +92,9 @@ namespace Raven.Server.Documents.Patch
         public SpatialResult? Distance => _doc?.Distance;
         public float? IndexScore => _doc?.IndexScore;
 
-        private Int32 HandleID;
-        private Int32 ObjectID;
+#if DEBUG
+        private V8EntityID _SelfID;
+#endif
 
         public InternalHandle CreateObjectBinder(bool keepAlive = false) {
             return BlittableObjectInstance.CreateObjectBinder(Engine, this, keepAlive: keepAlive);
@@ -104,10 +103,6 @@ namespace Raven.Server.Documents.Patch
         public static InternalHandle CreateObjectBinder(V8EngineEx engine, BlittableObjectInstance boi, bool keepAlive = false)
         {
             InternalHandle jsBinder = engine.CreateObjectBinder<BlittableObjectInstance.CustomBinder>(boi, engine.TypeBinderBlittableObjectInstance, keepAlive: keepAlive);
-
-            boi.HandleID = jsBinder.ID;
-            boi.ObjectID = jsBinder.ObjectID;
-            GC.SuppressFinalize(boi);
 
             return jsBinder;
         }
@@ -202,8 +197,6 @@ namespace Raven.Server.Documents.Patch
 
                 Deletes = null;
                 OwnValues = null;
-
-                //GC.SuppressFinalize(this);
             }
 
             _disposed = true;
@@ -217,10 +210,21 @@ namespace Raven.Server.Documents.Patch
             }
         }
 
+#if DEBUG
+        public V8EntityID SelfID
+        {
+            get {
+                return _SelfID;
+            }
+            set {
+                _SelfID = value;
+            }
+        }
+
         public V8EntityID ParentID
         {
             get {
-                return new V8EntityID(_parent?.HandleID ?? -1, _parent?.ObjectID ?? -1);
+                return new V8EntityID(_parent?.SelfID?.HandleID ?? -1, _parent?.SelfID?.ObjectID ?? -1);
             } 
         }
 
@@ -253,7 +257,6 @@ namespace Raven.Server.Documents.Patch
             } 
         }
 
-
         public string Summary
         {
             get {
@@ -267,7 +270,7 @@ namespace Raven.Server.Documents.Patch
                 return desc;
             }
         }
-
+#endif
 
         public InternalHandle GetOwnPropertyJs(string propertyName)
         {
@@ -281,7 +284,11 @@ namespace Raven.Server.Documents.Patch
         private void _CheckIsNotDisposed(string descCtx)
         {
             if (_disposed) {
-                throw new InvalidOperationException($"BOI has been disposed: DocumentId={DocumentId}, HandleID={HandleID}, ObjectID={ObjectID}, context: {descCtx}");
+                string errorDesc = $"BOI has been disposed: DocumentId={DocumentId}: {descCtx}";
+#if DEBUG
+                errorDesc += $", HandleID={SelfID?.HandleID}, ObjectID={SelfID?.ObjectID}, context";                
+#endif
+                throw new InvalidOperationException(errorDesc);
             }
         }
 
@@ -482,7 +489,7 @@ namespace Raven.Server.Documents.Patch
                 //using (var old = metadata)
                 {
                     metadata = JavaScriptUtils.Context.ReadObject(metadata, DocumentId);
-                    using (InternalHandle jsMetadata = JavaScriptUtils.TranslateToJs(JavaScriptUtils.Context, metadata, false))
+                    using (InternalHandle jsMetadata = JavaScriptUtils.TranslateToJs(JavaScriptUtils.Context, metadata, keepAlive: false, parent: this))
                     {
                         if (jsMetadata.IsError)
                             return jsMetadata;
@@ -558,6 +565,9 @@ namespace Raven.Server.Documents.Patch
         }
 
         public sealed class BlittableObjectProperty : IDisposable
+#if DEBUG
+    , IV8DebugInfo
+#endif
         {
             private bool _disposed = false;
     
@@ -569,10 +579,11 @@ namespace Raven.Server.Documents.Patch
             private InternalHandle _value = InternalHandle.Empty;
             public bool Changed;
 
-             // just for debugging
             private string DocumentId; 
-            private int HandleID;
-            private int ObjectID;
+
+#if DEBUG
+            private V8EntityID _SelfID;
+#endif
 
             public string Name
             {
@@ -610,10 +621,11 @@ namespace Raven.Server.Documents.Patch
 
             private void _OnSetValue()
             {
+#if DEBUG
                 if (!_value.IsEmpty) {
-                    HandleID = _value.ID;
-                    ObjectID = _value.ObjectID;
+                    _SelfID = new V8EntityID(_value.HandleID, _value.ObjectID);
                 }
+#endif                
             }
 
             private void Init(BlittableObjectInstance parent, string propertyName)
@@ -623,9 +635,6 @@ namespace Raven.Server.Documents.Patch
                 _propertyName = propertyName;
                 JavaScriptUtils = _parent.JavaScriptUtils;
                 Engine = _parent.Engine;
-
-                HandleID = -1;
-                ObjectID = -1;
 
                 GC.SuppressFinalize(this);
             }
@@ -682,9 +691,9 @@ namespace Raven.Server.Documents.Patch
                     return;
 
 #if DEBUG
-                if (_value.IsEmpty && HandleID >= 0)
-                    throw new InvalidOperationException($"Property's internal handle is empty on disposal: propertyName={_propertyName}, handleID={HandleID}, objectID={ObjectID}, parentHandleID={_parent.HandleID}, parentObjectID={_parent.ObjectID}");
-#endif                
+                if (_value.IsEmpty && SelfID != null && SelfID.HandleID >= 0)
+                    throw new InvalidOperationException($"Property's internal handle is empty on disposal: {Summary}");
+#endif
 
                 _value.Dispose();
 
@@ -701,10 +710,44 @@ namespace Raven.Server.Documents.Patch
                 _disposed = true;
             }
 
+#if DEBUG
+            public V8EntityID SelfID
+            {
+                get {
+                    return _SelfID;
+                } 
+
+                set {
+                    _SelfID = value;
+                } 
+            }
+
+            public V8EntityID ParentID
+            {
+                get { return _parent.SelfID; } 
+            }
+
+            public List<V8EntityID> ChildIDs
+            {
+                get { return null; } 
+            }
+#endif
+
+            public string Summary
+            {
+                get {
+                    var res = $"BlittableObjectProperty has been disposed: DocumentId={DocumentId}, propertyName={_propertyName}";
+#if DEBUG
+                    res += $", HandleID={SelfID.HandleID}, ObjectID={SelfID.ObjectID}, parentHandleID={_parent.SelfID.HandleID}, parentObjectID={_parent.SelfID.ObjectID}";
+#endif
+                    return res;
+                }
+            }
+
             private void _CheckIsNotDisposed(string descCtx)
             {
                 if (_disposed) {
-                    throw new InvalidOperationException($"BlittableObjectProperty has been disposed: DocumentId={DocumentId}, propertyName={_propertyName}, HandleID={HandleID}, ObjectID={ObjectID}, context: {descCtx}");
+                    throw new InvalidOperationException($"BlittableObjectProperty has been disposed: context: {descCtx}, {Summary}");
                 }
             }
 
@@ -810,8 +853,8 @@ namespace Raven.Server.Documents.Patch
                     }
                     else
                     {
-                        throw new InvalidOperationException($"RecoGetOwnPropertygnized field '{propertyName}' as numeric but was unable to parse its value to 'long' or 'double'. " +
-                                                            $"documentId = '{parent.DocumentId}', value = {val}.");
+                        throw new InvalidOperationException($"Recognized field '{propertyName}' as numeric but was unable to parse its value to 'long' or 'double'. " +
+                                                            $"value = {val}, {Summary}.");
                     }
                 }
                 else
