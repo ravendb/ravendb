@@ -344,6 +344,22 @@ namespace Raven.Server.ServerWide.Commands
 
         public const byte Separator = 30;
 
+        public static unsafe bool DeleteCommands<TTransaction>(TransactionOperationContext<TTransaction> context, string database, long upToCommandCount)
+            where TTransaction : RavenTransaction
+        {
+            var items = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.TransactionCommandsSchema, ClusterStateMachine.TransactionCommands);
+
+            using (GetPrefix(context, database, out var prefixSlice))
+            {
+                return items.DeleteByPrimaryKeyPrefix(prefixSlice, shouldAbort: (tvb) =>
+                {
+                    var value = tvb.Reader.Read((int)ClusterTransactionCommand.TransactionCommandsColumn.Key, out var size);
+                    var prevCommandsCount = Bits.SwapBytes(*(long*)(value + size - sizeof(long)));
+                    return prevCommandsCount > upToCommandCount;
+                });
+            }
+        }
+
         public static unsafe ByteStringContext.InternalScope GetPrefix<TTransaction>(TransactionOperationContext<TTransaction> context, string database, out Slice prefixSlice, long? index = null)
             where TTransaction : RavenTransaction
         {
