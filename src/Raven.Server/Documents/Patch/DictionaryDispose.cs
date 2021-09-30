@@ -10,27 +10,27 @@ namespace Raven.Server.Documents.Patch
         {
         }
 
-        new public void Add(ref InternalHandle key, TValue value)
+        new public void Add(ref InternalHandle jsKey, TValue value)
         {
-            var keyNew = new InternalHandle(ref key, true);
+            var jsKeyNew = new InternalHandle(ref jsKey, true);
             try
             {
-                base.Add(keyNew, value);
+                base.Add(jsKeyNew, value);
             }
             catch 
             {
-                keyNew.Dispose();
+                jsKeyNew.Dispose();
                 throw;
             }
         }
 
-        new public bool TryAdd(ref InternalHandle key, TValue value)
+        new public bool TryAdd(ref InternalHandle jsKey, TValue value)
         {
-            var keyNew = new InternalHandle(ref key, true);
-            var res = base.TryAdd(keyNew, value);
+            var jsKeyNew = new InternalHandle(ref jsKey, true);
+            var res = base.TryAdd(jsKeyNew, value);
             if (!res)
             {
-                keyNew.Dispose();
+                jsKeyNew.Dispose();
             }
             return res;
         }
@@ -43,27 +43,27 @@ namespace Raven.Server.Documents.Patch
         {
         }
 
-        new public void Add(TKey key, ref InternalHandle value)
+        new public void Add(TKey key, ref InternalHandle jsValue)
         {
-            var valueNew = new InternalHandle(ref value, true);
+            var jsValueNew = new InternalHandle(ref jsValue, true);
             try
             {
-                base.Add(key, valueNew);
+                base.Add(key, jsValueNew);
             }
             catch 
             {
-                valueNew.Dispose();
+                jsValueNew.Dispose();
                 throw;
             }
         }
 
-        new public bool TryAdd(TKey key, ref InternalHandle value)
+        new public bool TryAdd(TKey key, ref InternalHandle jsValue)
         {
-            var valueNew = new InternalHandle(ref value, true);
-            var res = base.TryAdd(key, valueNew);
+            var jsValueNew = new InternalHandle(ref jsValue, true);
+            var res = base.TryAdd(key, jsValueNew);
             if (!res)
             {
-                valueNew.Dispose();
+                jsValueNew.Dispose();
             }
             return res;
         }
@@ -79,16 +79,38 @@ namespace Raven.Server.Documents.Patch
 
     }
 
-    public class DictionaryDisposeKey<TKey, TValue> : Dictionary<TKey, TValue>
+    public class DictionaryDisposeKey<TKey, TValue> : Dictionary<TKey, TValue>, IDisposable
     where TKey : IDisposable
     {
+        private bool _disposed = false;
+
         public DictionaryDisposeKey() : base()
         {
+            //GC.SuppressFinalize(this);
         }
 
         ~DictionaryDisposeKey()
         {
+            Dispose(false);
+        }
+
+        public void Dispose()
+        {  
+            Dispose(true);
+        }
+
+        protected void Dispose(bool disposing)
+        {
+            if (_disposed)
+                return;
+
             Clear();
+
+            if (disposing) {
+                //GC.SuppressFinalize(this);
+            }
+
+            _disposed = true;
         }
 
         new public void Clear()
@@ -115,16 +137,38 @@ namespace Raven.Server.Documents.Patch
         }
     }
 
-    public class DictionaryDisposeValue<TKey, TValue> : Dictionary<TKey, TValue>
+    public class DictionaryDisposeValue<TKey, TValue> : Dictionary<TKey, TValue>, IDisposable
     where TValue : IDisposable
     {
+        private bool _disposed = false;
+
         public DictionaryDisposeValue() : base()
         {
+            //GC.SuppressFinalize(this);
         }
 
         ~DictionaryDisposeValue()
         {
+            Dispose(false);
+        }
+
+        public void Dispose()
+        {  
+            Dispose(true);
+        }
+
+        protected void Dispose(bool disposing)
+        {
+            if (_disposed)
+                return;
+
             Clear();
+
+            if (disposing) {
+                //GC.SuppressFinalize(this);
+            }
+
+            _disposed = true;
         }
 
         new public void Clear()
