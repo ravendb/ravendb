@@ -316,12 +316,12 @@ var process = {
             }
         }
 
-        public InternalHandle TranslateToJs(JsonOperationContext context, object o, bool keepAlive = false)
+        public InternalHandle TranslateToJs(JsonOperationContext context, object o, bool keepAlive = false, BlittableObjectInstance parent = null)
         {
             if (o is Tuple<Document, Lucene.Net.Documents.Document, IState, Dictionary<string, IndexField>, bool?, ProjectionOptions> t)
             {
                 var d = t.Item1;
-                BlittableObjectInstance boi = new BlittableObjectInstance(this, null, Clone(d.Data, context), d)
+                BlittableObjectInstance boi = new BlittableObjectInstance(this, parent, Clone(d.Data, context), d)
                 {
                     LuceneDocument = t.Item2,
                     LuceneState = t.Item3,
@@ -333,18 +333,18 @@ var process = {
             }
             if (o is Document doc)
             {
-                BlittableObjectInstance boi = new BlittableObjectInstance(this, null, Clone(doc.Data, context), doc);
+                BlittableObjectInstance boi = new BlittableObjectInstance(this, parent, Clone(doc.Data, context), doc);
                 return boi.CreateObjectBinder(keepAlive);
             }
             if (o is DocumentConflict dc)
             {
-                BlittableObjectInstance boi = new BlittableObjectInstance(this, null, Clone(dc.Doc, context), dc.Id, dc.LastModified, dc.ChangeVector);
+                BlittableObjectInstance boi = new BlittableObjectInstance(this, parent, Clone(dc.Doc, context), dc.Id, dc.LastModified, dc.ChangeVector);
                 return boi.CreateObjectBinder(keepAlive);
             }
 
             if (o is BlittableJsonReaderObject json)
             {
-                BlittableObjectInstance boi = new BlittableObjectInstance(this, null, Clone(json, context), null, null, null);
+                BlittableObjectInstance boi = new BlittableObjectInstance(this, parent, Clone(json, context), null, null, null);
                 return boi.CreateObjectBinder(keepAlive);
             }
 
@@ -384,7 +384,7 @@ var process = {
                 var jsItems = new InternalHandle[arrayLength];
                 for (int i = 0; i < arrayLength; ++i)
                 {
-                    BlittableObjectInstance boi = new BlittableObjectInstance(this, null, Clone(docList[i].Data, context), docList[i]);
+                    BlittableObjectInstance boi = new BlittableObjectInstance(this, parent, Clone(docList[i].Data, context), docList[i]);
                     jsItems[i] = boi.CreateObjectBinder(keepAlive);
                 }
 
@@ -692,7 +692,13 @@ Array.prototype.reverse = function(...args) {
             }
 
             ObjectBinder binder = tb.CreateObjectBinder<TObjectBinder, object>(obj, true, keepAlive: keepAlive);
-            bool isLocked = binder._.IsLocked; // for debugging
+
+#if DEBUG
+            if (obj is IV8DebugInfo di) {
+                di.SelfID = new V8EntityID(binder._.ID, binder._.ObjectID);
+            }
+#endif
+
             return binder._; //new InternalHandle(ref binder._, true);
         }
 
@@ -727,8 +733,8 @@ Array.prototype.reverse = function(...args) {
 
             jsValue = obj switch 
             {
-                //BlittableJsonReaderObject bjro => (new BlittableObjectInstance(this, null, bjro, null, null, null)).CreateObjectBinder(keepAlive),
-                //Document doc => (new BlittableObjectInstance(this, null, doc.Data, doc)).CreateObjectBinder(keepAlive),
+                //BlittableJsonReaderObject bjro => (new BlittableObjectInstance(this, parent, bjro, null, null, null)).CreateObjectBinder(keepAlive),
+                //Document doc => (new BlittableObjectInstance(this, parent, doc.Data, doc)).CreateObjectBinder(keepAlive),
                 //LazyNumberValue lnv => CreateValue(lnv.ToDouble(CultureInfo.InvariantCulture)),
                 StringSegment ss => CreateValue(ss.ToString()),
                 LazyStringValue lsv => CreateValue(lsv.ToString()),
