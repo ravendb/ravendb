@@ -37,12 +37,12 @@ namespace Raven.Server.Documents.Indexes.Static
 
             if (reduceFunc.IsUndefined || reduceFunc.IsNull)
                 throw new ArgumentNullException(nameof(reduceFunc));
-            InternalHandle reduceFuncAux = reduceFunc; // it is using in the caller so there is no neither need nor possibility to modify its _Object and we can modify it just for the aux value
+            InternalHandle reduceFuncAux = reduceFunc;
             ReduceFunc = new InternalHandle(ref reduceFuncAux, true);
 
             if (key.IsUndefined || key.IsNull)
                 throw new ArgumentNullException(nameof(key));
-            InternalHandle keyAux = key; // it is using in the caller so there is no neither need nor possibility to modify its _Object and we can modify it just for the aux value
+            InternalHandle keyAux = key;
             Key = new InternalHandle(ref keyAux, true);
 
             JavaScriptIndexUtils = javaScriptIndexUtils;
