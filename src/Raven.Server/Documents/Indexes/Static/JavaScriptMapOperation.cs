@@ -38,7 +38,7 @@ namespace Raven.Server.Documents.Indexes.Static
             _engine = _javaScriptIndexUtils.Engine;
 
             MapFuncJint = mapFuncJint;
-            InternalHandle mapFuncV8Aux = mapFunc; // it is using in the caller so there is no neither need nor possibility to modify its _Object and we can modify it just for the aux value
+            InternalHandle mapFuncV8Aux = mapFunc;
             MapFunc = new InternalHandle(ref mapFuncV8Aux, true);
             IndexName = indexName;
             MapString = mapString;
