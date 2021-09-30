@@ -401,7 +401,7 @@ class patch extends viewModelBase {
                              `<div class="margin-bottom margin-bottom-lg text-info bg-info padding padding-xs">
                                  <ul class="margin-top">
                                      <li>
-                                         <small>Number of documents matching the Patch Query: <strong class="margin-left margin-left-sm">${matchingDocuments}</strong></small>
+                                         <small>Number of documents matching the Patch Query: <strong class="margin-left margin-left-sm">${matchingDocuments.toLocaleString()}</strong></small>
                                      </li>
                                      ${matchingDocuments > 0 ? warningMessage : ''}
                                  </ul>
