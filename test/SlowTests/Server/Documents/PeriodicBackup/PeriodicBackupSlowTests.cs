@@ -10,6 +10,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Utils;
 using Newtonsoft.Json;
 using Raven.Client;
 using Raven.Client.Documents;
@@ -533,6 +534,61 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
             }
         }
+
+        [Fact, Trait("Category", "Smuggler")]
+        public async Task can_backup_and_restore_snapshot_with_compare_exchange()
+        {
+            var ids = Enumerable.Range(0, 2 * 1024) // DatabaseDestination.DatabaseCompareExchangeActions.BatchSize
+                .Select(i => "users/" + i).ToArray();
+
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            using var store = GetDocumentStore();
+            await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+
+            using (var session = store.OpenAsyncSession(new SessionOptions
+            {
+                TransactionMode = TransactionMode.ClusterWide
+            }))
+            {
+                foreach (var id in ids)
+                {
+                    await session.StoreAsync(new User(), id);
+                }
+                await session.SaveChangesAsync();
+            }
+
+            var sourceStats = await store.Maintenance.SendAsync(new GetDetailedStatisticsOperation());
+            Assert.Equal(ids.Length, sourceStats.CountOfCompareExchange);
+
+            var config = Backup.CreateBackupConfiguration(backupPath, backupType: BackupType.Snapshot);
+            config.SnapshotSettings = new SnapshotSettings { CompressionLevel = CompressionLevel.NoCompression };
+            var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+
+            var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDatabaseEtag;
+            await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
+            
+            // restore the database with a different name
+            string restoredDatabaseName = GetDatabaseName();
+            var backupLocation = Directory.GetDirectories(backupPath).First();
+
+            using (ReadOnly(backupLocation))
+            using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
+            {
+                BackupLocation = backupLocation,
+                DatabaseName = restoredDatabaseName
+            }))
+            {
+                using var destination = new DocumentStore { Urls = store.Urls, Database = restoredDatabaseName }.Initialize();
+
+                using var session = destination.OpenAsyncSession();
+                var users = await session.LoadAsync<User>(ids);
+                Assert.All(users.Values, Assert.NotNull);
+
+                var restoreStats = await destination.Maintenance.SendAsync(new GetDetailedStatisticsOperation());
+                Assert.Equal(sourceStats.CountOfCompareExchange, restoreStats.CountOfCompareExchange);
+            }
+        }
+
 
         [Fact, Trait("Category", "Smuggler")]
         public async Task can_backup_and_restore_snapshot_with_compression()
