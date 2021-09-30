@@ -20,6 +20,7 @@ using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.TrafficWatch;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Platform;
@@ -75,7 +76,7 @@ namespace Raven.Server.Documents.Handlers
                         writer.WriteComma();
 
                         writer.WritePropertyName(nameof(TimeSeriesItemDetail.NumberOfEntries));
-                        writer.WriteInteger(stats.Count);
+                        writer.WriteInteger(tsName.StartsWith(IncrementalTimeSeriesPrefix) ? -1 : stats.Count);
 
                         writer.WriteComma();
 
@@ -158,6 +159,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
+        public const string IncrementalTimeSeriesPrefix = "INC:";
         [RavenAction("/databases/*/timeseries", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task Read()
         {
@@ -171,7 +173,10 @@ namespace Raven.Server.Documents.Handlers
 
             var includeDoc = GetBoolValueQueryString("includeDocument", required: false) ?? false;
             var includeTags = GetBoolValueQueryString("includeTags", required: false) ?? false;
-
+            var fullResults = GetBoolValueQueryString("full", required: false) ?? false;
+            
+            bool incrementalTimeSeries = name.StartsWith(IncrementalTimeSeriesPrefix) && name.Contains('@') == false;
+            
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
@@ -195,7 +200,10 @@ namespace Raven.Server.Documents.Handlers
                     ? new IncludeDocumentsDuringTimeSeriesLoadingCommand(context, documentId, includeDoc, includeTags)
                     : null;
 
-                var rangeResult = GetTimeSeriesRange(context, documentId, name, from, to, ref start, ref pageSize, includesCommand);
+                var rangeResult = incrementalTimeSeries ? 
+                    GetIncrementalTimeSeriesRange(context, documentId, name, from, to, ref start, ref pageSize, includesCommand, fullResults) :
+                    GetTimeSeriesRange(context, documentId, name, from, to, ref start, ref pageSize, includesCommand);
+
                 var hash = rangeResult?.Hash ?? string.Empty;
 
                 var etag = GetStringFromHeaders("If-None-Match");
@@ -210,13 +218,13 @@ namespace Raven.Server.Documents.Handlers
                 long? totalCount = null;
                 if (from <= stats.Start && to >= stats.End)
                 {
-                    totalCount = stats.Count;
+                    totalCount = incrementalTimeSeries == false ? stats.Count : rangeResult?.Entries.Length;
                 }
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     if (rangeResult != null)
-                        WriteRange(writer, rangeResult, totalCount);
+                        WriteRange(writer, rangeResult, totalCount, context);
                 }
             }
         }
@@ -243,10 +251,15 @@ namespace Raven.Server.Documents.Handlers
                     throw new InvalidOperationException($"GetMultipleTimeSeriesOperation : Missing '{nameof(TimeSeriesRange.Name)}' argument in 'TimeSeriesRange' on document '{documentId}'. " +
                                                         $"'{nameof(TimeSeriesRange.Name)}' cannot be null or empty");
 
+                var incrementalTimeSeries = name.StartsWith(IncrementalTimeSeriesPrefix) && name.Contains('@') == false;
+
                 var from = string.IsNullOrEmpty(fromList[i]) ? DateTime.MinValue : ParseDate(fromList[i], name);
                 var to = string.IsNullOrEmpty(toList[i]) ? DateTime.MaxValue : ParseDate(toList[i], name);
 
-                var rangeResult = GetTimeSeriesRange(context, documentId, name, from, to, ref start, ref pageSize, includes);
+                var rangeResult = incrementalTimeSeries ?
+                    GetIncrementalTimeSeriesRange(context, documentId, name, from, to, ref start, ref pageSize, includes) :
+                    GetTimeSeriesRange(context, documentId, name, from, to, ref start, ref pageSize, includes);
+
                 if (rangeResult == null)
                 {
                     Debug.Assert(pageSize <= 0, "Page size must be zero or less here");
@@ -365,6 +378,129 @@ namespace Raven.Server.Documents.Handlers
             return result;
         }
 
+        internal static unsafe TimeSeriesRangeResult GetIncrementalTimeSeriesRange(DocumentsOperationContext context, string docId, string name, DateTime from, DateTime to, ref int start, ref int pageSize,
+            IncludeDocumentsDuringTimeSeriesLoadingCommand includesCommand = null, bool fullResults = false)
+        {
+            if (pageSize == 0)
+                return null;
+
+            var incrementalValues = new Dictionary<long, TimeSeriesEntry>();
+            var reader = new TimeSeriesReader(context, docId, name, from, to, offset: null);
+
+            // init hash
+            var size = Sodium.crypto_generichash_bytes();
+            Debug.Assert((int)size == 32);
+            var cryptoGenerichashStatebytes = (int)Sodium.crypto_generichash_statebytes();
+            var state = stackalloc byte[cryptoGenerichashStatebytes];
+            if (Sodium.crypto_generichash_init(state, null, UIntPtr.Zero, size) != 0)
+                ComputeHttpEtags.ThrowFailToInitHash();
+
+            var initialStart = start;
+            var hasMore = false;
+            DateTime lastSeenEntry = from;
+
+            includesCommand?.InitializeNewRangeResult(state);
+
+            foreach (var (individualValues, segmentResult) in reader.SegmentsOrValues())
+            {
+                if (individualValues == null &&
+                    start > segmentResult.Summary.NumberOfLiveEntries)
+                {
+                    lastSeenEntry = segmentResult.End;
+                    start -= segmentResult.Summary.NumberOfLiveEntries;
+                    continue;
+                }
+
+                var enumerable = individualValues ?? segmentResult.Values;
+
+                foreach (var singleResult in enumerable)
+                {
+                    lastSeenEntry = segmentResult.End;
+
+                    if (start-- > 0)
+                        continue;
+
+                    var nodeDbId = singleResult.Tag.Substring(7);
+                    var values = singleResult.Values.ToArray();
+
+                    includesCommand?.Fill(singleResult.Tag);
+
+                    if (incrementalValues.TryGetValue(singleResult.Timestamp.Ticks, out var entry))
+                    {
+                        if(fullResults)
+                            entry.NodesValues[nodeDbId] = values;
+                        
+                        var length = Math.Max(entry.Values.Length, singleResult.Values.Length);
+                        if (entry.Values.Length < length) // need to allocate more space for new values
+                        {
+                            var newValues = singleResult.Values.Span;
+
+                            for (int i = 0; i < entry.Values.Length; i++)
+                                newValues[i] += entry.Values[i];
+
+                            entry.Values = newValues.ToArray();
+                        }
+                        else
+                        {
+                            for (int i = 0; i < values.Length ; i++)
+                                entry.Values[i] += values[i];
+                        }
+                        continue;
+                    }
+
+                    if (pageSize-- <= 0)
+                    {
+                        hasMore = true;
+                        break;
+                    }
+
+                    incrementalValues[singleResult.Timestamp.Ticks] = new TimeSeriesEntry
+                    {
+                        Timestamp = singleResult.Timestamp,
+                        Tag = singleResult.Tag,
+                        Values = singleResult.Values.ToArray(),
+                        IsRollup = singleResult.Type == SingleResultType.RolledUp,
+                        NodesValues = fullResults ? new Dictionary<string, double[]>{ [nodeDbId] = values } : null
+                    };
+                }
+
+                ComputeHttpEtags.HashChangeVector(state, segmentResult.ChangeVector);
+
+                if (pageSize <= 0)
+                    break;
+            }
+
+            var hash = ComputeHttpEtags.FinalizeHash(size, state);
+
+            TimeSeriesRangeResult result;
+
+            if (initialStart > 0 && incrementalValues.Count == 0)
+            {
+                // this is a special case, because before the 'start' we might have values
+                result = new TimeSeriesRangeResult
+                {
+                    From = lastSeenEntry,
+                    To = to,
+                    Entries = Array.Empty<TimeSeriesEntry>(),
+                    Hash = hash
+                };
+            }
+            else
+            {
+                result = new TimeSeriesRangeResult
+                {
+                    From = (initialStart > 0) ? incrementalValues.Values.ToArray()[0].Timestamp : from,
+                    To = hasMore ? incrementalValues.Values.Last().Timestamp : to,
+                    Entries = incrementalValues.Values.ToArray(),
+                    Hash = hash
+                };
+            }
+
+            includesCommand?.AddIncludesToResult(result);
+
+            return result;
+        }
+
         public static unsafe DateTime ParseDate(string dateStr, string name)
         {
             fixed (char* c = dateStr)
@@ -458,7 +594,7 @@ namespace Raven.Server.Documents.Handlers
                         totalCount = stats.Count;
                     }
 
-                    WriteRange(writer, ranges[i], totalCount);
+                    WriteRange(writer, ranges[i], totalCount, context);
 
                     await writer.MaybeFlushAsync(token);
                 }
@@ -509,7 +645,7 @@ namespace Raven.Server.Documents.Handlers
                         totalCount = stats.Count;
                     }
 
-                    WriteRange(writer, ranges[i], totalCount);
+                    WriteRange(writer, ranges[i], totalCount, context);
                 }
                 writer.WriteEndArray();
             }
@@ -517,7 +653,7 @@ namespace Raven.Server.Documents.Handlers
             writer.WriteEndObject();
         }
 
-        private static void WriteRange(AsyncBlittableJsonTextWriter writer, TimeSeriesRangeResult rangeResult, long? totalCount)
+        private static void WriteRange(AsyncBlittableJsonTextWriter writer, TimeSeriesRangeResult rangeResult, long? totalCount, DocumentsOperationContext context = null)
         {
             writer.WriteStartObject();
             {
@@ -536,7 +672,7 @@ namespace Raven.Server.Documents.Handlers
                 writer.WriteComma();
 
                 writer.WritePropertyName(nameof(TimeSeriesRangeResult.Entries));
-                WriteEntries(writer, rangeResult.Entries);
+                WriteEntries(writer, rangeResult.Entries, context);
 
                 if (totalCount.HasValue)
                 {
@@ -557,7 +693,7 @@ namespace Raven.Server.Documents.Handlers
             writer.WriteEndObject();
         }
 
-        private static void WriteEntries(AsyncBlittableJsonTextWriter writer, TimeSeriesEntry[] entries)
+        private static void WriteEntries(AsyncBlittableJsonTextWriter writer, TimeSeriesEntry[] entries, DocumentsOperationContext context = null)
         {
             writer.WriteStartArray();
 
@@ -578,11 +714,32 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteComma();
                     writer.WritePropertyName(nameof(TimeSeriesEntry.IsRollup));
                     writer.WriteBool(entries[i].IsRollup);
+
+                    if (entries[i].NodesValues != null && entries[i].NodesValues.Count > 0)
+                        WriteNodesValues(writer, entries[i].NodesValues, context);
                 }
                 writer.WriteEndObject();
             }
 
             writer.WriteEndArray();
+        }
+
+        private static void WriteNodesValues(AsyncBlittableJsonTextWriter writer, Dictionary<string, double[]> nodesValues, DocumentsOperationContext context = null)
+        {
+            writer.WriteComma();
+            writer.WritePropertyName(nameof(TimeSeriesEntry.NodesValues));
+            writer.WriteStartObject();
+            var dbCv = context?.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(context);
+
+            int i = nodesValues.Count;
+            foreach (var nodeValues in nodesValues)
+            {
+                var nodeTag = dbCv != null ? ChangeVectorUtils.GetNodeTagById(dbCv, nodeValues.Key) ?? "A" : "A";
+                writer.WriteArray(nodeTag + "-" + nodeValues.Key, nodeValues.Value);
+                if (--i > 0)
+                    writer.WriteComma();
+            }
+            writer.WriteEndObject();
         }
 
         [RavenAction("/databases/*/timeseries", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]

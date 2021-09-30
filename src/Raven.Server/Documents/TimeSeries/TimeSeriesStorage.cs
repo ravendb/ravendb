@@ -1236,6 +1236,9 @@ namespace Raven.Server.Documents.TimeSeries
             IEnumerable<TimeSeriesOperation.AppendOperation> toAppend,
             string changeVectorFromReplication = null)
         {
+            if (name.StartsWith(IncrementalTimeSeriesPrefix))
+                throw new InvalidOperationException("Cannot perform append operations on Incremental Time Series");
+
             var holder = new SingleResult();
 
             return AppendTimestamp(context, documentId, collection, name, toAppend.Select(ToResult), changeVectorFromReplication);
@@ -1253,6 +1256,7 @@ namespace Raven.Server.Documents.TimeSeries
         private Dictionary<string, List<LazyStringValue>> _timedCounterCacheTags;
         private static readonly byte[] TimedCounterPrefixBuffer = Encoding.UTF8.GetBytes(TimedCounterPrefix);
         private static readonly byte[] TimedCounterPositivePrefixBuffer = Encoding.UTF8.GetBytes(TimedCounterPositivePrefix);
+        private const string IncrementalTimeSeriesPrefix = "INC:";
         private const string TimedCounterPrefix = "TC:";
         private const string TimedCounterPositivePrefix = TimedCounterPrefix + "INC-";
         private const string TimedCounterNegativePrefix = TimedCounterPrefix + "DEC-";
@@ -1264,24 +1268,70 @@ namespace Raven.Server.Documents.TimeSeries
             string name,
             IEnumerable<TimeSeriesOperation.IncrementOperation> toIncrement)
         {
+            if (name.Contains('@'))
+                throw new InvalidOperationException("Cannot perform increment operations on Rollup Time Series");
+
+            if (name.StartsWith(IncrementalTimeSeriesPrefix) == false)
+                throw new InvalidOperationException("Cannot perform increment operations on Non Incremental Time Series");
+
             _timedCounterCacheTags ??= new Dictionary<string, List<LazyStringValue>>();
             DateTime prevTimestamp = DateTime.MinValue;
 
             var holder = new SingleResult();
 
-            return AppendTimestamp(context, documentId, collection, name, toIncrement.Select(ToResult));
+            return AppendTimestamp(context, documentId, collection, name, toIncrement.SelectMany(ToResult));
 
 
-            SingleResult ToResult(TimeSeriesOperation.IncrementOperation element)
+            IEnumerable<SingleResult> ToResult(TimeSeriesOperation.IncrementOperation element)
             {
                 ValidateTimestamp(prevTimestamp, element.Timestamp);
                 prevTimestamp = element.Timestamp;
-
-                holder.Values = element.Values;
-                holder.Tag = TryGetTimedCounterTag(_documentDatabase.DbBase64Id, element.Values);
+                
                 holder.Timestamp = element.Timestamp.EnsureUtc().EnsureMilliseconds();
                 holder.Status = TimeSeriesValuesSegment.Live;
-                return holder;
+
+                var positiveValues = new List<double>();
+                var negativeValues = new List<double>();
+
+                foreach (var value in element.Values)
+                {
+                    var sign = Math.Sign(value);
+                    if (sign == 0)
+                    {
+                        positiveValues.Add(value);
+                        negativeValues.Add(value);
+                    }
+                    else if (sign > 0)
+                    {
+                        positiveValues.Add(value);
+                        negativeValues.Add(0);
+                    }
+                    else
+                    {
+                        negativeValues.Add(value);
+                        positiveValues.Add(value);
+                    }
+                }
+
+                if(positiveValues.Count != negativeValues.Count)
+                {
+
+                    holder.Values = positiveValues.ToArray();
+                    holder.Tag = TryGetTimedCounterTag(_documentDatabase.DbBase64Id, 1);
+                    yield return holder;
+
+
+                    holder.Values = negativeValues.ToArray();
+                    holder.Tag = TryGetTimedCounterTag(_documentDatabase.DbBase64Id, -1);
+                    yield return holder;
+                }
+                else
+                {
+                    var sign = TryGetValuesSign(element.Values);
+                    holder.Values = element.Values;
+                    holder.Tag = TryGetTimedCounterTag(_documentDatabase.DbBase64Id, sign);
+                    yield return holder;
+                }
             }
         }
 
@@ -1294,7 +1344,7 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        private static int TryGetValuesSign(IReadOnlyList<double> values)
+        private static int TryGetValuesSign(IEnumerable<double> values)
         {
             int sign = 0;
             foreach (var value in values)
@@ -1304,23 +1354,11 @@ namespace Raven.Server.Documents.TimeSeries
                     break;
             }
 
-            if (sign != 0)
-            {
-                for (int i = 1; i < values.Count; i++)
-                {
-                    var currentSign = Math.Sign(values[i]);
-                    if (sign != currentSign && currentSign != 0)
-                        throw new InvalidDataException("Cannot mix increment & decrement operations in a single call. But got: " + string.Join(", ", values));
-                }
-            }
-
             return sign;
         }
 
-        private LazyStringValue TryGetTimedCounterTag(string key, IReadOnlyList<double> values)
+        private LazyStringValue TryGetTimedCounterTag(string key, int sign)
         {
-            var sign = TryGetValuesSign(values);
-
             if (_timedCounterCacheTags.ContainsKey(key) == false)
             {
                 _timedCounterCacheTags[key] = new List<LazyStringValue>()
@@ -1734,7 +1772,7 @@ namespace Raven.Server.Documents.TimeSeries
                         current.Timestamp < nextSegmentBaseline)
                     {
                         retryAppend = timeSeriesSegment.AddNewValue(current, ref splitSegment);
-                        segmentChanged = true;
+                        segmentChanged = retryAppend == false;
                     }
 
                     if (segmentChanged)
@@ -1768,16 +1806,17 @@ namespace Raven.Server.Documents.TimeSeries
 
             if (localTime == remote.Timestamp)
             {
-                bool incrementOperation = remote.Tag?.StartsWith(TimedCounterPrefixBuffer) == true &&
-                                          localTag.StartsWith(TimedCounterPrefixBuffer);
+                bool incrementOperation = localTag.StartsWith(TimedCounterPrefixBuffer);
 
                 CompareResult compareResult;
                 if (incrementOperation)
                 {
+                    if (remote.Tag == null || remote.Tag.StartsWith(TimedCounterPrefixBuffer) == false)
+                        throw new InvalidDataException("Cannot get append operation for Incremental Time Series.");
+
                     int cmp = localTag.SequenceCompareTo(remote.Tag.AsSpan());
                     if (cmp == 0)
                     {
-
                         if (EitherOneIsMarkedAsDead(localStatus, remote, out compareResult)) 
                             return compareResult;
 
@@ -1794,6 +1833,9 @@ namespace Raven.Server.Documents.TimeSeries
                         return CompareResult.Local | CompareResult.Merge;
                     return CompareResult.Remote | CompareResult.Merge;
                 }
+
+                if (remote.Tag != null && remote.Tag.StartsWith(TimedCounterPrefixBuffer))
+                    throw new InvalidDataException("Cannot get increment operation for Non-Incremental Time Series.");
 
                 if (holder.FromReplication == false)
                 {
