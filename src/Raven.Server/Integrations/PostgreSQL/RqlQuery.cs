@@ -58,7 +58,9 @@ namespace Raven.Server.Integrations.PostgreSQL
 
             // If limit is 0, fetch one document for the schema generation
             if (_limit != null)
-                _result = _result.Take(_limit.Value == 0 ? 1 : _limit.Value).ToList();
+                _result = _result
+                    .Take(_limit.Value == 0 ? 1 : _limit.Value)
+                    .ToList();
 
             // TODO: Support skipping (check how/if PowerBI sends it, probably using the incremental refresh feature)
             // query.Skip(..)
@@ -202,80 +204,10 @@ namespace Raven.Server.Integrations.PostgreSQL
 
                         result.GetPropertyByIndex(index, ref prop);
 
-                        ReadOnlyMemory<byte>? value = null;
-                        switch (prop.Token & BlittableJsonReaderBase.TypesMask, pgColumn.PgType.Oid)
-                        {
-                            case (BlittableJsonToken.Boolean, PgTypeOIDs.Bool):
-                            case (BlittableJsonToken.CompressedString, PgTypeOIDs.Text):
-                            case (BlittableJsonToken.EmbeddedBlittable, PgTypeOIDs.Json):
-                            case (BlittableJsonToken.Integer, PgTypeOIDs.Int8):
-                            case (BlittableJsonToken.String, PgTypeOIDs.Text):
-                            case (BlittableJsonToken.StartArray, PgTypeOIDs.Json):
-                            case (BlittableJsonToken.StartObject, PgTypeOIDs.Json):
-                                value = pgColumn.PgType.ToBytes(prop.Value, pgColumn.FormatCode);
-                                break;
-                            case (BlittableJsonToken.LazyNumber, PgTypeOIDs.Float8):
-                                value = pgColumn.PgType.ToBytes((double)(LazyNumberValue)prop.Value, pgColumn.FormatCode);
-                                break;
-
-                            case (BlittableJsonToken.CompressedString, PgTypeOIDs.Timestamp):
-                            case (BlittableJsonToken.CompressedString, PgTypeOIDs.TimestampTz):
-                            case (BlittableJsonToken.CompressedString, PgTypeOIDs.Interval):
-                                {
-                                    if (((string)prop.Value).Length != 0 && 
-                                        TypeConverter.TryConvertStringValue((string)prop.Value, out var obj))
-                                    {
-                                        value = pgColumn.PgType.ToBytes(obj, pgColumn.FormatCode);
-                                    }
-                                    break;
-                                }
-                            case (BlittableJsonToken.String, PgTypeOIDs.Timestamp):
-                            case (BlittableJsonToken.String, PgTypeOIDs.TimestampTz):
-                            case (BlittableJsonToken.String, PgTypeOIDs.Interval):
-                                {
-                                    if (((LazyStringValue)prop.Value).Length != 0 && 
-                                        TypeConverter.TryConvertStringValue((LazyStringValue)prop.Value, out object obj))
-                                    {
-                                        // TODO: Make pretty
-                                        // Check for mismatch between column type and our data type
-                                        if (obj is DateTime dt)
-                                        {
-                                            if (dt.Kind == DateTimeKind.Utc && pgColumn.PgType is not PgTimestampTz)
-                                            {
-                                                break;
-                                            }
-                                            else if (dt.Kind != DateTimeKind.Utc && pgColumn.PgType is not PgTimestamp)
-                                            {
-                                                break;
-                                            }
-                                        }
-
-                                        if (obj is DateTimeOffset && pgColumn.PgType is not PgTimestampTz)
-                                        {
-                                            break;
-                                        }
-
-                                        if (obj is TimeSpan && pgColumn.PgType is not PgInterval)
-                                        {
-                                            break;
-                                        }
-
-                                        value = pgColumn.PgType.ToBytes(obj, pgColumn.FormatCode);
-                                    }
-                                    break;
-                                }
-                            case (BlittableJsonToken.String, PgTypeOIDs.Float8):
-                                value = pgColumn.PgType.ToBytes(double.Parse((LazyStringValue)prop.Value), pgColumn.FormatCode);
-                                break;
-                            case (BlittableJsonToken.Null, PgTypeOIDs.Json):
-                                value = Array.Empty<byte>();
-                                break;
-                        }
-
+                        var value = GetValueByType(prop, pgColumn);
                         if (value == null)
-                        {
                             continue;
-                        }
+
                         row[pgColumn.ColumnIndex] = value;
                         result.Modifications.Remove(key);
                     }
@@ -285,9 +217,7 @@ namespace Raven.Server.Integrations.PostgreSQL
                         using (DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                         using (context.OpenReadTransaction())
                         {
-                            BlittableJsonReaderObject modified;
-
-                            modified = context.ReadObject(result, "renew");
+                            var modified = context.ReadObject(result, "renew");
                             row[jsonIndex] = Encoding.UTF8.GetBytes(modified.ToString());
                         }
                     }
@@ -301,6 +231,74 @@ namespace Raven.Server.Integrations.PostgreSQL
             }
 
             await writer.WriteAsync(builder.CommandComplete($"SELECT {_result.Count}"), token);
+        }
+
+        private ReadOnlyMemory<byte>? GetValueByType(BlittableJsonReaderObject.PropertyDetails propertyDetails, PgColumn pgColumn)
+        {
+            switch (propertyDetails.Token & BlittableJsonReaderBase.TypesMask, pgColumn.PgType.Oid)
+            {
+                case (BlittableJsonToken.Boolean, PgTypeOIDs.Bool):
+                case (BlittableJsonToken.CompressedString, PgTypeOIDs.Text):
+                case (BlittableJsonToken.EmbeddedBlittable, PgTypeOIDs.Json):
+                case (BlittableJsonToken.Integer, PgTypeOIDs.Int8):
+                case (BlittableJsonToken.String, PgTypeOIDs.Text):
+                case (BlittableJsonToken.StartArray, PgTypeOIDs.Json):
+                case (BlittableJsonToken.StartObject, PgTypeOIDs.Json):
+                    return pgColumn.PgType.ToBytes(propertyDetails.Value, pgColumn.FormatCode);
+
+                case (BlittableJsonToken.LazyNumber, PgTypeOIDs.Float8):
+                    return pgColumn.PgType.ToBytes((double)(LazyNumberValue)propertyDetails.Value, pgColumn.FormatCode);
+
+                case (BlittableJsonToken.CompressedString, PgTypeOIDs.Timestamp):
+                case (BlittableJsonToken.CompressedString, PgTypeOIDs.TimestampTz):
+                case (BlittableJsonToken.CompressedString, PgTypeOIDs.Interval):
+                    {
+                        if (((string)propertyDetails.Value).Length != 0 
+                            && TypeConverter.TryConvertStringValue((string)propertyDetails.Value, out var obj))
+                            return pgColumn.PgType.ToBytes(obj, pgColumn.FormatCode);
+                        break;
+                    }
+
+                case (BlittableJsonToken.String, PgTypeOIDs.Timestamp):
+                case (BlittableJsonToken.String, PgTypeOIDs.TimestampTz):
+                case (BlittableJsonToken.String, PgTypeOIDs.Interval):
+                    {
+                        if (((LazyStringValue)propertyDetails.Value).Length != 0 
+                            && TypeConverter.TryConvertStringValue((LazyStringValue)propertyDetails.Value, out object obj))
+                        {
+                            // Check for mismatch between column type and our data type
+                            if (obj is DateTime dt)
+                            {
+                                if (dt.Kind == DateTimeKind.Utc 
+                                    && pgColumn.PgType is not PgTimestampTz)
+                                    break;
+
+                                if (dt.Kind != DateTimeKind.Utc 
+                                    && pgColumn.PgType is not PgTimestamp)
+                                    break;
+                            }
+
+                            if (obj is DateTimeOffset 
+                                && pgColumn.PgType is not PgTimestampTz)
+                                break;
+
+                            if (obj is TimeSpan 
+                                && pgColumn.PgType is not PgInterval)
+                                break;
+
+                            return pgColumn.PgType.ToBytes(obj, pgColumn.FormatCode);
+                        }
+                        break;
+                    }
+
+                case (BlittableJsonToken.String, PgTypeOIDs.Float8):
+                    return pgColumn.PgType.ToBytes(double.Parse((LazyStringValue)propertyDetails.Value), pgColumn.FormatCode);
+
+                case (BlittableJsonToken.Null, PgTypeOIDs.Json):
+                    return Array.Empty<byte>();
+            }
+
+            return null;
         }
 
         public override void Dispose()
