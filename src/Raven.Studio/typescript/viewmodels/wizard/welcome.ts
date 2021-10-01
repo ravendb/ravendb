@@ -6,6 +6,8 @@ import genUtils = require("common/generalUtils");
 import detectBrowser = require("viewmodels/common/detectBrowser");
 
 class welcome extends setupStep {
+
+    view = require("views/wizard/welcome.html");
    
     disableLetEncrypt = ko.observable<boolean>(false);
     

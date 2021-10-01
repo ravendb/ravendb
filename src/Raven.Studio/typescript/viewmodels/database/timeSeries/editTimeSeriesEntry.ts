@@ -7,6 +7,8 @@ import popoverUtils = require("common/popoverUtils");
 import moment = require("moment");
 
 class editTimeSeriesEntry extends dialogViewModelBase {
+    
+    view = require("views/database/timeSeries/editTimeSeriesEntry.html");
 
     static aggregationColumns = timeSeriesEntryModel.aggregationColumns;
     

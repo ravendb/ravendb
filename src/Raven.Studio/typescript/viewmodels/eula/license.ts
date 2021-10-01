@@ -4,6 +4,8 @@ import getEulaCommand = require("commands/licensing/getEulaCommand");
 import acceptEulaCommand = require("commands/licensing/acceptEulaCommand");
 
 class license extends viewModelBase {
+
+    view = require("views/eula/license.html");
     
     spinners = {
         accept: ko.observable<boolean>(false)
