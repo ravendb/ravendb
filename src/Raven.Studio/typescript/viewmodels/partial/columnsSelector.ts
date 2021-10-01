@@ -8,6 +8,7 @@ import customColumn = require("widgets/virtualGrid/columns/customColumn");
 import hyperlinkColumn = require("widgets/virtualGrid/columns/hyperlinkColumn");
 import storageKeyProvider = require("common/storage/storageKeyProvider");
 import generalUtils = require("common/generalUtils");
+import Sortable from "sortablejs";
 
 class columnItem {
 

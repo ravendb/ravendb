@@ -87,8 +87,10 @@
     "@types/node-forge": "^0.7.4",
     "@types/prismjs": "^1.9.0",
     "@types/requirejs": "^2.1.31",
+    "@types/sortablejs": "^1.10.7",
     "@types/toastr": "^2.1.39",
     "diff": "^4.0.2",
+    "draggabilly": "^2.3.0",
     "durandal": "^2.2.0",
     "favico.js": "^0.3.10",
     "jszip": "^3.7.1",
@@ -99,7 +101,9 @@
     "lodash": "^4.17.15",
     "moment": "^2.21.0",
     "node-forge": "^0.7.6",
+    "packery": "^2.1.2",
     "rbush": "^2.0.1",
+    "sortablejs": "^1.14.0",
     "webcola": "^3.4.0"
   }
 }
