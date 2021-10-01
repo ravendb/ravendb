@@ -234,10 +234,10 @@ namespace Raven.Server.Documents.Replication
                 var task = TcpUtils.ConnectSecuredTcpSocketAsReplication(_connectionInfo, certificate, _parent._server.Server.CipherSuitesPolicy,
                     (_, info, s, _, _) => NegotiateReplicationVersion(info, s, authorizationInfo),
                     _parent._server.Engine.TcpConnectionTimeout, _log, CancellationToken);
-            task.Wait(CancellationToken);
+                task.Wait(CancellationToken);
 
                 var socketResult = task.Result;
-                
+
                 _stream = socketResult.Stream;
 
                 if (SupportedFeatures.ProtocolVersion <= 0)
@@ -248,7 +248,7 @@ namespace Raven.Server.Documents.Replication
 
                 using (Interlocked.Exchange(ref _tcpClient, socketResult.TcpClient))
                 {
- 					if (socketResult.SupportedFeatures.DataCompression)
+                    if (socketResult.SupportedFeatures.DataCompression)
                     {
                         _stream = new ReadWriteCompressedStream(_stream, _buffer);
                         _tcpConnectionOptions.Stream = _stream;
@@ -267,7 +267,7 @@ namespace Raven.Server.Documents.Replication
                             return;
                         }
                     }
-                    
+
                     AddReplicationPulse(ReplicationPulseDirection.OutgoingInitiate);
                     if (_log.IsInfoEnabled)
                         _log.Info($"Will replicate to {Destination.FromString()} via {socketResult.Url}");
@@ -325,12 +325,12 @@ namespace Raven.Server.Documents.Replication
 
             try
             {
-            using (_parent._server.Server._tcpContextPool.AllocateOperationContext(out var ctx))
-            using (ctx.GetMemoryBuffer(out _buffer))
-            {
+                using (_parent._server.Server._tcpContextPool.AllocateOperationContext(out var ctx))
+                using (ctx.GetMemoryBuffer(out _buffer))
+                {
                     _parent.RunPullReplicationAsSink(tcpOptions, _buffer, Destination as PullReplicationAsSink, this);
+                }
             }
-        }
             catch
             {
                 try
@@ -605,7 +605,7 @@ namespace Raven.Server.Documents.Replication
                                 Type = ReplicationLoader.PullReplicationParams.ConnectionType.Outgoing
                             };
                         }
-                        
+
                         break;
 
                     case ReplicationMessageReply.ReplyType.Error:
@@ -734,8 +734,8 @@ namespace Raven.Server.Documents.Replication
                 SupportedFeatures = TcpNegotiation.Sync.NegotiateProtocolVersion(documentsContext, stream, parameters);
 
                 return Task.FromResult(SupportedFeatures);
-                }
             }
+        }
 
         private int ReadHeaderResponseAndThrowIfUnAuthorized(JsonOperationContext context, BlittableJsonTextWriter writer, Stream stream, string url)
         {

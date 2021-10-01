@@ -226,7 +226,7 @@ namespace Raven.Client.Documents.Subscriptions
                     TcpConnectionHeaderMessage.OperationTypes.Subscription,
                     NegotiateProtocolVersionForSubscriptionAsync,
                     context,
-                    requestExecutor.DefaultTimeout, 
+                    requestExecutor.DefaultTimeout,
                     null
 #if TCP_CLIENT_CANCELLATIONTOKEN_SUPPORT
                     ,
@@ -247,7 +247,7 @@ namespace Raven.Client.Documents.Subscriptions
                     throw new InvalidOperationException(
                         $"{_options.SubscriptionName}: TCP negotiation resulted with an invalid protocol version:{_supportedFeatures.ProtocolVersion}");
                 }
-                
+
 #if !(NETSTANDARD2_0 || NETSTANDARD2_1 || NETCOREAPP2_1)
                 if (_supportedFeatures.DataCompression)
                     _stream = new ReadWriteCompressedStream(_stream);
@@ -269,11 +269,11 @@ namespace Raven.Client.Documents.Subscriptions
 
         private async Task<TcpConnectionHeaderMessage.SupportedFeatures> NegotiateProtocolVersionForSubscriptionAsync(string chosenUrl, TcpConnectionInfo tcpInfo, Stream stream, JsonOperationContext context, List<string> _)
         {
-                bool compressionSupport = false;
+            bool compressionSupport = false;
 #if NETCOREAPP3_1_OR_GREATER
-                var version = SubscriptionTcpVersion ?? TcpConnectionHeaderMessage.SubscriptionTcpVersion;
-                if(version >= 53_000)
-                    compressionSupport = true;
+            var version = SubscriptionTcpVersion ?? TcpConnectionHeaderMessage.SubscriptionTcpVersion;
+            if (version >= 53_000)
+                compressionSupport = true;
 #endif
 
             var parameters = new AsyncTcpNegotiateParameters
@@ -285,7 +285,7 @@ namespace Raven.Client.Documents.Subscriptions
                 DestinationNodeTag = CurrentNodeTag,
                 DestinationUrl = chosenUrl,
                 DestinationServerId = tcpInfo.ServerId,
-				CompressionSupport = compressionSupport
+                CompressionSupport = compressionSupport
             };
 
             return await TcpNegotiation.NegotiateProtocolVersionAsync(context, stream, parameters).ConfigureAwait(false);
@@ -331,7 +331,7 @@ namespace Raven.Client.Documents.Subscriptions
             using (var response = await context.ReadForMemoryAsync(stream, "Subscription/tcp-header-response").ConfigureAwait(false))
             {
                 var reply = JsonDeserializationClient.TcpConnectionHeaderResponse(response);
-                
+
                 switch (reply.Status)
                 {
                     case TcpConnectionStatus.Ok:
@@ -559,7 +559,7 @@ namespace Raven.Client.Documents.Subscriptions
                 while (endOfBatch == false && _processingCts.IsCancellationRequested == false)
                 {
                     SubscriptionConnectionServerMessage receivedMessage = await ReadNextObject(context, tcpStream, buffer).ConfigureAwait(false);
-                    
+
                     if (receivedMessage == null || _processingCts.IsCancellationRequested)
                     {
                         break;
