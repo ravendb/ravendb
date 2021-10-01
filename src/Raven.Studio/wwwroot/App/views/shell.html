@@ -397,7 +397,6 @@
         </div>
     </div>
     <div data-bind="if: displayUsageStatsInfo()">
-        <div data-bind="compose: 'usageStats.html'"></div>
+        <div data-bind="compose: usageStatsView"></div>
     </div>
-    <div class="graph-helper" data-bind="compose: 'common/graphHelper.html'"></div>
-</div>
+    <div class="graph-helper" data-bind="compose: graphHelperView"></div></div>

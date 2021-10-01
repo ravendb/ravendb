@@ -4,6 +4,13 @@ import durandalRouter = require("plugins/router");
 import accessManager = require("common/shell/accessManager");
 
 class debugAdvanced {
+    
+    view = require("views/manage/debugAdvancedParent.html");
+    
+    getView() {
+        return this.view;
+    }
+    
     router: DurandalRootRouter;
     
     growContainer = ko.observable<boolean>(true);

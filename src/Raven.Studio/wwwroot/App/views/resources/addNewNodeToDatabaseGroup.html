@@ -58,7 +58,7 @@
             </div>
             <div data-bind="with: encryptionSection">
                 <h3>Encryption configuration</h3>
-                <div data-bind="compose: 'resources/setupEncryptionKey.html'"></div>
+                <div data-bind="compose: $root.setupEncryptionKeyView"></div>
             </div>
         </div>
         <div class="modal-footer">

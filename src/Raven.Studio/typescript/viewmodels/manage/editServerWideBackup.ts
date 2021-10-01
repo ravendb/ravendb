@@ -17,6 +17,8 @@ import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 class editServerWideBackup extends viewModelBase {
 
     view = require("views/manage/editServerWideBackup.html");
+    setupEncryptionKeyView = require("views/resources/setupEncryptionKey.html");
+    backupDestinationsView = require("views/partial/backupDestinations.html");
     
     editedTask = ko.observable<serverWideBackupEditModel>();
     serverConfiguration = ko.observable<periodicBackupServerLimitsResponse>();

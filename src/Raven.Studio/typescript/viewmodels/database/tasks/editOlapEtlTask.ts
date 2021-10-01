@@ -214,6 +214,8 @@ class olapTaskTestMode {
 class editOlapEtlTask extends viewModelBase {
 
     view = require("views/database/tasks/editOlapEtlTask.html");
+    backupDestinationTestCredentialsView = require("views/partial/backupDestinationTestCredentialsResults.html");
+    connectionStringOlapView = require("views/database/settings/connectionStringOlap.html");
 
     static readonly scriptNamePrefix = "Script_";
     enableTestArea = ko.observable<boolean>(false);

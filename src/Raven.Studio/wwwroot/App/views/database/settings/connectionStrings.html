@@ -255,7 +255,7 @@
             </div>
             <div data-bind="with: editedOlapEtlConnectionString" class="slidein-style">
                 <form autocomplete="off">
-                    <div data-bind="compose: 'database/settings/connectionStringOlap.html'"></div>
+                    <div data-bind="compose: $root.connectionStringOlapView"></div>
                 </form>
             </div>
             <div class="panel slidein-style padding">

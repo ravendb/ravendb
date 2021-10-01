@@ -59,6 +59,7 @@ class shell extends viewModelBase {
 
     private router = router;
     view = require("views/shell.html");
+    usageStatsView = require("views/usageStats.html");
     
     notificationCenterView = require("views/notifications/notificationCenter.html");
     graphHelperView = require("views/common/graphHelper.html");
