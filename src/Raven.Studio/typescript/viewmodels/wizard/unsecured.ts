@@ -6,6 +6,8 @@ import databaseStudioConfigurationModel = require("models/database/settings/data
 
 class unsecured extends setupStep {
 
+    view = require("views/wizard/unsecured.html");
+
     static environments = databaseStudioConfigurationModel.environments;
     
     canActivate(): JQueryPromise<canActivateResultDto> {

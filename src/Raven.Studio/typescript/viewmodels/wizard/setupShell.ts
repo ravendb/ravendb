@@ -19,6 +19,8 @@ type deploymentEnvironment = "AwsLinux" | "AwsWindows" | "Azure" | "Custom";
 
 class setupShell extends viewModelBase {
 
+    view = require("views/wziard/setupShell.html");
+
     private router = router;
     studioLoadingFakeRequest: requestExecution;
     clientBuildVersion = ko.observable<clientBuildVersionDto>();

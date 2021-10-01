@@ -31,6 +31,8 @@ interface exportDataDto {
 }
 
 class importDatabaseFromSql extends viewModelBase {
+
+    view = require("views/database/tasks/importDatabaseFromSql.html");
     
     static pageCount = 20;
     

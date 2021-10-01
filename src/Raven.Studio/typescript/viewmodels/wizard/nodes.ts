@@ -9,6 +9,8 @@ import databaseStudioConfigurationModel = require("models/database/settings/data
 
 class nodes extends setupStep {
 
+    view = require("views/wizard/nodes.html");
+
     static environments = databaseStudioConfigurationModel.environments;
     
     currentStep: number;

@@ -56,6 +56,8 @@ class editTimeSeries extends viewModelBase {
     static timeSeriesFormat = "YYYY-MM-DD HH:mm:ss.SSS";
     static pageSize = 100;
     
+    view = require("views/database/timeSeries/editTimeSeries.html");
+    
     documentId = ko.observable<string>();
     documentCollection = ko.observable<string>();
     
