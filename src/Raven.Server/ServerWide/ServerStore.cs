@@ -78,8 +78,8 @@ using Sparrow.Server.Utils;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron;
+using Voron.Exceptions;
 using Constants = Raven.Client.Constants;
-using Index = Raven.Server.Documents.Indexes.Index;
 
 namespace Raven.Server.ServerWide
 {
@@ -133,6 +133,8 @@ namespace Raven.Server.ServerWide
 
         public Operations Operations { get; }
 
+        public CatastrophicFailureNotification CatastrophicFailureNotification { get; }
+
         public ServerStore(RavenConfiguration configuration, RavenServer server)
         {
             // we want our servers to be robust get early errors about such issues
@@ -184,6 +186,39 @@ namespace Raven.Server.ServerWide
 
             if (Configuration.Indexing.MaxNumberOfConcurrentlyRunningIndexes != null)
                 ServerWideConcurrentlyRunningIndexesLock = new FifoSemaphore(Configuration.Indexing.MaxNumberOfConcurrentlyRunningIndexes.Value);
+
+            CatastrophicFailureNotification = new CatastrophicFailureNotification((envId, path, exception, stacktrace) =>
+            {
+                var message = $"Catastrophic failure in server storage located at '{path}', StackTrace: '{stacktrace}'";
+
+                if (Logger.IsOperationsEnabled)
+                {
+                    ExecuteSafely(() =>
+                    {
+                        Logger.OperationsWithWait(message, exception).Wait(TimeSpan.FromSeconds(1));
+                    });
+                }
+
+                ExecuteSafely(() =>
+                {
+                    Console.Error.WriteLine($"{message}. Exception: {exception}");
+                    Console.Error.Flush();
+                });
+
+                Environment.Exit(29); // ERROR_WRITE_FAULT
+
+                static void ExecuteSafely(Action action)
+                {
+                    try
+                    {
+                        action();
+                    }
+                    catch
+                    {
+                        // nothing we can do
+                    }
+                }
+            });
         }
 
         internal readonly FifoSemaphore ServerWideConcurrentlyRunningIndexesLock;
@@ -535,11 +570,11 @@ namespace Raven.Server.ServerWide
             StorageEnvironmentOptions options;
             if (Configuration.Core.RunInMemory)
             {
-                options = StorageEnvironmentOptions.CreateMemoryOnly();
+                options = StorageEnvironmentOptions.CreateMemoryOnly(null, null, null, CatastrophicFailureNotification);
             }
             else
             {
-                options = StorageEnvironmentOptions.ForPath(path.FullPath, null, null, IoChanges, null);
+                options = StorageEnvironmentOptions.ForPath(path.FullPath, null, null, IoChanges, CatastrophicFailureNotification);
                 var secretKey = Path.Combine(path.FullPath, "secret.key.encrypted");
                 if (File.Exists(secretKey))
                 {
@@ -663,7 +698,7 @@ namespace Raven.Server.ServerWide
             options.ForceUsing32BitsPager = Configuration.Storage.ForceUsing32BitsPager;
             options.EnablePrefetching = Configuration.Storage.EnablePrefetching;
             options.DiscardVirtualMemory = Configuration.Storage.DiscardVirtualMemory;
-            
+
             if (Configuration.Storage.MaxScratchBufferSize.HasValue)
                 options.MaxScratchBufferSize = Configuration.Storage.MaxScratchBufferSize.Value.GetValue(SizeUnit.Bytes);
             options.PrefetchSegmentSize = Configuration.Storage.PrefetchBatchSize.GetValue(SizeUnit.Bytes);

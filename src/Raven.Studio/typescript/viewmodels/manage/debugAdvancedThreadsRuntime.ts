@@ -55,19 +55,21 @@ class debugAdvancedThreadsRuntime extends viewModelBase {
                 this.filteredData(this.allData().slice());
             }
     
-            this.gridController().reset(true);    
+            this.gridController().reset(true);
         } else {
             this.filteredData(this.allData().slice());
         }
     }
     
-    private matchesFilter(item: Raven.Server.Dashboard.ThreadInfo) {
+    private matchesFilter(item: Raven.Server.Dashboard.ThreadInfo): boolean {
         const filter = this.filter();
         if (!filter) {
             return true;
         }
         const filterLowered = filter.toLocaleLowerCase();
-        return item.Name.toLocaleLowerCase().includes(filterLowered);
+        
+        return item.Name.toLocaleLowerCase().includes(filterLowered) ||
+               item.Id.toString().includes(filterLowered);
     }
     
     activate(args: any) {
@@ -155,7 +157,6 @@ class debugAdvancedThreadsRuntime extends viewModelBase {
             .done(() => this.gridController().reset(true))
             .always(() => this.spinners.refresh(false));
     }
-
 }
 
 export = debugAdvancedThreadsRuntime;

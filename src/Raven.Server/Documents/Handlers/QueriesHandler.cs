@@ -114,6 +114,7 @@ namespace Raven.Server.Documents.Handlers
         private async Task Query(QueryOperationContext queryContext, OperationCancelToken token, RequestTimeTracker tracker, HttpMethod method, bool diagnostics)
         {
             var indexQuery = await GetIndexQuery(queryContext.Documents, method, tracker);
+            
             indexQuery.Diagnostics = diagnostics ? new List<string>() : null;
             indexQuery.AddTimeSeriesNames = GetBoolValueQueryString("addTimeSeriesNames", false) ?? false;
 

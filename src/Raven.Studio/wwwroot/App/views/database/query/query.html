@@ -47,7 +47,7 @@
                         </div>
                     </div>
                     <div class="query-controls">
-                        <button class="btn btn-primary btn-block btn-lg text-center run-query" data-bind="click: _.partial(runQuery, null), css: { 'btn-spinner': isLoading }">
+                        <button class="btn btn-primary btn-block btn-lg text-center run-query" data-bind="click: _.partial(runQuery, null), css: { 'btn-spinner': isLoading }, enable: criteria().queryText().trim()">
                             <i class="icon-play2 icon-lg"></i><br />
                             <small class="kbd"><kbd>ctrl</kbd> <strong>+</strong> <kbd>enter</kbd></small>
                         </button>
@@ -60,7 +60,7 @@
         <div class="flex-window-head">
             <h2 class="on-base-background">
                 Results
-                <a target="_blank" href="#" title="Show raw output" data-bind="attr: { href: rawJsonUrl }"><i class="icon-link"></i></a>
+                <a target="_blank" href="#" title="Show raw output" data-bind="attr: { href: rawJsonUrl }, visible: queryStats"><i class="icon-link"></i></a>
             </h2>
             <div class="clearfix">
                 <div class="pull-left btn-group">

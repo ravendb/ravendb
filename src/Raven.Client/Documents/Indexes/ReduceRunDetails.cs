@@ -38,4 +38,22 @@
 
         public long AllocationBudget { get; set; }
     }
+
+    public class ReferenceRunDetails
+    {
+        public int ReferenceAttempts { get; set; }
+
+        public int ReferenceSuccesses { get; set; }
+
+        public int ReferenceErrors { get; set; }
+
+        public long ProcessPrivateMemory { get; set; }
+
+        public long ProcessWorkingSet { get; set; }
+
+        public long CurrentlyAllocated { get; set; }
+
+        public long AllocationBudget { get; set; }
+
+    }
 }

@@ -1569,6 +1569,14 @@ namespace Raven.Server.Documents
             return result;
         }
 
+        public DeleteOperationResult? Delete(DocumentsOperationContext context, string id, DocumentFlags flags)
+        {
+            using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
+            {
+                return Delete(context, lowerId, id, expectedChangeVector:null, documentFlags: flags);
+            }
+        }
+
         public DeleteOperationResult? Delete(DocumentsOperationContext context, string id, string expectedChangeVector)
         {
             using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
@@ -1608,13 +1616,8 @@ namespace Raven.Server.Documents
                     ExtractCollectionName(context, collectionName.Name);
                 }
 
-                var tombstoneTable = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema,
-                    collectionName.GetTableName(CollectionTableType.Tombstones));
-
-                if (tombstoneTable.IsOwned(local.Tombstone.StorageId))
-                {
-                    tombstoneTable.Delete(local.Tombstone.StorageId);
-                }
+                DocumentPutAction.DeleteTombstoneIfNeeded(context, collectionName, lowerId);
+               
                 DocumentFlags flags;
                 var localFlags = local.Tombstone.Flags.Strip(DocumentFlags.FromClusterTransaction);
                 if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByEnforceRevisionConfiguration))

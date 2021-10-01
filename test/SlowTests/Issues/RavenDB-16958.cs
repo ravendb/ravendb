@@ -26,7 +26,7 @@ namespace SlowTests.Issues
         public RavenDB_16958(ITestOutputHelper output) : base(output)
         {
         }
-        
+
         private RavenServer CreateSecuredServer(string fakePublicUrl = null, bool uniqueCerts = false)
         {
             var certificates = GenerateAndSaveSelfSignedCertificate(createNew: uniqueCerts);
@@ -42,7 +42,7 @@ namespace SlowTests.Issues
             if (fakePublicUrl != null)
             {
                 ravenServer.Configuration.Core.ExternalPublicTcpServerUrl =
-                    new[] {fakePublicUrl}.Concat(ravenServer.ServerStore.GetNodeClusterTcpServerUrls(forExternalUse: true))
+                    new[] { fakePublicUrl }.Concat(ravenServer.ServerStore.GetNodeClusterTcpServerUrls(forExternalUse: true))
                         .Select(x => new UriSetting(x)).ToArray();
                 ravenServer.Configuration.Core.ClusterPublicTcpServerUrl = new[] { fakePublicUrl }.Concat(ravenServer.ServerStore.GetNodeClusterTcpServerUrls(forExternalUse: false))
                     .Select(x => new UriSetting(x)).ToArray();
@@ -85,7 +85,7 @@ namespace SlowTests.Issues
                         var keys = new BlockingCollection<string>();
                         var ages = new BlockingCollection<int>();
 
-                        subscription.Run(batch =>
+                        _ = subscription.Run(batch =>
                         {
                             batch.Items.ForEach(x => keys.Add(x.Id));
                             batch.Items.ForEach(x => ages.Add(x.Result.Age));
@@ -116,9 +116,9 @@ namespace SlowTests.Issues
 
                     using (var session = storeB.OpenSession())
                     {
-                        session.Store(new User {Age = 31}, "users/1");
-                        session.Store(new User {Age = 27}, "users/12");
-                        session.Store(new User {Age = 25}, "users/3");
+                        session.Store(new User { Age = 31 }, "users/1");
+                        session.Store(new User { Age = 27 }, "users/12");
+                        session.Store(new User { Age = 25 }, "users/3");
 
                         session.SaveChanges();
                     }
@@ -131,12 +131,12 @@ namespace SlowTests.Issues
                     {
                         var keys = new BlockingCollection<string>();
                         var ages = new BlockingCollection<int>();
-                        
-                        subscription.Run(batch =>
-                        {
-                            batch.Items.ForEach(x => keys.Add(x.Id));
-                            batch.Items.ForEach(x => ages.Add(x.Result.Age));
-                        });
+
+                        _ = subscription.Run(batch =>
+                         {
+                             batch.Items.ForEach(x => keys.Add(x.Id));
+                             batch.Items.ForEach(x => ages.Add(x.Result.Age));
+                         });
 
                         await AssertWaitForValueAsync(() => Task.FromResult(keys.Count), 3);
                         await AssertWaitForValueAsync(() => Task.FromResult(ages.Count), 3);
@@ -149,8 +149,8 @@ namespace SlowTests.Issues
         public async Task MoveOnToNextTcpAddressOnCertFailInReplication()
         {
             //A tries to replicate with B. B sends tcpInfo with C's url. A fails to connect to C with cert and then moves on to connect to B.
-            using (var serverC = CreateSecuredServer(uniqueCerts:true)) //certC
-            using (var serverA = CreateSecuredServer(uniqueCerts:false)) //certA
+            using (var serverC = CreateSecuredServer(uniqueCerts: true)) //certC
+            using (var serverA = CreateSecuredServer(uniqueCerts: false)) //certA
             using (var serverB = CreateSecuredServer(serverC.ServerStore.GetNodeTcpServerUrl(), false)) //certA
             {
                 var databaseA = GetDatabaseName("DB_A");
@@ -172,7 +172,7 @@ namespace SlowTests.Issues
                         s1.Store(new User(), "foo/bar");
                         s1.SaveChanges();
                     }
-                    
+
                     Assert.True(WaitForDocument(storeA, "foo/bar", 15000));
                     Assert.True(WaitForDocument(storeB, "foo/bar", 15000));
                 }
@@ -188,7 +188,7 @@ namespace SlowTests.Issues
             using (var serverB = CreateSecuredServer(serverC.ServerStore.GetNodeTcpServerUrl(), false)) //certA
             {
                 var database = GetDatabaseName();
-                
+
                 using (var storeB = new DocumentStore { Urls = new[] { serverB.WebUrl }, Certificate = serverB.Certificate.Certificate, Database = database }.Initialize())
                 using (var storeA = new DocumentStore { Urls = new[] { serverA.WebUrl }, Certificate = serverA.Certificate.Certificate, Database = database }.Initialize())
                 using (var storeC = new DocumentStore { Urls = new[] { serverC.WebUrl }, Certificate = serverC.Certificate.Certificate, Database = database }.Initialize())
@@ -216,23 +216,23 @@ namespace SlowTests.Issues
         {
             //Leader asks node for tcpInfo and node answers with Leader's url. Leader will try to connect to Node and end up connecting to itself,
             //guid check will fail, and failover will happen.
-            
-            var cluster = await CreateRaftClusterWithSsl(1, watcherCluster:true);
-            var serverB = CreateSecuredServer(cluster.Leader.ServerStore.GetNodeTcpServerUrl(), uniqueCerts:false);
+
+            var cluster = await CreateRaftClusterWithSsl(1, watcherCluster: true);
+            var serverB = CreateSecuredServer(cluster.Leader.ServerStore.GetNodeTcpServerUrl(), uniqueCerts: false);
 
             using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(cluster.Leader.WebUrl, cluster.Leader.Certificate.Certificate))
             using (requestExecutor.ContextPool.AllocateOperationContext(out var ctx))
             {
                 string database = GetDatabaseName();
-                
+
                 await requestExecutor.ExecuteAsync(new AddClusterNodeCommand(serverB.WebUrl, serverB.ServerStore.NodeTag), ctx);
-                
+
                 using (var leaderStore =
                     new DocumentStore { Urls = new[] { cluster.Leader.WebUrl }, Certificate = cluster.Leader.Certificate.Certificate, Database = database }.Initialize())
                 {
                     var res = leaderStore.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(database)));
                 }
-                
+
                 using (var storeB = new DocumentStore { Urls = new[] { serverB.WebUrl }, Certificate = serverB.Certificate.Certificate, Database = database }.Initialize())
                 {
                     var name = await WaitForValueAsync(() =>
@@ -266,7 +266,9 @@ namespace SlowTests.Issues
 
         private class HttpPingResult
         {
+#pragma warning disable 649
             public List<NodeDebugHandler.PingResult> Result;
+#pragma warning restore 649
         }
 
         private class User

@@ -1038,6 +1038,9 @@ class query extends viewModelBase {
                         this.getQueriedIndexInfo();
                     })
                     .fail((request: JQueryXHR) => {
+                        this.rawJsonUrl(null);
+                        this.queryStats(null);
+                        this.totalResultsForUi(0);
                         resultsTask.reject(request);
                     });
                 

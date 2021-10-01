@@ -95,7 +95,7 @@ function getManageServerMenuItem() {
             nav: true,
             css: 'icon-server-wide-custom-analyzers',
             dynamicHash: appUrl.forServerWideCustomAnalyzers,
-            requiredAccess: "ClusterAdmin"
+            requiredAccess: "Operator"
         }),
         new leafMenuItem({
             route: 'admin/settings/editServerWideCustomAnalyzer',
@@ -112,7 +112,7 @@ function getManageServerMenuItem() {
             nav: true,
             css: 'icon-server-wide-custom-sorters',
             dynamicHash: appUrl.forServerWideCustomSorters,
-            requiredAccess: "ClusterAdmin"
+            requiredAccess: "Operator"
         }),
         new leafMenuItem({
             route: 'admin/settings/editServerWideCustomSorter',

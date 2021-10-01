@@ -8,9 +8,11 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
-using Raven.Client.Util;
+using Raven.Server.Config;
+using Raven.Server.Config.Categories;
 using Raven.Server.Documents.ETL;
 using Raven.Server.NotificationCenter;
+using Raven.Server.ServerWide;
 using Sparrow.Json;
 using Tests.Infrastructure.Utils;
 using Xunit;
@@ -22,7 +24,16 @@ namespace SlowTests.Server.Documents.ETL
     public abstract class EtlTestBase : RavenTestBase
     {
         private DocumentStore _src;
-        
+
+        protected static readonly BackupConfiguration DefaultBackupConfiguration;
+
+        static EtlTestBase()
+        {
+            var configuration = RavenConfiguration.CreateForTesting("foo", ResourceType.Database);
+            configuration.Initialize();
+
+            DefaultBackupConfiguration = configuration.Backup;
+        }
         protected EtlTestBase(ITestOutputHelper output) : base(output)
         {
         }
@@ -70,12 +81,12 @@ namespace SlowTests.Server.Documents.ETL
                 }
             );
         }
-        
+
         protected (DocumentStore src, DocumentStore dest, AddEtlOperationResult result) CreateSrcDestAndAddEtl(string collections, string script, bool applyToAllDocuments = false, bool disabled = false, string mentor = null, Options srcOptions = null)
         {
-            return CreateSrcDestAndAddEtl(new[] {collections}, script, applyToAllDocuments, disabled, mentor, srcOptions);
+            return CreateSrcDestAndAddEtl(new[] { collections }, script, applyToAllDocuments, disabled, mentor, srcOptions);
         }
-        
+
         protected (DocumentStore src, DocumentStore dest, AddEtlOperationResult result) CreateSrcDestAndAddEtl(IEnumerable<string> collections, string script, bool applyToAllDocuments = false, bool disabled = false, string mentor = null, Options srcOptions = null)
         {
             _src = GetDocumentStore(srcOptions);
@@ -100,7 +111,7 @@ namespace SlowTests.Server.Documents.ETL
 
             return mre;
         }
-        
+
         protected async Task<(string, string, EtlProcessStatistics)> WaitForEtlAsync(DocumentStore store, Func<string, EtlProcessStatistics, bool> predicate, TimeSpan timeout)
         {
             var database = GetDatabase(store.Database).Result;
@@ -111,7 +122,7 @@ namespace SlowTests.Server.Documents.ETL
             {
                 try
                 {
-                    if (predicate($"{x.ConfigurationName}/{x.TransformationName}", x.Statistics) == false) 
+                    if (predicate($"{x.ConfigurationName}/{x.TransformationName}", x.Statistics) == false)
                         return;
                     taskCompletionSource.SetResult(x);
                 }
@@ -125,7 +136,7 @@ namespace SlowTests.Server.Documents.ETL
             var whenAny = await Task.WhenAny(taskCompletionSource.Task, Task.Delay(timeout));
             database.EtlLoader.BatchCompleted -= EtlLoaderOnBatchCompleted;
 
-            if(whenAny != taskCompletionSource.Task)
+            if (whenAny != taskCompletionSource.Task)
                 throw new TimeoutException($"Etl predicate timeout - {timeout}");
 
             return await taskCompletionSource.Task;
@@ -148,7 +159,7 @@ namespace SlowTests.Server.Documents.ETL
                 return notifications;
             }
         }
-        
+
         protected IAsyncDisposable OpenEtlOffArea(IDocumentStore store, long etlTaskId, bool cleanTombstones = false)
         {
             store.Maintenance.Send(new ToggleOngoingTaskStateOperation(etlTaskId, OngoingTaskType.RavenEtl, true));
@@ -157,9 +168,9 @@ namespace SlowTests.Server.Documents.ETL
                 if (cleanTombstones)
                 {
                     var srcDatabase = await GetDatabase(store.Database);
-                    await srcDatabase.TombstoneCleaner.ExecuteCleanup();    
-                } 
-                
+                    await srcDatabase.TombstoneCleaner.ExecuteCleanup();
+                }
+
                 store.Maintenance.Send(new ToggleOngoingTaskStateOperation(etlTaskId, OngoingTaskType.RavenEtl, false));
             });
         }
@@ -168,16 +179,16 @@ namespace SlowTests.Server.Documents.ETL
         {
             try
             {
-                if (_src == null) 
+                if (_src == null)
                     return;
 
                 if (Context.TestException == null || Context.TestOutput == null)
                     return;
-                
+
                 var notifications = GetEtlErrorNotifications(_src).Result;
-                if (notifications.Any() == false) 
+                if (notifications.Any() == false)
                     return;
-                
+
                 string message = string.Join(",\n", notifications);
                 Context.TestOutput.WriteLine(message);
             }

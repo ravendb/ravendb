@@ -654,7 +654,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 Thread.CurrentThread.Priority = ThreadPriority.BelowNormal;
                 NativeMemory.EnsureRegistered();
 
-                using (_database.PreventFromUnloading())
+                using (_database.PreventFromUnloadingByIdleOperations())
                 {
                     backupResult = (BackupResult)backupTask.RunPeriodicBackup(onProgress, ref runningBackupStatus);
                     tcs.SetResult(backupResult);

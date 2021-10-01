@@ -220,6 +220,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(HugeDocumentInfo));
             scripter.AddType(typeof(RequestLatencyDetail));
             scripter.AddType(typeof(WarnIndexOutputsPerDocument));
+            scripter.AddType(typeof(IndexingReferenceLoadWarning));
 
             // subscriptions
             scripter.AddType(typeof(SubscriptionConnectionStats));
@@ -352,6 +353,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(LicenseSupportInfo));
             scripter.AddType(typeof(LicenseRenewalResult));
             scripter.AddType(typeof(LicenseConfiguration));
+            scripter.AddType(typeof(LicenseHandler.ConnectivityToLicenseServer));
 
             // feedback form
             scripter.AddType(typeof(FeedbackForm));

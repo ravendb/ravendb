@@ -181,6 +181,9 @@ namespace Raven.Server.Monitoring.Snmp
             [Description("Number of requests per second (one minute rate)")]
             public const string RequestsPerSecond = "1.7.3";
 
+            [Description("Average request time in milliseconds")]
+            public const string RequestAverageDuration = "1.7.4";
+
             [Description("Server last request time")]
             public const string LastRequestTime = "1.8";
 
@@ -414,6 +417,12 @@ namespace Raven.Server.Monitoring.Snmp
             [Description("Number of error indexes")]
             public const string NumberOfErrorIndexes = "5.2.{0}.5.6";
 
+            [Description("Number of writes (documents, attachments, counters)")]
+            public const string WritesPerSecond = "5.2.{0}.6.1";
+
+            [Description("Number of bytes written (documents, attachments, counters)")]
+            public const string DataWrittenPerSecond = "5.2.{0}.6.2";
+
             public class Indexes
             {
                 private Indexes()
@@ -535,6 +544,12 @@ namespace Raven.Server.Monitoring.Snmp
 
                 [Description("Number of reduces per second for map-reduce indexes (one minute rate) in all loaded databases")]
                 public const string TotalMapReduceIndexReducedPerSecond = "5.1.8.3";
+
+                [Description("Number of writes (documents, attachments, counters) in all loaded databases")]
+                public const string TotalWritesPerSecond = "5.1.9.1";
+
+                [Description("Number of bytes written (documents, attachments, counters) in all loaded databases")]
+                public const string TotalDataWrittenPerSecond = "5.1.9.2";
 
                 public static DynamicJsonArray ToJson()
                 {

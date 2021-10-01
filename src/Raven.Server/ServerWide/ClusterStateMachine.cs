@@ -3160,6 +3160,15 @@ namespace Raven.Server.ServerWide
                 return items.VerifyKeyExists(key);
         }
 
+        public bool DatabaseExists(string name)
+        {
+            using (ContextPoolForReadOnlyOperations.AllocateOperationContext(out ClusterOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                return DatabaseExists(context, name);
+            }
+        }
+
         public DatabaseRecord ReadDatabase<TTransaction>(TransactionOperationContext<TTransaction> context, string name, out long etag)
             where TTransaction : RavenTransaction
         {

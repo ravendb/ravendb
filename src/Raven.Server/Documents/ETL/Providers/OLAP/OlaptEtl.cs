@@ -44,12 +44,12 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             Metrics = OlapMetrics;
             _operationCancelToken = new OperationCancelToken(Database.DatabaseShutdown, CancellationToken);
             
-            _uploaderSettings = GenerateUploaderSetting();
+            _uploaderSettings = GenerateUploaderSetting(database.Configuration.Backup);
 
             UpdateTimer(LastProcessState.LastBatchTime);
         }
 
-        private UploaderSettings GenerateUploaderSetting()
+        private UploaderSettings GenerateUploaderSetting(Config.Categories.BackupConfiguration configuration)
         {
             var s3Settings = BackupTask.GetBackupConfigurationFromScript(Configuration.Connection.S3Settings, x => JsonDeserializationServer.S3Settings(x),
                 Database, updateServerWideSettingsFunc: null, serverWide: false);
@@ -66,7 +66,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             var ftpSettings = BackupTask.GetBackupConfigurationFromScript(Configuration.Connection.FtpSettings, x => JsonDeserializationServer.FtpSettings(x),
                 Database, updateServerWideSettingsFunc: null, serverWide: false);
 
-            return new UploaderSettings
+            return new UploaderSettings(configuration)
             {
                 S3Settings = s3Settings, 
                 AzureSettings = azureSettings, 

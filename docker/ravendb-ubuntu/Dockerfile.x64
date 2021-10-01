@@ -2,7 +2,7 @@ FROM mcr.microsoft.com/dotnet/runtime-deps:5.0-focal
 
 RUN apt-get update \
     && apt-get install -y \
-    && apt-get install --no-install-recommends bzip2 jq -y
+    && apt-get install --no-install-recommends openssl bzip2 jq curl -y
 
 ENV RAVEN_ARGS='' RAVEN_SETTINGS='' RAVEN_Setup_Mode='Initial' RAVEN_DataDir='RavenData' RAVEN_ServerUrl_Tcp='38888' RAVEN_AUTO_INSTALL_CA='true' RAVEN_IN_DOCKER='true'
 
@@ -18,7 +18,7 @@ RUN cd /opt \
     && rm -rf /var/lib/apt/lists/*
 
 COPY run-raven.sh healthcheck.sh /opt/RavenDB/
-COPY settings.json /opt/RavenDB/Server
+COPY settings.json server-utils.sh cert-utils.sh /opt/RavenDB/Server/
 
 HEALTHCHECK --start-period=60s CMD /opt/RavenDB/healthcheck.sh
 
