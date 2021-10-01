@@ -20,7 +20,7 @@ namespace Raven.Server.Platform.Posix
             if (PlatformDetails.RunningOnPosix == false)
                 throw new InvalidOperationException($"Cannot read '{MemInfoFileName}' because it requires POSIX");
 
-            using (FileStream fs = new(MemInfoFileName, FileMode.Open, FileAccess.Read, FileShare.Read))
+            using (var fs = new FileStream(MemInfoFileName, FileMode.Open, FileAccess.Read, FileShare.Read))
                 return Read(fs);
         }
 
@@ -29,9 +29,9 @@ namespace Raven.Server.Platform.Posix
             if (stream == null)
                 throw new ArgumentNullException(nameof(stream));
 
-            using (StreamReader reader = new(stream))
+            using (var reader = new StreamReader(stream))
             {
-                MemInfo result = new();
+                var result = new MemInfo();
 
                 while (true)
                 {
@@ -41,7 +41,7 @@ namespace Raven.Server.Platform.Posix
 
                     string[] values = line.Split(Separators, StringSplitOptions.RemoveEmptyEntries);
 
-                    if (values.Length is < 2 or > 3)
+                    if (values.Length < 2 || values.Length > 3)
                         throw new InvalidOperationException($"Invalid line in '{MemInfoFileName}'. Line: '{line}'.");
 
                     string name = values[0].TrimEnd(':');
@@ -71,7 +71,7 @@ namespace Raven.Server.Platform.Posix
 
     public class MemInfo
     {
-        public static readonly Dictionary<string, PropertyInfo> AllProperties = new();
+        public static readonly Dictionary<string, PropertyInfo> AllProperties = new Dictionary<string, PropertyInfo>();
 
         public static readonly MemInfo Invalid = new MemInfo();
 
@@ -102,7 +102,7 @@ namespace Raven.Server.Platform.Posix
             static int GetPropertySnmpIndex(MemberInfo memberInfo)
             {
                 var snmpIndexAttribute = memberInfo.GetCustomAttribute<SnmpIndexAttribute>();
-                if (snmpIndexAttribute is not { Index: > 0 })
+                if (snmpIndexAttribute == null || snmpIndexAttribute.Index <= 0)
                     throw new InvalidOperationException($"{nameof(MemInfo)} property '{memberInfo.Name}' must have {nameof(SnmpIndexAttribute)}");
 
                 return snmpIndexAttribute.Index;
@@ -248,7 +248,7 @@ namespace Raven.Server.Platform.Posix
 
         public void Set(string name, long value, SizeUnit unit)
         {
-            Size size = new(value, unit);
+            var size = new Size(value, unit);
 
             if (AllProperties.TryGetValue(name, out PropertyInfo property))
             {
