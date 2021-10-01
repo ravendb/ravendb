@@ -90,6 +90,18 @@ namespace Raven.Server.ServerWide.Commands.ETL
                 }
             }
 
+            var elasticEtls = record.ElasticSearchEtls;
+            if (elasticEtls != null)
+            {
+                for (var i = 0; i < elasticEtls.Count; i++)
+                {
+                    if (elasticEtls[i].Name == ConfigurationName)
+                    {
+                        return elasticEtls[i];
+                    }
+                }
+            }
+
             return null;
         }
 
