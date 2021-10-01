@@ -18,6 +18,7 @@ import messagePublisher = require("common/messagePublisher");
 import generalUtils = require("common/generalUtils");
 import toggleDynamicNodeAssignmentCommand = require("commands/database/dbGroup/toggleDynamicNodeAssignmentCommand");
 import jsonUtil = require("common/jsonUtil");
+import Sortable from "sortablejs";
 
 class manageDatabaseGroup extends viewModelBase {
 

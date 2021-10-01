@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-      "baseUrl": ".",
+    "baseUrl": ".",
     "noImplicitAny": true,
     "noEmitOnError": true,
     "removeComments": false,
@@ -8,6 +8,7 @@
     "sourceMap": true,
     "target": "ES6", 
     "esModuleInterop": true,
+    "moduleResolution": "node",
     "skipLibCheck": true,
     "module": "AMD",
     "lib": [
@@ -49,7 +50,13 @@
           "webcola": ["node_modules/webcola/dist/index.d.ts"],
           "Favico":  ["node_modules/favico.js/favico.js"],
           "moment": ["node_modules/moment/moment.d.ts"],
-          "jszip":  ["node_modules/jszip/index.d.ts"]
+          "jszip":  ["node_modules/jszip/index.d.ts"],
+          "viewmodels/*":  ["typescript/viewmodels/*"],
+          "models/*":  ["typescript/models/*"],
+          "common/*": ["typescript/common/*"],
+          "widgets/*": ["typescript/widgets/*"],
+          "commands/*": ["typescript/commands/*"],
+          "knockout": ["node_modules/@types/knockout"]
       }
   },
   "exclude": [
