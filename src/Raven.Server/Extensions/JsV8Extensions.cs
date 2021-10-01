@@ -159,9 +159,9 @@ namespace Raven.Server.Extensions
             {}
         }
 
-        public static void ExecuteWithReset(this V8Engine engine, InternalHandle script, string sourceName = "V8.NET", bool throwExceptionOnError = true, int timeout = 0)
+        public static void ExecuteWithReset(this V8Engine engine, InternalHandle script, bool throwExceptionOnError = true, int timeout = 0)
         {
-            using (engine.ExecuteExprWithReset(script, sourceName, throwExceptionOnError, timeout))
+            using (engine.ExecuteExprWithReset(script, throwExceptionOnError, timeout))
             {}
         }
 
@@ -169,15 +169,15 @@ namespace Raven.Server.Extensions
         {
             using (var script = engine.Compile(source, sourceName, throwExceptionOnError))
             {
-                return ExecuteExprWithReset(engine, script, sourceName, throwExceptionOnError, timeout);
+                return ExecuteExprWithReset(engine, script, throwExceptionOnError, timeout);
             }
         }
 
-        public static InternalHandle ExecuteExprWithReset(this V8Engine engine, InternalHandle script, string sourceName = "V8.NET", bool throwExceptionOnError = true, int timeout = 0)
+        public static InternalHandle ExecuteExprWithReset(this V8Engine engine, InternalHandle script, bool throwExceptionOnError = true, int timeout = 0)
         {
             try
             {
-                return engine.Execute(script, sourceName, throwExceptionOnError, timeout);
+                return engine.Execute(script, throwExceptionOnError, timeout);
             }
             finally
             {
