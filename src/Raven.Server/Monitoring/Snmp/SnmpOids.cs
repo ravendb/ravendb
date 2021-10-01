@@ -1,5 +1,7 @@
 ﻿using System.ComponentModel;
 using System.Reflection;
+using Raven.Server.Monitoring.Snmp.Objects.Server;
+using Raven.Server.Platform.Posix;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
@@ -190,9 +192,27 @@ namespace Raven.Server.Monitoring.Snmp
                 foreach (var field in typeof(Server).GetFields())
                 {
                     var fieldValue = GetFieldValue(field);
-                    var fullOid = field.Name == nameof(UpTimeGlobal) ? fieldValue.Oid : Root + fieldValue.Oid;
 
-                    array.Add(CreateJsonItem(fullOid, fieldValue.Description));
+                    switch (field.Name)
+                    {
+                        case nameof(UpTimeGlobal):
+                            array.Add(CreateJsonItem(fieldValue.Oid, fieldValue.Description));
+                            break;
+                        case nameof(MemInfoPrefix):
+                            foreach (var propertyInfo in MemInfo.AllProperties.Values)
+                            {
+                                var index = propertyInfo.GetCustomAttribute<SnmpIndexAttribute>().Index;
+                                var oid = Root + string.Format(MemInfoPrefix, index);
+                                var name = propertyInfo.GetCustomAttribute<DisplayNameAttribute>()?.DisplayName ?? propertyInfo.Name;
+
+
+                                array.Add(CreateJsonItem(oid, $"{name} value from '{MemInfoReader.MemInfoFileName}"));
+                            }
+                            break;
+                        default:
+                            array.Add(CreateJsonItem(Root + fieldValue.Oid, fieldValue.Description));
+                            break;
+                    }
                 }
 
                 return array;
@@ -525,7 +545,7 @@ namespace Raven.Server.Monitoring.Snmp
 
         private static (string Oid, string Description) GetFieldValue(FieldInfo field)
         {
-            return (field.GetRawConstantValue().ToString(), field.GetCustomAttribute<DescriptionAttribute>().Description);
+            return (field.GetRawConstantValue().ToString(), field.GetCustomAttribute<DescriptionAttribute>()?.Description);
         }
 
         private static DynamicJsonValue CreateJsonItem(string oid, string description)
