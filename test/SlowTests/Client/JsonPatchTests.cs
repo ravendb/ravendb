@@ -952,9 +952,11 @@ namespace SlowTests.Client
             }
         }
 
-        class MyTestClass
+        private class MyTestClass
         {
+#pragma warning disable 649
             public string Id;
+#pragma warning restore 649
             public string Name;
             public List<int> MyArray;
         }
