@@ -5,9 +5,6 @@ declare const QRCode: any;
 
 declare var require: any;
 
-/// Sortable
-declare const Sortable: any;
-
 declare const _: LoDashStatic;
 
 declare const Prism: Prism;

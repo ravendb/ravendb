@@ -3,6 +3,8 @@ import copyToClipboard = require("common/copyToClipboard");
 
 class additionalSourceSyntax extends dialogViewModelBase {
 
+    view = require("views/database/indexes/additionalSourceSyntax.html");
+    
     dialogContainer: Element;
 
     compositionComplete() {

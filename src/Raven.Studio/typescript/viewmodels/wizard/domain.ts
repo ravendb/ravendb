@@ -9,6 +9,8 @@ import viewHelpers = require("common/helpers/view/viewHelpers");
 
 class domain extends setupStep {
 
+    view = require("views/wizard/domain.html");
+
     spinners = {
         save: ko.observable<boolean>(false)
     };

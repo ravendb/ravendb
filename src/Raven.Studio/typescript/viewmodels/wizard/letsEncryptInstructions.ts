@@ -3,6 +3,8 @@ import dialog = require("plugins/dialog");
 
 class letsEncryptInstructions extends dialogViewModelBase {
 
+    view = require("views/wizard/letsEncryptInstructions.html");
+
     certificateInstalled = ko.observable<boolean>(undefined);
     
     validationGroup: KnockoutValidationGroup;

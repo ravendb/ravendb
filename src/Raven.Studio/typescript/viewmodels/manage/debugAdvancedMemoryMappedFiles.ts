@@ -18,6 +18,8 @@ type memoryMappingItem = {
 
 class memoryMappedFiles extends viewModelBase {
 
+    view = require("views/manage/debugAdvancedMemoryMappedFiles.html");
+
     allData = ko.observable<memoryMappingItem[]>();
     filteredData = ko.observable<memoryMappingItem[]>();
     filter = ko.observable<string>();

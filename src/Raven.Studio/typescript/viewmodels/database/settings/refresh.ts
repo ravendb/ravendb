@@ -8,6 +8,8 @@ import saveRefreshConfigurationCommand = require("commands/database/documents/sa
 
 class refresh extends viewModelBase {
 
+    view = require("views/database/settings/refresh.html");
+
     static readonly refreshSample = {
         "Example": "This is an example of a document with @refresh flag set",
         "@metadata": {

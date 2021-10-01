@@ -3,6 +3,8 @@ import copyToClipboard = require("common/copyToClipboard");
 
 class transformationScriptSyntax extends dialogViewModelBase {
 
+    view = require("views/database/tasks/transformationScriptSyntax.html");
+    
     etlType = ko.observable<Raven.Client.Documents.Operations.ETL.EtlType>();
     dialogContainer: Element;
 

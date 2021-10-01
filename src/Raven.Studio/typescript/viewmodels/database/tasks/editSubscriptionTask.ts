@@ -40,6 +40,9 @@ class perCollectionIncludes {
 class editSubscriptionTask extends viewModelBase {
 
     languageService: rqlLanguageService;
+    view = require("views/database/tasks/editSubscriptionTask.html");
+
+    queryCompleter = queryCompleter.remoteCompleter(this.activeDatabase, ko.observableArray([]), "Select"); // we intentionally pass empty indexes here as subscriptions works only on collections
     editedSubscription = ko.observable<ongoingTaskSubscriptionEdit>();
     isAddingNewSubscriptionTask = ko.observable<boolean>(true);
 

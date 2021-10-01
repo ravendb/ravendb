@@ -8,6 +8,8 @@ interface widgetToAdd {
 
 class addWidgetModal extends dialogViewModelBase {
 
+    view = require("views/resources/addWidgetModal.html");
+    
     private readonly existingTypes: widgetType[];
     private readonly onWidgetSelected: (type: widgetType) => void;
     

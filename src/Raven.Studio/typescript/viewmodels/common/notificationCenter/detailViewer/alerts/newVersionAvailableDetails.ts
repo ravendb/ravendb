@@ -7,6 +7,8 @@ import moment = require("moment");
 
 class newVersionAvailableDetails extends abstractAlertDetails {
 
+    view = require("views/common/notificationCenter/detailViewer/alerts/newVersionAvailableDetails.html");
+
     constructor(alert: alert, notificationCenter: notificationCenter) {
         super(alert, notificationCenter);
     }

@@ -8,6 +8,8 @@ import saveExpirationConfigurationCommand = require("commands/database/documents
 
 class expiration extends viewModelBase {
 
+    view = require("views/database/settings/expiration.html");
+
     static readonly expirationSample = {
         "Example": "This is an example of a document with @expires flag set",
         "@metadata": {

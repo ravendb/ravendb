@@ -257,6 +257,8 @@ class hitTest {
 
 class ongoingTasksStats extends viewModelBase {
 
+    view = require("views/database/status/ongoingTasksStats.html");
+
     /* static */
     static readonly brushSectionHeight = 40;
     private static readonly brushSectionTrackWorkHeight = 22;

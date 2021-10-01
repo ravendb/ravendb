@@ -10,6 +10,8 @@ import fileImporter = require("common/fileImporter");
 
 class editCustomSorter extends viewModelBase {
 
+    view = require("views/database/settings/editCustomSorter.html");
+    
     editedSorter = ko.observable<customSorter>();
     
     usedSorterNames = ko.observableArray<string>([]);

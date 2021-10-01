@@ -18,6 +18,8 @@ type backupConfigurationClass = manualBackupConfiguration | periodicBackupConfig
 
 class editPeriodicBackupTask extends viewModelBase {
 
+    view = require("views/database/tasks/editPeriodicBackupTask.html");
+
     titleForView: KnockoutComputed<string>;
     configuration = ko.observable<backupConfigurationClass>();
     

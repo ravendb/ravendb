@@ -12,6 +12,8 @@ import generalUtils = require("common/generalUtils");
 import moment = require("moment");
 
 class etlTransformOrLoadErrorDetails extends abstractAlertDetails {
+    
+    view = require("views/common/notificationCenter/detailViewer/alerts/etlTransformOrLoadErrorDetails.html");
 
     currentDetails = ko.observable<Raven.Server.NotificationCenter.Notifications.Details.EtlErrorInfo>();
     

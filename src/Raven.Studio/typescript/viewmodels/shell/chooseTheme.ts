@@ -1,6 +1,8 @@
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 
 class chooseTheme extends dialogViewModelBase {
+
+    view = require("views/shell/chooseTheme.html");
     
     static readonly supportedThemes = ["blue", "dark", "light"];
     static readonly themeLocalStorageKey = "raven-theme";

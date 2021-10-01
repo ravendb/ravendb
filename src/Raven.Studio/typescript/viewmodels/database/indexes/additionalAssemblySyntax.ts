@@ -3,6 +3,8 @@ import copyToClipboard = require("common/copyToClipboard");
 
 class additionalAssemblySyntax extends dialogViewModelBase {
 
+    view = require("views/database/indexes/additionalAssemblySyntax.html");
+
     dialogContainer: Element;
 
     compositionComplete() {

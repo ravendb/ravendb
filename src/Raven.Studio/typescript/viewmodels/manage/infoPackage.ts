@@ -9,6 +9,8 @@ import viewHelpers = require("common/helpers/view/viewHelpers");
 import killOperationCommand = require("commands/operations/killOperationCommand");
 
 class infoPackage extends viewModelBase {
+
+    view = require("views/manage/infoPackage.html");
     
     operationId: number;
     

@@ -13,6 +13,8 @@ type identityItem = { Prefix: string, Value: number };
 
 class statistics extends viewModelBase {
 
+    view = require("views/database/status/statistics.html");
+
     stats = ko.observable<statsModel>();
     identities = ko.observableArray<identityItem>([]);
     rawJsonUrl: KnockoutComputed<string>;

@@ -3,6 +3,8 @@ import copyToClipboard = require("common/copyToClipboard");
 
 class conflictResolutionScriptSyntax extends dialogViewModelBase {
 
+    view = require("views/database/settings/conflictResolutionScriptSyntax.html");
+    
     dialogContainer: Element;
     
     static readonly sampleScript = `// The following variables are available in script context:

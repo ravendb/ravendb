@@ -213,6 +213,8 @@ class olapTaskTestMode {
 
 class editOlapEtlTask extends viewModelBase {
 
+    view = require("views/database/tasks/editOlapEtlTask.html");
+
     static readonly scriptNamePrefix = "Script_";
     enableTestArea = ko.observable<boolean>(false);
 
