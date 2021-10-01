@@ -9,6 +9,8 @@ import abstractOperationDetails = require("viewmodels/common/notificationCenter/
 
 class deleteDocumentsDetails extends abstractOperationDetails {
 
+    view = require("views/common/notificationCenter/detailViewer/operations/deleteDocumentsDetails.html");
+
     progress: KnockoutObservable<Raven.Client.Documents.Operations.DeterminateProgress>;
     result: KnockoutObservable<Raven.Client.Documents.Operations.BulkOperationResult>;
     processingSpeed: KnockoutComputed<string>;

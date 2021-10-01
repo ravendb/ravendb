@@ -9,6 +9,8 @@ import abstractOperationDetails = require("viewmodels/common/notificationCenter/
 
 class patchDocumentsDetails extends abstractOperationDetails {
 
+    view = require("views/common/notificationCenter/detailViewer/operations/patchDocumentsDetails.html");
+
     progress: KnockoutObservable<Raven.Client.Documents.Operations.DeterminateProgress>;
     result: KnockoutObservable<Raven.Client.Documents.Operations.BulkOperationResult>;
     processingSpeed: KnockoutObservable<string>;

@@ -2,8 +2,6 @@ import confirmViewModelBase = require("viewmodels/confirmViewModelBase");
 
 class backupNowConfirm extends confirmViewModelBase<backupNowConfirmResult> {
 
-    view = require("views/database/tasks/backupNowConfirm.html");
-    
     private isFullBackup = ko.observable<boolean>(true);
 
     constructor(private fullBackupType: string) {

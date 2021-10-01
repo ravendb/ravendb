@@ -12,6 +12,8 @@ import moment = require("moment");
 
 class slowWriteDetails extends abstractPerformanceHintDetails {
 
+    view = require("views/common/notificationCenter/detailViewer/performanceHint/slowWriteDetails.html");
+
     tableItems: Raven.Server.NotificationCenter.Notifications.Details.SlowWritesDetails.SlowWriteInfo[] = [];
     private gridController = ko.observable<virtualGridController<Raven.Server.NotificationCenter.Notifications.Details.SlowWritesDetails.SlowWriteInfo>>();
     private columnPreview = new columnPreviewPlugin<Raven.Server.NotificationCenter.Notifications.Details.SlowWritesDetails.SlowWriteInfo>();

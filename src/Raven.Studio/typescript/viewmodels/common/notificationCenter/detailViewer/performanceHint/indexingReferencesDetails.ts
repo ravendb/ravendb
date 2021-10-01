@@ -23,6 +23,8 @@ interface indexingReferencesItem {
 
 class indexingReferencesDetails extends abstractPerformanceHintDetails {
 
+    view = require("views/common/notificationCenter/detailViewer/performanceHint/indexingReferencesDetails.html");
+
     currentDetails = ko.observable<indexingReferencesItem>();
     
     tableItems: indexingReferencesItem[] = [];

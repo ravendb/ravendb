@@ -9,6 +9,8 @@ import moment = require("moment");
 
 class deleteTimeSeries extends dialogViewModelBase {
 
+    view = require("views/database/timeSeries/deleteTimeSeries.html");
+
     spinners = {
         delete: ko.observable<boolean>(false)
     };

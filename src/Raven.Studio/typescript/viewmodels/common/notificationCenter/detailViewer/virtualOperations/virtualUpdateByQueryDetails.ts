@@ -13,6 +13,8 @@ import moment = require("moment");
 
 class virtualUpdateByQueryDetails extends dialogViewModelBase {
 
+    view = require("views/common/notificationCenter/detailViewer/virtualOperations/virtualUpdateByQueryDetails.html");
+
     private virtualNotification: virtualUpdateByQuery;
     private gridController = ko.observable<virtualGridController<queryBasedVirtualBulkOperationItem>>();
     private columnPreview = new columnPreviewPlugin<queryBasedVirtualBulkOperationItem>();

@@ -4,6 +4,8 @@ import getIndexStalenessReasonsCommand = require("commands/database/index/getInd
 
 class indexStalenessReasons extends dialogViewModelBase {
 
+    view = require("views/database/indexes/indexStalenessReasons.html");
+    
     private db: database;
     indexName: string;
     reasons = ko.observable<indexStalenessReasonsResponse>();

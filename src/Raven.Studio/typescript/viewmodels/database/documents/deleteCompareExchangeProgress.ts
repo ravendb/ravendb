@@ -11,6 +11,8 @@ type itemTypeDto = {
 
 class deleteCompareExchangeProgress extends dialogViewModelBase {
 
+    view = require("views/database/documents/deleteCompareExchangeProgress.html");
+
     private items: itemTypeDto[] = [];
     private db: database;
     

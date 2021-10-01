@@ -13,6 +13,8 @@ import moment = require("moment");
 
 class virtualDeleteByQueryDetails extends dialogViewModelBase {
 
+    view = require("views/common/notificationCenter/detailViewer/virtualOperations/virtualDeleteByQueryDetails.html");
+
     private virtualNotification: virtualDeleteByQuery;
     private gridController = ko.observable<virtualGridController<queryBasedVirtualBulkOperationItem>>();
     private columnPreview = new columnPreviewPlugin<queryBasedVirtualBulkOperationItem>();
