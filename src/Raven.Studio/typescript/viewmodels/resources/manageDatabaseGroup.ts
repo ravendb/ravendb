@@ -23,6 +23,8 @@ import Sortable from "sortablejs";
 class manageDatabaseGroup extends viewModelBase {
 
     view = require("views/resources/manageDatabaseGroup.html");
+    
+    legendView = require("views/partial/databaseGroupLegend.html");
 
     dynamicDatabaseDistribution = ko.observable<boolean>(false);
     nodes = ko.observableArray<databaseGroupNode>([]);

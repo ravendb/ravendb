@@ -15,7 +15,7 @@
             </div>
         </div>
         <div data-bind="collapse: hasConfigurationScript">
-            <div data-bind="compose: 'partial/backupConfigurationScript.html'"></div>
+            <div data-bind="compose: $root.backupConfigurationView"></div>
         </div>
         <div data-bind="collapse: !hasConfigurationScript()">
             <div data-bind="compose: 'partial/backupDestinationLocal.html'"></div>
@@ -48,7 +48,7 @@
                 </div>
             </div>
             <div data-bind="collapse: hasConfigurationScript">
-                <div data-bind="compose: 'partial/backupConfigurationScript.html'"></div>
+                <div data-bind="compose: $root.backupConfigurationView"></div>
             </div>
             <div data-bind="collapse: !hasConfigurationScript()">
                 <div data-bind="compose: $data"></div>
@@ -62,7 +62,7 @@
         </div>
         <div class="panel-addon">
             <div data-bind="with: testConnectionResult">
-                <div data-bind="compose: 'partial/backupDestinationTestCredentialsResults.html'"></div>
+                <div data-bind="compose: $root.backupDestinationTestCredentialsView"></div>
             </div>
         </div>
     </div>
@@ -84,7 +84,7 @@
                 </div>
             </div>
             <div data-bind="collapse: hasConfigurationScript">
-                <div data-bind="compose: 'partial/backupConfigurationScript.html'"></div>
+                <div data-bind="compose: $root.backupConfigurationView"></div>
             </div>
             <div data-bind="collapse: !hasConfigurationScript()">
                 <div data-bind="compose: $data"></div>
@@ -98,7 +98,7 @@
         </div>
         <div class="panel-addon">
             <div data-bind="with: testConnectionResult">
-                <div data-bind="compose: 'partial/backupDestinationTestCredentialsResults.html'"></div>
+                <div data-bind="compose: $root.backupDestinationTestCredentialsView"></div>
             </div>
         </div>
     </div>
@@ -120,7 +120,7 @@
                 </div>
             </div>
             <div data-bind="collapse: hasConfigurationScript">
-                <div data-bind="compose: 'partial/backupConfigurationScript.html'"></div>
+                <div data-bind="compose: $root.backupConfigurationView"></div>
             </div>
             <div data-bind="collapse: !hasConfigurationScript()">
                 <div data-bind="compose: $data"></div>
@@ -134,7 +134,7 @@
         </div>
         <div class="panel-addon">
             <div data-bind="with: testConnectionResult">
-                <div data-bind="compose: 'partial/backupDestinationTestCredentialsResults.html'"></div>
+                <div data-bind="compose: $root.backupDestinationTestCredentialsView"></div>
             </div>
         </div>
     </div>
@@ -156,7 +156,7 @@
                 </div>
             </div>
             <div data-bind="collapse: hasConfigurationScript">
-                <div data-bind="compose: 'partial/backupConfigurationScript.html'"></div>
+                <div data-bind="compose: $root.backupConfigurationView"></div>
             </div>
             <div data-bind="collapse: !hasConfigurationScript()">
                 <div data-bind="compose: $data"></div>
@@ -170,7 +170,7 @@
         </div>
         <div class="panel-addon">
             <div data-bind="with: testConnectionResult">
-                <div data-bind="compose: 'partial/backupDestinationTestCredentialsResults.html'"></div>
+                <div data-bind="compose: $root.backupDestinationTestCredentialsView"></div>
             </div>
         </div>
     </div>
@@ -192,7 +192,7 @@
                 </div>
             </div>
             <div data-bind="collapse: hasConfigurationScript">
-                <div data-bind="compose: 'partial/backupConfigurationScript.html'"></div>
+                <div data-bind="compose: $root.backupConfigurationView"></div>
             </div>
             <div data-bind="collapse: !hasConfigurationScript()">
                 <div data-bind="compose: $data"></div>
@@ -206,7 +206,7 @@
         </div>
         <div class="panel-addon">
             <div data-bind="with: testConnectionResult">
-                <div data-bind="compose: 'partial/backupDestinationTestCredentialsResults.html'"></div>
+                <div data-bind="compose: $root.backupDestinationTestCredentialsView"></div>
             </div>
         </div>
     </div>

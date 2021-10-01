@@ -9,6 +9,8 @@ class addNewNodeToDatabaseGroup extends dialogViewModelBase {
 
     view = require("views/resources/addNewNodeToDatabaseGroup.html");
 
+    setupEncryptionKeyView = require("views/resources/setupEncryptionKey.html");
+
     private readonly isEncrypted: boolean;
     
     nodeTag = ko.observable<string>();

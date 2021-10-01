@@ -1,9 +1,15 @@
-import viewModelBase = require("viewmodels/viewModelBase");
 import appUrl = require("common/appUrl");
 
 import durandalRouter = require("plugins/router");
 
 class importParent {
+    
+    view = require("views/database/tasks/importParent.html");
+    
+    getView() {
+        return this.view;
+    }
+    
     router: DurandalRootRouter;
 
     constructor() {
