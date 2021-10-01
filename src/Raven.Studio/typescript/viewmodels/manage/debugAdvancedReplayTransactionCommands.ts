@@ -8,6 +8,8 @@ import notificationCenter = require("common/notifications/notificationCenter");
 
 class debugAdvancedReplayTransactionCommands extends viewModelBase {
 
+    view = require("views/manage/debugAdvancedReplayTransactionCommands.html");
+
     private static readonly filePickerTag = "#transactionCommandsFilePicker";
 
     databaseNames = ko.observableArray<string>([]);

@@ -13,6 +13,8 @@ type positionAndSizes = {
 
 class storageReport extends viewModelBase {
 
+    view = require("views/manage/storageReport.html");
+
     static readonly animationLength = 200;
 
     private rawData: detailedSystemStorageReportItemDto;

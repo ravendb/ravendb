@@ -15,6 +15,8 @@ import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 
 class editServerWideBackup extends viewModelBase {
+
+    view = require("views/manage/editServerWideBackup.html");
     
     editedTask = ko.observable<serverWideBackupEditModel>();
     serverConfiguration = ko.observable<periodicBackupServerLimitsResponse>();

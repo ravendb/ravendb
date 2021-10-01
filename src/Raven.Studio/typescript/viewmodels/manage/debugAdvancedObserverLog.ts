@@ -14,6 +14,8 @@ import fileDownloader = require("common/fileDownloader");
 
 class clusterObserverLog extends viewModelBase {
 
+    view = require("views/manage/debugAdvancedObserverLog.html");
+    
     filter = ko.observable<string>();
     
     decisions = ko.observable<Raven.Server.ServerWide.Maintenance.ClusterObserverDecisions>();

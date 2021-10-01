@@ -8,6 +8,8 @@ import spatialCircleModel = require("models/database/query/spatialCircleModel");
 import spatialPolygonModel = require("models/database/query/spatialPolygonModel");
 
 class spatialQueryMap extends viewModelBase {
+
+    view = require("views/database/query/spatialQueryMap.html");
     
     private map: Map;
     

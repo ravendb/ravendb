@@ -11,6 +11,8 @@ import viewHelpers = require("common/helpers/view/viewHelpers");
 
 class editCustomAnalyzer extends viewModelBase {
 
+    view = require("views/database/settings/editCustomAnalyzer.html");
+
     editedAnalyzer = ko.observable<customAnalyzer>();
     usedAnalyzerNames = ko.observableArray<string>([]);
     isAddingNewAnalyzer = ko.observable<boolean>();

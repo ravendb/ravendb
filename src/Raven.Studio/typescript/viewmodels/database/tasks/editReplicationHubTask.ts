@@ -29,6 +29,8 @@ import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
 
 class editReplicationHubTask extends viewModelBase {
 
+    view = require("views/database/tasks/editReplicationHubTask.html");
+    
     editedHubTask = ko.observable<ongoingTaskReplicationHubEditModel>();
     editedReplicationAccessItem = ko.observable<replicationAccessHubModel>(null);
 

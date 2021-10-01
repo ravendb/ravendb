@@ -213,6 +213,8 @@ class rawTimeSeriesContainer extends timeSeriesContainer<dataPoint> {
 }
 
 class timeSeriesPlotDetails extends viewModelBase {
+
+    view = require("views/common/timeSeriesPlotDetails.html");
     
     private readonly margin = {
         top: 40,

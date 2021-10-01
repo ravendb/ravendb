@@ -26,6 +26,8 @@ type fetcherType = (skip: number, take: number) => JQueryPromise<pagedResult<doc
 
 class customSorters extends viewModelBase {
 
+    view = require("views/database/settings/customSorters.html");
+
     indexes = ko.observableArray<Raven.Client.Documents.Operations.IndexInformation>();
     languageService: rqlLanguageService;
     

@@ -3,6 +3,9 @@ import dbLiveIOStatsWebSocketClient = require("common/dbLiveIOStatsWebSocketClie
 import ioStatsGraph = require("models/database/status/ioStatsGraph");
 
 class ioStats extends viewModelBase {
+    
+    view = require("views/database/status/ioStats.html");
+    
     private graph: ioStatsGraph;
     
     constructor() {

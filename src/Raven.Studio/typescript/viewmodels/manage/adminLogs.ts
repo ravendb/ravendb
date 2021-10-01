@@ -65,6 +65,8 @@ class heightCalculator {
 
 class adminLogs extends viewModelBase {
 
+    view = require("views/manage/adminLogs.html");
+
     private liveClient = ko.observable<adminLogsWebSocketClient>();
     private listController = ko.observable<listViewController<string>>();
     

@@ -8,6 +8,8 @@ class warningsData {
 
 class editorWarningsConfirm extends dialogViewModelBase {
 
+    view = require("views/database/documents/editorWarningsConfirm.html");
+
     private textForTitle: string;
     private warningsList = ko.observableArray<warningsData>();
     private readonly onGoto: (warning: AceAjax.Annotation, source?: string) => void;

@@ -20,6 +20,8 @@ import viewHelpers = require("common/helpers/view/viewHelpers");
 
 class exportDatabase extends viewModelBase {
 
+    view = require("views/database/tasks/exportDatabase.html");
+
     completer = defaultAceCompleter.completer();
     model = new exportDatabaseModel();
 

@@ -17,6 +17,8 @@ type ExecutingQueryInfoWithCache = {
 }
 
 class runningQueries extends viewModelBase {
+
+    view = require("views/manage/runningQueries.html");
     
     filter = ko.observable<string>();
     

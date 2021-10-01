@@ -7,6 +7,8 @@ type supportedLangs = "javascript" | "csharp" | "plain";
 
 class showDataDialog extends dialogViewModelBase {
 
+    view = require("views/common/showDataDialog.html");
+
     width = ko.observable<string>("");
     inputData = ko.observable<string>();
 

@@ -12,6 +12,8 @@ import threadStackTrace = require("viewmodels/manage/threadStackTrace");
 
 class debugAdvancedThreadsRuntime extends viewModelBase {
 
+    view = require("views/manage/debugAdvancedThreadsRuntime.html");
+
     allData = ko.observable<Raven.Server.Dashboard.ThreadInfo[]>();
     filteredData = ko.observable<Raven.Server.Dashboard.ThreadInfo[]>();
 
