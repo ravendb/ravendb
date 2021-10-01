@@ -21,6 +21,9 @@ class indexInfoForDelete {
 }
 
 class deleteIndexesConfirm extends dialogViewModelBase {
+
+    view = require("views/database/indexes/deleteIndexesConfirm.html");
+    
     title: string;
     subTitleHtml: string;
     showWarning: boolean = false;

@@ -49,6 +49,8 @@ class registrationDismissStorage {
 }
 
 class registration extends dialogViewModelBase {
+
+    view = require("views/shell/registration.html");
     
     static readonly licenseDialogSelector = "#licenseModal";
 

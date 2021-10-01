@@ -21,6 +21,8 @@ type pagingDetailsItemDto = {
 
 class pagingDetails extends abstractPerformanceHintDetails {
 
+    view = require("views/common/notificationCenter/detailViewer/performanceHint/pagingDetails.html");
+
     tableItems: pagingDetailsItemDto[] = [];
     private gridController = ko.observable<virtualGridController<pagingDetailsItemDto>>();
     private columnPreview = new columnPreviewPlugin<pagingDetailsItemDto>();

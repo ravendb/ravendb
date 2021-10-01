@@ -13,6 +13,8 @@ import moment = require("moment");
 
 class virtualBulkInsertDetails extends dialogViewModelBase {
 
+    view = require("views/common/notificationCenter/detailViewer/virtualOperations/virtualBulkInsertDetails.html");
+
     private bulkInserts: virtualBulkInsert;
     private gridController = ko.observable<virtualGridController<virtualBulkOperationItem>>();
     private columnPreview = new columnPreviewPlugin<virtualBulkOperationItem>();

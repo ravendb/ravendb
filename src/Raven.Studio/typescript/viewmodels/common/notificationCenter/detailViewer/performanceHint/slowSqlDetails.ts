@@ -12,6 +12,8 @@ import abstractPerformanceHintDetails = require("viewmodels/common/notificationC
 
 class slowSqlDetails extends abstractPerformanceHintDetails {
 
+    view = require("views/common/notificationCenter/detailViewer/performanceHint/slowSqlDetails.html");
+    
     currentDetails = ko.observable<Raven.Server.NotificationCenter.Notifications.Details.SlowSqlStatementInfo>();
     
     tableItems: Raven.Server.NotificationCenter.Notifications.Details.SlowSqlStatementInfo[] = [];

@@ -5,6 +5,8 @@ import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 
 class queryStatsDialog extends dialogViewModelBase {
 
+    view = require("views/database/query/queryStatsDialog.html");
+
     public static readonly AllDocs = "AllDocs";
 
     selectedIndexEditUrl: string;

@@ -4,6 +4,9 @@ import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import clearIndexErrorsCommand = require("commands/database/index/clearIndexErrorsCommand");
 
 class clearIndexErrorsConfirm extends dialogViewModelBase {
+
+    view = require("views/database/indexes/clearIndexErrorsConfirm.html");
+    
     title: string;
     subTitleHtml: string;
     clearErrorsTask = $.Deferred<boolean>();

@@ -15,6 +15,9 @@ type gridItem = {
 }
 
 class enforceRevisionsConfigurationDetail extends abstractOperationDetails {
+
+    view = require("views/common/notificationCenter/detailViewer/operations/enforceRevisionsConfigurationDetails.html");
+    
     progress: KnockoutObservable<Raven.Client.Documents.Operations.Revisions.EnforceConfigurationResult>;
 
     private gridController = ko.observable<virtualGridController<gridItem>>();

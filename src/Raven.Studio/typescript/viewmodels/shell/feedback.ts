@@ -44,6 +44,8 @@ class feedbackModel {
 
 class feedback extends dialogViewModelBase {
 
+    view = require("views/shell/feedback.html");
+
     private readonly studioVersion: string;
     private readonly serverVersion: string;
     private moduleTitle = ko.observable<string>();

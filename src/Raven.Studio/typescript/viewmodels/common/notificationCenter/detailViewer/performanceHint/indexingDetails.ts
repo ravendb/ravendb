@@ -15,6 +15,8 @@ interface indexingDetailsItemDto extends Raven.Server.NotificationCenter.Notific
 
 class indexingDetails extends abstractPerformanceHintDetails {
 
+    view = require("views/common/notificationCenter/detailViewer/performanceHint/indexingDetails.html");
+
     tableItems: indexingDetailsItemDto[] = [];
     suggestions = ko.observableArray<string>([]);
     

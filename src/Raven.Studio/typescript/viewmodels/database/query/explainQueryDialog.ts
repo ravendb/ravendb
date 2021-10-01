@@ -5,6 +5,8 @@ import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import explainQueryCommand = require("commands/database/index/explainQueryCommand");
 
 class explainQueryDialog extends dialogViewModelBase {
+
+    view = require("views/database/query/explainQueryDialog.html");
     
     explanation = ko.observableArray<Raven.Server.Documents.Queries.Dynamic.DynamicQueryToIndexMatcher.Explanation>([]);
     indexUsed = ko.observable<string>();
