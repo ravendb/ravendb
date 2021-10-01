@@ -244,6 +244,36 @@ namespace Raven.Server.Platform.Posix
         [SnmpIndex(42)]
         public Size DirectMap4M { get; set; }
 
+        [SnmpIndex(43)]
+        public Size MemAvailable { get; set; }
+
+        [SnmpIndex(44)]
+        public Size KReclaimable { get; set; }
+
+        [SnmpIndex(45)]
+        public Size Percpu { get; set; }
+
+        [SnmpIndex(46)]
+        public Size ShmemHugePages { get; set; }
+
+        [SnmpIndex(47)]
+        public Size ShmemPmdMapped { get; set; }
+
+        [SnmpIndex(48)]
+        public Size FileHugePages { get; set; }
+
+        [SnmpIndex(49)]
+        public Size FilePmdMapped { get; set; }
+
+        [SnmpIndex(50)]
+        public Size Hugetlb { get; set; }
+
+        [SnmpIndex(51)]
+        public Size DirectMap2M { get; set; }
+
+        [SnmpIndex(52)]
+        public Size DirectMap1G { get; set; }
+
         public Dictionary<string, Size> Other { get; set; }
 
         public void Set(string name, long value, SizeUnit unit)

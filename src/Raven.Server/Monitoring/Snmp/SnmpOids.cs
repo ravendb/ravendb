@@ -206,7 +206,7 @@ namespace Raven.Server.Monitoring.Snmp
                                 var name = propertyInfo.GetCustomAttribute<DisplayNameAttribute>()?.DisplayName ?? propertyInfo.Name;
 
 
-                                array.Add(CreateJsonItem(oid, $"{name} value from '{MemInfoReader.MemInfoFileName}"));
+                                array.Add(CreateJsonItem(oid, $"{name} value from '{MemInfoReader.MemInfoFileName}'"));
                             }
                             break;
                         default:
