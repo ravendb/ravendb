@@ -77,6 +77,8 @@ namespace FastTests.Issues
             if (memInfo.Other.Count > 0)
             {
                 var sb = new StringBuilder("Following properties were not mapped:");
+                sb.AppendLine();
+
                 foreach (var kvp in memInfo.Other)
                     sb.AppendLine($"{kvp.Key}: {kvp.Value.GetValue(SizeUnit.Kilobytes)} kB");
 
