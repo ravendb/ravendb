@@ -51,11 +51,7 @@ namespace Raven.Server.Integrations.PostgreSQL
                                 row[index] = table.Columns[index].PgType.ToBytes(obj, table.Columns[index].FormatCode);
                         }
 
-                        // TODO: Create a constructor for PgDataRow
-                        table.Data.Add(new PgDataRow
-                        {
-                            ColumnData = row
-                        });
+                        table.Data.Add(new PgDataRow(row));
                     }
                 }
             }

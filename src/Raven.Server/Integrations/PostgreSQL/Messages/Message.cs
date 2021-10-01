@@ -111,6 +111,16 @@ namespace Raven.Server.Integrations.PostgreSQL.Messages
     public class PgDataRow
     {
         public Memory<ReadOnlyMemory<byte>?> ColumnData;
+
+        public PgDataRow()
+        {
+            ColumnData = new Memory<ReadOnlyMemory<byte>?>();
+        }
+
+        public PgDataRow(Memory<ReadOnlyMemory<byte>?> columnData)
+        {
+            ColumnData = columnData;
+        }
     }
     public enum PgFormat : short
     {

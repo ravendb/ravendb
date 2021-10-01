@@ -71,16 +71,15 @@ namespace Raven.Server.Integrations.PostgreSQL.PowerBI
             int i = 0;
             foreach (var column in schema)
             {
-                _results.Add(new PgDataRow
+                var columnData = new ReadOnlyMemory<byte>?[]
                 {
-                    ColumnData = new ReadOnlyMemory<byte>?[]
-                    {
-                        Encoding.UTF8.GetBytes(column.Name), // column_name
-                        BitConverter.GetBytes(IPAddress.HostToNetworkOrder(i)), // ordinal_position
-                        Encoding.UTF8.GetBytes("YES"), // is_nullable
-                        Encoding.UTF8.GetBytes(""), // data_type - easier to leave empty for us
-                    }
-                });
+                    Encoding.UTF8.GetBytes(column.Name), // column_name
+                    BitConverter.GetBytes(IPAddress.HostToNetworkOrder(i)), // ordinal_position
+                    Encoding.UTF8.GetBytes("YES"), // is_nullable
+                    Encoding.UTF8.GetBytes(""), // data_type - easier to leave empty for us
+                };
+
+                _results.Add(new PgDataRow(columnData));
                 i++;
             }
 
