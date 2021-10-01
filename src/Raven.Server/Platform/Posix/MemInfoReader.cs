@@ -11,7 +11,7 @@ namespace Raven.Server.Platform.Posix
 {
     public static class MemInfoReader
     {
-        private const string MemInfoFileName = "/proc/meminfo";
+        internal const string MemInfoFileName = "/proc/meminfo";
 
         private static readonly char[] Separators = { ' ' };
 
