@@ -53,14 +53,18 @@ namespace Raven.Client.Documents.Operations.ETL.ElasticSearch
     public class ElasticSearchIndex
     {
         public string IndexName { get; set; }
+
         public string IndexIdProperty { get; set; }
-        
+
+        public bool InsertOnlyMode { get; set; }
+
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
                 [nameof(IndexName)] = IndexName,
-                [nameof(IndexIdProperty)] = IndexIdProperty
+                [nameof(IndexIdProperty)] = IndexIdProperty,
+                [nameof(InsertOnlyMode)] = InsertOnlyMode
             };
         }
     }

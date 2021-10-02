@@ -21,7 +21,7 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
     public class ElasticSearchEtl : EtlProcess<ElasticSearchItem, ElasticSearchIndexWithRecords, ElasticSearchEtlConfiguration, ElasticSearchConnectionString, EtlStatsScope, EtlPerformanceOperation>
     {
         public readonly ElasticSearchEtlMetricsCountersManager ElasticSearchMetrics = new ElasticSearchEtlMetricsCountersManager();
-        
+
         public ElasticSearchEtl(Transformation transformation, ElasticSearchEtlConfiguration configuration, DocumentDatabase database, ServerStore serverStore)
             : base(transformation, configuration, database, serverStore, ElasticSearchEtlTag)
         {
@@ -89,88 +89,110 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
 
         protected override int LoadInternal(IEnumerable<ElasticSearchIndexWithRecords> records, DocumentsOperationContext context, EtlStatsScope scope)
         {
-            int statsCounter = 0;
+            int count = 0;
 
-            if (_client == null)
-            {
-                _client = ElasticSearchHelper.CreateClient(Configuration.Connection);    
-            }
+            _client ??= ElasticSearchHelper.CreateClient(Configuration.Connection);
 
-            StringBuilder deleteQuery = new StringBuilder();
-            
             foreach (var index in records)
             {
-                deleteQuery.Clear();
-                
-                foreach (ElasticSearchItem delete in index.Deletes)
+                string indexName = index.IndexName.ToLower();
+
+                if (_client.Indices.Exists(new IndexExistsRequest(Indices.Index(indexName))).Exists == false)
                 {
-                    deleteQuery.Append($"{delete.DocumentId},");
+                    var response = _client.Indices.Create(indexName, c => c
+                        .Map(m => m
+                            .Properties(p => p
+                                .Keyword(t => t
+                                    .Name(index.IndexIdProperty)))));
+
+                    // TODO arek - check response status
                 }
 
-                var deleteResponse = _client.DeleteByQuery<string>(d => d
-                    .Index(index.IndexName.ToLower())
-                    .Query(q => q
-                        .Match(p => p
-                            .Field(index.IndexIdProperty)
-                            .Query(deleteQuery.ToString()))
-                    )
-                );
-                
-                // The request made it to the server but something went wrong in Elasticsearch (query parsing exception, non-existent index, etc)
-                if (deleteResponse.ServerError != null)
+                if (index.InsertOnlyMode == false)
                 {
-                    if (deleteResponse.ServerError.Error.Type != "index_not_found_exception")
-                    {
-                        var message = $"Index {index}; Documents IDs: {deleteQuery}; Error: {deleteResponse.ServerError.Error}";
-                    
-                        if (Logger.IsInfoEnabled)
-                        {
-                            Logger.Info($"{message}; Debug Information: {deleteResponse.DebugInformation}");
-                        }
-                    
-                        throw new ElasticSearchLoadException(message);
-                    }
+                    count += DeleteByQueryOnIndexIdProperty(index);
                 }
-                
-                // Elasticsearch error occurred or a connection error (the server could not be reached, request timed out, etc)
-                if (deleteResponse.OriginalException != null)
-                {
-                    var message = $"Index {index}; Documents IDs: {deleteQuery}; Error: {deleteResponse.OriginalException}";
-                    
-                    if (Logger.IsInfoEnabled)
-                    {
-                        Logger.Info($"{message}; Debug Information: {deleteResponse.DebugInformation}", deleteResponse.OriginalException);
-                    }
-                    
-                    throw new ElasticSearchLoadException(message);
-                }
-
-                statsCounter += (int)deleteResponse.Deleted;
 
                 foreach (ElasticSearchItem insert in index.Inserts)
                 {
-                    if (insert.Property == null) continue;
+                    if (insert.Property == null) 
+                        continue;
 
                     var response = _client.LowLevel.Index<StringResponse>(
-                        index: index.IndexName.ToLower(),
-                        body: insert.Property.RawValue.ToString(), requestParameters: new IndexRequestParameters(){Refresh = Refresh.WaitFor});
+                        index: indexName,
+                        body: insert.Property.RawValue.ToString(), requestParameters: new IndexRequestParameters());
 
                     if (response.Success == false)
                     {
-                        if (string.IsNullOrWhiteSpace(deleteResponse.DebugInformation) == false)
+                        if (string.IsNullOrWhiteSpace(response.DebugInformation) == false)
                         {
-                            throw new ElasticSearchLoadException($"Index {index} error: {deleteResponse.DebugInformation}");
+                            throw new ElasticSearchLoadException($"Index {index} error: {response.DebugInformation}");
                         }
-                        throw new ElasticSearchLoadException($"Index {index} error: {deleteResponse.OriginalException}");
+
+                        throw new ElasticSearchLoadException($"Index {index} error: {response.OriginalException}");
                     }
 
-                    statsCounter++;
+                    count++;
                 }
             }
 
-            return statsCounter;
+            return count;
         }
-        
+
+        private int DeleteByQueryOnIndexIdProperty(ElasticSearchIndexWithRecords index)
+        {
+            string indexName = index.IndexName.ToLower();
+
+            var idsToDelete = new List<string>();
+
+            foreach (ElasticSearchItem delete in index.Deletes)
+            {
+                idsToDelete.Add(delete.DocumentId);
+            }
+
+            // we are about to delete by query so we need to ensure that all documents are available for search
+            // this way we won't skip just inserted documents that could not be indexed yet
+
+            _client.Indices.Refresh(new RefreshRequest(Indices.Index(indexName)));
+
+            var deleteResponse = _client.DeleteByQuery<string>(d => d
+                .Index(indexName)
+                .Query(q => q
+                    .Terms(p => p
+                        .Field(index.IndexIdProperty)
+                        .Terms(idsToDelete))
+                )
+            );
+
+            // The request made it to the server but something went wrong in ElasticSearch (query parsing exception, non-existent index, etc)
+            if (deleteResponse.ServerError != null)
+            {
+                var message = $"Index {index}; Documents IDs: {string.Join(',', idsToDelete)}; Error: {deleteResponse.ServerError.Error}";
+
+                if (Logger.IsInfoEnabled)
+                {
+                    Logger.Info($"{message}; Debug Information: {deleteResponse.DebugInformation}");
+                }
+
+                throw new ElasticSearchLoadException(message);
+            }
+
+            // ElasticSearch error occurred or a connection error (the server could not be reached, request timed out, etc)
+            if (deleteResponse.OriginalException != null)
+            {
+                var message = $"Index {index}; Documents IDs: {string.Join(',', idsToDelete)}; Error: {deleteResponse.OriginalException}";
+
+                if (Logger.IsInfoEnabled)
+                {
+                    Logger.Info($"{message}; Debug Information: {deleteResponse.DebugInformation}", deleteResponse.OriginalException);
+                }
+
+                throw new ElasticSearchLoadException(message);
+            }
+
+            return (int)deleteResponse.Deleted;
+        }
+
         public ElasticSearchEtlTestScriptResult RunTest(IEnumerable<ElasticSearchIndexWithRecords> records)
         {
             var simulatedWriter = new ElasticSearchIndexWriterSimulator();

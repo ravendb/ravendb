@@ -87,6 +87,8 @@ loadToOrders(orderData);
                 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
+                EnsureNonStaleElasticResults(client);
+
                 var ordersCount = client.Count<object>(c => c.Index(OrderIndexName));
                 var orderLinesCount = client.Count<object>(c => c.Index(OrderLinesIndexName));
 
@@ -104,8 +106,8 @@ loadToOrders(orderData);
                 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                client.Indices.Refresh(new RefreshRequest(Indices.All));
- 
+                EnsureNonStaleElasticResults(client);
+
                 var ordersCountAfterDelete = client.Count<object>(c => c.Index(OrderIndexName));
                 var orderLinesCountAfterDelete = client.Count<object>(c => c.Index(OrderLinesIndexName));
 
@@ -113,7 +115,73 @@ loadToOrders(orderData);
                 Assert.Equal(0, orderLinesCountAfterDelete.Count);
             }
         }
-        
+
+        [RequiresElasticSearchFact]
+        public void SimpleScriptWithManyDocuments()
+        {
+            using (var store = GetDocumentStore())
+            using (GetElasticClient(out var client))
+            {
+                var numberOfOrders = 100;
+                var numberOfLinesPerOrder = 5;
+
+                SetupElasticEtl(store, defaultScript, new List<string>() { OrderIndexName, OrderLinesIndexName });
+                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LastProcessedEtag >= numberOfOrders);
+
+                for (int i = 0; i < numberOfOrders; i++)
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        Order order = new Order
+                        {
+                            OrderLines = new List<OrderLine>()
+                        };
+
+                        for (int j = 0; j < numberOfLinesPerOrder; j++)
+                        {
+                            order.OrderLines.Add(new OrderLine { Cost = j + 1, Product = "foos/" + j, Quantity = (i * j) % 10});
+                        }
+
+                        session.Store(order, "orders/" + i);
+
+                        session.SaveChanges();
+                    }
+                }
+
+                etlDone.Wait(TimeSpan.FromMinutes(1));
+
+                EnsureNonStaleElasticResults(client);
+
+                var ordersCount = client.Count<object>(c => c.Index(OrderIndexName));
+                var orderLinesCount = client.Count<object>(c => c.Index(OrderLinesIndexName));
+
+                Assert.Equal(numberOfOrders, ordersCount.Count);
+                Assert.Equal(numberOfOrders * numberOfLinesPerOrder, orderLinesCount.Count);
+
+                etlDone = WaitForEtl(store, (n, statistics) => statistics.LastProcessedEtag >= 2 * numberOfOrders);
+
+                for (int i = 0; i < numberOfOrders; i++)
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        session.Delete("orders/" + i);
+
+                        session.SaveChanges();
+                    }
+                }
+
+                etlDone.Wait(TimeSpan.FromMinutes(1));
+
+                EnsureNonStaleElasticResults(client);
+
+                Thread.Sleep(3000);
+                var ordersCountAfterDelete = client.Count<object>(c => c.Index(OrderIndexName));
+                var orderLinesCountAfterDelete = client.Count<object>(c => c.Index(OrderLinesIndexName));
+
+                Assert.Equal(0, ordersCountAfterDelete.Count);
+                Assert.Equal(0, orderLinesCountAfterDelete.Count);
+            }
+        }
         [Fact]
         public void Simple_script_error_expected()
         {
@@ -186,6 +254,8 @@ loadToOrders(orderData);
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
+                EnsureNonStaleElasticResults(client);
+
                 var orderResponse = client.Search<object>(d => d
                     .Index(OrderIndexName)
                     .Query(q => q
@@ -225,7 +295,7 @@ loadToOrders(orderData);
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                client.Indices.Refresh(new RefreshRequest(Indices.All));
+                EnsureNonStaleElasticResults(client);
 
                 var ordersCountAfterDelete = client.Count<object>(c => c.Index(OrderIndexName));
                 var orderLinesCountAfterDelete = client.Count<object>(c => c.Index(OrderLinesIndexName));
@@ -258,6 +328,8 @@ loadToOrders(orderData);
 
                 etlDone.Wait(TimeSpan.FromSeconds(30));
 
+                EnsureNonStaleElasticResults(client);
+
                 var ordersCount = client.Count<object>(c => c.Index(OrderIndexName));
                 var orderLinesCount = client.Count<object>(c => c.Index(OrderLinesIndexName));
 
@@ -275,7 +347,7 @@ loadToOrders(orderData);
 
                 etlDone.Wait(TimeSpan.FromSeconds(90));
 
-                client.Indices.Refresh(new RefreshRequest(Indices.All));
+                EnsureNonStaleElasticResults(client);
 
                 var ordersCountAfterDelete = client.Count<object>(c => c.Index(OrderIndexName));
                 var orderLinesCountAfterDelete = client.Count<object>(c => c.Index(OrderLinesIndexName));
@@ -306,8 +378,9 @@ loadToOrders(orderData);
                 SetupElasticEtl(store, defaultScript, new List<string>() {OrderIndexName, OrderLinesIndexName});
                 var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
 
-
                 etlDone.Wait(TimeSpan.FromMinutes(1));
+
+                EnsureNonStaleElasticResults(client);
 
                 var orderResponse = client.Search<object>(d => d
                     .Index(OrderIndexName)
@@ -344,6 +417,8 @@ loadToOrders(orderData);
                 }
 
                 etlDone.Wait(TimeSpan.FromMinutes(2));
+
+                EnsureNonStaleElasticResults(client);
 
                 var orderResponse1 = client.Search<object>(d => d
                     .Index(OrderIndexName)
@@ -384,6 +459,8 @@ loadToOrders(orderData);
                 }
                 
                 etlDone.Wait(TimeSpan.FromSeconds(20));
+
+                EnsureNonStaleElasticResults(client);
 
                 var userResponse1 = client.Search<object>(d => d
                     .Index("users")
@@ -427,6 +504,8 @@ loadToOrders(orderData);
                 }
 
                 etlDone.Wait(TimeSpan.FromSeconds(20));
+
+                EnsureNonStaleElasticResults(client);
 
                 var userResponse3 = client.Search<object>(d => d
                     .Index("users")
@@ -478,6 +557,8 @@ loadToOrders(orderData);
                 }
 
                 etlDone.Wait(TimeSpan.FromSeconds(30));
+                
+                EnsureNonStaleElasticResults(client);
 
                 var userResponse = client.Search<object>(d => d
                     .Index("users")
@@ -513,6 +594,8 @@ loadToOrders(orderData);
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
+                EnsureNonStaleElasticResults(client);
+
                 var userResponse = client.Search<object>(d => d
                     .Index("users")
                     .Query(q => q
@@ -535,7 +618,7 @@ loadToOrders(orderData);
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                client.Indices.Refresh(new RefreshRequest(Indices.All));
+                EnsureNonStaleElasticResults(client);
 
                 userResponse = client.Search<object>(d => d
                     .Index("users")
@@ -653,6 +736,8 @@ loadToOrders(orderData);
                 }
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
+
+                EnsureNonStaleElasticResults(client);
 
                 var userResponse1 = client.Search<object>(d => d
                     .Index("users")
@@ -869,6 +954,11 @@ loadToOrders(orderData);
             public int Cost { get; set; }
         }
 
+        private void EnsureNonStaleElasticResults(ElasticClient client)
+        {
+            client.Indices.Refresh(new RefreshRequest(Indices.All));
+        }
+
         public IDisposable GetElasticClient(out ElasticClient client)
         {
             var localClient = client = ElasticSearchHelper.CreateClient(new ElasticSearchConnectionString { Nodes = ElasticSearchTestNodes.Instance.VerifiedNodes.Value });
@@ -883,7 +973,7 @@ loadToOrders(orderData);
 
         private void CleanupIndexes(ElasticClient client)
         {
-            client.Indices.Delete("*");
+            var response = client.Indices.Delete(Indices.All);
         }
 
         public override void Dispose()
