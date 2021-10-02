@@ -2739,7 +2739,7 @@ namespace Raven.Server.Documents.Queries
                 }
             }
 
-            return new JavaScriptParser("return " + Query.SelectFunctionBody.FunctionText, new ParserOptions(), VerifyKnownAliases).ParseScript();
+            return new JavaScriptParser(JintExtensions.ProcessJintStub("return " + Query.SelectFunctionBody.FunctionText), new ParserOptions(), VerifyKnownAliases).ParseScript();
         }
 
         private bool NotInRootAliasPaths(string key)

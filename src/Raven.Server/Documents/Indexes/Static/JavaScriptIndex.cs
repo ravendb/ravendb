@@ -9,6 +9,7 @@ using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes.Configuration;
 using Raven.Server.ServerWide;
+using Raven.Server.Extensions;
 using Sparrow.Server;
 
 using Jint; // actually we need Esprima for analyzing groupings, but for now we use it in the old way by means of Jint (having the outdated Esprima parser version not supporting some new features like optional chaining operator '?.')
@@ -465,7 +466,7 @@ function map(name, lambda) {
                     _engine.ExecuteWithReset(script, $"./{definition.Name}/additionalSource/{kvpScript.Key}");
                     _engineJint.ExecuteWithReset(script);
                     sb.Append(Environment.NewLine);
-                    sb.AppendLine(script);
+                    sb.AppendLine(JintExtensions.ProcessJintStub(script));
                 }
             }
 
@@ -475,7 +476,7 @@ function map(name, lambda) {
             {
                 _engine.ExecuteWithReset(map, "map");
                 _engineJint.ExecuteWithReset(map);
-                var result = CollectReferencedCollections(map, additionalSources);
+                var result = CollectReferencedCollections(JintExtensions.ProcessJintStub(map), additionalSources);
                 mapReferencedCollections.Add(result);
             }
 

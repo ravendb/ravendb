@@ -36,6 +36,7 @@ using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Raven.Server.Extensions;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -1428,7 +1429,7 @@ namespace Raven.Server.Documents.TcpHandlers
             // verify that the JS code parses
             try
             {
-                new JavaScriptParser(script).ParseScript();
+                new JavaScriptParser(JintExtensions.ProcessJintStub(script)).ParseScript();
             }
             catch (Exception e)
             {

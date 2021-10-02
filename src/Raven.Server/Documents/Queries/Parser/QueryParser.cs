@@ -1200,7 +1200,7 @@ namespace Raven.Server.Documents.Queries.Parser
 
         private static Esprima.Ast.Program ValidateScript(string script)
         {
-            var javaScriptParser = new JavaScriptParser(script);
+            var javaScriptParser = new JavaScriptParser(JintExtensions.ProcessJintStub(script));
             return javaScriptParser.ParseScript();
         }
 
