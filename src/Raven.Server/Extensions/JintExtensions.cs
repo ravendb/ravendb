@@ -100,7 +100,7 @@ Actually, it is worth to switch off the whole file in case it does not contain m
 
 
         // this is a temporary solution based on the description in the above JintStubInstruction string (till we don't have the latest Esprima version integrated)
-        private static string ProcessJintStub(string script)
+        public static string ProcessJintStub(string script)
         {
             string res = "";
 
