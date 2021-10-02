@@ -123,7 +123,7 @@ namespace Raven.Server.Commercial
         
         public bool HasOlapEtl => GetValue<bool>("olapEtl");
 
-        public bool HasElasticSearchEtl => GetValue<bool>("elasticsearchEtl");
+        public bool HasElasticSearchEtl => GetValue<bool>("elasticSearchEtl");
 
         public bool HasSnmpMonitoring => GetValue<bool>("snmp");
         

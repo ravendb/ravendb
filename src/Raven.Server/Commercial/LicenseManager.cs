@@ -1406,8 +1406,9 @@ namespace Raven.Server.Commercial
             if (LicenseStatus.HasElasticSearchEtl != false)
                 return;
 
-            const string message = "Your current license doesn't include the ElasticSearch ETL feature";
-            throw GenerateLicenseLimit(LimitType.ElasticSearchEtl, message);
+            // TODO arek
+            //const string message = "Your current license doesn't include the ElasticSearch ETL feature";
+            //throw GenerateLicenseLimit(LimitType.ElasticSearchEtl, message);
         }
 
         public void AssertCanAddOlapEtl()

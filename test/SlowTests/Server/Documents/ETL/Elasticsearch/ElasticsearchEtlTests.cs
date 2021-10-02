@@ -13,10 +13,13 @@ using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.ServerWide.Operations.Certificates;
+using Raven.Client.Util;
 using Raven.Server.Documents.ETL.Providers.ElasticSearch;
 using Raven.Server.Documents.ETL.Providers.ElasticSearch.Test;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
+using Tests.Infrastructure.ConnectionString;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -27,19 +30,15 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
         // we're using a single instance of ES for all tests which can run in parallel
         // there is no notion of a database in ES and we use the same index names in the tests
         // so we are limiting the number of concurrent tests running against ES to avoid data conflicts
+        // https://www.elastic.co/guide/en/elasticsearch/reference/current/_mapping_concepts_across_sql_and_elasticsearch.html
+
         private static readonly SemaphoreSlim ConcurrentEsEtlTests = new SemaphoreSlim(1, 1);
-
-        private readonly ElasticClient _client;
-
+        
         public ElasticSearchEtlTests(ITestOutputHelper output) : base(output)
         {
             ConcurrentEsEtlTests.Wait();
-
-            _client = ElasticSearchHelper.CreateClient(new ElasticSearchConnectionString() { Nodes = new string[] { "http://localhost:9200" } });
-
-            CleanupIndexes(_client);
         }
-
+        
         private const string OrderIndexName = "orders";
         private const string OrderLinesIndexName = "orderlines";
         
@@ -65,10 +64,11 @@ for (var i = 0; i < this.OrderLines.length; i++) {
 loadToOrders(orderData);
 ";
 
-        [Fact]
+        [RequiresElasticSearchFact]
         public void SimpleScript()
         {
             using (var store = GetDocumentStore())
+            using (GetElasticClient(out var client))
             {
                 SetupElasticEtl(store, defaultScript, new List<string>() {OrderIndexName, OrderLinesIndexName});
                 var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
@@ -87,8 +87,8 @@ loadToOrders(orderData);
                 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                var ordersCount = _client.Count<object>(c => c.Index(OrderIndexName));
-                var orderLinesCount = _client.Count<object>(c => c.Index(OrderLinesIndexName));
+                var ordersCount = client.Count<object>(c => c.Index(OrderIndexName));
+                var orderLinesCount = client.Count<object>(c => c.Index(OrderLinesIndexName));
 
                 Assert.Equal(1, ordersCount.Count);
                 Assert.Equal(2, orderLinesCount.Count);
@@ -104,10 +104,10 @@ loadToOrders(orderData);
                 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                _client.Indices.Refresh(new RefreshRequest(Indices.All));
+                client.Indices.Refresh(new RefreshRequest(Indices.All));
  
-                var ordersCountAfterDelete = _client.Count<object>(c => c.Index(OrderIndexName));
-                var orderLinesCountAfterDelete = _client.Count<object>(c => c.Index(OrderLinesIndexName));
+                var ordersCountAfterDelete = client.Count<object>(c => c.Index(OrderIndexName));
+                var orderLinesCountAfterDelete = client.Count<object>(c => c.Index(OrderLinesIndexName));
 
                 Assert.Equal(0, ordersCountAfterDelete.Count);
                 Assert.Equal(0, orderLinesCountAfterDelete.Count);
@@ -162,10 +162,11 @@ loadToOrders(orderData);
             }
         }
 
-        [Fact]
+        [RequiresElasticSearchFact]
         public void Can_get_document_id()
         {
             using (var store = GetDocumentStore())
+            using (GetElasticClient(out var client))
             {
                 using (var session = store.OpenSession())
                 {
@@ -185,7 +186,7 @@ loadToOrders(orderData);
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                var orderResponse = _client.Search<object>(d => d
+                var orderResponse = client.Search<object>(d => d
                     .Index(OrderIndexName)
                     .Query(q => q
                         .Match(p => p
@@ -194,7 +195,7 @@ loadToOrders(orderData);
                     )
                 );
 
-                var orderLineResponse = _client.Search<object>(d => d
+                var orderLineResponse = client.Search<object>(d => d
                     .Index(OrderLinesIndexName)
                     .Query(q => q
                         .Match(p => p
@@ -224,20 +225,21 @@ loadToOrders(orderData);
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                _client.Indices.Refresh(new RefreshRequest(Indices.All));
+                client.Indices.Refresh(new RefreshRequest(Indices.All));
 
-                var ordersCountAfterDelete = _client.Count<object>(c => c.Index(OrderIndexName));
-                var orderLinesCountAfterDelete = _client.Count<object>(c => c.Index(OrderLinesIndexName));
+                var ordersCountAfterDelete = client.Count<object>(c => c.Index(OrderIndexName));
+                var orderLinesCountAfterDelete = client.Count<object>(c => c.Index(OrderLinesIndexName));
                 
                 Assert.Equal(0, ordersCountAfterDelete.Count);
                 Assert.Equal(0, orderLinesCountAfterDelete.Count);
             }
         }
 
-        [Fact]
+        [RequiresElasticSearchFact]
         public void Can_Update_To_Be_No_Items_In_Child_TTable()
         {
             using (var store = GetDocumentStore())
+            using (GetElasticClient(out var client))
             {
                 SetupElasticEtl(store, defaultScript, new List<string>() {OrderIndexName, OrderLinesIndexName});
                 var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
@@ -256,8 +258,8 @@ loadToOrders(orderData);
 
                 etlDone.Wait(TimeSpan.FromSeconds(30));
 
-                var ordersCount = _client.Count<object>(c => c.Index(OrderIndexName));
-                var orderLinesCount = _client.Count<object>(c => c.Index(OrderLinesIndexName));
+                var ordersCount = client.Count<object>(c => c.Index(OrderIndexName));
+                var orderLinesCount = client.Count<object>(c => c.Index(OrderLinesIndexName));
 
                 Assert.Equal(1, ordersCount.Count);
                 Assert.Equal(2, orderLinesCount.Count);
@@ -273,20 +275,21 @@ loadToOrders(orderData);
 
                 etlDone.Wait(TimeSpan.FromSeconds(90));
 
-                _client.Indices.Refresh(new RefreshRequest(Indices.All));
+                client.Indices.Refresh(new RefreshRequest(Indices.All));
 
-                var ordersCountAfterDelete = _client.Count<object>(c => c.Index(OrderIndexName));
-                var orderLinesCountAfterDelete = _client.Count<object>(c => c.Index(OrderLinesIndexName));
+                var ordersCountAfterDelete = client.Count<object>(c => c.Index(OrderIndexName));
+                var orderLinesCountAfterDelete = client.Count<object>(c => c.Index(OrderLinesIndexName));
 
                 Assert.Equal(1, ordersCountAfterDelete.Count);
                 Assert.Equal(0, orderLinesCountAfterDelete.Count);
             }
         }
 
-        [Fact]
+        [RequiresElasticSearchFact]
         public void Update_of_disassembled_document()
         {
             using (var store = GetDocumentStore())
+            using (GetElasticClient(out var client))
             {
                 using (var session = store.OpenSession())
                 {
@@ -306,7 +309,7 @@ loadToOrders(orderData);
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                var orderResponse = _client.Search<object>(d => d
+                var orderResponse = client.Search<object>(d => d
                     .Index(OrderIndexName)
                     .Query(q => q
                         .Match(p => p
@@ -342,7 +345,7 @@ loadToOrders(orderData);
 
                 etlDone.Wait(TimeSpan.FromMinutes(2));
 
-                var orderResponse1 = _client.Search<object>(d => d
+                var orderResponse1 = client.Search<object>(d => d
                     .Index(OrderIndexName)
                     .Query(q => q
                         .Match(p => p
@@ -362,10 +365,11 @@ loadToOrders(orderData);
             }
         }
 
-        [Fact]
+        [RequiresElasticSearchFact]
         public void Docs_from_two_collections_loaded_to_single_one()
         {
             using (var store = GetDocumentStore())
+            using (GetElasticClient(out var client))
             {
                 SetupElasticEtl(store, @"var userData = { UserId: id(this), Name: this.Name }; loadToUsers(userData)", new[] {"Users", "People"});
                 var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
@@ -381,7 +385,7 @@ loadToOrders(orderData);
                 
                 etlDone.Wait(TimeSpan.FromSeconds(20));
 
-                var userResponse1 = _client.Search<object>(d => d
+                var userResponse1 = client.Search<object>(d => d
                     .Index("users")
                     .Query(q => q
                         .MatchPhrase(p => p
@@ -395,7 +399,7 @@ loadToOrders(orderData);
                 Assert.NotNull(userObject1);
                 Assert.Equal("Joe Doe", userObject1["Name"]);
 
-                var userResponse2 = _client.Search<object>(d => d
+                var userResponse2 = client.Search<object>(d => d
                     .Index("users")
                     .Query(q => q
                         .MatchPhrase(p => p
@@ -424,7 +428,7 @@ loadToOrders(orderData);
 
                 etlDone.Wait(TimeSpan.FromSeconds(20));
 
-                var userResponse3 = _client.Search<object>(d => d
+                var userResponse3 = client.Search<object>(d => d
                     .Index("users")
                     .Query(q => q
                         .MatchPhrase(p => p
@@ -438,7 +442,7 @@ loadToOrders(orderData);
                 Assert.NotNull(userObject3);
                 Assert.Equal("Doe Joe", userObject3["Name"]);
 
-                var userResponse4 = _client.Search<object>(d => d
+                var userResponse4 = client.Search<object>(d => d
                     .Index("users")
                     .Query(q => q
                         .MatchPhrase(p => p
@@ -455,10 +459,11 @@ loadToOrders(orderData);
             }
         }
 
-        [Fact]
+        [RequiresElasticSearchFact]
         public void Can_load_to_specific_collection_when_applying_to_all_docs()
         {
             using (var src = GetDocumentStore())
+            using (GetElasticClient(out var client))
             {
                 var etlDone = WaitForEtl(src, (n, statistics) => statistics.LoadSuccesses != 0);
 
@@ -474,7 +479,7 @@ loadToOrders(orderData);
 
                 etlDone.Wait(TimeSpan.FromSeconds(30));
 
-                var userResponse = _client.Search<object>(d => d
+                var userResponse = client.Search<object>(d => d
                     .Index("users")
                     .Query(q => q
                         .Match(p => p
@@ -487,10 +492,11 @@ loadToOrders(orderData);
             }
         }
 
-        [Fact]
+        [RequiresElasticSearchFact]
         public void Should_delete_existing_document_when_filtered_by_script()
         {
             using (var src = GetDocumentStore())
+            using (GetElasticClient(out var client))
             {
                 var etlDone = WaitForEtl(src, (n, statistics) => statistics.LoadSuccesses != 0);
 
@@ -507,7 +513,7 @@ loadToOrders(orderData);
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                var userResponse = _client.Search<object>(d => d
+                var userResponse = client.Search<object>(d => d
                     .Index("users")
                     .Query(q => q
                         .Match(p => p
@@ -529,9 +535,9 @@ loadToOrders(orderData);
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                _client.Indices.Refresh(new RefreshRequest(Indices.All));
+                client.Indices.Refresh(new RefreshRequest(Indices.All));
 
-                userResponse = _client.Search<object>(d => d
+                userResponse = client.Search<object>(d => d
                     .Index("users")
                     .Query(q => q
                         .Match(p => p
@@ -581,7 +587,7 @@ loadToOrders(orderData);
             }
         }
 
-        [Fact]
+        [RequiresElasticSearchFact]
         public void Etl_from_encrypted_to_non_encrypted_db_will_work()
         {
             var certificates = SetupServerAuthentication();
@@ -615,6 +621,7 @@ loadToOrders(orderData);
             {
                 AdminCertificate = adminCert, ClientCertificate = adminCert, ModifyDatabaseRecord = record => record.Encrypted = true, ModifyDatabaseName = s => dbName,
             }))
+            using (GetElasticClient(out var client))
             {
                 AddEtl(src,
                     new ElasticSearchEtlConfiguration()
@@ -647,7 +654,7 @@ loadToOrders(orderData);
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                var userResponse1 = _client.Search<object>(d => d
+                var userResponse1 = client.Search<object>(d => d
                     .Index("users")
                     .Query(q => q
                         .MatchPhrase(p => p
@@ -840,7 +847,7 @@ loadToOrders(orderData);
                     }
                 },
                                 
-                new ElasticSearchConnectionString {Name = connectionStringName, Nodes = new[] {"http://localhost:9200"}, Authentication = authentication });
+                new ElasticSearchConnectionString {Name = connectionStringName, Nodes = ElasticSearchTestNodes.Instance.VerifiedNodes.Value, Authentication = authentication });
         }
 
         private class Order
@@ -862,18 +869,28 @@ loadToOrders(orderData);
             public int Cost { get; set; }
         }
 
-        public override void Dispose()
+        public IDisposable GetElasticClient(out ElasticClient client)
         {
-            base.Dispose();
+            var localClient = client = ElasticSearchHelper.CreateClient(new ElasticSearchConnectionString { Nodes = ElasticSearchTestNodes.Instance.VerifiedNodes.Value });
 
-            CleanupIndexes(_client);
+            CleanupIndexes(localClient);
 
-            ConcurrentEsEtlTests.Release();
+            return new DisposableAction(() =>
+            {
+                CleanupIndexes(localClient);
+            });
         }
 
         private void CleanupIndexes(ElasticClient client)
         {
             client.Indices.Delete("*");
+        }
+
+        public override void Dispose()
+        {
+            base.Dispose();
+
+            ConcurrentEsEtlTests.Release();
         }
     }
 }
