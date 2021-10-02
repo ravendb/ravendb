@@ -108,8 +108,12 @@
                             <input type="text" class="form-control input-sm" placeholder="Index name"
                                    data-bind="textInput: indexName">
                         </div>
-                        <div class="flex-grow" data-bind="validationElement: idProperty">
+                        <div class="flex-grow margin-right margin-right-sm" data-bind="validationElement: idProperty">
                             <input type="text" class="form-control input-sm" placeholder="ID property" data-bind="textInput: idProperty">
+                        </div>
+                        <div class="flex-noshrink toggle input-sm">
+                            <input id="toggleMode" class="styled" type="checkbox" data-bind="checked: insertOnlyMode">
+                            <label for="toggleMode">Insert only</label>
                         </div>
                         <div class="flex-noshrink">
                             <button type="button" class="btn btn-success btn-sm" title="Add this Elasticsearch index" data-bind="click: $root.saveEditedElasticSearchIndex"><i class="icon-tick"></i></button>
@@ -135,6 +139,7 @@
                                 <div class="col-sm-4">
                                     <div class="widthlabel"><label class="superscript">Id Property</label><strong data-bind="text: idProperty"></strong></div>
                                 </div>
+                                <div class="col-sm-4" data-bind="if: insertOnlyMode">Insert only</div>
                             </div>
                             <div class="flex-noshrink">
                                 <button type="button" class="btn btn-default btn-sm" title="Edit this Elasticsearch index" data-bind="click: $root.editElasticSearchIndex.bind($data)"><i class="icon-edit"></i></button>
