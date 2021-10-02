@@ -12,6 +12,7 @@ interface computedAppUrls {
     conflicts: KnockoutComputed<string>;
     patch: KnockoutComputed<string>;
     cmpXchg: KnockoutComputed<string>;
+    identities: KnockoutComputed<string>;
     indexes: KnockoutComputed<string>;
     newIndex: KnockoutComputed<string>;
     editIndex: (indexName?: string) => KnockoutComputed<string>;
