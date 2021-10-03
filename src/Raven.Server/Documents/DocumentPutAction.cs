@@ -88,7 +88,6 @@ namespace Raven.Server.Documents
                         if (string.Compare(expectedChangeVector, oldChangeVector, StringComparison.Ordinal) != 0)
                             ThrowConcurrentException(id, expectedChangeVector, oldChangeVector);
                     }
-
                     oldDoc = new BlittableJsonReaderObject(oldValue.Read((int)DocumentsTable.Data, out int oldSize), oldSize, context);
                     var oldCollectionName = _documentsStorage.ExtractCollectionName(context, oldDoc);
                     if (oldCollectionName != collectionName)
@@ -99,6 +98,10 @@ namespace Raven.Server.Documents
                     if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) == false)
                     {
                         flags = flags.Strip(DocumentFlags.FromReplication);
+
+                        if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByAttachmentUpdate) ||
+                            nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByCountersUpdate))
+                            flags = flags.Strip(DocumentFlags.Reverted);
 
                         if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByAttachmentUpdate) == false &&
                             oldFlags.Contain(DocumentFlags.HasAttachments))

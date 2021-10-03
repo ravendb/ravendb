@@ -400,6 +400,16 @@ namespace Raven.Server.Documents
                 return UpdateDocumentAfterAttachmentChange(context, lowerDocumentId, documentId, tvr, null);
             }
         }
+        public void DeleteAttachmentDirect2(DocumentsOperationContext context, LazyStringValue lowerDocId)
+        {
+            var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
+            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, lowerDocId, out Slice lowerId, out Slice idSlice))
+            {
+                GetAttachmentKeyInternal(context, lowerId.Content.Ptr, lowerId.Content.Length, default, default, default(Slice), null, 0,
+                    KeyType.Prefix, AttachmentType.Document, default, out var key);
+                table.DeleteByPrimaryKeyPrefix(key);
+            }
+        }
 
         public void RevisionAttachments(DocumentsOperationContext context, Slice lowerId, Slice changeVector)
         {
@@ -424,6 +434,37 @@ namespace Raven.Server.Documents
                     attachment.name.Dispose();
                     attachment.contentType.Dispose();
                     attachment.base64Hash.Release(context.Allocator);
+                }
+            }
+        }
+        public void PutAttachmentRevert(DocumentsOperationContext context, Document document, out bool hasAttachments)
+        {
+            hasAttachments = false;
+
+            if (document.Data.TryGet(Client.Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false ||
+                metadata.TryGet(Client.Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false)
+                return;
+
+            foreach (BlittableJsonReaderObject attachment in attachments)
+            {
+                hasAttachments = true;
+
+                if (attachment.TryGet(nameof(AttachmentName.Name), out LazyStringValue name) == false ||
+                    attachment.TryGet(nameof(AttachmentName.ContentType), out LazyStringValue contentType) == false ||
+                    attachment.TryGet(nameof(AttachmentName.Hash), out LazyStringValue hash) == false)
+                    throw new ArgumentException($"The attachment info in missing a mandatory value: {attachment}");
+
+                var cv = Slices.Empty;
+                var type = AttachmentType.Document;
+
+                using (DocumentIdWorker.GetSliceFromId(context, document.Id, out Slice lowerDocumentId))
+                using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, name, out Slice lowerName, out Slice nameSlice))
+                using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, contentType, out Slice lowerContentType, out Slice contentTypeSlice))
+                using (Slice.External(context.Allocator, hash, out Slice base64Hash))
+                using (GetAttachmentKey(context, lowerDocumentId.Content.Ptr, lowerDocumentId.Size, lowerName.Content.Ptr, lowerName.Size,
+                    base64Hash, lowerContentType.Content.Ptr, lowerContentType.Size, type, cv, out Slice keySlice))
+                {
+                    PutDirect(context, keySlice, nameSlice, contentTypeSlice, base64Hash);
                 }
             }
         }
