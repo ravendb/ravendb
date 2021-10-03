@@ -8,6 +8,7 @@ using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Identity;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow.Collections;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -98,6 +99,43 @@ namespace FastTests.Client
                     generateDocumentKey = multiDbHiLo.GenerateDocumentIdAsync(null, new Product()).GetAwaiter().GetResult();
                     Assert.Equal("products/129-A", generateDocumentKey);
                 }
+            }
+        }
+
+        [Fact]
+        public void Generate_HiLo_Ids()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var multiDbHiLo = new AsyncMultiDatabaseHiLoIdGenerator(store);
+
+                var usersIds = new ConcurrentSet<long>();
+                var productsIds = new ConcurrentSet<long>();
+                var count = 10;
+
+                Parallel.For(0, count, _ =>
+                {
+                    var id = multiDbHiLo.GenerateNextIdForAsync(null, "Users").GetAwaiter().GetResult();
+                    Assert.True(usersIds.TryAdd(id));
+
+                    id = multiDbHiLo.GenerateNextIdForAsync(null, "Products").GetAwaiter().GetResult();
+                    Assert.True(productsIds.TryAdd(id));
+                });
+
+                Assert.Equal(count, usersIds.Count);
+                Assert.Equal(count, productsIds.Count);
+
+                Parallel.For(0, count, _ =>
+                {
+                    var id = store.AsyncMultiDatabaseHiLoIdGenerator.GenerateNextIdForAsync(null, "Users").GetAwaiter().GetResult();
+                    Assert.True(usersIds.TryAdd(id));
+
+                    id = store.AsyncMultiDatabaseHiLoIdGenerator.GenerateNextIdForAsync(null, "Products").GetAwaiter().GetResult();
+                    Assert.True(productsIds.TryAdd(id));
+                });
+
+                Assert.Equal(count * 2, usersIds.Count);
+                Assert.Equal(count * 2, productsIds.Count);
             }
         }
 
