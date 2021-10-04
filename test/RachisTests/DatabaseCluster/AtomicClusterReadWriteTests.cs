@@ -174,7 +174,7 @@ namespace RachisTests.DatabaseCluster
 
                 await amre2.WaitAsync();
                 await Assert.ThrowsAnyAsync<ConcurrencyException>(() => session.SaveChangesAsync());
-            });
+            }).ContinueWith(t => amre.SetException(t.Exception), TaskContinuationOptions.OnlyOnFaulted);
             await amre.WaitAsync();
             using (var session = stores[1].OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
             {

@@ -2,7 +2,9 @@
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
+using Nito.AsyncEx;
 using Raven.Client;
+using Raven.Server.Documents.Sharding.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web;
 using Sparrow.Logging;
@@ -38,6 +40,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
             //TODO - sharding: We probably want to put it in the ShardedContext, not use the server one 
             ContextPool = context.RavenServer.ServerStore.ContextPool;
             Logger = LoggingSource.Instance.GetLogger(ShardedContext.DatabaseName, GetType().FullName);
+
             var topologyEtag = GetLongFromHeaders(Constants.Headers.TopologyEtag);
             if (topologyEtag.HasValue && ShardedContext.HasTopologyChanged(topologyEtag.Value))
             {
@@ -72,7 +75,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                     var db = await task;
                     tasks.Add(db.RachisLogIndexNotifications.WaitForIndexNotification(index, ServerStore.Engine.OperationTimeout));
                 }
-                await Task.WhenAll(tasks);
+                await tasks.WhenAll();
             }
         }
     }

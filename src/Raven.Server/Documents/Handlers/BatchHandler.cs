@@ -54,18 +54,18 @@ namespace Raven.Server.Documents.Handlers
                 var contentType = HttpContext.Request.ContentType;
                 try
                 {
-                if (contentType == null ||
-                    contentType.StartsWith("application/json", StringComparison.OrdinalIgnoreCase))
-                {
-                    await commandBuilder.BuildCommandsAsync(context, RequestBodyStream());
-                }
-                else if (contentType.StartsWith("multipart/mixed", StringComparison.OrdinalIgnoreCase) ||
-                         contentType.StartsWith("multipart/form-data", StringComparison.OrdinalIgnoreCase))
-                {
-                    await commandBuilder.ParseMultipart(context, RequestBodyStream(), HttpContext.Request.ContentType);
-                }
-                else
-                    ThrowNotSupportedType(contentType);
+                    if (contentType == null ||
+                        contentType.StartsWith("application/json", StringComparison.OrdinalIgnoreCase))
+                    {
+                        await commandBuilder.BuildCommandsAsync(context, RequestBodyStream());
+                    }
+                    else if (contentType.StartsWith("multipart/mixed", StringComparison.OrdinalIgnoreCase) ||
+                             contentType.StartsWith("multipart/form-data", StringComparison.OrdinalIgnoreCase))
+                    {
+                        await commandBuilder.ParseMultipart(context, RequestBodyStream(), HttpContext.Request.ContentType);
+                    }
+                    else
+                        ThrowNotSupportedType(contentType);
                 }
                 finally
                 {
@@ -77,32 +77,12 @@ namespace Raven.Server.Documents.Handlers
                     }
                 }
                 
-                var disableAtomicDocumentWrites = GetBoolValueQueryString("disableAtomicDocumentWrites", required: false) ??
-                                                  Database.Configuration.Cluster.DisableAtomicDocumentWrites;
-
-                CheckBackwardCompatibility(HttpContext, ref disableAtomicDocumentWrites);
-
                 using (var command = await commandBuilder.GetCommand(context))
                 {
                     if (command.IsClusterTransaction)
                     {
-                        ValidateCommandForClusterWideTransaction(command);
-
-                        using (ServerStore.Cluster.ClusterTransactionWaiter.CreateTask(out var taskId))
-                        {
-                            // Since this is a cluster transaction we are not going to wait for the write assurance of the replication.
-                            // Because in any case the user will get a raft index to wait upon on his next request.
-                            var options =
-                                new ClusterTransactionCommand.ClusterTransactionOptions(taskId, disableAtomicDocumentWrites,
-                                    ClusterCommandsVersionManager.CurrentClusterMinimalVersion)
-                                {
-                                    WaitForIndexesTimeout = waitForIndexesTimeout,
-                                    WaitForIndexThrow = waitForIndexThrow,
-                                    SpecifiedIndexesQueryString = specifiedIndexesQueryString.Count > 0 ? specifiedIndexesQueryString.ToList() : null
-                                };
-                            await HandleClusterTransaction(context, command, options);
-                        }
-
+                        var clusterTransactionHandler = new ClusterTransactionRequestHandler(this, Database.Name, Database.IdentityPartsSeparator);
+                        await clusterTransactionHandler.Handle(context, command.ParsedCommands);
                         return;
                     }
 
@@ -161,12 +141,6 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        internal static void ValidateCommandForClusterWideTransaction(MergedBatchCommand command)
-        {
-            var commandParsedCommands = command.ParsedCommands;
-            ClusterTransactionCommand.ValidateCommands(commandParsedCommands);
-        }
-
         public static string BatchTrafficWatch(ArraySegment<BatchRequestParser.CommandData> parsedCommands)
         {
             var sb = new StringBuilder();
@@ -188,67 +162,6 @@ namespace Raven.Server.Documents.Handlers
             }
 
             return sb.ToString();
-        }
-
-        private async Task HandleClusterTransaction(DocumentsOperationContext context, MergedBatchCommand command, ClusterTransactionCommand.ClusterTransactionOptions options)
-        {
-            var raftRequestId = GetRaftRequestIdFromQuery();
-            var topology = ServerStore.LoadDatabaseTopology(Database.Name);
-
-            if (topology.Promotables.Contains(ServerStore.NodeTag))
-                throw new DatabaseNotRelevantException("Cluster transaction can't be handled by a promotable node.");
-
-            var clusterTransactionCommand = new ClusterTransactionCommand(Database.Name, Database.IdentityPartsSeparator, topology, command.ParsedCommands, options, raftRequestId);
-            var result = await ServerStore.SendToLeaderAsync(clusterTransactionCommand);
-
-            if (result.Result is List<ClusterTransactionCommand.ClusterTransactionErrorInfo> errors)
-            {
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.Conflict;
-                throw new ClusterTransactionConcurrencyException($"Failed to execute cluster transaction due to the following issues: {string.Join(Environment.NewLine, errors.Select(e => e.Message))}")
-                {
-                    ConcurrencyViolations = errors.Select(e => e.Violation).ToArray()
-                };
-            }
-
-            // wait for the command to be applied on this node
-            await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, result.Index);
-
-            var array = new DynamicJsonArray();
-            if (clusterTransactionCommand.DatabaseCommandsCount > 0)
-            {
-                ClusterTransactionCompletionResult reply;
-                using (var timeout = new CancellationTokenSource(ServerStore.Engine.OperationTimeout))
-                using (var cts = CancellationTokenSource.CreateLinkedTokenSource(timeout.Token, HttpContext.RequestAborted))
-                {
-                    reply = await ServerStore.Cluster.ClusterTransactionWaiter.WaitForResults(options.TaskId, cts.Token);
-                }
-                if (reply.IndexTask != null)
-                {
-                    await reply.IndexTask;
-                }
-
-                array = reply.Array;
-            }
-
-            foreach (var clusterCommands in clusterTransactionCommand.ClusterCommands)
-            {
-                array.Add(new DynamicJsonValue
-                {
-                    ["Type"] = clusterCommands.Type,
-                    ["Key"] = clusterCommands.Id,
-                    ["Index"] = result.Index
-                });
-            }
-
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                context.Write(writer, new DynamicJsonValue
-                {
-                    [nameof(BatchCommandResult.Results)] = array,
-                    [nameof(BatchCommandResult.TransactionIndex)] = result.Index
-                });
-            }
         }
 
         public static void ThrowNotSupportedType(string contentType)
