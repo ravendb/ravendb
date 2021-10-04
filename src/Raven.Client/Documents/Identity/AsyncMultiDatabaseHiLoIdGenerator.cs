@@ -10,7 +10,7 @@ using Raven.Client.Extensions;
 
 namespace Raven.Client.Documents.Identity
 {
-    public class AsyncMultiDatabaseHiLoIdGenerator
+    public class AsyncMultiDatabaseHiLoIdGenerator : IHiLoIdGenerator
     {
         protected readonly DocumentStore Store;
 
