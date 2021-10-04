@@ -1,64 +1,140 @@
-import router = require("plugins/router");
-import app = require("durandal/app");
-import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
 import eventsCollector = require("common/eventsCollector");
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
-import getCompareExchangeItemsCommand = require("commands/database/cmpXchg/getCompareExchangeItemsCommand");
-import hyperlinkColumn = require("widgets/virtualGrid/columns/hyperlinkColumn");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
-import checkedColumn = require("widgets/virtualGrid/columns/checkedColumn");
+import actionColumn = require("widgets/virtualGrid/columns/actionColumn");
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
-import continueTest = require("common/shell/continueTest");
-import getIdentitiesCommand = require("commands/database/debug/getIdentitiesCommand");
+import getIdentitiesCommand = require("commands/database/identities/getIdentitiesCommand");
+import setIdentityCommand = require("commands/database/identities/setIdentityCommand");
+import genUtils = require("common/generalUtils");
+
+class identity {
+    prefix = ko.observable<string>();
+    prefixWithPipe: KnockoutComputed<string>;
+    prefixWithoutPipe: KnockoutComputed<string>;
+    prefixAlreadyExists = ko.observable<boolean>(false);
+    
+    value = ko.observable<number>();
+    currentValue = ko.observable<number>();
+    
+    nextDocumentText: KnockoutComputed<string>;
+    
+    validationGroup = ko.validatedObservable();
+    
+    constructor(prefix: string, value: number) {
+        this.prefix(prefix);
+        this.value(value);
+        this.currentValue(value);
+        
+        this.initObservables();
+        this.initValidation();
+    }
+    
+    private initObservables(): void {
+        this.prefixWithPipe = ko.pureComputed(() => {
+            let prefix = this.prefix();
+            
+            if (prefix.length >= 1 && prefix.charAt(prefix.length - 1) !== "|") {
+                prefix += "|";
+            }
+            
+            return prefix;
+        });
+        
+        this.prefixWithoutPipe = ko.pureComputed(() => {
+            let prefix = this.prefix();
+            
+            if (prefix.length >=2 && prefix.charAt(prefix.length - 1) === "|") {
+                return prefix.slice(0, -1);
+            }
+
+            return prefix;
+        });
+        
+        this.nextDocumentText = ko.pureComputed(() => {
+           return `<span>The next document that will be created with Prefix: "<strong>${genUtils.escapeHtml(this.prefixWithPipe())}</strong>"
+                   will have ID: "<strong>${genUtils.escapeHtml(this.prefixWithoutPipe())}/${this.value() + 1}</strong>"</span>`;
+        });
+    }
+
+    private initValidation(): void {
+        this.prefix.extend({
+            required: true,
+            validation: [
+                {
+                    validator: () => !this.prefixAlreadyExists(),
+                    message: "Prefix already exists"
+                }
+            ]
+        });
+
+        this.value.extend({
+            required: true,
+            digit: true
+        });
+        
+        this.validationGroup = ko.validatedObservable({
+            name: this.prefix,
+            value: this.value
+        })
+    }
+    
+    static empty() {
+        return new identity("", null);
+    }
+}
 
 class identities extends viewModelBase {
 
+    editedIdentityItem = ko.observable<identity>(null);
+    isNewIdentity = ko.observable<boolean>(false);
+    
     filter = ko.observable<string>();
-    private nextItemToFetchIndex = undefined as number;
 
-    private gridController = ko.observable<virtualGridController<Raven.Server.Web.System.CompareExchangeHandler.CompareExchangeListItem>>();
-    private columnPreview = new columnPreviewPlugin<Raven.Server.Web.System.CompareExchangeHandler.CompareExchangeListItem>();
+    identityPrefixList: string[] = [];
+    
+    private gridController = ko.observable<virtualGridController<identity>>();
+    private columnPreview = new columnPreviewPlugin<identity>();
 
+    clientVersion = viewModelBase.clientVersion;
+    
     constructor() {
         super();
-
+        this.bindToCurrentInstance("saveIdentity", "addNewIdentity", "cancel");
         this.initObservables();
+    }
+
+    private initObservables(): void {
         this.filter.throttle(500).subscribe(() => this.filterIdentities());
     }
     
-    private filterIdentities() {
-        this.nextItemToFetchIndex = 0;
-        this.gridController().reset(true);
+    private filterIdentities(): void {
+        this.gridController().reset();
     }
 
-    private initObservables() {
-        // todo..
-    }
+    private fetchIdentities(): JQueryPromise<pagedResult<identity>> {
+        const task = $.Deferred<pagedResult<identity>>();
 
-    activate(args: any) {
-        super.activate(args);
-
-        continueTest.default.init(args); // ???
-    }
-
-    fetchIdentities(skip: number): JQueryPromise<pagedResult<Raven.Server.Web.System.CompareExchangeHandler.CompareExchangeListItem>> {
-        const task = $.Deferred<pagedResult<Raven.Server.Web.System.CompareExchangeHandler.CompareExchangeListItem>>();
-
-        new getCompareExchangeItemsCommand(this.activeDatabase(), this.filter(), this.nextItemToFetchIndex || 0, 101)
+        new getIdentitiesCommand(this.activeDatabase())
             .execute()
-            .done(result => {
-                const hasMore = result.items.length === 101;
-                const totalCount = skip + result.items.length;
-                if (hasMore) {
-                    result.items.pop();
-                    this.nextItemToFetchIndex = skip + result.items.length;
-                }
+            .done((identities: dictionary<number>) => {
+                
+                const mappedIdentities = _.map(identities, (value, key): identity => {
+                    return new identity(key, value);
+                });
+
+                this.identityPrefixList = mappedIdentities.map(x => x.prefixWithoutPipe());
+
+                let filteredIdentities = this.filter() ? 
+                    mappedIdentities.filter(x => x.prefix().toLocaleLowerCase().includes(this.filter().toLocaleLowerCase())) : 
+                    mappedIdentities;
+                
+                filteredIdentities = _.sortBy(filteredIdentities, x => x.prefix());
 
                 task.resolve({
-                    totalResultCount: totalCount,
-                    items: result.items
+                    totalResultCount: filteredIdentities.length,
+                    items: filteredIdentities
                 });
             });
 
@@ -69,38 +145,65 @@ class identities extends viewModelBase {
         super.compositionComplete();
 
         const grid = this.gridController();
+        grid.headerVisible(true);
+       
+        const prefixColumn = new textColumn<identity>(grid, x => x.prefix(), "Document ID Prefix", "60%", { sortable: x => x.prefix() });
+        const valueColumn = new textColumn<identity>(grid, x => x.value().toLocaleString(), "Value", "30%", { sortable: x => x.value() });
+        const editColumn = new actionColumn<identity>(grid,
+            x => this.editIdentity(x),
+            "Edit",
+            `<i class="icon-edit"></i>`,
+            "10%",
+            { title: () => 'Edit identity value', hide: () => this.isReadOnlyAccess() });
 
-        grid.headerVisible(true); // todo maybe use this w/ false instead of the separate empty template ???
-
+        const gridColumns = this.isReadOnlyAccess() ? [prefixColumn, valueColumn] : [prefixColumn, valueColumn, editColumn];
         
-        const nameColumn = new hyperlinkColumn<Raven.Server.Web.System.CompareExchangeHandler.CompareExchangeListItem>(grid, x => x.Key, x => appUrl.forEditCmpXchg(x.Key, this.activeDatabase()), "Name", "30%");
-        const valueColumn = new textColumn<Raven.Server.Web.System.CompareExchangeHandler.CompareExchangeListItem>(grid, x => x.Value.Object, "Value", "30%");
-        const editColumn = new textColumn<Raven.Server.Web.System.CompareExchangeHandler.CompareExchangeListItem>(grid, x => x.Value["@metadata"], "Metadata", "20%");
-
-        const gridColumns = [nameColumn, valueColumn, editColumn];
-        grid.init((s, _) => this.fetchIdentities(s), () => gridColumns);
+        grid.init(() => this.fetchIdentities(), () => gridColumns);
         
-         this.columnPreview.install(".js-identites-grid", ".js-identities-tooltip", 
-             (doc: Raven.Server.Web.System.CompareExchangeHandler.CompareExchangeListItem, column: virtualColumn, e: JQueryEventObject, onValue: (context: any, valueToCopy: string) => void) => {
+        this.columnPreview.install(".js-identities-grid", ".js-identities-tooltip",
+            (identityItem: identity, column: virtualColumn, e: JQueryEventObject, onValue: (context: any, valueToCopy?: string) => void) => {
             if (column instanceof textColumn) {
-                const value = column.getCellValue(doc);
-                if (!_.isUndefined(value)) {
-                    const json = JSON.stringify(value, null, 4);
-                    const html = Prism.highlight(json, (Prism.languages as any).javascript);
-                    onValue(html, json);
-                }
+                onValue(column.getCellValue(identityItem));
             }
         });
     }
 
-    newIdentity($event: JQueryEventObject) {
+    addNewIdentity($event: JQueryEventObject): void {
         eventsCollector.default.reportEvent("identity", "new");
-        // const url = appUrl.forNewCmpXchg(this.activeDatabase());
-        // if ($event.ctrlKey) {
-        //     window.open(url);
-        // } else {
-        //     router.navigate(url);
-        // }
+        this.isNewIdentity(true);
+        this.editedIdentityItem(identity.empty())
+
+        this.editedIdentityItem().prefix.subscribe(() => {
+            const item = this.editedIdentityItem();
+            item.prefixAlreadyExists(!!this.identityPrefixList.find(x => x.toLocaleLowerCase() === item.prefixWithPipe().toLocaleLowerCase() ||
+                                                                         x.toLocaleLowerCase() === item.prefixWithoutPipe().toLocaleLowerCase()));
+        });
+    }
+    
+    editIdentity(identityItem: identity): void {
+        this.isNewIdentity(false);
+        this.editedIdentityItem(identityItem);
+    }
+    
+    cancel(): void {
+        this.isNewIdentity(false);
+        this.editedIdentityItem(null);
+    }
+
+    saveIdentity(): void {
+        const item = this.editedIdentityItem();
+        const prefix = item.prefixWithPipe();
+        
+        if (!this.isValid(item.validationGroup)) {
+            return;
+        }
+
+        new setIdentityCommand(this.activeDatabase(), prefix, item.value())
+            .execute()
+            .done(() => {
+                this.editedIdentityItem(null);
+                this.gridController().reset();
+            });
     }
 }
 

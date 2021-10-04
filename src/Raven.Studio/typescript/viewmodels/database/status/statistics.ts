@@ -7,7 +7,7 @@ import indexStalenessReasons = require("viewmodels/database/indexes/indexStalene
 import getStorageReportCommand = require("commands/database/debug/getStorageReportCommand");
 import statsModel = require("models/database/stats/statistics");
 import popoverUtils = require("common/popoverUtils");
-import getIdentitiesCommand = require("commands/database/debug/getIdentitiesCommand");
+import getIdentitiesCommand = require("commands/database/identities/getIdentitiesCommand");
 
 type identityItem = { Prefix: string, Value: number };
 
