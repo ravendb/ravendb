@@ -6,6 +6,7 @@ using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Replication;
+using Raven.Client.Extensions;
 using Raven.Client.ServerWide.Operations;
 using Sparrow.Json.Parsing;
 
@@ -388,6 +389,20 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
             json[nameof(RetentionPolicy)] = RetentionPolicy?.ToJson();
             json[nameof(IsEncrypted)] = IsEncrypted;
             json[nameof(LastExecutingNodeTag)] = LastExecutingNodeTag;
+            return json;
+        }
+    }
+
+    public class ShardedOngoingTaskRavenEtlDetails : OngoingTaskRavenEtlDetails
+    {
+        public Dictionary<string, NodeId> ResponsibleNodes;
+
+        public new Dictionary<string, OngoingTaskConnectionStatus> TaskConnectionStatus;
+
+        public override DynamicJsonValue ToJson()
+        {
+            var json = base.ToJson();
+            json[nameof(ResponsibleNodes)] = ResponsibleNodes?.ToJson();
             return json;
         }
     }
