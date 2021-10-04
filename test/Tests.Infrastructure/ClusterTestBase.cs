@@ -949,14 +949,26 @@ namespace Tests.Infrastructure
             var relevantServers = currentCluster.Where(s => databaseResult.Topology.RelevantFor(s.ServerStore.NodeTag)).ToArray();
             foreach (var server in relevantServers)
             {
-                await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(record.DatabaseName);
-                numberOfInstances++;
+                var result = server.ServerStore.DatabasesLandlord.TryGetOrCreateDatabase(record.DatabaseName);
+                if (result.DatabaseStatus != DatabasesLandlord.DatabaseSearchResult.Status.Missing)
+                    numberOfInstances++;
             }
 
-            if (numberOfInstances != replicationFactor)
-                throw new InvalidOperationException($@"Couldn't create the db on all nodes, just on {numberOfInstances}
+            if (record.IsSharded == false)
+            {
+                if (numberOfInstances != replicationFactor)
+                {
+                    throw new InvalidOperationException($@"Couldn't create the db on all nodes, just on {numberOfInstances}
                                                     out of {replicationFactor}{Environment.NewLine}
                                                     Server urls are {string.Join(",", Servers.Select(x => $"[{x.WebUrl}|{x.Disposed}]"))}; Current cluster (members) urls are : {string.Join(",", urls)}; The relevant servers are : {string.Join(",", relevantServers.Select(x => x.WebUrl))}; current servers are : {string.Join(",", currentCluster.Select(x => x.WebUrl))}");
+                }
+            }
+            else
+            {
+                if (numberOfInstances != record.Shards.Length)
+                    throw new InvalidOperationException($@"Couldn't create the db on all shards, just on {numberOfInstances} out of { record.Shards.Length}{Environment.NewLine}");
+            }
+
             return (databaseResult, relevantServers.ToList());
         }
 
