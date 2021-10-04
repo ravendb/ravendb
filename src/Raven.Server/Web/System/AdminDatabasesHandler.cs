@@ -419,7 +419,7 @@ namespace Raven.Server.Web.System
                 {
                     topology = new DatabaseTopology
                     {
-                        Members = nodeUrlsAddedTo,
+                        Members = members
                     };
                 }
                 else
