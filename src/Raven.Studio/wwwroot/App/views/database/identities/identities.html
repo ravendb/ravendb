@@ -1,49 +1,78 @@
-<div class="content-margin">
-    <div class="flex-window stretch">
-        <div class="flex-window-head">
-            <div class="flex-horizontal flex-noshrink margin-bottom margin-bottom-sm">
-                <div>
-                    <div class="btn-group">
-                        <button type="button" class="btn btn-primary" data-bind="click: newItem, requiredAccess: 'DatabaseReadWrite'">
-                            <i class="icon-plus"></i>
-                            <span>Add New Identity</span>
-                        </button>
-                    </div>
-                </div>
-                <div>
-                    <input class="form-control" placeholder="Filter names" data-bind="textInput: filter" />
-                </div>
-                <div class="flex-separator"></div>
-                <small title="Go to the RavenDB identities documentation">
-                    <a target="_blank" data-bind="attr: { href: 'https://ravendb.net/l/LGUJH8/' + clientVersion() }"><i class="icon-link"></i>Identities tutorial</a>
-                </small>
+<div class="identities-view flex-vertical absolute-fill">
+    <div class="flex-horizontal flex-wrap margin-top margin-top-lg margin-left margin-left-lg margin-right margin-right-lg">
+        <div>
+            <button type="button" class="btn btn-primary" data-bind="click: addNewIdentity, requiredAccess: 'DatabaseReadWrite'">
+                <i class="icon-plus"></i>
+                <span>Add new identity</span>
+            </button>
+        </div>
+        <div>
+            <input class="form-control" placeholder="Filter prefix" data-bind="textInput: filter" />
+        </div>
+        <div class="flex-separator"></div>
+        <small title="Go to the RavenDB identities documentation">
+            <a target="_blank" data-bind="attr: { href: 'https://ravendb.net/l/CN81C4/' + clientVersion() }"><i class="icon-link"></i>Identities tutorial</a>
+        </small>
+    </div>
+    <div class="flex-horizontal flex-stretch-items content-margin identities-grid">
+        <div class="flex-vertical">
+            <div class="identities-list-container flex-vertical flex-grow" style="position:relative;">
+                <virtual-grid class="resizable js-identities-grid" 
+                              params="controller: gridController, emptyTemplate: 'empty-identities-template'"></virtual-grid>
             </div>
         </div>
-<!--        <div class="flex-window-scroll">-->
-<!--            <div class="scroll-stretch">-->
-<!--                <div class="panel-body">-->
-<!--                    <virtual-grid class="resizable js-cmp-xchg-grid"-->
-<!--                                  params="controller: gridController, emptyTemplate: 'empty-identities-template'"></virtual-grid>-->
-<!--                </div>-->
-<!--            </div>-->
-<!--        </div>-->
-        <div class="flex-window-scroll margin-top">
-            <div class="scroll-stretch">
-                <div class="panel-body">
-                    <virtual-grid class="resizable js-identities-grid"
-                                  params="controller: gridController, emptyTemplate: 'empty-identities-template'"></virtual-grid>
+        <div class="flex-grow slidein-style" data-bind="with: editedIdentityItem">
+            <form class="flex-form" autocomplete="off">
+                <div class="panel padding padding-lg margin-left">
+                    <div class="panel-body">
+                        <div>
+                            <h3 data-bind="text: $root.isNewIdentity() ? `Add New Identity` : `Edit Identity Value`"></h3>
+                        </div>
+                        <div class="margin-top margin-top-lg">
+                            <div class="form-group margin-top margin-top-lg" data-bind="validationElement: prefix">
+                                <label for="prefix" class="control-label">Prefix</label>
+                                <div class="flex-grow">
+                                    <input type="text" class="form-control" data-bind="textInput: prefix, disable: !$root.isNewIdentity()"
+                                           id="prefix" placeholder="Enter the Document ID Prefix">
+                                </div>
+                            </div>
+                            <div class="form-group margin-top margin-top-lg" data-bind="validationElement: value">
+                                <label for="value" class="control-label">Value</label>
+                                <div class="flex-grow">
+                                    <input type="number" min="0" class="form-control" data-bind="numericInput: value"
+                                           id="value" placeholder="Enter identity value">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group margin-top margin-top-lg" data-bind="if: validationGroup.isValid()">
+                            <label class="control-label">&nbsp;</label>
+                            <div class="flex-grow">
+                                <div class="text-info bg-info padding padding-sm">
+                                    <i class="icon-info"></i>
+                                    <span data-bind="html: nextDocumentText"></span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <button type="submit" class="btn btn-primary margin-top margin-top-lg" data-bind="click: $root.saveIdentity">
+                                <i class="icon-save"></i>
+                                <span data-bind="text: $root.isNewIdentity() ? `Create` : `Update`"></span>
+                            </button>
+                            <button class="btn btn-default margin-top margin-top-lg" data-bind="click: $root.cancel">
+                                <i class="icon-cancel"></i><span>Cancel</span>
+                            </button>
+                        </div>
+                    </div>
                 </div>
-            </div>
+            </form>
         </div>
     </div>
 </div>
 
 <script type="text/html" id="empty-identities-template">
-    <div class="if: $root.filter">
-        <div class="text-center text-muted">
-            <i class="icon-lg icon-empty-set"></i>
-            <h2 class="margin-top margin-top-sm">No matching identities</h2>
-        </div>
+    <div class="text-center text-muted">
+        <i class="icon-lg icon-empty-set"></i>
+        <h2 class="margin-top margin-top-sm" data-bind="text: $root.filter() ? 'No matching identities' : 'No identities defined'"></h2>
     </div>
 </script>
 
