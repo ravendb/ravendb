@@ -127,10 +127,10 @@ namespace FastTests.Client
 
                 Parallel.For(0, count, _ =>
                 {
-                    var id = store.AsyncMultiDatabaseHiLoIdGenerator.GenerateNextIdForAsync(null, "Users").GetAwaiter().GetResult();
+                    var id = store.HiLoIdGenerator.GenerateNextIdForAsync(null, "Users").GetAwaiter().GetResult();
                     Assert.True(usersIds.TryAdd(id));
 
-                    id = store.AsyncMultiDatabaseHiLoIdGenerator.GenerateNextIdForAsync(null, "Products").GetAwaiter().GetResult();
+                    id = store.HiLoIdGenerator.GenerateNextIdForAsync(null, "Products").GetAwaiter().GetResult();
                     Assert.True(productsIds.TryAdd(id));
                 });
 
