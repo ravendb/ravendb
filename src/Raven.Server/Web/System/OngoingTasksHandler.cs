@@ -1432,7 +1432,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        private static OngoingTaskState GetEtlTaskState<T>(EtlConfiguration<T> config) where T : ConnectionString
+        internal static OngoingTaskState GetEtlTaskState<T>(EtlConfiguration<T> config) where T : ConnectionString
         {
             var taskState = OngoingTaskState.Enabled;
 

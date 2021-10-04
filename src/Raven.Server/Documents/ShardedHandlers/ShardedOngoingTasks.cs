@@ -12,11 +12,18 @@ using System.Threading.Tasks;
 using Nito.AsyncEx;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Database;
+using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
+using Raven.Server.Documents.ETL;
+using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Web.System;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -30,8 +37,6 @@ namespace Raven.Server.Documents.ShardedHandlers
             await DatabaseConfigurations((_, databaseName, connectionString, guid) => ServerStore.PutConnectionString(_, databaseName, connectionString, guid), 
                 "put-connection-string", GetRaftRequestIdFromQuery());
         }
-
-
 
         [RavenShardedAction("/databases/*/admin/etl", "PUT")]
         public async Task AddEtl()
@@ -151,45 +156,212 @@ namespace Raven.Server.Documents.ShardedHandlers
             }
         }
 
-        /*        protected delegate void RefAction(string databaseName, ref BlittableJsonReaderObject configuration, JsonOperationContext context);
+        // Get Info about a specific task - For Edit View in studio - Each task should return its own specific object
+        [RavenShardedAction("/databases/*/task", "GET")]
+        public async Task GetOngoingTaskInfo()
+        {
+            if (ResourceNameValidator.IsValidResourceName(ShardedContext.DatabaseName, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
+                throw new BadRequestException(errorMessage);
+            long key = 0;
+            var taskId = GetLongQueryString("key", false);
+            if (taskId != null)
+                key = taskId.Value;
+            var name = GetStringQueryString("taskName", false);
 
+            if ((taskId == null) && (name == null))
+                throw new ArgumentException($"You must specify a query string argument of either 'key' or 'name' , but none was specified.");
 
-                protected delegate Task<(long, object)> SetupFunc(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject json, string raftRequestId);
+            var typeStr = GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
 
-
-                protected async Task DatabaseConfigurations(SetupFunc setupConfigurationFunc,
-                    string debug,
-                    string raftRequestId,
-                    RefAction beforeSetupConfiguration = null,
-                    Action<DynamicJsonValue, BlittableJsonReaderObject, long> fillJson = null,
-                    HttpStatusCode statusCode = HttpStatusCode.OK)
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                using (context.OpenReadTransaction())
                 {
-                    if (await CanAccessDatabaseAsync(Database.Name, requireAdmin: true, requireWrite: true) == false)
-                        return;
+                    var clusterTopology = ServerStore.GetClusterTopology(context);
+                    var record = ServerStore.Cluster.ReadDatabase(context, ShardedContext.DatabaseName);
+                    if (record == null)
+                        throw new DatabaseDoesNotExistException(ShardedContext.DatabaseName);
 
-                    if (ResourceNameValidator.IsValidResourceName(Database.Name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
-                        throw new BadRequestException(errorMessage);
+                    if (Enum.TryParse<OngoingTaskType>(typeStr, true, out var type) == false)
+                        throw new ArgumentException($"Unknown task type: {type}", "type");
 
-                    await ServerStore.EnsureNotPassiveAsync();
-                    using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    switch (type)
                     {
-                        var configurationJson = await context.ReadForMemoryAsync(RequestBodyStream(), debug);
-                        beforeSetupConfiguration?.Invoke(Database.Name, ref configurationJson, context);
+                        case OngoingTaskType.Replication:
+                        case OngoingTaskType.Subscription:
+                        case OngoingTaskType.PullReplicationAsSink:
+                        case OngoingTaskType.Backup:
+                            // todo
+                            break;
+                        case OngoingTaskType.PullReplicationAsHub:
+                            throw new BadRequestException("Getting task info for " + OngoingTaskType.PullReplicationAsHub + " is not supported");
 
-                        var (index, _) = await setupConfigurationFunc(context, Database.Name, configurationJson, raftRequestId);
-                        await WaitForIndexToBeApplied(context, index);
-                        HttpContext.Response.StatusCode = (int)statusCode;
+                        case OngoingTaskType.SqlEtl:
+/*
 
-                        await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                        {
-                            var json = new DynamicJsonValue
+                            var sqlEtl = name != null ?
+                                record.SqlEtls.Find(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+                                : record.SqlEtls?.Find(x => x.TaskId == key);
+
+                            if (sqlEtl == null)
                             {
-                                ["RaftCommandIndex"] = index,
+                                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                                break;
+                            }
+
+                            await WriteResult(context, new OngoingTaskSqlEtlDetails
+                            {
+                                TaskId = sqlEtl.TaskId,
+                                TaskName = sqlEtl.Name,
+                                MentorNode = sqlEtl.MentorNode,
+                                Configuration = sqlEtl,
+                                TaskState = GetEtlTaskState(sqlEtl),
+                                TaskConnectionStatus = GetEtlTaskConnectionStatus(record, sqlEtl, out var sqlNode, out var sqlEtlError),
+                                ResponsibleNode = new NodeId
+                                {
+                                    NodeTag = sqlNode,
+                                    NodeUrl = clusterTopology.GetUrlFromTag(sqlNode)
+                                },
+                                Error = sqlEtlError
+                            });*/
+                            break;
+
+                        case OngoingTaskType.OlapEtl:
+
+/*                            var olapEtl = name != null ?
+                                record.OlapEtls.Find(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+                                : record.OlapEtls?.Find(x => x.TaskId == key);
+
+                            if (olapEtl == null)
+                            {
+                                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                                break;
+                            }
+
+                            await WriteResult(context, new OngoingTaskOlapEtlDetails
+                            {
+                                TaskId = olapEtl.TaskId,
+                                TaskName = olapEtl.Name,
+                                MentorNode = olapEtl.MentorNode,
+                                Configuration = olapEtl,
+                                TaskState = GetEtlTaskState(olapEtl),
+                                TaskConnectionStatus = GetEtlTaskConnectionStatus(record, olapEtl, out var olapNode, out var olapEtlError),
+                                ResponsibleNode = new NodeId
+                                {
+                                    NodeTag = olapNode,
+                                    NodeUrl = clusterTopology.GetUrlFromTag(olapNode)
+                                },
+                                Error = olapEtlError
+                            });*/
+                            break;
+
+                        case OngoingTaskType.RavenEtl:
+
+                            var ravenEtl = name != null ?
+                                record.RavenEtls.Find(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+                                : record.RavenEtls?.Find(x => x.TaskId == key);
+
+                            if (ravenEtl == null)
+                            {
+                                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                                break;
+                            }
+
+                            var tasks = ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(ShardedContext.DatabaseName);
+                            var databases = new List<DocumentDatabase>(record.Shards.Length);
+                            string url = default;
+                            foreach (var task in tasks)
+                            {
+                                var db = await task;
+                                databases.Add(db);
+                                var process = db.EtlLoader.Processes.OfType<RavenEtl>().FirstOrDefault(x => x.ConfigurationName == ravenEtl.Name);
+                                if (process != null)
+                                {
+                                    url = process.Url;
+                                }
+                            }
+
+                            var ongoingTaskRavenEtlDetails = new ShardedOngoingTaskRavenEtlDetails
+                            {
+                                TaskId = ravenEtl.TaskId,
+                                TaskName = ravenEtl.Name,
+                                Configuration = ravenEtl,
+                                TaskState = OngoingTasksHandler.GetEtlTaskState(ravenEtl),
+                                MentorNode = ravenEtl.MentorNode,
+                                DestinationUrl = url,
+                                TaskConnectionStatus = GetShardedEtlTaskConnectionStatus(record, databases, ravenEtl, out var responsibleNodes, out var ravenEtlError),
+                                Error = ravenEtlError,
+                                ResponsibleNodes = new Dictionary<string, NodeId>()
                             };
-                            fillJson?.Invoke(json, configurationJson, index);
-                            context.Write(writer, json);
-                        }
+
+                            foreach (var kvp in responsibleNodes)
+                            {
+                                ongoingTaskRavenEtlDetails.ResponsibleNodes[kvp.Key] = new NodeId
+                                {
+                                    NodeTag = kvp.Value,
+                                    NodeUrl = clusterTopology.GetUrlFromTag(kvp.Value)
+                                };
+                            }
+
+                            await WriteResult(context, ongoingTaskRavenEtlDetails);
+                            break;
+
+                        default:
+                            HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                            break;
                     }
-                }*/
+                }
+            }
+        }
+
+        private async Task WriteResult(JsonOperationContext context, IDynamicJson taskInfo)
+        {
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                context.Write(writer, taskInfo.ToJson());
+            }
+        }
+
+        private Dictionary<string, OngoingTaskConnectionStatus> GetShardedEtlTaskConnectionStatus<T>(DatabaseRecord record, IReadOnlyList<DocumentDatabase> databases, EtlConfiguration<T> config, out Dictionary<string, string> responsibleNodes, out string error)
+            where T : ConnectionString
+        {
+            var connectionStatus = new Dictionary<string, OngoingTaskConnectionStatus>();
+            error = null;
+
+            responsibleNodes = new Dictionary<string, string>();
+            for (var index = 0; index < databases.Count; index++)
+            {
+                var shard = record.Shards[index];
+                var db = databases[index];
+                var dbName = db.Name;
+                var processState = EtlLoader.GetProcessState(config.Transforms, db, config.Name);
+                var tag = db.WhoseTaskIsIt(shard, config, processState);
+                
+                responsibleNodes[dbName] = tag;
+
+                if (tag == ServerStore.NodeTag)
+                {
+                    var process = db.EtlLoader.Processes.FirstOrDefault(x => x.ConfigurationName == config.Name);
+
+                    if (process != null)
+                        connectionStatus[dbName] = process.GetConnectionStatus();
+                    else
+                    {
+                        if (config.Disabled)
+                            connectionStatus[dbName] = OngoingTaskConnectionStatus.NotActive;
+                        else
+                            error = $"ETL process '{config.Name}' was not found.";
+                    }
+                }
+                else
+                {
+                    connectionStatus[dbName] = OngoingTaskConnectionStatus.NotOnThisNode;
+                }
+            }
+
+            return connectionStatus;
+        }
     }
 }
