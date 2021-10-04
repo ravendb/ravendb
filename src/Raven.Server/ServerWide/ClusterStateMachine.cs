@@ -1171,7 +1171,7 @@ namespace Raven.Server.ServerWide
                         {
                             // delete immediately if this node was removed.
                             var deleteNow = record.DeletionInProgress.Remove(removed) && _parent.Tag == removed;
-                            if (record.DeletionInProgress.Count == 0 && record.Topology.Count == 0 || deleteNow)
+                            if (record.DeletionInProgress.Count == 0 && record.IsSharded == false && record.Topology.Count == 0 || deleteNow)
                             {
                                 DeleteDatabaseRecord(context, index, items, lowerKey, record, serverStore);
                                 tasks.Add(() => Changes.OnDatabaseChanges(record.DatabaseName, index, nameof(RemoveNodeFromCluster),
@@ -1181,12 +1181,32 @@ namespace Raven.Server.ServerWide
                             }
                         }
 
-                        if (record.Topology.RelevantFor(removed))
+                        if (record.IsSharded == false && record.Topology.RelevantFor(removed))
                         {
                             record.Topology.RemoveFromTopology(removed);
                             // Explicit removing of the node means that we modify the replication factor
                             record.Topology.ReplicationFactor = record.Topology.Count;
                             if (record.Topology.Count == 0)
+                            {
+                                DeleteDatabaseRecord(context, index, items, lowerKey, record, serverStore);
+                                continue;
+                            }
+                        }
+                        else
+                        {
+                            bool emptyShardTypology = true;
+                            foreach (var shardTopology in record.Shards)
+                            {
+                                if (shardTopology.RelevantFor(removed))
+                                {
+                                    shardTopology.RemoveFromTopology(removed);
+                                    // Explicit removing of the node means that we modify the replication factor
+                                    shardTopology.ReplicationFactor = shardTopology.Count;
+                                    emptyShardTypology &= shardTopology.Count == 0;
+                                }
+                            }
+
+                            if (emptyShardTypology)
                             {
                                 DeleteDatabaseRecord(context, index, items, lowerKey, record, serverStore);
                                 continue;
