@@ -532,7 +532,7 @@ namespace Raven.Server.Web
             throw new ArgumentException($"Could not parse query string '{name}' as date, val '{dataAsString}'");
         }
 
-        protected TimeSpan? GetTimeSpanQueryString(string name, bool required = true)
+        protected internal TimeSpan? GetTimeSpanQueryString(string name, bool required = true)
         {
             var timeSpanAsString = GetStringQueryString(name, required);
             if (timeSpanAsString == null)

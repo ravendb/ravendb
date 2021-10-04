@@ -58,25 +58,29 @@ namespace Raven.Server.Documents.Sharding.Commands
 
         public void AddDefaultHeaders(ShardedBaseCommand<T> command, Headers headers)
         {
-            if (headers == Commands.Headers.None)
-                return;
-
             if (headers.HasFlag(Commands.Headers.IfMatch))
+            {
                 command.Headers["If-Match"] = Handler.GetStringFromHeaders("If-Match");
-
-            if (headers.HasFlag(Commands.Headers.IfNoneMatch))
+            }
+            else if(headers.HasFlag(Commands.Headers.IfNoneMatch))
+            {
                 command.Headers["If-None-Match"] = Handler.GetStringFromHeaders("If-None-Match");
+            }
 
             if (headers.HasFlag(Commands.Headers.Sharded))
                 command.Headers[Constants.Headers.Sharded] = "true";
+            
+            var lastKnownClusterTransactionIndex = Handler.GetStringFromHeaders(Constants.Headers.LastKnownClusterTransactionIndex);
+            if (lastKnownClusterTransactionIndex != null)
+                command.Headers[Constants.Headers.LastKnownClusterTransactionIndex] = lastKnownClusterTransactionIndex;
         }
     }
 
     public enum Headers
     {
-        None,
-        IfMatch,
-        IfNoneMatch,
-        Sharded
+        None = 0,
+        IfMatch = 1,
+        IfNoneMatch = 2,
+        Sharded = 4
     }
 }

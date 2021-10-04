@@ -62,8 +62,8 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 {
                     if (batch.IsClusterTransaction)
                     {
-                        //TODO To use common code for shard and not shard
-                        await HandleClusterTransaction(context, batch);
+                        var clusterTransactionHandler = new ClusterTransactionRequestHandler(this, ShardedContext.DatabaseName, ShardedContext.IdentitySeparator);
+                        await clusterTransactionHandler.Handle(context, batch.ParsedCommands);
                         return;
                     }
 
@@ -100,82 +100,6 @@ namespace Raven.Server.Documents.Sharding.Handlers
                         }
                         context.Write(writer, new DynamicJsonValue { [nameof(BatchCommandResult.Results)] = new DynamicJsonArray(reply) });
                     }
-                }
-            }
-        }
-
-        private async Task HandleClusterTransaction(TransactionOperationContext context, ShardedBatchCommand batch)
-        {
-            ClusterTransactionCommand.ValidateCommands(batch.ParsedCommands);
-
-            using (ServerStore.Cluster.ClusterTransactionWaiter.CreateTask(out var taskId))
-            {
-                var waitForIndexesTimeout = GetTimeSpanQueryString("waitForIndexesTimeout", required: false); //TODO  To check
-                var waitForIndexThrow = GetBoolValueQueryString("waitForIndexThrow", required: false) ?? true; //TODO  To check
-                var specifiedIndexesQueryString = HttpContext.Request.Query["waitForSpecificIndex"]; //TODO  To check
-
-                var disableAtomicDocumentWrites = GetBoolValueQueryString("disableAtomicDocumentWrites", required: false) ?? false;
-
-                BatchHandler.CheckBackwardCompatibility(HttpContext, ref disableAtomicDocumentWrites);
-
-                var options = new ClusterTransactionCommand.ClusterTransactionOptions(taskId, disableAtomicDocumentWrites, ClusterCommandsVersionManager.CurrentClusterMinimalVersion)
-                {
-                    WaitForIndexesTimeout = waitForIndexesTimeout,
-                    WaitForIndexThrow = waitForIndexThrow,
-                    SpecifiedIndexesQueryString = specifiedIndexesQueryString.Count > 0 ? specifiedIndexesQueryString.ToList() : null
-                };
-
-                var raftRequestId = GetRaftRequestIdFromQuery();
-                var clusterTransactionCommand = new ClusterTransactionCommand(
-                    ShardedContext.DatabaseName,
-                    ShardedContext.IdentitySeparator,
-                    batch.ParsedCommands,
-                    options,
-                    raftRequestId);
-
-                var clusterTransactionCommandResult = await ServerStore.SendToLeaderAsync(clusterTransactionCommand);
-                if (clusterTransactionCommandResult.Result is List<string> errors)
-                {
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.Conflict;
-                    throw new ConcurrencyException($"Failed to execute cluster transaction due to the following issues: {string.Join(Environment.NewLine, errors)}");
-                }
-                await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, clusterTransactionCommandResult.Index);
-                
-                DynamicJsonArray result;
-                if (clusterTransactionCommand.DatabaseCommands.Count > 0)
-                {
-                    using var timeout = new CancellationTokenSource(ServerStore.Engine.OperationTimeout);
-                    using var cts = CancellationTokenSource.CreateLinkedTokenSource(timeout.Token, HttpContext.RequestAborted);
-                    var databaseResult = await ServerStore.Cluster.ClusterTransactionWaiter.WaitForResults(taskId, cts.Token);
-                    result = databaseResult.Array;
-                }
-                else
-                {
-                    result = new DynamicJsonArray();
-                }
-
-                if (clusterTransactionCommand.ClusterCommands.Count > 0)
-                {
-                    foreach (var clusterCommands in clusterTransactionCommand.ClusterCommands)
-                    {
-                        result.Add(new DynamicJsonValue
-                        {
-                            [nameof(ICommandData.Type)] = clusterCommands.Type,
-                            [nameof(ICompareExchangeValue.Key)] = clusterCommands.Id,
-                            [nameof(ICompareExchangeValue.Index)] = clusterTransactionCommandResult.Index
-                        });
-                    }
-                }
-
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    context.Write(writer,
-                        new DynamicJsonValue
-                        {
-                            [nameof(BatchCommandResult.Results)] = result,
-                            [nameof(BatchCommandResult.TransactionIndex)] = clusterTransactionCommandResult.Index
-                        });
                 }
             }
         }
