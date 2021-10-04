@@ -2481,9 +2481,13 @@ namespace Raven.Server.ServerWide
 
         //this is needed for cases where Result or any of its fields are blittable json.
         //(for example, this is needed for use with AddOrUpdateCompareExchangeCommand, since it returns BlittableJsonReaderObject as result)
-        public Task<(long Index, object Result)> SendToLeaderAsync(TransactionOperationContext context, CommandBase cmd)
+        public async Task<(long Index, object Result)> SendToLeaderAsync(TransactionOperationContext context, CommandBase cmd)
         {
-            return SendToLeaderAsyncInternal(context, cmd);
+            // the command and result here rely on the context, so we must prevent its early release.
+            using (context.PreventContextReturn())
+            {
+                return await SendToLeaderAsyncInternal(context, cmd);
+            }
         }
 
         public DynamicJsonArray GetClusterErrors()
@@ -3137,6 +3141,8 @@ namespace Raven.Server.ServerWide
         internal class TestingStuff
         {
             internal Action BeforePutLicenseCommandHandledInOnValueChanged;
+            
+            public bool SimulateCompareExchangeRequestDrop;
         }
     }
 }

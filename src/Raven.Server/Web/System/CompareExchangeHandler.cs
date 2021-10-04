@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net;
 using System.Threading.Tasks;
@@ -119,7 +120,6 @@ namespace Raven.Server.Web.System
                 numberOfResults, keys.Count, sw.ElapsedMilliseconds, totalDocumentsSizeInBytes);
         }
 
-
         [RavenAction("/databases/*/cmpxchg", "PUT", AuthorizationStatus.ValidUser, DisableOnCpuCreditsExhaustion = true)]
         public async Task PutCompareExchangeValue()
         {
@@ -137,6 +137,12 @@ namespace Raven.Server.Web.System
                 var command = new AddOrUpdateCompareExchangeCommand(Database.Name, key, updateJson, index, context, raftRequestId);
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
+                    if (ServerStore.ForTestingPurposes?.SimulateCompareExchangeRequestDrop == true)
+                    {
+                        var t = Task.Run(async () => await ServerStore.SendToLeaderAsync(context, command));
+                        throw new InvalidOperationException("Simulate Request Drop");
+                    }
+
                     (var raftIndex, var response) = await ServerStore.SendToLeaderAsync(context, command);
                     await ServerStore.Cluster.WaitForIndexNotification(raftIndex);
 

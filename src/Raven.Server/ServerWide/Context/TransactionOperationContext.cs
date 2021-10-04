@@ -3,6 +3,7 @@ using Sparrow.Json;
 using Sparrow.Server;
 using Sparrow.Threading;
 using Voron;
+using Voron.Util;
 
 namespace Raven.Server.ServerWide.Context
 {
@@ -129,6 +130,20 @@ namespace Raven.Server.ServerWide.Context
             throw new InvalidOperationException("Transaction is already opened");
         }
 
+        private readonly MultipleUseFlag _locked = new MultipleUseFlag();
+        private Action _continuation;
+
+        public IDisposable PreventContextReturn()
+        {
+            _locked.RaiseOrDie();
+
+            return new DisposableAction(()=>
+            {
+                _locked.LowerOrDie();
+                _continuation?.Invoke();
+            });
+        }
+
         public void CloseTransaction()
         {
             Transaction?.Dispose();
@@ -137,6 +152,12 @@ namespace Raven.Server.ServerWide.Context
 
         public override void Dispose()
         {
+            if (_locked.IsRaised())
+            {
+                _continuation = Dispose;
+                return;
+            }
+
             base.Dispose();
 
             Allocator.Dispose();
@@ -144,11 +165,19 @@ namespace Raven.Server.ServerWide.Context
 
         protected internal override void Reset(bool forceResetLongLivedAllocator = false, bool releaseAllocatedStringValues = false)
         {
+            if (_locked.Raise() == false)
+            {
+                _continuation = () => Reset(forceResetLongLivedAllocator, releaseAllocatedStringValues);
+                return;
+            }
+
             CloseTransaction();
 
             base.Reset(forceResetLongLivedAllocator, releaseAllocatedStringValues);
 
             Allocator.Reset();
+
+            _locked.Lower();
         }
     }
 }
