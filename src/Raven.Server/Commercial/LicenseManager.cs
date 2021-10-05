@@ -241,14 +241,19 @@ namespace Raven.Server.Commercial
 
         private void RemoveAgplAlert()
         {
+            var id = AlertRaised.GetKey(AlertType.LicenseManager_AGPL3, null);
+            if (_serverStore.NotificationCenter.Exists(id) == false)
+                return;
+
             try
             {
-                _serverStore.NotificationCenter.Dismiss(AlertRaised.GetKey(AlertType.LicenseManager_AGPL3, null));
+                _serverStore.NotificationCenter.Dismiss(id);
             }
             catch (Exception e)
             {
                 // nothing we do can here, we'll try to remove it on next restart or when reloading the license
-                Logger.Info("Failed to remove the AGPL alert", e);
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations("Failed to remove the AGPL alert", e);
             }
         }
 

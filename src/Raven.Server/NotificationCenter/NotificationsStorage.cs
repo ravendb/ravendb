@@ -258,6 +258,17 @@ namespace Raven.Server.NotificationCenter
             }
         }
 
+        public bool Exists(string id)
+        {
+            using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (var tx = context.OpenReadTransaction())
+            using (Slice.From(tx.InnerTransaction.Allocator, id, out Slice slice))
+            {
+                var table = tx.InnerTransaction.OpenTable(_actionsSchema, NotificationsSchema.NotificationsTree);
+                return table.ReadByKey(slice, out _);
+            }
+        }
+
         public long GetAlertCount()
         {
             return GetNotificationCount(nameof(NotificationType.AlertRaised));
@@ -292,7 +303,6 @@ namespace Raven.Server.NotificationCenter
 
         private NotificationTableValue Read(JsonOperationContext context, ref TableValueReader reader)
         {
-
             var createdAt = new DateTime(Bits.SwapBytes(*(long*)reader.Read(NotificationsSchema.NotificationsTable.CreatedAtIndex, out int size)));
 
             var postponeUntilTicks = *(long*)reader.Read(NotificationsSchema.NotificationsTable.PostponedUntilIndex, out size);
