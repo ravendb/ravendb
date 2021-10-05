@@ -261,7 +261,7 @@ loadToOrders(orderData);
                     .Query(q => q
                         .Match(p => p
                             .Field("Id")
-                            .Query("orders/1-A"))
+                            .Query("orders/1-a"))
                     )
                 );
 
@@ -270,25 +270,25 @@ loadToOrders(orderData);
                     .Query(q => q
                         .Match(p => p
                             .Field("OrderId")
-                            .Query("orders/1-A"))
+                            .Query("orders/1-a"))
                     )
                 );
 
                 Assert.Equal(1, orderResponse.Documents.Count);
-                Assert.Equal("orders/1-A", JObject.FromObject(orderResponse.Documents.First()).ToObject<Dictionary<string, object>>()?["Id"]);
+                Assert.Equal("orders/1-a", JObject.FromObject(orderResponse.Documents.First()).ToObject<Dictionary<string, object>>()?["Id"]);
 
                 Assert.Equal(2, orderLineResponse.Documents.Count);
 
                 foreach (var document in orderLineResponse.Documents)
                 {
-                    Assert.Equal("orders/1-A", JObject.FromObject(document).ToObject<Dictionary<string, object>>()?["OrderId"]);
+                    Assert.Equal("orders/1-a", JObject.FromObject(document).ToObject<Dictionary<string, object>>()?["OrderId"]);
                 }
 
                 etlDone.Reset();
 
                 using (var session = store.OpenSession())
                 {
-                    session.Delete("orders/1-A");
+                    session.Delete("orders/1-a");
 
                     session.SaveChanges();
                 }
@@ -387,7 +387,7 @@ loadToOrders(orderData);
                     .Query(q => q
                         .Match(p => p
                             .Field("Id")
-                            .Query("orders/1-A"))
+                            .Query("orders/1-a"))
                     )
                 );
 
@@ -396,7 +396,7 @@ loadToOrders(orderData);
                 var orderObject = JObject.FromObject(orderResponse.Documents.First()).ToObject<Dictionary<string, object>>();
 
                 Assert.NotNull(orderObject);
-                Assert.Equal("orders/1-A", orderObject["Id"]);
+                Assert.Equal("orders/1-a", orderObject["Id"]);
                 Assert.Equal(2, (int)(long)orderObject["OrderLinesCount"]);
                 Assert.Equal(20, (int)(long)orderObject["TotalCost"]);
 
@@ -425,7 +425,7 @@ loadToOrders(orderData);
                     .Query(q => q
                         .Match(p => p
                             .Field("Id")
-                            .Query("orders/1-A"))
+                            .Query("orders/1-a"))
                     )
                 );
 
@@ -434,7 +434,7 @@ loadToOrders(orderData);
                 var orderObject1 = JObject.FromObject(orderResponse1.Documents.First()).ToObject<Dictionary<string, object>>();
 
                 Assert.NotNull(orderObject1);
-                Assert.Equal("orders/1-A", orderObject1["Id"]);
+                Assert.Equal("orders/1-a", orderObject1["Id"]);
                 Assert.Equal(2, (int)(long)orderObject1["OrderLinesCount"]);
                 Assert.Equal(30, (int)(long)orderObject1["TotalCost"]);
             }
@@ -744,7 +744,7 @@ loadToOrders(orderData);
                     .Query(q => q
                         .MatchPhrase(p => p
                             .Field("UserId")
-                            .Query("users/1"))
+                            .Query("users/1-a"))
                     )
                 );
 

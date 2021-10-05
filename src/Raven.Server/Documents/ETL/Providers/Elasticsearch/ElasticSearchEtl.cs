@@ -15,11 +15,15 @@ using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Exceptions.ETL.ElasticSearch;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
 {
     public class ElasticSearchEtl : EtlProcess<ElasticSearchItem, ElasticSearchIndexWithRecords, ElasticSearchEtlConfiguration, ElasticSearchConnectionString, EtlStatsScope, EtlPerformanceOperation>
     {
+        private readonly HashSet<string> _existingIndexes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
         public readonly ElasticSearchEtlMetricsCountersManager ElasticSearchMetrics = new ElasticSearchEtlMetricsCountersManager();
 
         public ElasticSearchEtl(Transformation transformation, ElasticSearchEtlConfiguration configuration, DocumentDatabase database, ServerStore serverStore)
@@ -97,39 +101,46 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
             {
                 string indexName = index.IndexName.ToLower();
 
-                if (_client.Indices.Exists(new IndexExistsRequest(Indices.Index(indexName))).Exists == false)
-                {
-                    var response = _client.Indices.Create(indexName, c => c
-                        .Map(m => m
-                            .Properties(p => p
-                                .Keyword(t => t
-                                    .Name(index.IndexIdProperty)))));
+                EnsureIndexExists(indexName, index);
 
-                    // TODO arek - check response status
-                }
-
-                if (index.InsertOnlyMode == false)
-                {
+                if (index.InsertOnlyMode == false) 
                     count += DeleteByQueryOnIndexIdProperty(index);
-                }
 
                 foreach (ElasticSearchItem insert in index.Inserts)
                 {
                     if (insert.Property == null) 
                         continue;
 
-                    var response = _client.LowLevel.Index<StringResponse>(
-                        index: indexName,
-                        body: insert.Property.RawValue.ToString(), requestParameters: new IndexRequestParameters());
+                    var json = insert.Property.RawValue;
 
-                    if (response.Success == false)
+                    if (json.TryGet(index.IndexIdProperty, out LazyStringValue idProperty))
                     {
-                        if (string.IsNullOrWhiteSpace(response.DebugInformation) == false)
+                        using (var old = json)
                         {
-                            throw new ElasticSearchLoadException($"Index {index} error: {response.DebugInformation}");
-                        }
+                            json.Modifications = new DynamicJsonValue(json)
+                            {
+                                [index.IndexIdProperty] = EnsureLowerCasedIndexIdProperty(idProperty)
+                            };
 
-                        throw new ElasticSearchLoadException($"Index {index} error: {response.OriginalException}");
+                            json = context.ReadObject(json, "es-etl-load");
+                        }
+                    }
+
+                    using (json)
+                    {
+                        var response = _client.LowLevel.Index<StringResponse>(
+                            index: indexName,
+                            body: json.ToString(), requestParameters: new IndexRequestParameters());
+
+                        if (response.Success == false)
+                        {
+                            if (string.IsNullOrWhiteSpace(response.DebugInformation) == false)
+                            {
+                                throw new ElasticSearchLoadException($"Index {index} error: {response.DebugInformation}");
+                            }
+
+                            throw new ElasticSearchLoadException($"Index {index} error: {response.OriginalException}");
+                        }
                     }
 
                     count++;
@@ -147,7 +158,7 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
 
             foreach (ElasticSearchItem delete in index.Deletes)
             {
-                idsToDelete.Add(delete.DocumentId);
+                idsToDelete.Add(EnsureLowerCasedIndexIdProperty(delete.DocumentId));
             }
 
             // we are about to delete by query so we need to ensure that all documents are available for search
@@ -166,31 +177,52 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
 
             // The request made it to the server but something went wrong in ElasticSearch (query parsing exception, non-existent index, etc)
             if (deleteResponse.ServerError != null)
-            {
-                var message = $"Index {index}; Documents IDs: {string.Join(',', idsToDelete)}; Error: {deleteResponse.ServerError.Error}";
-
-                if (Logger.IsInfoEnabled)
-                {
-                    Logger.Info($"{message}; Debug Information: {deleteResponse.DebugInformation}");
-                }
-
-                throw new ElasticSearchLoadException(message);
-            }
+                throw new ElasticSearchLoadException(
+                    $"Index {index}; Documents IDs: {string.Join(',', idsToDelete)}; Error: {deleteResponse.ServerError.Error}. Debug Information: {deleteResponse.DebugInformation}");
 
             // ElasticSearch error occurred or a connection error (the server could not be reached, request timed out, etc)
             if (deleteResponse.OriginalException != null)
-            {
-                var message = $"Index {index}; Documents IDs: {string.Join(',', idsToDelete)}; Error: {deleteResponse.OriginalException}";
-
-                if (Logger.IsInfoEnabled)
-                {
-                    Logger.Info($"{message}; Debug Information: {deleteResponse.DebugInformation}", deleteResponse.OriginalException);
-                }
-
-                throw new ElasticSearchLoadException(message);
-            }
+                throw new ElasticSearchLoadException(
+                    $"Index {index}; Documents IDs: {string.Join(',', idsToDelete)}; Debug Information: {deleteResponse.DebugInformation}", deleteResponse.OriginalException);
 
             return (int)deleteResponse.Deleted;
+        }
+
+        private void EnsureIndexExists(string indexName, ElasticSearchIndexWithRecords index)
+        {
+            if (_existingIndexes.Contains(indexName) == false && _client.Indices.Exists(new IndexExistsRequest(Indices.Index(indexName))).Exists == false)
+            {
+                CreateDefaultIndex(indexName, index);
+
+                _existingIndexes.Add(indexName);
+            }
+            else
+            {
+                _existingIndexes.Add(indexName);
+            }
+        }
+
+        private void CreateDefaultIndex(string indexName, ElasticSearchIndexWithRecords index)
+        {
+            var response = _client.Indices.Create(indexName, c => c
+                .Map(m => m
+                    .Properties(p => p
+                        .Keyword(t => t
+                            .Name(index.IndexIdProperty)))));
+
+            // The request made it to the server but something went wrong in ElasticSearch (query parsing exception, non-existent index, etc)
+            if (response.ServerError != null)
+                throw new ElasticSearchLoadException(
+                    $"Failed to create '{indexName}' index. Error: {response.ServerError.Error}. Debug Information: {response.DebugInformation}");
+
+            // ElasticSearch error occurred or a connection error (the server could not be reached, request timed out, etc)
+            if (response.OriginalException != null)
+                throw new ElasticSearchLoadException($"Failed to create '{indexName}' index. Debug Information: {response.DebugInformation}", response.OriginalException);
+        }
+
+        private string EnsureLowerCasedIndexIdProperty(LazyStringValue id)
+        {
+            return id.ToLowerInvariant();
         }
 
         public ElasticSearchEtlTestScriptResult RunTest(IEnumerable<ElasticSearchIndexWithRecords> records)
