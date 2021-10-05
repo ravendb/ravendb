@@ -123,12 +123,7 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
 
                         if (response.Success == false)
                         {
-                            if (string.IsNullOrWhiteSpace(response.DebugInformation) == false)
-                            {
-                                throw new ElasticSearchLoadException($"Index {index} error: {response.DebugInformation}");
-                            }
-
-                            throw new ElasticSearchLoadException($"Index {index} error: {response.OriginalException}");
+                            throw new ElasticSearchLoadException($"Failed to index to '{index}'. Debug info: {response.DebugInformation}", response.OriginalException);
                         }
                     }
 
