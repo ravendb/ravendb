@@ -113,18 +113,7 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
 
                     var json = insert.Property.RawValue;
 
-                    if (json.TryGet(index.IndexIdProperty, out LazyStringValue idProperty))
-                    {
-                        using (var old = json)
-                        {
-                            json.Modifications = new DynamicJsonValue(json)
-                            {
-                                [index.IndexIdProperty] = EnsureLowerCasedIndexIdProperty(idProperty)
-                            };
-
-                            json = context.ReadObject(json, "es-etl-load");
-                        }
-                    }
+                    json = EnsureLowerCasedIndexIdProperty(context, json, index);
 
                     using (json)
                     {
@@ -150,6 +139,22 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
             return count;
         }
 
+        internal static BlittableJsonReaderObject EnsureLowerCasedIndexIdProperty(DocumentsOperationContext context, BlittableJsonReaderObject json,
+            ElasticSearchIndexWithRecords index)
+        {
+            if (json.TryGet(index.IndexIdProperty, out LazyStringValue idProperty))
+            {
+                using (var old = json)
+                {
+                    json.Modifications = new DynamicJsonValue(json) { [index.IndexIdProperty] = LowerCaseIndexIdProperty(idProperty) };
+
+                    json = context.ReadObject(json, "es-etl-load");
+                }
+            }
+
+            return json;
+        }
+
         private int DeleteByQueryOnIndexIdProperty(ElasticSearchIndexWithRecords index)
         {
             string indexName = index.IndexName.ToLower();
@@ -158,7 +163,7 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
 
             foreach (ElasticSearchItem delete in index.Deletes)
             {
-                idsToDelete.Add(EnsureLowerCasedIndexIdProperty(delete.DocumentId));
+                idsToDelete.Add(LowerCaseIndexIdProperty(delete.DocumentId));
             }
 
             // we are about to delete by query so we need to ensure that all documents are available for search
@@ -220,19 +225,19 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
                 throw new ElasticSearchLoadException($"Failed to create '{indexName}' index. Debug Information: {response.DebugInformation}", response.OriginalException);
         }
 
-        private string EnsureLowerCasedIndexIdProperty(LazyStringValue id)
+        internal static string LowerCaseIndexIdProperty(LazyStringValue id)
         {
             return id.ToLowerInvariant();
         }
 
-        public ElasticSearchEtlTestScriptResult RunTest(IEnumerable<ElasticSearchIndexWithRecords> records)
+        public ElasticSearchEtlTestScriptResult RunTest(IEnumerable<ElasticSearchIndexWithRecords> records, DocumentsOperationContext context)
         {
             var simulatedWriter = new ElasticSearchIndexWriterSimulator();
             var summaries = new List<IndexSummary>();
             
             foreach (var record in records)
             {
-                var commands = simulatedWriter.SimulateExecuteCommandText(record);
+                var commands = simulatedWriter.SimulateExecuteCommandText(record, context);
                 
                 summaries.Add(new IndexSummary
                 {

@@ -1,7 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Text;
-using NuGet.Protocol;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -9,7 +8,7 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
 {
     public class ElasticSearchIndexWriterSimulator
     {
-        public IEnumerable<string> SimulateExecuteCommandText(ElasticSearchIndexWithRecords records)
+        public IEnumerable<string> SimulateExecuteCommandText(ElasticSearchIndexWithRecords records, DocumentsOperationContext context)
         {
             var result = new List<string>();
 
@@ -17,18 +16,18 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
             result.Add(GenerateDeleteItemsCommandText(records.IndexName.ToLower(), records.IndexIdProperty,
                 records.Deletes));
 
-            result.AddRange(GenerateInsertItemsCommandText(records.IndexName.ToLower(), records.Inserts));
+            result.AddRange(GenerateInsertItemsCommandText(records.IndexName.ToLower(), records, context));
 
             return result;
         }
 
         private string GenerateDeleteItemsCommandText(string indexName, string idField, List<ElasticSearchItem> elasticSearchItems)
         {
-            StringBuilder deleteQuery = new StringBuilder();
+            var idsToDelete = new List<string>();
 
             foreach (var item in elasticSearchItems)
             {
-                deleteQuery.Append($"{item.DocumentId},");
+                idsToDelete.Add(ElasticSearchEtl.LowerCaseIndexIdProperty(item.DocumentId));
             }
 
             using (var context = JsonOperationContext.ShortTermSingleUse())
@@ -37,9 +36,9 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
                 {
                     ["query"] = new DynamicJsonValue()
                     {
-                        ["match"] = new DynamicJsonValue()
+                        ["terms"] = new DynamicJsonValue()
                         {
-                            [idField] = deleteQuery.ToString()
+                            [idField] = new DynamicJsonArray(idsToDelete)
                         }
                     }
                 };
@@ -55,16 +54,18 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
             }
         }
 
-        private IEnumerable<string> GenerateInsertItemsCommandText(string indexName, List<ElasticSearchItem> elasticSearchItems)
+        private IEnumerable<string> GenerateInsertItemsCommandText(string indexName, ElasticSearchIndexWithRecords index, DocumentsOperationContext context)
         {
             var result = new List<string>();
 
-            foreach (var item in elasticSearchItems)
+            foreach (var item in index.Inserts)
             {
+                var json = ElasticSearchEtl.EnsureLowerCasedIndexIdProperty(context, item.Property.RawValue, index);
+
                 var sb = new StringBuilder("POST ")
                     .Append(indexName)
                     .AppendLine("/_doc")
-                    .AppendLine(item.Property.RawValue.ToString());
+                    .AppendLine(json.ToString());
 
                 result.Add(sb.ToString());
             }

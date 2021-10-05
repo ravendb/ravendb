@@ -1152,7 +1152,7 @@ namespace Raven.Server.Documents.ETL
                             var results = elasticSearchEtl.Transform(new[] { elasticSearchItem }, context, new EtlStatsScope(new EtlRunStats()),
                                 new EtlProcessState());
 
-                            var result = elasticSearchEtl.RunTest(results);
+                            var result = elasticSearchEtl.RunTest(results, context);
                             result.DebugOutput = debugOutput;
 
                             return result;
