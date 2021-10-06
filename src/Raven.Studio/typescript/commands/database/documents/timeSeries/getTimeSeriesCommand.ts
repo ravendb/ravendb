@@ -1,6 +1,7 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 import endpoints = require("endpoints");
+import timeSeriesEntryModel = require("models/database/timeSeries/timeSeriesEntryModel");
 
 class getTimeSeriesCommand extends commandBase {
     
@@ -14,7 +15,8 @@ class getTimeSeriesCommand extends commandBase {
             docId: this.docId,
             name: this.timeSeriesName,
             pageSize: this.pageSize,
-            start: this.start
+            start: this.start,
+            full: this.timeSeriesName.toUpperCase().startsWith(timeSeriesEntryModel.incrementalPrefix)
         };
         
         const url = endpoints.databases.timeSeries.timeseries;

@@ -25,14 +25,25 @@ import popoverUtils = require("common/popoverUtils");
 class timeSeriesInfo {
     name = ko.observable<string>();
     numberOfEntries = ko.observable<number>();
+    
     nameAndNumberFormatted: KnockoutComputed<string>;
+    isIncremental: KnockoutComputed<boolean>;
     
     constructor(name: string, numberOfEntries: number) {
         this.name(name);
         this.numberOfEntries(numberOfEntries);
         
+        this.initObservables();
+    }
+    
+    private initObservables(): void {
         this.nameAndNumberFormatted = ko.pureComputed(() => {
-           return `${this.name()} (${generalUtils.formatNumberToStringFixed(this.numberOfEntries(), 0)})`;
+            const numberPart = this.numberOfEntries() === -1 ? "N/A" : generalUtils.formatNumberToStringFixed(this.numberOfEntries(), 0);
+            return `${this.name()} (${numberPart})`;
+        });
+        
+        this.isIncremental = ko.pureComputed(() => {
+           return this.name().startsWith("INC:");
         });
     }
 }
@@ -567,7 +578,7 @@ class editTimeSeries extends viewModelBase {
         
         popoverUtils.longWithHover($(".raw-data-info"),
             {
-                content: `<ul style="max-width: 600px;">
+                content: `<ul style="max-width: 600px;" class="margin-top margin-top-sm">
                               <li>
                                   <small>Data below is <strong>Raw Time Series Data</strong>. Entries can be edited as needed.</small>
                               </li>
@@ -582,8 +593,7 @@ class editTimeSeries extends viewModelBase {
 
         popoverUtils.longWithHover($(".rollups-info"),
             {
-                content: `<br>
-                          <ul style="max-width: 700px;">
+                content: `<ul style="max-width: 700px;" class="margin-top margin-top-sm">
                               <li>
                                   <small>Data below is not raw data.</small><br />
                                   <small>Each entry is <strong>Rolled-Up Data</strong> that is aggregated for a <strong>specific time frame</strong> defined by a <a href="${timeseriesSettingsUrl}">Time Series Policy</a>.</small>
@@ -592,7 +602,7 @@ class editTimeSeries extends viewModelBase {
                                   <small>The rolled-up data is only available when the aggregation time frame defined by the policy has ended.</small>
                               </li>
                           </ul>`,
-                placement: "right",
+                placement: "bottom",
                 html: true,
                 container: ".edit-time-series"
             })
