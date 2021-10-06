@@ -36,7 +36,7 @@ class identity {
         this.prefixWithPipe = ko.pureComputed(() => {
             let prefix = this.prefix();
             
-            if (prefix.length && !prefix.endsWith("|")) {
+            if (prefix && !prefix.endsWith("|")) {
                 prefix += "|";
             }
             
