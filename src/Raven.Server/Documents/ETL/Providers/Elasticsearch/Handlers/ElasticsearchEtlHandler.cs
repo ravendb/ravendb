@@ -11,7 +11,7 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch.Handlers
 {
     public class ElasticSearchEtlHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/admin/etl/elasticsearch/test", "POST", AuthorizationStatus.Operator)]
+        [RavenAction("/databases/*/admin/etl/elasticsearch/test", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task PostScriptTest()
         {
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))

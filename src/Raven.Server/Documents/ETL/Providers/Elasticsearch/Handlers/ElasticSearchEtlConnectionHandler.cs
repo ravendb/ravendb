@@ -5,7 +5,6 @@ using Nest;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Server.Routing;
-using Raven.Server.Web;
 using Raven.Server.Web.System;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -13,10 +12,10 @@ using Authentication = Raven.Client.Documents.Operations.ETL.ElasticSearch.Authe
 
 namespace Raven.Server.Documents.ETL.Providers.ElasticSearch.Handlers
 {
-    public class ElasticSearchEtlConnectionHandler : RequestHandler
+    public class ElasticSearchEtlConnectionHandler : DatabaseRequestHandler
     {
-        [RavenAction("/admin/etl/elasticsearch/test-connection", "POST", AuthorizationStatus.Operator)]
-        public async Task GetTestSqlConnectionResult()
+        [RavenAction("/databases/*/admin/etl/elasticsearch/test-connection", "POST", AuthorizationStatus.DatabaseAdmin)]
+        public async Task GetTestElasticSearchConnectionResult()
         {
             try
             {
