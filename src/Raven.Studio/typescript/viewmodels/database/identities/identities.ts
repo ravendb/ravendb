@@ -36,7 +36,7 @@ class identity {
         this.prefixWithPipe = ko.pureComputed(() => {
             let prefix = this.prefix();
             
-            if (prefix.length >= 1 && !prefix.endsWith("|")) {
+            if (prefix.length && !prefix.endsWith("|")) {
                 prefix += "|";
             }
             
@@ -46,7 +46,7 @@ class identity {
         this.prefixWithoutPipe = ko.pureComputed(() => {
             let prefix = this.prefix();
             
-            if (prefix.length >=2 && prefix.endsWith("|")) {
+            if (prefix.endsWith("|")) {
                 return prefix.slice(0, -1);
             }
 
@@ -180,7 +180,7 @@ class identities extends viewModelBase {
 
         this.editedIdentityItem().prefix.subscribe(() => {
             const item = this.editedIdentityItem();
-            item.prefixAlreadyExists(!!this.identityPrefixList.find(x => x.toLocaleLowerCase() === item.prefixWithoutPipe().toLocaleLowerCase()));
+            item.prefixAlreadyExists(this.identityPrefixList.find(x => x.toLocaleLowerCase() === item.prefixWithoutPipe().toLocaleLowerCase()) !== undefined);
         });
     }
     
