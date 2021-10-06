@@ -2,7 +2,7 @@ import commandBase = require("commands/commandBase");
 import endpoints = require("endpoints");
 import database = require("models/resources/database");
 
-class setIdentityCommand extends commandBase {
+class seedIdentityCommand extends commandBase {
 
     constructor(private db: database, private prefix: string, private value: number) {
         super();
@@ -22,4 +22,4 @@ class setIdentityCommand extends commandBase {
     }
 }
 
-export = setIdentityCommand;
+export = seedIdentityCommand;

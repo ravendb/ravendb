@@ -6,7 +6,7 @@ import actionColumn = require("widgets/virtualGrid/columns/actionColumn");
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import getIdentitiesCommand = require("commands/database/identities/getIdentitiesCommand");
-import setIdentityCommand = require("commands/database/identities/setIdentityCommand");
+import seedIdentityCommand = require("commands/database/identities/seedIdentityCommand");
 import genUtils = require("common/generalUtils");
 
 class identity {
@@ -36,7 +36,7 @@ class identity {
         this.prefixWithPipe = ko.pureComputed(() => {
             let prefix = this.prefix();
             
-            if (prefix.length >= 1 && prefix.charAt(prefix.length - 1) !== "|") {
+            if (prefix.length >= 1 && !prefix.endsWith("|")) {
                 prefix += "|";
             }
             
@@ -46,7 +46,7 @@ class identity {
         this.prefixWithoutPipe = ko.pureComputed(() => {
             let prefix = this.prefix();
             
-            if (prefix.length >=2 && prefix.charAt(prefix.length - 1) === "|") {
+            if (prefix.length >=2 && prefix.endsWith("|")) {
                 return prefix.slice(0, -1);
             }
 
@@ -180,8 +180,7 @@ class identities extends viewModelBase {
 
         this.editedIdentityItem().prefix.subscribe(() => {
             const item = this.editedIdentityItem();
-            item.prefixAlreadyExists(!!this.identityPrefixList.find(x => x.toLocaleLowerCase() === item.prefixWithPipe().toLocaleLowerCase() ||
-                                                                         x.toLocaleLowerCase() === item.prefixWithoutPipe().toLocaleLowerCase()));
+            item.prefixAlreadyExists(!!this.identityPrefixList.find(x => x.toLocaleLowerCase() === item.prefixWithoutPipe().toLocaleLowerCase()));
         });
     }
     
@@ -203,7 +202,7 @@ class identities extends viewModelBase {
             return;
         }
 
-        new setIdentityCommand(this.activeDatabase(), prefix, item.value())
+        new seedIdentityCommand(this.activeDatabase(), prefix, item.value())
             .execute()
             .done(() => {
                 this.editedIdentityItem(null);
