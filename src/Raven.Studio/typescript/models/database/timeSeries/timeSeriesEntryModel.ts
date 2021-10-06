@@ -44,19 +44,38 @@ class rollupDataModel {
     }
 }
 
+interface nodeData {
+    nodeTag: string;
+    databaseID: string;
+    nodeValues: number[];
+}
+
 class timeSeriesEntryModel {
     
     static aggregationColumns = ["First", "Last", "Min", "Max", "Sum", "Count"];
     static readonly numberOfPossibleValues = 32;
     static readonly numberOfPossibleRollupValues = 5;
+    static readonly incrementalPrefix = "INC:";
 
     name = ko.observable<string>();
     tag = ko.observable<string>();
     timestamp = ko.observable<moment.Moment>();
-    isRollupEntry = ko.observable<boolean>();
     
+    isRollupEntry = ko.observable<boolean>();
+   
+    createIncrementalTimeSeries = ko.observable<boolean>();
+    
+    isCreatingNewTimeSeries = ko.observable<boolean>();
+    
+    entryTitle: KnockoutComputed<string>;
+    isIncrementalEntry: KnockoutComputed<boolean>;
+
     values = ko.observableArray<timeSeriesValue>([]);
+    existingNumberOfValues: number = 0;
+    
     rollupValues = ko.observableArray<rollupDataModel>([]);
+
+    nodesDetails = ko.observableArray<nodeData>([]);
 
     maxNumberOfValuesReachedWarning: KnockoutComputed<string>;
 
@@ -68,6 +87,22 @@ class timeSeriesEntryModel {
         this.tag(dto.Tag);
         this.timestamp(dto.Timestamp ? moment.utc(dto.Timestamp) : null);
         this.isRollupEntry(dto.IsRollup);
+
+        this.isCreatingNewTimeSeries(!timeSeriesName);
+        
+        if (timeSeriesName && timeSeriesName.toUpperCase().startsWith(timeSeriesEntryModel.incrementalPrefix)) {
+            const details = _.map(dto.NodesValues, (valuesList, nodeDetails): nodeData => {
+                const [tag, dbId] = _.split(nodeDetails, '-', 2);
+                return {
+                    nodeTag: tag,
+                    databaseID: dbId,
+                    nodeValues: valuesList
+                };
+            })
+            
+            const detailsSorted = _.sortBy(details, x => x.nodeTag);
+            this.nodesDetails(detailsSorted);
+        }
         
         if (dto.IsRollup) {
             const values = dto.Values;
@@ -88,25 +123,43 @@ class timeSeriesEntryModel {
             }
         } else {
             this.values(dto.Values.map(x => new timeSeriesValue(x)));
+            this.existingNumberOfValues = this.values().length;
         }
         
         this.canEditName = !timeSeriesName;
+
+        this.initObservables();
         this.initValidation();
-        
+    }
+    
+    private initObservables(): void {
         this.maxNumberOfValuesReachedWarning = ko.pureComputed(() => {
             if (this.isRollupEntry && this.rollupValues().length === timeSeriesEntryModel.numberOfPossibleRollupValues) {
                 return `The maximum number of possible rollup values (${timeSeriesEntryModel.numberOfPossibleRollupValues}) has been reached.`;
             }
-            
+
             if (!this.isRollupEntry() && this.values().length === timeSeriesEntryModel.numberOfPossibleValues) {
                 return `The maximum number of possible values (${timeSeriesEntryModel.numberOfPossibleValues}) has been reached.`;
             }
 
             return "";
         });
+
+        this.isIncrementalEntry  = ko.pureComputed(() => {
+            return !this.isCreatingNewTimeSeries() && this.name().toUpperCase().startsWith(timeSeriesEntryModel.incrementalPrefix);
+        });
+
+        this.entryTitle = ko.pureComputed(() => {
+            const newEditPart = this.isCreatingNewTimeSeries() || !this.timestamp() ? "New" : "Edit";
+            const entryPart = " Time Series Entry";
+            const incPart = this.createIncrementalTimeSeries() || this.isIncrementalEntry() ? " - Incremental" : "";
+            const rollupPart = this.isRollupEntry() ? " - Rollup" : "";
+
+            return newEditPart + entryPart + incPart + rollupPart;
+        });
     }
 
-    addValue() {
+    addValue(): void {
         if (this.isRollupEntry()) {
             const newRollupData = new rollupDataModel();
             this.rollupValues.push(newRollupData);
@@ -120,17 +173,33 @@ class timeSeriesEntryModel {
         this.values.remove(value);
     }
 
-    removeRollupData(rollup: rollupDataModel) {
+    removeRollupData(rollup: rollupDataModel): void {
         this.rollupValues.remove(rollup);
     }
     
-    private initValidation() {
+    removeValueData(value: timeSeriesValue): void {
+        this.values.remove(value);
+    }
+    
+    private initValidation(): void {
         this.name.extend({
             required: true,
             validation: [
                 {
                     validator: () => this.isRollupEntry() || !this.canEditName || !this.name().includes("@"),
                     message: "A Time Series name cannot contain '@'. This character is reserved for Time Series Rollups."
+                },
+                {
+                    validator: () => !this.isCreatingNewTimeSeries() ||
+                                     !this.createIncrementalTimeSeries() ||
+                                      this.name().toUpperCase().startsWith(timeSeriesEntryModel.incrementalPrefix),
+                    message: `An Incremental Time Series name must start with prefix: '${timeSeriesEntryModel.incrementalPrefix}'`
+                },
+                {
+                    validator: () => !this.isCreatingNewTimeSeries() ||
+                                      this.createIncrementalTimeSeries() ||
+                                     !this.name().toUpperCase().startsWith(timeSeriesEntryModel.incrementalPrefix),
+                    message: `A regular Time Series name cannot start with prefix: '${timeSeriesEntryModel.incrementalPrefix}'`
                 }
             ]
         });
@@ -182,21 +251,23 @@ class timeSeriesEntryModel {
             return result;
         }, []);
     }
-    
+
     public toDto(): Raven.Client.Documents.Operations.TimeSeries.TimeSeriesOperation.AppendOperation {
         return {
             Tag: this.tag(),
             Timestamp: this.timestamp().utc().format(generalUtils.utcFullDateFormat),
-            Values: this.isRollupEntry() ? this.flattenRollupValues() : this.values().map(x => x.value())
+            Values: this.isRollupEntry() ? this.flattenRollupValues() :
+                                           this.values().map(x => this.isIncrementalEntry() ? x.delta() : x.value())
         }
     }
     
-    static empty(timeSeriesName: string) {
+    static empty(timeSeriesName: string): timeSeriesEntryModel {
         return new timeSeriesEntryModel(timeSeriesName, {
             Timestamp: null,
             Tag: null,
             Values: [],
-            IsRollup: timeSeriesName && timeSeriesName.includes("@")
+            IsRollup: timeSeriesName && timeSeriesName.includes("@"),
+            NodesValues: null
         });
     }
 }

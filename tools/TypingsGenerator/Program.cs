@@ -563,6 +563,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(TimeSeriesOperation));
             scripter.AddType(typeof(TimeSeriesOperation.AppendOperation));
             scripter.AddType(typeof(TimeSeriesOperation.DeleteOperation));
+            scripter.AddType(typeof(TimeSeriesOperation.IncrementOperation));
             scripter.AddType(typeof(TimeSeriesConfiguration));
 
             // studio configuration
