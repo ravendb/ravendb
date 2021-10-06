@@ -12,7 +12,7 @@ class testElasticSearchNodeConnectionCommand extends commandBase {
             url: this.serverUrl
         };
         
-        const url = endpoints.global.elasticSearchEtlConnection.adminEtlElasticsearchTestConnection + this.urlEncodeArgs(args);
+        const url = endpoints.databases.elasticSearchEtlConnection.adminEtlElasticsearchTestConnection + this.urlEncodeArgs(args);
         const payload = this.authenticationDto;
 
         return this.post<Raven.Server.Web.System.NodeConnectionTestResult>(url, JSON.stringify(payload), null, { dataType: undefined })
