@@ -653,10 +653,8 @@ namespace Raven.Server.Smuggler.Documents
                     if (rawDatabaseRecord.DatabaseState == DatabaseStateStatus.RestoreInProgress)
                     {
                         await _database.ExecuteClusterTransaction(writeContext);
-                        ClusterTransactionCommand.DeleteCommands(writeContext, _database.Name, long.MaxValue);
                     }
                 }
-                
                 await _database.RachisLogIndexNotifications.WaitForIndexNotification(clusterTransactionResult.Index, _token);
             }
 

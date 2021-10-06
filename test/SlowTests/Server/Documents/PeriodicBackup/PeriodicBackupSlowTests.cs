@@ -535,8 +535,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
-        public async Task can_backup_and_restore_snapshot_with_compare_exchange()
+        [Theory, Trait("Category", "Smuggler")]
+        [InlineData(BackupType.Snapshot)]
+        [InlineData(BackupType.Backup)]
+        public async Task can_backup_and_restore_snapshot_with_compare_exchange(BackupType backupType)
         {
             var ids = Enumerable.Range(0, 2 * 1024) // DatabaseDestination.DatabaseCompareExchangeActions.BatchSize
                 .Select(i => "users/" + i).ToArray();
@@ -560,7 +562,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             var sourceStats = await store.Maintenance.SendAsync(new GetDetailedStatisticsOperation());
             Assert.Equal(ids.Length, sourceStats.CountOfCompareExchange);
 
-            var config = Backup.CreateBackupConfiguration(backupPath, backupType: BackupType.Snapshot);
+            var config = Backup.CreateBackupConfiguration(backupPath, backupType: backupType);
             config.SnapshotSettings = new SnapshotSettings { CompressionLevel = CompressionLevel.NoCompression };
             var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
@@ -580,12 +582,29 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             {
                 using var destination = new DocumentStore { Urls = store.Urls, Database = restoredDatabaseName }.Initialize();
 
-                using var session = destination.OpenAsyncSession();
-                var users = await session.LoadAsync<User>(ids);
-                Assert.All(users.Values, Assert.NotNull);
+                using (var session = destination.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                {
+                    var users = await session.LoadAsync<User>(ids);
+                    Assert.All(users.Values, Assert.NotNull);
+                }
 
                 var restoreStats = await destination.Maintenance.SendAsync(new GetDetailedStatisticsOperation());
                 Assert.Equal(sourceStats.CountOfCompareExchange, restoreStats.CountOfCompareExchange);
+
+                using (var session = destination.OpenAsyncSession(new SessionOptions{TransactionMode = TransactionMode.ClusterWide}))
+                {
+                    var user = await session.LoadAsync<User>(ids[0]);
+
+                    await session.StoreAsync(user);
+
+                    await session.SaveChangesAsync();
+                }
+                
+                using (var session = destination.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                {
+                    await session.StoreAsync(new User(), ids[0]);
+                    await Assert.ThrowsAnyAsync<ConcurrencyException>(async () => await session.SaveChangesAsync());
+                }
             }
         }
 
