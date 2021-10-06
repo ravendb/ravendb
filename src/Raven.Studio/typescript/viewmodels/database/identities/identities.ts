@@ -17,6 +17,7 @@ class identity {
     
     value = ko.observable<number>();
     currentValue = ko.observable<number>();
+    warnAboutSmallerValue: KnockoutComputed<boolean>;
     
     nextDocumentText: KnockoutComputed<string>;
     
@@ -55,6 +56,10 @@ class identity {
         this.nextDocumentText = ko.pureComputed(() => {
            return `<span>The next document that will be created with Prefix: "<strong>${genUtils.escapeHtml(this.prefixWithPipe())}</strong>"
                    will have ID: "<strong>${genUtils.escapeHtml(this.prefixWithoutPipe())}/${this.value() + 1}</strong>"</span>`;
+        });
+        
+        this.warnAboutSmallerValue = ko.pureComputed(() => {
+           return this.value() < this.currentValue();
         });
     }
 
