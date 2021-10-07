@@ -7,6 +7,9 @@ import genUtils = require("common/generalUtils");
 import spatialCircleModel = require("models/database/query/spatialCircleModel");
 import spatialPolygonModel = require("models/database/query/spatialPolygonModel");
 
+import L = require("leaflet");
+import "leaflet.markercluster";
+
 class spatialQueryMap extends viewModelBase {
 
     view = require("views/database/query/spatialQueryMap.html");

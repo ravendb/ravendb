@@ -2,6 +2,7 @@
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import pluralizeHelpers = require("common/helpers/text/pluralizeHelpers");
 import dialog = require("plugins/dialog");
+import { jwerty } from "jwerty";
 
 type dialogViewModelBaseOptions = {
     elementToFocusOnDismissal?: string;
