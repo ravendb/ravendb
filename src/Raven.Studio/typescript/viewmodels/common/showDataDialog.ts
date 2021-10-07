@@ -2,6 +2,7 @@ import dialog = require("plugins/dialog");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import copyToClipboard = require("common/copyToClipboard");
 import generalUtils = require("common/generalUtils");
+import { highlight, languages } from "prismjs";
 
 type supportedLangs = "javascript" | "csharp" | "plain";
 
@@ -21,7 +22,7 @@ class showDataDialog extends dialogViewModelBase {
             return generalUtils.escapeHtml(input);
         }
         
-        return Prism.highlight(input, (Prism.languages as any)[this.lang]);
+        return highlight(input, languages[this.lang]);
     });
 
     constructor(private title: string, inputData: string, private lang: supportedLangs, elementToFocusOnDismissal?: string) {

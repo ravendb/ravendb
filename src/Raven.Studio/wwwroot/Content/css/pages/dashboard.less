@@ -530,34 +530,3 @@
         color: @resource-usage-secondary-color;
     }
 }
-
-html:not(.no-cssgrid) {
-    .infogrid {
-        display: grid;
-        grid-template-columns: auto 1fr;
-        grid-gap: @grid-gutter-width/4 0;
-        align-items: stretch;
-
-        .separator {
-            display: none;
-        }
-    }
-}
-html.no-cssgrid {
-    .infogrid {
-        display: flex;
-        align-items: stretch;
-        flex-wrap: wrap;
-
-        .separator {
-            width: 100%;
-            height: 1px;
-        }
-    }
-
-    .infogrid-graph {
-        width: 50%;
-        flex-grow: 1;
-        page-break-after: always;
-    }
-}

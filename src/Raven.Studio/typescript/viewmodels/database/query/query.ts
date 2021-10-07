@@ -44,6 +44,7 @@ import spatialPolygonModel = require("models/database/query/spatialPolygonModel"
 import rqlLanguageService = require("common/rqlLanguageService");
 import hyperlinkColumn = require("widgets/virtualGrid/columns/hyperlinkColumn");
 import moment = require("moment");
+import { highlight, languages } from "prismjs";
 
 type queryResultTab = "results" | "explanations" | "timings" | "graph" | "revisions";
 
@@ -726,7 +727,7 @@ class query extends viewModelBase {
             const showPreview = (value: any) => {
                 if (!_.isUndefined(value)) {
                     const json = JSON.stringify(value, null, 4);
-                    const html = Prism.highlight(json, (Prism.languages as any).javascript);
+                    const html = highlight(json, languages.javascript);
                     onValue(html, json);
                 }
             };

@@ -41,6 +41,7 @@ import getCustomAnalyzersCommand = require("commands/database/settings/getCustom
 import getServerWideCustomAnalyzersCommand = require("commands/serverWide/analyzers/getServerWideCustomAnalyzersCommand");
 import getIndexDefaultsCommand = require("commands/database/index/getIndexDefaultsCommand");
 import moment = require("moment");
+import { highlight, languages } from "prismjs";
 
 class editIndex extends viewModelBase {
     
@@ -157,7 +158,7 @@ class editIndex extends viewModelBase {
             const source = this.selectedSourcePreview();
             
             if (source) {
-                return '<pre class="form-control sourcePreview">' + Prism.highlight(source.code(), (Prism.languages as any).csharp) + '</pre>';
+                return '<pre class="form-control sourcePreview">' + highlight(source.code(), languages.csharp) + '</pre>';
             }
             
             const hasAdditionalSources = this.editedIndex().additionalSources().length > 0;

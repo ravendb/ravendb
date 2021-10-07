@@ -7,8 +7,6 @@ declare var require: any;
 
 declare const _: LoDashStatic;
 
-declare const Prism: Prism;
-
 declare const L: L;
 
 

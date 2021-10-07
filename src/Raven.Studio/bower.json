@@ -4,12 +4,9 @@
   "dependencies": {
     "eonasdan-bootstrap-datetimepicker": "bootstrap3-datetimepicker#4.17.47",
     "bootstrap-select": "1.12.4",
-    "animate.css": "3.5.2",
     "google-analytics": "https://www.google-analytics.com/analytics.js",
-    "prism": "1.13.0",
     "qrcode.js": "qrcode-js#*",
     "cronstrue": "https://github.com/bradymholt/cRonstrue.git#v0.8.0",
-    "diff": "https://cdnjs.cloudflare.com/ajax/libs/jsdiff/4.0.1/diff.min.js"
   },
   "resolutions": {
     "jquery": "^2.2.0",

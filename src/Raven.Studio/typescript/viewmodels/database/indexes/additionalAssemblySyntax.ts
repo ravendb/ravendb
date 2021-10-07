@@ -1,5 +1,6 @@
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import copyToClipboard = require("common/copyToClipboard");
+import { highlight, languages } from "prismjs";
 
 class additionalAssemblySyntax extends dialogViewModelBase {
 
@@ -56,12 +57,12 @@ select new {
         {
             title: "Csharp - Additional Source",
             text: additionalAssemblySyntax.additionalSourceCsharpText,
-            html: Prism.highlight(additionalAssemblySyntax.additionalSourceCsharpText, (Prism.languages as any).csharp)
+            html: highlight(additionalAssemblySyntax.additionalSourceCsharpText, languages.csharp)
         },
         {
             title: "Csharp - Usage in Map",
             text: additionalAssemblySyntax.usageInMapCsharpText,
-            html: Prism.highlight(additionalAssemblySyntax.usageInMapCsharpText, (Prism.languages as any).csharp)
+            html: highlight(additionalAssemblySyntax.usageInMapCsharpText, languages.csharp)
         }
     ];
 }

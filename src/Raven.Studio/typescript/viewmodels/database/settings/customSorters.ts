@@ -20,6 +20,7 @@ import generalUtils = require("common/generalUtils");
 import sorterListItemModel = require("models/database/settings/sorterListItemModel");
 import accessManager = require("common/shell/accessManager");
 import rqlLanguageService = require("common/rqlLanguageService");
+import { highlight, languages } from "prismjs";
 
 type testTabName = "results" | "diagnostics";
 type fetcherType = (skip: number, take: number) => JQueryPromise<pagedResult<documentObject>>;
@@ -258,7 +259,7 @@ class customSorters extends viewModelBase {
                             onValue(formattedValue, value);
                         } else {
                             const json = JSON.stringify(value, null, 4);
-                            const html = Prism.highlight(json, (Prism.languages as any).javascript);
+                            const html = highlight(json, languages.javascript);
                             onValue(html, json);
                         }
                     }

@@ -32,6 +32,7 @@ import virtualGridController = require("widgets/virtualGrid/virtualGridControlle
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import virtualGrid = require("widgets/virtualGrid/virtualGrid");
+import { highlight, languages } from "prismjs";
 
 class partitionTable {
     key: string;
@@ -166,7 +167,7 @@ class olapTaskTestMode {
                             const metaDto = docDto["@metadata"];
                             documentMetadata.filterMetadata(metaDto);
                             const text = JSON.stringify(docDto, null, 4);
-                            this.loadedDocument(Prism.highlight(text, (Prism.languages as any).javascript));
+                            this.loadedDocument(highlight(text, languages.javascript));
                             this.loadedDocumentId(doc.getId());
 
                             $('.test-container a[href="#documentPreview"]').tab('show');

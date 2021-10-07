@@ -13,6 +13,8 @@ import checkedColumn = require("widgets/virtualGrid/columns/checkedColumn");
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import actionColumn = require("widgets/virtualGrid/columns/actionColumn");
+import continueTest = require("common/shell/continueTest");
+import { highlight, languages } from "prismjs";
 
 class cmpXchg extends viewModelBase {
 
@@ -122,7 +124,7 @@ class cmpXchg extends viewModelBase {
                 const value = column.getCellValue(doc);
                 if (!_.isUndefined(value)) {
                     const json = JSON.stringify(value, null, 4);
-                    const html = Prism.highlight(json, (Prism.languages as any).javascript);
+                    const html = highlight(json, languages.javascript);
                     onValue(html, json);
                 }
             }

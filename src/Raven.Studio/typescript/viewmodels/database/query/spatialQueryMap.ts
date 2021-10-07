@@ -6,6 +6,7 @@ import { Control, IconOptions, MarkerClusterGroup, Map, TileLayer } from "leafle
 import genUtils = require("common/generalUtils");
 import spatialCircleModel = require("models/database/query/spatialCircleModel");
 import spatialPolygonModel = require("models/database/query/spatialPolygonModel");
+import { highlight, languages } from "prismjs";
 
 import L = require("leaflet");
 import "leaflet.markercluster";
@@ -46,7 +47,7 @@ class spatialQueryMap extends viewModelBase {
             documentMetadata.filterMetadata(metaDto);
 
             let text = JSON.stringify(docDto, null, 4);
-            text = Prism.highlight(text, (Prism.languages as any)["javascript"]);
+            text = highlight(text, languages.javascript);
 
             return `<div>
                           <h4>Document: ${genUtils.escapeHtml(doc.getId())}</h4>

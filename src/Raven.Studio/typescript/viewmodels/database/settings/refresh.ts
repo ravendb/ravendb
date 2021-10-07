@@ -5,6 +5,7 @@ import eventsCollector = require("common/eventsCollector");
 import messagePublisher = require("common/messagePublisher");
 import getRefreshConfigurationCommand = require("commands/database/documents/getRefreshConfigurationCommand");
 import saveRefreshConfigurationCommand = require("commands/database/documents/saveRefreshConfigurationCommand");
+import { highlight, languages } from "prismjs";
 
 class refresh extends viewModelBase {
 
@@ -47,7 +48,7 @@ class refresh extends viewModelBase {
             }
         });
         
-        this.refreshSampleFormatted = Prism.highlight(JSON.stringify(refresh.refreshSample, null, 4), (Prism.languages as any).javascript);
+        this.refreshSampleFormatted = highlight(JSON.stringify(refresh.refreshSample, null, 4), languages.javascript);
     }
     
     canActivate(args: any) {
