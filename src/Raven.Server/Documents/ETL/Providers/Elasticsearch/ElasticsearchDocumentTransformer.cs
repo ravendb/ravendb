@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
 
             LoadToDestinations = destinationIndexes;
 
-            _indexes = new Dictionary<string, ElasticSearchIndexWithRecords>(destinationIndexes.Length);
+            _indexes = new Dictionary<string, ElasticSearchIndexWithRecords>(destinationIndexes.Length, StringComparer.OrdinalIgnoreCase);
             _indexesForScript = new List<ElasticSearchIndex>(destinationIndexes.Length);
 
             for (var i = 0; i < _config.ElasticIndexes.Count; i++)
