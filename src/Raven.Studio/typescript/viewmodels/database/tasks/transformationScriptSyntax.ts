@@ -134,12 +134,12 @@ loadToOrders(orderData);`;
     static readonly elasticSearchEtlSampleText = // todo...
         `var orderData = {
     Id: id(this),
-    OrderLinesCount: this.OrderLines.length,
+    OrderLinesCount: this.Lines.length,
     TotalCost: 0
 };
 
-for (var i = 0; i < this.OrderLines.length; i++) {
-    var line = this.OrderLines[i];
+for (var i = 0; i < this.Lines.length; i++) {
+    var line = this.Lines[i];
     var cost = (line.Quantity * line.PricePerUnit) * ( 1 - line.Discount);
     orderData.TotalCost += line.Cost * line.Quantity;
     loadToOrderLines({
