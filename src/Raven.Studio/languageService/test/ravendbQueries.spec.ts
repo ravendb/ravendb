@@ -8,7 +8,7 @@ const graphQuery = (name: string) => name.trim().startsWith("match") || name.tri
 
 describe("RavenDB Queries", function () {
     for (const query of queries) {
-        if (isTimeSeriesTest(query) || graphQuery(query)) {
+        if (graphQuery(query)) {
             it.skip("can parse - " + query, () => {});
         } else {
             it("can parse - " + query, () => {
