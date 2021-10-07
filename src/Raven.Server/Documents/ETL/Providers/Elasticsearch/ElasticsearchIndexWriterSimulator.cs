@@ -58,14 +58,20 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
         {
             var result = new List<string>();
 
-            foreach (var item in index.Inserts)
+            if (index.Inserts.Count > 0)
             {
-                var json = ElasticSearchEtl.EnsureLowerCasedIndexIdProperty(context, item.Property.RawValue, index);
-
                 var sb = new StringBuilder("POST ")
                     .Append(indexName)
-                    .AppendLine("/_doc")
-                    .AppendLine(json.ToString());
+                    .AppendLine("/_bulk");
+
+                foreach (var item in index.Inserts)
+                {
+                    using (var json = ElasticSearchEtl.EnsureLowerCasedIndexIdProperty(context, item.Property.RawValue, index))
+                    {
+                        sb.AppendLine(ElasticSearchEtl.IndexBulkAction);
+                        sb.AppendLine(json.ToString());
+                    }
+                }
 
                 result.Add(sb.ToString());
             }

@@ -816,11 +816,17 @@ loadToOrders(orderData);
 
                     var orderLines = result.Summary.First(x => x.IndexName == "orderlines");
 
-                    Assert.Equal(3, orderLines.Commands.Length); // delete and two inserts
+                    Assert.Equal(2, orderLines.Commands.Length); // delete and bulk
+
+                    Assert.StartsWith("POST orderlines/_delete_by_query", orderLines.Commands[0]);
+                    Assert.StartsWith("POST orderlines/_bulk", orderLines.Commands[1]);
 
                     var orders = result.Summary.First(x => x.IndexName == "orders");
 
-                    Assert.Equal(2, orders.Commands.Length); // delete and insert
+                    Assert.Equal(2, orders.Commands.Length); // delete and bulk
+
+                    Assert.StartsWith("POST orders/_delete_by_query", orders.Commands[0]);
+                    Assert.StartsWith("POST orders/_bulk", orders.Commands[1]);
 
                     Assert.Equal("test output", result.DebugOutput[0]);
                 }
