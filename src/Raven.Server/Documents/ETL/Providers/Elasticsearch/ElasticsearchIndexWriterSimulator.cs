@@ -12,9 +12,12 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
         {
             var result = new List<string>();
 
-            // first, delete all the rows that might already exist there
-            result.Add(GenerateDeleteItemsCommandText(records.IndexName.ToLower(), records.IndexIdProperty,
-                records.Deletes));
+            if (records.InsertOnlyMode == false)
+            {
+                // first, delete all the rows that might already exist there
+                result.Add(GenerateDeleteItemsCommandText(records.IndexName.ToLower(), records.IndexIdProperty,
+                    records.Deletes));
+            }
 
             result.AddRange(GenerateInsertItemsCommandText(records.IndexName.ToLower(), records, context));
 

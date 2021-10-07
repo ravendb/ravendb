@@ -105,8 +105,7 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
                 if (elasticIndex == null)
                     ThrowIndexNotDefinedInConfig(indexName);
 
-                _indexes[indexName] =
-                    index = new ElasticSearchIndexWithRecords(elasticIndex);
+                _indexes[indexName] = index = new ElasticSearchIndexWithRecords(elasticIndex);
             }
 
             return index;

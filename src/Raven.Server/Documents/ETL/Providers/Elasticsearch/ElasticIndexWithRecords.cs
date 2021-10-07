@@ -13,6 +13,7 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
         {
             IndexName = index.IndexName;
             IndexIdProperty = index.IndexIdProperty;
+            InsertOnlyMode = index.InsertOnlyMode;
         }
     }
 }
