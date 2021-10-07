@@ -3,16 +3,29 @@ import { ProgContext, RqlParser } from "../generated/RqlParser";
 import { BaseAutocompleteProvider } from "./baseProvider";
 import { Scanner } from "../scanner";
 import { META_COLLECTION, META_INDEX, SCORING_COLLECTION, SCORING_INDEX } from "./scoring";
+import { AutocompleteProvider } from "./common";
 
-const collections = ["Orders", "Products", "Employees"];
-const indexes = ['Orders/ByCompany', 'Product/Rating'];
-
-export class AutocompleteFrom extends BaseAutocompleteProvider {
+export class AutocompleteFrom extends BaseAutocompleteProvider implements AutocompleteProvider {
     
-    async collectAsync(scanner: Scanner, candidates: CandidatesCollection, parser: RqlParser, parseTree: ProgContext, writtenPart: string): Promise<autoCompleteWordList[]> {
+    async fetchCollectionNames(): Promise<string[]> {
+        return new Promise<string[]>(resolve => this.metadataProvider.collections(resolve));
+    }
+    
+    async fetchIndexNames(): Promise<string[]> {
+        return new Promise<string[]>(resolve => this.metadataProvider.indexNames(resolve));
+    }
+    
+    async collectAsync(scanner: Scanner, 
+                       candidates: CandidatesCollection, 
+                       parser: RqlParser, 
+                       parseTree: ProgContext, 
+                       writtenPart: string, 
+                       ): Promise<autoCompleteWordList[]> {
         const quoteType = AutocompleteFrom.detectQuoteType(writtenPart);
         
         if (candidates.rules.has(RqlParser.RULE_collectionName)) {
+            const collections = await this.fetchCollectionNames();
+            
             return collections.map(c => ({
                 meta: META_COLLECTION,
                 score: SCORING_COLLECTION,
@@ -22,6 +35,7 @@ export class AutocompleteFrom extends BaseAutocompleteProvider {
         }
         
         if (candidates.rules.has(RqlParser.RULE_indexName)) {
+            const indexes = await this.fetchIndexNames();
             return indexes.map(index => ({
                 meta: META_INDEX,
                 score: SCORING_INDEX,

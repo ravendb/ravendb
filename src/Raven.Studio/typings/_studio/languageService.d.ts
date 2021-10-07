@@ -2,6 +2,7 @@
 
 interface BaseLanguageServiceRequest {
     id: number;
+    msgType: "request";
 }
 
 interface LanguageServiceSyntaxRequest extends BaseLanguageServiceRequest {
@@ -15,10 +16,26 @@ interface LanguageServiceAutoCompleteRequest extends BaseLanguageServiceRequest 
     position: { row: number; column: number };
 }
 
-type LanguageServiceRequest = LanguageServiceSyntaxRequest | LanguageServiceAutoCompleteRequest;
+interface LanguageServiceMetadataRequest extends BaseLanguageServiceRequest {
+    type: "metadata";
+    payload: MetadataRequestPayload;
+}
+
+type MetadataRequestListCollections = {
+    type: "collections";
+}
+
+type MetadataRequestListIndexes = {
+    type: "indexes";
+}
+
+type MetadataRequestPayload = MetadataRequestListCollections | MetadataRequestListIndexes;
+
+type LanguageServiceRequest = LanguageServiceSyntaxRequest | LanguageServiceAutoCompleteRequest | LanguageServiceMetadataRequest;
 
 interface BaseLanguageServiceResponse {
     id: number;
+    msgType: "response"
 }
 
 interface LanguageServiceSyntaxResponse extends BaseLanguageServiceResponse {
@@ -29,4 +46,18 @@ interface LanguageServiceAutoCompleteResponse extends BaseLanguageServiceRespons
     wordList: autoCompleteWordList[];
 }
 
-type LanguageServiceResponse = LanguageServiceSyntaxResponse | LanguageServiceAutoCompleteResponse;
+interface LanguageServiceMetadataResponse extends BaseLanguageServiceResponse {
+    response: MetadataResponsePayload;
+}
+
+type MetadataResponseCollections = {
+    names: string[];
+}
+
+type MetadataResponseIndexes = {
+    names: string[];
+}
+
+type MetadataResponsePayload = MetadataResponseCollections | MetadataResponseIndexes;
+
+type LanguageServiceResponse = LanguageServiceSyntaxResponse | LanguageServiceAutoCompleteResponse | LanguageServiceMetadataResponse;
