@@ -15,6 +15,7 @@ import hyperlinkColumn = require("widgets/virtualGrid/columns/hyperlinkColumn");
 import checkedColumn = require("widgets/virtualGrid/columns/checkedColumn");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
+import { highlight, languages } from "prismjs";
 
 class revisionsBin extends viewModelBase {
 
@@ -124,7 +125,7 @@ class revisionsBin extends viewModelBase {
                     const value = column.getCellValue(doc);
                     if (!_.isUndefined(value)) {
                         const json = JSON.stringify(value, null, 4);
-                        const html = Prism.highlight(json, (Prism.languages as any).javascript);
+                        const html = highlight(json, languages.javascript);
                         onValue(html, json);
                     }
                 }

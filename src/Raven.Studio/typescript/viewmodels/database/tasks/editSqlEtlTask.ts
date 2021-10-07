@@ -26,6 +26,7 @@ import testSqlReplicationCommand = require("commands/database/tasks/testSqlRepli
 import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
 import popoverUtils = require("common/popoverUtils");
 import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
+import { highlight, languages } from "prismjs";
 
 class sqlTaskTestMode {
     
@@ -119,7 +120,7 @@ class sqlTaskTestMode {
                             const metaDto = docDto["@metadata"];
                             documentMetadata.filterMetadata(metaDto);
                             const text = JSON.stringify(docDto, null, 4);
-                            this.loadedDocument(Prism.highlight(text, (Prism.languages as any).javascript));
+                            this.loadedDocument(highlight(text, languages.javascript));
                             this.loadedDocumentId(doc.getId());
 
                             $('.test-container a[href="#documentPreview"]').tab('show');

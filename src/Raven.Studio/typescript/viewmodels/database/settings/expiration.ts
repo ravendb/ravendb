@@ -5,6 +5,7 @@ import eventsCollector = require("common/eventsCollector");
 import messagePublisher = require("common/messagePublisher");
 import getExpirationConfigurationCommand = require("commands/database/documents/getExpirationConfigurationCommand");
 import saveExpirationConfigurationCommand = require("commands/database/documents/saveExpirationConfigurationCommand");
+import { highlight, languages } from "prismjs";
 
 class expiration extends viewModelBase {
 
@@ -47,7 +48,7 @@ class expiration extends viewModelBase {
             }
         });
         
-        this.expirationSampleFormatted = Prism.highlight(JSON.stringify(expiration.expirationSample, null, 4), (Prism.languages as any).javascript);
+        this.expirationSampleFormatted = highlight(JSON.stringify(expiration.expirationSample, null, 4), languages.javascript);
     }
     
     canActivate(args: any) {

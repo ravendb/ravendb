@@ -22,6 +22,7 @@ import saveDocumentCommand = require("commands/database/documents/saveDocumentCo
 import changeVectorUtils = require("common/changeVectorUtils");
 import generalUtils = require("common/generalUtils");
 import moment = require("moment");
+import { highlight, languages } from "prismjs";
 
 class conflictItem {
     
@@ -38,7 +39,7 @@ class conflictItem {
         if (dto.Doc) {
             const json = JSON.stringify(dto.Doc, null, 4);
             this.originalValue(json);
-            this.formattedValue(Prism.highlight(json, (Prism.languages as any).javascript));
+            this.formattedValue(highlight(json, languages.javascript));
             this.deletedMarker(false);
             this.changeVector(changeVectorUtils.formatChangeVector(dto.ChangeVector, useLongChangeVectorFormat));
         } else {

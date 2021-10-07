@@ -1,4 +1,5 @@
 import confirmViewModelBase = require("viewmodels/confirmViewModelBase");
+import { highlight, languages } from "prismjs";
 
 class saveDatabaseSettingsConfirm extends confirmViewModelBase<confirmDialogResult> {
 
@@ -10,7 +11,7 @@ class saveDatabaseSettingsConfirm extends confirmViewModelBase<confirmDialogResu
         super();
 
         const settingsJson = JSON.stringify(databaseSettingsToSave, null, 4);
-        const settingsHtml = Prism.highlight(settingsJson, (Prism.languages as any).javascript)
+        const settingsHtml = highlight(settingsJson, languages.javascript)
 
         this.settingsToSaveText = settingsHtml;
     }

@@ -1,5 +1,6 @@
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import copyToClipboard = require("common/copyToClipboard");
+import { highlight, languages } from "prismjs";
 
 class additionalSourceSyntax extends dialogViewModelBase {
 
@@ -70,12 +71,12 @@ map('People', function (person) { return {
         {
             title: "Csharp - Additional Source",
             text: additionalSourceSyntax.additionalSourceCsharpText,
-            html: Prism.highlight(additionalSourceSyntax.additionalSourceCsharpText, (Prism.languages as any).csharp)
+            html: highlight(additionalSourceSyntax.additionalSourceCsharpText, languages.csharp)
         },
         {
             title: "Csharp - Usage in Map",
             text: additionalSourceSyntax.usageInMapCsharpText,
-            html: Prism.highlight(additionalSourceSyntax.usageInMapCsharpText, (Prism.languages as any).csharp)
+            html: highlight(additionalSourceSyntax.usageInMapCsharpText, languages.csharp)
         }
     ];
 
@@ -83,12 +84,12 @@ map('People', function (person) { return {
         {
             title: "Javascript - Additional Source",
             text: additionalSourceSyntax.additionalSourceJavascriptText,
-            html: Prism.highlight(additionalSourceSyntax.additionalSourceJavascriptText, (Prism.languages as any).javascript)
+            html: highlight(additionalSourceSyntax.additionalSourceJavascriptText, languages.javascript)
         },
         {
             title: "Javascript - Usage in Map",
             text: additionalSourceSyntax.usageInMapJavascriptText,
-            html: Prism.highlight(additionalSourceSyntax.usageInMapJavascriptText, (Prism.languages as any).javascript)
+            html: highlight(additionalSourceSyntax.usageInMapJavascriptText, languages.javascript)
         }
     ];
 }
