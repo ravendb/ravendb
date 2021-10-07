@@ -24,8 +24,6 @@ namespace SlowTests.Client.TimeSeries.Issues
 
         }
 
-        private readonly Random _rng = new Random(123746);
-
         private static bool Equals(TimeSeriesEntry entryA, TimeSeriesEntry entryB)
         {
             if (entryA.Timestamp.Equals(entryB.Timestamp) == false)
@@ -71,7 +69,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                 {
                     using (var session = storeA.OpenSession())
                     {
-                        var ts = session.TimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "HeartRate");
+                        var ts = session.IncrementalTimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "HeartRate");
                         for (int j = 0; j < 100; j++)
                         {
                             ts.Increment(baseline.AddMinutes(j), 1);
@@ -84,7 +82,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                 {
                     using (var session = storeB.OpenSession())
                     {
-                        var ts = session.TimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "HeartRate");
+                        var ts = session.IncrementalTimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "HeartRate");
                         for (int j = 0; j < 100; j++)
                         {
                             ts.Increment(baseline.AddMinutes(j), 1);
@@ -104,8 +102,8 @@ namespace SlowTests.Client.TimeSeries.Issues
                 using (var sessionA = storeA.OpenSession())
                 using (var sessionB = storeB.OpenSession())
                 {
-                    var tsA = sessionA.TimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "HeartRate").Get();
-                    var tsB = sessionB.TimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "HeartRate").Get();
+                    var tsA = sessionA.IncrementalTimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "HeartRate").Get();
+                    var tsB = sessionB.IncrementalTimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "HeartRate").Get();
 
                     Assert.Equal(tsA.Length, tsB.Length);
 
@@ -130,51 +128,47 @@ namespace SlowTests.Client.TimeSeries.Issues
                     session.Store(new User{ Name = "Oren" }, "users/ayende");
                     session.SaveChanges();
                 }
+
                 using (var session = storeB.OpenSession())
                 {
                     session.Store(new User{ Name = "Oren" }, "users/ayende");
                     session.SaveChanges();
                 }
 
-                for (int i = 0; i < 10; i++)
+                for (int i = 1; i < 5; i++)
                 {
                     using (var session = storeA.OpenSession())
                     {
-                        var ts = session.TimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "HeartRate");
-                        for (int j = 0; j < 10; j++)
-                        {
-                            ts.Increment(baseline.AddMinutes(j), 1);
-                        }
+                        var ts = session.IncrementalTimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "HeartRate");
+                        ts.Increment(baseline.AddMinutes(i), new double[] {0, i, 0, -i});
                         session.SaveChanges();
                     }
                 }
-
-                for (int i = 0; i < 10; i++)
+                
+                for (int i = 1; i < 5; i++)
                 {
                     using (var session = storeB.OpenSession())
                     {
-                        var ts = session.TimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "HeartRate");
-                        for (int j = 0; j < 10; j++)
-                        {
-                            ts.Increment(baseline.AddMinutes(j), 1);
-                        }
+                        var ts = session.IncrementalTimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "HeartRate");
+                        ts.Increment(baseline.AddMinutes(i), new double[] { -i, i, 0});
                         session.SaveChanges();
                     }
                 }
+
                 await SetupReplicationAsync(storeA, storeB);
                 await SetupReplicationAsync(storeB, storeA);
-
+                
                 await EnsureReplicatingAsync(storeA, storeB);
                 await EnsureReplicatingAsync(storeB, storeA);
 
                 await EnsureNoReplicationLoop(Server, storeA.Database);
                 await EnsureNoReplicationLoop(Server, storeB.Database);
-
+                
                 using (var sessionA = storeA.OpenSession())
                 using (var sessionB = storeB.OpenSession())
                 {
-                    var tsA = sessionA.TimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "HeartRate").Get();
-                    var tsB = sessionB.TimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "HeartRate").Get();
+                    var tsA = sessionA.IncrementalTimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "HeartRate").Get();
+                    var tsB = sessionB.IncrementalTimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "HeartRate").Get();
 
                     Assert.Equal(tsA.Length, tsB.Length);
 
@@ -196,21 +190,21 @@ namespace SlowTests.Client.TimeSeries.Issues
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User{ Name = "Oren" }, "users/ayende");
-                    var ts = session.TimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "HeartRate");
+                    var ts = session.IncrementalTimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "HeartRate");
                     ts.Increment(baseline, 100_000);
                     session.SaveChanges();
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    var ts = session.TimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "HeartRate");
+                    var ts = session.IncrementalTimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "HeartRate");
                     ts.Increment(baseline, 100_000);
                     session.SaveChanges();
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    var ts = session.TimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "HeartRate").Get(baseline);
+                    var ts = session.IncrementalTimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "HeartRate").Get(baseline);
 
                     Assert.Equal(1, ts.Length);
                     Assert.Equal(200_000, ts[0].Value);
@@ -270,11 +264,9 @@ namespace SlowTests.Client.TimeSeries.Issues
                     }
                 }
 
-                WaitForUserToContinueTheTest(store);
-
                 using (var session = store.OpenSession())
                 {
-                    var ts = session.TimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "HeartRate").Get();
+                    var ts = session.IncrementalTimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "HeartRate").Get();
                    
                     Assert.Equal(2, ts.Length);
                     Assert.Equal(50, ts[0].Value);
@@ -293,21 +285,21 @@ namespace SlowTests.Client.TimeSeries.Issues
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User{ Name = "Oren" }, "users/ayende");
-                    var ts = session.TimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "HeartRate");
+                    var ts = session.IncrementalTimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "HeartRate");
                     ts.Increment(baseline, 4);
                     session.SaveChanges();
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    var ts = session.TimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "HeartRate");
+                    var ts = session.IncrementalTimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "HeartRate");
                     ts.Increment(baseline, 6);
                     session.SaveChanges();
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    var ts = session.TimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "HeartRate").Get(baseline);
+                    var ts = session.IncrementalTimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "HeartRate").Get(baseline);
 
                     Assert.Equal(1, ts.Length);
                     Assert.Equal(10, ts[0].Value);
@@ -325,21 +317,21 @@ namespace SlowTests.Client.TimeSeries.Issues
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User { Name = "Oren" }, "users/ayende");
-                    var ts = session.TimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "VotesPerDistrict");
+                    var ts = session.IncrementalTimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "VotesPerDistrict");
                     ts.Increment(baseline, new double[] {1, 1, 1});
                     session.SaveChanges();
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    var ts = session.TimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "VotesPerDistrict");
+                    var ts = session.IncrementalTimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "VotesPerDistrict");
                     ts.Increment(baseline, new double[] { 0, 0, 9 });
                     session.SaveChanges();
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    var ts = session.TimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "VotesPerDistrict").Get(baseline);
+                    var ts = session.IncrementalTimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "VotesPerDistrict").Get(baseline);
 
                     Assert.Equal(1, ts.Length);
                     Assert.Equal(new double[] { 1, 1, 10 }, ts[0].Values);
@@ -357,17 +349,49 @@ namespace SlowTests.Client.TimeSeries.Issues
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User { Name = "Oren" }, "users/ayende");
-                    var ts = session.TimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "VotesPerDistrict");
+                    var ts = session.IncrementalTimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "VotesPerDistrict");
                     ts.Increment(baseline, new double[] { 1, -2, 3 });
+                    session.SaveChanges();
+                }
+                
+                using (var session = store.OpenSession())
+                {
+                    var ts = session.IncrementalTimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "VotesPerDistrict").Get(baseline);
+
+                    Assert.Equal(1, ts.Length);
+                    Assert.Equal(new double[] { 1, -2, 3 }, ts[0].Values);
+                }
+            }
+        }
+
+        [Fact]
+        public void ShouldSplitOperationsIfIncrementContainBothPositiveNegativeValues2()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Oren" }, "users/ayende");
+                    var ts = session.IncrementalTimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "VotesPerDistrict");
+                    ts.Increment(baseline, new double[] { 0, 1, -2, 0, 3, -4 });
                     session.SaveChanges();
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    var ts = session.TimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "VotesPerDistrict").Get(baseline);
+                    var ts = session.IncrementalTimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "VotesPerDistrict");
+                    ts.Increment(baseline, new double[] { -3 });
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var ts = session.IncrementalTimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "VotesPerDistrict").Get(baseline);
 
                     Assert.Equal(1, ts.Length);
-                    Assert.Equal(new double[] { 1, -2, 3 }, ts[0].Values);
+                    Assert.Equal(new double[] { -3, 1, -2, 0, 3, -4 }, ts[0].Values);
                 }
             }
         }
@@ -382,30 +406,29 @@ namespace SlowTests.Client.TimeSeries.Issues
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User{ Name = "Oren" }, "users/ayende");
-                    var ts = session.TimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "HeartRate");
+                    var ts = session.IncrementalTimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "HeartRate");
                     ts.Increment(baseline, 1);
                     session.SaveChanges();
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    session.TimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "HeartRate").Delete(baseline);
+                    session.IncrementalTimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "HeartRate").Delete(baseline);
                     session.SaveChanges();
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    session.TimeSeriesFor("users/ayende", "HeartRate").Append(baseline, 2d, "foo");
+                    session.IncrementalTimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "HeartRate").Increment(baseline, 2d);
                     session.SaveChanges();
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    var ts = session.TimeSeriesFor("users/ayende", "HeartRate").Get(baseline);
+                    var ts = session.IncrementalTimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "HeartRate").Get(baseline);
 
                     Assert.Equal(1, ts.Length);
                     Assert.Equal(2d, ts[0].Value);
-                    Assert.Equal("foo", ts[0].Tag);
                 }
             }
         }
@@ -448,7 +471,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User { Name = "Oren" }, "users/ayende");
-                    var ts = session.TimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "HeartRate");
+                    var ts = session.IncrementalTimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "HeartRate");
                     ts.Increment(baseline, 10d);
                     session.SaveChanges();
                 }
@@ -457,7 +480,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                 {
                     var e = Assert.Throws<RavenException>(() =>
                     {
-                        var ts = session.TimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "HeartRate");
+                        var ts = session.IncrementalTimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "HeartRate");
                         ts.Append(baseline, 1d);
                         session.SaveChanges();
                     });
@@ -596,8 +619,8 @@ namespace SlowTests.Client.TimeSeries.Issues
                 using (var sessionA = storeA.OpenSession())
                 using (var sessionB = storeB.OpenSession())
                 {
-                    var tsA = sessionA.TimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "HeartRate").Get();
-                    var tsB = sessionB.TimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "HeartRate").Get();
+                    var tsA = sessionA.IncrementalTimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "HeartRate").Get();
+                    var tsB = sessionB.IncrementalTimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "HeartRate").Get();
 
                     Assert.Equal(tsA.Length, tsB.Length);
                     Assert.Equal(1, tsA.Length);
@@ -688,8 +711,8 @@ namespace SlowTests.Client.TimeSeries.Issues
                 using (var sessionA = storeA.OpenSession())
                 using (var sessionB = storeB.OpenSession())
                 {
-                    var tsA = sessionA.TimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "HeartRate").Get();
-                    var tsB = sessionB.TimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "HeartRate").Get();
+                    var tsA = sessionA.IncrementalTimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "HeartRate").Get();
+                    var tsB = sessionB.IncrementalTimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "HeartRate").Get();
 
                     Assert.Equal(tsA.Length, tsB.Length);
                     Assert.Equal(1, tsA.Length);
@@ -788,8 +811,8 @@ namespace SlowTests.Client.TimeSeries.Issues
                 using (var sessionA = storeA.OpenSession())
                 using (var sessionB = storeB.OpenSession())
                 {
-                    var tsA = sessionA.TimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "HeartRate").Get();
-                    var tsB = sessionB.TimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "HeartRate").Get();
+                    var tsA = sessionA.IncrementalTimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "HeartRate").Get();
+                    var tsB = sessionB.IncrementalTimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "HeartRate").Get();
 
                     Assert.Equal(tsA.Length, tsB.Length);
                     for (int i = 0; i < tsA.Length; i++)
@@ -862,7 +885,7 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                 using (var sessionA = store.OpenSession())
                 {
-                    var ts = sessionA.TimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "HeartRate").Get();
+                    var ts = sessionA.IncrementalTimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "HeartRate").Get();
 
                     Assert.Equal(1, ts.Length);
                     Assert.Equal(10d, ts[0].Value);
@@ -922,7 +945,7 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                 using (var sessionA = store.OpenSession())
                 {
-                    var ts = sessionA.TimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "HeartRate").Get();
+                    var ts = sessionA.IncrementalTimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "HeartRate").Get();
 
                     Assert.Equal(2, ts.Length);
                     Assert.Equal(10d, ts[0].Value);
@@ -975,7 +998,7 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                 using (var sessionA = store.OpenSession())
                 {
-                    var ts = sessionA.TimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "HeartRate").Get();
+                    var ts = sessionA.IncrementalTimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "HeartRate").Get();
 
                     Assert.Equal(1, ts.Length);
                     Assert.Equal(new double[] {10, 10, 10}, ts[0].Values);
@@ -1015,7 +1038,7 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                     for (int i = 0; i < 100; i++)
                     {
-                        session.TimeSeriesFor("users/karmel", IncrementalTimeSeriesPrefix + "Heartrate")
+                        session.IncrementalTimeSeriesFor("users/karmel", IncrementalTimeSeriesPrefix + "Heartrate")
                             .Increment(baseline.AddSeconds(0.4 * i), new[] { 29d * i });
                     }
                     session.SaveChanges();
@@ -1026,17 +1049,17 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var ts = session.TimeSeriesFor("users/karmel", IncrementalTimeSeriesPrefix + "Heartrate").Get(DateTime.MinValue, DateTime.MaxValue).ToList();
+                    var ts = session.IncrementalTimeSeriesFor("users/karmel", IncrementalTimeSeriesPrefix + "Heartrate").Get(DateTime.MinValue, DateTime.MaxValue).ToList();
                     var tsSeconds = (int)(ts.Last().Timestamp - ts.First().Timestamp).TotalSeconds;
 
-                    var ts1 = session.TimeSeriesFor("users/karmel", p1.GetTimeSeriesName(IncrementalTimeSeriesPrefix + "Heartrate")).Get(DateTime.MinValue, DateTime.MaxValue).ToList();
+                    var ts1 = session.IncrementalTimeSeriesFor("users/karmel", p1.GetTimeSeriesName(IncrementalTimeSeriesPrefix + "Heartrate")).Get(DateTime.MinValue, DateTime.MaxValue).ToList();
                     var ts1Seconds = (int)(ts1.Last().Timestamp - ts1.First().Timestamp).TotalSeconds;
                     Assert.Equal(ts1Seconds, tsSeconds);
 
-                    var ts2 = session.TimeSeriesFor("users/karmel", p2.GetTimeSeriesName(IncrementalTimeSeriesPrefix + "Heartrate")).Get(DateTime.MinValue, DateTime.MaxValue).ToList();
+                    var ts2 = session.IncrementalTimeSeriesFor("users/karmel", p2.GetTimeSeriesName(IncrementalTimeSeriesPrefix + "Heartrate")).Get(DateTime.MinValue, DateTime.MaxValue).ToList();
                     Assert.Equal(ts1.Count / 2, ts2.Count);
 
-                    var ts3 = session.TimeSeriesFor("users/karmel", p3.GetTimeSeriesName(IncrementalTimeSeriesPrefix + "Heartrate")).Get(DateTime.MinValue, DateTime.MaxValue).ToList();
+                    var ts3 = session.IncrementalTimeSeriesFor("users/karmel", p3.GetTimeSeriesName(IncrementalTimeSeriesPrefix + "Heartrate")).Get(DateTime.MinValue, DateTime.MaxValue).ToList();
                     Assert.Equal(ts1.Count / 4, ts3.Count);
                 }
 
@@ -1047,7 +1070,7 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                         for (int i = 0; i < 100; i++)
                         {
-                            session.TimeSeriesFor("users/karmel", p1.GetTimeSeriesName(IncrementalTimeSeriesPrefix + "Heartrate"))
+                            session.IncrementalTimeSeriesFor("users/karmel", p1.GetTimeSeriesName(IncrementalTimeSeriesPrefix + "Heartrate"))
                                 .Increment(baseline.AddSeconds(0.4 * i), new[] { 29d * i });
                         }
                         session.SaveChanges();
@@ -1104,15 +1127,41 @@ namespace SlowTests.Client.TimeSeries.Issues
                         }
                     }
                 }
-
-                WaitForUserToContinueTheTest(store);
-
+                
                 using (var session = store.OpenSession())
                 {
-                    var ts = session.TimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "HeartRate").Get();
+                    var ts = session.IncrementalTimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "HeartRate").Get();
 
                     Assert.Equal(1, ts.Length);
                     Assert.Equal(630, ts[0].Value);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task ShouldThrowIfIncrementalTimeSeriesForReceiveNameWithoutIncrementalPrefix()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Oren" }, "users/ayende");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var e = Assert.ThrowsAsync<InvalidDataException>(async () =>
+                    {
+                        session.IncrementalTimeSeriesFor("users/karmel", "Heartrate")
+                            .Increment(baseline, new[] {29d});
+                        await session.SaveChangesAsync();
+                    });
+
+                    await e;
+                    Assert.True(e.Result.Message.Contains("Incremental Time Series name must include"));
                 }
             }
         }

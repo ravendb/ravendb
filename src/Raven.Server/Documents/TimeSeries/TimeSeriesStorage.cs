@@ -1285,14 +1285,14 @@ namespace Raven.Server.Documents.TimeSeries
             IEnumerable<SingleResult> ToResult(TimeSeriesOperation.IncrementOperation element)
             {
                 ValidateTimestamp(prevTimestamp, element.Timestamp);
-                prevTimestamp = element.Timestamp;
-                
+
                 holder.Timestamp = element.Timestamp.EnsureUtc().EnsureMilliseconds();
                 holder.Status = TimeSeriesValuesSegment.Live;
 
                 var positiveValues = new List<double>();
                 var negativeValues = new List<double>();
 
+                int zeroCount = 0, incCount = 0, decCount = 0; 
                 foreach (var value in element.Values)
                 {
                     var sign = Math.Sign(value);
@@ -1300,29 +1300,30 @@ namespace Raven.Server.Documents.TimeSeries
                     {
                         positiveValues.Add(value);
                         negativeValues.Add(value);
+                        zeroCount++;
                     }
                     else if (sign > 0)
                     {
                         positiveValues.Add(value);
                         negativeValues.Add(0);
+                        incCount++;
                     }
                     else
                     {
                         negativeValues.Add(value);
-                        positiveValues.Add(value);
+                        positiveValues.Add(0);
+                        decCount++;
                     }
                 }
 
-                if(positiveValues.Count != negativeValues.Count)
+                if(element.Values.Length > 1 && (incCount + zeroCount < element.Values.Length || decCount + zeroCount < element.Values.Length))
                 {
+                    holder.Values = negativeValues.ToArray();
+                    holder.Tag = TryGetTimedCounterTag(_documentDatabase.DbBase64Id, -1);
+                    yield return holder;
 
                     holder.Values = positiveValues.ToArray();
                     holder.Tag = TryGetTimedCounterTag(_documentDatabase.DbBase64Id, 1);
-                    yield return holder;
-
-
-                    holder.Values = negativeValues.ToArray();
-                    holder.Tag = TryGetTimedCounterTag(_documentDatabase.DbBase64Id, -1);
                     yield return holder;
                 }
                 else
@@ -1332,12 +1333,13 @@ namespace Raven.Server.Documents.TimeSeries
                     holder.Tag = TryGetTimedCounterTag(_documentDatabase.DbBase64Id, sign);
                     yield return holder;
                 }
+                prevTimestamp = element.Timestamp;
             }
         }
 
         private static void ValidateTimestamp(DateTime prevTimestamp, DateTime elementTimestamp)
         {
-            if (elementTimestamp <= prevTimestamp)
+            if (elementTimestamp < prevTimestamp)
             {
                 throw new InvalidDataException(
                     $"The order of increment operations must be sequential, but got previous operation {prevTimestamp} and the current: {elementTimestamp}");
@@ -1497,9 +1499,9 @@ namespace Raven.Server.Documents.TimeSeries
                                 break;
                             }
 
-                            if (EnsureNumberOfValues(segmentHolder.ReadOnlySegment.NumberOfValues, ref current))
+                            if (EnsureNumberOfValues(segmentHolder.ReadOnlySegment.NumberOfValues, ref current) && name.StartsWith(IncrementalTimeSeriesPrefix) == false)
                             {
-                                if (TryAppendToCurrentSegment(context, segmentHolder, appendEnumerator, current, out var newValueFetched))
+                                if ( TryAppendToCurrentSegment(context, segmentHolder, appendEnumerator, current, out var newValueFetched))
                                     break;
 
                                 if (newValueFetched)
@@ -1709,7 +1711,7 @@ namespace Raven.Server.Documents.TimeSeries
                                     int length = Math.Min(currentValues.Length, current.Values.Length);
                                     for (int i = 0; i < length; i++)
                                     {
-                                        current.Values.Span[i] += currentValues[i];
+                                        current.Values.Span[i] = double.IsNaN(current.Values.Span[i]) ? currentValues[i] : current.Values.Span[i] + currentValues[i];
                                     }
                                     compare = CompareResult.Remote;
                                 }
@@ -1834,7 +1836,7 @@ namespace Raven.Server.Documents.TimeSeries
                     return CompareResult.Remote | CompareResult.Merge;
                 }
 
-                if (remote.Tag != null && remote.Tag.StartsWith(TimedCounterPrefixBuffer))
+                if (localStatus != TimeSeriesValuesSegment.Dead && remote.Tag != null && remote.Tag.StartsWith(TimedCounterPrefixBuffer))
                     throw new InvalidDataException("Cannot get increment operation for Non-Incremental Time Series.");
 
                 if (holder.FromReplication == false)
@@ -1878,6 +1880,9 @@ namespace Raven.Server.Documents.TimeSeries
 
         private static CompareResult SelectLargestValue(Span<double> localValues, SingleResult remote)
         {
+            if (EnsureNumberOfValues(localValues.Length, ref remote) == false)
+                return CompareResult.Remote;
+
             if (localValues.Length != remote.Values.Length)
             {
                 // larger number of values wins
@@ -1897,6 +1902,9 @@ namespace Raven.Server.Documents.TimeSeries
 
         private static CompareResult SelectSmallerValue(Span<double> localValues, SingleResult remote)
         {
+            if (EnsureNumberOfValues(localValues.Length, ref remote) == false)
+                return CompareResult.Remote;
+
             if (localValues.Length != remote.Values.Length)
             {
                 // smaller number of values wins
