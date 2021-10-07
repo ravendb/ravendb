@@ -59,6 +59,7 @@ export class Scanner {
                     }
                     
                     this._index = i - 1;
+                    break;
                 }
             }
         }

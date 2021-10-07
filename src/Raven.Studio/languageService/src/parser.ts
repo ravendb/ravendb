@@ -5,7 +5,7 @@ import { ParsedRql } from "./types";
 import { ANTLRErrorListener } from "antlr4ts/ANTLRErrorListener";
 import { Token } from "antlr4ts/Token";
 
-interface parseRqlOptions {
+export interface parseRqlOptions {
     onLexerError?: ANTLRErrorListener<Token>["syntaxError"];
     onParserError?: ANTLRErrorListener<Token>["syntaxError"];
 }

@@ -10,14 +10,19 @@ export class AutocompleteGroupBy extends BaseAutocompleteProvider implements Aut
     async getPossibleFields(parser: RqlParser): Promise<string[]> {
         const [queryType, source] = AutocompleteGroupBy.detectQueryType(parser);
         
-        return new Promise(resolve => {
+        return new Promise<string[]>(resolve => {
             switch (queryType) {
                 case "unknown":
-                    return [];
+                    resolve([]);
+                    break;
                 case "index":
-                    return this.metadataProvider.indexFields(source, resolve);
+                    this.metadataProvider.indexFields(source, resolve);
+                    break;
                 case "collection":
-                    return this.metadataProvider.collectionFields(source, undefined, fields => resolve(Object.keys(fields)));
+                    //TODO: pass correct prefix!
+                    //TODO: extract and pass values as well!
+                    this.metadataProvider.collectionFields(source, undefined, fields => resolve(Object.keys(fields)));
+                    break;
             }
         });
     }

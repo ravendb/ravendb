@@ -3,6 +3,9 @@ import { CaretPosition } from "../src/types";
 
 import 'jest-extended';
 import { FakeMetadataProvider } from "./autocomplete/FakeMetadataProvider";
+import { ANTLRErrorListener } from "antlr4ts/ANTLRErrorListener";
+import { Token } from "antlr4ts/Token";
+import { parseRqlOptions } from "../src/parser";
 
 
 const caret = "|";
@@ -30,6 +33,35 @@ export function extractCaretPosition(input: string): { inputWithoutCaret: string
         inputWithoutCaret, 
         position
     }
+}
+
+type ErrorItem = Parameters<ANTLRErrorListener<Token>["syntaxError"]>;
+
+export class ErrorCollector {
+    
+    private _lexerErrors: ErrorItem[] = [];
+    private _parserErrors: ErrorItem[] = [];
+    
+    numberOfLexerErrors() {
+        return this._lexerErrors.length;
+    }
+    
+    numberOfParserErrors() {
+        return this._parserErrors.length;
+    }
+    
+    numberOfErrors() {
+        return this.numberOfLexerErrors() + this.numberOfParserErrors();
+    }
+    
+    listeners(): Required<Pick<parseRqlOptions, "onLexerError" | "onParserError">> {
+        const self = this;
+        return {
+            onParserError: function () { self._parserErrors.push([...arguments] as any); },
+            onLexerError: function () { self._lexerErrors.push([...arguments] as any); }
+        }
+    }
+    
 }
 
 export async function autocomplete(input: string): Promise<autoCompleteWordList[]> {

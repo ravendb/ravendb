@@ -8,19 +8,22 @@ export class FakeMetadataProvider implements queryCompleterProviders {
         callback(indexes);
     }
     
-    terms() {
-        //TODO:
-    }
-    
     collections(callback: (collections: string[]) => void) {
         callback(collections);
     }
-    
-    collectionFields() {
-        //TODO:
+
+    collectionFields(collectionName: string, prefix: string, callback: (fields: dictionary<string>) => void): void {
+        callback({}); //TODO:
+    }
+
+    indexFields(indexName: string, callback: (fields: string[]) => void): void {
+        callback([]); //tODO:
+    }
+
+    terms(indexName: string, collection: string, field: string, pageSize: number, callback: (terms: string[]) => void): void {
+        callback([]); //TODO:
     }
     
-    indexFields() {
-        //TODO:
-    }
+    
+    
 }

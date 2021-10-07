@@ -3,7 +3,6 @@ import { parseRql } from "../src/parser";
 
 const queries = require("./data/queries.json");
 
-const isTimeSeriesTest = (name: string) => name.includes("declare timeseries ") || name.includes("timeseries("); 
 const graphQuery = (name: string) => name.trim().startsWith("match") || name.trim().startsWith("with");
 
 describe("RavenDB Queries", function () {
