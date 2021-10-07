@@ -139,7 +139,16 @@ class elasticSearchTaskTestMode {
             new testElasticSearchEtlCommand(this.db(), dto)
                 .execute()
                 .done(simulationResult => {
-                    this.testResults(simulationResult.Summary);
+                    const summaryFormatted =  simulationResult.Summary.map(x => {
+                        return { 
+                            Commands: x.Commands.map((y: string) => {
+                                return y.replace(/\r\n/g, "\n");
+                            }),
+                            IndexName: x.IndexName
+                        };
+                    });
+                    
+                    this.testResults(summaryFormatted);
                     
                     this.debugOutput(simulationResult.DebugOutput);
                     this.transformationErrors(simulationResult.TransformationErrors);
