@@ -386,9 +386,6 @@ namespace Raven.Server.Documents.Handlers
 
             var incrementalValues = new Dictionary<long, TimeSeriesEntry>();
             var reader = new TimeSeriesReader(context, docId, name, from, to, offset: null);
-            Dictionary<string, double[]> nodesValues = null;
-            if (fullResults)
-                nodesValues = new Dictionary<string, double[]>();
 
             // init hash
             var size = Sodium.crypto_generichash_bytes();
@@ -476,20 +473,12 @@ namespace Raven.Server.Documents.Handlers
                         break;
                     }
 
-                    if (fullResults)
-                    {
-                        if (nodesValues.Count > 0)
-                            nodesValues.Clear();
-
-                        nodesValues[nodeDbId] = values;
-                    }
-
                     incrementalValues[singleResult.Timestamp.Ticks] = new TimeSeriesEntry
                     {
                         Timestamp = singleResult.Timestamp,
                         Values = singleResult.Values.ToArray(),
                         IsRollup = singleResult.Type == SingleResultType.RolledUp,
-                        NodesValues = fullResults ? nodesValues : null
+                        NodesValues = fullResults ? new Dictionary<string, double[]>(){ [nodeDbId] = values } : null
                     };
                 }
 

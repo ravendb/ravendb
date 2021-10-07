@@ -163,7 +163,7 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                 await EnsureNoReplicationLoop(Server, storeA.Database);
                 await EnsureNoReplicationLoop(Server, storeB.Database);
-                
+                WaitForUserToContinueTheTest(storeA);
                 using (var sessionA = storeA.OpenSession())
                 using (var sessionB = storeB.OpenSession())
                 {
@@ -1127,7 +1127,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                         }
                     }
                 }
-                
+                WaitForUserToContinueTheTest(store);
                 using (var session = store.OpenSession())
                 {
                     var ts = session.IncrementalTimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "HeartRate").Get();
@@ -1161,7 +1161,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                     });
 
                     await e;
-                    Assert.True(e.Result.Message.Contains("Incremental Time Series name must include"));
+                    Assert.True(e.Result.Message.Contains("Incremental Time Series name must start with"));
                 }
             }
         }
