@@ -1,12 +1,34 @@
 /// <reference path="../../typings/tsd.d.ts"/>
 
 import { parseRql } from "./parser";
-import { handleAutoComplete } from "./autocomplete";
 import { CaretPosition } from "./types";
+import { autoCompleteEngine } from "./autocomplete";
+import { proxyMetadataProvider } from "../../typescript/common/autoComplete/proxyMetadataProvider";
 
-export function sendResponse(response: LanguageServiceResponse) {
-    postMessage(response, undefined);
+let nextRequestId = 1;
+
+export function sendRequest(msg: LanguageServiceRequest) {
+    postMessage(msg, undefined);
 }
+
+export function sendResponse(msg: LanguageServiceResponse) {
+    postMessage(msg, undefined);
+}
+
+const metadataProvider = new proxyMetadataProvider(payload => {
+    const requestId = nextRequestId++;
+
+    sendRequest({
+        id: requestId,
+        msgType: "request",
+        type: "metadata",
+        payload
+    });
+
+    return requestId;
+});
+
+const engine = new autoCompleteEngine(metadataProvider);
 
 export function handleSyntaxCheck(input: string): AceAjax.Annotation[] {
     const response: AceAjax.Annotation[] = [];
@@ -27,31 +49,39 @@ export function handleSyntaxCheck(input: string): AceAjax.Annotation[] {
     return response;
 }
 
-onmessage = async (e: MessageEvent<LanguageServiceRequest>): Promise<void> => {
-    switch (e.data.type) {
-        case "syntax":
-            const annotations = handleSyntaxCheck(e.data.query);
-            
-            sendResponse({
-                id: e.data.id,
-                annotations
-            });
-            break;
-        case "complete":
-            const position = e.data.position;
-            const caret: CaretPosition = {
-                line: position.row + 1,
-                column: position.column
-            };
-            const query = e.data.query;
-            const wordList = await handleAutoComplete(query, caret);
-            
-            sendResponse({
-                id: e.data.id,
-                wordList
-            });
-            break;
-        default:
-            throw new Error("Unhandled message type: " + e.data);
+onmessage = async (e: MessageEvent<LanguageServiceRequest | LanguageServiceResponse>): Promise<void> => {
+    if (e.data.msgType === "request") {
+        switch (e.data.type) {
+            case "syntax":
+                const annotations = handleSyntaxCheck(e.data.query);
+
+                sendResponse({
+                    id: e.data.id,
+                    annotations,
+                    msgType: "response"
+                });
+                break;
+            case "complete":
+                const position = e.data.position;
+                const caret: CaretPosition = {
+                    line: position.row + 1,
+                    column: position.column
+                };
+                const query = e.data.query;
+                const wordList = await engine.complete(query, caret);
+
+                sendResponse({
+                    msgType: "response",
+                    id: e.data.id,
+                    wordList
+                });
+                break;
+            default:
+                throw new Error("Unhandled message type: " + e.data);
+        }
+    }
+    
+    if (e.data.msgType === "response") {
+        metadataProvider.onResponse(e.data.id, (e.data as LanguageServiceMetadataResponse).response);
     }
 }

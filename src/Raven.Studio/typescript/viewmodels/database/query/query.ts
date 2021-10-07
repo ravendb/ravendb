@@ -294,7 +294,7 @@ class query extends viewModelBase {
     constructor() {
         super();
 
-        this.languageService = new rqlLanguageService(this.activeDatabase, this.indexes);
+        this.languageService = new rqlLanguageService(this.activeDatabase, this.indexes, "Select");
         
         aceEditorBindingHandler.install();
         datePickerBindingHandler.install();

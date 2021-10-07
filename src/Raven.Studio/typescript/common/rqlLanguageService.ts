@@ -1,6 +1,8 @@
 /// <reference path="../../typings/tsd.d.ts" />
 
 import database = require("models/resources/database");
+import remoteMetadataProvider = require("./autoComplete/remoteMetadataProvider");
+import cachedMetadataProvider = require("./autoComplete/cachedMetadataProvider");
 
 class rqlLanguageService {
     
@@ -9,9 +11,15 @@ class rqlLanguageService {
     private pendingMessages: Map<number, Function>;
     private latestSyntaxCheckRequestId = -1;
     private lastAutoCompleteRequestId = -1;
+    private metadataProvider: queryCompleterProviders;
     
-    constructor(activeDatabase: KnockoutObservable<database>, indexes: KnockoutObservableArray<Raven.Client.Documents.Operations.IndexInformation>) {
+    constructor(
+        activeDatabase: KnockoutObservable<database>, 
+        indexes: KnockoutObservableArray<Raven.Client.Documents.Operations.IndexInformation>,
+        queryType: rqlQueryType) {
         this.worker = new Worker("/studio/rql_worker.js");
+        
+        this.metadataProvider = new cachedMetadataProvider(new remoteMetadataProvider(activeDatabase, indexes, queryType));
         
         _.bindAll(this, "complete");
         
@@ -31,13 +39,58 @@ class rqlLanguageService {
     }
     
     private handleMessage(ev: MessageEvent) {
-        const response = ev.data as LanguageServiceResponse;
+        if (ev.data.msgType === "response") {
+            const response = ev.data as LanguageServiceResponse;
+
+            const callback = this.pendingMessages.get(response.id);
+            try {
+                callback(response);
+            } finally {
+                this.pendingMessages.delete(response.id);
+            }
+        } 
         
-        const callback = this.pendingMessages.get(response.id);
-        try {
-            callback(response);
-        } finally {
-            this.pendingMessages.delete(response.id);
+        if (ev.data.msgType === "request") {
+            const request = ev.data as LanguageServiceRequest;
+
+            switch (request.type) {
+                case "metadata":
+                    this.handleMetadataRequest(request);
+                    break;
+            }
+        }
+    }
+    
+    private sendMetadataResponse(request: LanguageServiceMetadataRequest, payload: MetadataResponsePayload) {
+        const response: LanguageServiceMetadataResponse = {
+            id: request.id,
+            msgType: "response",
+            response: payload
+        } 
+        
+        this.worker.postMessage(response);
+    }
+    
+    private handleMetadataRequest(request: LanguageServiceMetadataRequest) {
+        switch (request.payload.type) {
+            case "collections":
+                this.metadataProvider.collections(names => {
+                    this.sendMetadataResponse(request, {
+                        names
+                    })
+                });
+                break;
+                
+            case "indexes":
+                this.metadataProvider.indexNames(names => {
+                    this.sendMetadataResponse(request, {
+                        names
+                    });
+                });
+                break;
+                
+            default:
+                throw new Error("Unhandled metadata request" + request.payload);
         }
     }
     
@@ -57,6 +110,7 @@ class rqlLanguageService {
         this.latestSyntaxCheckRequestId = requestId;
         
         this.postMessage({
+            msgType: "request",
             type: "syntax",
             id: requestId,
             query: text
@@ -81,6 +135,7 @@ class rqlLanguageService {
         this.lastAutoCompleteRequestId = requestId;
         
         this.postMessage({
+            msgType: "request",
             type: "complete",
             id: requestId,
             query: text,

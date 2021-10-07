@@ -45,7 +45,4 @@
     <Compile Remove="aceBuild\build\demo\kitchen-sink\docs\csharp.cs" />
     <None Include="aceBuild\build\demo\kitchen-sink\docs\csharp.cs" />
   </ItemGroup>
-  <ItemGroup>
-    <TypeScriptCompile Include="languageService\test\grammar\whereStatement.spec.ts" />
-  </ItemGroup>
 </Project>

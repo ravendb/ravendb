@@ -1,8 +1,17 @@
 import { CandidatesCollection } from "antlr4-c3/out/src/CodeCompletionCore";
-import { RqlParser } from "../generated/RqlParser";
+import { ProgContext, RqlParser } from "../generated/RqlParser";
 import { BaseAutocompleteProvider } from "./baseProvider";
 import { Scanner } from "../scanner";
-import { META_ALL, META_FUNCTION, META_OPERATOR, SCORING_FUNCTION, SCORING_OPERATOR } from "./scoring";
+import {
+    META_ALL,
+    META_COLLECTION,
+    META_FUNCTION, META_KEYWORD,
+    META_OPERATOR,
+    SCORING_COLLECTION,
+    SCORING_FUNCTION, SCORING_KEYWORD,
+    SCORING_OPERATOR
+} from "./scoring";
+import { AutocompleteProvider } from "./common";
 
 const ident = x => x;
 
@@ -17,6 +26,23 @@ function filterTokens<T>(text: string, candidates: T[], extractor: (val: T) => s
         });
     }
 }
+
+
+const rootKeywords: number[] = [
+    RqlParser.FROM,
+    RqlParser.GROUP_BY,
+    RqlParser.WHERE,
+    RqlParser.LOAD,
+    RqlParser.ORDER_BY,
+    RqlParser.SELECT,
+    RqlParser.INCLUDE,
+    RqlParser.LIMIT
+];
+
+const tokensRemap = new Map<number, string>();
+tokensRemap.set(RqlParser.ALL_DOCS, "@all_docs");
+tokensRemap.set(RqlParser.ORDER_BY, "order by");
+tokensRemap.set(RqlParser.GROUP_BY, "group by");
 
 const specialFunctions: Pick<autoCompleteWordList, "value" | "caption">[] = [
     {
@@ -56,14 +82,42 @@ const specialFunctions: Pick<autoCompleteWordList, "value" | "caption">[] = [
         caption: "exact()" //TODO:
     }
 ]
-export class AutocompleteKeywords extends BaseAutocompleteProvider {
+
+const alreadyHandledTokenTypes: number[] = [
+    RqlParser.MATH,
+    RqlParser.EQUAL,
+    RqlParser.METADATA,
+    RqlParser.ALL_DOCS,
+    ...rootKeywords
+] 
+
+export class AutocompleteKeywords extends BaseAutocompleteProvider implements AutocompleteProvider {
     
-    constructor(private ignoredTokens: number[]) {
-        super();
+    constructor(metadataProvider: queryCompleterProviders, private ignoredTokens: number[]) {
+        super(metadataProvider);
     }
     
-    tryHandleFromWithExplicitAlias(candidates: CandidatesCollection, scanner: Scanner): boolean {
-        if (!candidates.rules.has(RqlParser.RULE_identifiersAllNames)) {
+    static handleFromAlias(candidates: CandidatesCollection, scanner: Scanner): autoCompleteWordList[] {
+        const aliasRule = candidates.rules.get(RqlParser.RULE_fromAlias);
+        scanner.push();
+        
+        try {
+            scanner.seek(aliasRule.startTokenIndex);
+            const withAlias = scanner.tokenType() === RqlParser.AS;
+            return withAlias ? [] : [{
+                value: "as ",
+                caption: "as",
+                score: SCORING_OPERATOR,
+                meta: META_OPERATOR
+            }];
+        } finally {
+            scanner.pop();
+        }
+        
+    }
+    
+    static tryHandleFromWithExplicitAlias(candidates: CandidatesCollection, scanner: Scanner): boolean {
+        if (!candidates.rules.has(RqlParser.RULE_fromAlias)) {
             return false;
         }
         
@@ -71,12 +125,12 @@ export class AutocompleteKeywords extends BaseAutocompleteProvider {
             return false;
         }
         
-        const allIdentifiers = candidates.rules.get(RqlParser.RULE_identifiersAllNames);
+        const allIdentifiers = candidates.rules.get(RqlParser.RULE_fromAlias);
 
         return allIdentifiers.ruleList.indexOf(RqlParser.RULE_fromAlias) !== -1;
     }
     
-    handleSpecialFunctions(candidates: CandidatesCollection, writtenText: string): autoCompleteWordList[] {
+    static handleSpecialFunctions(candidates: CandidatesCollection, writtenText: string): autoCompleteWordList[] {
         const specialFunctionRule = candidates.rules.get(RqlParser.RULE_specialFunctionName);
         const inWhereSpecialFunction = specialFunctionRule
             && specialFunctionRule.ruleList.length >= 1
@@ -93,7 +147,7 @@ export class AutocompleteKeywords extends BaseAutocompleteProvider {
         }));
     } 
     
-    handleEqual(): autoCompleteWordList[] {
+    static handleEqual(): autoCompleteWordList[] {
         return [
             {
                 value: "==",
@@ -143,29 +197,78 @@ export class AutocompleteKeywords extends BaseAutocompleteProvider {
             }
         ]
     }
+
+    static handleAllDocs(): autoCompleteWordList {
+        return {
+            value: "@all_docs ",
+            caption: "@all_docs",
+            meta: META_COLLECTION,
+            score: SCORING_COLLECTION
+        }
+    }
     
-    collect(scanner: Scanner, candidates: CandidatesCollection, parser: RqlParser, writtenText: string): autoCompleteWordList[] {
+    static handleRootKeywords(candidates: CandidatesCollection, parser: RqlParser, writtenText: string): autoCompleteWordList[] {
+        const result: autoCompleteWordList[] = [];
+
+        // we iterate here in order keywords appear in RQL
+        for (const keyword of rootKeywords) {
+            if (candidates.tokens.has(keyword)) {
+                const displayName = parser.vocabulary.getSymbolicName(keyword).toLowerCase(); 
+                result.push({
+                    caption: displayName,
+                    value: displayName + " ",
+                    meta: META_KEYWORD,
+                    score: SCORING_KEYWORD
+                });
+            }
+        }
+        
+        const fromKeywordIndex = result.findIndex(x => x.caption === "from");
+        if (fromKeywordIndex !== -1) {
+            result.splice(fromKeywordIndex, 0, {
+                value: "from index ",
+                caption: "from index",
+                meta: META_KEYWORD,
+                score: SCORING_KEYWORD
+            })
+        }
+        
+        return filterTokens(writtenText, result, x => x.value);
+    }
+    
+    collect(scanner: Scanner, candidates: CandidatesCollection, parser: RqlParser, parseTree: ProgContext, writtenText: string): autoCompleteWordList[] {
         const completions: autoCompleteWordList[] = [];
         
-        if (this.tryHandleFromWithExplicitAlias(candidates, scanner)) {
-            return completions;
+        if (candidates.rules.has(RqlParser.RULE_fromAlias)) {
+            const fromAlias = AutocompleteKeywords.handleFromAlias(candidates, scanner);
+            completions.push(...fromAlias);
+            if (!fromAlias.length) {
+                // we are just after 'as' inside 'from' - skip keywords
+                return completions;
+            }
         }
         
         if (candidates.rules.has(RqlParser.RULE_specialFunctionName)) {
-            completions.push(...this.handleSpecialFunctions(candidates, writtenText));
+            completions.push(...AutocompleteKeywords.handleSpecialFunctions(candidates, writtenText));
         }
         
         if (candidates.tokens.has(RqlParser.EQUAL)) {
-            completions.push(...this.handleEqual())
+            completions.push(...AutocompleteKeywords.handleEqual())
         }
         
         if (candidates.tokens.has(RqlParser.MATH)) {
-            completions.push(...this.handleMath());
+            completions.push(...AutocompleteKeywords.handleMath());
         }
         
         if (candidates.tokens.has(RqlParser.METADATA)) {
-            completions.push(...this.handleMetadata());
+            completions.push(...AutocompleteKeywords.handleMetadata());
         }
+
+        if (candidates.tokens.has(RqlParser.ALL_DOCS)) {
+            completions.push(AutocompleteKeywords.handleAllDocs());
+        }
+        
+        completions.push(...AutocompleteKeywords.handleRootKeywords(candidates, parser, writtenText));
         
         const tokens: string[] = [];
         candidates.tokens.forEach((_, k) => {

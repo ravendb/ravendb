@@ -1,11 +1,18 @@
-import { AutocompleteProvider } from "./common";
 import { ParseTree } from "antlr4ts/tree/ParseTree";
-import { ProgContext } from "../generated/RqlParser";
+import { CollectionByIndexContext, CollectionByNameContext, ProgContext, RqlParser } from "../generated/RqlParser";
 import { TerminalNode } from "antlr4ts/tree/TerminalNode";
+import { CandidateRule, CandidatesCollection } from "antlr4-c3/out/src/CodeCompletionCore";
 
-export type QuoteType = "None" | "Single" | "Double"; 
+export type QueryType = "index" | "collection" | "unknown";
+export type QuoteType = "None" | "Single" | "Double";
 
-export class BaseAutocompleteProvider implements AutocompleteProvider {
+export abstract class BaseAutocompleteProvider {
+    
+    protected readonly metadataProvider: queryCompleterProviders;
+
+    constructor(metadataProvider: queryCompleterProviders) {
+        this.metadataProvider = metadataProvider;
+    }
     
     /**
      * Returns root context for given node, ex.: from, include, group by, etc
@@ -52,5 +59,32 @@ export class BaseAutocompleteProvider implements AutocompleteProvider {
             case "Single":
                 return `'${input.replace(/'/g, "\'")}'`;
         }
+    }
+    
+    static detectQueryType(parser: RqlParser): [QueryType, string] {
+        const from = parser.fromStatement();
+        if (!from) {
+            return ["unknown", undefined];
+        }
+        
+        if (from instanceof CollectionByNameContext) {
+            return ["collection", from.collectionName().text];
+        }
+
+        if (from instanceof CollectionByIndexContext) {
+            return ["index", from.indexName().text];
+        }
+        
+        return ["unknown", undefined];
+    }
+    
+    static findFirstRule(candidates: CandidatesCollection, rules: number[]): [number, CandidateRule] {
+        for (const rule of rules) {
+            if (candidates.rules.has(rule)) {
+                return [rule, candidates.rules.get(rule)];
+            }
+        }
+        
+        return null;
     }
 }

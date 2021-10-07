@@ -1,7 +1,8 @@
-import { handleAutoComplete } from "../src/autocomplete";
+import { autoCompleteEngine } from "../src/autocomplete";
 import { CaretPosition } from "../src/types";
 
 import 'jest-extended';
+import { FakeMetadataProvider } from "./autocomplete/FakeMetadataProvider";
 
 
 const caret = "|";
@@ -33,5 +34,6 @@ export function extractCaretPosition(input: string): { inputWithoutCaret: string
 
 export async function autocomplete(input: string): Promise<autoCompleteWordList[]> {
     const { inputWithoutCaret, position } = extractCaretPosition(input);
-    return await handleAutoComplete(inputWithoutCaret, position);
+    const engine = new autoCompleteEngine(new FakeMetadataProvider());
+    return await engine.complete(inputWithoutCaret, position);
 }
