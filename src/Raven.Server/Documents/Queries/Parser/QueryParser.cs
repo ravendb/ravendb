@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using Esprima;
 using Raven.Client.Exceptions;
@@ -1566,6 +1567,8 @@ namespace Raven.Server.Documents.Queries.Parser
 
         private bool Binary(out QueryExpression op)
         {
+            RuntimeHelpers.EnsureSufficientExecutionStack();
+
             switch (_state)
             {
                 case NextTokenOptions.Parenthesis:
