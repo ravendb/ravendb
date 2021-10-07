@@ -171,4 +171,24 @@ describe("scanner seek", function () {
         expect(scanner.tokenType())
             .toEqual(RqlParser.WS);
     });
+    
+    it("can seek after declare function ", () => {
+        const { writtenPart, caretIndex, scanner } = act("declare function x() {\n" +
+            "    \n" +
+            "}\n" +
+            "\n" +
+            "\n" +
+            "|\n" +
+            "from \n ");
+
+        expect(caretIndex)
+            .toEqual(16);
+        expect(writtenPart)
+            .toEqual("");
+        expect(scanner.tokenType())
+            .toEqual(RqlParser.WS);
+        
+        expect(scanner.lookAhead())
+            .toEqual(RqlParser.FROM);
+    });
 });

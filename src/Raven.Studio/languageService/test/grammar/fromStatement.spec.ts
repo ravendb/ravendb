@@ -1,5 +1,6 @@
 import { parseRql } from "../../src/parser";
 import { CollectionByIndexContext, CollectionByNameContext } from "../../src/generated/RqlParser";
+import { ErrorCollector } from "../autocompleteUtils";
 
 
 describe("FROM statement parser", function() {
@@ -52,9 +53,12 @@ describe("FROM statement parser", function() {
     });
 
     it("from index (w/o collection)", function() {
-        const { parseTree, parser } = parseRql(`from index"`);
-
-        expect(parser.numberOfSyntaxErrors)
+        const errorCollector = new ErrorCollector();
+        const { parseTree } = parseRql(`from index "`, {
+            ...errorCollector.listeners()
+        });
+        
+        expect(errorCollector.numberOfErrors())
             .toEqual(1);
 
         const from = parseTree.fromStatement();
@@ -64,9 +68,12 @@ describe("FROM statement parser", function() {
     });
 
     it("from index '", function() {
-        const { parseTree, parser } = parseRql(`from index '`);
+        const errorCollector = new ErrorCollector();
+        const { parseTree } = parseRql(`from index '`, {
+            ...errorCollector.listeners()
+        });
 
-        expect(parser.numberOfSyntaxErrors)
+        expect(errorCollector.numberOfErrors())
             .toEqual(1);
 
         const from = parseTree.fromStatement();
@@ -75,10 +82,14 @@ describe("FROM statement parser", function() {
             .toBeInstanceOf(CollectionByIndexContext);
     });
 
-    it("from index d", function() {
-        const { parseTree, parser } = parseRql(`from index d"`);
+    it("from index d\"", function() {
+        const errorCollector = new ErrorCollector();
+        
+        const { parseTree } = parseRql(`from index d"`, {
+            ...errorCollector.listeners()
+        });
 
-        expect(parser.numberOfSyntaxErrors)
+        expect(errorCollector.numberOfErrors())
             .toEqual(1);
 
         const from = parseTree.fromStatement();
@@ -90,5 +101,20 @@ describe("FROM statement parser", function() {
         
         expect(indexContext._collection.text)
             .toEqual("d")
+    });
+
+    it("can use index as projection field", function() {
+        const errorCollector = new ErrorCollector();
+        const { parseTree } = parseRql(`from Orders select index `, {
+            ...errorCollector.listeners()
+        });
+
+        expect(errorCollector.numberOfErrors())
+            .toEqual(0);
+
+        const from = parseTree.fromStatement();
+
+        expect(from)
+            .toBeInstanceOf(CollectionByNameContext);
     });
 });

@@ -41,7 +41,6 @@ export const ignoredTokens: number[] = [
     RqlParser.NOT,
     RqlParser.NULL,
     RqlParser.TRUE,
-    RqlParser.JAVASCRIPT,
     RqlParser.JS_FUNCTION_DECLARATION
 ];
 
@@ -84,7 +83,7 @@ export class autoCompleteEngine {
     private readonly metadataProvider: queryCompleterProviders;
     private readonly providers: AutocompleteProvider[];
     
-    private debug: boolean = true; //TODO:
+    private debug: boolean = false; //TODO:
     
     public constructor(metadataProvider: queryCompleterProviders) {
         this.metadataProvider = metadataProvider;

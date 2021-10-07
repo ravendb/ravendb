@@ -1,8 +1,7 @@
 import { parseRql } from "../../src/parser";
 import {
-    CollectionByIndexContext,
-    CollectionByNameContext, ProjectFieldContext, ProjectIndividualFieldsContext,
-    TimeSeriesFunctionContext, TsBetweenContext, TsProgContext
+    ProjectFieldContext, ProjectIndividualFieldsContext,
+    TimeSeriesFunctionContext
 } from "../../src/generated/RqlParser";
 
 
@@ -27,7 +26,6 @@ describe("TimeSeries statement parser", function () {
         expect(timeSeriesQuery._from._name.text)
             .toEqual("person.Heartrate");
 
-
         const between = timeSeriesQuery._range.tsBetween();
         expect(between._from.text)
             .toEqual("$p3")
@@ -37,13 +35,10 @@ describe("TimeSeries statement parser", function () {
         const load = timeSeriesQuery._load.tsAlias();
         expect(load._alias_text.text)
             .toEqual("watch");
-
-    
-    
     });
 
     it("timeseries in projection", function () {
-        const {parseTree, parser} = parseRql("from 'People' as p select timeseries(from p.Heartrate between $p1 and $p2 where (Values[0] > $p0) group by '1 Months'   select average(), max(), min()) as __timeSeriesQueryFunction0 ");
+        const { parseTree, parser } = parseRql("from 'People' as p select timeseries(from p.Heartrate between $p1 and $p2 where (Values[0] > $p0) group by '1 Months'   select average(), max(), min()) as __timeSeriesQueryFunction0 ");
 
         expect(parser.numberOfSyntaxErrors)
             .toEqual(0);
@@ -62,7 +57,6 @@ describe("TimeSeries statement parser", function () {
         expect(timeSeriesQuery._from._name.text)
             .toEqual("p.Heartrate");
 
-
         const between = timeSeriesQuery._range.tsBetween();
         expect(between._from.text)
             .toEqual("$p1")
@@ -73,11 +67,8 @@ describe("TimeSeries statement parser", function () {
         expect(groupBy.text)
             .toEqual("'1 Months'");
 
-
-
         const select = timeSeriesQuery._select._field;
         expect(select.text)
             .toEqual("average()");
     });
-
 });

@@ -138,6 +138,32 @@ describe("can complete from", function () {
         });
     });
     
+    describe("with describe", function () {
+        it("can complete from after declare function - w/o from ahead", async function () {
+            const suggestions = await autocomplete("declare function Name() { \r\n\r\n } | ");
+
+            const from = suggestions.find(x => x.value.startsWith("from"));
+            expect(from)
+                .toBeTruthy();
+            
+            const where = suggestions.find(x => x.value.startsWith("where"));
+            expect(where)
+                .toBeFalsy();
+        });
+        
+        it("can complete from after declare function - with from ahead", async function () {
+            const suggestions = await autocomplete("declare function Name() { \r\n\r\n } |\r\nfrom Orders ");
+            
+            const from = suggestions.find(x => x.value.startsWith("from"));
+            expect(from)
+                .toBeTruthy();
+
+            const where = suggestions.find(x => x.value.startsWith("where"));
+            expect(where)
+                .toBeFalsy();
+        });
+    });
+    
     describe("alias", function () {
         it("has empty list when entering as alias", async function () {
             const suggestions = await autocomplete(`from Orders as |`);
@@ -153,6 +179,14 @@ describe("can complete from", function () {
             expect(values)
                 .toContain("as ");
             
+            const whereSuggestion = suggestions.find(x => x.value.startsWith("where"));
+            expect(whereSuggestion)
+                .toBeTruthy();
+        });
+
+        it("can complete keywords when alias was defined", async function () {
+            const suggestions = await autocomplete(`from Orders as o |`);
+
             const whereSuggestion = suggestions.find(x => x.value.startsWith("where"));
             expect(whereSuggestion)
                 .toBeTruthy();
