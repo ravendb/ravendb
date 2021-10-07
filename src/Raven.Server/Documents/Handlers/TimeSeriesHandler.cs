@@ -386,6 +386,9 @@ namespace Raven.Server.Documents.Handlers
 
             var incrementalValues = new Dictionary<long, TimeSeriesEntry>();
             var reader = new TimeSeriesReader(context, docId, name, from, to, offset: null);
+            Dictionary<string, double[]> nodesValues = null;
+            if (fullResults)
+                nodesValues = new Dictionary<string, double[]>();
 
             // init hash
             var size = Sodium.crypto_generichash_bytes();
@@ -427,10 +430,7 @@ namespace Raven.Server.Documents.Handlers
 
                     if (incrementalValues.TryGetValue(singleResult.Timestamp.Ticks, out var entry))
                     {
-                        if(fullResults)
-                            entry.NodesValues[nodeDbId] = values;
-                        
-                        var length = Math.Max(entry.Values.Length, singleResult.Values.Length);
+                        var length = Math.Max(entry.Values.Length, values.Length);
                         if (entry.Values.Length < length) // need to allocate more space for new values
                         {
                             var newValues = singleResult.Values.Span;
@@ -445,6 +445,28 @@ namespace Raven.Server.Documents.Handlers
                             for (int i = 0; i < values.Length ; i++)
                                 entry.Values[i] += values[i];
                         }
+
+                        if (fullResults)
+                        {
+                            if (entry.NodesValues.TryGetValue(nodeDbId, out _))
+                            {
+                                if (entry.NodesValues[nodeDbId].Length != values.Length)
+                                {
+                                    if (entry.NodesValues[nodeDbId].Length < values.Length) 
+                                    {
+                                        for (int i = 0; i < entry.NodesValues[nodeDbId].Length; i++)
+                                            values[i] += entry.NodesValues[nodeDbId][i];
+
+                                        entry.NodesValues[nodeDbId] = values;
+                                        continue;
+                                    }
+                                }
+                                for (int i = 0; i < values.Length; i++)
+                                    entry.NodesValues[nodeDbId][i] += values[i];
+                            }
+                            else
+                                entry.NodesValues[nodeDbId] = values;
+                        }
                         continue;
                     }
 
@@ -454,13 +476,20 @@ namespace Raven.Server.Documents.Handlers
                         break;
                     }
 
+                    if (fullResults)
+                    {
+                        if (nodesValues.Count > 0)
+                            nodesValues.Clear();
+
+                        nodesValues[nodeDbId] = values;
+                    }
+
                     incrementalValues[singleResult.Timestamp.Ticks] = new TimeSeriesEntry
                     {
                         Timestamp = singleResult.Timestamp,
-                        Tag = singleResult.Tag,
                         Values = singleResult.Values.ToArray(),
                         IsRollup = singleResult.Type == SingleResultType.RolledUp,
-                        NodesValues = fullResults ? new Dictionary<string, double[]>{ [nodeDbId] = values } : null
+                        NodesValues = fullResults ? nodesValues : null
                     };
                 }
 
