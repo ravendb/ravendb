@@ -5,6 +5,7 @@ import ioStatsGraph = require("models/database/status/ioStatsGraph");
 class ioStats extends viewModelBase {
     
     view = require("views/database/status/ioStats.html");
+    graphView = require("views/partial/ioStatsGraph.html");
     
     private graph: ioStatsGraph;
     

@@ -11,6 +11,7 @@ import eventsCollector = require("common/eventsCollector");
 import viewHelpers = require("common/helpers/view/viewHelpers");
 import accessManager = require("common/shell/accessManager");
 import messagePublisher = require("common/messagePublisher");
+import { jwerty } from "jwerty";
 
 /*
  * Base view model class that provides basic view model services, such as tracking the active database and providing a means to add keyboard shortcuts.

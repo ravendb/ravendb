@@ -24,10 +24,13 @@ export function overrideViews() {
 
     viewEngine.isViewUrl = function(url: string) {
         //TODO:
+        if (!url || url === "views/") {
+            return false;
+        }
         if (url && url.startsWith("<")) {
             return true;
         }
-
+        
         return isViewUrl(url);
     };
 }

@@ -124,16 +124,15 @@ declare module "draggabilly" {
 /// jwerty
 ///
 
+declare module "jwerty" {
+    export class jwerty {
+        static key(keyCombination: string, handler: (event: KeyboardEvent, keyCombination: string) => any, context?: any, selector?: string): JwertySubscription;
+    }
 
-interface JwertyStatic {
-    key(keyCombination: string, handler: (event: KeyboardEvent, keyCombination: string) => any, context?: any, selector?: string): JwertySubscription;
+    interface JwertySubscription {
+        unbind(): void;
+    }
 }
-
-interface JwertySubscription {
-    unbind(): void;
-}
-
-declare var jwerty: JwertyStatic;
 
 ///
 /// Ace
@@ -197,20 +196,6 @@ interface Cronstrue {
 
 declare var cronstrue: Cronstrue;
 
-interface Spinner {
-    stop() :void;
-    spin(): Spinner;
-    spin(p1: HTMLElement): Spinner;
-    el: Node;
-}
-
-declare var Spinner: {
-    new (spinnerOptions: {
-        lines: number; length: number; width: number; radius: number; scale: number; corners: number;
-        color: any; opacity: number; rotate: number; direction: number; speed: number; trail: number; fps: number; zIndex: number;
-        className: string; top: string; left: string; shadow: boolean; hwaccel: boolean; position: string;
-    }): Spinner;
-}
 
 interface Storage {
     getObject: (string: string) => any;
