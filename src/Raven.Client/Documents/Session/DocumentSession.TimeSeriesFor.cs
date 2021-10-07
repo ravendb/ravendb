@@ -19,7 +19,7 @@ namespace Raven.Client.Documents.Session
         public ISessionDocumentTimeSeries TimeSeriesFor(string documentId, string name)
         {
             if (name.StartsWith(IncrementalTimeSeriesPrefix))
-                throw new InvalidDataException($"Time Series name cannot include {IncrementalTimeSeriesPrefix} prefix");
+                throw new InvalidDataException($"Time Series name cannot start with {IncrementalTimeSeriesPrefix} prefix");
 
             return new SessionDocumentTimeSeries<TimeSeriesEntry>(this, documentId, name);
         }
@@ -27,7 +27,7 @@ namespace Raven.Client.Documents.Session
         public ISessionDocumentTimeSeries TimeSeriesFor(object entity, string name)
         {
             if (name.StartsWith(IncrementalTimeSeriesPrefix))
-                throw new InvalidDataException($"Time Series name cannot include {IncrementalTimeSeriesPrefix} prefix");
+                throw new InvalidDataException($"Time Series name cannot start with {IncrementalTimeSeriesPrefix} prefix");
 
             return new SessionDocumentTimeSeries<TimeSeriesEntry>(this, entity, name);
         }
@@ -36,7 +36,7 @@ namespace Raven.Client.Documents.Session
         {
             var tsName = name ?? TimeSeriesOperations.GetTimeSeriesName<TValues>(Conventions);
             if (tsName.StartsWith(IncrementalTimeSeriesPrefix))
-                throw new InvalidDataException($"Time Series name cannot include {IncrementalTimeSeriesPrefix} prefix");
+                throw new InvalidDataException($"Time Series name cannot start with {IncrementalTimeSeriesPrefix} prefix");
 
             return new SessionDocumentTimeSeries<TValues>(this, documentId, tsName);
         }
@@ -45,7 +45,7 @@ namespace Raven.Client.Documents.Session
         {
             var tsName = name ?? TimeSeriesOperations.GetTimeSeriesName<TValues>(Conventions);
             if (tsName.StartsWith(IncrementalTimeSeriesPrefix))
-                throw new InvalidDataException($"Time Series name cannot include {IncrementalTimeSeriesPrefix} prefix");
+                throw new InvalidDataException($"Time Series name cannot start with {IncrementalTimeSeriesPrefix} prefix");
 
             return new SessionDocumentTimeSeries<TValues>(this, entity, tsName);
         }
@@ -66,7 +66,7 @@ namespace Raven.Client.Documents.Session
         public ISessionDocumentTimeSeries IncrementalTimeSeriesFor(string documentId, string name)
         {
             if (name.StartsWith(IncrementalTimeSeriesPrefix) == false)
-                throw new InvalidDataException($"Incremental Time Series name must include {IncrementalTimeSeriesPrefix} prefix");
+                throw new InvalidDataException($"Incremental Time Series name must start with {IncrementalTimeSeriesPrefix} prefix");
 
             return new SessionDocumentTimeSeries<TimeSeriesEntry>(this, documentId, name);
         }
@@ -74,7 +74,7 @@ namespace Raven.Client.Documents.Session
         public ISessionDocumentTimeSeries IncrementalTimeSeriesFor(object entity, string name)
         {
             if (name.StartsWith(IncrementalTimeSeriesPrefix) == false)
-                throw new InvalidDataException($"Incremental Time Series name must include {IncrementalTimeSeriesPrefix} prefix");
+                throw new InvalidDataException($"Incremental Time Series name must start with {IncrementalTimeSeriesPrefix} prefix");
 
             return new SessionDocumentTimeSeries<TimeSeriesEntry>(this, entity, name);
         }
@@ -83,7 +83,7 @@ namespace Raven.Client.Documents.Session
         {
             var tsName = name ?? TimeSeriesOperations.GetTimeSeriesName<TValues>(Conventions);
             if (tsName.StartsWith(IncrementalTimeSeriesPrefix) == false)
-                throw new InvalidDataException($"Incremental Time Series name must include {IncrementalTimeSeriesPrefix} prefix");
+                throw new InvalidDataException($"Incremental Time Series name must start with {IncrementalTimeSeriesPrefix} prefix");
 
             return new SessionDocumentTimeSeries<TValues>(this, documentId, tsName);
         }
@@ -92,7 +92,7 @@ namespace Raven.Client.Documents.Session
         {
             var tsName = name ?? TimeSeriesOperations.GetTimeSeriesName<TValues>(Conventions);
             if (tsName.StartsWith(IncrementalTimeSeriesPrefix) == false)
-                throw new InvalidDataException($"Incremental Time Series name must include {IncrementalTimeSeriesPrefix} prefix");
+                throw new InvalidDataException($"Incremental Time Series name must start with {IncrementalTimeSeriesPrefix} prefix");
 
             return new SessionDocumentTimeSeries<TValues>(this, entity, tsName);
         }
