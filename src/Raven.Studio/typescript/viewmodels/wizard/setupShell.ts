@@ -14,17 +14,16 @@ import buildInfo = require("models/resources/buildInfo");
 import constants = require("common/constants/constants");
 import chooseTheme = require("viewmodels/shell/chooseTheme");
 import app = require("durandal/app");
-
-type deploymentEnvironment = "AwsLinux" | "AwsWindows" | "Azure" | "Custom";
+import serverSetup from "models/wizard/serverSetup";
 
 class setupShell extends viewModelBase {
 
-    view = require("views/wziard/setupShell.html");
+    view = require("views/wizard/setupShell.html");
 
     private router = router;
     studioLoadingFakeRequest: requestExecution;
     clientBuildVersion = ko.observable<clientBuildVersionDto>();
-    static deploymentEnvironment = ko.observable<deploymentEnvironment>("Custom");
+    static deploymentEnvironment = serverSetup.deploymentEnvironment;
     static buildInfo = buildInfo;
 
     showSplash = viewModelBase.showSplash;

@@ -31,8 +31,6 @@
   </ItemGroup>
   <Target Name="PrepublishScript" BeforeTargets="PrepareForPublish">
     <Exec Command="npm install" />
-    <Exec Command="bower install" />
-    <Exec Command="gulp build" />
     <Exec Command="dotnet bundle" />
   </Target>
   <ItemGroup>

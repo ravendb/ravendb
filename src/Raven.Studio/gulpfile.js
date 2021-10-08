@@ -3,47 +3,16 @@
 require('./gulp/shim');
 
 const gulp = require('gulp');
-const typescript = require("gulp-typescript");
-const gulpLess = require("gulp-less");
-const zip = require("gulp-zip");
-const path = require('path');
-const fs = require('fs');
-const del = require('del');
 const exec = require('child_process').exec;
-const bower = require("gulp-bower");
 const parseHandlers = require('./gulp/parseHandlers');
 const parseConfiguration = require('./gulp/parseConfiguration');
 const checkAllFilesExist = require('./gulp/checkAllFilesExist');
 const gutil = require('gulp-util');
-const sourcemaps = require("gulp-sourcemaps");
-const cachebust = require('gulp-cache-bust');
-const autoPrefixer = require('gulp-autoprefixer');
 const fsUtils = require('./gulp/fsUtils');
-const typings = require("gulp-typings");
-const processHtml = require("gulp-processhtml");
-const naturalSort = require("gulp-natural-sort");
 const cssNano = require("gulp-cssnano");
-const changed = require("gulp-changed");
 const concatCss = require("gulp-concat-css");
-const insert = require("gulp-insert");
-const reduceFile = require("gulp-reduce-file");
-const concat = require("gulp-concat");
-const uglify = require("gulp-uglify");
-const durandal = require("gulp-durandal");
 
 const PATHS = require('./gulp/paths');
-
-const tsProject = typescript.createProject('tsconfig.json');
-const testTsProject = typescript.createProject('tsconfig.json');
-
-function z_clean(cb) {
-    del.sync(['./wwwroot/App/**/*.js']);
-    del.sync(['./wwwroot/App/**/*.js.map']);
-    del.sync(PATHS.releaseTarget);
-    del.sync(['./typings/*', '!./typings/_studio/**', '!./typings/tsd.d.ts']);
-    del.sync([PATHS.bowerSource]);
-    cb();
-}
 
 function z_parse_handlers() {
     return gulp.src(PATHS.handlersToParse)
@@ -55,15 +24,6 @@ function z_parse_configuration() {
     return gulp.src(PATHS.configurationFilesToParse)
         .pipe(parseConfiguration('configuration.ts'))
         .pipe(gulp.dest(PATHS.constantsTargetDir));
-}
-
-function less() {
-    return gulp.src(PATHS.lessSource, { base: './wwwroot/Content/' })
-        .pipe(sourcemaps.init())
-        .pipe(gulpLess({ sourceMap: true }))
-        .pipe(autoPrefixer())
-        .pipe(sourcemaps.write("."))
-        .pipe(gulp.dest(PATHS.lessTarget));
 }
 
 function z_generate_typings(cb) {
@@ -88,65 +48,8 @@ function z_generate_typings(cb) {
     });
 }
 
-function z_compile_app() {
-    return gulp.src([PATHS.tsSource])
-        .pipe(naturalSort())
-        .pipe(sourcemaps.init())
-        .pipe(tsProject())
-        .js
-        .pipe(sourcemaps.write("."))
-        .pipe(gulp.dest(PATHS.tsOutput));
-}
-
-function z_compile_test() {
-    return gulp.src([PATHS.test.tsSource])
-        .pipe(naturalSort())
-        .pipe(sourcemaps.init())
-        .pipe(testTsProject())
-        .js
-        .pipe(sourcemaps.write("."))
-        .pipe(gulp.dest(PATHS.test.tsOutput));
-}
-
-function z_compile_app_changed() {
-    return gulp.src([PATHS.tsSource])
-        .pipe(changed(PATHS.tsOutput, { extension: '.js' }))
-        .pipe(sourcemaps.init())
-        .pipe(tsProject())
-        .js
-        .pipe(sourcemaps.write("."))
-        .pipe(gulp.dest(PATHS.tsOutput));
-}
-
-function z_typings() {
-    return gulp.src(PATHS.typingsConfig)
-        .pipe(typings()); 
-}
-
-function z_bower() {
-    return bower();
-}
-
-function z_release_favicon() {
-    return gulp.src([
-        "wwwroot/android-chrome*",
-        "wwwroot/apple*",
-        "wwwroot/browserconfig.xml",
-        "wwwroot/favicon*",
-        "wwwroot/manifest.json",
-        "wwwroot/mstile-*",
-        "wwwroot/safari-pinned-tab*"
-    ])
-        .pipe(gulp.dest(PATHS.releaseTarget));
-}
-
 function z_release_ace_workers() {
     return gulp.src("wwwroot/Content/ace/worker*.js")
-        .pipe(gulp.dest(PATHS.releaseTarget));
-}
-
-function z_release_rql_worker() {
-    return gulp.src(["wwwroot/rql_worker.js", "wwwroot/rql_worker.js.map"])
         .pipe(gulp.dest(PATHS.releaseTarget));
 }
 
@@ -302,7 +205,6 @@ const release_chain = gulp.series(
         z_release_copy_version,
         z_release_favicon,
         z_release_ace_workers,
-        z_release_rql_worker,
         z_release_images,
         z_release_html,
         z_release_css_common,

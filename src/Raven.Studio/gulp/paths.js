@@ -38,7 +38,6 @@ var paths = {
     lessTargetSelector: './wwwroot/Content/**/*.css',
 
     releaseTarget: './build/',
-    bowerSource: './wwwroot/lib/',
     themeCss: [
         'wwwroot/Content/css/styles.css',
         'wwwroot/Content/css/styles-blue.css',
