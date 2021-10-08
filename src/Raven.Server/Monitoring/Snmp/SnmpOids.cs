@@ -109,7 +109,7 @@ namespace Raven.Server.Monitoring.Snmp
             [Description("Server encryption buffers memory being in pool in MB")]
             public const string EncryptionBuffersMemoryInPool = "1.6.10";
 
-            public const string MemInfoPrefix = "1.6.11.{0}";
+            public const string MemInfoPrefix = "1.6.12.{0}";
 
             [Description("Number of concurrent requests")]
             public const string ConcurrentRequests = "1.7.1";
