@@ -1,6 +1,8 @@
 ﻿using System;
 using System.ComponentModel;
 using System.Reflection;
+using Raven.Server.Monitoring.Snmp.Objects.Server;
+using Raven.Server.Platform.Posix;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
@@ -108,67 +110,69 @@ namespace Raven.Server.Monitoring.Snmp
             [Description("Server encryption buffers memory being in pool in MB")]
             public const string EncryptionBuffersMemoryInPool = "1.6.10";
 
-            [SnmpIndex(typeof(GCKind))]
+            public const string MemInfoPrefix = "1.6.12.{0}";
+
+            [SnmpEnumIndex(typeof(GCKind))]
             [Description("GC information for {0}. Specifies if this is a compacting GC or not.")]
             public const string GcCompacted = "1.6.11.{0}.1";
 
-            [SnmpIndex(typeof(GCKind))]
+            [SnmpEnumIndex(typeof(GCKind))]
             [Description("GC information for {0}. Specifies if this is a concurrent GC or not.")]
             public const string GcConcurrent = "1.6.11.{0}.2";
 
-            [SnmpIndex(typeof(GCKind))]
+            [SnmpEnumIndex(typeof(GCKind))]
             [Description("GC information for {0}. Gets the number of objects ready for finalization this GC observed.")]
             public const string GcFinalizationPendingCount = "1.6.11.{0}.3";
 
-            [SnmpIndex(typeof(GCKind))]
+            [SnmpEnumIndex(typeof(GCKind))]
             [Description("GC information for {0}. Gets the total fragmentation (in MB) when the last garbage collection occurred.")]
             public const string GcFragmented = "1.6.11.{0}.4";
 
-            [SnmpIndex(typeof(GCKind))]
+            [SnmpEnumIndex(typeof(GCKind))]
             [Description("GC information for {0}. Gets the generation this GC collected.")]
             public const string GcGeneration = "1.6.11.{0}.5";
 
-            [SnmpIndex(typeof(GCKind))]
+            [SnmpEnumIndex(typeof(GCKind))]
             [Description("GC information for {0}. Gets the total heap size (in MB) when the last garbage collection occurred.")]
             public const string GcHeapSize = "1.6.11.{0}.6";
 
-            [SnmpIndex(typeof(GCKind))]
+            [SnmpEnumIndex(typeof(GCKind))]
             [Description("GC information for {0}. Gets the high memory load threshold (in MB) when the last garbage collection occurred.")]
             public const string GcHighMemoryLoadThreshold = "1.6.11.{0}.7";
 
-            [SnmpIndex(typeof(GCKind))]
+            [SnmpEnumIndex(typeof(GCKind))]
             [Description("GC information for {0}. The index of this GC.")]
             public const string GcIndex = "1.6.11.{0}.8";
 
-            [SnmpIndex(typeof(GCKind))]
+            [SnmpEnumIndex(typeof(GCKind))]
             [Description("GC information for {0}. Gets the memory load (in MB) when the last garbage collection occurred.")]
             public const string GcMemoryLoad = "1.6.11.{0}.9";
 
-            [SnmpIndex(typeof(GCKind))]
+            [SnmpEnumIndex(typeof(GCKind))]
             [Description("GC information for {0}. Gets the pause durations. First item in the array.")]
             public const string GcPauseDurations1 = "1.6.11.{0}.10.1";
 
-            [SnmpIndex(typeof(GCKind))]
+            [SnmpEnumIndex(typeof(GCKind))]
             [Description("GC information for {0}. Gets the pause durations. Second item in the array.")]
             public const string GcPauseDurations2 = "1.6.11.{0}.10.2";
 
-            [SnmpIndex(typeof(GCKind))]
+            [SnmpEnumIndex(typeof(GCKind))]
             [Description("GC information for {0}. Gets the pause time percentage in the GC so far.")]
             public const string GcPauseTimePercentage = "1.6.11.{0}.11";
 
-            [SnmpIndex(typeof(GCKind))]
+            [SnmpEnumIndex(typeof(GCKind))]
             [Description("GC information for {0}. Gets the number of pinned objects this GC observed.")]
             public const string GcPinnedObjectsCount = "1.6.11.{0}.12";
 
-            [SnmpIndex(typeof(GCKind))]
+            [SnmpEnumIndex(typeof(GCKind))]
             [Description("GC information for {0}. Gets the promoted MB for this GC.")]
             public const string GcPromoted = "1.6.11.{0}.13";
 
-            [SnmpIndex(typeof(GCKind))]
+            [SnmpEnumIndex(typeof(GCKind))]
             [Description("GC information for {0}. Gets the total available memory (in MB) for the garbage collector to use when the last garbage collection occurred.")]
             public const string GcTotalAvailableMemory = "1.6.11.{0}.14";
 
-            [SnmpIndex(typeof(GCKind))]
+            [SnmpEnumIndex(typeof(GCKind))]
             [Description("GC information for {0}. Gets the total committed MB of the managed heap.")]
             public const string GcTotalCommitted = "1.6.11.{0}.15";
 
@@ -253,23 +257,45 @@ namespace Raven.Server.Monitoring.Snmp
                 foreach (var field in typeof(Server).GetFields())
                 {
                     var fieldValue = GetFieldValue(field);
-                    var fullOid = field.Name == nameof(UpTimeGlobal) ? fieldValue.Oid : Root + fieldValue.Oid;
 
-                    if (fieldValue.Type == null)
+                    switch (field.Name)
                     {
-                        array.Add(CreateJsonItem(fullOid, fieldValue.Description));
-                        continue;
-                    }
+                        case nameof(UpTimeGlobal):
+                            array.Add(CreateJsonItem(fieldValue.Oid, fieldValue.Description));
+                            break;
+                        case nameof(MemInfoPrefix):
+                            foreach (var propertyInfo in MemInfo.AllProperties.Values)
+                            {
+                                var index = propertyInfo.GetCustomAttribute<SnmpIndexAttribute>().Index;
+                                var oid = Root + string.Format(MemInfoPrefix, index);
+                                var name = propertyInfo.GetCustomAttribute<DisplayNameAttribute>()?.DisplayName ?? propertyInfo.Name;
 
-                    var enumUnderlyingType = Enum.GetUnderlyingType(fieldValue.Type);
-                    foreach (var value in fieldValue.Type.GetEnumValues())
-                    {
-                        var enumUnderlyingValue = Convert.ChangeType(value, enumUnderlyingType);
 
-                        var finalOid = fullOid.Replace("{0}", enumUnderlyingValue.ToString());
-                        var finalDescription = fieldValue.Description.Replace("{0}", $"{fieldValue.Type.Name}.{value}");
+                                array.Add(CreateJsonItem(oid, $"{name} value from '{MemInfoReader.MemInfoFileName}'"));
+                            }
+                            break;
+                        default:
+                            var fullOid = field.Name == nameof(UpTimeGlobal) ? fieldValue.Oid : Root + fieldValue.Oid;
 
-                        array.Add(CreateJsonItem(finalOid, finalDescription));
+                            if (fieldValue.Type == null)
+                            {
+                                array.Add(CreateJsonItem(fullOid, fieldValue.Description));
+                            }
+                            else
+                            {
+                                var enumUnderlyingType = Enum.GetUnderlyingType(fieldValue.Type);
+                                foreach (var value in fieldValue.Type.GetEnumValues())
+                                {
+                                    var enumUnderlyingValue = Convert.ChangeType(value, enumUnderlyingType);
+
+                                    var finalOid = fullOid.Replace("{0}", enumUnderlyingValue.ToString());
+                                    var finalDescription = fieldValue.Description.Replace("{0}", $"{fieldValue.Type.Name}.{value}");
+
+                                    array.Add(CreateJsonItem(finalOid, finalDescription));
+                                }
+                            }
+
+                            break;
                     }
                 }
 
@@ -603,7 +629,7 @@ namespace Raven.Server.Monitoring.Snmp
 
         private static (string Oid, string Description, Type Type) GetFieldValue(FieldInfo field)
         {
-            return (field.GetRawConstantValue().ToString(), field.GetCustomAttribute<DescriptionAttribute>().Description, field.GetCustomAttribute<SnmpIndexAttribute>()?.Type);
+            return (field.GetRawConstantValue().ToString(), field.GetCustomAttribute<DescriptionAttribute>()?.Description, field.GetCustomAttribute<SnmpEnumIndexAttribute>()?.Type);
         }
 
         private static DynamicJsonValue CreateJsonItem(string oid, string description)
