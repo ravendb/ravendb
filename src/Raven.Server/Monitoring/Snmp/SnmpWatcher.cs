@@ -411,6 +411,8 @@ namespace Raven.Server.Monitoring.Snmp
             store.Add(new ServerEncryptionBuffersMemoryInUse());
             store.Add(new ServerEncryptionBuffersMemoryInPool());
 
+            ServerMemInfo.Register(store, server.MetricCacher);
+
             store.Add(new ServerLastRequestTime(server.Statistics));
             store.Add(new ServerLastAuthorizedNonClusterAdminRequestTime(server.Statistics));
 
