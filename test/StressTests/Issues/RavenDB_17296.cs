@@ -5,7 +5,7 @@ using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace SlowTests.Issues
+namespace StressTests.Issues
 {
     public class RavenDB_17296 : RavenTestBase
     {
@@ -13,8 +13,10 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void Should_Not_Kill_Server_Because_Of_Not_Sufficient_Execution_Stack()
+        [Theory]
+        [InlineData(3_000)]
+        [InlineData(10_000)]
+        public void Should_Not_Kill_Server_Because_Of_Insufficient_Execution_Stack(int numberOfExpressions)
         {
             using (var store = GetDocumentStore())
             {
@@ -23,7 +25,7 @@ namespace SlowTests.Issues
                     var baseQuery = session.Advanced.DocumentQuery<User>();
 
                     var first = true;
-                    for (var i = 0; i < 1_000; i++)
+                    for (var i = 0; i < numberOfExpressions; i++)
                     {
                         if (first == false)
                             baseQuery.OrElse();
@@ -39,8 +41,8 @@ namespace SlowTests.Issues
                         first = false;
                     }
 
-                    var e = Assert.Throws<RavenException>(() => baseQuery.ToList());
-                    Assert.Contains("InsufficientExecutionStackException", e.Message);
+                    var e = Assert.ThrowsAny<RavenException>(() => baseQuery.ToList());
+                    Assert.Contains("Query is too complex", e.Message);
                 }
             }
         }
