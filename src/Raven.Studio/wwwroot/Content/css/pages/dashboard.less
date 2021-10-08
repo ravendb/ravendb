@@ -530,3 +530,16 @@
         color: @resource-usage-secondary-color;
     }
 }
+
+html:not(.no-cssgrid) {
+    .infogrid {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        grid-gap: @grid-gutter-width/4 0;
+        align-items: stretch;
+
+        .separator {
+            display: none;
+        }
+    }
+}
