@@ -3,6 +3,7 @@ import distributeSecretCommand = require("commands/database/secrets/distributeSe
 import copyToClipboard = require("common/copyToClipboard");
 import fileDownloader = require("common/fileDownloader");
 import moment = require("moment");
+import { QRCode } from "qrcodejs";
 
 abstract class setupEncryptionKey {
 

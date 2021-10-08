@@ -1,8 +1,6 @@
 /// QRCode
 /// <reference types="lodash" />
 
-declare const QRCode: any;
-
 declare var require: any;
 
 declare const _: LoDashStatic;
@@ -20,6 +18,10 @@ declare const JSZipUtils: {
 
 declare module "jszip-utils" {
     export = JSZipUtils;
+}
+
+declare module "qrcodejs" {
+    export const QRCode: any;
 }
 
 /// forge 
@@ -192,6 +194,10 @@ interface Cronstrue {
     toString(string: string): string;
 }
 
+declare module "cronstrue" {
+    const module: Cronstrue;
+    export = module;
+}
 declare var cronstrue: Cronstrue;
 
 

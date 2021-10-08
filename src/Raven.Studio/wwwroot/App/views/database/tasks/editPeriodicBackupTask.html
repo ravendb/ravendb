@@ -105,7 +105,7 @@
                             <input id="fullBackupToggle" type="checkbox" data-bind="checked: fullBackupEnabled">
                             <label for="fullBackupToggle">Enable full backup</label>
                         </div>
-                        <div data-bind="compose: $root.fullBackupCronEditor, visible: fullBackupEnabled"></div>
+                        <div data-bind="compose: { model: $root.fullBackupCronEditor }, visible: fullBackupEnabled"></div>
                     </div>
                 </div>
                 <div class="row margin-bottom" data-bind="validationElement: incrementalBackupFrequency">
