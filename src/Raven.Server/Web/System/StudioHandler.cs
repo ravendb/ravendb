@@ -528,13 +528,13 @@ namespace Raven.Server.Web.System
         }
 
         private static readonly string[] FileSystemLookupPaths = {
-            "src/Raven.Studio/wwwroot",
-            "wwwroot",
-            "../Raven.Studio/wwwroot",
-            "../src/Raven.Studio/wwwroot",
-            "../../../../src/Raven.Studio/wwwroot",
-            "../../../../../src/Raven.Studio/wwwroot",
-            "../../../../../../src/Raven.Studio/wwwroot"
+            "src/Raven.Studio/wwwroot/dist",
+            "wwwroot/dist",
+            "../Raven.Studio/wwwroot/dist",
+            "../src/Raven.Studio/wwwroot/dist",
+            "../../../../src/Raven.Studio/wwwroot/dist",
+            "../../../../../src/Raven.Studio/wwwroot/dist",
+            "../../../../../../src/Raven.Studio/wwwroot/dist"
         };
 
         private static void StartFileSystemWatcher(FileSystemWatcher watcher, FileSystemEventHandler createChangeDeleteHandler, RenamedEventHandler renameHandler)

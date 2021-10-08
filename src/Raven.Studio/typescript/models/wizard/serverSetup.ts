@@ -6,11 +6,12 @@ import nodeInfo = require("models/wizard/nodeInfo");
 import continueSetup = require("models/wizard/continueSetup");
 import certificateInfo = require("models/wizard/certificateInfo");
 import ipEntry = require("models/wizard/ipEntry");
-import setupShell = require("viewmodels/wizard/setupShell");
+type deploymentEnvironment = "AwsLinux" | "AwsWindows" | "Azure" | "Custom";
 
 class serverSetup {
     static default = new serverSetup();
     static readonly nodesTags = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'];
+    static deploymentEnvironment = ko.observable<deploymentEnvironment>("Custom");
 
     userDomains = ko.observable<Raven.Server.Commercial.UserDomainsWithIps>();
     
@@ -97,11 +98,11 @@ class serverSetup {
         ipEntry.runningOnDocker = params.IsDocker;
 
         if (params.IsAzure) {
-            setupShell.deploymentEnvironment("Azure");
+            serverSetup.deploymentEnvironment("Azure");
         } else if (params.IsAws) {
-            setupShell.deploymentEnvironment(params.RunningOnPosix ? "AwsLinux" : "AwsWindows");
+            serverSetup.deploymentEnvironment(params.RunningOnPosix ? "AwsLinux" : "AwsWindows");
         } else {
-            setupShell.deploymentEnvironment("Custom");
+            serverSetup.deploymentEnvironment("Custom");
         }
     }
 

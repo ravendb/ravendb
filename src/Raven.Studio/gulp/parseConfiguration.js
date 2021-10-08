@@ -1,8 +1,6 @@
 var through = require('through2');
 var path = require('path');
-var Set = require('es6-set');
 var Map = require('es6-map');
-var gutil = require('gulp-util');
 var PATHS = require('./paths');
 var fs = require('fs');
 
@@ -10,7 +8,6 @@ var ravenConfigurations = new Map();
 var latestFile;
 
 var HANDLER_PATTERN = "Configuration.cs";
-var CONF_CONST_REGEX = /public const string (\w+) = \"([^\"]+)\";/g;
 
 
 var CLASS_REGEX = /public\s(static\s)?class\s([A-Za-z0-9]+)/g;
