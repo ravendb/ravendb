@@ -22,6 +22,8 @@ namespace Raven.Server.ServerWide.Commands.ETL
 
         public string NodeTag { get; set; }
 
+        public string DbId { get; set; }
+
         public bool HasHighlyAvailableTasks;
 
         public HashSet<string> SkippedTimeSeriesDocs { get; set; }
@@ -32,7 +34,7 @@ namespace Raven.Server.ServerWide.Commands.ETL
         }
 
         public UpdateEtlProcessStateCommand(string databaseName, string configurationName, string transformationName, long lastProcessedEtag, string changeVector,
-            string nodeTag, bool hasHighlyAvailableTasks, string uniqueRequestId, HashSet<string> skippedTimeSeriesDocs) : base(databaseName, uniqueRequestId)
+            string nodeTag, bool hasHighlyAvailableTasks, string dbId, string uniqueRequestId, HashSet<string> skippedTimeSeriesDocs) : base(databaseName, uniqueRequestId)
         {
             ConfigurationName = configurationName;
             TransformationName = transformationName;
@@ -40,6 +42,7 @@ namespace Raven.Server.ServerWide.Commands.ETL
             ChangeVector = changeVector;
             NodeTag = nodeTag;
             HasHighlyAvailableTasks = hasHighlyAvailableTasks;
+            DbId = dbId;
             SkippedTimeSeriesDocs = skippedTimeSeriesDocs;
         }
 
@@ -104,7 +107,14 @@ namespace Raven.Server.ServerWide.Commands.ETL
                 };
             }
 
+            if (DbId != null)
+                etlState.LastProcessedEtagPerDbId[DbId] = LastProcessedEtag;
+
+#pragma warning disable 618
+            if (etlState.LastProcessedEtagPerNode?.Count > 0)
             etlState.LastProcessedEtagPerNode[NodeTag] = LastProcessedEtag;
+#pragma warning restore 618
+
             etlState.ChangeVector = ChangeVector;
             etlState.NodeTag = NodeTag;
             etlState.SkippedTimeSeriesDocs = SkippedTimeSeriesDocs;
@@ -137,6 +147,7 @@ namespace Raven.Server.ServerWide.Commands.ETL
             json[nameof(ChangeVector)] = ChangeVector;
             json[nameof(NodeTag)] = NodeTag;
             json[nameof(HasHighlyAvailableTasks)] = HasHighlyAvailableTasks;
+            json[nameof(DbId)] = DbId;
             json[nameof(SkippedTimeSeriesDocs)] = SkippedTimeSeriesDocs;
         }
     }

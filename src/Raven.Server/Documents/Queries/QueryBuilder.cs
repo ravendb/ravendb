@@ -154,7 +154,8 @@ namespace Raven.Server.Documents.Queries
             QueryExpression expression, QueryMetadata metadata, Index index,
             BlittableJsonReaderObject parameters, Analyzer analyzer, QueryBuilderFactories factories, bool exact = false, int? proximity = null, bool secondary = false, List<string> buildSteps = null)
         {
-            RuntimeHelpers.EnsureSufficientExecutionStack();
+            if (RuntimeHelpers.TryEnsureSufficientExecutionStack() == false)
+                ThrowQueryTooComplexException(metadata, parameters);
 
             if (expression == null)
                 return new MatchAllDocsQuery();
@@ -1499,6 +1500,11 @@ namespace Raven.Server.Documents.Queries
         {
             if (fieldType != ValueTokenType.Double && fieldType != ValueTokenType.Long)
                 ThrowValueTypeMismatch(fieldName, fieldType, ValueTokenType.Double);
+        }
+
+        private static void ThrowQueryTooComplexException(QueryMetadata metadata, BlittableJsonReaderObject parameters)
+        {
+            throw new InvalidQueryException($"Query is too complex", metadata.QueryText, parameters);
         }
 
         private static void ThrowUnhandledValueTokenType(ValueTokenType type)
