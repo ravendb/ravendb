@@ -3,11 +3,11 @@ name: tests/fast
 on:
   push:
     branches:
-        - v5.2
+        - v5.3
 
   pull_request:
     branches:
-        - v5.2
+        - v5.3
 jobs:
   build:
     runs-on: ${{ matrix.os }}
