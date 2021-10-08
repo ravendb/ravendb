@@ -281,6 +281,15 @@ namespace Raven.Client.Http
             {
                 using (var handler = new HttpClientHandler())
                     handler.ServerCertificateCustomValidationCallback += OnServerCertificateCustomValidationCallback;
+
+                string explicitlyTrustedCerts = Environment.GetEnvironmentVariable("Raven_ExplicitlyTrustedServerCertificateThumbprints") ?? 
+												Environment.GetEnvironmentVariable("Raven.ExplicitlyTrustedServerCertificateThumbprints");
+                if (explicitlyTrustedCerts == null) return;
+                string[] certThumbprints = explicitlyTrustedCerts.Split(new[]{';'}, StringSplitOptions.RemoveEmptyEntries);
+                foreach (string thumbprint in certThumbprints)
+                {
+                    ExplicitlyTrustedServerCertificates.Add(thumbprint);
+                }
             }
             catch (Exception e)
             {
@@ -1992,6 +2001,18 @@ namespace Raven.Client.Http
                 ServerCertificateCustomValidationCallbackRegistrationException);
         }
 
+        private static readonly ConcurrentSet<string> ExplicitlyTrustedServerCertificates = new(StringComparer.OrdinalIgnoreCase);
+
+        public static IDisposable RegisterExplicitlyTrustedServerCertificate(X509Certificate2 certificate)
+        {
+            string certificateThumbprint = certificate.Thumbprint;
+
+            if (ExplicitlyTrustedServerCertificates.TryAdd(certificateThumbprint) == false)
+                return null;
+
+            return new DisposableAction(() => ExplicitlyTrustedServerCertificates.TryRemove(certificateThumbprint));
+        }
+
         internal static bool OnServerCertificateCustomValidationCallback(object sender, X509Certificate cert, X509Chain chain, SslPolicyErrors errors)
         {
             var onServerCertificateCustomValidationCallback = _serverCertificateCustomValidationCallback;
@@ -2002,6 +2023,11 @@ namespace Raven.Client.Http
                     ThrowCertificateNameMismatchException(sender, cert);
 
                 return errors == SslPolicyErrors.None;
+            }
+
+            if (cert is X509Certificate2 cert2 && ExplicitlyTrustedServerCertificates.Contains(cert2.Thumbprint))
+            {
+               return true;
             }
 
             for (var i = 0; i < onServerCertificateCustomValidationCallback.Length; i++)

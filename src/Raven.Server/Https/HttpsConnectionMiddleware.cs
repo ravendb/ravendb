@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.AspNetCore.Server.Kestrel.Https;
+using Raven.Client.Http;
 
 namespace Raven.Server.Https
 {
@@ -24,6 +25,7 @@ namespace Raven.Server.Https
         private const string ServerAuthenticationOid = "1.3.6.1.5.5.7.3.1";
 
         private X509Certificate2 _serverCertificate;
+        private IDisposable _removeOldTrustedCertificate;
 
         public HttpsConnectionMiddleware(RavenServer server, KestrelServerOptions options)
         {
@@ -68,6 +70,13 @@ namespace Raven.Server.Https
             EnsureCertificateIsAllowedForServerAuth(serverCertificate);
 
             Interlocked.Exchange(ref _serverCertificate, serverCertificate);
+            lock (this)
+            {
+                using (_removeOldTrustedCertificate)
+                {
+                    _removeOldTrustedCertificate = RequestExecutor.RegisterExplicitlyTrustedServerCertificate(serverCertificate);
+                }
+            }
         }
 
         public async Task OnConnectionAsync(ConnectionContext context, Func<Task> next)
