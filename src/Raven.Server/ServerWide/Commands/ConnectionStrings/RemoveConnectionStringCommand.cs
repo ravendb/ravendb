@@ -1,5 +1,6 @@
 ﻿using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.ServerWide;
@@ -36,7 +37,7 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
 
         public RemoveRavenConnectionStringCommand(string connectionStringName, string databaseName, string uniqueRequestId) : base(connectionStringName, databaseName, uniqueRequestId)
         {
-            
+
         }
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
@@ -63,6 +64,23 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
         }
     }
 
+    public class RemoveElasticSearchConnectionStringCommand : RemoveConnectionStringCommand<ElasticSearchConnectionString>
+    {
+        protected RemoveElasticSearchConnectionStringCommand()
+        {
+            // for deserialization
+        }
+
+        public RemoveElasticSearchConnectionStringCommand(string connectionStringName, string databaseName, string uniqueRequestId) : base(connectionStringName, databaseName, uniqueRequestId)
+        {
+        }
+
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        {
+            record.ElasticSearchConnectionStrings.Remove(ConnectionStringName);
+        }
+    }
+
     public class RemoveOlapConnectionStringCommand : RemoveConnectionStringCommand<OlapConnectionString>
     {
         protected RemoveOlapConnectionStringCommand()
@@ -81,3 +99,4 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
         }
     }
 }
+

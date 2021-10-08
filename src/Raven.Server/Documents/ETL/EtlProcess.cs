@@ -9,6 +9,7 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.OngoingTasks;
@@ -17,6 +18,7 @@ using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents.ETL.Metrics;
+using Raven.Server.Documents.ETL.Providers.ElasticSearch;
 using Raven.Server.Documents.ETL.Providers.OLAP;
 using Raven.Server.Documents.ETL.Providers.OLAP.Test;
 using Raven.Server.Documents.ETL.Providers.Raven;
@@ -352,6 +354,7 @@ namespace Raven.Server.Documents.ETL
                             stats.RecordChangeVector(item.ChangeVector);
 
                             batchSize++;
+
                         }
                         catch (JavaScriptParseException e)
                         {
@@ -1136,6 +1139,23 @@ namespace Raven.Server.Documents.ETL
                                 DebugOutput = debugOutput
                             };
 
+                        }
+
+                    case EtlType.ElasticSearch:
+                        using (var elasticSearchEtl = new ElasticSearchEtl(testScript.Configuration.Transforms[0], testScript.Configuration as ElasticSearchEtlConfiguration, database, database.ServerStore))
+                        using (elasticSearchEtl.EnterTestMode(out debugOutput))
+                        {
+                            elasticSearchEtl.EnsureThreadAllocationStats();
+
+                            var elasticSearchItem = testScript.IsDelete ? new ElasticSearchItem(tombstone, docCollection) : new ElasticSearchItem(document, docCollection);
+
+                            var results = elasticSearchEtl.Transform(new[] { elasticSearchItem }, context, new EtlStatsScope(new EtlRunStats()),
+                                new EtlProcessState());
+
+                            var result = elasticSearchEtl.RunTest(results, context);
+                            result.DebugOutput = debugOutput;
+
+                            return result;
                         }
                     default:
                         throw new NotSupportedException($"Unknown ETL type in script test: {testScript.Configuration.EtlType}");

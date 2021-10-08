@@ -140,10 +140,10 @@
                     <div class="hr-title">
                         <h5 class="tasks-list-item ravendb-etl no-text-transform">
                             <i class="icon-etl"></i>
-                            <span>RavenDB ETL</span><span data-bind="text: ' (' + etlTasks().length + ')'"></span>
+                            <span>RavenDB ETL</span><span data-bind="text: ' (' + ravenEtlTasks().length + ')'"></span>
                         </h5><hr>
                     </div>
-                    <div data-bind="foreach: etlTasks">
+                    <div data-bind="foreach: ravenEtlTasks">
                         <div class="panel destination-item ravendb-etl" data-bind="if: responsibleNode().NodeTag === $parent.selectedNode() || $parent.selectedNode() === 'All nodes'">
                             <div data-bind="attr: { 'data-state-text': badgeText, class: 'state ' + badgeClass() }"></div>
                             <div class="padding destination-info flex-vertical">
@@ -198,10 +198,10 @@
                     <div class="hr-title">
                         <h5 class="tasks-list-item sql-etl no-text-transform">
                             <i class="icon-sql-etl"></i>
-                            <span>SQL ETL</span><span data-bind="text: ' (' + sqlTasks().length + ')'"></span>
+                            <span>SQL ETL</span><span data-bind="text: ' (' + sqlEtlTasks().length + ')'"></span>
                         </h5><hr>
                     </div>
-                    <div data-bind="foreach: sqlTasks">
+                    <div data-bind="foreach: sqlEtlTasks">
                         <div class="panel destination-item sql-etl" data-bind="if: responsibleNode().NodeTag === $parent.selectedNode() || $parent.selectedNode() === 'All nodes'">
                             <div data-bind="attr: { 'data-state-text': badgeText, class: 'state ' + badgeClass() }"></div>
                             <div class="padding destination-info flex-vertical">
@@ -246,10 +246,10 @@
                     <div class="hr-title">
                         <h5 class="tasks-list-item olap-etl no-text-transform">
                             <i class="icon-olap-etl"></i>
-                            <span>OLAP ETL</span><span data-bind="text: ' (' + olapTasks().length + ')'"></span>
+                            <span>OLAP ETL</span><span data-bind="text: ' (' + olapEtlTasks().length + ')'"></span>
                         </h5><hr>
                     </div>
-                    <div data-bind="foreach: olapTasks">
+                    <div data-bind="foreach: olapEtlTasks">
                         <div class="panel destination-item olap-etl" data-bind="if: responsibleNode().NodeTag === $parent.selectedNode() || $parent.selectedNode() === 'All nodes'">
                             <div data-bind="attr: { 'data-state-text': badgeText, class: 'state ' + badgeClass() }"></div>
                             <div class="padding destination-info flex-vertical">
@@ -282,6 +282,54 @@
                                                 </div>
                                             </div>
                                             <div class="property-item" data-bind="template: { name: 'connection-string-template' }"></div>
+                                        </div>
+                                        <div data-bind="template: { name: 'etl-progress-template' }"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ElasticSearch Etl -->
+
+                <div data-bind="if: showElasticSearchSection">
+                    <div class="hr-title">
+                        <h5 class="tasks-list-item elastic-etl no-text-transform">
+                            <i class="icon-elastic-search-etl"></i>
+                            <span>Elasticsearch ETL</span><span data-bind="text: ' (' + elasticSearchEtlTasks().length + ')'"></span>
+                        </h5><hr>
+                    </div>
+                    <div data-bind="foreach: elasticSearchEtlTasks">
+                        <div class="panel destination-item elastic-etl" data-bind="if: responsibleNode().NodeTag === $parent.selectedNode() || $parent.selectedNode() === 'All nodes'">
+                            <div data-bind="attr: { 'data-state-text': badgeText, class: 'state ' + badgeClass() }"></div>
+                            <div class="padding destination-info flex-vertical">
+                                <div class="flex-horizontal">
+                                    <div class="checkbox panel-checkbox hide">
+                                        <input type="checkbox" class="styled" />
+                                        <label></label>
+                                    </div>
+                                    <div class="panel-name flex-grow" data-bind="template: { name: 'name-template-admin' }"></div>
+                                    <div class="node" data-bind="template: { name: 'responsible-node-template' }"></div>
+                                    <div class="status" data-bind="template: { name: 'state-template' }"></div>
+                                    <div data-bind="template: { name: 'actions-template-admin' }"></div>
+                                </div>
+                            </div>
+                            <div class="collapse panel-addon" data-bind="collapse: showDetails">
+                                <div class="padding flex-horizontal">
+                                    <div class="flex-grow">
+                                        <div class="list-properties">
+                                            <div class="property-item">
+                                                <div class="property-name">Task Status:</div>
+                                                <div class="property-value text-details" data-bind="text: badgeText"></div>
+                                            </div>
+                                            <div class="property-item" data-bind="template: { name: 'connection-string-template' }"></div>
+                                            <!-- ko foreach: nodesUrls -->
+                                            <div class="property-item">
+                                                <div class="property-name" data-bind="text: $data === $parent.nodesUrls()[0] ? 'Nodes URLs:' : ''"></div>
+                                                <div class="property-value" data-bind="text: $data" title="Node Url"></div>
+                                            </div>
+                                            <!-- /ko -->
                                         </div>
                                         <div data-bind="template: { name: 'etl-progress-template' }"></div>
                                     </div>
@@ -712,7 +760,7 @@
                     <div class="text-warning" data-bind="visible: !globalProgress.total()">
                         <small>
                             <i class="icon-warning"></i>
-                            This script doesn't match any documents. 
+                            This script doesn't match any documents.
                         </small>
                     </div>
                 </div>
@@ -723,7 +771,8 @@
                         <div class="percentage" data-bind="text: percentageFormatted,  css: { 'text-success': completed }, attr: { title: textualProgress }"></div>
                     </div>
                     <div class="progress" data-bind="with: globalProgress">
-                        <div data-bind="css: { 'progress-bar-striped': !completed() && !disabled(), 'progress-bar-primary': !completed(), 'active': !completed() && !disabled(), 'progress-bar-success': completed }, style: { width: percentageFormatted }, attr: { 'aria-valuenow': percentage, title: textualProgress } "
+                        <div data-bind="css: { 'progress-bar-striped': !completed() && !disabled(), 'progress-bar-primary': !completed(), 'active': !completed() && !disabled(), 'progress-bar-success': completed },
+                                        style: { width: percentageFormatted }, attr: { 'aria-valuenow': percentage, title: textualProgress }"
                              class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100">
                             <span class="sr-only" data-bind="text: percentageFormatted() + ' Completed'"></span>
                         </div>
@@ -737,7 +786,8 @@
                         <small class="percentage" data-bind="text: percentageFormatted(), css: { 'text-success': completed }, attr: { title: textualProgress }"></small>
                     </div>
                     <div class="progress">
-                        <div data-bind="css: { 'progress-bar-striped': !completed() && !$parents[1].globalProgress.disabled(), 'progress-bar-primary': !completed(), 'active': !completed() && !$parents[1].globalProgress.disabled(), 'progress-bar-success': completed() }, style: { width: percentageFormatted }, attr: { 'aria-valuenow': percentage, title: textualProgress } "
+                        <div data-bind="css: { 'progress-bar-striped': !completed() && !$parents[1].globalProgress.disabled(), 'progress-bar-primary': !completed(), 'active': !completed() && !$parents[1].globalProgress.disabled(), 'progress-bar-success': completed() },
+                                        style: { width: percentageFormatted }, attr: { 'aria-valuenow': percentage, title: textualProgress }"
                              class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100">
                             <span class="sr-only" data-bind="text: percentageFormatted() + ' Completed'"></span>
                         </div>

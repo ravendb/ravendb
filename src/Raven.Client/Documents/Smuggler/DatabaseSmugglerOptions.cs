@@ -34,7 +34,9 @@
                                                                                   DatabaseRecordItemType.Analyzers |
                                                                                   DatabaseRecordItemType.LockMode |
                                                                                   DatabaseRecordItemType.OlapConnectionStrings |
-                                                                                  DatabaseRecordItemType.OlapEtls;
+                                                                                  DatabaseRecordItemType.OlapEtls |
+                                                                                  DatabaseRecordItemType.ElasticSearchConnectionStrings |
+                                                                                  DatabaseRecordItemType.ElasticSearchEtls;
 
         private const int DefaultMaxStepsForTransformScript = 10 * 1000;
 

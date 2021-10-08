@@ -8,6 +8,7 @@ using Microsoft.CodeAnalysis.Formatting;
 using Microsoft.Extensions.Primitives;
 using NCrontab.Advanced;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Exceptions;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide.Operations.Migration;
@@ -15,6 +16,7 @@ using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
+using Raven.Server.Documents.ETL.Providers.ElasticSearch;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Aws;
@@ -398,6 +400,10 @@ namespace Raven.Server.Web.Studio
                     case ItemType.Script:
                         isValid = ResourceNameValidator.IsValidFileName(name, out errorMessage);
                         break;
+                    
+                    case ItemType.ElasticSearchIndex:
+                        isValid = ElasticSearchIndexValidator.IsValidIndexName(name, out errorMessage);
+                        break;
                 }
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -562,7 +568,8 @@ namespace Raven.Server.Web.Studio
         {
             Index,
             Database,
-            Script
+            Script,
+            ElasticSearchIndex
         }
     }
 }

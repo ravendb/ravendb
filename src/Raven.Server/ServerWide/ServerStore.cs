@@ -1961,6 +1961,17 @@ namespace Raven.Server.ServerWide
                         command = new AddOlapEtlCommand(olapEtl, databaseName, raftRequestId);
                         break;
 
+                    case EtlType.ElasticSearch:
+                        var elasticSearchEtl = JsonDeserializationCluster.ElasticSearchEtlConfiguration(etlConfiguration);
+                        elasticSearchEtl.Validate(out var elasticEtlErr, validateName: false, validateConnection: false);
+                        if (ValidateConnectionString(rawRecord, elasticSearchEtl.ConnectionStringName, elasticSearchEtl.EtlType) == false)
+                            elasticEtlErr.Add($"Could not find connection string named '{elasticSearchEtl.ConnectionStringName}'. Please supply an existing connection string.");
+
+                        ThrowInvalidConfigurationIfNecessary(etlConfiguration, elasticEtlErr);
+
+                        command = new AddElasticSearchEtlCommand(elasticSearchEtl, databaseName, raftRequestId);
+                        break;
+
                     default:
                         throw new NotSupportedException($"Unknown ETL configuration type. Configuration: {etlConfiguration}");
                 }
@@ -2005,9 +2016,12 @@ namespace Raven.Server.ServerWide
                 case EtlType.Olap:
                     var olapConnectionString = databaseRecord.OlapConnectionString;
                     return olapConnectionString != null && olapConnectionString.TryGetValue(connectionStringName, out _);
+                case EtlType.ElasticSearch:
+                    var elasticSearchConnectionString = databaseRecord.ElasticSearchConnectionStrings;
+                    return elasticSearchConnectionString != null && elasticSearchConnectionString.TryGetValue(connectionStringName, out _);
+                default:
+                    throw new NotSupportedException($"Unknown ETL type. Type: {etlType}");
             }
-
-            return false;
         }
 
         public async Task<(long, object)> UpdateEtl(TransactionOperationContext context, string databaseName, long id, BlittableJsonReaderObject etlConfiguration, string raftRequestId)
@@ -2048,6 +2062,16 @@ namespace Raven.Server.ServerWide
                         ThrowInvalidConfigurationIfNecessary(etlConfiguration, olapEtlErr);
 
                         command = new UpdateOlapEtlCommand(id, olapEtl, databaseName, raftRequestId);
+                        break;
+                    case EtlType.ElasticSearch:
+                        var elasticSearchEtl = JsonDeserializationCluster.ElasticSearchEtlConfiguration(etlConfiguration);
+                        elasticSearchEtl.Validate(out var elasticSearchEtlErr, validateName: false, validateConnection: false);
+                        if (ValidateConnectionString(rawRecord, elasticSearchEtl.ConnectionStringName, elasticSearchEtl.EtlType) == false)
+                            elasticSearchEtlErr.Add($"Could not find connection string named '{elasticSearchEtl.ConnectionStringName}'. Please supply an existing connection string.");
+
+                        ThrowInvalidConfigurationIfNecessary(etlConfiguration, elasticSearchEtlErr);
+
+                        command = new UpdateElasticSearchEtlCommand(id, elasticSearchEtl, databaseName, raftRequestId);
                         break;
                     default:
                         throw new NotSupportedException($"Unknown ETL configuration type. Configuration: {etlConfiguration}");
@@ -2107,6 +2131,10 @@ namespace Raven.Server.ServerWide
                 case ConnectionStringType.Olap:
                     command = new PutOlapConnectionStringCommand(JsonDeserializationCluster.OlapConnectionString(connectionString), databaseName, raftRequestId);
                     break;
+                case ConnectionStringType.ElasticSearch:
+                    command = new PutElasticSearchConnectionStringCommand(JsonDeserializationCluster.ElasticSearchConnectionString(connectionString), databaseName, raftRequestId);
+                    break;
+
                 default:
                     throw new NotSupportedException($"Unknown connection string type: {connectionStringType}");
             }
@@ -2196,7 +2224,27 @@ namespace Raven.Server.ServerWide
 
                         command = new RemoveOlapConnectionStringCommand(connectionStringName, databaseName, raftRequestId);
                         break;
-                    
+
+                    case ConnectionStringType.ElasticSearch:
+                        
+                        var elasticSearchEtls = rawRecord.ElasticSearchEtls;
+                        
+                        // Don't delete the connection string if used by tasks types: ElasticSearch Etl
+                        if (elasticSearchEtls != null)
+                        {
+                            foreach (var elasticSearchETlTask in elasticSearchEtls)
+                            {
+                                if (elasticSearchETlTask.ConnectionStringName == connectionStringName)
+                                {
+                                    throw new InvalidOperationException(
+                                        $"Can't delete connection string: {connectionStringName}. It is used by task: {elasticSearchETlTask.Name}");
+                                }
+                            }
+                        }
+
+                        command = new RemoveElasticSearchConnectionStringCommand(connectionStringName, databaseName, raftRequestId);
+                        break;
+
                     default:
                         throw new NotSupportedException($"Unknown connection string type: {connectionStringType}");
                 }

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Replication;
@@ -16,6 +17,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
         RavenEtl,
         SqlEtl,
         OlapEtl,
+        ElasticSearchEtl,
         Backup,
         Subscription,
         PullReplicationAsHub,
@@ -285,7 +287,6 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
         }
 
         public string ConnectionStringName { get; set; }
-        
         public string Destination { get; set; }
 
         public override DynamicJsonValue ToJson()
@@ -317,7 +318,47 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
             return json;
         }
     }
+    
+    public class OngoingTaskElasticSearchEtlListView : OngoingTask
+    {
+        public OngoingTaskElasticSearchEtlListView()
+        {
+            TaskType = OngoingTaskType.ElasticSearchEtl;
+        }
 
+        public string ConnectionStringName { get; set; }
+        public string[] NodesUrls { get; set; }
+
+        public override DynamicJsonValue ToJson()
+        {
+            var json = base.ToJson();
+
+            json[nameof(ConnectionStringName)] = ConnectionStringName;
+            json[nameof(NodesUrls)] = NodesUrls;
+            
+            return json;
+        }
+    }
+
+    public class OngoingTaskElasticSearchEtlDetails : OngoingTask
+    {
+        public OngoingTaskElasticSearchEtlDetails()
+        {
+            TaskType = OngoingTaskType.ElasticSearchEtl;
+        }
+
+        public ElasticSearchEtlConfiguration Configuration { get; set; }
+
+        public override DynamicJsonValue ToJson()
+        {
+            var json = base.ToJson();
+
+            json[nameof(Configuration)] = Configuration?.ToJson();
+
+            return json;
+        }
+    }
+ 
     public class OngoingTaskBackup : OngoingTask
     {
         public BackupType BackupType { get; set; }

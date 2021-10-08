@@ -18,6 +18,10 @@
 @olap-etl-color-dark: darken(@color-1-2, 10%);
 @olap-etl-color-light: lighten(@color-1-2, 5%);
 
+@elastic-etl-color: @color-5-2;
+@elastic-etl-color-dark: darken(@color-5-2, 10%);
+@elastic-etl-color-light: lighten(@color-5-2, 5%);
+
 @ravendb-etl-color: @color-2;
 @ravendb-etl-color-dark: darken(@color-2, 10%);
 @ravendb-etl-color-light: lighten(@color-2, 5%);
@@ -51,7 +55,7 @@
 }
 
 .destinationModal {
-    .external-replication, .sql-etl, .olap-etl, .ravendb-etl, .periodic-backup, .subscription, .pull-replication-hub, .pull-replication-sink {
+    .external-replication, .sql-etl, .olap-etl, .elastic-etl, .ravendb-etl, .periodic-backup, .subscription, .pull-replication-hub, .pull-replication-sink {
         display: block;
         padding: 10px;
         transition: background-color .2s ease, color .1s;
@@ -79,6 +83,10 @@
 
     .olap-etl {
         .bigbtn-variant (@olap-etl-color, @olap-etl-color-dark);
+    }
+
+    .elastic-etl {
+        .bigbtn-variant (@elastic-etl-color, @elastic-etl-color-dark);
     }
 
     .ravendb-etl {
@@ -202,6 +210,14 @@
             background-color: @olap-etl-color;
         }
 
+        .elastic-etl {
+            color: @elastic-etl-color;
+        }
+
+        .task-elastic-etl {
+            background-color: @elastic-etl-color;
+        }
+
         .subscriptions {
             color: @subscription-color;
         }
@@ -276,6 +292,11 @@
         }
 
         &.olap-etl {
+            .name-variant (@brand-info, @brand-info-light);
+        }
+
+        // todo ???
+        &.elastic-etl {
             .name-variant (@brand-info, @brand-info-light);
         }
 
@@ -582,6 +603,47 @@
     }
 }
 
+.edit-elastic-search-task {
+
+    overflow-x: hidden;
+
+    .result-item {
+        .header {
+            padding: @grid-gutter-width / 2;
+            background-color: @gray-dark;
+        }
+        pre {
+            background-color: @gray-darker;
+        }
+    }
+
+    .flex-row {
+        transition: transform 0.5s;
+    }
+
+    .test-container {
+        position: absolute;
+        right: 0;
+        top: 0;
+        bottom: 0;
+        width: 50%;
+        transform: translateX(100%);
+        transition: transform 0.5s;
+
+        .tab-content {
+            overflow: auto;
+        }
+    }
+    &.test-mode {
+        .flex-row {
+            transform: translateX(-50%);
+        }
+        .test-container {
+            transform: translateX(0%);
+        }
+    }
+}
+
 .js-test-sql-tooltip {
     z-index: @zindex-modal + 1;
 }
@@ -596,7 +658,7 @@
         }
     }
 
-    .edit-raven-sql-task, .edit-raven-etl-task {
+    .edit-raven-sql-task, .edit-raven-etl-task, .edit-elastic-search-task {
         & > .flex-row {
             z-index: @zindex-modal;
         }
@@ -606,8 +668,8 @@
     }
     
     #debugOutput pre {
-        white-space: pre-wrap;       
-        word-wrap: break-word; 
+        white-space: pre-wrap;
+        word-wrap: break-word;
     }
 
     .transformation-errors, .load-errors {
