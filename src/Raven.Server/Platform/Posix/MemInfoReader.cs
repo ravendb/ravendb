@@ -274,6 +274,12 @@ namespace Raven.Server.Platform.Posix
         [SnmpIndex(52)]
         public Size DirectMap1G { get; set; }
 
+        [SnmpIndex(53)]
+        public Size CmaTotal { get; set; }
+
+        [SnmpIndex(54)]
+        public Size CmaFree { get; set; }
+
         public Dictionary<string, Size> Other { get; set; }
 
         public void Set(string name, long value, SizeUnit unit)
