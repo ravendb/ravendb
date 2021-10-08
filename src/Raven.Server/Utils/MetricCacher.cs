@@ -28,6 +28,8 @@ namespace Raven.Server.Utils
 
                 public const string DiskSpaceInfo = "DiskSpaceInfo";
 
+                public const string MemInfo = "MemInfo";
+
                 public const string GcAny = "GC/Any";
 
                 public const string GcEphemeral = "GC/Ephemeral";
