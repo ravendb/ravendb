@@ -1567,7 +1567,13 @@ namespace Raven.Server.Documents.Queries.Parser
 
         private bool Binary(out QueryExpression op)
         {
-            RuntimeHelpers.EnsureSufficientExecutionStack();
+            if (RuntimeHelpers.TryEnsureSufficientExecutionStack() == false)
+            {
+                ThrowQueryTooComplexException();
+
+                op = null; // code is unreachable
+                return false;
+            }
 
             switch (_state)
             {
@@ -1942,6 +1948,11 @@ namespace Raven.Server.Documents.Queries.Parser
                 .Append(msg);
 
             throw new ParseException(sb.ToString());
+        }
+
+        private void ThrowQueryTooComplexException()
+        {
+            throw new ParseException($"Query is too complex. Query: {Scanner.Input}");
         }
 
         private bool Value(out ValueExpression val)
