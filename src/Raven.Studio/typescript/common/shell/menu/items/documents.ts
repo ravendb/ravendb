@@ -43,15 +43,6 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
             dynamicHash: appUrls.query("")
         }),
         new leafMenuItem({
-            title: "Conflicts",
-            nav: true,
-            route: "databases/documents/conflicts",
-            moduleId: "viewmodels/database/conflicts/conflicts",
-            css: "icon-conflicts",
-            dynamicHash: appUrls.conflicts,
-            badgeData: collectionsTracker.default.conflictsCount
-        }),
-        new leafMenuItem({
             route: "databases/edit",
             title: "Edit Document",
             moduleId: "viewmodels/database/documents/editDocument",
@@ -66,11 +57,12 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
             itemRouteToHighlight: "databases/documents"
         }),
         new leafMenuItem({
-            route: "databases/cmpXchg/edit",
-            title: "Edit Compare Exchange Value",
-            moduleId: "viewmodels/database/cmpXchg/editCmpXchg",
-            nav: false,
-            itemRouteToHighlight: "databases/cmpXchg"
+            title: "Identities",
+            nav: true,
+            route: "databases/identities",
+            moduleId: "viewmodels/database/identities/identities",
+            css: "icon-identities",
+            dynamicHash: appUrls.identities
         }),
         new leafMenuItem({
             title: "Compare Exchange",
@@ -79,6 +71,22 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
             moduleId: "viewmodels/database/cmpXchg/cmpXchg",
             css: "icon-cmp-xchg",
             dynamicHash: appUrls.cmpXchg
+        }),
+        new leafMenuItem({
+            route: "databases/cmpXchg/edit",
+            title: "Edit Compare Exchange Value",
+            moduleId: "viewmodels/database/cmpXchg/editCmpXchg",
+            nav: false,
+            itemRouteToHighlight: "databases/cmpXchg"
+        }),
+        new leafMenuItem({
+            title: "Conflicts",
+            nav: true,
+            route: "databases/documents/conflicts",
+            moduleId: "viewmodels/database/conflicts/conflicts",
+            css: "icon-conflicts",
+            dynamicHash: appUrls.conflicts,
+            badgeData: collectionsTracker.default.conflictsCount
         })
     ];
 

@@ -1,7 +1,8 @@
 ﻿using System;
 
-namespace Sparrow.Server
+namespace Sparrow.Platform
 {
+#if NETCOREAPP3_1_OR_GREATER
     public static unsafe partial class Sodium
     {
         public static void ZeroBuffer(byte[] buffer)
@@ -22,4 +23,5 @@ namespace Sparrow.Server
             return buffer;
         }
     }
+#endif
 }

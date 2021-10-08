@@ -201,8 +201,6 @@ namespace Raven.Server.Commercial
             try
             {
                 SetLicense(GetLicenseStatus(license));
-
-                RemoveAgplAlert();
             }
             catch (Exception e)
             {
@@ -222,6 +220,7 @@ namespace Raven.Server.Commercial
                 _serverStore.NotificationCenter.Add(alert);
             }
 
+            RemoveAgplAlert();
             LicenseChanged?.Invoke();
 
             if (firstRun == false)
@@ -242,7 +241,20 @@ namespace Raven.Server.Commercial
 
         private void RemoveAgplAlert()
         {
-            _serverStore.NotificationCenter.Dismiss(AlertRaised.GetKey(AlertType.LicenseManager_AGPL3, null));
+            var id = AlertRaised.GetKey(AlertType.LicenseManager_AGPL3, null);
+            if (_serverStore.NotificationCenter.Exists(id) == false)
+                return;
+
+            try
+            {
+                _serverStore.NotificationCenter.Dismiss(id);
+            }
+            catch (Exception e)
+            {
+                // nothing we do can here, we'll try to remove it on next restart or when reloading the license
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations("Failed to remove the AGPL alert", e);
+            }
         }
 
         public void ReloadLicenseLimits(bool firstRun = false)

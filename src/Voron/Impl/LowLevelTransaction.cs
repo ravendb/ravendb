@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 using Sparrow;
+using Sparrow.Platform;
 using Sparrow.Server;
 using Sparrow.Threading;
 using Sparrow.Utils;

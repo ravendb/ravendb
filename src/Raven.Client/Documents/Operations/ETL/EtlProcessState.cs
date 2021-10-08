@@ -10,7 +10,7 @@ namespace Raven.Client.Documents.Operations.ETL
     {
         public EtlProcessState()
         {
-            LastProcessedEtagPerNode = new Dictionary<string, long>();
+            LastProcessedEtagPerDbId = new Dictionary<string, long>();
             ChangeVector = null;
         }
 
@@ -18,6 +18,9 @@ namespace Raven.Client.Documents.Operations.ETL
 
         public string TransformationName { get; set; }
 
+        public Dictionary<string, long> LastProcessedEtagPerDbId { get; set; }
+
+        [Obsolete("Was used in older versions, replaced by 'LastProcessedEtagPerDbId'")]
         public Dictionary<string, long> LastProcessedEtagPerNode { get; set; }
 
         public string ChangeVector { get; set; }
@@ -31,11 +34,17 @@ namespace Raven.Client.Documents.Operations.ETL
 
         public DateTime? LastBatchTime { get; set; }
 
-        public long GetLastProcessedEtagForNode(string nodeTag)
+        public long GetLastProcessedEtag(string dbId, string nodeTag)
         {
-            if (LastProcessedEtagPerNode.TryGetValue(nodeTag, out var etag))
+            if (LastProcessedEtagPerDbId.TryGetValue(dbId, out var etag))
                 return etag;
 
+#pragma warning disable 618
+            if (LastProcessedEtagPerNode != null && LastProcessedEtagPerNode.TryGetValue(nodeTag, out etag))
+#pragma warning restore 618
+                // legacy EtlProcessState
+                return etag;
+            
             return 0;
         }
 
@@ -45,7 +54,10 @@ namespace Raven.Client.Documents.Operations.ETL
             {
                 [nameof(ConfigurationName)] = ConfigurationName,
                 [nameof(TransformationName)] = TransformationName,
-                [nameof(LastProcessedEtagPerNode)] = LastProcessedEtagPerNode.ToJson(),
+                [nameof(LastProcessedEtagPerDbId)] = LastProcessedEtagPerDbId.ToJson(),
+#pragma warning disable 618
+                [nameof(LastProcessedEtagPerNode)] = LastProcessedEtagPerNode?.ToJson(),
+#pragma warning restore 618
                 [nameof(ChangeVector)] = ChangeVector,
                 [nameof(NodeTag)] = NodeTag,
                 [nameof(SkippedTimeSeriesDocs)] = SkippedTimeSeriesDocs,

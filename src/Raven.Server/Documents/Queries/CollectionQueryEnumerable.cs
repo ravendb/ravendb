@@ -89,6 +89,8 @@ namespace Raven.Server.Documents.Queries
             private readonly HashSet<ulong> _alreadySeenProjections;
             private long _start;
             private IEnumerator<Document> _inner;
+            private bool _hasProjections;
+            private List<Document>.Enumerator _projections;
             private int _innerCount;
             private readonly List<Slice> _ids;
             private readonly MapQueryResultRetriever _resultsRetriever;
@@ -163,32 +165,13 @@ namespace Raven.Server.Documents.Queries
 
                 while (true)
                 {
-                    if (_inner == null)
+                    var (hasNext, doc) = GetNextDocument();
+                    if (doc == null)
                     {
-                        _inner = GetDocuments().GetEnumerator();
-                        _innerCount = 0;
-                    }
-
-                    if (_inner.MoveNext() == false)
-                    {
-                        Current = null;
-
-                        if (_returnedResults >= _query.PageSize)
+                        if (hasNext == false)
                             return false;
-
-                        if (_innerCount < _query.PageSize)
-                            return false;
-
-                        _start += _query.PageSize;
-                        _inner = null;
                         continue;
                     }
-
-                    _innerCount++;
-
-                    var doc = _fieldsToFetch.IsProjection
-                        ? _resultsRetriever.GetProjectionFromDocument(_inner.Current, null, QueryResultRetrieverBase.ZeroScore, _fieldsToFetch, _context, null)
-                        : _inner.Current;
 
                     if (_query.SkipDuplicateChecking || _fieldsToFetch.IsDistinct == false)
                     {
@@ -207,6 +190,65 @@ namespace Raven.Server.Documents.Queries
                     if (_returnedResults >= _query.PageSize)
                         return false;
                 }
+            }
+
+            private (bool HasNext, Document Doc) GetNextDocument()
+            {
+                if (_hasProjections)
+                {
+                    if (_projections.MoveNext())
+                        return (true, _projections.Current);
+
+                    _hasProjections = false;
+                    _projections = default;
+                }
+                
+                if (_inner == null)
+                {
+                    _inner = GetDocuments().GetEnumerator();
+                    _innerCount = 0;
+                }
+
+                if (_inner.MoveNext() == false)
+                {
+                    Current = null;
+
+                    if (_returnedResults >= _query.PageSize)
+                        return (false, null);
+
+                    if (_innerCount < _query.PageSize)
+                        return (false, null);
+
+                    _start += _query.PageSize;
+                    _inner = null;
+                    return (true, null);
+                }
+
+                _innerCount++;
+
+                if (_fieldsToFetch.IsProjection)
+                {
+                    var result = _resultsRetriever.GetProjectionFromDocument(_inner.Current, null, QueryResultRetrieverBase.ZeroScore, _fieldsToFetch, _context, null);
+                    if (result.List != null)
+                    {
+                        var it = result.List.GetEnumerator();
+                        if (it.MoveNext() == false)
+                            return (true, null);
+                        _totalResults.Value += result.List.Count - 1;
+                        _projections = it;
+                        _hasProjections = true;
+                        return (true, it.Current);
+                    }
+
+                    if (result.Document != null)
+                    {
+                        return (true, result.Document);
+                    }
+
+                    return (true, null);
+                }
+
+                return (true, _inner.Current);
             }
 
             private IEnumerable<Document> GetDocuments()
@@ -306,15 +348,42 @@ namespace Raven.Server.Documents.Queries
                     {
                         count++;
 
-                        var doc = _fieldsToFetch.IsProjection
-                            ? _resultsRetriever.GetProjectionFromDocument(document, null, QueryResultRetrieverBase.ZeroScore, _fieldsToFetch, _context, null)
-                            : _inner.Current;
+                        if (_fieldsToFetch.IsProjection)
+                        {
+                            var result = _resultsRetriever.GetProjectionFromDocument(document, null, QueryResultRetrieverBase.ZeroScore, _fieldsToFetch, _context, null);
+                            if (result.Document != null)
+                            {
+                                if (IsStartingPoint(result.Document))
+                                    break;
+                            }
+                            else if (result.List != null)
+                            {
+                                bool match = false;
+                                foreach (Document item in result.List)
+                                {
+                                    if (IsStartingPoint(item))
+                                    {
+                                        match = true;
+                                        break;
+                                    }
+                                }
 
-                        if (doc.Data.Count <= 0)
-                            continue;
+                                if (match)
+                                    break;
+                            }
+                        }
+                        else
+                        {
+                            if (IsStartingPoint(_inner.Current))
+                            {
+                                break;
+                            }
+                        }
 
-                        if (_alreadySeenProjections.Add(doc.DataHash) && _alreadySeenProjections.Count == _query.Start)
-                            break;
+                        bool IsStartingPoint(Document d)
+                        {
+                            return d.Data.Count > 0 && _alreadySeenProjections.Add(d.DataHash) && _alreadySeenProjections.Count == _query.Start;
+                        }
                     }
 
                     if (_alreadySeenProjections.Count == _query.Start)

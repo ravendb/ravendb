@@ -375,7 +375,7 @@ namespace Raven.Server.Documents.ETL
                             Database.NotificationCenter.Add(alert);
 
                             stats.RecordBatchCompleteReason(message);
-                            stats.RecordTransformationError(); 
+                            stats.RecordTransformationError();
 
                             Stop(reason: message);
 
@@ -568,7 +568,7 @@ namespace Raven.Server.Documents.ETL
 
             return true;
         }
-        
+
         protected void UpdateMetrics(DateTime startTime, TStatsScope stats)
         {
             var batchSize = stats.NumberOfExtractedItems.Sum(x => x.Value);
@@ -678,7 +678,7 @@ namespace Raven.Server.Documents.ETL
 
                     var state = LastProcessState = GetProcessState(Database, Configuration.Name, Transformation.Name);
 
-                    var loadLastProcessedEtag = state.GetLastProcessedEtagForNode(_serverStore.NodeTag);
+                    var loadLastProcessedEtag = state.GetLastProcessedEtag(Database.DbBase64Id, _serverStore.NodeTag);
 
                     using (Statistics.NewBatch())
                     using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -820,7 +820,7 @@ namespace Raven.Server.Documents.ETL
         {
             var command = new UpdateEtlProcessStateCommand(Database.Name, Configuration.Name, Transformation.Name, Statistics.LastProcessedEtag,
                 ChangeVectorUtils.MergeVectors(Statistics.LastChangeVector, state.ChangeVector), _serverStore.NodeTag,
-                _serverStore.LicenseManager.HasHighlyAvailableTasks(), RaftIdGenerator.NewId(), state.SkippedTimeSeriesDocs, lastBatchTime);
+                _serverStore.LicenseManager.HasHighlyAvailableTasks(), Database.DbBase64Id, RaftIdGenerator.NewId(), state.SkippedTimeSeriesDocs, lastBatchTime);
 
             var sendToLeaderTask = _serverStore.SendToLeaderAsync(command);
 
@@ -1190,7 +1190,7 @@ namespace Raven.Server.Documents.ETL
                 ? Database.DocumentsStorage.GetCollections(documentsContext).Select(x => x.Name).ToList()
                 : Transformation.Collections;
 
-            var lastProcessedEtag = LastProcessState.GetLastProcessedEtagForNode(_serverStore.NodeTag);
+            var lastProcessedEtag = LastProcessState.GetLastProcessedEtag(Database.DbBase64Id, Database.ServerStore.NodeTag);
 
             foreach (var collection in collections)
             {

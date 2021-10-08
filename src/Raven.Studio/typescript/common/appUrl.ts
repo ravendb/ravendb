@@ -32,6 +32,7 @@ class appUrl {
         documents: ko.pureComputed(() => appUrl.forDocuments(null, appUrl.currentDatabase())),
         revisionsBin: ko.pureComputed(() => appUrl.forRevisionsBin(appUrl.currentDatabase())),
         conflicts: ko.pureComputed(() => appUrl.forConflicts(appUrl.currentDatabase())),
+        identities: ko.pureComputed(() => appUrl.forIdentities(appUrl.currentDatabase())),
         cmpXchg: ko.pureComputed(() => appUrl.forCmpXchg(appUrl.currentDatabase())),
         patch: ko.pureComputed(() => appUrl.forPatch(appUrl.currentDatabase())),
         indexes: ko.pureComputed(() => appUrl.forIndexes(appUrl.currentDatabase())),
@@ -435,6 +436,11 @@ class appUrl {
         return "#/databases/documents?" + collectionPart + "&database=" + encodeURIComponent(dbName);
     }
 
+    static forIdentities(db: database | databaseInfo): string {
+        const databasePart = appUrl.getEncodedDbPart(db);
+        return "#databases/identities?" + databasePart;
+    }
+    
     static forCmpXchg(db: database | databaseInfo): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/cmpXchg?" + databasePart;

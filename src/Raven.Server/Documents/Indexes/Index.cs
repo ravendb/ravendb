@@ -118,7 +118,10 @@ namespace Raven.Server.Documents.Indexes
 
         private readonly AsyncManualResetEvent _indexingBatchCompleted = new AsyncManualResetEvent();
 
-        private readonly SemaphoreSlim _indexingInProgress = new SemaphoreSlim(1, 1);
+        private readonly SemaphoreSlim _doingIndexingWork = new SemaphoreSlim(1, 1);
+
+        private readonly SemaphoreSlim _executingIndexing = new SemaphoreSlim(1, 1);
+
 
         private long _allocatedAfterPreviousCleanup = 0;
 
@@ -151,7 +154,7 @@ namespace Raven.Server.Documents.Indexes
 
         internal TransactionContextPool _contextPool;
 
-        protected ThrottledManualResetEventSlim _mre;
+        internal ThrottledManualResetEventSlim _mre;
         private readonly object _disablingIndexLock = new object();
 
         private readonly ManualResetEventSlim _logsAppliedEvent = new ManualResetEventSlim();
@@ -743,7 +746,7 @@ namespace Raven.Server.Documents.Indexes
                 Configuration = configuration;
                 PerformanceHintsConfig = performanceHints;
 
-                _mre = new ThrottledManualResetEventSlim(Configuration.ThrottlingTimeInterval?.AsTimeSpan, throttlingBehavior: ThrottledManualResetEventSlim.ThrottlingBehavior.ManualManagement);
+                _mre = new ThrottledManualResetEventSlim(Configuration.ThrottlingTimeInterval?.AsTimeSpan, timerManagement: ThrottledManualResetEventSlim.TimerManagement.Manual);
                 _logger = LoggingSource.Instance.GetLogger<Index>(documentDatabase.Name);
                 _environment = environment;
                 var safeName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(Name);
@@ -1360,6 +1363,7 @@ namespace Raven.Server.Documents.Indexes
             _indexingThreadStats = NativeMemory.CurrentThreadStats;
 
             using (CultureHelper.EnsureInvariantCulture())
+            using (EnsureSingleIndexingThread())
             {
                 // if we are starting indexing e.g. manually after failure
                 // we need to reset errors to give it a chance
@@ -1464,7 +1468,7 @@ namespace Raven.Server.Documents.Indexes
 
                                     try
                                     {
-                                        _indexingInProgress.Wait(_indexingProcessCancellationTokenSource.Token);
+                                        _doingIndexingWork.Wait(_indexingProcessCancellationTokenSource.Token);
 
                                         try
                                         {
@@ -1487,7 +1491,7 @@ namespace Raven.Server.Documents.Indexes
                                         }
                                         finally
                                         {
-                                            _indexingInProgress.Release();
+                                            _doingIndexingWork.Release();
 
                                             if (_batchStopped)
                                             {
@@ -1709,8 +1713,10 @@ namespace Raven.Server.Documents.Indexes
                 }
                 finally
                 {
-                    _inMemoryIndexProgress.Clear();
+                    _forTestingPurposes?.ActionToCallInFinallyOfExecuteIndexing?.Invoke();
 
+                    _inMemoryIndexProgress.Clear();
+                    
                     if (storageEnvironment != null)
                         storageEnvironment.OnLogsApplied -= HandleLogsApplied;
 
@@ -1894,7 +1900,7 @@ namespace Raven.Server.Documents.Indexes
 
         private void ReduceMemoryUsage(StorageEnvironment environment, IndexCleanup mode)
         {
-            if (_indexingInProgress.Wait(0) == false)
+            if (_doingIndexingWork.Wait(0) == false)
                 return;
 
             try
@@ -1928,7 +1934,7 @@ namespace Raven.Server.Documents.Indexes
             }
             finally
             {
-                _indexingInProgress.Release();
+                _doingIndexingWork.Release();
             }
         }
 
@@ -2333,19 +2339,23 @@ namespace Raven.Server.Documents.Indexes
         protected virtual void SubscribeToChanges(DocumentDatabase documentDatabase)
         {
             if (documentDatabase != null)
+            {
                 documentDatabase.Changes.OnDocumentChange += HandleDocumentChange;
 
-            if (Definition.HasCompareExchange)
-                documentDatabase.ServerStore.Cluster.Changes.OnCompareExchangeChange += HandleCompareExchangeChange;
+                if (Definition.HasCompareExchange)
+                    documentDatabase.ServerStore.Cluster.Changes.OnCompareExchangeChange += HandleCompareExchangeChange;
+            }
         }
 
         protected virtual void UnsubscribeFromChanges(DocumentDatabase documentDatabase)
         {
             if (documentDatabase != null)
+            {
                 documentDatabase.Changes.OnDocumentChange -= HandleDocumentChange;
 
-            if (Definition.HasCompareExchange)
-                documentDatabase.ServerStore.Cluster.Changes.OnCompareExchangeChange -= HandleCompareExchangeChange;
+                if (Definition.HasCompareExchange)
+                    documentDatabase.ServerStore.Cluster.Changes.OnCompareExchangeChange -= HandleCompareExchangeChange;
+            }
         }
 
         protected virtual void HandleDocumentChange(DocumentChange change)
@@ -3766,6 +3776,20 @@ namespace Raven.Server.Documents.Indexes
             return queryDoneRunning;
         }
 
+        private IDisposable EnsureSingleIndexingThread()
+        {
+            try
+            {
+                _executingIndexing.Wait(_indexingProcessCancellationTokenSource.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                return null;
+            }
+
+            return new DisposableAction(() => _executingIndexing.Release());
+        }
+
         internal static readonly TimeSpan DefaultWaitForNonStaleResultsTimeout = TimeSpan.FromSeconds(15); // this matches default timeout from client
 
         private readonly ConcurrentLruRegexCache _regexCache = new ConcurrentLruRegexCache(1024);
@@ -4950,6 +4974,28 @@ namespace Raven.Server.Documents.Indexes
                 }
 
                 return files.Length;
+            }
+        }
+
+        private TestingStuff _forTestingPurposes;
+
+        internal TestingStuff ForTestingPurposesOnly()
+        {
+            if (_forTestingPurposes != null)
+                return _forTestingPurposes;
+
+            return _forTestingPurposes = new TestingStuff();
+        }
+
+        internal class TestingStuff
+        {
+            internal Action ActionToCallInFinallyOfExecuteIndexing;
+
+            internal IDisposable CallDuringFinallyOfExecuteIndexing(Action action)
+            {
+                ActionToCallInFinallyOfExecuteIndexing = action;
+
+                return new DisposableAction(() => ActionToCallInFinallyOfExecuteIndexing = null);
             }
         }
     }

@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using Jint.Native;
 using Jint.Native.Object;
 using Jint.Runtime;
 using Lucene.Net.Documents;
 using Lucene.Net.Store;
+using Microsoft.Extensions.Azure;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
@@ -102,7 +104,7 @@ namespace Raven.Server.Documents.Queries.Results
             }
         }
 
-        public abstract Document Get(Lucene.Net.Documents.Document input, Lucene.Net.Search.ScoreDoc scoreDoc, IState state);
+        public abstract (Document Document, List<Document> List) Get(Lucene.Net.Documents.Document input, Lucene.Net.Search.ScoreDoc scoreDoc, IState state);
 
         public abstract bool TryGetKey(Lucene.Net.Documents.Document document, IState state, out string key);
 
@@ -114,7 +116,7 @@ namespace Raven.Server.Documents.Queries.Results
 
         protected abstract DynamicJsonValue GetCounterRaw(string docId, string name);
 
-        protected Document GetProjection(Lucene.Net.Documents.Document input, Lucene.Net.Search.ScoreDoc scoreDoc, string lowerId, IState state)
+        protected (Document Document, List<Document> List) GetProjection(Lucene.Net.Documents.Document input, Lucene.Net.Search.ScoreDoc scoreDoc, string lowerId, IState state)
         {
             using (_projectionScope = _projectionScope?.Start() ?? RetrieverScope?.For(nameof(QueryTimingsScope.Names.Projection)))
             {
@@ -132,7 +134,7 @@ namespace Raven.Server.Documents.Queries.Results
                                 FieldsToFetch.Projection.ThrowCouldNotExtractProjectionOnDocumentBecauseDocumentDoesNotExistException(lowerId);
                         }
 
-                        return null;
+                        return default;
                     }
 
                     return GetProjectionFromDocumentInternal(doc, input, scoreDoc, FieldsToFetch, _context, state);
@@ -196,7 +198,7 @@ namespace Raven.Server.Documents.Queries.Results
                             }
 
                             // we don't return partial results
-                            return null;
+                            return default;
                         }
                     }
 
@@ -211,7 +213,7 @@ namespace Raven.Server.Documents.Queries.Results
                             else
                                 ThrowInvalidQueryBodyResponse(fieldVal);
                             FinishDocumentSetup(doc, scoreDoc);
-                            return doc;
+                            return (doc, null);
                         }
 
                         if (fieldVal is List<object> list)
@@ -241,11 +243,11 @@ namespace Raven.Server.Documents.Queries.Results
                     };
                 }
 
-                return ReturnProjection(result, doc, scoreDoc, _context);
+                return (ReturnProjection(result, doc, scoreDoc, _context), null);
             }
         }
 
-        public Document GetProjectionFromDocument(Document doc, Lucene.Net.Documents.Document luceneDoc, Lucene.Net.Search.ScoreDoc scoreDoc, FieldsToFetch fieldsToFetch, JsonOperationContext context, IState state)
+        public (Document Document, List<Document> List) GetProjectionFromDocument(Document doc, Lucene.Net.Documents.Document luceneDoc, Lucene.Net.Search.ScoreDoc scoreDoc, FieldsToFetch fieldsToFetch, JsonOperationContext context, IState state)
         {
             using (RetrieverScope?.Start())
             using (_projectionScope = _projectionScope?.Start() ?? RetrieverScope?.For(nameof(QueryTimingsScope.Names.Projection)))
@@ -254,7 +256,7 @@ namespace Raven.Server.Documents.Queries.Results
             }
         }
 
-        private Document GetProjectionFromDocumentInternal(Document doc, Lucene.Net.Documents.Document luceneDoc, Lucene.Net.Search.ScoreDoc scoreDoc, FieldsToFetch fieldsToFetch, JsonOperationContext context, IState state)
+        private (Document Document, List<Document> List) GetProjectionFromDocumentInternal(Document doc, Lucene.Net.Documents.Document luceneDoc, Lucene.Net.Search.ScoreDoc scoreDoc, FieldsToFetch fieldsToFetch, JsonOperationContext context, IState state)
         {
             var result = new DynamicJsonValue();
 
@@ -274,14 +276,14 @@ namespace Raven.Server.Documents.Queries.Results
 
                 var immediateResult = AddProjectionToResult(doc, scoreDoc, fieldsToFetch, result, key, fieldVal);
 
-                if (immediateResult != null)
+                if (immediateResult.Document != null || immediateResult.List != null)
                     return immediateResult;
             }
 
-            return ReturnProjection(result, doc, scoreDoc, context);
+            return (ReturnProjection(result, doc, scoreDoc, context), null);
         }
 
-        protected Document AddProjectionToResult(Document doc, Lucene.Net.Search.ScoreDoc scoreDoc, FieldsToFetch fieldsToFetch, DynamicJsonValue result, string key, object fieldVal)
+        protected (Document Document, List<Document> List) AddProjectionToResult(Document doc, Lucene.Net.Search.ScoreDoc scoreDoc, FieldsToFetch fieldsToFetch, DynamicJsonValue result, string key, object fieldVal)
         {
             if (_query.IsStream &&
                 key.StartsWith(Constants.TimeSeries.QueryFunction))
@@ -291,26 +293,52 @@ namespace Raven.Server.Documents.Queries.Results
                 doc.TimeSeriesStream.TimeSeries = value.Stream;
                 doc.TimeSeriesStream.Key = key;
                 Json.BlittableJsonTextWriterExtensions.MergeMetadata(result, value.Metadata);
-                return null;
+                return default;
             }
 
             if (fieldsToFetch.SingleBodyOrMethodWithNoAlias)
             {
-                var newDoc = CreateNewDocument(doc, key, fieldVal);
-                FinishDocumentSetup(newDoc, scoreDoc);
-                return newDoc;
+                var r = CreateNewDocument(doc, key, fieldVal);
+                FinishDocumentSetup(r.Document, scoreDoc);
+                if (r.List == null) return r;
+                foreach (Document item in r.List)
+                {
+                    FinishDocumentSetup(item, scoreDoc);
+                }
+                return r;
+
             }
 
             AddProjectionToResult(result, key, fieldVal);
-            return null;
+            return default;
         }
 
-        private Document CreateNewDocument(Document doc, string key, object fieldVal)
+        private (Document Document, List<Document> List) CreateNewDocument(Document doc, string key, object fieldVal)
         {
             switch (fieldVal)
             {
+                case List<object> list:
+                    RuntimeHelpers.EnsureSufficientExecutionStack();
+                    var results = new List<Document>(list.Count);
+                    for (int i = 0; i < list.Count; i++)
+                    {
+                        var result = CreateNewDocument(doc, key, list[i]);
+                        if (result.Document != null)
+                        {
+                            results.Add(result.Document);
+                        }
+                        else if (result.List != null)
+                        {
+                            foreach (var document in result.List)
+                            {
+                                results.Add(document);
+                            }
+                        }
+                    }
+
+                    return (null, results);
                 case BlittableJsonReaderObject nested:
-                    return new Document
+                    return (new Document
                     {
                         Id = doc.Id,
                         ChangeVector = doc.ChangeVector,
@@ -322,13 +350,13 @@ namespace Raven.Server.Documents.Queries.Results
                         NonPersistentFlags = doc.NonPersistentFlags,
                         StorageId = doc.StorageId,
                         TransactionMarker = doc.TransactionMarker
-                    };
+                    }, null);
 
                 case Document d:
-                    return d;
+                    return (d, null);
 
                 case TimeSeriesRetriever.TimeSeriesRetrieverResult ts:
-                    return new Document
+                    return (new Document
                     {
                         Id = doc.Id,
                         ChangeVector = doc.ChangeVector,
@@ -345,14 +373,14 @@ namespace Raven.Server.Documents.Queries.Results
                             TimeSeries = ts.Stream,
                             Key = key
                         }
-                    };
+                    }, null);
 
                 default:
                     ThrowInvalidQueryBodyResponse(fieldVal);
                     break;
             }
 
-            return null;
+            return default;
         }
 
         protected static void AddProjectionToResult(DynamicJsonValue result, string key, object fieldVal)

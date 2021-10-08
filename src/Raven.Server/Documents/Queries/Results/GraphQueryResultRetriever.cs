@@ -45,7 +45,7 @@ namespace Raven.Server.Documents.Queries.Results
             throw new InvalidQueryException($"Invalid projection behavior '{_query.ProjectionBehavior}'.Only default projection behavior can be used for graph queries.", _query.Query, _query.QueryParameters);
         }
 
-        public override Document Get(Lucene.Net.Documents.Document input, Lucene.Net.Search.ScoreDoc scoreDoc, IState state)
+        public override (Document Document, List<Document> List) Get(Lucene.Net.Documents.Document input, Lucene.Net.Search.ScoreDoc scoreDoc, IState state)
         {
             throw new NotSupportedException("Graph Queries do not deal with Lucene indexes.");
         }
@@ -125,8 +125,8 @@ namespace Raven.Server.Documents.Queries.Results
                     fieldVal = GetFunctionValue(fieldToFetch, null, args);
 
                     var immediateResult = AddProjectionToResult(item, OneScore, FieldsToFetch, result, key, fieldVal);
-                    if (immediateResult != null)
-                        return immediateResult;
+                    if (immediateResult.Document != null)
+                        return immediateResult.Document;
                 }
                 else
                 {
@@ -140,8 +140,8 @@ namespace Raven.Server.Documents.Queries.Results
                                     continue;
                                 d.EnsureMetadata();
                                 var immediateResult = AddProjectionToResult(d, OneScore, FieldsToFetch, result, key, fieldVal);
-                                if (immediateResult != null)
-                                    return immediateResult;
+                                if (immediateResult.Document != null)
+                                    return immediateResult.Document;
                                 break;
                             }
                         case BlittableJsonReaderObject bjro:
@@ -151,8 +151,8 @@ namespace Raven.Server.Documents.Queries.Results
                                     continue;
                                 doc.EnsureMetadata();
                                 var immediateResult = AddProjectionToResult(doc, OneScore, FieldsToFetch, result, key, fieldVal);
-                                if (immediateResult != null)
-                                    return immediateResult;
+                                if (immediateResult.Document != null)
+                                    return immediateResult.Document;
                                 break;
                             }
                         case MatchCollection matches:

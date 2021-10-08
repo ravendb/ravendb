@@ -20,6 +20,8 @@ import patchTester = require("viewmodels/database/patch/patchTester");
 import savedPatchesStorage = require("common/storage/savedPatchesStorage");
 import queryUtil = require("common/queryUtil");
 import generalUtils = require("common/generalUtils");
+import queryCommand = require("commands/database/query/queryCommand");
+import queryCriteria = require("models/database/query/queryCriteria");
 
 type fetcherType = (skip: number, take: number, previewCols: string[], fullCols: string[]) => JQueryPromise<pagedResult<document>>;
 
@@ -29,7 +31,7 @@ class patchList {
 
     previewItem = ko.observable<storedPatchDto>();
 
-    allPatches = ko.observableArray<storedPatchDto>([]);  
+    allPatches = ko.observableArray<storedPatchDto>([]);
 
     private readonly useHandler: (patch: storedPatchDto) => void;
     private readonly removeHandler: (patch: storedPatchDto) => void;
@@ -125,7 +127,7 @@ class patch extends viewModelBase {
     staleTimeout = ko.observable<number>(60);
 
     maxOperationsPerSecond = ko.observable<number>();
-    defineMaxOperationsPerSecond = ko.observable<boolean>(false);    
+    defineMaxOperationsPerSecond = ko.observable<boolean>(false);
     
     static readonly recentKeyword = 'Recent Patch';
 
@@ -290,7 +292,8 @@ class patch extends viewModelBase {
 
     runPatch() {
         if (this.isValid(this.patchDocument().validationGroup)) {
-            this.patchOnQuery();
+            this.getMatchingDocumentsNumber()
+                .done((matchingDocs: number) => this.executePatch(matchingDocs));
         }
     }
 
@@ -313,13 +316,13 @@ class patch extends viewModelBase {
                         });
                 } else {
                     this.savePatchToStorage();
-                }                
+                }
                 
                 this.inSaveMode(false);
             }
         } else {
             if (this.isValid(this.patchDocument().validationGroup)) {
-                this.inSaveMode(true);    
+                this.inSaveMode(true);
             }
         }
     }
@@ -364,12 +367,50 @@ class patch extends viewModelBase {
         return type !== "unknown" ? patch.recentKeyword + " (" + collectionIndexName + ")" : patch.recentKeyword;
     }
 
-    private patchOnQuery() {
-        eventsCollector.default.reportEvent("patch", "run");
-        const message = `Are you sure you want to apply this patch to matching documents?`;
+    private getMatchingDocumentsNumber(): JQueryPromise<number> {
+        const patchScript = this.patchDocument().query();
+        const patchScriptParts = patchScript.split("update");
+        
+        const matchingDocs = $.Deferred<number>();
+        
+        if (patchScriptParts.length === 2) {
+            let query = queryCriteria.empty();
+            query.queryText(patchScriptParts[0]);
 
-        this.confirmationMessage("Patch", message, {
-            buttons: ["Cancel", "Patch all"]
+            new queryCommand(this.activeDatabase(), 0, 0, query)
+                .execute()
+                .done((queryResults: pagedResultExtended<document>) => matchingDocs.resolve(queryResults.totalResultCount))
+                .fail(() => matchingDocs.resolve(-1))
+        } else {
+            matchingDocs.resolve(-1);
+        }
+
+        return matchingDocs;
+    }
+    
+    private executePatch(matchingDocuments: number): void {
+        eventsCollector.default.reportEvent("patch", "run");
+
+        const patchQuestion = `<div>Are you sure you want to apply this patch to matching documents?</div>`;
+        
+        const warningMessage = `<li>
+                                 <small>Actual number of processed documents might be smaller if documents are filtered by the 'update' script</small>
+                             </li>`;
+        
+        const patchMessage = matchingDocuments > -1 ?
+                             `<div class="margin-bottom margin-bottom-lg text-info bg-info padding padding-xs">
+                                 <ul class="margin-top">
+                                     <li>
+                                         <small>Number of documents matching the Patch Query: <strong class="margin-left margin-left-sm">${matchingDocuments.toLocaleString()}</strong></small>
+                                     </li>
+                                     ${matchingDocuments > 0 ? warningMessage : ''}
+                                 </ul>
+                              </div>
+                              ${patchQuestion}` : `${patchQuestion}`;
+
+        this.confirmationMessage("Patch", patchMessage, {
+            buttons: ["Cancel", "Patch all"],
+            html: true
         })
             .done(result => {
                 if (result.can) {

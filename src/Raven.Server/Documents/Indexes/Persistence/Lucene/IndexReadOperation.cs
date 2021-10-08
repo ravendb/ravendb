@@ -155,44 +155,78 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                             continue;
                         }
 
-                        var result = retriever.Get(document, scoreDoc, _state);
-                        if (scope.TryIncludeInResults(result) == false)
+                        bool markedAsSkipped = false;
+                        var r = retriever.Get(document, scoreDoc, _state);
+                        if (r.Document != null)
                         {
-                            result?.Dispose();
+                            var qr = CreateQueryResult(r.Document);
+                            if(qr.Result == null)
+                                continue;
+                            yield return qr;
+                        }
+                        else if (r.List != null)
+                        {
+                            int numberOfProjectedResults = 0;
+                            foreach (Document item in r.List)
+                            {
+                                var qr = CreateQueryResult(item);
+                                if(qr.Result == null)
+                                    continue;
+                                yield return qr;
+                                numberOfProjectedResults++;
+                            }
 
+                            if (numberOfProjectedResults > 1)
+                            {
+                                totalResults.Value += numberOfProjectedResults - 1;
+                            }
+                        }
+                        else
+                        {
                             skippedResults.Value++;
-                            continue;
                         }
 
-                        returnedResults++;
-
-                        if (isDistinctCount == false)
+                        QueryResult CreateQueryResult(Document d)
                         {
-                            Dictionary<string, Dictionary<string, string[]>> highlightings = null;
-                            if (query.Metadata.HasHighlightings)
+                            if (scope.TryIncludeInResults(d) == false)
                             {
-                                using (highlightingScope?.Start())
-                                    highlightings = GetHighlighterResults(query, _searcher, scoreDoc, result, document, documentsContext);
-                            }
+                                d?.Dispose();
 
-                            ExplanationResult explanation = null;
-                            if (query.Metadata.HasExplanations)
-                            {
-                                using (explanationsScope?.Start())
+                                if (markedAsSkipped == false)
                                 {
-                                    if (explanationOptions == null)
-                                        explanationOptions = query.Metadata.Explanation.GetOptions(documentsContext, query.QueryParameters);
-
-                                    explanation = GetQueryExplanations(explanationOptions, luceneQuery, _searcher, scoreDoc, result, document);
+                                    skippedResults.Value++;
+                                    markedAsSkipped = true;
                                 }
+
+                                return default;
                             }
 
-                            yield return new QueryResult
+                            returnedResults++;
+
+                            if (isDistinctCount == false)
                             {
-                                Result = result,
-                                Highlightings = highlightings,
-                                Explanation = explanation
-                            };
+                                Dictionary<string, Dictionary<string, string[]>> highlightings = null;
+                                if (query.Metadata.HasHighlightings)
+                                {
+                                    using (highlightingScope?.Start())
+                                        highlightings = GetHighlighterResults(query, _searcher, scoreDoc, d, document, documentsContext);
+                                }
+
+                                ExplanationResult explanation = null;
+                                if (query.Metadata.HasExplanations)
+                                {
+                                    using (explanationsScope?.Start())
+                                    {
+                                        if (explanationOptions == null)
+                                            explanationOptions = query.Metadata.Explanation.GetOptions(documentsContext, query.QueryParameters);
+
+                                        explanation = GetQueryExplanations(explanationOptions, luceneQuery, _searcher, scoreDoc, d, document);
+                                    }
+                                }
+
+                                return new QueryResult { Result = d, Highlightings = highlightings, Explanation = explanation };
+                            }
+                            return default;
                         }
 
                         if (returnedResults == pageSize)
@@ -404,21 +438,43 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     }
 
                     var result = retriever.Get(document, new ScoreDoc(indexResult.LuceneId, indexResult.Score), _state);
-                    if (scope.TryIncludeInResults(result) == false)
-                    {
-                        result?.Dispose();
 
-                        skippedResults.Value++;
-                        skippedResultsInCurrentLoop++;
-                        continue;
+                    if (result.Document != null)
+                    {
+                        var qr = CreateQueryResult(result.Document);
+                        if(qr.Result == null)
+                            continue;
+                        yield return qr;
                     }
-
-                    returnedResults++;
-
-                    yield return new QueryResult
+                    else if (result.List != null)
                     {
-                        Result = result
-                    };
+                        foreach (Document item in result.List)
+                        {
+                            var qr = CreateQueryResult(item);
+                            if(qr.Result == null)
+                                continue;
+                            yield return qr;
+                        }
+                    }
+                    
+                    QueryResult CreateQueryResult(Document d)
+                    {
+                        if (scope.TryIncludeInResults(d) == false)
+                        {
+                            d?.Dispose();
+
+                            skippedResults.Value++;
+                            skippedResultsInCurrentLoop++;
+                            return default;
+                        }
+
+                        returnedResults++;
+
+                        return new QueryResult
+                        {
+                            Result = d
+                        };
+                    }
 
                     if (returnedResults == pageSize)
                         yield break;
@@ -784,10 +840,24 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 if (ids.Add(id) == false)
                     continue;
 
-                yield return new QueryResult
+                var result = retriever.Get(doc, hit, _state);
+                if (result.Document != null)
                 {
-                    Result = retriever.Get(doc, hit, _state)
-                };
+                    yield return new QueryResult
+                    {
+                        Result = result.Document
+                    };
+                }
+                else if (result.List != null)
+                {
+                    foreach (Document item in result.List)
+                    {
+                        yield return new QueryResult
+                        {
+                            Result = item
+                        };  
+                    }
+                }
             }
         }
 

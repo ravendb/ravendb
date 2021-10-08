@@ -216,7 +216,7 @@ namespace Raven.Client.Documents.Subscriptions
                         tcpInfo = await LegacyTryGetTcpInfo(requestExecutor, context, token).ConfigureAwait(false);
                     }
                 }
-                
+
                 var result = await TcpUtils.ConnectSecuredTcpSocket(
                     tcpInfo,
                     _store.Certificate,
@@ -226,7 +226,7 @@ namespace Raven.Client.Documents.Subscriptions
                     TcpConnectionHeaderMessage.OperationTypes.Subscription,
                     NegotiateProtocolVersionForSubscriptionAsync,
                     context,
-                    requestExecutor.DefaultTimeout, 
+                    requestExecutor.DefaultTimeout,
                     null
 #if TCP_CLIENT_CANCELLATIONTOKEN_SUPPORT
                     ,
@@ -241,17 +241,21 @@ namespace Raven.Client.Documents.Subscriptions
                 _tcpClient.NoDelay = true;
                 _tcpClient.SendBufferSize = _options?.SendBufferSizeInBytes ?? SubscriptionWorkerOptions.DefaultSendBufferSizeInBytes;
                 _tcpClient.ReceiveBufferSize = _options?.ReceiveBufferSizeInBytes ?? SubscriptionWorkerOptions.DefaultReceiveBufferSizeInBytes;
-                
+
                 if (_supportedFeatures.ProtocolVersion <= 0)
                 {
                     throw new InvalidOperationException(
                         $"{_options.SubscriptionName}: TCP negotiation resulted with an invalid protocol version:{_supportedFeatures.ProtocolVersion}");
                 }
 
+#if !(NETSTANDARD2_0 || NETSTANDARD2_1 || NETCOREAPP2_1)
+                if (_supportedFeatures.DataCompression)
+                    _stream = new ReadWriteCompressedStream(_stream);
+#endif
+
                 using (var optionsJson = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_options, context))
                 {
                     await optionsJson.WriteJsonToAsync(_stream, token).ConfigureAwait(false);
-
                     await _stream.FlushAsync(token).ConfigureAwait(false);
                 }
 
@@ -265,6 +269,13 @@ namespace Raven.Client.Documents.Subscriptions
 
         private async Task<TcpConnectionHeaderMessage.SupportedFeatures> NegotiateProtocolVersionForSubscriptionAsync(string chosenUrl, TcpConnectionInfo tcpInfo, Stream stream, JsonOperationContext context, List<string> _)
         {
+            bool compressionSupport = false;
+#if NETCOREAPP3_1_OR_GREATER
+            var version = SubscriptionTcpVersion ?? TcpConnectionHeaderMessage.SubscriptionTcpVersion;
+            if (version >= 53_000)
+                compressionSupport = true;
+#endif
+
             var parameters = new AsyncTcpNegotiateParameters
             {
                 Database = _store.GetDatabase(_dbName),
@@ -273,7 +284,8 @@ namespace Raven.Client.Documents.Subscriptions
                 ReadResponseAndGetVersionCallbackAsync = ReadServerResponseAndGetVersionAsync,
                 DestinationNodeTag = CurrentNodeTag,
                 DestinationUrl = chosenUrl,
-                DestinationServerId = tcpInfo.ServerId
+                DestinationServerId = tcpInfo.ServerId,
+                CompressionSupport = compressionSupport
             };
 
             return await TcpNegotiation.NegotiateProtocolVersionAsync(context, stream, parameters).ConfigureAwait(false);
@@ -319,7 +331,7 @@ namespace Raven.Client.Documents.Subscriptions
             using (var response = await context.ReadForMemoryAsync(stream, "Subscription/tcp-header-response").ConfigureAwait(false))
             {
                 var reply = JsonDeserializationClient.TcpConnectionHeaderResponse(response);
-                
+
                 switch (reply.Status)
                 {
                     case TcpConnectionStatus.Ok:
@@ -433,10 +445,10 @@ namespace Raven.Client.Documents.Subscriptions
                 using (var tcpStream = await ConnectToServer(_processingCts.Token).ConfigureAwait(false))
                 {
                     _processingCts.Token.ThrowIfCancellationRequested();
-                    var tcpStreamCopy = tcpStream;
+
                     using (contextPool.AllocateOperationContext(out JsonOperationContext handshakeContext))
                     {
-                        var connectionStatus = await ReadNextObject(handshakeContext, tcpStreamCopy, buffer).ConfigureAwait(false);
+                        var connectionStatus = await ReadNextObject(handshakeContext, tcpStream, buffer).ConfigureAwait(false);
                         if (_processingCts.IsCancellationRequested)
                             return;
 
@@ -455,7 +467,7 @@ namespace Raven.Client.Documents.Subscriptions
                     while (_processingCts.IsCancellationRequested == false)
                     {
                         // start reading next batch from server on 1'st thread (can be before client started processing)
-                        var readFromServer = ReadSingleSubscriptionBatchFromServer(contextPool, tcpStreamCopy, buffer, batch);
+                        var readFromServer = ReadSingleSubscriptionBatchFromServer(contextPool, tcpStream, buffer, batch);
                         try
                         {
                             // wait for the subscriber to complete processing on 2'nd thread
@@ -510,9 +522,9 @@ namespace Raven.Client.Documents.Subscriptions
 
                             try
                             {
-                                if (tcpStreamCopy != null) //possibly prevent ObjectDisposedException
+                                if (tcpStream != null) //possibly prevent ObjectDisposedException
                                 {
-                                    await SendAckAsync(lastReceivedChangeVector, tcpStreamCopy, context, _processingCts.Token).ConfigureAwait(false);
+                                    await SendAckAsync(lastReceivedChangeVector, tcpStream, context, _processingCts.Token).ConfigureAwait(false);
                                 }
                             }
                             catch (ObjectDisposedException)
@@ -547,7 +559,7 @@ namespace Raven.Client.Documents.Subscriptions
                 while (endOfBatch == false && _processingCts.IsCancellationRequested == false)
                 {
                     SubscriptionConnectionServerMessage receivedMessage = await ReadNextObject(context, tcpStream, buffer).ConfigureAwait(false);
-                    
+
                     if (receivedMessage == null || _processingCts.IsCancellationRequested)
                     {
                         break;
