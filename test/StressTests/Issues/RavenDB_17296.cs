@@ -2,6 +2,7 @@
 using FastTests;
 using Raven.Client.Exceptions;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,7 +14,7 @@ namespace StressTests.Issues
         {
         }
 
-        [Theory]
+        [Windows64BitTheory]
         [InlineData(3_000)]
         [InlineData(10_000)]
         public void Should_Not_Kill_Server_Because_Of_Insufficient_Execution_Stack(int numberOfExpressions)
