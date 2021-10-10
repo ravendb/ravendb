@@ -1289,57 +1289,65 @@ namespace Raven.Server.Documents.TimeSeries
                 holder.Timestamp = element.Timestamp.EnsureUtc().EnsureMilliseconds();
                 holder.Status = TimeSeriesValuesSegment.Live;
 
-                var positiveValues = new List<double>();
-                var negativeValues = new List<double>();
-
-                int zeroCount = 0, incCount = 0, decCount = 0; 
-                foreach (var value in element.Values)
+                bool splitOperation = false;
+                if (element.Values.Length > 1)
                 {
-                    var sign = Math.Sign(value);
-                    if (sign == 0)
+                    // if element values include positive & negative values 
+                    // we need to split the operation - one operation with positive values for increment and other for decrement
+
+                    var positiveValues = new List<double>();
+                    var negativeValues = new List<double>();
+
+                    int zeroCount = 0;
+                    foreach (var value in element.Values)
                     {
-                        positiveValues.Add(value);
-                        negativeValues.Add(value);
-                        zeroCount++;
+                        switch (Math.Sign(value))
+                        {
+                            case 0:
+                                positiveValues.Add(value);
+                                negativeValues.Add(value);
+                                zeroCount++;
+                                break;
+                            case > 0:
+                                positiveValues.Add(value);
+                                negativeValues.Add(0);
+                                break;
+                            default:
+                                negativeValues.Add(value);
+                                positiveValues.Add(0);
+                                break;
+                        }
                     }
-                    else if (sign > 0)
+
+                    if (positiveValues.Count - zeroCount > 0 && negativeValues.Count - zeroCount > 0)
                     {
-                        positiveValues.Add(value);
-                        negativeValues.Add(0);
-                        incCount++;
-                    }
-                    else
-                    {
-                        negativeValues.Add(value);
-                        positiveValues.Add(0);
-                        decCount++;
+                        splitOperation = true;
+
+                        holder.Values = negativeValues.ToArray();
+                        holder.Tag = TryGetTimedCounterTag(_documentDatabase.DbBase64Id, -1);
+                        yield return holder;
+
+                        holder.Values = positiveValues.ToArray();
+                        holder.Tag = TryGetTimedCounterTag(_documentDatabase.DbBase64Id, 1);
+                        yield return holder;
                     }
                 }
 
-                if(element.Values.Length > 1 && (incCount + zeroCount < element.Values.Length || decCount + zeroCount < element.Values.Length))
-                {
-                    holder.Values = negativeValues.ToArray();
-                    holder.Tag = TryGetTimedCounterTag(_documentDatabase.DbBase64Id, -1);
-                    yield return holder;
-
-                    holder.Values = positiveValues.ToArray();
-                    holder.Tag = TryGetTimedCounterTag(_documentDatabase.DbBase64Id, 1);
-                    yield return holder;
-                }
-                else
+                if (splitOperation == false)
                 {
                     var sign = TryGetValuesSign(element.Values);
                     holder.Values = element.Values;
                     holder.Tag = TryGetTimedCounterTag(_documentDatabase.DbBase64Id, sign);
                     yield return holder;
                 }
+               
                 prevTimestamp = element.Timestamp;
             }
         }
 
         private static void ValidateTimestamp(DateTime prevTimestamp, DateTime elementTimestamp)
         {
-            if (elementTimestamp < prevTimestamp)
+            if (elementTimestamp <= prevTimestamp)
             {
                 throw new InvalidDataException(
                     $"The order of increment operations must be sequential, but got previous operation {prevTimestamp} and the current: {elementTimestamp}");

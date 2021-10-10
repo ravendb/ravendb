@@ -1083,7 +1083,7 @@ namespace SlowTests.Client.TimeSeries.Issues
         }
 
         [Fact]
-        public async Task SendingFullResultsToClientShouldWork()
+        public async Task GetIncrementalTimeSeriesFullResultsShouldWork()
         {
             using (var store = GetDocumentStore())
             {

@@ -224,7 +224,7 @@ namespace Raven.Server.Documents.Handlers
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     if (rangeResult != null)
-                        WriteRange(writer, rangeResult, totalCount, context);
+                        WriteRange(writer, rangeResult, totalCount);
                 }
             }
         }
@@ -378,14 +378,15 @@ namespace Raven.Server.Documents.Handlers
             return result;
         }
 
-        internal static unsafe TimeSeriesRangeResult GetIncrementalTimeSeriesRange(DocumentsOperationContext context, string docId, string name, DateTime from, DateTime to, ref int start, ref int pageSize,
-            IncludeDocumentsDuringTimeSeriesLoadingCommand includesCommand = null, bool fullResults = false)
+        internal static unsafe TimeSeriesRangeResult GetIncrementalTimeSeriesRange(DocumentsOperationContext context, string docId, string name, DateTime from, DateTime to, 
+            ref int start, ref int pageSize, IncludeDocumentsDuringTimeSeriesLoadingCommand includesCommand = null, bool fullResults = false)
         {
             if (pageSize == 0)
                 return null;
 
             var incrementalValues = new Dictionary<long, TimeSeriesEntry>();
             var reader = new TimeSeriesReader(context, docId, name, from, to, offset: null);
+            var dbCv = context.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(context);
 
             // init hash
             var size = Sodium.crypto_generichash_bytes();
@@ -420,50 +421,21 @@ namespace Raven.Server.Documents.Handlers
                     if (start-- > 0)
                         continue;
 
-                    var nodeDbId = singleResult.Tag.Substring(7);
-                    var values = singleResult.Values.ToArray();
-
                     includesCommand?.Fill(singleResult.Tag);
 
-                    if (incrementalValues.TryGetValue(singleResult.Timestamp.Ticks, out var entry))
+                    var dbId = singleResult.Tag.Substring(7); // extract dbId from tag [tag struct: "TC:XXX-dbId" - where "XXX" can be "INC"/"DEC"] 
+                    var nodeTag = ChangeVectorUtils.GetNodeTagById(dbCv, dbId) ?? "A";
+
+                    if (nodeTag.Length > 1) //TODO: fix space in GetNodeTagById method
+                        nodeTag = nodeTag[1..];
+
+                    nodeTag = nodeTag + "-" + dbId;
+                    var values = singleResult.Values.ToArray();
+
+                    if (incrementalValues.TryGetValue(singleResult.Timestamp.Ticks, out var entry)) 
                     {
-                        var length = Math.Max(entry.Values.Length, values.Length);
-                        if (entry.Values.Length < length) // need to allocate more space for new values
-                        {
-                            var newValues = singleResult.Values.Span;
-
-                            for (int i = 0; i < entry.Values.Length; i++)
-                                newValues[i] += entry.Values[i];
-
-                            entry.Values = newValues.ToArray();
-                        }
-                        else
-                        {
-                            for (int i = 0; i < values.Length ; i++)
-                                entry.Values[i] += values[i];
-                        }
-
-                        if (fullResults)
-                        {
-                            if (entry.NodesValues.TryGetValue(nodeDbId, out _))
-                            {
-                                if (entry.NodesValues[nodeDbId].Length != values.Length)
-                                {
-                                    if (entry.NodesValues[nodeDbId].Length < values.Length) 
-                                    {
-                                        for (int i = 0; i < entry.NodesValues[nodeDbId].Length; i++)
-                                            values[i] += entry.NodesValues[nodeDbId][i];
-
-                                        entry.NodesValues[nodeDbId] = values;
-                                        continue;
-                                    }
-                                }
-                                for (int i = 0; i < values.Length; i++)
-                                    entry.NodesValues[nodeDbId][i] += values[i];
-                            }
-                            else
-                                entry.NodesValues[nodeDbId] = values;
-                        }
+                        // an entry with this timestamp already exists --> sum values
+                        MergeIncrementalTimeSeriesValues(singleResult, nodeTag, values, ref entry, fullResults);
                         continue;
                     }
 
@@ -478,7 +450,7 @@ namespace Raven.Server.Documents.Handlers
                         Timestamp = singleResult.Timestamp,
                         Values = singleResult.Values.ToArray(),
                         IsRollup = singleResult.Type == SingleResultType.RolledUp,
-                        NodesValues = fullResults ? new Dictionary<string, double[]>(){ [nodeDbId] = values } : null
+                        NodesValues = fullResults ? new Dictionary<string, double[]>(){ [nodeTag] = values } : null
                     };
                 }
 
@@ -517,6 +489,43 @@ namespace Raven.Server.Documents.Handlers
             includesCommand?.AddIncludesToResult(result);
 
             return result;
+        }
+
+        private static void MergeIncrementalTimeSeriesValues(SingleResult singleResult, string nodeTag, double[] values, ref TimeSeriesEntry entry, bool fullResults)
+        {
+            if (entry.Values.Length < values.Length) // need to allocate more space for new values
+            {
+                var updatedValues = singleResult.Values.Span;
+
+                for (int i = 0; i < entry.Values.Length; i++)
+                    updatedValues[i] += entry.Values[i];
+
+                entry.Values = updatedValues.ToArray();
+            }
+            else
+            {
+                for (int i = 0; i < values.Length; i++)
+                    entry.Values[i] += values[i];
+            }
+
+            if (fullResults == false)
+                return;
+            
+            if (entry.NodesValues.TryGetValue(nodeTag, out var nodeValues))
+            {
+                    if (nodeValues.Length < values.Length) // need to allocate more space for new values
+                    {
+                        for (int i = 0; i < nodeValues.Length; i++)
+                            values[i] += nodeValues[i];
+
+                        entry.NodesValues[nodeTag] = values;
+                    }
+
+                    for (int i = 0; i < values.Length; i++)
+                        nodeValues[i] += values[i];
+            }
+            else
+                entry.NodesValues[nodeTag] = values;
         }
 
         public static unsafe DateTime ParseDate(string dateStr, string name)
@@ -612,7 +621,7 @@ namespace Raven.Server.Documents.Handlers
                         totalCount = stats.Count;
                     }
 
-                    WriteRange(writer, ranges[i], totalCount, context);
+                    WriteRange(writer, ranges[i], totalCount);
 
                     await writer.MaybeFlushAsync(token);
                 }
@@ -663,7 +672,7 @@ namespace Raven.Server.Documents.Handlers
                         totalCount = stats.Count;
                     }
 
-                    WriteRange(writer, ranges[i], totalCount, context);
+                    WriteRange(writer, ranges[i], totalCount);
                 }
                 writer.WriteEndArray();
             }
@@ -671,7 +680,7 @@ namespace Raven.Server.Documents.Handlers
             writer.WriteEndObject();
         }
 
-        private static void WriteRange(AsyncBlittableJsonTextWriter writer, TimeSeriesRangeResult rangeResult, long? totalCount, DocumentsOperationContext context = null)
+        private static void WriteRange(AsyncBlittableJsonTextWriter writer, TimeSeriesRangeResult rangeResult, long? totalCount)
         {
             writer.WriteStartObject();
             {
@@ -690,7 +699,7 @@ namespace Raven.Server.Documents.Handlers
                 writer.WriteComma();
 
                 writer.WritePropertyName(nameof(TimeSeriesRangeResult.Entries));
-                WriteEntries(writer, rangeResult.Entries, context);
+                WriteEntries(writer, rangeResult.Entries);
 
                 if (totalCount.HasValue)
                 {
@@ -711,7 +720,7 @@ namespace Raven.Server.Documents.Handlers
             writer.WriteEndObject();
         }
 
-        private static void WriteEntries(AsyncBlittableJsonTextWriter writer, TimeSeriesEntry[] entries, DocumentsOperationContext context = null)
+        private static void WriteEntries(AsyncBlittableJsonTextWriter writer, TimeSeriesEntry[] entries)
         {
             writer.WriteStartArray();
 
@@ -734,7 +743,7 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteBool(entries[i].IsRollup);
 
                     if (entries[i].NodesValues != null && entries[i].NodesValues.Count > 0)
-                        WriteNodesValues(writer, entries[i].NodesValues, context);
+                        WriteNodesValues(writer, entries[i].NodesValues);
                 }
                 writer.WriteEndObject();
             }
@@ -742,18 +751,17 @@ namespace Raven.Server.Documents.Handlers
             writer.WriteEndArray();
         }
 
-        private static void WriteNodesValues(AsyncBlittableJsonTextWriter writer, Dictionary<string, double[]> nodesValues, DocumentsOperationContext context = null)
+        private static void WriteNodesValues(AsyncBlittableJsonTextWriter writer, Dictionary<string, double[]> nodesValues)
         {
             writer.WriteComma();
             writer.WritePropertyName(nameof(TimeSeriesEntry.NodesValues));
             writer.WriteStartObject();
-            var dbCv = context?.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(context);
 
             int i = nodesValues.Count;
-            foreach (var nodeValues in nodesValues)
+            foreach (var value in nodesValues)
             {
-                var nodeTag = dbCv != null ? ChangeVectorUtils.GetNodeTagById(dbCv, nodeValues.Key) ?? "A" : "A";
-                writer.WriteArray(nodeTag + "-" + nodeValues.Key, nodeValues.Value);
+                writer.WriteArray(value.Key, value.Value);
+
                 if (--i > 0)
                     writer.WriteComma();
             }
