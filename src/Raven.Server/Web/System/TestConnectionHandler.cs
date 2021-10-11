@@ -56,9 +56,11 @@ namespace Raven.Server.Web.System
 
             using (server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
             {
-                await TcpUtils.ConnectSecuredTcpSocket(tcpConnectionInfo, server.Certificate.Certificate, server.CipherSuitesPolicy,
+                var tcpSocketResult = await TcpUtils.ConnectSecuredTcpSocket(tcpConnectionInfo, server.Certificate.Certificate, server.CipherSuitesPolicy,
                     TcpConnectionHeaderMessage.OperationTypes.TestConnection,
                     NegotiateWithRemote, ctx, timeout, negLogs, token);
+                await tcpSocketResult.Stream.DisposeAsync();
+                tcpSocketResult.TcpClient.Dispose();
             }
 
             result.Log = negLogs;
