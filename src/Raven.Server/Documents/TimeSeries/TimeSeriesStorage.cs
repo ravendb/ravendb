@@ -1236,7 +1236,7 @@ namespace Raven.Server.Documents.TimeSeries
             IEnumerable<TimeSeriesOperation.AppendOperation> toAppend,
             string changeVectorFromReplication = null)
         {
-            if (name.StartsWith(IncrementalTimeSeriesPrefix))
+            if (name.StartsWith(IncrementalTimeSeriesPrefix, StringComparison.OrdinalIgnoreCase) && name.Contains('@') == false)
                 throw new InvalidOperationException("Cannot perform append operations on Incremental Time Series");
 
             var holder = new SingleResult();
@@ -1271,7 +1271,7 @@ namespace Raven.Server.Documents.TimeSeries
             if (name.Contains('@'))
                 throw new InvalidOperationException("Cannot perform increment operations on Rollup Time Series");
 
-            if (name.StartsWith(IncrementalTimeSeriesPrefix) == false)
+            if (name.StartsWith(IncrementalTimeSeriesPrefix, StringComparison.OrdinalIgnoreCase) == false)
                 throw new InvalidOperationException("Cannot perform increment operations on Non Incremental Time Series");
 
             _timedCounterCacheTags ??= new Dictionary<string, List<LazyStringValue>>();

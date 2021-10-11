@@ -340,6 +340,38 @@ namespace SlowTests.Client.TimeSeries.Issues
         }
 
         [Fact]
+        public void ShouldIncrementValueOnEditIncrementEntry3()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Oren" }, "users/ayende");
+                    var ts = session.IncrementalTimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "VotesPerDistrict");
+                    ts.Increment(baseline, new double[] { 1 });
+                    session.SaveChanges();
+                }
+                WaitForUserToContinueTheTest(store);
+                using (var session = store.OpenSession())
+                {
+                    var ts = session.IncrementalTimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "VotesPerDistrict");
+                    ts.Increment(baseline, new double[] { 2, 10, 9 });
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var ts = session.IncrementalTimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "VotesPerDistrict").Get(baseline);
+
+                    Assert.Equal(1, ts.Length);
+                    Assert.Equal(new double[] { 3, 10, 9 }, ts[0].Values);
+                }
+            }
+        }
+
+        [Fact]
         public void ShouldSplitOperationsIfIncrementContainBothPositiveNegativeValues()
         {
             using (var store = GetDocumentStore())
