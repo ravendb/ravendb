@@ -292,23 +292,21 @@ namespace Raven.Client.Util
 #endif
             )
         {
-            TcpClient tcpClient = null;
-            Stream stream = null;
-            TcpConnectionHeaderMessage.SupportedFeatures supportedFeatures = null;
-
-            string[] infoUrls = info.Urls == null ? new string[] {info.Url} : info.Urls.Append(info.Url).ToArray();
+            var infoUrls = info.Urls == null 
+                ? new[] {info.Url} 
+                : info.Urls.Contains(info.Url) 
+                    ? info.Urls 
+                    : info.Urls.Append(info.Url).ToArray();
             
-            logs?.Add($"Received tcpInfo: {Environment.NewLine}urls: { string.Join(",", infoUrls)} {Environment.NewLine}guid:{ info.ServerId}");
+            logs?.Add($"Received tcpInfo: {Environment.NewLine}urls: { string.Join(", ", infoUrls)} {Environment.NewLine}guid:{ info.ServerId}");
 
             var exceptions = new List<Exception>();
-            for (int i=0; i < infoUrls.Length; i++)
+            foreach (var url in infoUrls)
             {
-                string url = infoUrls[i];
+                TcpClient tcpClient = null;
+                Stream stream = null;
                 try
                 {
-                    tcpClient?.Dispose();
-                    stream?.Dispose();
-                    
                     logs?.Add($"Trying to connect to :{url}");
 
                     tcpClient = await ConnectAsync(
@@ -320,7 +318,7 @@ namespace Raven.Client.Util
 #endif
                         ).ConfigureAwait(false);
                     
-                    stream = await TcpUtils.WrapStreamWithSslAsync(
+                    stream = await WrapStreamWithSslAsync(
                         tcpClient,
                         info,
                         cert,
@@ -334,21 +332,7 @@ namespace Raven.Client.Util
 #endif
                     ).ConfigureAwait(false);
 
-                    switch (operationType)
-                    {
-                        case TcpConnectionHeaderMessage.OperationTypes.Subscription:
-                        case TcpConnectionHeaderMessage.OperationTypes.Replication:
-                        case TcpConnectionHeaderMessage.OperationTypes.Heartbeats:
-                        case TcpConnectionHeaderMessage.OperationTypes.Cluster:
-                            supportedFeatures = await negotiationCallback(url, info, stream, negContext).ConfigureAwait(false);
-                            break;
-                        case TcpConnectionHeaderMessage.OperationTypes.TestConnection:
-                        case TcpConnectionHeaderMessage.OperationTypes.Ping:
-                            supportedFeatures = await negotiationCallback(url, info, stream, negContext, logs).ConfigureAwait(false);
-                            break;
-                        default:
-                            throw new NotSupportedException($"Operation type '{operationType}' not supported.");
-                    }
+                    var supportedFeatures = await InvokeNegotiation(info, operationType, negotiationCallback, negContext, logs, url, stream).ConfigureAwait(false);
 
                     logs?.Add($"{Environment.NewLine}Negotiation successful for operation {operationType}.{Environment.NewLine} {tcpClient.Client.LocalEndPoint} "+
                               $"is connected to {tcpClient.Client.RemoteEndPoint}{Environment.NewLine}");
@@ -357,17 +341,37 @@ namespace Raven.Client.Util
                 }
                 catch (Exception e)
                 {
+                    tcpClient?.Dispose();
+                    stream?.Dispose();
+
                     logs?.Add($"Failed to connect to url {url}: {e.Message}");
                     exceptions.Add(e);
-                    if (i == infoUrls.Length - 1)
-                    {
-                        throw new AggregateException($"Failed to connect to url {url}", exceptions);
-                    }
                 }
             }
-            //Should not reach here
-            Debug.Assert(false, "Shouldn't have reached here. This is likely a bug.");
-            throw new InvalidOperationException();
+
+            var message = $"Failed to connect to all urls {string.Join(", ", infoUrls)}" +
+                          Environment.NewLine +
+                          string.Join(Environment.NewLine, logs);
+
+            throw new AggregateException(message, exceptions);
+        }
+
+        private static async Task<TcpConnectionHeaderMessage.SupportedFeatures> InvokeNegotiation(TcpConnectionInfo info, TcpConnectionHeaderMessage.OperationTypes operationType, NegotiationCallback negotiationCallback,
+            JsonOperationContext negContext, List<string> logs, string url, Stream stream)
+        {
+            switch (operationType)
+            {
+                case TcpConnectionHeaderMessage.OperationTypes.Subscription:
+                case TcpConnectionHeaderMessage.OperationTypes.Replication:
+                case TcpConnectionHeaderMessage.OperationTypes.Heartbeats:
+                case TcpConnectionHeaderMessage.OperationTypes.Cluster:
+                    return await negotiationCallback(url, info, stream, negContext).ConfigureAwait(false);
+                case TcpConnectionHeaderMessage.OperationTypes.TestConnection:
+                case TcpConnectionHeaderMessage.OperationTypes.Ping:
+                    return await negotiationCallback(url, info, stream, negContext, logs).ConfigureAwait(false);
+                default:
+                    throw new NotSupportedException($"Operation type '{operationType}' not supported.");
+            }
         }
     }
 }
