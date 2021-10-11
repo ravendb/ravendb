@@ -11,6 +11,8 @@ namespace Raven.Embedded
     {
         internal const string Wildcard = "x";
 
+        internal const char GreaterOrEqual = '+';
+
         internal static async Task<string> MatchAsync(ServerOptions options)
         {
             if (NeedsMatch(options) == false)
@@ -50,7 +52,7 @@ namespace Raven.Embedded
                 return false;
 
             var frameworkVersionAsString = options.FrameworkVersion.ToLowerInvariant();
-            if (frameworkVersionAsString.Contains(Wildcard) == false) // no wildcards
+            if (frameworkVersionAsString.Contains(Wildcard) == false && frameworkVersionAsString.Contains(GreaterOrEqual) == false) // no wildcards && no greaterOrEqual
                 return false;
 
             return true;
@@ -127,6 +129,8 @@ namespace Raven.Embedded
 
             public int? Patch { get; internal set; }
 
+            public MatchingType PatchMatchingType { get; internal set; }
+
             public string Suffix { get; set; }
 
             public RuntimeFrameworkVersion(string frameworkVersion)
@@ -145,50 +149,104 @@ namespace Raven.Embedded
                     var version = versions[i].Trim();
                     if (version.Contains(Wildcard) == false)
                     {
-                        var versionAsInt = Parse(version);
-                        Set(i, versionAsInt);
+                        var (versionAsInt, matchingType) = Parse(version);
+                        Set(i, version, versionAsInt, matchingType);
                         continue;
                     }
 
                     if (version != Wildcard)
                         throw new InvalidOperationException($"Wildcard character must be a sole part of the version string, but was '{version}'."); // e.g. 3x, x7, etc
 
-                    Set(i, value: null);
+                    Set(i, valueAsString: null, value: null, matchingType: MatchingType.Equal);
                 }
             }
 
             public override string ToString()
             {
-                var version = $"{Major?.ToString() ?? Wildcard}.{Minor?.ToString() ?? Wildcard}.{Patch?.ToString() ?? Wildcard}";
+                var version = $"{ToStringInternal(Major, MatchingType.Equal)}.{ToStringInternal(Minor, MatchingType.Equal)}.{ToStringInternal(Patch, PatchMatchingType)}";
+
                 if (Suffix != null)
                     version = $"{version}{SuffixSeparator}{Suffix}";
 
                 return version;
+
+                static string ToStringInternal(int? number, MatchingType matchingType)
+                {
+                    if (number.HasValue == false)
+                        return Wildcard;
+
+                    switch (matchingType)
+                    {
+                        case MatchingType.Equal:
+                            return number.ToString();
+                        case MatchingType.GreaterOrEqual:
+                            return $"{number}{GreaterOrEqual}";
+                        default:
+                            throw new ArgumentOutOfRangeException(nameof(matchingType), matchingType, null);
+                    }
+                }
             }
 
-            private static int Parse(string value)
+            private static (int Value, MatchingType MatchingType) Parse(string value)
             {
-                if (int.TryParse(value, out var valueAsInt) == false)
+                var matchingType = MatchingType.Equal;
+
+                var valueToParse = value;
+
+                var lastChar = valueToParse[valueToParse.Length - 1];
+                if (lastChar == GreaterOrEqual)
+                {
+                    matchingType = MatchingType.GreaterOrEqual;
+                    valueToParse = valueToParse.Substring(0, valueToParse.Length - 1);
+                }
+
+                if (int.TryParse(valueToParse, out int valueAsInt) == false)
                     throw new InvalidOperationException($"Cannot parse '{value}' to a number.");
 
-                return valueAsInt;
+                return (valueAsInt, matchingType);
             }
 
-            private void Set(int i, int? value)
+            private void Set(int i, string valueAsString, int? value, MatchingType matchingType)
             {
                 switch (i)
                 {
                     case 0:
+                        AssertMatchingType(nameof(Major), valueAsString, MatchingType.Equal, matchingType);
                         Major = value;
                         break;
                     case 1:
+                        AssertMatchingType(nameof(Minor), valueAsString, MatchingType.Equal, matchingType);
                         Minor = value;
                         break;
                     case 2:
+                        AssertMatchingType(nameof(Patch), valueAsString, expectedMatchingType: null, matchingType);
                         Patch = value;
+                        PatchMatchingType = matchingType;
                         break;
                     default:
                         throw new ArgumentOutOfRangeException(nameof(i));
+                }
+
+                void AssertMatchingType(string fieldName, string valueAsString, MatchingType? expectedMatchingType, MatchingType matchingType)
+                {
+                    if (Suffix != null && matchingType != MatchingType.Equal)
+                        throw new InvalidOperationException($"Cannot set '{fieldName}' with value '{valueAsString}' because '{MatchingTypeToString(matchingType)}' is not allowed when Suffix ('{Suffix}') is set.");
+
+                    if (expectedMatchingType.HasValue && expectedMatchingType != matchingType)
+                        throw new InvalidOperationException($"Cannot set '{fieldName}' with value '{valueAsString}' because '{MatchingTypeToString(matchingType)}' is not allowed.");
+                }
+
+                static string MatchingTypeToString(MatchingType matchingType)
+                {
+                    switch (matchingType)
+                    {
+                        case MatchingType.Equal:
+                            return string.Empty;
+                        case MatchingType.GreaterOrEqual:
+                            return GreaterOrEqual.ToString();
+                        default:
+                            throw new ArgumentOutOfRangeException(nameof(matchingType), matchingType, null);
+                    }
                 }
             }
 
@@ -200,14 +258,34 @@ namespace Raven.Embedded
                 if (Minor.HasValue && Minor != version.Minor)
                     return false;
 
-                if (Patch.HasValue && Patch != version.Patch)
-                    return false;
+                if (Patch.HasValue)
+                {
+                    switch (PatchMatchingType)
+                    {
+                        case MatchingType.Equal:
+                            if (Patch != version.Patch)
+                                return false;
+                            break;
+                        case MatchingType.GreaterOrEqual:
+                            if (Patch > version.Patch)
+                                return false;
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
+                }
 
                 if (Suffix != version.Suffix)
                     return false;
 
                 return true;
             }
+        }
+
+        internal enum MatchingType
+        {
+            Equal,
+            GreaterOrEqual
         }
     }
 }

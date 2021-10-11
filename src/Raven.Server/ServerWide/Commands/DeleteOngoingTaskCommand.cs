@@ -122,6 +122,14 @@ namespace Raven.Server.ServerWide.Commands
                         record.OlapEtls.Remove(olapEtl);
                     }
                     break;
+                
+                case OngoingTaskType.ElasticSearchEtl:
+                    var elasticSearchEtl = record.ElasticSearchEtls.Find(x => x.TaskId == TaskId);
+                    if (elasticSearchEtl != null)
+                    {
+                        record.ElasticSearchEtls.Remove(elasticSearchEtl);
+                    }
+                    break;
             }
         }
 

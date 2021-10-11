@@ -3,9 +3,10 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Runtime.InteropServices;
 
-namespace Sparrow.Server
+namespace Sparrow.Utils
 {
-    public static class DynamicNativeLibraryResolver
+#if NETCOREAPP3_1_OR_GREATER
+    internal static class DynamicNativeLibraryResolver
     {
         private static Dictionary<string, Func<string, string>> _registered = new Dictionary<string, Func<string, string>>();
         private static readonly HashSet<Assembly> _registeredAssemblies = new HashSet<Assembly>();
@@ -26,7 +27,7 @@ namespace Sparrow.Server
 
         private static IntPtr Resolver(string libraryName, Assembly assembly, DllImportSearchPath? dllImportSearchPath)
         {
-            if(_registered.TryGetValue(libraryName, out var mutator) == false)
+            if (_registered.TryGetValue(libraryName, out var mutator) == false)
                 return IntPtr.Zero;
 
             string suffix;
@@ -62,4 +63,5 @@ namespace Sparrow.Server
             return NativeLibrary.Load(name, assembly, dllImportSearchPath);
         }
     }
+#endif
 }

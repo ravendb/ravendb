@@ -52,7 +52,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             IQueryMatch result = _coraxQueryEvaluator.Search(query, fieldsToFetch);
             if (result == null)
                 yield break;
-            
+
             var ids = ArrayPool<long>.Shared.Rent(BufferSize);
             try
             {
@@ -93,8 +93,25 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     for (int i = 0; i < read && docsToLoad != 0; --docsToLoad, ++i)
                     {
                         RetrieverInput retrieverInput = new(_indexSearcher.GetReaderFor(ids[i]), _indexSearcher.GetIdentityFor(ids[i]));
+                        var r = retriever.Get(ref retrieverInput);
 
-                        yield return new QueryResult() { Result = retriever.Get(ref retrieverInput) };
+                        if (r.Document != null)
+                        {
+                            yield return new QueryResult
+                            {
+                                Result = r.Document
+                            };
+                        }
+                        else if (r.List != null)
+                        {
+                            foreach (Document item in r.List)
+                            {
+                                yield return new QueryResult
+                                {
+                                    Result = item
+                                };
+                            }
+                        }
                     }
 
                     if (docsToLoad == 0)

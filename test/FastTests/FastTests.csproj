@@ -29,6 +29,9 @@
     <Compile Remove="Sparrow\BitVectors.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Remove="Data\memInfo.txt" />
+  </ItemGroup>
+  <ItemGroup>
     <Content Include="..\xunit.runner.json" Link="xunit.runner.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
@@ -51,6 +54,9 @@
     </PackageReference>
     <PackageReference Include="xunit" Version="2.4.1" />
     <DotNetCliToolReference Include="dotnet-xunit" Version="2.4.0-beta.1.build10001" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Data\RavenDB_17185\memInfo.txt" />
   </ItemGroup>
   <ItemGroup>
     <Service Include="{82a7f48d-3b50-4b1e-b82e-3ada8210c358}" />

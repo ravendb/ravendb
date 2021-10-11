@@ -5,6 +5,19 @@ import genUtils = require("common/generalUtils");
 
 class certificateModel {
 
+    static allTimeUnits: Array<valueAndLabelItem<timeUnit, string>> = [
+        {
+            label: "days",
+            value: "day"
+        }, {
+            label: "months",
+            value: "month"
+        }
+    ];
+    
+    validityPeriodUnits = ko.observable<timeUnit>("month");
+    validityPeriodUnitsLabel: KnockoutComputed<string>;
+    
     static securityClearanceTypes: valueAndLabelItem<Raven.Client.ServerWide.Operations.Certificates.SecurityClearance, string>[] = [
         {
             label: "Cluster Admin",
@@ -47,7 +60,7 @@ class certificateModel {
     private constructor(mode: certificateMode) {
         this.mode(mode);
 
-        _.bindAll(this, "setClearanceMode");
+        _.bindAll(this, "setClearanceMode", "changeValidityPeriodUnits");
         
         this.initObservables();
         this.initValidation();
@@ -66,14 +79,17 @@ class certificateModel {
         this.canEditClearance = ko.pureComputed(() => this.securityClearance() !== "ClusterNode");
 
         this.expirationDateFormatted = ko.pureComputed(() => {
-            const validMonths = this.validityPeriod();
+            const validPeriod = this.validityPeriod();
 
-            if (!validMonths) {
+            if (!validPeriod) {
                 return null;
             }
 
-            return moment.utc().add(validMonths, "months").format();
+            return moment.utc().add(validPeriod, this.validityPeriodUnitsLabel()).format();
         });
+        
+        this.validityPeriodUnitsLabel = ko.pureComputed(
+            () => certificateModel.allTimeUnits.find(x => this.validityPeriodUnits() === x.value).label);
     }
     
     static clearanceLabelFor(input: Raven.Client.ServerWide.Operations.Certificates.SecurityClearance) {
@@ -201,6 +217,10 @@ class certificateModel {
             return permission;
         }));
         return model;
+    }
+
+    changeValidityPeriodUnits(unit: timeUnit) {
+        this.validityPeriodUnits(unit);
     }
 }
 

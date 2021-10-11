@@ -1938,24 +1938,32 @@ namespace Raven.Server.Documents.Patch
                 return Translate(result.RawJsValue, context, modifier, usageMode);
             }
 
-            internal object Translate(JsValue val, JsonOperationContext context, JsBlittableBridge.IResultModifier modifier = null, BlittableJsonDocumentBuilder.UsageMode usageMode = BlittableJsonDocumentBuilder.UsageMode.None)
+            internal object Translate(JsValue val, JsonOperationContext context, JsBlittableBridge.IResultModifier modifier = null, BlittableJsonDocumentBuilder.UsageMode usageMode = BlittableJsonDocumentBuilder.UsageMode.None, bool isNested = false)
             {
                 if (val.IsString())
                     return val.AsString();
                 if (val.IsBoolean())
                     return val.AsBoolean();
+                if (val.IsArray())
+                {
+                    RuntimeHelpers.EnsureSufficientExecutionStack();
+                    var list = new List<object>();
+                    foreach (JsValue item in val.AsArray())
+                    {
+                        list.Add(Translate(item, context, modifier, usageMode, isNested: true));
+                    }
+                    return list;
+                }
                 if (val.IsObject())
                 {
                     if (val.IsNull())
                         return null;
-                    return JsBlittableBridge.Translate(context, ScriptEngine, val.AsObject(), modifier, usageMode);
+                    return JsBlittableBridge.Translate(context, ScriptEngine, val.AsObject(), modifier, usageMode, isNested);
                 }
                 if (val.IsNumber())
                     return val.AsNumber();
                 if (val.IsNull() || val.IsUndefined())
                     return null;
-                if (val.IsArray())
-                    throw new InvalidOperationException("Returning arrays from scripts is not supported, only objects or primitives");
                 throw new NotSupportedException("Unable to translate " + val.Type);
             }
         }

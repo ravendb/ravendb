@@ -125,7 +125,7 @@ namespace SlowTests.Issues
         [Fact]
         public void CanEnableDisableThrottlingTimer()
         {
-            using (var mre = new ThrottledManualResetEventSlim(TimeSpan.FromSeconds(1), throttlingBehavior: ThrottledManualResetEventSlim.ThrottlingBehavior.ManualManagement))
+            using (var mre = new ThrottledManualResetEventSlim(TimeSpan.FromSeconds(1), timerManagement: ThrottledManualResetEventSlim.TimerManagement.Manual))
             {
                 mre.Set();
 

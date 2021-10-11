@@ -271,6 +271,10 @@ namespace Raven.Client.Documents.Smuggler
             public bool OlapEtlsUpdated { get; set; }
 
             public bool OlapConnectionStringsUpdated { get; set; }
+            
+            public bool ElasticSearchEtlsUpdated { get; set; }
+
+            public bool ElasticSearchConnectionStringsUpdated { get; set; }
 
             public override DynamicJsonValue ToJson()
             {
@@ -338,6 +342,12 @@ namespace Raven.Client.Documents.Smuggler
 
                 if (OlapEtlsUpdated)
                     json[nameof(OlapEtlsUpdated)] = OlapEtlsUpdated;
+                
+                if (ElasticSearchConnectionStringsUpdated)
+                    json[nameof(ElasticSearchConnectionStringsUpdated)] = ElasticSearchConnectionStringsUpdated;
+
+                if (ElasticSearchEtlsUpdated)
+                    json[nameof(ElasticSearchEtlsUpdated)] = ElasticSearchEtlsUpdated;
 
                 return json;
             }
@@ -407,6 +417,12 @@ namespace Raven.Client.Documents.Smuggler
 
                 if (OlapEtlsUpdated)
                     sb.AppendLine("- OLAP ETLs");
+                
+                if (ElasticSearchConnectionStringsUpdated)
+                    sb.AppendLine("- ElasticSearch Connection Strings");
+
+                if (ElasticSearchEtlsUpdated)
+                    sb.AppendLine("- ElasticSearch ETLs");
 
                 if (sb.Length == 0)
                     return string.Empty;

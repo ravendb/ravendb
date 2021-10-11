@@ -10,7 +10,7 @@ using System.Threading;
 using Microsoft.Win32.SafeHandles;
 using Sparrow;
 using Sparrow.Collections;
-using Sparrow.Server;
+using Sparrow.Platform;
 using Sparrow.Server.Meters;
 using Sparrow.Utils;
 using Voron.Data;

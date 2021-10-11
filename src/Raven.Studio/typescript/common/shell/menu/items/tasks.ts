@@ -110,6 +110,14 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
             nav: false,
             dynamicHash: appUrls.editOlapEtlTaskUrl,
             itemRouteToHighlight: 'databases/tasks/ongoingTasks'
+        }),
+        new leafMenuItem({
+            route: 'databases/tasks/editElasticSearchEtlTask',
+            moduleId: 'viewmodels/database/tasks/editElasticSearchEtlTask',
+            title: 'Elastic Search ETL Task',
+            nav: false,
+            dynamicHash: appUrls.editElasticSearchEtlTaskUrl,
+            itemRouteToHighlight: 'databases/tasks/ongoingTasks'
         })
     ];
 

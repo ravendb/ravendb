@@ -9,6 +9,7 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.OngoingTasks;
@@ -17,6 +18,7 @@ using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents.ETL.Metrics;
+using Raven.Server.Documents.ETL.Providers.ElasticSearch;
 using Raven.Server.Documents.ETL.Providers.OLAP;
 using Raven.Server.Documents.ETL.Providers.OLAP.Test;
 using Raven.Server.Documents.ETL.Providers.Raven;
@@ -48,7 +50,7 @@ namespace Raven.Server.Documents.ETL
         public string Tag { get; protected set; }
 
         public abstract EtlType EtlType { get; }
-        
+
         public abstract long TaskId { get; }
 
         public EtlProcessStatistics Statistics { get; protected set; }
@@ -74,7 +76,7 @@ namespace Raven.Server.Documents.ETL
         public abstract void NotifyAboutWork(DatabaseChange change);
 
         public abstract bool ShouldTrackCounters();
-        
+
         public abstract bool ShouldTrackTimeSeries();
 
         public abstract EtlPerformanceStats[] GetPerformanceStats();
@@ -165,9 +167,9 @@ namespace Raven.Server.Documents.ETL
         protected abstract IEnumerator<TExtracted> ConvertAttachmentTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, List<string> collections);
 
         protected abstract IEnumerator<TExtracted> ConvertCountersEnumerator(DocumentsOperationContext context, IEnumerator<CounterGroupDetail> counters, string collection);
-        
+
         protected abstract IEnumerator<TExtracted> ConvertTimeSeriesEnumerator(DocumentsOperationContext context, IEnumerator<TimeSeriesSegmentEntry> timeSeries, string collection);
-        
+
         protected abstract IEnumerator<TExtracted> ConvertTimeSeriesDeletedRangeEnumerator(DocumentsOperationContext context, IEnumerator<TimeSeriesDeletedRangeItem> timeSeries, string collection);
 
         protected abstract bool ShouldTrackAttachmentTombstones();
@@ -191,11 +193,11 @@ namespace Raven.Server.Documents.ETL
                     throw new NotSupportedException($"Invalid ETL item type: {type}");
             }
         }
-        
+
         private void ExtractDocuments(
-            DocumentsOperationContext context, 
-            ExtractedItemsEnumerator<TExtracted, TStatsScope, TEtlPerformanceOperation> merged, 
-            long fromEtag, 
+            DocumentsOperationContext context,
+            ExtractedItemsEnumerator<TExtracted, TStatsScope, TEtlPerformanceOperation> merged,
+            long fromEtag,
             AbstractEtlStatsScope<TStatsScope, TEtlPerformanceOperation> stats,
             DisposableScope scope)
         {
@@ -234,7 +236,7 @@ namespace Raven.Server.Documents.ETL
                 }
             }
         }
-                
+
         private void ExtractCounters(DocumentsOperationContext context,
             ExtractedItemsEnumerator<TExtracted, TStatsScope, TEtlPerformanceOperation> merged,
             long fromEtag,
@@ -257,7 +259,7 @@ namespace Raven.Server.Documents.ETL
                 }
             }
         }
-        
+
         private void ExtractTimeSeries(DocumentsOperationContext context,
             ExtractedItemsEnumerator<TExtracted, TStatsScope, TEtlPerformanceOperation> merged,
             long fromEtag,
@@ -269,7 +271,7 @@ namespace Raven.Server.Documents.ETL
                 var timeSeries = Database.DocumentsStorage.TimeSeriesStorage.GetTimeSeriesFrom(context, fromEtag, long.MaxValue).GetEnumerator();
                 scope.EnsureDispose(timeSeries);
                 merged.AddEnumerator(ConvertTimeSeriesEnumerator(context, timeSeries, null));
-                
+
                 var deletedRanges = Database.DocumentsStorage.TimeSeriesStorage.GetDeletedRangesFrom(context, fromEtag).GetEnumerator();
                 scope.EnsureDispose(deletedRanges);
                 merged.AddEnumerator(ConvertTimeSeriesDeletedRangeEnumerator(context, deletedRanges, null));
@@ -281,7 +283,7 @@ namespace Raven.Server.Documents.ETL
                     var timeSeries = Database.DocumentsStorage.TimeSeriesStorage.GetTimeSeriesFrom(context, collection, fromEtag, long.MaxValue).GetEnumerator();
                     scope.EnsureDispose(timeSeries);
                     merged.AddEnumerator(ConvertTimeSeriesEnumerator(context, timeSeries, collection));
-                    
+
                     var deletedRanges = Database.DocumentsStorage.TimeSeriesStorage.GetDeletedRangesFrom(context, collection, fromEtag).GetEnumerator();
                     scope.EnsureDispose(deletedRanges);
                     merged.AddEnumerator(ConvertTimeSeriesDeletedRangeEnumerator(context, deletedRanges, collection));
@@ -352,6 +354,7 @@ namespace Raven.Server.Documents.ETL
                             stats.RecordChangeVector(item.ChangeVector);
 
                             batchSize++;
+
                         }
                         catch (JavaScriptParseException e)
                         {
@@ -372,7 +375,7 @@ namespace Raven.Server.Documents.ETL
                             Database.NotificationCenter.Add(alert);
 
                             stats.RecordBatchCompleteReason(message);
-                            stats.RecordTransformationError(); 
+                            stats.RecordTransformationError();
 
                             Stop(reason: message);
 
@@ -450,7 +453,7 @@ namespace Raven.Server.Documents.ETL
         }
 
         protected abstract int LoadInternal(IEnumerable<TTransformed> items, DocumentsOperationContext context, TStatsScope scope);
-    
+
         private bool CanContinueBatch(TStatsScope stats, TExtracted currentItem, int batchSize, DocumentsOperationContext ctx)
         {
             if (_serverStore.Server.CpuCreditsBalance.BackgroundTasksAlertRaised.IsRaised())
@@ -565,7 +568,7 @@ namespace Raven.Server.Documents.ETL
 
             return true;
         }
-        
+
         protected void UpdateMetrics(DateTime startTime, TStatsScope stats)
         {
             var batchSize = stats.NumberOfExtractedItems.Sum(x => x.Value);
@@ -593,7 +596,7 @@ namespace Raven.Server.Documents.ETL
                 TimeSeriesChange _ => ShouldTrackTimeSeries(),
                 _ => throw new InvalidOperationException($"Notify about {change.GetType()} is not supported")
             };
-            if(shouldNotify)
+            if (shouldNotify)
                 _waitForChanges.Set();
         }
 
@@ -673,9 +676,9 @@ namespace Raven.Server.Documents.ETL
 
                     var didWork = false;
 
-                    var state  = LastProcessState = GetProcessState(Database, Configuration.Name, Transformation.Name);
+                    var state = LastProcessState = GetProcessState(Database, Configuration.Name, Transformation.Name);
 
-                    var loadLastProcessedEtag = state.GetLastProcessedEtagForNode(_serverStore.NodeTag);
+                    var loadLastProcessedEtag = state.GetLastProcessedEtag(Database.DbBase64Id, _serverStore.NodeTag);
 
                     using (Statistics.NewBatch())
                     using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -701,7 +704,7 @@ namespace Raven.Server.Documents.ETL
 
                                     if (ShouldTrackCounters())
                                         Extract(context, merged, nextEtag, EtlItemType.CounterGroup, stats, scope);
-                                    
+
                                     if (ShouldTrackTimeSeries())
                                         Extract(context, merged, nextEtag, EtlItemType.TimeSeries, stats, scope);
 
@@ -714,10 +717,10 @@ namespace Raven.Server.Documents.ETL
                                     if (lastProcessed > Statistics.LastProcessedEtag && noFailures)
                                     {
                                         didWork = true;
-                                        
+
                                         Statistics.LastProcessedEtag = lastProcessed;
                                         Statistics.LastChangeVector = stats.ChangeVector;
-                                    
+
                                         UpdateMetrics(startTime, stats);
 
                                         if (Logger.IsInfoEnabled)
@@ -817,7 +820,7 @@ namespace Raven.Server.Documents.ETL
         {
             var command = new UpdateEtlProcessStateCommand(Database.Name, Configuration.Name, Transformation.Name, Statistics.LastProcessedEtag,
                 ChangeVectorUtils.MergeVectors(Statistics.LastChangeVector, state.ChangeVector), _serverStore.NodeTag,
-                _serverStore.LicenseManager.HasHighlyAvailableTasks(), RaftIdGenerator.NewId(), state.SkippedTimeSeriesDocs, lastBatchTime);
+                _serverStore.LicenseManager.HasHighlyAvailableTasks(), Database.DbBase64Id, RaftIdGenerator.NewId(), state.SkippedTimeSeriesDocs, lastBatchTime);
 
             var sendToLeaderTask = _serverStore.SendToLeaderAsync(command);
 
@@ -859,7 +862,7 @@ namespace Raven.Server.Documents.ETL
         protected virtual void AfterAllBatchesCompleted(DateTime lastBatchTime)
         {
         }
-        
+
         private static bool AlreadyLoadedByDifferentNode(ExtractedItem item, EtlProcessState state)
         {
             var conflictStatus = ChangeVectorUtils.GetConflictStatus(
@@ -1044,7 +1047,7 @@ namespace Raven.Server.Documents.ETL
 
                             var sqlItem = testScript.IsDelete ? new ToSqlItem(tombstone, docCollection) : new ToSqlItem(document, docCollection);
 
-                            var transformed = sqlEtl.Transform(new[] {sqlItem}, context, new EtlStatsScope(new EtlRunStats()),
+                            var transformed = sqlEtl.Transform(new[] { sqlItem }, context, new EtlStatsScope(new EtlRunStats()),
                                 new EtlProcessState());
 
                             Debug.Assert(sqlTestScript != null);
@@ -1062,8 +1065,8 @@ namespace Raven.Server.Documents.ETL
 
                             var ravenEtlItem = testScript.IsDelete ? new RavenEtlItem(tombstone, docCollection, EtlItemType.Document) : new RavenEtlItem(document, docCollection);
 
-                            var results = ravenEtl.Transform(new[] {ravenEtlItem}, context, new EtlStatsScope(new EtlRunStats()),
-                                new EtlProcessState{SkippedTimeSeriesDocs = new HashSet<string> {testScript.DocumentId}});
+                            var results = ravenEtl.Transform(new[] { ravenEtlItem }, context, new EtlStatsScope(new EtlRunStats()),
+                                new EtlProcessState { SkippedTimeSeriesDocs = new HashSet<string> { testScript.DocumentId } });
 
                             return new RavenEtlTestScriptResult
                             {
@@ -1137,6 +1140,23 @@ namespace Raven.Server.Documents.ETL
                             };
 
                         }
+
+                    case EtlType.ElasticSearch:
+                        using (var elasticSearchEtl = new ElasticSearchEtl(testScript.Configuration.Transforms[0], testScript.Configuration as ElasticSearchEtlConfiguration, database, database.ServerStore))
+                        using (elasticSearchEtl.EnterTestMode(out debugOutput))
+                        {
+                            elasticSearchEtl.EnsureThreadAllocationStats();
+
+                            var elasticSearchItem = testScript.IsDelete ? new ElasticSearchItem(tombstone, docCollection) : new ElasticSearchItem(document, docCollection);
+
+                            var results = elasticSearchEtl.Transform(new[] { elasticSearchItem }, context, new EtlStatsScope(new EtlRunStats()),
+                                new EtlProcessState());
+
+                            var result = elasticSearchEtl.RunTest(results, context);
+                            result.DebugOutput = debugOutput;
+
+                            return result;
+                        }
                     default:
                         throw new NotSupportedException($"Unknown ETL type in script test: {testScript.Configuration.EtlType}");
                 }
@@ -1166,11 +1186,11 @@ namespace Raven.Server.Documents.ETL
                 AverageProcessedPerSecond = Metrics.GetProcessedPerSecondRate() ?? 0.0
             };
 
-            var collections = Transformation.ApplyToAllDocuments 
-                ? Database.DocumentsStorage.GetCollections(documentsContext).Select(x => x.Name).ToList() 
+            var collections = Transformation.ApplyToAllDocuments
+                ? Database.DocumentsStorage.GetCollections(documentsContext).Select(x => x.Name).ToList()
                 : Transformation.Collections;
 
-            var lastProcessedEtag = LastProcessState.GetLastProcessedEtagForNode(_serverStore.NodeTag);
+            var lastProcessedEtag = LastProcessState.GetLastProcessedEtag(Database.DbBase64Id, Database.ServerStore.NodeTag);
 
             foreach (var collection in collections)
             {
@@ -1185,21 +1205,21 @@ namespace Raven.Server.Documents.ETL
                     result.NumberOfCounterGroupsToProcess += Database.DocumentsStorage.CountersStorage.GetNumberOfCounterGroupsToProcess(documentsContext, collection, lastProcessedEtag, out total);
                     result.TotalNumberOfCounterGroups += total;
                 }
-                
+
                 if (ShouldTrackTimeSeries())
                 {
                     result.NumberOfTimeSeriesSegmentsToProcess += Database.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesSegmentsToProcess(documentsContext, collection, lastProcessedEtag, out total);
                     result.TotalNumberOfTimeSeriesSegments += total;
-                    
+
                     result.NumberOfTimeSeriesDeletedRangesToProcess += Database.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesDeletedRangesToProcess(documentsContext, collection, lastProcessedEtag, out total);
                     result.TotalNumberOfTimeSeriesDeletedRanges += total;
                 }
             }
 
-            result.Completed = (result.NumberOfDocumentsToProcess > 0 
-                                && result.NumberOfDocumentTombstonesToProcess > 0 
-                                && result.NumberOfCounterGroupsToProcess > 0 
-                                && result.NumberOfTimeSeriesSegmentsToProcess > 0 
+            result.Completed = (result.NumberOfDocumentsToProcess > 0
+                                && result.NumberOfDocumentTombstonesToProcess > 0
+                                && result.NumberOfCounterGroupsToProcess > 0
+                                && result.NumberOfTimeSeriesSegmentsToProcess > 0
                                 && result.NumberOfTimeSeriesDeletedRangesToProcess > 0) == false;
 
             var performance = _lastStats?.ToPerformanceLiveStats();
@@ -1219,17 +1239,17 @@ namespace Raven.Server.Documents.ETL
 
                 if (result.NumberOfCounterGroupsToProcess > 0)
                     result.NumberOfCounterGroupsToProcess -= performance.NumberOfTransformedItems[EtlItemType.CounterGroup];
-                
+
                 if (result.NumberOfTimeSeriesSegmentsToProcess > 0)
                     result.NumberOfTimeSeriesSegmentsToProcess -= performance.NumberOfTransformedItems[EtlItemType.TimeSeries];
 
                 if (result.NumberOfTimeSeriesDeletedRangesToProcess > 0)
                     result.NumberOfTimeSeriesDeletedRangesToProcess -= performance.NumberOfTransformedTombstones[EtlItemType.TimeSeries];
-                
-                result.Completed = (result.NumberOfDocumentsToProcess > 0 
-                                   && result.NumberOfDocumentTombstonesToProcess > 0 
-                                   && result.NumberOfCounterGroupsToProcess > 0 
-                                   && result.NumberOfTimeSeriesSegmentsToProcess > 0 
+
+                result.Completed = (result.NumberOfDocumentsToProcess > 0
+                                   && result.NumberOfDocumentTombstonesToProcess > 0
+                                   && result.NumberOfCounterGroupsToProcess > 0
+                                   && result.NumberOfTimeSeriesSegmentsToProcess > 0
                                    && result.NumberOfTimeSeriesDeletedRangesToProcess > 0) == false;
 
                 if (result.Completed && performance.Completed == null)

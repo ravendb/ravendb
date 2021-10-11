@@ -383,10 +383,6 @@ class adminLogs extends viewModelBase {
         // set flag to true, since list reset is async
         this.duringManualScrollEvent = true;
         this.tailEnabled(true);
-        
-        if (!this.liveClient()) {
-            this.resumeLogs();
-        }
     }
     
     exportToFile() {

@@ -509,7 +509,6 @@ class databaseGroupGraph {
                 });
             }
         }
-        
 
         tasks.forEach((task) => {
             if (task.responsibleNode) {
@@ -566,6 +565,8 @@ class databaseGroupGraph {
                     return "&#xe9b9;";
                 case "OlapEtl":
                     return "&#xea46;";
+                case "ElasticSearchEtl":
+                    return "&#xea51;";
                 case "Subscription":
                     return "&#xe9b5;";
                 case "PullReplicationAsHub":
@@ -768,7 +769,6 @@ class databaseGroupGraph {
         
         return result.join(",");
     }
-
 }
 
 export = databaseGroupGraph;

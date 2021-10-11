@@ -94,10 +94,21 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             {
                 var scoreDoc = search.ScoreDocs[_alreadyScannedForDuplicates];
                 var retrieverInput = new RetrieverInput(_searcher.Doc(scoreDoc.Doc, _state), scoreDoc, _state);
-                var document = _retriever.Get(ref retrieverInput);
+                var result = _retriever.Get(ref retrieverInput);
 
-                if (document.Data.Count > 0) // we don't consider empty projections to be relevant for distinct operations
-                    _alreadySeenProjections.Add(document.DataHash);
+                if (result.Document != null)
+                {
+                    if (result.Document.Data.Count > 0) // we don't consider empty projections to be relevant for distinct operations
+                        _alreadySeenProjections.Add(result.Document.DataHash);
+            }
+                else if(result.List != null)
+                {
+                    foreach (Document item in result.List)
+                    {
+                        if (item.Data.Count > 0) // we don't consider empty projections to be relevant for distinct operations
+                            _alreadySeenProjections.Add(item.DataHash);
+        }
+                }
             }
         }
 

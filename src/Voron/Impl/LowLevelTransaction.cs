@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 using Sparrow;
+using Sparrow.Platform;
 using Sparrow.Server;
 using Sparrow.Threading;
 using Sparrow.Utils;
@@ -30,7 +31,7 @@ namespace Voron.Impl
         private readonly StorageEnvironment _env;
         private readonly long _id;
         private readonly ByteStringContext _allocator;
-        private readonly PageLocator _pageLocator;
+        internal readonly PageLocator _pageLocator;
         private bool _disposeAllocator;
         internal long DecompressedBufferBytes;
         internal TestingStuff _forTestingPurposes;

@@ -32,6 +32,10 @@ class getConnectionStringInfoCommand extends commandBase {
     static forOlapEtl(db: database, connectionStringName: string) {
         return new getConnectionStringInfoCommand(db, "Olap", connectionStringName);
     }
+
+    static forElasticSearchEtl(db: database, connectionStringName: string) {
+        return new getConnectionStringInfoCommand(db, "ElasticSearch", connectionStringName);
+    }
 }
 
 export = getConnectionStringInfoCommand; 

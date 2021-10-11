@@ -10,6 +10,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Sync;
+using Sparrow.Platform;
 using Sparrow.Server;
 using Sparrow.Server.Json.Sync;
 using Voron;

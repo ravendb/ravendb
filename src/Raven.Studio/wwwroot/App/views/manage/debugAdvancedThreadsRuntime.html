@@ -1,8 +1,6 @@
-
 <div class="flex-window stretch debug-advanced">
     <div class="flex-window-head">
         <div class="clearfix padding padding-sm">
-
             <div class="flex-header flex-horizontal flex-noshrink margin-bottom">
                 <div>
                     <div class="btn-group">
@@ -14,7 +12,7 @@
                     </div>
                 </div>
                 <div>
-                    <input class="form-control" placeholder="Filter" data-bind="textInput: filter" />    
+                    <input class="form-control" placeholder="Filter (Name, Thread Id)" data-bind="textInput: filter" />
                 </div>
                 <div>
                     <div class="text-muted info-block">
@@ -30,11 +28,10 @@
                         <div class="text-center">
                             <small><strong data-bind="text: dedicatedThreadsCount"></strong></small>
                         </div>
-                    </div>    
+                    </div>
                 </div>
             </div>
         </div>
-
     </div>
     <div class="flex-window-scroll">
         <div class="scroll-stretch">
@@ -44,8 +41,10 @@
         </div>
     </div>
 </div>
+
 <script type="text/html" id="empty-threads-info-template">
     No entries found.
 </script>
+
 <div class="tooltip json-preview lg js-threads-runtime-tooltip" style="opacity: 0">
 </div>

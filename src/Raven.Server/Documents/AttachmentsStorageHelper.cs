@@ -4,7 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
-using Sparrow.Server;
+using Sparrow.Platform;
 
 namespace Raven.Server.Documents
 {

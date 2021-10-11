@@ -61,10 +61,10 @@ class actionColumn<T> implements virtualColumn {
         let extraCssClasses = this.opts.extraClass ? this.opts.extraClass(item) : '';
         
         if (isSorted) {
-           extraCssClasses += " sorted"; 
+           extraCssClasses += " sorted";
         }
         
-        return `<div class="cell action-cell" style="width: ${this.width}; ${extraStyle}">
+        return `<div class="cell action-cell padding padding-xs" style="width: ${this.width}; ${extraStyle}">
             <button type="button" ${extraButtonHtml} data-action="${this.actionUniqueId}" class="btn btn-sm btn-block ${extraCssClasses}">${this.buttonText(item)}</button>
         </div>`;
     }

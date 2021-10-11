@@ -515,12 +515,12 @@ namespace Raven.Server.Documents.Patch
                    property == Constants.Documents.Metadata.Flags;
         }
 
-        public static BlittableJsonReaderObject Translate(JsonOperationContext context, Engine scriptEngine, ObjectInstance objectInstance, IResultModifier modifier = null, BlittableJsonDocumentBuilder.UsageMode usageMode = BlittableJsonDocumentBuilder.UsageMode.None)
+        public static BlittableJsonReaderObject Translate(JsonOperationContext context, Engine scriptEngine, ObjectInstance objectInstance, IResultModifier modifier = null, BlittableJsonDocumentBuilder.UsageMode usageMode = BlittableJsonDocumentBuilder.UsageMode.None, bool isNested = false)
         {
             if (objectInstance == null)
                 return null;
 
-            if (objectInstance is BlittableObjectInstance boi && boi.Changed == false)
+            if (objectInstance is BlittableObjectInstance boi && boi.Changed == false && isNested == false)
                 return boi.Blittable.Clone(context);
 
             using (var writer = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))

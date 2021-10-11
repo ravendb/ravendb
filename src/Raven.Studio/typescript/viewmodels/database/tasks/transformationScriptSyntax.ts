@@ -27,6 +27,9 @@ class transformationScriptSyntax extends dialogViewModelBase {
             case "Sql":
                 sampleText = transformationScriptSyntax.sqlEtlSampleText;
                 break;
+            case "ElasticSearch":
+                sampleText = transformationScriptSyntax.elasticSearchEtlSampleText;
+                break;
             case "Olap":
                 switch (sampleTitle) {
                     case "olapEtlSamplePartition":
@@ -128,6 +131,29 @@ loadToOrders(orderData);`;
 
     sqlEtlSampleHtml = transformationScriptSyntax.highlightJavascript(transformationScriptSyntax.sqlEtlSampleText);
 
+    static readonly elasticSearchEtlSampleText = // todo...
+        `var orderData = {
+    Id: id(this),
+    OrderLinesCount: this.Lines.length,
+    TotalCost: 0
+};
+
+for (var i = 0; i < this.Lines.length; i++) {
+    var line = this.Lines[i];
+    var cost = (line.Quantity * line.PricePerUnit) * ( 1 - line.Discount);
+    orderData.TotalCost += line.Cost * line.Quantity;
+    loadToOrderLines({
+        OrderId: id(this),
+        Qty: line.Quantity,
+        Product: line.Product,
+        Cost: line.Cost
+    });
+}
+
+loadToOrders(orderData);`;
+
+    elasticSearchEtlSampleHtml = transformationScriptSyntax.highlightJavascript(transformationScriptSyntax.elasticSearchEtlSampleText);
+    
     static readonly olapEtlSamplePartitionText =
 `var orderDate = new Date(this.OrderedAt);
 var year = orderDate.getFullYear();

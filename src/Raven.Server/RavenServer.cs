@@ -61,6 +61,7 @@ using Sparrow.Logging;
 using Sparrow.Server.Debugging;
 using Sparrow.Server.Json.Sync;
 using Sparrow.Threading;
+using Sparrow.Utils;
 using Voron;
 using DateTime = System.DateTime;
 
@@ -1790,7 +1791,7 @@ namespace Raven.Server
                         $"1) Change the ServerUrl.Tcp property in setting.json file.{Environment.NewLine}" +
                         $"2) Run the server from the command line with --ServerUrl.Tcp option.{Environment.NewLine}" +
                         $"3) Add RAVEN_ServerUrl_Tcp to the Environment Variables.{Environment.NewLine}" +
-                        "For more information go to https://ravendb.net/l/EJS81M/5.2";
+                        "For more information go to https://ravendb.net/l/EJS81M/5.3";
 
                         errors.Add(new IOException(msg, ex));
                         if (Logger.IsOperationsEnabled)
@@ -1929,6 +1930,18 @@ namespace Raven.Server
 
                             header = await NegotiateOperationVersion(stream, buffer, tcpClient, tcpAuditLog, cert, tcp);
 
+                            var supportedFeatures = TcpConnectionHeaderMessage.GetSupportedFeaturesFor(header.Operation, header.OperationVersion);
+
+                            if (supportedFeatures.DataCompression)
+                            {
+                                if (header.Operation == TcpConnectionHeaderMessage.OperationTypes.Replication ||
+                                    (header.Operation == TcpConnectionHeaderMessage.OperationTypes.Subscription && header.CompressionSupport))
+                                {
+                                    stream = new ReadWriteCompressedStream(stream, buffer);
+                                    tcp.Stream = stream;
+                                }
+                            }
+
                             await DispatchTcpConnection(header, tcp, buffer, cert);
 
                             if (TrafficWatchManager.HasRegisteredClients)
@@ -2035,7 +2048,7 @@ namespace Raven.Server
                         }
                         
                         header = JsonDeserializationClient.TcpConnectionHeaderMessage(headerJson);
-
+                        
                         if (Logger.IsInfoEnabled)
                         {
                             Logger.Info($"New {header.Operation} TCP connection to {header.DatabaseName ?? "the cluster node"} from {tcpClient.Client.RemoteEndPoint}");
@@ -2240,6 +2253,7 @@ namespace Raven.Server
                         ["Message"] = e.Message
                     });
                 }
+
             }
             catch (Exception inner)
             {

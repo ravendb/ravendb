@@ -2,6 +2,7 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import connectionStringRavenEtlModel = require("models/database/settings/connectionStringRavenEtlModel");
 import connectionStringSqlEtlModel = require("models/database/settings/connectionStringSqlEtlModel");
 import connectionStringOlapEtlModel = require("models/database/settings/connectionStringOlapEtlModel");
+import connectionStringElasticSearchEtlModel = require("models/database/settings/connectionStringElasticSearchEtlModel");
 import saveConnectionStringCommand = require("commands/database/settings/saveConnectionStringCommand");
 import getConnectionStringsCommand = require("commands/database/settings/getConnectionStringsCommand");
 import getConnectionStringInfoCommand = require("commands/database/settings/getConnectionStringInfoCommand");
@@ -20,6 +21,7 @@ class connectionStrings extends viewModelBase {
     ravenEtlConnectionStringsNames = ko.observableArray<string>([]);
     sqlEtlConnectionStringsNames = ko.observableArray<string>([]);
     olapEtlConnectionStringsNames = ko.observableArray<string>([]);
+    elasticSearchEtlConnectionStringsNames = ko.observableArray<string>([]);
 
     // Mapping from { connection string } to { taskId, taskName, taskType }
     connectionStringsTasksInfo: dictionary<Array<{ TaskId: number, TaskName: string, TaskType: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType }>> = {};
@@ -27,6 +29,7 @@ class connectionStrings extends viewModelBase {
     editedRavenEtlConnectionString = ko.observable<connectionStringRavenEtlModel>(null);
     editedSqlEtlConnectionString = ko.observable<connectionStringSqlEtlModel>(null);
     editedOlapEtlConnectionString = ko.observable<connectionStringOlapEtlModel>(null);
+    editedElasticSearchEtlConnectionString = ko.observable<connectionStringElasticSearchEtlModel>(null);
 
     testConnectionResult = ko.observable<Raven.Server.Web.System.NodeConnectionTestResult>();
     testConnectionHttpSuccess: KnockoutComputed<boolean>;
@@ -43,8 +46,9 @@ class connectionStrings extends viewModelBase {
 
     constructor() {
         super();
-        this.bindToCurrentInstance("onEditSqlEtl", "onEditRavenEtl", "onEditOlapEtl", "confirmDelete",
-                                   "isConnectionStringInUse", "onTestConnectionRaven", "testCredentials");
+        this.bindToCurrentInstance("onEditSqlEtl", "onEditRavenEtl", "onEditOlapEtl", "onEditElasticSearchEtl",
+                                   "confirmDelete", "isConnectionStringInUse", 
+                                   "onTestConnectionRaven", "onTestConnectionElasticSearch", "testCredentials");
         this.initObservables();
     }
     
@@ -83,6 +87,11 @@ class connectionStrings extends viewModelBase {
                 return olapEtl.dirtyFlag().isDirty();
             }
 
+            const elasticEtl = this.editedElasticSearchEtlConnectionString();
+            if (elasticEtl) {
+                return elasticEtl.dirtyFlag().isDirty();
+            }
+
             return false;
         });
 
@@ -104,6 +113,9 @@ class connectionStrings extends viewModelBase {
                                 break;
                             case "olap":
                                 this.onEditOlapEtl(args.name);
+                                break;
+                            case "elasticSearch":
+                                this.onEditElasticSearchEtl(args.name);
                                 break;
                         }
                     }
@@ -138,10 +150,11 @@ class connectionStrings extends viewModelBase {
     
     private processData(result: Raven.Server.Web.System.OngoingTasksResult) {
         const tasksThatUseConnectionStrings = result.OngoingTasksList.filter((task) =>
-                                                                              task.TaskType === "RavenEtl"    ||
-                                                                              task.TaskType === "SqlEtl"      ||
-                                                                              task.TaskType === "OlapEtl"     ||
-                                                                              task.TaskType === "Replication" ||
+                                                                              task.TaskType === "RavenEtl"         ||
+                                                                              task.TaskType === "SqlEtl"           ||
+                                                                              task.TaskType === "OlapEtl"          ||
+                                                                              task.TaskType === "ElasticSearchEtl" ||
+                                                                              task.TaskType === "Replication"      ||
                                                                               task.TaskType === "PullReplicationAsSink");
         for (let i = 0; i < tasksThatUseConnectionStrings.length; i++) {
             const task = tasksThatUseConnectionStrings[i];
@@ -160,6 +173,9 @@ class connectionStrings extends viewModelBase {
                     break;
                 case "OlapEtl":
                     stringName = (task as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskOlapEtlListView).ConnectionStringName;
+                    break;
+                case "ElasticSearchEtl":
+                    stringName = (task as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtlListView).ConnectionStringName;
                     break;
                 case "Replication":
                     stringName = (task as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskReplication).ConnectionStringName;
@@ -203,11 +219,32 @@ class connectionStrings extends viewModelBase {
                 // olapEtl
                 this.olapEtlConnectionStringsNames(Object.keys(result.OlapConnectionStrings));
                 this.olapEtlConnectionStringsNames(_.sortBy(this.olapEtlConnectionStringsNames(), x => x.toUpperCase()));
+
+                // elasticSearchEtl
+                this.elasticSearchEtlConnectionStringsNames(Object.keys(result.ElasticSearchConnectionStrings));
+                this.elasticSearchEtlConnectionStringsNames(_.sortBy(this.elasticSearchEtlConnectionStringsNames(), x => x.toUpperCase()));
             });
     }
 
-    confirmDelete(connectionStringName: string, connectionStringtype: Raven.Client.Documents.Operations.ConnectionStrings.ConnectionStringType) {
-        const stringType = connectionStringtype === "Raven" ? "RavenDB" :  connectionStringtype === "Sql" ? "SQL" : "Olap";
+    confirmDelete(connectionStringName: string, connectionStringType: Raven.Client.Documents.Operations.ConnectionStrings.ConnectionStringType) {
+        let stringType;
+        switch (connectionStringType) {
+            case "Raven":
+                stringType = "RavenDB"; 
+                break;
+            case "Sql":
+                stringType = "SQL";
+                break;
+            case "Olap":
+                stringType = "OLAP";
+                break;
+            case "ElasticSearch":
+                stringType = "Elasticsearch"
+                break;
+            default:
+                console.warn("Invalid connection string type: " + connectionStringType);
+                break;
+        }
 
         this.confirmationMessage("Delete connection string?",
             `You're deleting ${stringType} connection string: <br><ul><li><strong>${generalUtils.escapeHtml(connectionStringName)}</strong></li></ul>`, {
@@ -216,7 +253,7 @@ class connectionStrings extends viewModelBase {
             })
             .done(result => {
                 if (result.can) {
-                    this.deleteConnectionSring(connectionStringtype, connectionStringName);
+                    this.deleteConnectionSring(connectionStringType, connectionStringName);
                 }
             });
     }
@@ -254,6 +291,7 @@ class connectionStrings extends viewModelBase {
 
         this.editedSqlEtlConnectionString(null);
         this.editedOlapEtlConnectionString(null);
+        this.editedElasticSearchEtlConnectionString(null);
     }
 
     onAddSqlEtl() {
@@ -279,6 +317,7 @@ class connectionStrings extends viewModelBase {
 
         this.editedRavenEtlConnectionString(null);
         this.editedOlapEtlConnectionString(null);
+        this.editedElasticSearchEtlConnectionString(null);
     }
 
     onAddOlapEtl() {
@@ -335,6 +374,39 @@ class connectionStrings extends viewModelBase {
         
         this.editedRavenEtlConnectionString(null);
         this.editedSqlEtlConnectionString(null);
+        this.editedElasticSearchEtlConnectionString(null);
+    }
+
+    onAddElasticSearchEtl() {
+        eventsCollector.default.reportEvent("connection-strings", "add-elastic-search-etl");
+        this.editedElasticSearchEtlConnectionString(connectionStringElasticSearchEtlModel.empty());
+        this.onElasticSearchEtl();
+        this.clearTestResult();
+    }
+
+    onEditElasticSearchEtl(connectionStringName: string) {
+        this.clearTestResult();
+
+        return getConnectionStringInfoCommand.forElasticSearchEtl(this.activeDatabase(), connectionStringName)
+            .execute()
+            .done((result: Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult) => {
+                const elasticConnectionString = new connectionStringElasticSearchEtlModel(
+                    result.ElasticSearchConnectionStrings[connectionStringName],
+                    false,
+                    this.getTasksThatUseThisString(connectionStringName, "ElasticSearch"));
+
+                this.editedElasticSearchEtlConnectionString(elasticConnectionString);
+                this.onElasticSearchEtl();
+            });
+    }
+
+    private onElasticSearchEtl() {
+        this.editedElasticSearchEtlConnectionString().nodesUrls.subscribe(() => this.clearTestResult());
+        this.editedElasticSearchEtlConnectionString().inputUrl().discoveryUrlName.subscribe(() => this.clearTestResult());
+
+        this.editedRavenEtlConnectionString(null);
+        this.editedOlapEtlConnectionString(null);
+        this.editedSqlEtlConnectionString(null);
     }
     
     private getTasksThatUseThisString(connectionStringName: string, connectionStringType: Raven.Client.Documents.Operations.ConnectionStrings.ConnectionStringType): { taskName: string; taskId: number }[] {
@@ -358,6 +430,10 @@ class connectionStrings extends viewModelBase {
         
         if (connectionType === "Olap") {
             return ["OlapEtl"];
+        }
+
+        if (connectionType === "ElasticSearch") {
+            return ["ElasticSearchEtl"];
         }
         
         return ["RavenEtl", "Replication", "PullReplicationAsSink"];
@@ -396,19 +472,37 @@ class connectionStrings extends viewModelBase {
                 this.fullErrorDetailsVisible(false);
             });
     }
+
+    onTestConnectionElasticSearch(urlToTest: discoveryUrl) {
+        this.clearTestResult();
+        const elasticConnectionString = this.editedElasticSearchEtlConnectionString();
+        eventsCollector.default.reportEvent("elastic-search-connection-string", "test-connection");
+
+        this.spinners.test(true);
+        elasticConnectionString.selectedUrlToTest(urlToTest.discoveryUrlName());
+
+        elasticConnectionString.testConnection(urlToTest)
+            .done(result => this.testConnectionResult(result))
+            .always(() => {
+                this.spinners.test(false);
+                this.fullErrorDetailsVisible(false);
+            });
+    }
     
     onCloseEdit() {
         this.editedRavenEtlConnectionString(null);
         this.editedSqlEtlConnectionString(null);
         this.editedOlapEtlConnectionString(null);
+        this.editedElasticSearchEtlConnectionString(null);
     }
 
     onSave() {
-        let model: connectionStringRavenEtlModel | connectionStringSqlEtlModel | connectionStringOlapEtlModel;
+        let model: connectionStringRavenEtlModel | connectionStringSqlEtlModel | connectionStringOlapEtlModel | connectionStringElasticSearchEtlModel;
         
         const editedRavenEtl = this.editedRavenEtlConnectionString();
         const editedSqlEtl = this.editedSqlEtlConnectionString();
         const editedOlapEtl = this.editedOlapEtlConnectionString();
+        const editedElasticSearchEtl = this.editedElasticSearchEtlConnectionString();
         
         // 1. Validate model
         if (editedRavenEtl) {
@@ -428,6 +522,12 @@ class connectionStrings extends viewModelBase {
                 return;
             }
             model = editedOlapEtl;
+            
+        } else if (editedElasticSearchEtl) {
+            if (!this.isValidEditedElasticSearchEtl()) {
+                return;
+            }
+            model = editedElasticSearchEtl;
         }
 
         // 2. Create/add the new connection string
@@ -440,6 +540,7 @@ class connectionStrings extends viewModelBase {
                 this.editedRavenEtlConnectionString(null);
                 this.editedSqlEtlConnectionString(null);
                 this.editedOlapEtlConnectionString(null);
+                this.editedElasticSearchEtlConnectionString(null);
 
                 this.dirtyFlag().reset();
             });
@@ -470,6 +571,12 @@ class connectionStrings extends viewModelBase {
     isValidEditedSqlEtl() {
         const editedSqlEtl = this.editedSqlEtlConnectionString();
         return this.isValid(editedSqlEtl.validationGroup);
+    }
+
+    isValidEditedElasticSearchEtl() {
+        const editedElasticEtl = this.editedElasticSearchEtlConnectionString();
+        return this.isValid(editedElasticEtl.validationGroup) && 
+               this.isValid(editedElasticEtl.authentication().validationGroup);
     }
 
     isValidEditedOlapEtl() {
@@ -519,6 +626,8 @@ class connectionStrings extends viewModelBase {
                 return urls.editOlapEtl(task.TaskId)();
             case "RavenEtl": 
                 return urls.editRavenEtl(task.TaskId)();
+            case "ElasticSearchEtl":
+                return urls.editElasticSearchEtl(task.TaskId)();
             case "Replication":
                return urls.editExternalReplication(task.TaskId)();
         }
