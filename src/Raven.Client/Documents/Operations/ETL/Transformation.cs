@@ -243,7 +243,6 @@ namespace Raven.Client.Documents.Operations.ETL
 
         internal bool IsEmptyScript { get; set; }
 
-
         internal Dictionary<string, string> CollectionToDeleteDocumentsBehaviorFunction { get; private set; }
 
         internal bool IsAddingAttachments { get; private set; }
@@ -386,6 +385,9 @@ namespace Raven.Client.Documents.Operations.ETL
                             case EtlType.Sql:
                             case EtlType.Olap:
                                 targetName = "Table";
+                                break;
+                            case EtlType.ElasticSearch:
+                                targetName = "Index";
                                 break;
                             default:
                                 throw new ArgumentException($"Unknown ETL type: {type}");

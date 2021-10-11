@@ -2,17 +2,15 @@
 
 namespace Raven.Server.Monitoring.Snmp
 {
-    [AttributeUsage(AttributeTargets.Field, AllowMultiple = false)]
+
+    [AttributeUsage(AttributeTargets.Property | AttributeTargets.Field)]
     public class SnmpIndexAttribute : Attribute
     {
-        public SnmpIndexAttribute(Type type)
+        public int Index { get; }
+
+        public SnmpIndexAttribute(int index)
         {
-            if (type.IsEnum == false)
-                throw new InvalidOperationException($"Only enums are supported, but was '{type}'.");
-
-            Type = type;
+            Index = index;
         }
-
-        public Type Type { get; }
     }
 }

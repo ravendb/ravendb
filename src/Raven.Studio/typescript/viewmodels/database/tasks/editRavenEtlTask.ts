@@ -17,7 +17,6 @@ import getPossibleMentorsCommand = require("commands/database/tasks/getPossibleM
 import getDocumentsMetadataByIDPrefixCommand = require("commands/database/documents/getDocumentsMetadataByIDPrefixCommand");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import jsonUtil = require("common/jsonUtil");
-import ongoingTaskEtlTransformationModel = require("models/database/tasks/ongoingTaskRavenEtlTransformationModel");
 import viewHelpers = require("common/helpers/view/viewHelpers");
 import documentMetadata = require("models/database/documents/documentMetadata");
 import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
@@ -62,7 +61,9 @@ class ravenTaskTestMode {
         return this.transformationErrors().length;
     });
 
-    constructor(db: KnockoutObservable<database>, validateParent: () => boolean, configurationProvider: () => Raven.Client.Documents.Operations.ETL.RavenEtlConfiguration) {
+    constructor(db: KnockoutObservable<database>,
+                validateParent: () => boolean,
+                configurationProvider: () => Raven.Client.Documents.Operations.ETL.RavenEtlConfiguration) {
         this.db = db;
         this.validateParent = validateParent;
         this.configurationProvider = configurationProvider;

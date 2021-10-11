@@ -240,7 +240,7 @@ namespace SlowTests.Issues
             }
         }
 
-        public class MyBackup
+        private class MyBackup
         {
             public string BackupPath { get; set; }
             public long BackupTaskId { get; set; }
@@ -248,7 +248,7 @@ namespace SlowTests.Issues
             public string NodeTag { get; set; }
         }
 
-        public class User
+        private class User
         {
             public string Name { get; set; }
         }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Lucene.Net.Store;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
@@ -15,13 +16,13 @@ namespace Raven.Server.Documents.Queries.Results
         private readonly DocumentsOperationContext _context;
         private QueryTimingsScope _storageScope;
 
-        public MapQueryResultRetriever(DocumentDatabase database, IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsStorage documentsStorage, DocumentsOperationContext context, SearchEngineType searchEngineType, FieldsToFetch fieldsToFetch, IncludeDocumentsCommand includeDocumentsCommand, IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand, IncludeRevisionsCommand includeRevisionsCommand )
+        public MapQueryResultRetriever(DocumentDatabase database, IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsStorage documentsStorage, DocumentsOperationContext context, SearchEngineType searchEngineType, FieldsToFetch fieldsToFetch, IncludeDocumentsCommand includeDocumentsCommand, IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand, IncludeRevisionsCommand includeRevisionsCommand)
             : base(database, query, queryTimings, searchEngineType, fieldsToFetch, documentsStorage, context, false, includeDocumentsCommand, includeCompareExchangeValuesCommand, includeRevisionsCommand: includeRevisionsCommand)
         {
             _context = context;
         }
 
-        public override Document Get(ref RetrieverInput retrieverInput)
+        public override (Document Document, List<Document> List) Get(ref RetrieverInput retrieverInput)
         {
 
             using (RetrieverScope?.Start())
@@ -47,7 +48,7 @@ namespace Raven.Server.Documents.Queries.Results
                     var doc = DirectGet(null, id, DocumentFields, retrieverInput.State);
 
                     FinishDocumentSetup(doc, retrieverInput.Score);
-                    return doc;
+                    return (doc, null);
                 }
             }
         }

@@ -10,37 +10,37 @@ namespace Raven.Server.Utils
 {
     public class ThrottledManualResetEventSlim : IDisposable
     {
-        public enum ThrottlingBehavior
+        public enum TimerManagement
         {
             Automatic,
-            ManualManagement
+            Manual
         }
 
         private readonly ManualResetEventSlim _mre;
         private readonly MultipleUseFlag _setCalled = new MultipleUseFlag();
-        private readonly ThrottlingBehavior _throttlingBehavior;
+        private readonly TimerManagement _timerManagement;
         private readonly CancellationToken _token;
         private bool _throttlingStarted;
         private TimeSpan? _throttlingInterval;
-        private Task _timerTask;
+        internal Task _timerTask;
         private CancellationTokenSource _timerCts;
 
-        public ThrottledManualResetEventSlim(TimeSpan? throttlingInterval, bool initialState = false, ThrottlingBehavior throttlingBehavior = ThrottlingBehavior.Automatic, CancellationToken token = default)
+        public ThrottledManualResetEventSlim(TimeSpan? throttlingInterval, bool initialState = false, TimerManagement timerManagement = TimerManagement.Automatic, CancellationToken token = default)
         {
             _throttlingInterval = throttlingInterval;
             _mre = new ManualResetEventSlim(initialState);
-            _throttlingBehavior = throttlingBehavior;
+            _timerManagement = timerManagement;
             _token = token;
 
-            switch (_throttlingBehavior)
+            switch (_timerManagement)
             {
-                case ThrottlingBehavior.Automatic:
+                case TimerManagement.Automatic:
                     StartThrottling();
                     break;
-                case ThrottlingBehavior.ManualManagement:
+                case TimerManagement.Manual:
                     break;
                 default:
-                    throw new ArgumentException($"Unsupported throttling behavior: {_throttlingBehavior}");
+                    throw new ArgumentException($"Unsupported throttling management: {_timerManagement}");
             }
         }
 
@@ -73,30 +73,30 @@ namespace Raven.Server.Utils
         [MethodImpl(MethodImplOptions.Synchronized)]
         public void EnableThrottlingTimer()
         {
-            switch (_throttlingBehavior)
+            switch (_timerManagement)
             {
-                case ThrottlingBehavior.Automatic:
-                    throw new InvalidOperationException($"Cannot enable throttling timer manually when the behavior is: {nameof(ThrottlingBehavior.Automatic)}");
-                case ThrottlingBehavior.ManualManagement:
+                case TimerManagement.Automatic:
+                    throw new InvalidOperationException($"Cannot enable throttling timer manually when the behavior is: {nameof(TimerManagement.Automatic)}");
+                case TimerManagement.Manual:
                     StartThrottling();
                     break;
                 default:
-                    throw new ArgumentException($"Unsupported throttling behavior: {_throttlingBehavior}");
+                    throw new ArgumentException($"Unsupported throttling behavior: {_timerManagement}");
             }
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
         public void DisableThrottlingTimer()
         {
-            switch (_throttlingBehavior)
+            switch (_timerManagement)
             {
-                case ThrottlingBehavior.Automatic:
-                    throw new InvalidOperationException($"Cannot disable throttling timer manually when the behavior is: {nameof(ThrottlingBehavior.Automatic)}");
-                case ThrottlingBehavior.ManualManagement:
+                case TimerManagement.Automatic:
+                    throw new InvalidOperationException($"Cannot disable throttling timer manually when the behavior is: {nameof(TimerManagement.Automatic)}");
+                case TimerManagement.Manual:
                     StopThrottling();
                     break;
                 default:
-                    throw new ArgumentException($"Unsupported throttling behavior: {_throttlingBehavior}");
+                    throw new ArgumentException($"Unsupported throttling behavior: {_timerManagement}");
             }
         }
 
@@ -112,7 +112,7 @@ namespace Raven.Server.Utils
                 if (_throttlingInterval == null)
                     return;
 
-                if (_throttlingStarted || _throttlingBehavior == ThrottlingBehavior.Automatic)
+                if (_throttlingStarted || _timerManagement == TimerManagement.Automatic)
                 {
                     StopThrottling();
                     StartThrottling();

@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
@@ -36,6 +37,7 @@ using Sparrow.Json.Sync;
 using Sparrow.Logging;
 using Sparrow.Server;
 using Sparrow.Server.Json.Sync;
+using Sparrow.Server.Utils;
 using Sparrow.Threading;
 using Sparrow.Utils;
 
@@ -235,7 +237,7 @@ namespace Raven.Server.Documents.Replication
                 task.Wait(CancellationToken);
 
                 var socketResult = task.Result;
-                
+
                 _stream = socketResult.Stream;
 
                 if (SupportedFeatures.ProtocolVersion <= 0)
@@ -246,6 +248,14 @@ namespace Raven.Server.Documents.Replication
 
                 using (Interlocked.Exchange(ref _tcpClient, socketResult.TcpClient))
                 {
+                    if (socketResult.SupportedFeatures.DataCompression)
+                    {
+                        _stream = new ReadWriteCompressedStream(_stream, _buffer);
+                        _tcpConnectionOptions.Stream = _stream;
+                    }
+
+                    _interruptibleRead = new InterruptibleRead(_database.DocumentsStorage.ContextPool, _stream);
+
                     if (socketResult.SupportedFeatures.Replication.PullReplication)
                     {
                         SendPreliminaryData();
@@ -257,7 +267,7 @@ namespace Raven.Server.Documents.Replication
                             return;
                         }
                     }
-                    
+
                     AddReplicationPulse(ReplicationPulseDirection.OutgoingInitiate);
                     if (_log.IsInfoEnabled)
                         _log.Info($"Will replicate to {Destination.FromString()} via {socketResult.Url}");
@@ -595,7 +605,7 @@ namespace Raven.Server.Documents.Replication
                                 Type = ReplicationLoader.PullReplicationParams.ConnectionType.Outgoing
                             };
                         }
-                        
+
                         break;
 
                     case ReplicationMessageReply.ReplyType.Error:
@@ -722,7 +732,7 @@ namespace Raven.Server.Documents.Replication
 
                 //This will either throw or return acceptable protocol version.
                 SupportedFeatures = TcpNegotiation.Sync.NegotiateProtocolVersion(documentsContext, stream, parameters);
-                
+
                 return Task.FromResult(SupportedFeatures);
             }
         }
@@ -1060,7 +1070,7 @@ namespace Raven.Server.Documents.Replication
                     var replicationBatchReply = HandleServerResponse(replicationBatchReplyMessage.Document, allowNotify: false);
                     if (replicationBatchReply == null)
                         continue;
-                    
+
                     LastHeartbeatTicks = _database.Time.GetUtcNow().Ticks;
 
                     var sendFullReply = replicationBatchReply.Type == ReplicationMessageReply.ReplyType.Error ||

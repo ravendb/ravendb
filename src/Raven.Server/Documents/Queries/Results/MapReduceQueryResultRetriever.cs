@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
 using Raven.Client;
@@ -93,10 +94,10 @@ namespace Raven.Server.Documents.Queries.Results
             };
         }
 
-        public override Document Get(ref RetrieverInput retrieverInput)
+        public override (Document Document, List<Document> List) Get(ref RetrieverInput retrieverInput)
         {
             if (FieldsToFetch.IsProjection)
-                return GetProjection( ref retrieverInput, null);
+                return GetProjection(ref retrieverInput, null);
 
             using (_storageScope = _storageScope?.Start() ?? RetrieverScope?.For(nameof(QueryTimingsScope.Names.Storage)))
             {
@@ -104,7 +105,7 @@ namespace Raven.Server.Documents.Queries.Results
 
                 FinishDocumentSetup(doc, retrieverInput.Score);
 
-                return doc;
+                return (doc, null);
             }
         }
 

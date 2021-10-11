@@ -12,7 +12,6 @@ import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import checkedColumn = require("widgets/virtualGrid/columns/checkedColumn");
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
-import continueTest = require("common/shell/continueTest");
 
 class cmpXchg extends viewModelBase {
 
@@ -27,6 +26,8 @@ class cmpXchg extends viewModelBase {
     spinners = {
         delete: ko.observable<boolean>(false)
     };
+
+    clientVersion = viewModelBase.clientVersion;
 
     constructor() {
         super();
@@ -56,12 +57,6 @@ class cmpXchg extends viewModelBase {
 
             return !deleteInProgress && selectedDocsCount > 0;
         });
-    }
-
-    activate(args: any) {
-        super.activate(args);
-
-        continueTest.default.init(args);
     }
 
     fetchItems(skip: number): JQueryPromise<pagedResult<Raven.Server.Web.System.CompareExchangeHandler.CompareExchangeListItem>> {

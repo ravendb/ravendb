@@ -10,6 +10,7 @@ using Sparrow.Utils;
 using Voron.Data.Fixed;
 using Voron.Exceptions;
 using Voron.Global;
+using Voron.Impl;
 using Voron.Impl.Paging;
 
 namespace Voron.Data.BTrees
@@ -72,7 +73,7 @@ namespace Voron.Data.BTrees
 
             private FixedSizeTree _tree;
             private int _version;
-            private Slice? _tag;            
+            private Slice? _tag;
 
             public void Init(Tree parent, Slice key, Slice? tag, int? initialNumberOfPagesPerChunk)
             {
@@ -139,7 +140,7 @@ namespace Voron.Data.BTrees
                 finally
                 {
                     ArrayPool<byte>.Shared.Return(_localBuffer);
-                }                
+                }
             }
 
             private long WriteBufferToPage(byte* pBuffer, long size)
@@ -195,9 +196,9 @@ namespace Voron.Data.BTrees
                     var streamHeaderPtr = (StreamPageHeader*)_currentPage.Pointer;
                     streamHeaderPtr->StreamNextPageNumber = nextPage.PageNumber;
                 }
-           
+
                 _currentPage = nextPage;
-                _currentPage.Flags |= PageFlags.Stream;                
+                _currentPage.Flags |= PageFlags.Stream;
                 _parent.State.OverflowPages += _numberOfPagesPerChunk;
                 _writePos = _currentPage.DataPointer;
 
@@ -292,27 +293,93 @@ namespace Voron.Data.BTrees
             return ++info->Version;
         }
 
-        public StreamInfo* GetStreamInfo(Slice key, bool writable)
+        public StreamInfo? GetStreamInfoForReporting(Slice key, out string tag)
         {
-            var tree = FixedTreeFor(key, ChunkDetails.SizeOf);
+            tag = null;
 
-            if (tree.NumberOfEntries == 0)
+            if (TryGetLastChunkDetailsForStream(key, out var lastChunk) == false)
                 return null;
 
-            ChunkDetails lastChunk;
-            using (var it = tree.Iterate())
+            var canRemovePage = CanRemovePage(lastChunk.PageNumber);
+            var page = _llt.GetPage(lastChunk.PageNumber);
+
+            try
             {
-                if (it.SeekToLast() == false)
-                    return null;
+                var info = (StreamInfo*)(page.DataPointer + lastChunk.ChunkSize);
+                tag = GetStreamTag(info);
 
-                using (tree.Read(it.CurrentKey, out Slice slice))
+                return new StreamInfo
                 {
-                    if (slice.HasValue == false)
-                        return null;
+                    TagSize = info->TagSize,
+                    TotalSize = info->TotalSize,
+                    Version = info->Version
+                };
+            }
+            finally
+            {
+                RemovePage();
+            }
 
-                    lastChunk = *(ChunkDetails*)slice.Content.Ptr;
+            bool CanRemovePage(long pageNumber)
+            {
+                // this methods checks if page was not used elsewhere prior executing GetStreamInfoForReporting method
+                // if yes then we cannot remove it to avoid releasing used memory
+
+                var lltState = (IPagerLevelTransactionState)_llt;
+                var states = lltState.CryptoPagerTransactionState;
+                if (states == null)
+                    return false; // not encrypted
+
+                if (states.Count == 0) 
+                    return true; // no states yet
+
+                foreach (var kvp in states)
+                {
+                    var pagerStates = kvp.Value;
+                    if (pagerStates.TryGetValue(pageNumber, out _))
+                        return false;
+                }
+
+                return true;
+            }
+
+            void RemovePage()
+            {
+                if (canRemovePage == false)
+                    return;
+
+                var lltState = (IPagerLevelTransactionState)_llt;
+                var states = lltState.CryptoPagerTransactionState;
+                if (states == null || states.Count == 0)
+                    return;
+
+                foreach (var kvp in states)
+                {
+                    var pager = kvp.Key;
+                    var pagerStates = kvp.Value;
+                    if (pagerStates.TryGetValue(page.PageNumber, out var buffer) == false)
+                        continue;
+
+                    if (buffer.Pointer != page.Pointer)
+                        continue;
+
+                    if (CryptoPager.CanReturnBuffer(buffer) == false)
+                        return;
+
+                    _llt._pageLocator.Reset(page.PageNumber);
+                    pagerStates.RemoveBuffer(page.PageNumber);
+
+                    var cryptoPager = (CryptoPager)pager;
+                    cryptoPager.ReturnBuffer(buffer);
+                    return;
                 }
             }
+        }
+
+        public StreamInfo* GetStreamInfo(Slice key, bool writable)
+        {
+            if (TryGetLastChunkDetailsForStream(key, out var lastChunk) == false)
+                return null;
 
             var page = _llt.GetPage(lastChunk.PageNumber);
 
@@ -320,6 +387,30 @@ namespace Voron.Data.BTrees
                 page = _llt.ModifyPage(page.PageNumber);
 
             return (StreamInfo*)(page.DataPointer + lastChunk.ChunkSize);
+        }
+
+        private bool TryGetLastChunkDetailsForStream(Slice key, out ChunkDetails lastChunk)
+        {
+            lastChunk = default;
+            var tree = FixedTreeFor(key, ChunkDetails.SizeOf);
+
+            if (tree.NumberOfEntries == 0)
+                return false;
+
+            using (var it = tree.Iterate())
+            {
+                if (it.SeekToLast() == false)
+                    return false;
+
+                using (tree.Read(it.CurrentKey, out Slice slice))
+                {
+                    if (slice.HasValue == false)
+                        return false;
+
+                    lastChunk = *(ChunkDetails*)slice.Content.Ptr;
+                    return true;
+                }
+            }
         }
 
         internal FixedSizeTree GetStreamChunksTree(Slice key)
@@ -408,6 +499,17 @@ namespace Voron.Data.BTrees
         {
             var info = GetStreamInfo(key, writable: false);
 
+            return GetStreamTag(info);
+        }
+
+        public string GetStreamTag(string key)
+        {
+            using (Slice.From(_tx.Allocator, key, out Slice str))
+                return GetStreamTag(str);
+        }
+
+        private string GetStreamTag(StreamInfo* info)
+        {
             if (info == null || info->TagSize == 0)
                 return null;
 
@@ -415,12 +517,6 @@ namespace Voron.Data.BTrees
             {
                 return result.ToString().Replace((char)SpecialChars.RecordSeparator, '|');
             }
-        }
-
-        public string GetStreamTag(string key)
-        {
-            using (Slice.From(_tx.Allocator, key, out Slice str))
-                return GetStreamTag(str);
         }
 
         private void ThrowStreamSizeMismatch(Slice name, long totalChunksSize, StreamInfo* info)

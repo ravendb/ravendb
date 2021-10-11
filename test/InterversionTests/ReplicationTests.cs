@@ -32,7 +32,7 @@ namespace InterversionTests
             using var store = GetDocumentStore();
             using (var session = store.OpenAsyncSession())
             {
-                await session.StoreAsync(new User { Name = "Egor" }, "user/322");
+                await session.StoreAsync(new User {Name = "Egor"}, "user/322");
                 session.TimeSeriesFor("user/322", "a").Append(DateTime.UtcNow, 1);
                 await session.SaveChangesAsync();
             }

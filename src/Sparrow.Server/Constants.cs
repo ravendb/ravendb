@@ -1,4 +1,6 @@
-﻿namespace Sparrow.Server.Global
+﻿using Sparrow.Platform;
+
+namespace Sparrow.Server.Global
 {
     internal static class Constants
     {

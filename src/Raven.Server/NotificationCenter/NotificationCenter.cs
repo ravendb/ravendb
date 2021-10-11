@@ -168,6 +168,11 @@ namespace Raven.Server.NotificationCenter
             Add(NotificationUpdated.Create(id, NotificationUpdateType.Dismissed));
         }
 
+        public bool Exists(string id)
+        {
+            return _notificationsStorage.Exists(id);
+        }
+
         public string GetDatabaseFor(string id) => _notificationsStorage.GetDatabaseFor(id);
 
         public void Postpone(string id, DateTime until)

@@ -1569,6 +1569,14 @@ namespace Raven.Server.Documents
             return result;
         }
 
+        public DeleteOperationResult? Delete(DocumentsOperationContext context, string id, DocumentFlags flags)
+        {
+            using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
+            {
+                return Delete(context, lowerId, id, expectedChangeVector:null, documentFlags: flags);
+            }
+        }
+
         public DeleteOperationResult? Delete(DocumentsOperationContext context, string id, string expectedChangeVector)
         {
             using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))

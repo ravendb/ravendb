@@ -1,4 +1,5 @@
-﻿using Corax;
+﻿using System.Collections.Generic;
+using Corax;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
 
@@ -6,7 +7,7 @@ namespace Raven.Server.Documents.Queries.Results
 {
     public interface IQueryResultRetriever
     {
-        Document Get(ref RetrieverInput retrieverInput);
+        (Document Document, List<Document> List) Get(ref RetrieverInput retrieverInput);
 
         bool TryGetKey(ref RetrieverInput retrieverInput, out string key);
     }

@@ -14,12 +14,12 @@ namespace SlowTests.Issues
         {
         }
 
-        public class User
+        private class User
         {
             public Dictionary<string, string> Items;
         }
 
-        public class User_Index : AbstractIndexCreationTask<User>
+        private class User_Index : AbstractIndexCreationTask<User>
         {
             public User_Index()
             {

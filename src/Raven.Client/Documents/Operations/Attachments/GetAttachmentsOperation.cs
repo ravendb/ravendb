@@ -13,6 +13,7 @@ using Raven.Client.Util;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Utils;
 
 namespace Raven.Client.Documents.Operations.Attachments
 {
