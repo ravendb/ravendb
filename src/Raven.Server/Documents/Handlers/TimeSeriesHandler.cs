@@ -175,7 +175,7 @@ namespace Raven.Server.Documents.Handlers
             var includeTags = GetBoolValueQueryString("includeTags", required: false) ?? false;
             var fullResults = GetBoolValueQueryString("full", required: false) ?? false;
             
-            bool incrementalTimeSeries = name.StartsWith(IncrementalTimeSeriesPrefix) && name.Contains('@') == false;
+            bool incrementalTimeSeries = name.StartsWith(IncrementalTimeSeriesPrefix, StringComparison.OrdinalIgnoreCase) && name.Contains('@') == false;
             
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
@@ -251,7 +251,7 @@ namespace Raven.Server.Documents.Handlers
                     throw new InvalidOperationException($"GetMultipleTimeSeriesOperation : Missing '{nameof(TimeSeriesRange.Name)}' argument in 'TimeSeriesRange' on document '{documentId}'. " +
                                                         $"'{nameof(TimeSeriesRange.Name)}' cannot be null or empty");
 
-                var incrementalTimeSeries = name.StartsWith(IncrementalTimeSeriesPrefix) && name.Contains('@') == false;
+                bool incrementalTimeSeries = name.StartsWith(IncrementalTimeSeriesPrefix, StringComparison.OrdinalIgnoreCase) && name.Contains('@') == false;
 
                 var from = string.IsNullOrEmpty(fromList[i]) ? DateTime.MinValue : ParseDate(fromList[i], name);
                 var to = string.IsNullOrEmpty(toList[i]) ? DateTime.MaxValue : ParseDate(toList[i], name);
