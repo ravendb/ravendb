@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.IO;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session.TimeSeries;
@@ -96,7 +97,7 @@ namespace Raven.Client.Documents.Session
             if (string.IsNullOrEmpty(name))
                 throw new InvalidDataException("Time Series name must contain at least one character");
 
-            if (name.StartsWith(IncrementalTimeSeriesPrefix))
+            if (name.StartsWith(IncrementalTimeSeriesPrefix, StringComparison.OrdinalIgnoreCase))
                 throw new InvalidDataException($"Time Series name cannot start with {IncrementalTimeSeriesPrefix} prefix");
         }
 
@@ -105,7 +106,7 @@ namespace Raven.Client.Documents.Session
             if (string.IsNullOrEmpty(name))
                 throw new InvalidDataException("Incremental Time Series name must contain at least one character");
 
-            if (name.StartsWith(IncrementalTimeSeriesPrefix) == false)
+            if (name.StartsWith(IncrementalTimeSeriesPrefix, StringComparison.OrdinalIgnoreCase) == false)
                 throw new InvalidDataException($"Incremental Time Series name must start with {IncrementalTimeSeriesPrefix} prefix");
         }
     }
