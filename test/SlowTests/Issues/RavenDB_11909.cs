@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Exceptions;
@@ -86,7 +85,7 @@ namespace SlowTests.Issues
         [Fact]
         public void ThrowOnDatabaseRecordChanges()
         {
-            const int numberOfFields = 38;
+            const int numberOfFields = 40;
             const int numberOfProperties = 1;
 
             var tasksList = new List<string>
@@ -97,7 +96,8 @@ namespace SlowTests.Issues
                 nameof(DatabaseRecord.HubPullReplications),
                 nameof(DatabaseRecord.RavenEtls),
                 nameof(DatabaseRecord.SqlEtls),
-                nameof(DatabaseRecord.OlapEtls)
+                nameof(DatabaseRecord.OlapEtls),
+                nameof(DatabaseRecord.ElasticSearchEtls)
             };
 
             var dbRecordType = typeof(DatabaseRecord);

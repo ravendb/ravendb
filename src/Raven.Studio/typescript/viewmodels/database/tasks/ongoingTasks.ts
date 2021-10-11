@@ -10,6 +10,7 @@ import ongoingTaskBackupListModel = require("models/database/tasks/ongoingTaskBa
 import ongoingTaskRavenEtlListModel = require("models/database/tasks/ongoingTaskRavenEtlListModel");
 import ongoingTaskSqlEtlListModel = require("models/database/tasks/ongoingTaskSqlEtlListModel");
 import ongoingTaskOlapEtlListModel = require("models/database/tasks/ongoingTaskOlapEtlListModel");
+import ongoingTaskElasticSearchEtlListModel = require("models/database/tasks/ongoingTaskElasticSearchEtlListModel");
 import ongoingTaskSubscriptionListModel = require("models/database/tasks/ongoingTaskSubscriptionListModel");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import createOngoingTask = require("viewmodels/database/tasks/createOngoingTask");
@@ -39,24 +40,27 @@ class ongoingTasks extends viewModelBase {
 
     // The Ongoing Tasks Lists:
     replicationTasks = ko.observableArray<ongoingTaskReplicationListModel>();
-    etlTasks = ko.observableArray<ongoingTaskRavenEtlListModel>();
-    sqlTasks = ko.observableArray<ongoingTaskSqlEtlListModel>();
-    olapTasks = ko.observableArray<ongoingTaskOlapEtlListModel>();
+    ravenEtlTasks = ko.observableArray<ongoingTaskRavenEtlListModel>();
+    sqlEtlTasks = ko.observableArray<ongoingTaskSqlEtlListModel>();
+    olapEtlTasks = ko.observableArray<ongoingTaskOlapEtlListModel>();
+    elasticSearchEtlTasks = ko.observableArray<ongoingTaskElasticSearchEtlListModel>();
     backupTasks = ko.observableArray<ongoingTaskBackupListModel>();
     subscriptionTasks = ko.observableArray<ongoingTaskSubscriptionListModel>();
     replicationHubTasks = ko.observableArray<ongoingTaskReplicationHubDefinitionListModel>();
     replicationSinkTasks = ko.observableArray<ongoingTaskReplicationSinkListModel>();
     
     showReplicationSection = this.createShowSectionComputed(this.replicationTasks, "External Replication");
-    showEtlSection = this.createShowSectionComputed(this.etlTasks, "RavenDB ETL");
-    showSqlSection = this.createShowSectionComputed(this.sqlTasks, "SQL ETL");
-    showOlapSection = this.createShowSectionComputed(this.olapTasks, "OLAP ETL");
+    showEtlSection = this.createShowSectionComputed(this.ravenEtlTasks, "RavenDB ETL");
+    showSqlSection = this.createShowSectionComputed(this.sqlEtlTasks, "SQL ETL");
+    showOlapSection = this.createShowSectionComputed(this.olapEtlTasks, "OLAP ETL");
+    showElasticSearchSection = this.createShowSectionComputed(this.elasticSearchEtlTasks, "Elasticsearch ETL");
     showBackupSection = this.createShowSectionComputed(this.backupTasks, "Backup");
     showSubscriptionsSection = this.createShowSectionComputed(this.subscriptionTasks, "Subscription");
     showReplicationHubSection = this.createShowSectionComputedForPullHub(this.replicationHubTasks);
     showReplicationSinkSection = this.createShowSectionComputed(this.replicationSinkTasks, "Replication Sink");
 
-    tasksTypesOrderForUI = ["Replication", "RavenEtl", "SqlEtl", "OlapEtl", "Backup", "Subscription", "PullReplicationAsHub", "PullReplicationAsSink"] as Array<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType>;
+    tasksTypesOrderForUI = ["Replication", "RavenEtl", "SqlEtl", "OlapEtl", "ElasticSearchEtl",
+                            "Backup", "Subscription", "PullReplicationAsHub", "PullReplicationAsSink"] as Array<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType>;
     existingTaskTypes = ko.observableArray<TasksNamesInUI | "All tasks">();
     selectedTaskType = ko.observable<TasksNamesInUI | "All tasks">();
     
@@ -83,9 +87,10 @@ class ongoingTasks extends viewModelBase {
         this.taskNameToCount = ko.pureComputed<dictionary<number>>(() => {
             return {
                 "External Replication": this.replicationTasks().length,
-                "RavenDB ETL": this.etlTasks().length,
-                "SQL ETL": this.sqlTasks().length,
-                "OLAP ETL": this.olapTasks().length,
+                "RavenDB ETL": this.ravenEtlTasks().length,
+                "SQL ETL": this.sqlEtlTasks().length,
+                "OLAP ETL": this.olapEtlTasks().length,
+                "Elasticsearch ETL": this.elasticSearchEtlTasks().length,
                 "Backup": this.backupTasks().length,
                 "Subscription": this.subscriptionTasks().length,
                 "Pull Replication Hub": this.replicationHubTasks().length,
@@ -136,21 +141,27 @@ class ongoingTasks extends viewModelBase {
                 results.Results.forEach(taskProgress => {
                     switch (taskProgress.EtlType) {
                         case "Sql":
-                            const matchingSqlTask = this.sqlTasks().find(x => x.taskName() === taskProgress.TaskName);
+                            const matchingSqlTask = this.sqlEtlTasks().find(x => x.taskName() === taskProgress.TaskName);
                             if (matchingSqlTask) {
                                 matchingSqlTask.updateProgress(taskProgress);
                             }
                             break;
                         case "Olap":
-                            const matchingOlapTask = this.olapTasks().find(x => x.taskName() === taskProgress.TaskName);
+                            const matchingOlapTask = this.olapEtlTasks().find(x => x.taskName() === taskProgress.TaskName);
                             if (matchingOlapTask) {
                                 matchingOlapTask.updateProgress(taskProgress);
                             }
                             break;
                         case "Raven":
-                            const matchingEtlTask = this.etlTasks().find(x => x.taskName() === taskProgress.TaskName);
-                            if (matchingEtlTask) {
-                                matchingEtlTask.updateProgress(taskProgress);
+                            const matchingRavenTask = this.ravenEtlTasks().find(x => x.taskName() === taskProgress.TaskName);
+                            if (matchingRavenTask) {
+                                matchingRavenTask.updateProgress(taskProgress);
+                            }
+                            break;
+                        case "ElasticSearch":
+                            const matchingElasticSearchTask = this.ravenEtlTasks().find(x => x.taskName() === taskProgress.TaskName);
+                            if (matchingElasticSearchTask) {
+                                matchingElasticSearchTask.updateProgress(taskProgress);
                             }
                             break;
                     }
@@ -158,19 +169,25 @@ class ongoingTasks extends viewModelBase {
                 
                 // tasks w/o defined connection string won't get progress update - update them manually 
                 
-                this.sqlTasks().forEach(task => {
+                this.sqlEtlTasks().forEach(task => {
                     if (task.loadingProgress()) {
                         task.loadingProgress(false);
                     }
                 });
 
-                this.olapTasks().forEach(task => {
+                this.olapEtlTasks().forEach(task => {
                     if (task.loadingProgress()) {
                         task.loadingProgress(false);
                     }
                 });
                 
-                this.etlTasks().forEach(task => {
+                this.ravenEtlTasks().forEach(task => {
+                    if (task.loadingProgress()) {
+                        task.loadingProgress(false);
+                    }
+                });
+
+                this.elasticSearchEtlTasks().forEach(task => {
                     if (task.loadingProgress()) {
                         task.loadingProgress(false);
                     }
@@ -294,7 +311,7 @@ class ongoingTasks extends viewModelBase {
     toggleDetails(item: ongoingTaskListModel) {
         item.toggleDetails();
         
-        const isEtl = item.taskType() === "RavenEtl" || item.taskType() === "SqlEtl" || item.taskType() === "OlapEtl";
+        const isEtl = item.taskType() === "RavenEtl" || item.taskType() === "SqlEtl" || item.taskType() === "OlapEtl" || item.taskType() === "ElasticSearchEtl";
         if (item.showDetails() && isEtl) {
             this.watchEtlProgress();
         }
@@ -304,9 +321,10 @@ class ongoingTasks extends viewModelBase {
         const oldTasks = [
             ...this.replicationTasks(),
             ...this.backupTasks(),
-            ...this.etlTasks(),
-            ...this.sqlTasks(),
-            ...this.olapTasks(),
+            ...this.ravenEtlTasks(),
+            ...this.sqlEtlTasks(),
+            ...this.olapEtlTasks(),
+            ...this.elasticSearchEtlTasks(),
             ...this.replicationSinkTasks(),
             ...this.replicationHubTasks(),
             ...this.subscriptionTasks()] as Array<{ taskId: number }>;
@@ -352,20 +370,25 @@ class ongoingTasks extends viewModelBase {
             this.backupTasks(serverWideBackupTasks);
         }
         
-        this.mergeTasks(this.etlTasks, 
+        this.mergeTasks(this.ravenEtlTasks, 
             groupedTasks["RavenEtl" as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType],
             toDeleteIds,
             (dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtlListView) => new ongoingTaskRavenEtlListModel(dto));
         
-        this.mergeTasks(this.sqlTasks, 
+        this.mergeTasks(this.sqlEtlTasks, 
             groupedTasks["SqlEtl" as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType],
             toDeleteIds,
             (dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtlListView) => new ongoingTaskSqlEtlListModel(dto));
 
-        this.mergeTasks(this.olapTasks,
+        this.mergeTasks(this.olapEtlTasks,
             groupedTasks["OlapEtl" as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType],
             toDeleteIds,
             (dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskOlapEtlListView) => new ongoingTaskOlapEtlListModel(dto));
+
+        this.mergeTasks(this.elasticSearchEtlTasks,
+            groupedTasks["ElasticSearchEtl" as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType],
+            toDeleteIds,
+            (dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtlListView) => new ongoingTaskElasticSearchEtlListModel(dto));
         
         this.mergeTasks(this.subscriptionTasks, 
             groupedTasks["Subscription" as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType],
@@ -520,7 +543,16 @@ class ongoingTasks extends viewModelBase {
     }
 
     showItemPreview(item: ongoingTaskListModel, scriptName: string) {
-        const type: Raven.Client.Documents.Operations.ETL.EtlType = item.taskType() === "RavenEtl" ? "Raven" : item.taskType() === "SqlEtl" ? "Sql" : "Olap";
+        //const type: Raven.Client.Documents.Operations.ETL.EtlType = item.taskType() === "RavenEtl" ? "Raven" : item.taskType() === "SqlEtl" ? "Sql" : "Olap";
+        let type:Raven.Client.Documents.Operations.ETL.EtlType;
+        
+        switch (item.taskType()) {
+            case "RavenEtl": type = "Raven"; break;
+            case "SqlEtl": type = "Sql"; break;
+            case "OlapEtl": type = "Olap"; break;
+            case "ElasticSearchEtl": type = "ElasticSearch"; break;
+        } 
+        
         this.definitionsCache.showDefinitionFor(type, item.taskId, scriptName);
     }
 }

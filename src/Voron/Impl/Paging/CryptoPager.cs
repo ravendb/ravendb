@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Sparrow;
-using Sparrow.Server;
+using Sparrow.Platform;
 using Sparrow.Utils;
 using Voron.Data;
 using Constants = Voron.Global.Constants;
@@ -34,9 +34,15 @@ namespace Voron.Impl.Paging
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool TryGetValue(long i, out EncryptionBuffer value)
+        public bool TryGetValue(long pageNumber, out EncryptionBuffer value)
         {
-            return _loadedBuffers.TryGetValue(i, out value);
+            return _loadedBuffers.TryGetValue(pageNumber, out value);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool RemoveBuffer(long pageNumber)
+        {
+            return _loadedBuffers.Remove(pageNumber);
         }
 
         public EncryptionBuffer this[long index]
@@ -247,13 +253,13 @@ namespace Voron.Impl.Paging
                     AllocatingThread = encBuffer.AllocatingThread
                 };
 
-                if (i < actualNumberOfAllocatedScratchPages) 
+                if (i < actualNumberOfAllocatedScratchPages)
                 {
                     // when we commit the tx, the pager will realize that we need to write this page
 
                     // we do this only for the encryption buffers are are going to be in use - we might allocate more under the covers because we're adjusting the size to the power of 2
                     // we must not encrypt such extra allocated memory because we might have garbage there resulting in segmentation fault on attempt to encrypt that
-                    
+
                     buffer.Modified = true;
                 }
 
@@ -356,18 +362,26 @@ namespace Voron.Impl.Paging
 
             foreach (var buffer in state)
             {
-                if (buffer.Value.OriginalSize != null && buffer.Value.OriginalSize == 0)
-                {
-                    // Pages that are marked with OriginalSize = 0 were separated from a larger allocation, we cannot free them directly.
-                    // The first page of the section will be returned and when it will be freed, all the other parts will be freed as well.
+                if (CanReturnBuffer(buffer.Value) == false)
                     continue;
-                }
 
                 ReturnBuffer(buffer.Value);
             }
         }
 
-        private void ReturnBuffer(EncryptionBuffer buffer)
+        internal static bool CanReturnBuffer(EncryptionBuffer buffer)
+        {
+            if (buffer.OriginalSize != null && buffer.OriginalSize == 0)
+            {
+                // Pages that are marked with OriginalSize = 0 were separated from a larger allocation, we cannot free them directly.
+                // The first page of the section will be returned and when it will be freed, all the other parts will be freed as well.
+                return false;
+            }
+
+            return true;
+        }
+
+        internal void ReturnBuffer(EncryptionBuffer buffer)
         {
             if (buffer.OriginalSize != null && buffer.OriginalSize != 0)
             {

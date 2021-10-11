@@ -201,8 +201,6 @@ namespace Raven.Server.Commercial
             try
             {
                 SetLicense(GetLicenseStatus(license));
-
-                RemoveAgplAlert();
             }
             catch (Exception e)
             {
@@ -222,6 +220,7 @@ namespace Raven.Server.Commercial
                 _serverStore.NotificationCenter.Add(alert);
             }
 
+            RemoveAgplAlert();
             LicenseChanged?.Invoke();
 
             if (firstRun == false)
@@ -242,7 +241,20 @@ namespace Raven.Server.Commercial
 
         private void RemoveAgplAlert()
         {
-            _serverStore.NotificationCenter.Dismiss(AlertRaised.GetKey(AlertType.LicenseManager_AGPL3, null));
+            var id = AlertRaised.GetKey(AlertType.LicenseManager_AGPL3, null);
+            if (_serverStore.NotificationCenter.Exists(id) == false)
+                return;
+
+            try
+            {
+                _serverStore.NotificationCenter.Dismiss(id);
+            }
+            catch (Exception e)
+            {
+                // nothing we do can here, we'll try to remove it on next restart or when reloading the license
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations("Failed to remove the AGPL alert", e);
+            }
         }
 
         public void ReloadLicenseLimits(bool firstRun = false)
@@ -945,6 +957,7 @@ namespace Raven.Server.Commercial
             var ravenEtlCount = 0;
             var sqlEtlCount = 0;
             var olapEtlCount = 0;
+            var elasticSearchEtlCount = 0;
             var snapshotBackupsCount = 0;
             var cloudBackupsCount = 0;
             var encryptedBackupsCount = 0;
@@ -998,6 +1011,10 @@ namespace Raven.Server.Commercial
                     if (databaseRecord.OlapEtls != null &&
                         databaseRecord.OlapEtls.Count > 0)
                         olapEtlCount++;
+                    
+                    if (databaseRecord.ElasticSearchEtls != null &&
+                        databaseRecord.ElasticSearchEtls.Count > 0)
+                        elasticSearchEtlCount++;
 
                     var backupTypes = GetBackupTypes(databaseRecord.PeriodicBackups);
                     if (backupTypes.HasSnapshotBackup)
@@ -1069,6 +1086,12 @@ namespace Raven.Server.Commercial
             {
                 var message = GenerateDetails(olapEtlCount, "OLAP ETL");
                 throw GenerateLicenseLimit(LimitType.OlapEtl, message);
+            }
+            
+            if (elasticSearchEtlCount > 0 && newLicenseStatus.HasElasticSearchEtl == false)
+            {
+                var message = GenerateDetails(elasticSearchEtlCount, "ElasticSearch ETL");
+                throw GenerateLicenseLimit(LimitType.ElasticSearchEtl, message);
             }
 
             if (snapshotBackupsCount > 0 && newLicenseStatus.HasSnapshotBackups == false)
@@ -1385,6 +1408,19 @@ namespace Raven.Server.Commercial
 
             const string message = "Your current license doesn't include the SQL ETL feature";
             throw GenerateLicenseLimit(LimitType.SqlEtl, message);
+        }
+        
+        public void AssertCanAddElasticSearchEtl()
+        {
+            if (IsValid(out var licenseLimit) == false)
+                throw licenseLimit;
+
+            if (LicenseStatus.HasElasticSearchEtl != false)
+                return;
+
+            // TODO arek
+            //const string message = "Your current license doesn't include the ElasticSearch ETL feature";
+            //throw GenerateLicenseLimit(LimitType.ElasticSearchEtl, message);
         }
 
         public void AssertCanAddOlapEtl()

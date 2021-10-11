@@ -33,6 +33,8 @@ abstract class ongoingTaskModel {
                 return "SQL ETL";
             case "OlapEtl":
                 return "OLAP ETL";
+            case "ElasticSearchEtl":
+                return "Elasticsearch ETL";
             case "PullReplicationAsHub":
                 return "Replication Hub";
             case "PullReplicationAsSink":

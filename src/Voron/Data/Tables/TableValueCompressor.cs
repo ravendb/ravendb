@@ -6,7 +6,9 @@ using System.IO.Compression;
 using System.Text;
 using Sparrow;
 using Sparrow.Binary;
+using Sparrow.Platform;
 using Sparrow.Server;
+using Sparrow.Utils;
 using Voron.Data.Fixed;
 using Voron.Global;
 using Voron.Impl;
@@ -69,7 +71,7 @@ namespace Voron.Data.Tables
                     .GetCompressionDictionaryFor(tx, table.CurrentCompressionDictionaryId);
 
                 CompressionTried = true;
-                var size = ZstdLib.Compress(RawBuffer.ToReadOnlySpan(), CompressedBuffer.ToSpan(), compressionDictionary);
+                var size = ZstdLib.Compress(RawBuffer.Ptr, RawBuffer.Length, CompressedBuffer.Ptr, CompressedBuffer.Length, compressionDictionary);
                 size += WriteVariableSizeIntInReverse(CompressedBuffer.Ptr + size, compressionDictionary.Id);
                 CompressedBuffer.Truncate(size);
                 var compressionRatio = GetCompressionRatio(size, RawBuffer.Length);
@@ -350,7 +352,7 @@ namespace Voron.Data.Tables
             var newCompressBufferScope = tx.Allocator.Allocate(maxSpace, out var newCompressBuffer);
             try
             {
-                var size = ZstdLib.Compress(RawBuffer.ToReadOnlySpan(), newCompressBuffer.ToSpan(), newDic);
+                var size = ZstdLib.Compress(RawBuffer.Ptr, RawBuffer.Length, newCompressBuffer.Ptr, newCompressBuffer.Length, newDic);
                 size += WriteVariableSizeIntInReverse(newCompressBuffer.Ptr + size, newDic.Id);
                 newCompressBuffer.Truncate(size);
 

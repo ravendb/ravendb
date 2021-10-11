@@ -386,6 +386,7 @@ namespace Raven.Server.Monitoring.Snmp
             store.Add(new ServerConcurrentRequests(server.Metrics));
             store.Add(new ServerTotalRequests(server.Metrics));
             store.Add(new ServerRequestsPerSecond(server.Metrics));
+            store.Add(new ServerRequestAverageDuration(server.Metrics));
 
             store.Add(new ProcessCpu(server.MetricCacher, server.CpuUsageCalculator));
             store.Add(new MachineCpu(server.MetricCacher, server.CpuUsageCalculator));
@@ -410,6 +411,8 @@ namespace Raven.Server.Monitoring.Snmp
             store.Add(new ServerEncryptionBuffersMemoryInUse());
             store.Add(new ServerEncryptionBuffersMemoryInPool());
 
+            ServerMemInfo.Register(store, server.MetricCacher);
+
             store.Add(new ServerLastRequestTime(server.Statistics));
             store.Add(new ServerLastAuthorizedNonClusterAdminRequestTime(server.Statistics));
 
@@ -427,6 +430,9 @@ namespace Raven.Server.Monitoring.Snmp
             store.Add(new TotalDatabaseMapIndexIndexedPerSecond(server.ServerStore));
             store.Add(new TotalDatabaseMapReduceIndexMappedPerSecond(server.ServerStore));
             store.Add(new TotalDatabaseMapReduceIndexReducedPerSecond(server.ServerStore));
+
+            store.Add(new TotalDatabaseWritesPerSecond(server.ServerStore));
+            store.Add(new TotalDatabaseDataWrittenPerSecond(server.ServerStore));
 
             store.Add(new ClusterNodeState(server.ServerStore));
             store.Add(new ClusterNodeTag(server.ServerStore));

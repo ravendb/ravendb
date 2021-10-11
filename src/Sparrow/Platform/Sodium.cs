@@ -1,20 +1,19 @@
 ﻿using System;
-using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Sparrow.Utils;
 using System.Threading;
-using Sparrow.Server.Platform;
-using Sparrow.Server.Utils;
 
-namespace Sparrow.Server
+namespace Sparrow.Platform
 {
+#if NETCOREAPP3_1_OR_GREATER
     public static unsafe partial class Sodium
     {
         static Sodium()
         {
             try
             {
-                DynamicNativeLibraryResolver.Register(typeof(Sodium).Assembly,LIBSODIUM);
+                DynamicNativeLibraryResolver.Register(typeof(Sodium).Assembly, LIBSODIUM);
 
                 var rc = sodium_init();
                 if (rc != 0)
@@ -235,7 +234,7 @@ namespace Sparrow.Server
 
             Interlocked.Add(ref _lockedBytes, (long)len);
             return 0;
-        }
+    }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int Unlock(byte* addr, UIntPtr len)
@@ -246,6 +245,7 @@ namespace Sparrow.Server
 
             Interlocked.Add(ref _lockedBytes, -(long)len);
             return 0;
-        }
+}
     }
+#endif
 }

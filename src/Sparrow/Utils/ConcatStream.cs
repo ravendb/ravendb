@@ -4,7 +4,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Raven.Client.Documents.Operations.Attachments
+namespace Sparrow.Utils
 {
     internal class ConcatStream : Stream
     {

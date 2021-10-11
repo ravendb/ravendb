@@ -4,7 +4,8 @@ import endpoints = require("endpoints");
 
 class saveEtlTaskCommand<T extends Raven.Client.Documents.Operations.ETL.RavenEtlConfiguration | 
                                    Raven.Client.Documents.Operations.ETL.SQL.SqlEtlConfiguration |
-                                   Raven.Client.Documents.Operations.ETL.OLAP.OlapEtlConfiguration> extends commandBase {
+                                   Raven.Client.Documents.Operations.ETL.OLAP.OlapEtlConfiguration |
+                                   Raven.Client.Documents.Operations.ETL.ElasticSearch.ElasticSearchEtlConfiguration > extends commandBase {
     
     private constructor(private db: database, private payload: T, private scriptsToReset?: string[]) {
         super();
@@ -42,6 +43,10 @@ class saveEtlTaskCommand<T extends Raven.Client.Documents.Operations.ETL.RavenEt
 
     static forOlapEtl(db: database, payload: Raven.Client.Documents.Operations.ETL.OLAP.OlapEtlConfiguration, scriptsToReset?: string[]) {
         return new saveEtlTaskCommand<Raven.Client.Documents.Operations.ETL.OLAP.OlapEtlConfiguration>(db, payload, scriptsToReset);
+    }
+
+    static forElasticSearchEtl(db: database, payload: Raven.Client.Documents.Operations.ETL.ElasticSearch.ElasticSearchEtlConfiguration, scriptsToReset?: string[]) {
+        return new saveEtlTaskCommand<Raven.Client.Documents.Operations.ETL.ElasticSearch.ElasticSearchEtlConfiguration>(db, payload, scriptsToReset);
     }
 }
 

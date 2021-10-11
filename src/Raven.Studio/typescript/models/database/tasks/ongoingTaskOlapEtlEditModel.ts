@@ -77,8 +77,6 @@ class ongoingTaskOlapEtlEditModel extends ongoingTaskEditModel {
         });
         
         this.enterTestModeValidationGroup = ko.validatedObservable({
-            olapTables: this.olapTables,
-            transformationScripts: this.transformationScripts,
             customPartition: this.customPartition,
         });
     }
