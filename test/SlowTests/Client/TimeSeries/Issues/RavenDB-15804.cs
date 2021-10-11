@@ -351,6 +351,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                     session.Store(new User { Name = "Oren" }, "users/ayende");
                     var ts = session.IncrementalTimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "VotesPerDistrict");
                     ts.Increment(baseline, new double[] { 1 });
+                    ts.Increment(baseline, new double[] { 2, 10, 9 });
                     session.SaveChanges();
                 }
                 WaitForUserToContinueTheTest(store);
@@ -360,7 +361,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                     ts.Increment(baseline, new double[] { 2, 10, 9 });
                     session.SaveChanges();
                 }
-
+                WaitForUserToContinueTheTest(store);
                 using (var session = store.OpenSession())
                 {
                     var ts = session.IncrementalTimeSeriesFor("users/ayende", IncrementalTimeSeriesPrefix + "VotesPerDistrict").Get(baseline);

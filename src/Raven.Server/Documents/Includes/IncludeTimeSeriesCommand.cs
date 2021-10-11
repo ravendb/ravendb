@@ -92,7 +92,7 @@ namespace Raven.Server.Documents.Includes
                 switch (range)
                 {
                     case TimeSeriesRange r:
-                        result = r.Name.StartsWith(TimeSeriesHandler.IncrementalTimeSeriesPrefix) && r.Name.Contains('@') == false ? 
+                        result = r.Name.StartsWith(TimeSeriesHandler.IncrementalTimeSeriesPrefix, StringComparison.OrdinalIgnoreCase) && r.Name.Contains('@') == false ? 
                             TimeSeriesHandler.GetIncrementalTimeSeriesRange(_context, docId, r.Name, r.From ?? DateTime.MinValue, r.To ?? DateTime.MaxValue, ref start, ref pageSize) :
                             TimeSeriesHandler.GetTimeSeriesRange(_context, docId, r.Name, r.From ?? DateTime.MinValue, r.To ?? DateTime.MaxValue, ref start, ref pageSize);
                         if (result == null)
@@ -118,7 +118,7 @@ namespace Raven.Server.Documents.Includes
                                     throw new NotSupportedException($"Not supported time series range type '{tr.Type}'.");
                             }
 
-                            result = tr.Name.StartsWith(TimeSeriesHandler.IncrementalTimeSeriesPrefix) && tr.Name.Contains('@') == false ? 
+                            result = tr.Name.StartsWith(TimeSeriesHandler.IncrementalTimeSeriesPrefix, StringComparison.OrdinalIgnoreCase) && tr.Name.Contains('@') == false ? 
                                 TimeSeriesHandler.GetIncrementalTimeSeriesRange(_context, docId, tr.Name, from, to, ref start, ref pageSize) :
                                 TimeSeriesHandler.GetTimeSeriesRange(_context, docId, tr.Name, from, to, ref start, ref pageSize);
                         }
@@ -135,7 +135,7 @@ namespace Raven.Server.Documents.Includes
                                     //TODO: what if start point is bigger than int max value
                                     var s = stats.Count <= cr.Count ? 0 : (int)(stats.Count - cr.Count);
                                     Debug.Assert(s < int.MaxValue, "s < int.MaxValue");
-                                    result = cr.Name.StartsWith(TimeSeriesHandler.IncrementalTimeSeriesPrefix) && cr.Name.Contains('@') == false ? 
+                                    result = cr.Name.StartsWith(TimeSeriesHandler.IncrementalTimeSeriesPrefix, StringComparison.OrdinalIgnoreCase) && cr.Name.Contains('@') == false ? 
                                         TimeSeriesHandler.GetIncrementalTimeSeriesRange(_context, docId, cr.Name, stats.Start, DateTime.MaxValue, ref s, ref pageSize) :
                                         TimeSeriesHandler.GetTimeSeriesRange(_context, docId, cr.Name, stats.Start, DateTime.MaxValue, ref s, ref pageSize);
                                     break;
