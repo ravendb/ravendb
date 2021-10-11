@@ -43,6 +43,9 @@ namespace Raven.Client.Exceptions.Commercial
         [Description("OLAP ETL")]
         OlapEtl,
 
+        [Description("ElasticSearch ETL")]
+        ElasticSearchEtl,
+
         [Description("Cores Limit")]
         Cores,
 

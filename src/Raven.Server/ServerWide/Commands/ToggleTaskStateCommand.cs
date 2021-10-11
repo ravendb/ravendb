@@ -83,6 +83,15 @@ namespace Raven.Server.ServerWide.Commands
                     }
                     break;
                 
+                case OngoingTaskType.ElasticSearchEtl:
+
+                    var elasticSearchEtl = record?.ElasticSearchEtls?.Find(x => x.TaskId == TaskId);
+                    if (elasticSearchEtl != null)
+                    {
+                        elasticSearchEtl.Disabled = Disable;
+                    }
+                    break;
+                
                 case OngoingTaskType.PullReplicationAsHub:
                     var pullAsHub = record?.HubPullReplications?.First(x => x.TaskId == TaskId);
                     if (pullAsHub != null)
@@ -101,7 +110,6 @@ namespace Raven.Server.ServerWide.Commands
 
                     break;
             }
-
 
             void ThrowIfServerWideTask(string name, string prefix, string typeName)
             {

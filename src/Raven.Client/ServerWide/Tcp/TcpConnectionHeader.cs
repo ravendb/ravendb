@@ -57,6 +57,8 @@ namespace Raven.Client.ServerWide.Tcp
 
         public AuthorizationInfo AuthorizeInfo { get; set; }
 
+        public bool CompressionSupport { get; set; }
+
         public DetailedReplicationHubAccess ReplicationHubAccess;
 
         public static readonly int PingBaseLine = -1;
@@ -71,6 +73,7 @@ namespace Raven.Client.ServerWide.Tcp
         public static readonly int ReplicationAttachmentMissingVersion41 = 41_300;
         public static readonly int ReplicationWithPullOption = 42_300;
         public static readonly int ReplicationWithTimeSeries = 50_000;
+        public static readonly int TcpConnectionsWithCompression = 53_000;
         public static readonly int SubscriptionBaseLine = 40;
         public static readonly int SubscriptionIncludes = 41_400;
         public static readonly int SubscriptionCounterIncludes = 50_000;
@@ -79,8 +82,8 @@ namespace Raven.Client.ServerWide.Tcp
 
         public static readonly int ClusterTcpVersion = ClusterBaseLine;
         public static readonly int HeartbeatsTcpVersion = Heartbeats42000;
-        public static readonly int ReplicationTcpVersion = ReplicationWithTimeSeries;
-        public static readonly int SubscriptionTcpVersion = SubscriptionTimeSeriesIncludes;
+        public static readonly int ReplicationTcpVersion = TcpConnectionsWithCompression;
+        public static readonly int SubscriptionTcpVersion = TcpConnectionsWithCompression; 
         public static readonly int TestConnectionTcpVersion = TestConnectionBaseLine;
 
         static TcpConnectionHeaderMessage()
@@ -182,6 +185,7 @@ namespace Raven.Client.ServerWide.Tcp
             public TestConnectionFeatures TestConnection { get; set; }
             public ReplicationFeatures Replication { get; set; }
 
+            public bool DataCompression;
             public class PingFeatures
             {
                 public bool BaseLine = true;
@@ -255,6 +259,7 @@ namespace Raven.Client.ServerWide.Tcp
                 },
                 [OperationTypes.Subscription] = new List<int>
                 {
+                    TcpConnectionsWithCompression,
                     SubscriptionTimeSeriesIncludes,
                     SubscriptionCounterIncludes,
                     SubscriptionIncludes,
@@ -262,6 +267,7 @@ namespace Raven.Client.ServerWide.Tcp
                 },
                 [OperationTypes.Replication] = new List<int>
                 {
+                    TcpConnectionsWithCompression,
                     ReplicationWithTimeSeries,
                     ReplicationWithPullOption,
                     ReplicationAttachmentMissingVersion41,
@@ -310,6 +316,16 @@ namespace Raven.Client.ServerWide.Tcp
                 },
                 [OperationTypes.Subscription] = new Dictionary<int, SupportedFeatures>
                 {
+                    [TcpConnectionsWithCompression] = new SupportedFeatures(TcpConnectionsWithCompression)
+                    {
+                        DataCompression = true,
+                        Subscription = new SupportedFeatures.SubscriptionFeatures
+                        {
+                            TimeSeriesIncludes = true,
+                            CounterIncludes = true,
+                            Includes = true
+                        }
+                    },
                     [SubscriptionTimeSeriesIncludes] = new SupportedFeatures(SubscriptionCounterIncludes)
                     {
                         Subscription = new SupportedFeatures.SubscriptionFeatures
@@ -341,6 +357,19 @@ namespace Raven.Client.ServerWide.Tcp
                 },
                 [OperationTypes.Replication] = new Dictionary<int, SupportedFeatures>
                 {
+                    [TcpConnectionsWithCompression] = new SupportedFeatures(TcpConnectionsWithCompression)
+                    {
+                        DataCompression = true,
+                        Replication = new SupportedFeatures.ReplicationFeatures
+                        {
+                            MissingAttachments = true, 
+                            CountersBatch = true,
+                            PullReplication = true,
+                            TimeSeries = true,
+                            CaseInsensitiveCounters = true,
+                            ClusterTransaction = true
+                        }
+                    },
                     [ReplicationWithTimeSeries] = new SupportedFeatures(ReplicationWithTimeSeries)
                     {
                         Replication = new SupportedFeatures.ReplicationFeatures

@@ -78,9 +78,9 @@ class queryCommand extends commandBase {
             if (line.endsWith("}") && line.startsWith("{")) {
                 try {
                     // check if this is valid JSON, if so, can send it
-                    JSON.parse(line);
+                    const lineObj = JSON.parse(line);
                     const q = arrayOfLines.splice(0, index).join("\n");
-                    return [line, q];
+                    return [lineObj, q];
                 } catch (e){
                     // ignore non JSON data
                 }

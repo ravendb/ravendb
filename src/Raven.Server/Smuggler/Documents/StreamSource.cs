@@ -10,6 +10,7 @@ using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Replication;
@@ -523,6 +524,52 @@ namespace Raven.Server.Smuggler.Documents
                             _log.Info("Wasn't able to import the OLAP connection strings from smuggler file. Skipping.", e);
                     }
                 }
+
+                if (reader.TryGet(nameof(databaseRecord.ElasticSearchEtls), out BlittableJsonReaderArray elasticEtls) &&
+                    elasticEtls != null)
+                {
+                    databaseRecord.ElasticSearchEtls = new List<ElasticSearchEtlConfiguration>();
+                    foreach (BlittableJsonReaderObject etl in elasticEtls)
+                    {
+                        try
+                        {
+                            databaseRecord.ElasticSearchEtls.Add(JsonDeserializationCluster.ElasticSearchEtlConfiguration(etl));
+                        }
+                        catch (Exception e)
+                        {
+                            if (_log.IsInfoEnabled)
+                                _log.Info("Wasn't able to import the Elastic Search ETLs configuration from smuggler file. Skipping.", e);
+                        }
+                    }
+                }
+
+                if (reader.TryGet(nameof(databaseRecord.ElasticSearchConnectionStrings), out BlittableJsonReaderObject elasticConnectionStrings) &&
+                    elasticConnectionStrings != null)
+                {
+                    try
+                    {
+                        foreach (var connectionName in elasticConnectionStrings.GetPropertyNames())
+                        {
+                            if (elasticConnectionStrings.TryGet(connectionName, out BlittableJsonReaderObject connection) == false)
+                            {
+                                if (_log.IsInfoEnabled)
+                                    _log.Info($"Wasn't able to import the Elastic Search connection string {connectionName} from smuggler file. Skipping.");
+
+                                continue;
+                            }
+
+                            var connectionString = JsonDeserializationCluster.ElasticSearchConnectionString(connection);
+                            databaseRecord.ElasticSearchConnectionStrings[connectionName] = connectionString;
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        databaseRecord.ElasticSearchConnectionStrings.Clear();
+                        if (_log.IsInfoEnabled)
+                            _log.Info("Wasn't able to import the Elastic Search connection strings from smuggler file. Skipping.", e);
+                    }
+                }
+
             });
 
             return databaseRecord;

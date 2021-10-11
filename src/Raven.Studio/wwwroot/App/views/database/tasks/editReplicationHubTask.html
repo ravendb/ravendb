@@ -172,19 +172,22 @@
                         <div class="panel panel-hover"
                              data-bind="css: { active: $root.editedReplicationAccessItem() && $data.certificate() === $root.editedReplicationAccessItem().certificate() }">
                             <div data-bind="if: !$root.showAccessDetails()">
-                                <div class="row padding padding-xs">
-                                    <div class="col-lg-5 margin-left margin-left-sm no-padding-right" data-bind="attr: { title: replicationAccessName }">
+                                <div class="flex-horizontal padding">
+                                    <div class="flex-grow margin-right" data-bind="attr: { title: replicationAccessName }">
                                         <label class="control-label">Name:</label>
-                                        <span class="form-control-static margin-left margin-left-sm" data-bind="text: replicationAccessName"></span>
+                                        <span class="form-control-static margin-left margin-left-sm word-break" data-bind="text: replicationAccessName"></span>
                                     </div>
-                                    <div class="col-lg-4">
-                                        <span><i data-bind="attr: { class: certificate().expirationIcon }"></i></span>
-                                        <label class="control-label">Expiration:</label>
-                                        <small class="form-control-static margin-left margin-left-sm" data-bind="text: certificate().expirationText()"></small>
+                                    <div class="flex-horizontal flex-wrap">                                        
+                                        <div>
+                                            <label class="control-label margin-left-sm"><i data-bind="attr: { class: certificate().expirationIcon }"></i> Expiration:</label>                                            
+                                        </div>
+                                        <div class="margin-right">
+                                            <small class="form-control-static margin-left margin-left-sm" data-bind="text: certificate().expirationText()"></small>
+                                        </div>
                                     </div>
-                                    <div class="col-lg-2 pull-right">
-                                        <div class="margin-top margin-top-xs" data-bind="template: { name: 'access-item-buttons' }"></div>
-                                    </div>
+                                    
+                                    <div class="nobr" data-bind="template: { name: 'access-item-buttons' }"></div>
+                                    
                                 </div>
                             </div>
                             <div data-bind="if: $root.showAccessDetails">

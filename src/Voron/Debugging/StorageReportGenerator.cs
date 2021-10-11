@@ -334,22 +334,24 @@ namespace Voron.Debugging
                 long totalNumberOfAllocatedPages = 0;
                 do
                 {
-                    var info = *tree.GetStreamInfo(it.CurrentKey, writable: false);
+                    var info = tree.GetStreamInfoForReporting(it.CurrentKey, out var tag);
+                    if (info.HasValue == false)
+                        continue;
 
-                    long numberOfAllocatedPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(info.TotalSize + info.TagSize + Tree.StreamInfo.SizeOf);
+                    long numberOfAllocatedPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(info.Value.TotalSize + info.Value.TagSize + Tree.StreamInfo.SizeOf);
 
                     var chunksTree = tree.GetStreamChunksTree(it.CurrentKey);
 
                     if (chunksTree.Type == RootObjectType.FixedSizeTree) // only if large fst, embedded already counted in parent
                         numberOfAllocatedPages += chunksTree.PageCount;
 
-                    var name = info.TagSize == 0 ? it.CurrentKey.ToString() : tree.GetStreamTag(it.CurrentKey);
+                    var name = tag ?? it.CurrentKey.ToString();
 
                     streams.Add(new StreamDetails
                     {
                         Name = name,
-                        Length = info.TotalSize,
-                        Version = info.Version,
+                        Length = info.Value.TotalSize,
+                        Version = info.Value.Version,
                         NumberOfAllocatedPages = numberOfAllocatedPages,
                         AllocatedSpaceInBytes = PagesToBytes(numberOfAllocatedPages),
                         ChunksTree = GetReport(chunksTree, false),

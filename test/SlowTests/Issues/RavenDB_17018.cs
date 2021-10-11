@@ -41,7 +41,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var companies = session.Load<Company>(new[] {"companies/1", "companies/2"}).ToList();
+                    var companies = session.Load<Company>(new[] { "companies/1", "companies/2" }).ToList();
                     Assert.NotEmpty(companies);
                 }
 
@@ -100,7 +100,7 @@ namespace SlowTests.Issues
                 }
             }
         }
-        
+
         [Fact]
         public async Task ShouldStoreTotalDocumentSizeInPerformanceHint_ForQueriesWithIncludes()
         {
@@ -111,8 +111,8 @@ namespace SlowTests.Issues
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new B{SomeString = "b1"}, "b/1");
-                    session.Store(new B{SomeString = "b2"}, "b/2");
+                    session.Store(new B { SomeString = "b1" }, "b/1");
+                    session.Store(new B { SomeString = "b2" }, "b/2");
                     session.Store(new A { BId = "b/1" }, "a/1");
                     session.Store(new A { BId = "b/2" }, "a/2");
                     session.SaveChanges();
@@ -153,7 +153,7 @@ namespace SlowTests.Issues
                 ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.PerformanceHints.MaxNumberOfResults)] = "1"
             }))
             {
-                
+
                 using (var session = store.OpenSession())
                 {
                     session.Store(new Company { Name = "HR", Address = new Address { Country = "Japan" } }, "companies/1");
@@ -208,7 +208,7 @@ namespace SlowTests.Issues
                     var index = detailsArray.GetByIndex<BlittableJsonReaderObject>(0);
                     Assert.NotNull(index);
                     Assert.True(index.TryGet("TotalDocumentsSizeInBytes", out int size));
-                    Assert.True(size > 0); 
+                    Assert.True(size > 0);
                 }
             }
         }
@@ -259,12 +259,12 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenSession(new SessionOptions {TransactionMode = TransactionMode.ClusterWide}))
+                using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                 {
                     var address = session.Advanced.ClusterTransaction.GetCompareExchangeValue<Address>("companies/hr");
                     Assert.Null(address);
 
-                    var addresses = session.Advanced.ClusterTransaction.GetCompareExchangeValues<Address>(new[] {"companies/hr", "companies/cf"});
+                    var addresses = session.Advanced.ClusterTransaction.GetCompareExchangeValues<Address>(new[] { "companies/hr", "companies/cf" });
 
                     Assert.True(addresses.ContainsKey("companies/hr"));
                     Assert.True(addresses.ContainsKey("companies/cf"));

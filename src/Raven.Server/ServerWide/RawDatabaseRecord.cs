@@ -7,6 +7,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Analysis;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Expiration;
@@ -552,6 +553,29 @@ namespace Raven.Server.ServerWide
                 return _olapEtls;
             }
         }
+        
+        private List<ElasticSearchEtlConfiguration> _elasticSearchEtls;
+
+        public List<ElasticSearchEtlConfiguration> ElasticSearchEtls
+        {
+            get
+            {
+                if (_materializedRecord != null)
+                    return _materializedRecord.ElasticSearchEtls;
+
+                if (_elasticSearchEtls == null)
+                {
+                    _elasticSearchEtls = new List<ElasticSearchEtlConfiguration>();
+                    if (_record.TryGet(nameof(DatabaseRecord.ElasticSearchEtls), out BlittableJsonReaderArray bjra) && bjra != null)
+                    {
+                        foreach (BlittableJsonReaderObject element in bjra)
+                            _elasticSearchEtls.Add(JsonDeserializationCluster.ElasticSearchEtlConfiguration(element));
+                    }
+                }
+
+                return _elasticSearchEtls;
+            }
+        }
 
         private Dictionary<string, string> _settings;
 
@@ -877,6 +901,38 @@ namespace Raven.Server.ServerWide
                 return _sqlConnectionStrings;
             }
         }
+        
+        private Dictionary<string, ElasticSearchConnectionString> _elasticSearchConnectionStrings;
+
+        public Dictionary<string, ElasticSearchConnectionString> ElasticSearchConnectionStrings
+        {
+            get
+            {
+                if (_materializedRecord != null)
+                    return _materializedRecord.ElasticSearchConnectionStrings;
+
+                if (_elasticSearchConnectionStrings == null)
+                {
+                    _elasticSearchConnectionStrings = new Dictionary<string, ElasticSearchConnectionString>();
+                    if (_record.TryGet(nameof(DatabaseRecord.ElasticSearchConnectionStrings), out BlittableJsonReaderObject obj) && obj != null)
+                    {
+                        var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
+                        for (var i = 0; i < obj.Count; i++)
+                        {
+                            obj.GetPropertyByIndex(i, ref propertyDetails);
+
+                            if (propertyDetails.Value == null)
+                                continue;
+
+                            if (propertyDetails.Value is BlittableJsonReaderObject bjro)
+                                _elasticSearchConnectionStrings[propertyDetails.Name] = JsonDeserializationCluster.ElasticSearchConnectionString(bjro);
+                        }
+                    }
+                }
+
+                return _elasticSearchConnectionStrings;
+            }
+        }
 
         private Dictionary<string, RavenConnectionString> _ravenConnectionStrings;
 
@@ -889,7 +945,7 @@ namespace Raven.Server.ServerWide
 
                 if (_ravenConnectionStrings == null)
                 {
-                    _ravenConnectionStrings = new Dictionary<string, RavenConnectionString>();   
+                    _ravenConnectionStrings = new Dictionary<string, RavenConnectionString>();
                     if (_record.TryGet(nameof(DatabaseRecord.RavenConnectionStrings), out BlittableJsonReaderObject obj) && obj != null)
                     {
                         var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
@@ -962,7 +1018,7 @@ namespace Raven.Server.ServerWide
                 return _materializedRecord;
             }
         }
-        
+
         public static implicit operator DatabaseRecord(RawDatabaseRecord raw) => raw.MaterializedRecord;
         public static implicit operator RawDatabaseRecord(DatabaseRecord record) => new RawDatabaseRecord(record);
     }

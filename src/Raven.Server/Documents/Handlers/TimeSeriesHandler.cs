@@ -22,7 +22,7 @@ using Raven.Server.Smuggler.Documents;
 using Raven.Server.TrafficWatch;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Sparrow.Server;
+using Sparrow.Platform;
 
 namespace Raven.Server.Documents.Handlers
 {
