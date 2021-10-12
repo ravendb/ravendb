@@ -3,7 +3,7 @@ import {
     BetweenExprContext,
     BinaryExpressionContext, CollectionByNameContext,
     EqualExpressionContext,
-} from "../../src/generated/RqlParser";
+} from "../../src/generated/BaseRqlParser";
 
 describe("WHERE statement parser", function () {
     it("single literal", function () {

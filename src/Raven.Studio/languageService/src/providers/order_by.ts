@@ -1,11 +1,12 @@
 import { CandidatesCollection } from "antlr4-c3/out/src/CodeCompletionCore";
-import { ProgContext, RqlParser } from "../generated/RqlParser";
 import { BaseAutocompleteProvider } from "./baseProvider";
 import { Scanner } from "../scanner";
 import {
     META_KEYWORD, SCORING_KEYWORD,
 } from "./scoring";
 import { AutocompleteProvider } from "./common";
+import { RqlParser } from "../RqlParser";
+import { ProgContext } from "../generated/BaseRqlParser";
 
 export class AutocompleteOrderBy extends BaseAutocompleteProvider implements AutocompleteProvider {
 

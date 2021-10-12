@@ -1,7 +1,8 @@
 import { ParseTree } from "antlr4ts/tree/ParseTree";
-import { CollectionByIndexContext, CollectionByNameContext, ProgContext, RqlParser } from "../generated/RqlParser";
+import { CollectionByIndexContext, CollectionByNameContext, ProgContext } from "../generated/BaseRqlParser";
 import { TerminalNode } from "antlr4ts/tree/TerminalNode";
 import { CandidateRule, CandidatesCollection } from "antlr4-c3/out/src/CodeCompletionCore";
+import { RqlParser } from "../RqlParser";
 
 export type QueryType = "index" | "collection" | "unknown";
 export type QuoteType = "None" | "Single" | "Double";
@@ -12,6 +13,24 @@ export abstract class BaseAutocompleteProvider {
 
     constructor(metadataProvider: queryCompleterProviders) {
         this.metadataProvider = metadataProvider;
+    }
+
+    async getPossibleFields(parseTree: ProgContext, prefix: string): Promise<string[]> {
+        const [queryType, source] = BaseAutocompleteProvider.detectQueryType(parseTree);
+
+        return new Promise<string[]>(resolve => {
+            switch (queryType) {
+                case "unknown":
+                    resolve([]);
+                    break;
+                case "index":
+                    this.metadataProvider.indexFields(source, resolve);
+                    break;
+                case "collection":
+                    this.metadataProvider.collectionFields(source, prefix, fields => resolve(Object.keys(fields)));
+                    break;
+            }
+        });
     }
     
     /**
@@ -61,18 +80,36 @@ export abstract class BaseAutocompleteProvider {
         }
     }
     
-    static detectQueryType(parser: RqlParser): [QueryType, string] {
-        const from = parser.fromStatement();
+    static unquote(input: string): string {
+        if (!input) {
+            return input;
+        }
+        
+        if (input.startsWith("'") && input.endsWith("'")) {
+            const unquoted = input.substring(1, input.length - 1);
+            return unquoted.replace(/\\'/g, "'");
+        }
+        
+        if (input.startsWith('"') && input.endsWith('"')) {
+            const unquoted = input.substring(1, input.length - 1);
+            return unquoted.replace(/\\"/g, '"');
+        }
+        
+        return input;
+    }
+    
+    static detectQueryType(parseTree: ProgContext): [QueryType, string] {
+        const from = parseTree.fromStatement();
         if (!from) {
             return ["unknown", undefined];
         }
         
         if (from instanceof CollectionByNameContext) {
-            return ["collection", from.collectionName().text];
+            return ["collection", this.unquote(from.collectionName().text)];
         }
 
         if (from instanceof CollectionByIndexContext) {
-            return ["index", from.indexName().text];
+            return ["index", this.unquote(from.indexName().text)];
         }
         
         return ["unknown", undefined];

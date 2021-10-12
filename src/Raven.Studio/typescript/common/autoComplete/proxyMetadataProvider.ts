@@ -11,7 +11,13 @@ export class proxyMetadataProvider implements queryCompleterProviders {
     }
 
     collectionFields(collectionName: string, prefix: string, callback: (fields: dictionary<string>) => void): void {
-        throw new Error("not implemented");
+        const id = this.sender({
+            type: "collectionFields",
+            collectionName,
+            prefix
+        });
+        
+        this.pendingMessages.set(id, (payload: MetadataResponseCollectionFields) => callback(payload.fields));
     }
 
     collections(callback: (collectionNames: string[]) => void): void {
@@ -23,7 +29,12 @@ export class proxyMetadataProvider implements queryCompleterProviders {
     }
 
     indexFields(indexName: string, callback: (fields: string[]) => void): void {
-        throw new Error("not implemented");
+        const id = this.sender({
+            type: "indexFields",
+            indexName
+        });
+        
+        this.pendingMessages.set(id, (payload: MetadataResponseIndexFields) => callback(payload.fields));
     }
 
     indexNames(callback: (indexNames: string[]) => void): void {

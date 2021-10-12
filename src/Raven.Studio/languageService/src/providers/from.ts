@@ -1,9 +1,10 @@
 import { CandidatesCollection } from "antlr4-c3/out/src/CodeCompletionCore";
-import { ProgContext, RqlParser } from "../generated/RqlParser";
 import { BaseAutocompleteProvider } from "./baseProvider";
 import { Scanner } from "../scanner";
 import { META_COLLECTION, META_INDEX, SCORING_COLLECTION, SCORING_INDEX } from "./scoring";
 import { AutocompleteProvider } from "./common";
+import { RqlParser } from "../RqlParser";
+import { ProgContext } from "../generated/BaseRqlParser";
 
 export class AutocompleteFrom extends BaseAutocompleteProvider implements AutocompleteProvider {
     
@@ -45,6 +46,5 @@ export class AutocompleteFrom extends BaseAutocompleteProvider implements Autoco
         }
         
         return [];
-       
     }
 }

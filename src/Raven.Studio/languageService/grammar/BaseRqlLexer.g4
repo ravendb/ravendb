@@ -1,4 +1,4 @@
-lexer grammar RqlLexer;
+lexer grammar BaseRqlLexer;
 //SPECIAL CHARACTERS:
 
 CL_CUR
