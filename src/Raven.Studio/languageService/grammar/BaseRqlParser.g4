@@ -21,9 +21,9 @@ fromMode
    ;
 
 fromStatement
-   : fromMode INDEX collection = indexName fromAlias? # CollectionByIndex
+   : fromMode INDEX collection = indexName aliasWithOptionalAs? # CollectionByIndex
    | FROM ALL_DOCS # AllCollections
-   | fromMode collection = collectionName fromAlias? # CollectionByName
+   | fromMode collection = collectionName aliasWithOptionalAs? # CollectionByName
    ;
 
 indexName
@@ -43,8 +43,8 @@ collectionName
    
    //from X t
    
-fromAlias
-   : AS? (WORD | STRING | identifiersWithoutRootKeywords)
+aliasWithOptionalAs
+   : AS? name = aliasName asArray?
    ;
    //          GROUP BY STATEMENT          //    
    
@@ -102,7 +102,7 @@ betweenFunction
    //Functions like morelikethis() or intersect()
    
 specialFunctions
-   : specialFunctionName OP_PAR (specialParam alias? (COMMA specialParam alias?)*)? CL_PAR
+   : specialFunctionName OP_PAR (specialParam aliasWithRequiredAs? (COMMA specialParam aliasWithRequiredAs?)*)? CL_PAR
    ;
 
 specialFunctionName
@@ -151,7 +151,7 @@ loadStatement
    ;
 
 loadDocumentByName
-   : name = variable as = alias
+   : name = variable as = aliasWithOptionalAs
    ;
    //          ORDER BY            //
    
@@ -197,7 +197,7 @@ selectStatement
    ;
 
 projectField
-   : (literal | specialFunctions | tsProg) alias?
+   : (literal | specialFunctions | tsProg) aliasWithRequiredAs?
    ;
    //JS header
    
@@ -213,7 +213,7 @@ jsBody
    : JS_OP jsBody* JS_CL
    ;
 
-alias
+aliasWithRequiredAs
    : AS name = aliasName asArray?
    ;
 
@@ -267,7 +267,7 @@ cacheParam
    ;
 
 parameterWithOptionalAlias
-   : value = variableOrFunction as = alias?
+   : value = variableOrFunction as = aliasWithRequiredAs?
    ;
 
 variableOrFunction

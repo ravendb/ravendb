@@ -1,5 +1,5 @@
 import { autocomplete } from "../autocompleteUtils";
-import { META_COLLECTION } from "../../src/providers/scoring";
+import { AUTOCOMPLETE_META } from "../../src/providers/common";
 
 describe("can complete from", function () {
 
@@ -34,7 +34,7 @@ describe("can complete from", function () {
                 .toBeTruthy();
             
             expect(allDocs.meta)
-                .toEqual(META_COLLECTION);
+                .toEqual(AUTOCOMPLETE_META.collection);
         });
         
         it("can complete collection", async function () {

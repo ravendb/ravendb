@@ -1,8 +1,7 @@
 import { CandidatesCollection } from "antlr4-c3/out/src/CodeCompletionCore";
 import { BaseAutocompleteProvider } from "./baseProvider";
 import { Scanner } from "../scanner";
-import { META_COLLECTION, META_INDEX, SCORING_COLLECTION, SCORING_INDEX } from "./scoring";
-import { AutocompleteProvider } from "./common";
+import { AUTOCOMPLETE_META, AUTOCOMPLETE_SCORING, AutocompleteProvider } from "./common";
 import { RqlParser } from "../RqlParser";
 import { ProgContext } from "../generated/BaseRqlParser";
 
@@ -28,8 +27,8 @@ export class AutocompleteFrom extends BaseAutocompleteProvider implements Autoco
             const collections = await this.fetchCollectionNames();
             
             return collections.map(c => ({
-                meta: META_COLLECTION,
-                score: SCORING_COLLECTION,
+                meta: AUTOCOMPLETE_META.collection,
+                score: AUTOCOMPLETE_SCORING.collection,
                 caption: c,
                 value: AutocompleteFrom.quote(c, quoteType === "Single" ? "Single" : "Double") + " "
             }));
@@ -38,8 +37,8 @@ export class AutocompleteFrom extends BaseAutocompleteProvider implements Autoco
         if (candidates.rules.has(RqlParser.RULE_indexName)) {
             const indexes = await this.fetchIndexNames();
             return indexes.map(index => ({
-                meta: META_INDEX,
-                score: SCORING_INDEX,
+                meta: AUTOCOMPLETE_META.index,
+                score: AUTOCOMPLETE_SCORING.index,
                 caption: index,
                 value: AutocompleteFrom.quote(index, quoteType === "Single" ? "Single" : "Double") + " "
             }));

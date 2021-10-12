@@ -59,7 +59,7 @@ describe("scanner seek", function () {
         expect(writtenPart)
             .toEqual("");
         expect(scanner.tokenType())
-            .toEqual(RqlParser.EOF);
+            .toEqual(RqlParser.WS);
     });
 
     it("can seek before empty collection - w/ whitespace after", () => {
@@ -81,7 +81,7 @@ describe("scanner seek", function () {
         expect(writtenPart)
             .toEqual("from");
         expect(scanner.tokenType())
-            .toEqual(RqlParser.FROM);
+            .toEqual(RqlParser.WS);
     });
 
     it("just after token - w space after", () => {
@@ -92,7 +92,7 @@ describe("scanner seek", function () {
         expect(writtenPart)
             .toEqual("from");
         expect(scanner.tokenType())
-            .toEqual(RqlParser.FROM);
+            .toEqual(RqlParser.WS);
     });
     
     it("can seek on partial collection - at the end", () => {
@@ -103,7 +103,7 @@ describe("scanner seek", function () {
         expect(writtenPart)
             .toEqual("Ord");
         expect(scanner.tokenType())
-            .toEqual(RqlParser.WORD);
+            .toEqual(RqlParser.WS);
     });
 
     it("can seek on partial collection - in the middle", () => {
@@ -114,7 +114,7 @@ describe("scanner seek", function () {
         expect(writtenPart)
             .toEqual("Ord");
         expect(scanner.tokenType())
-            .toEqual(RqlParser.WORD);
+            .toEqual(RqlParser.WS);
     });
 
     it("can seek on partial collection", () => {
@@ -147,7 +147,7 @@ describe("scanner seek", function () {
         expect(writtenPart)
             .toEqual("");
         expect(scanner.tokenType())
-            .toEqual(RqlParser.EOF);
+            .toEqual(RqlParser.WS);
     });
     
     it("can seek after closing bracket - w/o space after", () => {
@@ -176,11 +176,21 @@ describe("scanner seek", function () {
         const { writtenPart, caretIndex, scanner } = act('from Orders where Lines.| ');
 
         expect(caretIndex)
-            .toEqual(5);
+            .toEqual(8);
         expect(writtenPart)
-            .toEqual("Lines.");
+            .toEqual("");
         expect(scanner.tokenType())
-            .toEqual(RqlParser.WORD);
+            .toEqual(RqlParser.WS);
+    })
+    
+    it("can ignore whitespace", () => {
+        const query1 = act("from Orders group by |");
+        const query2 = act("from Orders group by Co|");
+        
+        expect(query1.caretIndex)
+            .toEqual(5);
+        expect(query2.caretIndex)
+            .toEqual(5);
     })
     
     it("can seek after declare function ", () => {

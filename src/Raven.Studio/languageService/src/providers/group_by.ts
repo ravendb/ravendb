@@ -1,8 +1,7 @@
 import { CandidatesCollection } from "antlr4-c3/out/src/CodeCompletionCore";
 import { BaseAutocompleteProvider } from "./baseProvider";
 import { Scanner } from "../scanner";
-import { META_FIELD, META_FUNCTION, SCORING_FIELD, SCORING_FUNCTION } from "./scoring";
-import { AutocompleteProvider } from "./common";
+import { AUTOCOMPLETE_META, AUTOCOMPLETE_SCORING, AutocompleteProvider } from "./common";
 import { RqlParser } from "../RqlParser";
 import { ProgContext } from "../generated/BaseRqlParser";
 
@@ -24,28 +23,17 @@ export class AutocompleteGroupBy extends BaseAutocompleteProvider implements Aut
             }
             
             const arrayFunction: autoCompleteWordList = {
-                score: SCORING_FUNCTION,
+                score: AUTOCOMPLETE_SCORING.function,
                 caption: "array()",
                 value: "array(",
-                meta: META_FUNCTION
+                meta: AUTOCOMPLETE_META.function
             };
-            
-            const fields = await this.getPossibleFields(parseTree, writtenPart);
-            
-            const mappedFields = fields.map(f => ({
-                meta: META_FIELD,
-                score: SCORING_FIELD,
-                value: f,
-                caption: f
-            }));
             
             const result: autoCompleteWordList[] = [];
 
             if (this.canCompleteArray(candidates)) {
                 result.push(arrayFunction);
             }
-            
-            result.push(...mappedFields);
             
             return result;
         }
