@@ -59,21 +59,21 @@ namespace Raven.Client.Documents.Session
             return new SessionDocumentTimeSeries<TValues>(this, documentId, $"{tsName}{TimeSeriesConfiguration.TimeSeriesRollupSeparator}{policy}");
         }
 
-        public ISessionDocumentTimeSeries IncrementalTimeSeriesFor(string documentId, string name)
+        public ISessionDocumentIncrementalTimeSeries IncrementalTimeSeriesFor(string documentId, string name)
         {
             ValidateIncrementalTimeSeriesName(name);
 
             return new SessionDocumentTimeSeries<TimeSeriesEntry>(this, documentId, name);
         }
 
-        public ISessionDocumentTimeSeries IncrementalTimeSeriesFor(object entity, string name)
+        public ISessionDocumentIncrementalTimeSeries IncrementalTimeSeriesFor(object entity, string name)
         {
             ValidateIncrementalTimeSeriesName(name);
 
             return new SessionDocumentTimeSeries<TimeSeriesEntry>(this, entity, name);
         }
 
-        public ISessionDocumentTypedTimeSeries<TValues> IncrementalTimeSeriesFor<TValues>(string documentId, string name = null) where TValues : new()
+        public ISessionDocumentTypedIncrementalTimeSeries<TValues> IncrementalTimeSeriesFor<TValues>(string documentId, string name = null) where TValues : new()
         {
             var tsName = name ?? TimeSeriesOperations.GetTimeSeriesName<TValues>(Conventions);
             ValidateIncrementalTimeSeriesName(tsName);
@@ -81,7 +81,7 @@ namespace Raven.Client.Documents.Session
             return new SessionDocumentTimeSeries<TValues>(this, documentId, tsName);
         }
 
-        public ISessionDocumentTypedTimeSeries<TValues> IncrementalTimeSeriesFor<TValues>(object entity, string name = null) where TValues : new()
+        public ISessionDocumentTypedIncrementalTimeSeries<TValues> IncrementalTimeSeriesFor<TValues>(object entity, string name = null) where TValues : new()
         {
             var tsName = name ?? TimeSeriesOperations.GetTimeSeriesName<TValues>(Conventions);
             ValidateIncrementalTimeSeriesName(tsName);

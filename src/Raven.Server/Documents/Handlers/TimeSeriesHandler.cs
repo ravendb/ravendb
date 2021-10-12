@@ -519,6 +519,7 @@ namespace Raven.Server.Documents.Handlers
                             values[i] += nodeValues[i];
 
                         entry.NodesValues[nodeTag] = values;
+                        return;
                     }
 
                     for (int i = 0; i < values.Length; i++)
