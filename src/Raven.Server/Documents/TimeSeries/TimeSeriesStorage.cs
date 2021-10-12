@@ -1298,7 +1298,7 @@ namespace Raven.Server.Documents.TimeSeries
                     var positiveValues = new List<double>();
                     var negativeValues = new List<double>();
 
-                    int zeroCount = 0;
+                    int zeroCount = 0, incCount = 0, decCount = 0;
                     foreach (var value in element.Values)
                     {
                         switch (Math.Sign(value))
@@ -1311,15 +1311,17 @@ namespace Raven.Server.Documents.TimeSeries
                             case > 0:
                                 positiveValues.Add(value);
                                 negativeValues.Add(0);
+                                incCount++;
                                 break;
                             default:
                                 negativeValues.Add(value);
                                 positiveValues.Add(0);
+                                decCount++;
                                 break;
                         }
                     }
 
-                    if (positiveValues.Count - zeroCount > 0 && negativeValues.Count - zeroCount > 0)
+                    if (incCount + zeroCount < element.Values.Length && decCount + zeroCount < element.Values.Length)
                     {
                         splitOperation = true;
 
@@ -1901,11 +1903,10 @@ namespace Raven.Server.Documents.TimeSeries
             }
 
             var compare = localValues.SequenceCompareTo(remote.Values.Span);
-            if (compare == 0)
-                return CompareResult.Equal;
-            if (compare < 0)
-                return CompareResult.Remote;
-            return CompareResult.Local;
+            if (compare >= 0)
+                return CompareResult.Local;
+            
+            return CompareResult.Remote;
         }
 
         private static CompareResult SelectSmallerValue(Span<double> localValues, SingleResult remote)
@@ -1923,10 +1924,9 @@ namespace Raven.Server.Documents.TimeSeries
             }
 
             var compare = localValues.SequenceCompareTo(remote.Values.Span);
-            if (compare == 0)
-                return CompareResult.Equal;
-            if (compare < 0)
+            if (compare <= 0)
                 return CompareResult.Local;
+
             return CompareResult.Remote;
         }
 
