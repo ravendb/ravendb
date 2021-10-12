@@ -58,9 +58,11 @@ namespace Raven.Server.Integrations.PostgreSQL
 
             // If limit is 0, fetch one document for the schema generation
             if (_limit != null)
+            {
                 _result = _result
                     .Take(_limit.Value == 0 ? 1 : _limit.Value)
                     .ToList();
+            }
 
             // TODO: Support skipping (check how/if PowerBI sends it, probably using the incremental refresh feature)
             // query.Skip(..)
