@@ -1725,8 +1725,8 @@ namespace Raven.Server
 
         private void StartPostgresServer()
         {
-            PostgresServer = new PgServer(this);
-            PostgresServer.Execute();
+            PostgresWatcher = new PgWatcher(this);
+            PostgresWatcher.Execute();
         }
 
         public TcpListenerStatus StartTcpListener()
@@ -2275,7 +2275,7 @@ namespace Raven.Server
 
         private TcpListenerStatus _tcpListenerStatus;
         public SnmpWatcher SnmpWatcher;
-        public PgServer PostgresServer;
+        public PgWatcher PostgresWatcher;
         private Timer _refreshClusterCertificate;
         private HttpsConnectionMiddleware _httpsConnectionMiddleware;
         private PoolOfThreads.LongRunningWork _cpuCreditsMonitoring;

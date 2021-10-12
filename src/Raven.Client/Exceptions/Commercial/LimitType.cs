@@ -52,6 +52,9 @@ namespace Raven.Client.Exceptions.Commercial
         [Description("SNMP")]
         Snmp,
 
+        [Description("PostgreSql Integration")]
+        PostgreSqlIntegration,
+
         [Description("Delayed External Replication")]
         DelayedExternalReplication,
 
