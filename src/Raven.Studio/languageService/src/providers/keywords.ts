@@ -1,33 +1,9 @@
 import { CandidatesCollection } from "antlr4-c3/out/src/CodeCompletionCore";
 import { RqlParser } from "../RqlParser";
-import { BaseAutocompleteProvider } from "./baseProvider";
+import { BaseAutocompleteProvider, filterTokens } from "./baseProvider";
 import { Scanner } from "../scanner";
-import {
-    META_ALL,
-    META_COLLECTION,
-    META_FUNCTION, META_KEYWORD,
-    META_OPERATOR,
-    SCORING_COLLECTION,
-    SCORING_FUNCTION, SCORING_KEYWORD,
-    SCORING_OPERATOR
-} from "./scoring";
-import { AutocompleteProvider } from "./common";
+import { AUTOCOMPLETE_META, AUTOCOMPLETE_SCORING, AutocompleteProvider } from "./common";
 import { ProgContext } from "../generated/BaseRqlParser";
-
-const ident = x => x;
-
-function filterTokens<T>(text: string, candidates: T[], extractor: (val: T) => string = ident) {
-    if (text.trim().length == 0) {
-        return candidates;
-    } else {
-        return candidates.filter(c => {
-            const startsWith = extractor(c).toLowerCase().startsWith(text.toLowerCase());
-            const equals = extractor(c).toLowerCase() === text.toLowerCase();
-            return startsWith && !equals;
-        });
-    }
-}
-
 
 const rootKeywords: number[] = [
     RqlParser.FROM,
@@ -83,6 +59,7 @@ const alreadyHandledTokenTypes: number[] = [
     RqlParser.MATH,
     RqlParser.EQUAL,
     RqlParser.METADATA,
+    RqlParser.AS,
     RqlParser.ALL_DOCS,
     ...rootKeywords
 ] 
@@ -94,7 +71,7 @@ export class AutocompleteKeywords extends BaseAutocompleteProvider implements Au
     }
     
     static handleFromAlias(candidates: CandidatesCollection, scanner: Scanner): autoCompleteWordList[] {
-        const aliasRule = candidates.rules.get(RqlParser.RULE_fromAlias);
+        const aliasRule = candidates.rules.get(RqlParser.RULE_aliasWithOptionalAs);
         scanner.push();
         
         try {
@@ -103,27 +80,13 @@ export class AutocompleteKeywords extends BaseAutocompleteProvider implements Au
             return withAlias ? [] : [{
                 value: "as ",
                 caption: "as",
-                score: SCORING_OPERATOR,
-                meta: META_OPERATOR
+                score: AUTOCOMPLETE_SCORING.operator,
+                meta: AUTOCOMPLETE_META.operator
             }];
         } finally {
             scanner.pop();
         }
         
-    }
-    
-    static tryHandleFromWithExplicitAlias(candidates: CandidatesCollection, scanner: Scanner): boolean {
-        if (!candidates.rules.has(RqlParser.RULE_fromAlias)) {
-            return false;
-        }
-        
-        if (scanner.lookBack() !== RqlParser.AS) {
-            return false;
-        }
-        
-        const allIdentifiers = candidates.rules.get(RqlParser.RULE_fromAlias);
-
-        return allIdentifiers.ruleList.indexOf(RqlParser.RULE_fromAlias) !== -1;
     }
     
     static handleSpecialFunctions(candidates: CandidatesCollection, writtenText: string): autoCompleteWordList[] {
@@ -138,8 +101,8 @@ export class AutocompleteKeywords extends BaseAutocompleteProvider implements Au
 
         return filterTokens(writtenText, specialFunctions, x => x.value).map(x => ({
             ...x,
-            score: SCORING_FUNCTION,
-            meta: META_FUNCTION
+            score: AUTOCOMPLETE_SCORING.function,
+            meta: AUTOCOMPLETE_META.function
         }));
     } 
     
@@ -152,8 +115,8 @@ export class AutocompleteKeywords extends BaseAutocompleteProvider implements Au
             {
                 value: "==",
                 caption: "==",
-                score: SCORING_OPERATOR,
-                meta: META_OPERATOR
+                score: AUTOCOMPLETE_SCORING.operator,
+                meta: AUTOCOMPLETE_META.operator
             }
         ] 
     }
@@ -167,26 +130,26 @@ export class AutocompleteKeywords extends BaseAutocompleteProvider implements Au
             {
                 value: "<",
                 caption: "<",
-                score: SCORING_OPERATOR,
-                meta: META_OPERATOR
+                score: AUTOCOMPLETE_SCORING.operator,
+                meta: AUTOCOMPLETE_META.operator
             },
             {
                 value: "<=",
                 caption: "<=",
-                score: SCORING_OPERATOR,
-                meta: META_OPERATOR
+                score: AUTOCOMPLETE_SCORING.operator,
+                meta: AUTOCOMPLETE_META.operator
             },
             {
                 value: ">",
                 caption: ">",
-                score: SCORING_OPERATOR,
-                meta: META_OPERATOR
+                score: AUTOCOMPLETE_SCORING.operator,
+                meta: AUTOCOMPLETE_META.operator
             },
             {
                 value: ">=",
                 caption: ">=",
-                score: SCORING_OPERATOR,
-                meta: META_OPERATOR
+                score: AUTOCOMPLETE_SCORING.operator,
+                meta: AUTOCOMPLETE_META.operator
             }
         ]
     }
@@ -196,18 +159,27 @@ export class AutocompleteKeywords extends BaseAutocompleteProvider implements Au
             {
                 value: "@metadata",
                 caption: "@metadata",
-                score: SCORING_FUNCTION,
-                meta: META_FUNCTION
+                score: AUTOCOMPLETE_SCORING.function,
+                meta: AUTOCOMPLETE_META.function
             }
         ]
     }
 
+    static handleAsOperator(): autoCompleteWordList {
+        return {
+            value: "as ",
+            caption: "as",
+            meta: AUTOCOMPLETE_META.keyword,
+            score: AUTOCOMPLETE_SCORING.keyword
+        }
+    }
+    
     static handleAllDocs(): autoCompleteWordList {
         return {
             value: "@all_docs ",
             caption: "@all_docs",
-            meta: META_COLLECTION,
-            score: SCORING_COLLECTION
+            meta: AUTOCOMPLETE_META.collection,
+            score: AUTOCOMPLETE_SCORING.collection
         }
     }
     
@@ -221,8 +193,8 @@ export class AutocompleteKeywords extends BaseAutocompleteProvider implements Au
                 result.push({
                     caption: displayName,
                     value: displayName + " ",
-                    meta: META_KEYWORD,
-                    score: SCORING_KEYWORD
+                    meta: AUTOCOMPLETE_META.keyword,
+                    score: AUTOCOMPLETE_SCORING.keyword
                 });
             }
         }
@@ -232,8 +204,8 @@ export class AutocompleteKeywords extends BaseAutocompleteProvider implements Au
             result.splice(fromKeywordIndex, 0, {
                 value: "from index ",
                 caption: "from index",
-                meta: META_KEYWORD,
-                score: SCORING_KEYWORD
+                meta: AUTOCOMPLETE_META.keyword,
+                score: AUTOCOMPLETE_SCORING.keyword
             })
         }
         
@@ -242,16 +214,7 @@ export class AutocompleteKeywords extends BaseAutocompleteProvider implements Au
     
     collect(scanner: Scanner, candidates: CandidatesCollection, parser: RqlParser, parseTree: ProgContext, writtenText: string): autoCompleteWordList[] {
         const completions: autoCompleteWordList[] = [];
-        
-        if (candidates.rules.has(RqlParser.RULE_fromAlias)) {
-            const fromAlias = AutocompleteKeywords.handleFromAlias(candidates, scanner);
-            completions.push(...fromAlias);
-            if (!fromAlias.length) {
-                // we are just after 'as' inside 'from' - skip keywords
-                return completions;
-            }
-        }
-        
+                
         if (candidates.rules.has(RqlParser.RULE_specialFunctionName)) {
             completions.push(...AutocompleteKeywords.handleSpecialFunctions(candidates, writtenText));
         }
@@ -271,25 +234,28 @@ export class AutocompleteKeywords extends BaseAutocompleteProvider implements Au
         if (candidates.tokens.has(RqlParser.ALL_DOCS)) {
             completions.push(AutocompleteKeywords.handleAllDocs());
         }
+
+        if (candidates.tokens.has(RqlParser.AS)) {
+            completions.push(AutocompleteKeywords.handleAsOperator());
+        }
         
         completions.push(...AutocompleteKeywords.handleRootKeywords(candidates, parser, writtenText));
-        
+
+        AutocompleteKeywords.debugRemainingTokens(candidates, parser, writtenText); //TODO: comment out!
+       
+        return completions;
+    }
+    
+    static debugRemainingTokens(candidates: CandidatesCollection, parser: RqlParser, writtenText: string) {
         const tokens: string[] = [];
         candidates.tokens.forEach((_, k) => {
             const displayName = parser.vocabulary.getDisplayName(k);
             if (displayName && alreadyHandledTokenTypes.indexOf(k) === -1) {
                 tokens.push(displayName.toLowerCase());
             }
-        });
-        
-        completions.push(...filterTokens(writtenText, tokens).map(x => ({
-            caption: x,
-            value: x + " ",
-            score: 100,
-            meta: META_ALL
-        })));
+        }); 
 
-        return completions;
+        console.log("REMAINING TOKENS = ", ...filterTokens(writtenText, tokens));
     }
     
 }

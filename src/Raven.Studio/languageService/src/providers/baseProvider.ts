@@ -1,11 +1,23 @@
-import { ParseTree } from "antlr4ts/tree/ParseTree";
 import { CollectionByIndexContext, CollectionByNameContext, ProgContext } from "../generated/BaseRqlParser";
-import { TerminalNode } from "antlr4ts/tree/TerminalNode";
 import { CandidateRule, CandidatesCollection } from "antlr4-c3/out/src/CodeCompletionCore";
-import { RqlParser } from "../RqlParser";
 
 export type QueryType = "index" | "collection" | "unknown";
 export type QuoteType = "None" | "Single" | "Double";
+
+
+const ident = x => x;
+
+export function filterTokens<T>(text: string, candidates: T[], extractor: (val: T) => string = ident) {
+    if (text.trim().length == 0) {
+        return candidates;
+    } else {
+        return candidates.filter(c => {
+            const startsWith = extractor(c).toLowerCase().startsWith(text.toLowerCase());
+            const equals = extractor(c).toLowerCase() === text.toLowerCase();
+            return startsWith && !equals;
+        });
+    }
+}
 
 export abstract class BaseAutocompleteProvider {
     
@@ -31,27 +43,6 @@ export abstract class BaseAutocompleteProvider {
                     break;
             }
         });
-    }
-    
-    /**
-     * Returns root context for given node, ex.: from, include, group by, etc
-     */
-    static findRootContext(tree: ParseTree) {
-        if (tree instanceof TerminalNode && tree.parent instanceof ProgContext) {
-            const progContext = tree.parent;
-            const terminalNodeIdx = progContext.children.findIndex(x => x === tree);
-            if (terminalNodeIdx > 0) {
-                return progContext.children[terminalNodeIdx - 1];
-            } else {
-                return undefined;
-            }
-        } 
-        
-        while (tree && !(tree.parent instanceof ProgContext)) {
-            tree = tree.parent;
-        }
-        
-        return tree;
     }
     
     static detectQuoteType(input: string): QuoteType {

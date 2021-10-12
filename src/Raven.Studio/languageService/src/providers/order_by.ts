@@ -1,27 +1,23 @@
 import { CandidatesCollection } from "antlr4-c3/out/src/CodeCompletionCore";
 import { BaseAutocompleteProvider } from "./baseProvider";
 import { Scanner } from "../scanner";
-import {
-    META_KEYWORD, SCORING_KEYWORD,
-} from "./scoring";
-import { AutocompleteProvider } from "./common";
+import { AUTOCOMPLETE_META, AUTOCOMPLETE_SCORING, AutocompleteProvider } from "./common";
 import { RqlParser } from "../RqlParser";
-import { ProgContext } from "../generated/BaseRqlParser";
 
 export class AutocompleteOrderBy extends BaseAutocompleteProvider implements AutocompleteProvider {
 
-    async collectAsync(scanner: Scanner, candidates: CandidatesCollection, parser: RqlParser, parseTree: ProgContext, writtenPart: string): Promise<autoCompleteWordList[]> {
+    async collectAsync(scanner: Scanner, candidates: CandidatesCollection): Promise<autoCompleteWordList[]> {
         if (candidates.rules.has(RqlParser.RULE_orderByOrder)) {
             return [{
                 value: "asc ",
                 caption: "asc",
-                meta: META_KEYWORD,
-                score: SCORING_KEYWORD
+                meta: AUTOCOMPLETE_META.keyword,
+                score: AUTOCOMPLETE_SCORING.keyword
             }, {
                 value: "desc ",
                 caption: "desc",
-                meta: META_KEYWORD,
-                score: SCORING_KEYWORD
+                meta: AUTOCOMPLETE_META.keyword,
+                score: AUTOCOMPLETE_SCORING.keyword
             }]
         }
         
@@ -31,8 +27,8 @@ export class AutocompleteOrderBy extends BaseAutocompleteProvider implements Aut
             return sortings.map(s => ({
                 caption: s, 
                 value: s + " ",
-                meta: META_KEYWORD,
-                score: SCORING_KEYWORD
+                meta: AUTOCOMPLETE_META.keyword,
+                score: AUTOCOMPLETE_SCORING.keyword
             }));
         }
         

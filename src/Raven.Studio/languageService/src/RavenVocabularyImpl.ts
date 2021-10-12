@@ -1,6 +1,10 @@
 import { Vocabulary } from "antlr4ts/Vocabulary";
 import { RqlParser } from "./RqlParser";
 
+const keywordsRemap = new Map<number, string>();
+keywordsRemap.set(RqlParser.GROUP_BY, "group by");
+keywordsRemap.set(RqlParser.ORDER_BY, "order by");
+
 export class RavenVocabularyImpl implements Vocabulary {
     
     private readonly parent: Vocabulary;
@@ -10,11 +14,8 @@ export class RavenVocabularyImpl implements Vocabulary {
     }
     
     getDisplayName(tokenType: number): string {
-        if (tokenType === RqlParser.GROUP_BY) {
-            return "group by";
-        }
-        if (tokenType === RqlParser.ORDER_BY) {
-            return "order by";
+        if (keywordsRemap.has(tokenType)) {
+            return keywordsRemap.get(tokenType);
         }
         
         return this.parent.getDisplayName(tokenType);

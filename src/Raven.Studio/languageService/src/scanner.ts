@@ -12,7 +12,6 @@ export class Scanner {
         this._tokens = input.getTokens();
     }
     
-    
     public next(skipHidden: boolean = true): boolean {
         while (this._index < this._tokens.length - 1) {
             ++this._index;

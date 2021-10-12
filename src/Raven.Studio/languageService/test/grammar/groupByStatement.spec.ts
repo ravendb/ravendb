@@ -58,7 +58,7 @@ describe("GROUP BY statement parser", function() {
         expect(from)
             .toBeInstanceOf(CollectionByNameContext);
         const collectionByName = from as CollectionByNameContext;
-        expect(collectionByName.fromAlias())
+        expect(collectionByName.aliasWithOptionalAs())
             .toBeFalsy();
 
         const groupBy = parseTree.groupByStatement();

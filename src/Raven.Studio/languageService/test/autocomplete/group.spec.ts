@@ -1,5 +1,5 @@
 import { autocomplete } from "../autocompleteUtils";
-import { META_FUNCTION } from "../../src/providers/scoring";
+import { AUTOCOMPLETE_META } from "../../src/providers/common";
 
 const nextKeywords = ["select", "limit", "load", "where"];
 
@@ -31,7 +31,7 @@ describe("can complete from", function () {
         expect(arrayFunction)
             .toBeTruthy();
         expect(arrayFunction.meta)
-            .toEqual(META_FUNCTION);
+            .toEqual(AUTOCOMPLETE_META.function);
     });
     
     it("can complete next Array() function in group by ", async () => {
@@ -41,17 +41,7 @@ describe("can complete from", function () {
         expect(arrayFunction)
             .toBeTruthy();
         expect(arrayFunction.meta)
-            .toEqual(META_FUNCTION);
-    });
-
-    it("can complete nested path in group by ", async () => {
-        const suggestions = await autocomplete(" from Orders group by array(Lines[].|), ");
-
-        const arrayFunction = suggestions.find(x => x.value.startsWith("array("));
-        expect(arrayFunction)
-            .toBeTruthy();
-        expect(arrayFunction.meta)
-            .toEqual(META_FUNCTION);
+            .toEqual(AUTOCOMPLETE_META.function);
     });
     
     it("can complete next keywords after group by ", async () => {

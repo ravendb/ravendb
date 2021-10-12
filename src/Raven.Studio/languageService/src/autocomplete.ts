@@ -49,7 +49,8 @@ export const ignoredTokens: number[] = [
 
 const noSeparatorRequiredFor = new Set<number>([
     RqlParser.OP_PAR,
-    RqlParser.CL_PAR
+    RqlParser.CL_PAR,
+    RqlParser.DOT
 ]);
 
 export function createScannerWithSeek(inputStream: CommonTokenStream, caretPosition: CaretPosition): { scanner: Scanner, caretIndex: number } {
@@ -66,6 +67,8 @@ export function createScannerWithSeek(inputStream: CommonTokenStream, caretPosit
         --caretIndex;
     }
     
+    scanner.seek(caretIndex);
+    
     return {
         scanner,
         caretIndex
@@ -77,7 +80,7 @@ export function getWrittenPart(input: string, caretPosition: CaretPosition) {
     const row = lines[caretPosition.line - 1];
     const toCaretText = row.substring(0, caretPosition.column);
 
-    const tokens = toCaretText.split(/[ ,)(]/);
+    const tokens = toCaretText.split(/[ \\.,)(]/);
     return tokens[tokens.length - 1];
 }
 
@@ -115,7 +118,7 @@ export class autoCompleteEngine {
 
         core.preferredRules = new Set([
             RqlParser.RULE_collectionName,
-            RqlParser.RULE_fromAlias,
+            RqlParser.RULE_aliasName,
             RqlParser.RULE_indexName,
             RqlParser.RULE_specialFunctionName,
             RqlParser.RULE_variable,
