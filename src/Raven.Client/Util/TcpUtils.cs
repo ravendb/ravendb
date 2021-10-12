@@ -206,7 +206,7 @@ namespace Raven.Client.Util
 
             var expectedCert = new X509Certificate2(Convert.FromBase64String(info.Certificate), (string)null, X509KeyStorageFlags.MachineKeySet);
             var sslStream = new SslStream(networkStream, false, (sender, actualCert, chain, errors) => expectedCert.Equals(actualCert));
-
+            
             var targetHost = new Uri(info.Url).Host;
             var clientCertificates = new X509CertificateCollection(new X509Certificate[] { storeCertificate });
 
@@ -257,7 +257,7 @@ namespace Raven.Client.Util
             return tcpClient;
         }
 
-        internal struct ConnectSecuredTcpSocketResult
+        internal struct ConnectSecuredTcpSocketResult : IDisposable
         {
             public string Url;
             public TcpClient TcpClient;
@@ -270,6 +270,12 @@ namespace Raven.Client.Util
                 TcpClient = tcpClient;
                 Stream = stream;
                 SupportedFeatures = supportedFeatures;
+            }
+
+            public void Dispose()
+            {
+                TcpClient?.Dispose();
+                Stream?.Dispose();
             }
         }
 
@@ -349,9 +355,9 @@ namespace Raven.Client.Util
                 }
             }
 
-            var message = $"Failed to connect to all urls {string.Join(", ", infoUrls)}" +
-                          Environment.NewLine +
-                          string.Join(Environment.NewLine, logs);
+            var message = $"Failed to connect to all urls {string.Join(", ", infoUrls)}";
+            if (logs != null)
+                message += Environment.NewLine + string.Join(Environment.NewLine, logs);
 
             throw new AggregateException(message, exceptions);
         }

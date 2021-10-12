@@ -59,8 +59,7 @@ namespace Raven.Server.Web.System
                 var tcpSocketResult = await TcpUtils.ConnectSecuredTcpSocket(tcpConnectionInfo, server.Certificate.Certificate, server.CipherSuitesPolicy,
                     TcpConnectionHeaderMessage.OperationTypes.TestConnection,
                     NegotiateWithRemote, ctx, timeout, negLogs, token);
-                await tcpSocketResult.Stream.DisposeAsync();
-                tcpSocketResult.TcpClient.Dispose();
+                tcpSocketResult.Dispose();
             }
 
             result.Log = negLogs;
