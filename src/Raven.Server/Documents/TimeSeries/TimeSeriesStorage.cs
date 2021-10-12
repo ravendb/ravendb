@@ -1833,7 +1833,7 @@ namespace Raven.Server.Documents.TimeSeries
                         if (holder.FromReplication)
                         {
                             bool isIncrement = localTag.StartsWith(TimedCounterPositivePrefixBuffer);
-                            return isIncrement ? SelectLargestValue(localValues, remote) : SelectSmallerValue(localValues, remote);
+                            return isIncrement ? SelectLargestValue(localValues, remote, true) : SelectSmallerValue(localValues, remote);
                         }
                             
                         return CompareResult.Addition;
@@ -1856,7 +1856,7 @@ namespace Raven.Server.Documents.TimeSeries
                 if (EitherOneIsMarkedAsDead(localStatus, remote, out compareResult))
                     return compareResult;
 
-                return SelectLargestValue(localValues, remote);
+                return SelectLargestValue(localValues, remote, false);
             }
 
             return CompareResult.Remote;
@@ -1886,9 +1886,9 @@ namespace Raven.Server.Documents.TimeSeries
             return false;
         }
 
-        private static CompareResult SelectLargestValue(Span<double> localValues, SingleResult remote)
+        private static CompareResult SelectLargestValue(Span<double> localValues, SingleResult remote, bool isIncrement)
         {
-            if (EnsureNumberOfValues(localValues.Length, ref remote) == false)
+            if (isIncrement && EnsureNumberOfValues(localValues.Length, ref remote) == false)
                 return CompareResult.Remote;
 
             if (localValues.Length != remote.Values.Length)

@@ -20,9 +20,9 @@ namespace Raven.Client.Documents.Session
         ISessionDocumentTypedTimeSeries<TValues> TimeSeriesFor<TValues>(string documentId, string name = null) where TValues : new();
         ISessionDocumentRollupTypedTimeSeries<TValues> TimeSeriesRollupFor<TValues>(object entity, string policy, string raw = null) where TValues : new();
         ISessionDocumentRollupTypedTimeSeries<TValues> TimeSeriesRollupFor<TValues>(string documentId, string policy, string raw = null) where TValues : new();
-        ISessionDocumentTimeSeries IncrementalTimeSeriesFor(string documentId, string name);
-        ISessionDocumentTimeSeries IncrementalTimeSeriesFor(object entity, string name);
-        ISessionDocumentTypedTimeSeries<TValues> IncrementalTimeSeriesFor<TValues>(object entity, string name = null) where TValues : new();
-        ISessionDocumentTypedTimeSeries<TValues> IncrementalTimeSeriesFor<TValues>(string documentId, string name = null) where TValues : new();
+        ISessionDocumentIncrementalTimeSeries IncrementalTimeSeriesFor(string documentId, string name);
+        ISessionDocumentIncrementalTimeSeries IncrementalTimeSeriesFor(object entity, string name);
+        ISessionDocumentTypedIncrementalTimeSeries<TValues> IncrementalTimeSeriesFor<TValues>(object entity, string name = null) where TValues : new();
+        ISessionDocumentTypedIncrementalTimeSeries<TValues> IncrementalTimeSeriesFor<TValues>(string documentId, string name = null) where TValues : new();
     }
 }
