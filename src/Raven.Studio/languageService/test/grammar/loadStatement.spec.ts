@@ -2,7 +2,7 @@
 import {
     LoadDocumentByNameContext,
     LoadStatementContext
-} from "../../src/generated/RqlParser";
+} from "../../src/generated/BaseRqlParser";
 
 describe("LOAD statement parser", function() {
     it("single", function() {

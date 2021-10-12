@@ -1,5 +1,5 @@
 import { CandidatesCollection } from "antlr4-c3/out/src/CodeCompletionCore";
-import { ProgContext, RqlParser } from "../generated/RqlParser";
+import { RqlParser } from "../RqlParser";
 import { BaseAutocompleteProvider } from "./baseProvider";
 import { Scanner } from "../scanner";
 import {
@@ -12,6 +12,7 @@ import {
     SCORING_OPERATOR
 } from "./scoring";
 import { AutocompleteProvider } from "./common";
+import { ProgContext } from "../generated/BaseRqlParser";
 
 const ident = x => x;
 
@@ -38,11 +39,6 @@ const rootKeywords: number[] = [
     RqlParser.INCLUDE,
     RqlParser.LIMIT
 ];
-
-const tokensRemap = new Map<number, string>();
-tokensRemap.set(RqlParser.ALL_DOCS, "@all_docs");
-tokensRemap.set(RqlParser.ORDER_BY, "order by");
-tokensRemap.set(RqlParser.GROUP_BY, "group by");
 
 const specialFunctions: Pick<autoCompleteWordList, "value" | "caption">[] = [
     {
@@ -147,7 +143,11 @@ export class AutocompleteKeywords extends BaseAutocompleteProvider implements Au
         }));
     } 
     
-    static handleEqual(): autoCompleteWordList[] {
+    static handleEqual(writtenText: string): autoCompleteWordList[] {
+        if (writtenText.endsWith(".")) {
+            return [];
+        }
+        
         return [
             {
                 value: "==",
@@ -158,7 +158,11 @@ export class AutocompleteKeywords extends BaseAutocompleteProvider implements Au
         ] 
     }
     
-    static handleMath(): autoCompleteWordList[] {
+    static handleMath(writtenText: string): autoCompleteWordList[] {
+        if (writtenText.endsWith(".")) {
+            return [];
+        }
+        
         return [
             {
                 value: "<",
@@ -213,7 +217,7 @@ export class AutocompleteKeywords extends BaseAutocompleteProvider implements Au
         // we iterate here in order keywords appear in RQL
         for (const keyword of rootKeywords) {
             if (candidates.tokens.has(keyword)) {
-                const displayName = parser.vocabulary.getSymbolicName(keyword).toLowerCase(); 
+                const displayName = parser.vocabulary.getDisplayName(keyword).toLowerCase(); 
                 result.push({
                     caption: displayName,
                     value: displayName + " ",
@@ -253,11 +257,11 @@ export class AutocompleteKeywords extends BaseAutocompleteProvider implements Au
         }
         
         if (candidates.tokens.has(RqlParser.EQUAL)) {
-            completions.push(...AutocompleteKeywords.handleEqual())
+            completions.push(...AutocompleteKeywords.handleEqual(writtenText))
         }
         
         if (candidates.tokens.has(RqlParser.MATH)) {
-            completions.push(...AutocompleteKeywords.handleMath());
+            completions.push(...AutocompleteKeywords.handleMath(writtenText));
         }
         
         if (candidates.tokens.has(RqlParser.METADATA)) {
@@ -272,14 +276,9 @@ export class AutocompleteKeywords extends BaseAutocompleteProvider implements Au
         
         const tokens: string[] = [];
         candidates.tokens.forEach((_, k) => {
-            const hasRemap = tokensRemap.get(k);
-            if (hasRemap) {
-                tokens.push(tokensRemap.get(k));
-            } else {
-                const symbolicName = parser.vocabulary.getSymbolicName(k);
-                if (symbolicName && alreadyHandledTokenTypes.indexOf(k) === -1) {
-                    tokens.push(symbolicName.toLowerCase());
-                }
+            const displayName = parser.vocabulary.getDisplayName(k);
+            if (displayName && alreadyHandledTokenTypes.indexOf(k) === -1) {
+                tokens.push(displayName.toLowerCase());
             }
         });
         

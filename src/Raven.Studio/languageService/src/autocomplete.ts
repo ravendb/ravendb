@@ -1,7 +1,7 @@
 import { CaretPosition } from "./types";
 import { parseRql } from "./parser";
 import { RqlQueryVisitor } from "./rqlQueryVisitor";
-import { ProgContext, RqlParser } from "./generated/RqlParser";
+import { RqlParser } from "./RqlParser";
 import { CodeCompletionCore, SymbolTable } from "antlr4-c3";
 import { AutocompleteProvider } from "./providers/common";
 import { AutocompleteFrom } from "./providers/from";
@@ -10,6 +10,8 @@ import { CommonTokenStream } from "antlr4ts";
 import { Scanner } from "./scanner";
 import { AutocompleteGroupBy } from "./providers/group_by";
 import { AutocompleteOrderBy } from "./providers/order_by";
+import { ProgContext } from "./generated/BaseRqlParser";
+import { AutoCompleteFields } from "./providers/fields";
 
 export const ignoredTokens: number[] = [
     RqlParser.EOF,
@@ -41,7 +43,8 @@ export const ignoredTokens: number[] = [
     RqlParser.NOT,
     RqlParser.NULL,
     RqlParser.TRUE,
-    RqlParser.JS_FUNCTION_DECLARATION
+    RqlParser.JS_FUNCTION_DECLARATION,
+    RqlParser.TIMESERIES_FUNCTION_DECLARATION
 ];
 
 const noSeparatorRequiredFor = new Set<number>([
@@ -74,7 +77,7 @@ export function getWrittenPart(input: string, caretPosition: CaretPosition) {
     const row = lines[caretPosition.line - 1];
     const toCaretText = row.substring(0, caretPosition.column);
 
-    const tokens = toCaretText.split(/[ ,\\.)(\[\]]/);
+    const tokens = toCaretText.split(/[ ,)(]/);
     return tokens[tokens.length - 1];
 }
 
@@ -154,6 +157,7 @@ export class autoCompleteEngine {
         return [
             new AutocompleteKeywords(metadataProvider, ignoredTokens),
             new AutocompleteFrom(metadataProvider),
+            new AutoCompleteFields(metadataProvider),
             new AutocompleteGroupBy(metadataProvider),
             new AutocompleteOrderBy(metadataProvider)
         ];

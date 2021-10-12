@@ -1,9 +1,9 @@
 import { CharStreams, CommonTokenStream } from "antlr4ts";
-import { RqlLexer } from "./generated/RqlLexer";
-import { RqlParser } from "./generated/RqlParser";
 import { ParsedRql } from "./types";
 import { ANTLRErrorListener } from "antlr4ts/ANTLRErrorListener";
 import { Token } from "antlr4ts/Token";
+import { RqlLexer } from "./RqlLexer";
+import { RqlParser } from "./RqlParser";
 
 export interface parseRqlOptions {
     onLexerError?: ANTLRErrorListener<Token>["syntaxError"];

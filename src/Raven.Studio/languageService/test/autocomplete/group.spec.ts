@@ -13,6 +13,16 @@ describe("can complete from", function () {
                 .toBeFalsy();
         }
     });
+    
+    it("doesn't complete keywords as nested field name", async () => {
+        const suggestions = await autocomplete(" from Orders group by ShipTo.|");
+
+        for (const keyword of nextKeywords) {
+            const matchingItem = suggestions.find(x => x.value.startsWith(keyword));
+            expect(matchingItem)
+                .toBeFalsy();
+        }
+    });
 
     it("can complete Array() function in group by ", async () => {
         const suggestions = await autocomplete(" from Orders group by |");

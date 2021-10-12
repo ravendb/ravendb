@@ -80,7 +80,6 @@ class rqlLanguageService {
                     })
                 });
                 break;
-                
             case "indexes":
                 this.metadataProvider.indexNames(names => {
                     this.sendMetadataResponse(request, {
@@ -88,7 +87,27 @@ class rqlLanguageService {
                     });
                 });
                 break;
-                
+            case "indexFields": 
+                {
+                    const payload = request.payload as MetadataRequestListIndexFields;
+                    this.metadataProvider.indexFields(payload.indexName, fields => {
+                        this.sendMetadataResponse(request, {
+                            fields
+                        });
+                    })
+                }
+                break;
+            case "collectionFields":
+                {
+                    const payload = request.payload as MetadataRequestListCollectionFields;
+                    this.metadataProvider.collectionFields(payload.collectionName, payload.prefix, fields => {
+                        this.sendMetadataResponse(request, {
+                            fields
+                        });
+                    })
+                }
+                break;
+            
             default:
                 throw new Error("Unhandled metadata request" + request.payload);
         }

@@ -24,6 +24,4 @@ export class FakeMetadataProvider implements queryCompleterProviders {
         callback([]); //TODO:
     }
     
-    
-    
 }

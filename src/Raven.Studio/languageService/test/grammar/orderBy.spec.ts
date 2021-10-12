@@ -2,7 +2,7 @@
 import {
     OrderByItemContext,
     OrderByStatementContext
-} from "../../src/generated/RqlParser";
+} from "../../src/generated/BaseRqlParser";
 
 describe("ORDER BY statement parser", function () {
     it("single", function () {

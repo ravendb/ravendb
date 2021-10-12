@@ -3,7 +3,7 @@ import {
     CollectionByNameContext,
     GroupByStatementContext,
     ParameterWithOptionalAliasContext,
-} from "../../src/generated/RqlParser";
+} from "../../src/generated/BaseRqlParser";
 
 describe("GROUP BY statement parser", function() {
     it("single", function() {

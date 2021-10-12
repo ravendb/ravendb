@@ -1,5 +1,5 @@
 import { parseRql } from "../../src/parser";
-import { CollectionByIndexContext, CollectionByNameContext } from "../../src/generated/RqlParser";
+import { CollectionByIndexContext, CollectionByNameContext } from "../../src/generated/BaseRqlParser";
 import { ErrorCollector } from "../autocompleteUtils";
 
 
@@ -59,7 +59,7 @@ describe("FROM statement parser", function() {
         });
         
         expect(errorCollector.numberOfErrors())
-            .toEqual(1);
+            .toEqual(2);
 
         const from = parseTree.fromStatement();
 
@@ -74,7 +74,7 @@ describe("FROM statement parser", function() {
         });
 
         expect(errorCollector.numberOfErrors())
-            .toEqual(1);
+            .toEqual(2);
 
         const from = parseTree.fromStatement();
 

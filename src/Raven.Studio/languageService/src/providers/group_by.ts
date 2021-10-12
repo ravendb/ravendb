@@ -1,30 +1,15 @@
 import { CandidatesCollection } from "antlr4-c3/out/src/CodeCompletionCore";
-import { ProgContext, RqlParser } from "../generated/RqlParser";
 import { BaseAutocompleteProvider } from "./baseProvider";
 import { Scanner } from "../scanner";
 import { META_FIELD, META_FUNCTION, SCORING_FIELD, SCORING_FUNCTION } from "./scoring";
 import { AutocompleteProvider } from "./common";
+import { RqlParser } from "../RqlParser";
+import { ProgContext } from "../generated/BaseRqlParser";
 
 export class AutocompleteGroupBy extends BaseAutocompleteProvider implements AutocompleteProvider {
-
-    async getPossibleFields(parser: RqlParser): Promise<string[]> {
-        const [queryType, source] = AutocompleteGroupBy.detectQueryType(parser);
-        
-        return new Promise<string[]>(resolve => {
-            switch (queryType) {
-                case "unknown":
-                    resolve([]);
-                    break;
-                case "index":
-                    this.metadataProvider.indexFields(source, resolve);
-                    break;
-                case "collection":
-                    //TODO: pass correct prefix!
-                    //TODO: extract and pass values as well!
-                    this.metadataProvider.collectionFields(source, undefined, fields => resolve(Object.keys(fields)));
-                    break;
-            }
-        });
+    
+    canCompleteArray(candidates: CandidatesCollection) {
+        return !candidates.rules.has(RqlParser.RULE_function);
     }
     
     async collectAsync(scanner: Scanner, candidates: CandidatesCollection, parser: RqlParser, parseTree: ProgContext, writtenPart: string): Promise<autoCompleteWordList[]> {
@@ -45,7 +30,7 @@ export class AutocompleteGroupBy extends BaseAutocompleteProvider implements Aut
                 meta: META_FUNCTION
             };
             
-            const fields = await this.getPossibleFields(parser);
+            const fields = await this.getPossibleFields(parseTree, writtenPart);
             
             const mappedFields = fields.map(f => ({
                 meta: META_FIELD,
@@ -54,7 +39,15 @@ export class AutocompleteGroupBy extends BaseAutocompleteProvider implements Aut
                 caption: f
             }));
             
-            return [arrayFunction, ...mappedFields];
+            const result: autoCompleteWordList[] = [];
+
+            if (this.canCompleteArray(candidates)) {
+                result.push(arrayFunction);
+            }
+            
+            result.push(...mappedFields);
+            
+            return result;
         }
         
         return [];

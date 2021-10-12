@@ -1,7 +1,7 @@
-parser grammar RqlParser;
+parser grammar BaseRqlParser;
 
 
-options { tokenVocab = RqlLexer; }
+options { tokenVocab = BaseRqlLexer; }
 prog
    : functionStatment* fromStatement groupByStatement? whereStatement? loadStatement? orderByStatement? updateStatement? selectStatement? includeStatement? limitStatement? EOF
    ;
@@ -312,7 +312,6 @@ identifiersWithoutRootKeywords
    | SORTING
    | ALPHANUMERIC
    | DOUBLE
-   | INDEX
    ;
 
 rootKeywords
@@ -324,6 +323,7 @@ rootKeywords
    | SELECT
    | INCLUDE
    | LIMIT
+   | INDEX
    ;
 
 identifiersAllNames

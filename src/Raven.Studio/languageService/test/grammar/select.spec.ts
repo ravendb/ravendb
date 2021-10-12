@@ -3,7 +3,7 @@ import {
     GetAllDistinctContext, 
     JavascriptCodeContext,
     ProjectIndividualFieldsContext
-} from "../../src/generated/RqlParser";
+} from "../../src/generated/BaseRqlParser";
 
 describe("SELECT statement parser", function () {
     it("single", function () {

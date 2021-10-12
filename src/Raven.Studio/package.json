@@ -5,7 +5,7 @@
     "gulp": "gulp",
     "webpack-language-service": "webpack --config languageService/webpack.config.js",
     "webpack-language-service-watch": "webpack --config languageService/webpack.config.js --watch",
-    "antlr4ts": "antlr4ts languageService/grammar/RqlLexer.g4 -visitor -no-listener languageService/grammar/RqlParser.g4 -o languageService/src/generated/",
+    "antlr4ts": "antlr4ts languageService/grammar/BaseRqlLexer.g4 -visitor -no-listener languageService/grammar/BaseRqlParser.g4 -o languageService/src/generated/",
     "test": "cd languageService/ && jest && cd .."
   },
   "private": true,

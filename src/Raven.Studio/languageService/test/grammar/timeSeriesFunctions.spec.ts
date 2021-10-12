@@ -2,7 +2,7 @@ import { parseRql } from "../../src/parser";
 import {
     ProjectFieldContext, ProjectIndividualFieldsContext,
     TimeSeriesFunctionContext
-} from "../../src/generated/RqlParser";
+} from "../../src/generated/BaseRqlParser";
 
 
 describe("TimeSeries statement parser", function () {

@@ -124,3 +124,9 @@ bench/Micro.Benchmark/BenchmarkDotNet.Artifacts/
 /src/Raven.Pal/osxcross
 /src/Raven.Pal/*.nativecodeanalysis.xml
 /src/Raven.Pal/src/posix/*.o
+
+
+# ANTLR generated files (via Rider plugin)
+gen/*.java
+gen/*.tokens
+gen/*.interp

@@ -25,11 +25,25 @@ type MetadataRequestListCollections = {
     type: "collections";
 }
 
+type MetadataRequestListCollectionFields = {
+    type: "collectionFields",
+    collectionName: string,
+    prefix: string
+}
+
+type MetadataRequestListIndexFields = {
+    type: "indexFields",
+    indexName: string
+}
+
 type MetadataRequestListIndexes = {
     type: "indexes";
 }
 
-type MetadataRequestPayload = MetadataRequestListCollections | MetadataRequestListIndexes;
+type MetadataRequestPayload = MetadataRequestListCollections 
+    | MetadataRequestListIndexes 
+    | MetadataRequestListCollectionFields
+    | MetadataRequestListIndexFields;
 
 type LanguageServiceRequest = LanguageServiceSyntaxRequest | LanguageServiceAutoCompleteRequest | LanguageServiceMetadataRequest;
 
@@ -58,6 +72,17 @@ type MetadataResponseIndexes = {
     names: string[];
 }
 
-type MetadataResponsePayload = MetadataResponseCollections | MetadataResponseIndexes;
+type MetadataResponseCollectionFields = {
+    fields: Record<string, string>;
+}
+
+type MetadataResponseIndexFields = {
+    fields: string[];
+}
+
+type MetadataResponsePayload = MetadataResponseCollections 
+    | MetadataResponseIndexes 
+    | MetadataResponseIndexFields 
+    | MetadataResponseCollectionFields;
 
 type LanguageServiceResponse = LanguageServiceSyntaxResponse | LanguageServiceAutoCompleteResponse | LanguageServiceMetadataResponse;
