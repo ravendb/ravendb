@@ -122,6 +122,16 @@ namespace Raven.Server.Commercial
         public bool HasRavenEtl => GetValue<bool>("ravenEtl");
 
         public bool HasSqlEtl => GetValue<bool>("sqlEtl");
+        
+        public bool HasOlapEtl => GetValue<bool>("olapEtl");
+
+        public bool HasElasticSearchEtl => GetValue<bool>("elasticsearchEtl");
+
+        public bool HasSnmpMonitoring => GetValue<bool>("snmp");
+
+        public bool HasPostgreSqlIntegration => GetValue<bool>("postgreSql");
+        
+        public bool HasMonitoringEndpoints => GetValue<bool>("monitoringEndpoints");
 
         public bool HasHighlyAvailableTasks => GetValue<bool>("highlyAvailableTasks");
 

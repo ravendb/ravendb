@@ -1494,6 +1494,26 @@ namespace Raven.Server.Commercial
             return false;
         }
 
+        public bool CanUsePostgreSqlIntegration(bool withNotification)
+        {
+            if (IsValid(out _) == false)
+                return false;
+
+            var value = LicenseStatus.HasPostgreSqlIntegration;
+            if (withNotification == false)
+                return false;
+
+            if (value)
+            {
+                DismissLicenseLimit(LimitType.PostgreSqlIntegration);
+                return true;
+            }
+
+            const string details = "Your current license doesn't include the PostgreSql integration feature";
+            GenerateLicenseLimit(LimitType.PostgreSqlIntegration, details, addNotification: true);
+            return false;
+        }
+
         public bool CanDynamicallyDistributeNodes(bool withNotification, out LicenseLimitException licenseLimit)
         {
             if (IsValid(out licenseLimit) == false)

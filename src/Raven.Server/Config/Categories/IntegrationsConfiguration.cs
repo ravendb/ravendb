@@ -26,6 +26,11 @@ namespace Raven.Server.Config.Categories
 
         public class PostgreSQLConfiguration : ConfigurationCategory
         {
+            [Description("Indicates if PostgreSQL integration is enabled or not. Default: false")]
+            [DefaultValue(false)]
+            [ConfigurationEntry("Integrations.PostgreSQL.Enabled", ConfigurationEntryScope.ServerWideOnly)]
+            public bool Enabled { get; set; }
+
             [Description("Port on which server is listening for a PostgreSQL connections. Default: 5433")]
             [DefaultValue(5433)]
             [ConfigurationEntry("Integrations.PostgreSQL.Port", ConfigurationEntryScope.ServerWideOnly)]

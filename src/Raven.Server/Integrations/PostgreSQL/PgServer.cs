@@ -8,17 +8,19 @@ using System.Threading.Tasks;
 
 namespace Raven.Server.Integrations.PostgreSQL
 {
-    public class PgServer
+    public class PgServer : IDisposable
     {
         private readonly RavenServer _server;
         private readonly ConcurrentDictionary<TcpClient, Task> _connections = new();
-        private Task _listenTask = Task.CompletedTask;
         private readonly CancellationTokenSource _cts = new();
-        private TcpListener _tcpListener;
-        private int _sessionIdentifier;
         private readonly int _processId;
         private readonly int _port;
 
+        private Task _listenTask = Task.CompletedTask;
+        private TcpListener _tcpListener;
+        private int _sessionIdentifier;
+        private bool _disposed;
+        
         public PgServer(RavenServer server)
         {
             _server = server;
@@ -26,7 +28,7 @@ namespace Raven.Server.Integrations.PostgreSQL
             _port = _server.Configuration.Integrations.PostgreSQL.Port;
         }
 
-        public void Execute()
+        public void Start()
         {
             _tcpListener = new TcpListener(IPAddress.Any, _port);
             _tcpListener.Start();
@@ -34,7 +36,7 @@ namespace Raven.Server.Integrations.PostgreSQL
             _listenTask = ListenToConnectionsAsync();
         }
 
-        public void Shutdown()
+        public void Stop()
         {
             _tcpListener.Stop();
             _cts.Cancel();
@@ -44,22 +46,16 @@ namespace Raven.Server.Integrations.PostgreSQL
             }
         }
 
-        private async Task ListenToConnectionsAsync()
+        public bool Active
         {
-            while (_cts.IsCancellationRequested == false)
+            get
             {
-                TcpClient client;
-                try
+                if (_disposed)
                 {
-                    client = await _tcpListener.AcceptTcpClientAsync();
-                }
-                catch (Exception e)
-                {
-                    // TODO: Error handling (won't be needed after integration as Raven.Server has this logic already)
-                    throw;
+                    throw new ObjectDisposedException(GetType().FullName);
                 }
 
-                _connections.TryAdd(client, HandleConnection(client));
+                return true;
             }
         }
 
@@ -81,6 +77,49 @@ namespace Raven.Server.Integrations.PostgreSQL
             {
                 // TODO: Error handling (won't be needed after integration as Raven.Server has this logic already)
             }
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        private async Task ListenToConnectionsAsync()
+        {
+            while (_cts.IsCancellationRequested == false)
+            {
+                TcpClient client;
+                try
+                {
+                    client = await _tcpListener.AcceptTcpClientAsync();
+                }
+                catch (Exception e)
+                {
+                    // TODO: Error handling (won't be needed after integration as Raven.Server has this logic already)
+                    throw;
+                }
+
+                _connections.TryAdd(client, HandleConnection(client));
+            }
+        }
+
+        private void Dispose(bool disposing)
+        {
+            if (_disposed)
+                return;
+
+            if (disposing)
+            {
+                _tcpListener.Stop();
+                _cts.Cancel();
+                foreach (var (_, task) in _connections)
+                {
+                    task.Wait();
+                }
+            }
+
+            _disposed = true;
         }
     }
 }
