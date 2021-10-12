@@ -3483,24 +3483,23 @@ namespace Raven.Server.ServerWide
                     SupportedFeatures = supportedFeatures,
                     Disconnect = () =>
                     {
+                        try
                         {
-                            try
-                            {
-                                tcpClient.Client.Disconnect(false);
-                            }
-                            catch (ObjectDisposedException)
-                            {
-                                //Happens, we don't really care at this point
-                            }
+                            tcpClient.Client.Disconnect(false);
+                            stream.Dispose();
+                            tcpClient.Dispose();
+                        }
+                        catch (ObjectDisposedException)
+                        {
+                            //Happens, we don't really care at this point
                         }
                     }
                 };
             }
             catch (Exception)
             {
-                if (stream != null)
-                    await stream.DisposeAsync();
                 tcpClient?.Dispose();
+                stream?.Dispose();
                 throw;
             }
         }

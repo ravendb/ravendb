@@ -157,8 +157,8 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
                     var tcpSocketResult = await TcpUtils.ConnectSecuredTcpSocket(info, ServerStore.Engine.ClusterCertificate, Server.CipherSuitesPolicy,
                         TcpConnectionHeaderMessage.OperationTypes.Ping, NegotiationCallback, context, ServerStore.Engine.TcpConnectionTimeout, log, cts.Token);
-                    await tcpSocketResult.Stream.DisposeAsync();
-                    tcpSocketResult.TcpClient.Dispose();
+
+                    tcpSocketResult.Dispose();
 
                     result.Log = log;
 
