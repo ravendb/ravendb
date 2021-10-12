@@ -77,7 +77,7 @@ namespace Raven.Server.Integrations.PostgreSQL
                         PgErrorCodes.ProtocolViolation,
                         "SSLRequest received twice"), _token);
                     return;
-                case Cancel cancel:
+                case Cancel cancel: 
                     // TODO: Support Cancel message
                     await writer.WriteAsync(messageBuilder.ErrorResponse(
                         PgSeverity.Fatal,
@@ -103,6 +103,9 @@ namespace Raven.Server.Integrations.PostgreSQL
             var writer = PipeWriter.Create(stream);
 
             await HandleInitialMessage(stream, reader, writer, messageBuilder);
+
+            if (_clientOptions == null) //TODO pfyasu maybe unused when cancel message will be implemented
+                return;
 
             if (_clientOptions.TryGetValue("database", out string databaseName) == false)
             {

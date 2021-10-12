@@ -141,10 +141,10 @@ namespace SlowTests.Server.Integrations.PostgreSQL
             }
         }
 
-        [Fact] //todo pfyasu query by index doesn't work (RqlQuery throws exception)
+        [Fact]
         public async Task ForSpecificCollection_GetCorrectNumberOfRecord_UsingIndex()
         {
-            var query = "from index 'Orders/Totals'";
+            const string query = "from index 'Orders/Totals'";
 
             using (var store = GetDocumentStore())
             {
@@ -166,7 +166,8 @@ namespace SlowTests.Server.Integrations.PostgreSQL
                 };
 
                 store.Maintenance.Send(new PutIndexesOperation(indexDefinition));
-                
+                WaitForIndexing(store);
+
                 using (var session = store.OpenAsyncSession())
                 {
                     var orders = await session.Advanced
@@ -177,7 +178,53 @@ namespace SlowTests.Server.Integrations.PostgreSQL
 
                     Assert.NotNull(result);
                     Assert.NotEmpty(result.Rows);
-                    Assert.Equal(result.Rows.Count, orders.Length);
+                    Assert.Equal(orders.Length, result.Rows.Count);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task ForSpecificCollection_AndSpecificQuery_GetCorrectSelectedFields_UsingIndex()
+        {
+            const string query = "from index 'Orders/Totals' select Total";
+            const string totalField = "Total";
+
+            using (var store = GetDocumentStore())
+            {
+                CreateNorthwindDatabase(store);
+
+                var indexDefinition = new IndexDefinition
+                {
+                    Name = "Orders/Totals",
+                    Maps =
+                    {
+                        @"from order in docs.Orders	
+                          select new 
+                          { 
+                              order.Employee, 
+                              order.Company,
+                              Total = order.Lines.Sum(l => (l.Quantity * l.PricePerUnit) * (1 - l.Discount))
+                          }"
+                    }
+                };
+
+                store.Maintenance.Send(new PutIndexesOperation(indexDefinition));
+                WaitForIndexing(store);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var orders = await session.Advanced
+                        .AsyncRawQuery<JObject>(query)
+                        .ToArrayAsync();
+
+                    var result = await Act(store, query);
+
+                    Assert.NotNull(result);
+                    Assert.NotEmpty(result.Rows);
+                    Assert.Equal(orders.Length, result.Rows.Count);
+
+                    var columns = GetColumnNames(result);
+                    Assert.Contains(totalField, columns);
                 }
             }
         }
