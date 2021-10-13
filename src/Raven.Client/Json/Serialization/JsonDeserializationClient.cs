@@ -90,8 +90,6 @@ namespace Raven.Client.Json.Serialization
 
         public static readonly Func<BlittableJsonReaderObject, OngoingTaskRavenEtlDetails> GetOngoingTaskRavenEtlResult = GenerateJsonDeserializationRoutine<OngoingTaskRavenEtlDetails>();
 
-        public static readonly Func<BlittableJsonReaderObject, ShardedOngoingTaskRavenEtlDetails> GetShardedOngoingTaskRavenEtlResult = GenerateJsonDeserializationRoutine<ShardedOngoingTaskRavenEtlDetails>();
-
         public static readonly Func<BlittableJsonReaderObject, OngoingTaskOlapEtlDetails> GetOngoingTaskOlapEtlResult = GenerateJsonDeserializationRoutine<OngoingTaskOlapEtlDetails>();
 
         public static readonly Func<BlittableJsonReaderObject, OngoingTaskBackup> GetOngoingTaskBackupResult = GenerateJsonDeserializationRoutine<OngoingTaskBackup>();

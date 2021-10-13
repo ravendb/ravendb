@@ -640,10 +640,11 @@ person.addCounter(loadCounter('down'));
         {
             using (var store = GetShardedDocumentStore())
             {
+                var name = "aaa";
                 var configuration = new RavenEtlConfiguration
                 {
                     ConnectionStringName = "test",
-                    Name = "aaa",
+                    Name = name,
                     Transforms =
                     {
                         new Transformation
@@ -663,9 +664,11 @@ person.addCounter(loadCounter('down'));
 
                 store.Maintenance.Send(new DeleteOngoingTaskOperation(result.TaskId, OngoingTaskType.RavenEtl));
 
-                var ongoingTask = store.Maintenance.Send(new GetOngoingTaskInfoOperation(result.TaskId, OngoingTaskType.RavenEtl));
-
-                Assert.Null(ongoingTask);
+                for (int i = 0; i < 3; i++)
+                {
+                    var ongoingTask = store.Maintenance.Send(new GetOngoingTaskInfoOperation($"{name}${i}", OngoingTaskType.RavenEtl));
+                    Assert.Null(ongoingTask);
+                }
             }
         }
 
@@ -674,10 +677,11 @@ person.addCounter(loadCounter('down'));
         {
             using (var store = GetShardedDocumentStore())
             {
+                var name = "aaa";
                 var configuration = new RavenEtlConfiguration
                 {
                     ConnectionStringName = "test",
-                    Name = "aaa",
+                    Name = name,
                     Transforms =
                     {
                         new Transformation
@@ -702,9 +706,9 @@ person.addCounter(loadCounter('down'));
 
                 configuration.Transforms[0].Disabled = true;
 
-                var update = store.Maintenance.Send(new UpdateEtlOperation<RavenConnectionString>(result.TaskId, configuration));
+                store.Maintenance.Send(new UpdateEtlOperation<RavenConnectionString>(result.TaskId, configuration));
 
-                var ongoingTask = store.Maintenance.Send(new GetOngoingTaskInfoOperation(update.TaskId, OngoingTaskType.RavenEtl));
+                var ongoingTask = store.Maintenance.Send(new GetOngoingTaskInfoOperation(name + "$0", OngoingTaskType.RavenEtl));
 
                 Assert.Equal(OngoingTaskState.PartiallyEnabled, ongoingTask.TaskState);
             }
@@ -715,10 +719,11 @@ person.addCounter(loadCounter('down'));
         {
             using (var store = GetShardedDocumentStore())
             {
+                var name = "aaa";
                 var configuration = new RavenEtlConfiguration
                 {
                     ConnectionStringName = "test",
-                    Name = "aaa",
+                    Name = name,
                     Transforms =
                     {
                         new Transformation
@@ -741,7 +746,7 @@ person.addCounter(loadCounter('down'));
                 Assert.True(toggleResult.RaftCommandIndex > 0);
                 Assert.True(toggleResult.TaskId > 0);
 
-                var ongoingTask = store.Maintenance.Send(new GetOngoingTaskInfoOperation(result.TaskId, OngoingTaskType.RavenEtl));
+                var ongoingTask = store.Maintenance.Send(new GetOngoingTaskInfoOperation(name + "$1", OngoingTaskType.RavenEtl));
                 Assert.Equal(OngoingTaskState.Disabled, ongoingTask.TaskState);
             }
         }
@@ -860,6 +865,48 @@ person.addCounter(loadCounter('down'));
                         var t2 = src.Maintenance.Server.SendAsync(new UpdateUnusedDatabasesOperation(src.Database, set));
                     }
                 }
+            }
+        }
+
+        [Fact]
+        public void CanGetTaskInfo()
+        {
+            using (var store = GetShardedDocumentStore())
+            {
+                var name = "aaa";
+                var configuration = new RavenEtlConfiguration
+                {
+                    ConnectionStringName = "test",
+                    Name = name,
+                    Transforms =
+                    {
+                        new Transformation
+                        {
+                            Name = "S1",
+                            Collections = {"Users"}
+                        }
+                    }
+                };
+
+                AddEtl(store, configuration, new RavenConnectionString
+                {
+                    Name = "test",
+                    TopologyDiscoveryUrls = new[] { "http://127.0.0.1:8080" },
+                    Database = "Northwind"
+                });
+
+                for (int i = 0; i < 3; i++)
+                {
+                    var taskName = $"{name}${i}";
+                    var ongoingTask = store.Maintenance.Send(new GetOngoingTaskInfoOperation(taskName, OngoingTaskType.RavenEtl));
+
+                    Assert.NotNull(ongoingTask);
+                    Assert.Equal(taskName, ongoingTask.TaskName);
+                    Assert.Equal("A", ongoingTask.ResponsibleNode.NodeTag);
+                    Assert.Equal(OngoingTaskConnectionStatus.Active, ongoingTask.TaskConnectionStatus);
+                }
+
+
             }
         }
 

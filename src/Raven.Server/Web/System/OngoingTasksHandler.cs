@@ -342,7 +342,7 @@ namespace Raven.Server.Web.System
             await DatabaseConfigurations(ServerStore.ModifyPeriodicBackup,
                 "update-periodic-backup",
                 GetRaftRequestIdFromQuery(),
-                beforeSetupConfiguration: (string databaseName, ref BlittableJsonReaderObject readerObject, JsonOperationContext context) =>
+                beforeSetupConfiguration: (string databaseName, ref BlittableJsonReaderObject readerObject, JsonOperationContext context, ServerStore serverStore) =>
                 {
                     var configuration = JsonDeserializationCluster.PeriodicBackupConfiguration(readerObject);
 
@@ -598,24 +598,29 @@ namespace Raven.Server.Web.System
         [RavenAction("/databases/*/admin/connection-strings", "DELETE", AuthorizationStatus.DatabaseAdmin)]
         public async Task RemoveConnectionString()
         {
-            if (await CanAccessDatabaseAsync(Database.Name, requireAdmin: true, requireWrite: true) == false)
+            await RemoveConnectionString(Database.Name, this);
+        }
+
+        public static async Task RemoveConnectionString(string databaseName, RequestHandler requestHandler)
+        {
+            if (await requestHandler.CanAccessDatabaseAsync(databaseName, requireAdmin: true, requireWrite: true) == false)
                 return;
 
-            if (ResourceNameValidator.IsValidResourceName(Database.Name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
+            if (ResourceNameValidator.IsValidResourceName(databaseName, requestHandler.ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
                 throw new BadRequestException(errorMessage);
 
-            var connectionStringName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("connectionString");
-            var type = GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
+            var connectionStringName = requestHandler.GetQueryStringValueAndAssertIfSingleAndNotEmpty("connectionString");
+            var type = requestHandler.GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
 
-            await ServerStore.EnsureNotPassiveAsync();
+            await requestHandler.ServerStore.EnsureNotPassiveAsync();
 
-            var (index, _) = await ServerStore.RemoveConnectionString(Database.Name, connectionStringName, type, GetRaftRequestIdFromQuery());
-            await ServerStore.Cluster.WaitForIndexNotification(index);
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+            var (index, _) = await requestHandler.ServerStore.RemoveConnectionString(databaseName, connectionStringName, type, requestHandler.GetRaftRequestIdFromQuery());
+            await requestHandler.ServerStore.Cluster.WaitForIndexNotification(index);
+            requestHandler.HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
 
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (requestHandler.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, requestHandler.ResponseBodyStream()))
                 {
                     context.Write(writer, new DynamicJsonValue
                     {
@@ -628,19 +633,24 @@ namespace Raven.Server.Web.System
         [RavenAction("/databases/*/admin/connection-strings", "GET", AuthorizationStatus.DatabaseAdmin)]
         public async Task GetConnectionStrings()
         {
-            if (ResourceNameValidator.IsValidResourceName(Database.Name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
+            await GetConnectionStrings(Database.Name, this);
+        }
+
+        public static async Task GetConnectionStrings(string databaseName, RequestHandler requestHandler)
+        {
+            if (ResourceNameValidator.IsValidResourceName(databaseName, requestHandler.ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
                 throw new BadRequestException(errorMessage);
 
-            if (await CanAccessDatabaseAsync(Database.Name, requireAdmin: true, requireWrite: false) == false)
+            if (await requestHandler.CanAccessDatabaseAsync(databaseName, requireAdmin: true, requireWrite: false) == false)
                 return;
 
-            var connectionStringName = GetStringQueryString("connectionStringName", false);
-            var type = GetStringQueryString("type", false);
+            var connectionStringName = requestHandler.GetStringQueryString("connectionStringName", false);
+            var type = requestHandler.GetStringQueryString("type", false);
 
-            await ServerStore.EnsureNotPassiveAsync();
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+            await requestHandler.ServerStore.EnsureNotPassiveAsync();
+            requestHandler.HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
 
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (requestHandler.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 Dictionary<string, RavenConnectionString> ravenConnectionStrings;
                 Dictionary<string, SqlConnectionString> sqlConnectionStrings;
@@ -648,7 +658,7 @@ namespace Raven.Server.Web.System
                 Dictionary<string, ElasticSearchConnectionString> elasticSearchConnectionStrings;
 
                 using (context.OpenReadTransaction())
-                using (var rawRecord = ServerStore.Cluster.ReadRawDatabaseRecord(context, Database.Name))
+                using (var rawRecord = requestHandler.ServerStore.Cluster.ReadRawDatabaseRecord(context, databaseName))
                 {
                     if (connectionStringName != null)
                     {
@@ -670,7 +680,7 @@ namespace Raven.Server.Web.System
                     }
                 }
 
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, requestHandler.ResponseBodyStream()))
                 {
                     var result = new GetConnectionStringsResult
                     {
@@ -740,28 +750,47 @@ namespace Raven.Server.Web.System
         [RavenAction("/databases/*/admin/connection-strings", "PUT", AuthorizationStatus.DatabaseAdmin)]
         public async Task PutConnectionString()
         {
-            await DatabaseConfigurations((_, databaseName, connectionString, guid) => ServerStore.PutConnectionString(_, databaseName, connectionString, guid), "put-connection-string", GetRaftRequestIdFromQuery());
+            await PutConnectionString(Database.Name, this);
+        }
+
+        internal static async Task PutConnectionString(string databaseName, RequestHandler requestHandler)
+        {
+            await DatabaseConfigurations(requestHandler.ServerStore.PutConnectionString, "put-connection-string", requestHandler.GetRaftRequestIdFromQuery(), 
+                databaseName, requestHandler);
         }
 
         [RavenAction("/databases/*/admin/etl", "RESET", AuthorizationStatus.DatabaseAdmin)]
         public async Task ResetEtl()
         {
-            var configurationName = GetStringQueryString("configurationName"); // etl task name
-            var transformationName = GetStringQueryString("transformationName");
+            await ResetEtl(Database.Name, this);
+        }
 
-            await DatabaseConfigurations((_, databaseName, etlConfiguration, guid) => ServerStore.RemoveEtlProcessState(_, databaseName, configurationName, transformationName, guid), "etl-reset", GetRaftRequestIdFromQuery());
+        public static async Task ResetEtl(string databaseName, RequestHandler requestHandler)
+        {
+            var configurationName = requestHandler.GetStringQueryString("configurationName"); // etl task name
+            var transformationName = requestHandler.GetStringQueryString("transformationName");
+
+            await DatabaseConfigurations((_, db, etlConfiguration, guid) => requestHandler.ServerStore.RemoveEtlProcessState(_, db, configurationName, transformationName, guid), 
+                "etl-reset", requestHandler.GetRaftRequestIdFromQuery(), databaseName, requestHandler);
         }
 
         [RavenAction("/databases/*/admin/etl", "PUT", AuthorizationStatus.DatabaseAdmin)]
         public async Task AddEtl()
         {
-            var id = GetLongQueryString("id", required: false);
+            await AddEtl(Database.Name, this);
+        }
+
+        public static async Task AddEtl(string databaseName, RequestHandler requestHandler)
+        {
+            var id = requestHandler.GetLongQueryString("id", required: false);
 
             if (id == null)
             {
-                await DatabaseConfigurations((_, databaseName, etlConfiguration, guid) =>
-                        ServerStore.AddEtl(_, databaseName, etlConfiguration, guid), "etl-add",
-                    GetRaftRequestIdFromQuery(),
+                await DatabaseConfigurations((_, db, etlConfiguration, guid) =>
+                        requestHandler.ServerStore.AddEtl(_, db, etlConfiguration, guid), "etl-add",
+                    requestHandler.GetRaftRequestIdFromQuery(),
+                    databaseName,
+                    requestHandler,
                     beforeSetupConfiguration: AssertCanAddOrUpdateEtl,
                     fillJson: (json, _, index) => json[nameof(EtlConfiguration<ConnectionString>.TaskId)] = index);
 
@@ -770,42 +799,44 @@ namespace Raven.Server.Web.System
 
             string etlConfigurationName = null;
 
-            await DatabaseConfigurations((_, databaseName, etlConfiguration, guid) =>
-            {
-                var task = ServerStore.UpdateEtl(_, databaseName, id.Value, etlConfiguration, guid);
-                etlConfiguration.TryGet(nameof(RavenEtlConfiguration.Name), out etlConfigurationName);
-                return task;
-            }, "etl-update",
-                GetRaftRequestIdFromQuery(),
+            await DatabaseConfigurations((_, db, etlConfiguration, guid) =>
+                {
+                    var task = requestHandler.ServerStore.UpdateEtl(_, db, id.Value, etlConfiguration, guid);
+                    etlConfiguration.TryGet(nameof(RavenEtlConfiguration.Name), out etlConfigurationName);
+                    return task;
+                }, "etl-update",
+                requestHandler.GetRaftRequestIdFromQuery(),
+                databaseName,
+                requestHandler,
                 beforeSetupConfiguration: AssertCanAddOrUpdateEtl,
                 fillJson: (json, _, index) => json[nameof(EtlConfiguration<ConnectionString>.TaskId)] = index);
 
             // Reset scripts if needed
-            var scriptsToReset = HttpContext.Request.Query["reset"];
-            var raftRequestId = GetRaftRequestIdFromQuery();
+            var scriptsToReset = requestHandler.HttpContext.Request.Query["reset"];
+            var raftRequestId = requestHandler.GetRaftRequestIdFromQuery();
 
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            using (requestHandler.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             using (ctx.OpenReadTransaction())
             {
                 foreach (var script in scriptsToReset)
                 {
-                    await ServerStore.RemoveEtlProcessState(ctx, Database.Name, etlConfigurationName, script, $"{raftRequestId}/{script}");
+                    await requestHandler.ServerStore.RemoveEtlProcessState(ctx, databaseName, etlConfigurationName, script, $"{raftRequestId}/{script}");
                 }
             }
         }
 
-        private void AssertCanAddOrUpdateEtl(string databaseName, ref BlittableJsonReaderObject etlConfiguration, JsonOperationContext context)
+        private static void AssertCanAddOrUpdateEtl(string databaseName, ref BlittableJsonReaderObject etlConfiguration, JsonOperationContext context, ServerStore serverStore)
         {
             switch (EtlConfiguration<ConnectionString>.GetEtlType(etlConfiguration))
             {
                 case EtlType.Raven:
-                    ServerStore.LicenseManager.AssertCanAddRavenEtl();
+                    serverStore.LicenseManager.AssertCanAddRavenEtl();
                     break;
                 case EtlType.Sql:
-                    ServerStore.LicenseManager.AssertCanAddSqlEtl();
+                    serverStore.LicenseManager.AssertCanAddSqlEtl();
                     break;
                 case EtlType.Olap:
-                    ServerStore.LicenseManager.AssertCanAddOlapEtl();
+                    serverStore.LicenseManager.AssertCanAddOlapEtl();
                     break;
                 case EtlType.ElasticSearch:
                     ServerStore.LicenseManager.AssertCanAddElasticSearchEtl();
@@ -988,8 +1019,13 @@ namespace Raven.Server.Web.System
         [RavenAction("/databases/*/task", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetOngoingTaskInfo()
         {
+            bool sharded = false;
             if (ResourceNameValidator.IsValidResourceName(Database.Name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
-                throw new BadRequestException(errorMessage);
+            {
+                sharded = ShardHelper.IsShardedName(Database.Name);
+                if (sharded == false)
+                    throw new BadRequestException(errorMessage);
+            }
             long key = 0;
             var taskId = GetLongQueryString("key", false);
             if (taskId != null)
@@ -1125,10 +1161,20 @@ namespace Raven.Server.Web.System
                             break;
 
                         case OngoingTaskType.RavenEtl:
-
-                            var ravenEtl = name != null ?
-                                record.RavenEtls.Find(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
-                                : record.RavenEtls?.Find(x => x.TaskId == key);
+                            
+                            RavenEtlConfiguration ravenEtl;
+                            if (sharded)
+                            {
+                                var taskName = name;
+                                ShardHelper.TryGetShardIndexAndDatabaseName(ref taskName);
+                                ravenEtl = record.RavenEtls.Find(x => x.Name.Equals(taskName, StringComparison.OrdinalIgnoreCase));
+                            }
+                            else
+                            {
+                                ravenEtl = name != null ?
+                                    record.RavenEtls.Find(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+                                    : record.RavenEtls?.Find(x => x.TaskId == key);
+                            }
 
                             if (ravenEtl == null)
                             {
@@ -1141,7 +1187,7 @@ namespace Raven.Server.Web.System
                             await WriteResult(context, new OngoingTaskRavenEtlDetails
                             {
                                 TaskId = ravenEtl.TaskId,
-                                TaskName = ravenEtl.Name,
+                                TaskName = name ?? ravenEtl.Name,
                                 Configuration = ravenEtl,
                                 TaskState = GetEtlTaskState(ravenEtl),
                                 MentorNode = ravenEtl.MentorNode,
@@ -1315,25 +1361,38 @@ namespace Raven.Server.Web.System
         [RavenAction("/databases/*/admin/tasks/state", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task ToggleTaskState()
         {
-            if (ResourceNameValidator.IsValidResourceName(Database.Name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
+            await ToggleTaskState(Database.Name, this, Database);
+        }
+
+        internal static async Task ToggleTaskState(string databaseName, RequestHandler requestHandler, DocumentDatabase database = null)
+        {
+            if (ResourceNameValidator.IsValidResourceName(databaseName, requestHandler.ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
                 throw new BadRequestException(errorMessage);
 
-            var key = GetLongQueryString("key");
-            var typeStr = GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
-            var disable = GetBoolValueQueryString("disable") ?? true;
-            var taskName = GetStringQueryString("taskName", required: false);
+            var key = requestHandler.GetLongQueryString("key");
+            var typeStr = requestHandler.GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
+            var disable = requestHandler.GetBoolValueQueryString("disable") ?? true;
+            var taskName = requestHandler.GetStringQueryString("taskName", required: false);
 
             if (Enum.TryParse<OngoingTaskType>(typeStr, true, out var type) == false)
                 throw new ArgumentException($"Unknown task type: {type}", nameof(type));
 
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (requestHandler.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var (index, _) = await ServerStore.ToggleTaskState(key, taskName, type, disable, Database.Name, GetRaftRequestIdFromQuery());
-                await Database.RachisLogIndexNotifications.WaitForIndexNotification(index, ServerStore.Engine.OperationTimeout);
+                var (index, _) = await requestHandler.ServerStore.ToggleTaskState(key, taskName, type, disable, databaseName, requestHandler.GetRaftRequestIdFromQuery());
+                if (database == null)
+                {
+                    // sharded database
+                    await requestHandler.WaitForIndexToBeApplied(context, index);
+                }
+                else
+                {
+                    await database.RachisLogIndexNotifications.WaitForIndexNotification(index, requestHandler.ServerStore.Engine.OperationTimeout);
+                }
 
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+                requestHandler.HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
 
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, requestHandler.ResponseBodyStream()))
                 {
                     context.Write(writer, new DynamicJsonValue
                     {
@@ -1387,31 +1446,50 @@ namespace Raven.Server.Web.System
         [RavenAction("/databases/*/admin/tasks", "DELETE", AuthorizationStatus.DatabaseAdmin)]
         public async Task DeleteOngoingTask()
         {
-            if (ResourceNameValidator.IsValidResourceName(Database.Name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
+            await DeleteOngoingTask(Database.Name, this, Database);
+        }
+
+        internal static async Task DeleteOngoingTask(string databaseName, RequestHandler requestHandler, DocumentDatabase database = null)
+        {
+            if (ResourceNameValidator.IsValidResourceName(databaseName, requestHandler.ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
                 throw new BadRequestException(errorMessage);
 
-            var id = GetLongQueryString("id");
-            var typeStr = GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
-            var taskName = GetStringQueryString("taskName", required: false);
+            var id = requestHandler.GetLongQueryString("id");
+            var typeStr = requestHandler.GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
+            var taskName = requestHandler.GetStringQueryString("taskName", required: false);
 
             if (Enum.TryParse<OngoingTaskType>(typeStr, true, out var type) == false)
                 throw new ArgumentException($"Unknown task type: {type}", "type");
 
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (requestHandler.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 long index;
+                bool sharded = false;
+                if (database == null)
+                {
+                    // sharded database
+                    database = await requestHandler.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(databaseName).First();
+                    sharded = true;
+                }
 
-                var action = new DeleteOngoingTaskAction(id, type, ServerStore, Database, Database.Name, context);
-                var raftRequestId = GetRaftRequestIdFromQuery();
+                var action = new DeleteOngoingTaskAction(id, type, requestHandler.ServerStore, database, databaseName, context);
+                var raftRequestId = requestHandler.GetRaftRequestIdFromQuery();
 
                 try
                 {
-                    (index, _) = await ServerStore.DeleteOngoingTask(id, taskName, type, Database.Name, $"{raftRequestId}/delete-ongoing-task");
-                    await Database.RachisLogIndexNotifications.WaitForIndexNotification(index, ServerStore.Engine.OperationTimeout);
+                    (index, _) = await requestHandler.ServerStore.DeleteOngoingTask(id, taskName, type, databaseName, $"{raftRequestId}/delete-ongoing-task");
+                    if (sharded)
+                    {
+                        await requestHandler.WaitForIndexToBeApplied(context, index);
+                    }
+                    else
+                    {
+                        await database.RachisLogIndexNotifications.WaitForIndexNotification(index, requestHandler.ServerStore.Engine.OperationTimeout);
+                    }
 
                     if (type == OngoingTaskType.Subscription)
                     {
-                        Database.SubscriptionStorage.RaiseNotificationForTaskRemoved(taskName);
+                        database.SubscriptionStorage.RaiseNotificationForTaskRemoved(taskName);
                 }
                 }
                 finally
@@ -1419,9 +1497,9 @@ namespace Raven.Server.Web.System
                     await action.Complete($"{raftRequestId}/complete");
                 }
 
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+                requestHandler.HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
 
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, requestHandler.ResponseBodyStream()))
                 {
                     context.Write(writer, new DynamicJsonValue
                     {

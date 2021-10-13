@@ -85,14 +85,14 @@ namespace Raven.Server.ServerWide.Commands.ETL
                 }
             }
 
-            var parquetEtls = record.OlapEtls;
-            if (parquetEtls != null)
+            var olapEtls = record.OlapEtls;
+            if (olapEtls != null)
             {
-                for (var i = 0; i < parquetEtls.Count; i++)
+                for (var i = 0; i < olapEtls.Count; i++)
                 {
-                    if (parquetEtls[i].Name == ConfigurationName)
+                    if (olapEtls[i].Name == ConfigurationName)
                     {
-                        return parquetEtls[i];
+                        return olapEtls[i];
                     }
                 }
             }

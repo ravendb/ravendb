@@ -393,20 +393,6 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
         }
     }
 
-    public class ShardedOngoingTaskRavenEtlDetails : OngoingTaskRavenEtlDetails
-    {
-        public Dictionary<string, NodeId> ResponsibleNodes;
-
-        public new Dictionary<string, OngoingTaskConnectionStatus> TaskConnectionStatus;
-
-        public override DynamicJsonValue ToJson()
-        {
-            var json = base.ToJson();
-            json[nameof(ResponsibleNodes)] = ResponsibleNodes?.ToJson();
-            return json;
-        }
-    }
-
     public class ModifyOngoingTaskResult
     {
         public long TaskId { get; set; }

@@ -3,7 +3,6 @@ using System.Net;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Util;
-using Raven.Client.Documents.Changes;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -46,9 +45,9 @@ namespace Raven.Server.Documents
             return Task.CompletedTask;
         }
 
-        protected delegate void RefAction(string databaseName, ref BlittableJsonReaderObject configuration, JsonOperationContext context);
+        public delegate void RefAction(string databaseName, ref BlittableJsonReaderObject configuration, JsonOperationContext context, ServerStore serverStore = null);
 
-        protected delegate Task<(long, object)> SetupFunc(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject json, string raftRequestId);
+        public delegate Task<(long, object)> SetupFunc(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject json, string raftRequestId);
 
         protected async Task DatabaseConfigurations(SetupFunc setupConfigurationFunc,
            string debug,
@@ -57,23 +56,35 @@ namespace Raven.Server.Documents
            Action<DynamicJsonValue, BlittableJsonReaderObject, long> fillJson = null,
            HttpStatusCode statusCode = HttpStatusCode.OK)
         {
-            if (await CanAccessDatabaseAsync(Database.Name, requireAdmin: true, requireWrite: true) == false)
+            await DatabaseConfigurations(setupConfigurationFunc, debug, raftRequestId, Database.Name, this, beforeSetupConfiguration, fillJson, statusCode);
+        }
+
+        internal static async Task DatabaseConfigurations(SetupFunc setupConfigurationFunc,
+            string debug,
+            string raftRequestId,
+            string databaseName,
+            RequestHandler requestHandler,
+            RefAction beforeSetupConfiguration = null,
+            Action<DynamicJsonValue, BlittableJsonReaderObject, long> fillJson = null,
+            HttpStatusCode statusCode = HttpStatusCode.OK)
+        {
+            if (await requestHandler.CanAccessDatabaseAsync(databaseName, requireAdmin: true, requireWrite: true) == false)
                 return;
 
-            if (ResourceNameValidator.IsValidResourceName(Database.Name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
+            if (ResourceNameValidator.IsValidResourceName(databaseName, requestHandler.ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
                 throw new BadRequestException(errorMessage);
 
-            await ServerStore.EnsureNotPassiveAsync();
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            await requestHandler.ServerStore.EnsureNotPassiveAsync();
+            using (requestHandler.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var configurationJson = await context.ReadForMemoryAsync(RequestBodyStream(), debug);
-                beforeSetupConfiguration?.Invoke(Database.Name, ref configurationJson, context);
+                var configurationJson = await context.ReadForMemoryAsync(requestHandler.RequestBodyStream(), debug);
+                beforeSetupConfiguration?.Invoke(databaseName, ref configurationJson, context, requestHandler.ServerStore);
 
-                var (index, _) = await setupConfigurationFunc(context, Database.Name, configurationJson, raftRequestId);
-                await WaitForIndexToBeApplied(context, index);
-                HttpContext.Response.StatusCode = (int)statusCode;
+                var (index, _) = await setupConfigurationFunc(context, databaseName, configurationJson, raftRequestId);
+                await requestHandler.WaitForIndexToBeApplied(context, index);
+                requestHandler.HttpContext.Response.StatusCode = (int)statusCode;
 
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, requestHandler.ResponseBodyStream()))
                 {
                     var json = new DynamicJsonValue
                     {
@@ -85,7 +96,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        protected async Task WaitForIndexToBeApplied(TransactionOperationContext context, long index)
+        public override async Task WaitForIndexToBeApplied(TransactionOperationContext context, long index)
         {
             DatabaseTopology dbTopology;
             using (context.OpenReadTransaction())
