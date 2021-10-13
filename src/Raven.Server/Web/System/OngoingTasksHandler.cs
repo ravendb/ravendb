@@ -684,7 +684,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        private static (Dictionary<string, RavenConnectionString>, Dictionary<string, SqlConnectionString>, Dictionary<string, OlapConnectionString>, Dictionary<string, ElasticSearchConnectionString>)
+        internal static (Dictionary<string, RavenConnectionString>, Dictionary<string, SqlConnectionString>, Dictionary<string, OlapConnectionString>)
             GetConnectionString(RawDatabaseRecord rawRecord, string connectionStringName, ConnectionStringType connectionStringType)
         {
             var ravenConnectionStrings = new Dictionary<string, RavenConnectionString>();
@@ -1401,7 +1401,7 @@ namespace Raven.Server.Web.System
             {
                 long index;
 
-                var action = new DeleteOngoingTaskAction(id, type, ServerStore, Database, context);
+                var action = new DeleteOngoingTaskAction(id, type, ServerStore, Database, Database.Name, context);
                 var raftRequestId = GetRaftRequestIdFromQuery();
 
                 try
@@ -1444,25 +1444,27 @@ namespace Raven.Server.Web.System
             return taskState;
         }
 
-        private class DeleteOngoingTaskAction
+        internal class DeleteOngoingTaskAction
         {
             private readonly ServerStore _serverStore;
             private readonly DocumentDatabase _database;
             private readonly TransactionOperationContext _context;
             private readonly (string Name, List<string> Transformations) _deletingEtl;
+            private readonly string _databaseName;
 
-            public DeleteOngoingTaskAction(long id, OngoingTaskType type, ServerStore serverStore, DocumentDatabase database, TransactionOperationContext context)
+            public DeleteOngoingTaskAction(long id, OngoingTaskType type, ServerStore serverStore, DocumentDatabase database, string databaseName, TransactionOperationContext context)
             {
                 _serverStore = serverStore;
                 _database = database;
                 _context = context;
+                _databaseName = databaseName;
 
                 switch (type)
                 {
                     case OngoingTaskType.RavenEtl:
                     case OngoingTaskType.SqlEtl:
                         using (context.Transaction == null ? context.OpenReadTransaction() : null)
-                        using (var rawRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, database.Name))
+                        using (var rawRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, _databaseName))
                         {
                             if (rawRecord == null)
                                 break;
@@ -1492,7 +1494,7 @@ namespace Raven.Server.Web.System
                 {
                     foreach (var transformation in _deletingEtl.Transformations)
                     {
-                        var (index, _) = await _serverStore.RemoveEtlProcessState(_context, _database.Name, _deletingEtl.Name, transformation,
+                        var (index, _) = await _serverStore.RemoveEtlProcessState(_context, _databaseName, _deletingEtl.Name, transformation,
                             $"{raftRequestId}/{transformation}");
                         await _database.RachisLogIndexNotifications.WaitForIndexNotification(index, _serverStore.Engine.OperationTimeout);
                     }
