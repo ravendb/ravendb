@@ -19,39 +19,39 @@ const rootKeywords: number[] = [
 const specialFunctions: Pick<autoCompleteWordList, "value" | "caption">[] = [
     {
         value: "fuzzy(",
-        caption: "fuzzy(fieldName, factor)"
+        caption: "fuzzy(field = value, factor)"
     },
     {
         value: "search(",
-        caption: "search(field, terms, operator)"
+        caption: "search(field, terms, operator = Guess)"
     },
     {
         value: "facet(",
-        caption: "facet()" //TODO: args
+        caption: "facet(field or facets)"
     },
     {
         value: "boost(",
-        caption: "boost()" //TODO: args
+        caption: "boost(expr)" 
     }, 
     {
         value: "startsWith(",
-        caption: "startsWith()" //TODO: args
+        caption: "startsWith(field, prefix)" 
     },
     {
         value: "endsWith(",
-        caption: "endsWith()" //TODO: args
+        caption: "endsWith(field, postfix)"
     }, 
     {
         value: "moreLikeThis(",
-        caption: "moreLikeThis()" //TODO args
+        caption: "moreLikeThis(id() == value, options?)"
     },
     {
         value: "intersect(",
-        caption: "intersect()" //TODO: args
+        caption: "intersect(expr1, expr2, ...)"
     },
     {
         value: "exact(",
-        caption: "exact()" //TODO:
+        caption: "exact(expr)"
     }
 ]
 

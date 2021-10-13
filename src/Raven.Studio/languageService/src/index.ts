@@ -30,7 +30,7 @@ const metadataProvider = new proxyMetadataProvider(payload => {
 
 const engine = new autoCompleteEngine(metadataProvider);
 
-export function handleSyntaxCheck(input: string): AceAjax.Annotation[] {
+export function handleSyntaxCheck(input: string, queryType: rqlQueryType): AceAjax.Annotation[] {
     const response: AceAjax.Annotation[] = [];
     
     parseRql(input, {
@@ -43,8 +43,6 @@ export function handleSyntaxCheck(input: string): AceAjax.Annotation[] {
             });
         }
     });
-    
-    //TODO: we might check for duplicates / invalid index name etc in future
 
     return response;
 }
@@ -53,7 +51,7 @@ onmessage = async (e: MessageEvent<LanguageServiceRequest | LanguageServiceRespo
     if (e.data.msgType === "request") {
         switch (e.data.type) {
             case "syntax":
-                const annotations = handleSyntaxCheck(e.data.query);
+                const annotations = handleSyntaxCheck(e.data.query, e.data.queryType);
 
                 sendResponse({
                     id: e.data.id,
@@ -68,7 +66,8 @@ onmessage = async (e: MessageEvent<LanguageServiceRequest | LanguageServiceRespo
                     column: position.column
                 };
                 const query = e.data.query;
-                const wordList = await engine.complete(query, caret);
+                const queryType = e.data.queryType;
+                const wordList = await engine.complete(query, caret, queryType);
 
                 sendResponse({
                     msgType: "response",

@@ -35,7 +35,7 @@
                                     </div>
                                 </div>
                                 <pre class="form-control editor query-source"
-                                     data-bind="aceEditor: { code: patchDocument().query, allowResize: false, minHeight: 300, maxHeight: 300, lang:'ace/mode/rql', completer: queryCompleter.complete }, validationOptions: { errorsAsTitle: false }, validationElement: patchDocument().query"></pre>
+                                     data-bind="aceEditor: { code: patchDocument().query, allowResize: false, minHeight: 300, maxHeight: 300, lang:'ace/mode/rql', completer: languageService.complete }, validationOptions: { errorsAsTitle: false }, validationElement: patchDocument().query"></pre>
                                 <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: patchDocument().query">
                                     <div class="help-block" data-bind="validationMessage: patchDocument().query"></div>
                                 </div>

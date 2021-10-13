@@ -1,74 +1,70 @@
 
-//TODO: lock concurrent requests
 class cachedMetadataProvider implements queryCompleterProviders {
     
     private readonly parent: queryCompleterProviders;
     
-    private cachedIndexNames: string[] = undefined;
-    private cachedCollections: string[] = undefined;
-    private cachedIndexFields: Map<string, string[]> = new Map<string, string[]>();
-    private cachedCollectionFields: Map<string, Map<string, dictionary<string>>> = new Map<string, Map<string, dictionary<string>>>();
+    private cachedIndexNames: Promise<string[]> = undefined;
+    private cachedCollections: Promise<string[]> = undefined;
+    private cachedIndexFields: Map<string, Promise<string[]>> = new Map<string, Promise<string[]>>();
+    private cachedCollectionFields: Map<string, Map<string, Promise<dictionary<string>>>> = new Map<string, Map<string, Promise<dictionary<string>>>>();
     
     constructor(parent: queryCompleterProviders) {
         this.parent = parent;
     }
 
-    collectionFields(collectionName: string, prefix: string, callback: (fields: dictionary<string>) => void): void {
+    async collectionFields(collectionName: string, prefix: string, callback: (fields: dictionary<string>) => void) {
         if (!this.cachedCollectionFields.has(collectionName)) {
-            this.cachedCollectionFields.set(collectionName, new Map<string, dictionary<string>>());
+            this.cachedCollectionFields.set(collectionName, new Map<string, Promise<dictionary<string>>>());
         }
         const collectionCache = this.cachedCollectionFields.get(collectionName);
 
         if (collectionCache.has(prefix)) {
-            callback(collectionCache.get(prefix));
+            const fields = await collectionCache.get(prefix);
+            callback(fields);
         } else {
             // no value in cache - call inner provider
+            const task = new Promise<dictionary<string>>(resolve => {
+                this.parent.collectionFields(collectionName, prefix, resolve);
+            });
+            
+            collectionCache.set(prefix, task);
+        }
+    }
 
-            this.parent.collectionFields(collectionName, prefix, collectionFields => {
-                collectionCache.set(prefix, collectionFields);
-                callback(collectionFields);
+    async collections(callback: (collectionNames: string[]) => void) {
+        if (this.cachedCollections) {
+            const collections = await this.cachedCollections;
+            callback(collections);
+        }
+        
+        this.cachedCollections = new Promise<string[]>(resolve => {
+            this.parent.collections(resolve);
+        });
+    }
+
+    async indexFields(indexName: string, callback: (fields: string[]) => void) {
+        if (this.cachedIndexFields.has(indexName)) {
+            const indexFields = await this.cachedIndexFields.get(indexName);
+            callback(indexFields);
+        }
+        
+        const task = new Promise<string[]>(resolve => {
+            this.parent.indexFields(indexName, resolve);
+        });
+        
+        this.cachedIndexFields.set(indexName, task);
+    }
+
+    async indexNames(callback: (indexNames: string[]) => void) {
+        if (this.cachedIndexNames) {
+            const indexNames = await this.cachedIndexNames;
+            callback(indexNames);
+        } else {
+            this.cachedIndexNames = new Promise<string[]>(resolve => {
+                this.parent.indexNames(resolve);
             });
         }
     }
-
-    collections(callback: (collectionNames: string[]) => void): void {
-        if (this.cachedCollections != null) {
-            callback(this.cachedCollections);
-        }
-        
-        this.parent.collections(names => {
-            this.cachedCollections = names;
-            callback(this.cachedCollections);
-        });
-    }
-
-    indexFields(indexName: string, callback: (fields: string[]) => void): void {
-        if (this.cachedIndexFields.has(indexName)) {
-            const indexFields = this.cachedIndexFields.get(indexName);
-            callback(indexFields);
-        }
-        
-        this.parent.indexFields(indexName, indexFields => {
-            this.cachedIndexFields.set(indexName, indexFields);
-            callback(indexFields);
-        });
-    }
-
-    indexNames(callback: (indexNames: string[]) => void): void {
-        if (this.cachedIndexNames != null) {
-            callback(this.cachedIndexNames);
-        }
-        
-        this.parent.indexNames(names => {
-            this.cachedIndexNames = names;
-            callback(this.cachedIndexNames);
-        });
-    }
-
-    terms(indexName: string, collection: string, field: string, pageSize: number, callback: (terms: string[]) => void): void {
-    }
-    
-    
 }
 
 export = cachedMetadataProvider;

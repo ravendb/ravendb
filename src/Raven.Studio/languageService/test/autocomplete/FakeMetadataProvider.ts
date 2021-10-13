@@ -42,15 +42,21 @@ function stubCollectionFields(): Map<string, Map<string, dictionary<string>>> {
     return result;
 }
 
-const indexes = ['Orders/ByCompany', 'Product/Rating'];
-
+function stubIndexFields(): Map<string, string[]> {
+    const result = new Map<string, string[]>();
+    result.set("Orders/ByCompany", ["Company", "Count", "Total"]);
+    result.set("Product/Rating", ["Name", "Rating", "TotalVotes", "AllRatings"]);
+    result.set("Orders/Totals", ["Employee", "Company", "Total"]);
+    return result;
+}
 
 export class FakeMetadataProvider implements queryCompleterProviders {
     
     private collectionStubs = stubCollectionFields();
+    private indexStubs = stubIndexFields();
     
     indexNames(callback: (indexNames: string[]) => void) {
-        callback(indexes);
+        callback(Array.from(this.indexStubs.keys()));
     }
     
     collections(callback: (collections: string[]) => void) {
@@ -68,11 +74,10 @@ export class FakeMetadataProvider implements queryCompleterProviders {
     }
 
     indexFields(indexName: string, callback: (fields: string[]) => void): void {
-        callback([]); //tODO:
+        if (this.indexStubs.has(indexName)) {
+            callback(this.indexStubs.get(indexName));
+        } else {
+            callback([]);
+        }
     }
-
-    terms(indexName: string, collection: string, field: string, pageSize: number, callback: (terms: string[]) => void): void {
-        callback([]); //TODO:
-    }
-    
 }

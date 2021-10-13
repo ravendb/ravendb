@@ -197,6 +197,6 @@ export class Scanner {
     
     public tokenSubText(): string {
         const cs = this._tokens[this._index].tokenSource.inputStream;
-        return cs.getText(Interval.of(this._tokens[this._index].startIndex, Number.MAX_SAFE_INTEGER)); //TODO:
+        return cs.getText(Interval.of(this._tokens[this._index].startIndex, Number.MAX_SAFE_INTEGER)); 
     }
 }

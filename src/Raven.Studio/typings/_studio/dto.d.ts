@@ -499,7 +499,6 @@ interface rqlQueryInfo {
 }
 
 interface queryCompleterProviders {
-    terms: (indexName: string, collection: string, field: string, pageSize: number, callback: (terms: string[]) => void) => void;
     indexFields: (indexName: string, callback: (fields: string[]) => void) => void;
     collectionFields: (collectionName: string, prefix: string, callback: (fields: dictionary<string>) => void) => void;
     collections: (callback: (collectionNames: string[]) => void) => void;

@@ -96,7 +96,7 @@ export class autoCompleteEngine {
         this.providers = this.defaultProviders(metadataProvider);
     }
     
-    async complete(input: string, caret: CaretPosition): Promise<autoCompleteWordList[]> {
+    async complete(input: string, caret: CaretPosition, queryType: rqlQueryType = "Select"): Promise<autoCompleteWordList[]> {
         const writtenPart = getWrittenPart(input, caret);
 
         const { parseTree, parser } = parseRql(input);

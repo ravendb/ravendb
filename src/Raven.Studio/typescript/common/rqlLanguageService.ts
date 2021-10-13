@@ -12,16 +12,19 @@ class rqlLanguageService {
     private latestSyntaxCheckRequestId = -1;
     private lastAutoCompleteRequestId = -1;
     private metadataProvider: queryCompleterProviders;
+    private readonly queryType: rqlQueryType;
     
     constructor(
         activeDatabase: KnockoutObservable<database>, 
         indexes: KnockoutObservableArray<Raven.Client.Documents.Operations.IndexInformation>,
         queryType: rqlQueryType) {
         this.worker = new Worker("/studio/rql_worker.js");
+        this.queryType = queryType;
         
-        this.metadataProvider = new cachedMetadataProvider(new remoteMetadataProvider(activeDatabase, indexes, queryType));
+        this.metadataProvider = new cachedMetadataProvider(new remoteMetadataProvider(activeDatabase, indexes));
         
         _.bindAll(this, "complete");
+        
         
         this.pendingMessages = new Map<number, Function>();
         
@@ -132,7 +135,8 @@ class rqlLanguageService {
             msgType: "request",
             type: "syntax",
             id: requestId,
-            query: text
+            query: text,
+            queryType: this.queryType
         });
         
         this.pendingMessages.set(requestId, (response: LanguageServiceSyntaxResponse) => {
@@ -157,6 +161,7 @@ class rqlLanguageService {
             msgType: "request",
             type: "complete",
             id: requestId,
+            queryType: this.queryType,
             query: text,
             position: {
                 row: pos.row,
