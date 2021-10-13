@@ -20,6 +20,7 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.OngoingTasks;
+using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
 using Raven.Server.Documents.ETL;
@@ -35,6 +36,7 @@ using SlowTests.Server.Documents.ETL.Raven;
 using SlowTests.Server.Documents.ETL.SQL;
 using SlowTests.Server.Documents.Migration;
 using Tests.Infrastructure;
+using Tests.Infrastructure.ConnectionString;
 using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
@@ -633,7 +635,7 @@ person.addCounter(loadCounter('down'));
             }
         }
 
-        [Fact(Skip = "Sharded DeleteOngoingTaskOperation not implemented")]
+        [Fact]
         public void CanDeleteEtl()
         {
             using (var store = GetShardedDocumentStore())
@@ -708,7 +710,7 @@ person.addCounter(loadCounter('down'));
             }
         }
 
-        [Fact(Skip = "Sharded ToggleOngoingTaskStateOperation not implemented")]
+        [Fact]
         public void CanDisableEtl()
         {
             using (var store = GetShardedDocumentStore())
@@ -741,6 +743,311 @@ person.addCounter(loadCounter('down'));
 
                 var ongoingTask = store.Maintenance.Send(new GetOngoingTaskInfoOperation(result.TaskId, OngoingTaskType.RavenEtl));
                 Assert.Equal(OngoingTaskState.Disabled, ongoingTask.TaskState);
+            }
+        }
+
+        [Fact]
+        public void CanResetEtl()
+        {
+            using (var src = GetShardedDocumentStore())
+            using (var dest = GetDocumentStore())
+            {
+                using (var session = src.OpenSession())
+                {
+                    session.Store(new User());
+                    session.SaveChanges();
+                }
+
+                var runs = 0;
+
+                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+
+                var resetDone = WaitForEtl(src, (n, statistics) => ++runs >= 2);
+
+                var configuration = new RavenEtlConfiguration()
+                {
+                    ConnectionStringName = "test",
+                    Name = "myConfiguration",
+                    Transforms =
+                    {
+                        new Transformation()
+                        {
+                            Name = "allUsers",
+                            Collections = {"Users"}
+                        }
+                    }
+                };
+
+                AddEtl(src, configuration, new RavenConnectionString
+                {
+                    Name = "test",
+                    TopologyDiscoveryUrls = dest.Urls,
+                    Database = dest.Database,
+                });
+
+                Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
+
+                src.Maintenance.Send(new ResetEtlOperation("myConfiguration", "allUsers"));
+
+                Assert.True(resetDone.Wait(TimeSpan.FromMinutes(1)));
+            }
+        }
+
+        [Fact]
+        public void CanResetEtl2()
+        {
+            using (var src = GetShardedDocumentStore())
+            using (var dest = GetDocumentStore())
+            {
+                using (var session = src.OpenSession())
+                {
+                    session.Store(new User());
+                    session.SaveChanges();
+                }
+
+                var configuration = new RavenEtlConfiguration()
+                {
+                    ConnectionStringName = "test",
+                    Name = "myConfiguration",
+                    Transforms =
+                    {
+                        new Transformation()
+                        {
+                            Name = "allUsers",
+                            Collections = {"Users"}
+                        }
+                    }
+                };
+
+                var mre = new ManualResetEvent(true);
+                var mre2 = new ManualResetEvent(false);
+                var etlDone = WaitForEtl(src, (n, s) =>
+                {
+                    Assert.True(mre.WaitOne(TimeSpan.FromMinutes(1)));
+                    mre.Reset();
+
+                    mre2.Set();
+
+                    return true;
+                });
+
+                AddEtl(src, configuration, new RavenConnectionString
+                {
+                    Name = "test",
+                    TopologyDiscoveryUrls = dest.Urls,
+                    Database = dest.Database,
+                });
+
+                var set = new HashSet<string>
+                {
+                    "asd"
+                };
+
+                for (int i = 0; i < 10; i++)
+                {
+
+                    Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)), $"blah at {i}");
+
+                    mre.Set();
+
+                    Assert.True(mre2.WaitOne(TimeSpan.FromMinutes(1)), $"oops at {i}");
+                    mre2.Reset();
+
+                    var t1 = src.Maintenance.SendAsync(new ResetEtlOperation("myConfiguration", "allUsers"));
+
+                    for (int j = 0; j < 100; j++)
+                    {
+                        var t2 = src.Maintenance.Server.SendAsync(new UpdateUnusedDatabasesOperation(src.Database, set));
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public void CanGetConnectionStringByName()
+        {
+            using (var store = GetShardedDocumentStore())
+            {
+                var ravenConnectionStrings = new List<RavenConnectionString>();
+                var sqlConnectionStrings = new List<SqlConnectionString>();
+
+                var ravenConnectionStr = new RavenConnectionString()
+                {
+                    Name = "RavenConnectionString",
+                    TopologyDiscoveryUrls = new[] { "http://127.0.0.1:8080" },
+                    Database = "Northwind",
+                };
+                var sqlConnectionStr = new SqlConnectionString
+                {
+                    Name = "SqlConnectionString",
+                    ConnectionString = MssqlConnectionString.Instance.VerifiedConnectionString.Value + $";Initial Catalog={store.Database}"
+                };
+
+                ravenConnectionStrings.Add(ravenConnectionStr);
+                sqlConnectionStrings.Add(sqlConnectionStr);
+
+                var result1 = store.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(ravenConnectionStr));
+                Assert.NotNull(result1.RaftCommandIndex);
+                var result2 = store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionStr));
+                Assert.NotNull(result2.RaftCommandIndex);
+
+                var result = store.Maintenance.Send(new GetConnectionStringsOperation(connectionStringName: sqlConnectionStr.Name, type: sqlConnectionStr.Type));
+                Assert.True(result.SqlConnectionStrings.Count > 0);
+                Assert.True(result.RavenConnectionStrings.Count == 0);
+
+            }
+        }
+
+        [Fact]
+        public void CanGetAllConnectionStrings()
+        {
+            using (var store = GetShardedDocumentStore())
+            {
+                var ravenConnectionStrings = new List<RavenConnectionString>();
+                var sqlConnectionStrings = new List<SqlConnectionString>();
+                for (var i = 0; i < 5; i++)
+                {
+                    var ravenConnectionStr = new RavenConnectionString()
+                    {
+                        Name = $"RavenConnectionString{i}",
+                        TopologyDiscoveryUrls = new[] { $"http://127.0.0.1:808{i}" },
+                        Database = "Northwind",
+                    };
+                    var sqlConnectionStr = new SqlConnectionString
+                    {
+                        Name = $"SqlConnectionString{i}",
+                        ConnectionString = MssqlConnectionString.Instance.VerifiedConnectionString.Value + $";Initial Catalog={store.Database}"
+                    };
+
+                    ravenConnectionStrings.Add(ravenConnectionStr);
+                    sqlConnectionStrings.Add(sqlConnectionStr);
+
+                    var result1 = store.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(ravenConnectionStr));
+                    Assert.NotNull(result1.RaftCommandIndex);
+                    var result2 = store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionStr));
+                    Assert.NotNull(result2.RaftCommandIndex);
+                }
+
+                var result = store.Maintenance.Send(new GetConnectionStringsOperation());
+                Assert.NotNull(result.SqlConnectionStrings);
+                Assert.NotNull(result.RavenConnectionStrings);
+
+                for (var i = 0; i < 5; i++)
+                {
+                    result.SqlConnectionStrings.TryGetValue($"SqlConnectionString{i}", out var sql);
+                    Assert.Equal(sql?.ConnectionString, sqlConnectionStrings[i].ConnectionString);
+
+                    result.RavenConnectionStrings.TryGetValue($"RavenConnectionString{i}", out var raven);
+                    Assert.Equal(raven?.TopologyDiscoveryUrls, ravenConnectionStrings[i].TopologyDiscoveryUrls);
+                    Assert.Equal(raven?.Database, ravenConnectionStrings[i].Database);
+                }
+            }
+        }
+
+        [Fact]
+        public void CanAddAndRemoveConnectionStrings()
+        {
+            using (var store = GetShardedDocumentStore())
+            {
+                var ravenConnectionString = new RavenConnectionString()
+                {
+                    Name = "RavenConnectionString",
+                    TopologyDiscoveryUrls = new[] { "http://localhost:8080" },
+                    Database = "Northwind",
+                };
+                var result0 = store.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(ravenConnectionString));
+                Assert.NotNull(result0.RaftCommandIndex);
+
+                var sqlConnectionString = new SqlConnectionString
+                {
+                    Name = "SqlConnectionString",
+                    ConnectionString = MssqlConnectionString.Instance.VerifiedConnectionString.Value + $";Initial Catalog={store.Database}",
+                };
+
+                var result1 = store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString));
+                Assert.NotNull(result1.RaftCommandIndex);
+
+                DatabaseRecord record;
+                using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    record = Server.ServerStore.Cluster.ReadDatabase(context, store.Database);
+                }
+
+                Assert.True(record.RavenConnectionStrings.ContainsKey("RavenConnectionString"));
+                Assert.Equal(ravenConnectionString.Name, record.RavenConnectionStrings["RavenConnectionString"].Name);
+                Assert.Equal(ravenConnectionString.TopologyDiscoveryUrls, record.RavenConnectionStrings["RavenConnectionString"].TopologyDiscoveryUrls);
+                Assert.Equal(ravenConnectionString.Database, record.RavenConnectionStrings["RavenConnectionString"].Database);
+
+                Assert.True(record.SqlConnectionStrings.ContainsKey("SqlConnectionString"));
+                Assert.Equal(sqlConnectionString.Name, record.SqlConnectionStrings["SqlConnectionString"].Name);
+                Assert.Equal(sqlConnectionString.ConnectionString, record.SqlConnectionStrings["SqlConnectionString"].ConnectionString);
+
+                var result3 = store.Maintenance.Send(new RemoveConnectionStringOperation<RavenConnectionString>(ravenConnectionString));
+                Assert.NotNull(result3.RaftCommandIndex);
+                var result4 = store.Maintenance.Send(new RemoveConnectionStringOperation<SqlConnectionString>(sqlConnectionString));
+                Assert.NotNull(result4.RaftCommandIndex);
+
+                using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    record = Server.ServerStore.Cluster.ReadDatabase(context, store.Database);
+                }
+
+                Assert.False(record.RavenConnectionStrings.ContainsKey("RavenConnectionString"));
+                Assert.False(record.SqlConnectionStrings.ContainsKey("SqlConnectionString"));
+
+            }
+        }
+
+        [Fact]
+        public void CanUpdateConnectionStrings()
+        {
+            using (var store = GetShardedDocumentStore())
+            {
+                var ravenConnectionString = new RavenConnectionString()
+                {
+                    Name = "RavenConnectionString",
+                    TopologyDiscoveryUrls = new[] { "http://127.0.0.1:8080" },
+                    Database = "Northwind",
+                };
+                var result1 = store.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(ravenConnectionString));
+                Assert.NotNull(result1.RaftCommandIndex);
+
+                var sqlConnectionString = new SqlConnectionString
+                {
+                    Name = "SqlConnectionString",
+                    ConnectionString = MssqlConnectionString.Instance.VerifiedConnectionString.Value + $";Initial Catalog={store.Database}",
+                };
+
+                var result2 = store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString));
+                Assert.NotNull(result2.RaftCommandIndex);
+
+                //update url
+                ravenConnectionString.TopologyDiscoveryUrls = new[] { "http://127.0.0.1:8081" };
+                var result3 = store.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(ravenConnectionString));
+                Assert.NotNull(result3.RaftCommandIndex);
+
+                //update name : need to remove the old entry
+                var result4 = store.Maintenance.Send(new RemoveConnectionStringOperation<SqlConnectionString>(sqlConnectionString));
+                Assert.NotNull(result4.RaftCommandIndex);
+                sqlConnectionString.Name = "New-Name";
+                var result5 = store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString));
+                Assert.NotNull(result5.RaftCommandIndex);
+
+                DatabaseRecord record;
+                using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    record = Server.ServerStore.Cluster.ReadDatabase(context, store.Database);
+                }
+
+                Assert.True(record.RavenConnectionStrings.ContainsKey("RavenConnectionString"));
+                Assert.Equal("http://127.0.0.1:8081", record.RavenConnectionStrings["RavenConnectionString"].TopologyDiscoveryUrls.First());
+
+                Assert.False(record.SqlConnectionStrings.ContainsKey("SqlConnectionString"));
+                Assert.True(record.SqlConnectionStrings.ContainsKey("New-Name"));
+                Assert.Equal(sqlConnectionString.ConnectionString, record.SqlConnectionStrings["New-Name"].ConnectionString);
             }
         }
 
