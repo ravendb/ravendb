@@ -6,7 +6,8 @@
     "webpack-language-service": "webpack --config languageService/webpack.config.js",
     "webpack-language-service-watch": "webpack --config languageService/webpack.config.js --watch",
     "antlr4ts": "antlr4ts languageService/grammar/BaseRqlLexer.g4 -visitor -no-listener languageService/grammar/BaseRqlParser.g4 -o languageService/src/generated/",
-    "test": "cd languageService/ && jest && cd .."
+    "test": "cd languageService/ && jest && cd ..",
+    "dist-language-service": "webpack --config languageService/webpack.config.js --mode production"
   },
   "private": true,
   "devDependencies": {

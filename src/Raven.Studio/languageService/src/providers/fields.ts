@@ -60,6 +60,12 @@ export class AutoCompleteFields extends BaseAutocompleteProvider implements Auto
     ): Promise<autoCompleteWordList[]> {
         if (candidates.rules.has(RqlParser.RULE_variable)) {
             const rule = candidates.rules.get(RqlParser.RULE_variable);
+            
+            if (rule.ruleList.indexOf(RqlParser.RULE_limitStatement) !== -1) {
+                // don't suggest fields in limit/offset
+                return [];
+            }
+            
             if (rule.startTokenIndex < scanner.tokenIndex && scanner.lookBack() !== RqlParser.DOT) {
                 return [];
             }

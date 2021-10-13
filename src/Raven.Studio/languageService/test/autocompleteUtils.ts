@@ -7,7 +7,6 @@ import { ANTLRErrorListener } from "antlr4ts/ANTLRErrorListener";
 import { Token } from "antlr4ts/Token";
 import { parseRqlOptions } from "../src/parser";
 
-
 const caret = "|";
 
 export function extractCaretPosition(input: string): { inputWithoutCaret: string, position: CaretPosition } {

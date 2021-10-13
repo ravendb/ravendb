@@ -13,7 +13,8 @@ const rootKeywords: number[] = [
     RqlParser.ORDER_BY,
     RqlParser.SELECT,
     RqlParser.INCLUDE,
-    RqlParser.LIMIT
+    RqlParser.LIMIT,
+    RqlParser.OFFSET
 ];
 
 const specialFunctions: Pick<autoCompleteWordList, "value" | "caption">[] = [
@@ -68,25 +69,6 @@ export class AutocompleteKeywords extends BaseAutocompleteProvider implements Au
     
     constructor(metadataProvider: queryCompleterProviders, private ignoredTokens: number[]) {
         super(metadataProvider);
-    }
-    
-    static handleFromAlias(candidates: CandidatesCollection, scanner: Scanner): autoCompleteWordList[] {
-        const aliasRule = candidates.rules.get(RqlParser.RULE_aliasWithOptionalAs);
-        scanner.push();
-        
-        try {
-            scanner.seek(aliasRule.startTokenIndex);
-            const withAlias = scanner.tokenType() === RqlParser.AS;
-            return withAlias ? [] : [{
-                value: "as ",
-                caption: "as",
-                score: AUTOCOMPLETE_SCORING.operator,
-                meta: AUTOCOMPLETE_META.operator
-            }];
-        } finally {
-            scanner.pop();
-        }
-        
     }
     
     static handleSpecialFunctions(candidates: CandidatesCollection, writtenText: string): autoCompleteWordList[] {
