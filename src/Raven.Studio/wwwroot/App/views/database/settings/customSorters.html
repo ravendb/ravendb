@@ -125,8 +125,8 @@
     <div class="panel-addon padding padding-sm">
         <div class="margin-bottom">
             <label title="Enter a query to test the sorter">Enter test RQL:</label>
-            <pre class="form-control margin-top"
-                 data-bind="aceEditor: { code: testRql, lang:'ace/mode/rql', completer: $root.queryCompleter.complete }, validationOptions: { errorsAsTitle: false }, validationElement: testRql" style="height: 160px;">
+            <pre class="form-control margin-top query-source"
+                 data-bind="aceEditor: { code: testRql, lang:'ace/mode/rql', completer: $root.languageService.complete }, validationOptions: { errorsAsTitle: false }, validationElement: testRql" style="height: 160px;">
                                 </pre>
             <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: testRql">
                 <div class="help-block" data-bind="validationMessage: testRql"></div>

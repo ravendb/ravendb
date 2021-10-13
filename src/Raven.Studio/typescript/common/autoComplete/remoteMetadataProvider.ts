@@ -1,5 +1,4 @@
 import database = require("models/resources/database");
-import getIndexTermsCommand = require("commands/database/index/getIndexTermsCommand");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
 import getIndexEntriesFieldsCommand = require("commands/database/index/getIndexEntriesFieldsCommand");
 
@@ -7,20 +6,10 @@ class remoteMetadataProvider implements queryCompleterProviders {
     
     private readonly database: KnockoutObservable<database>;
     private readonly indexes: KnockoutObservableArray<Raven.Client.Documents.Operations.IndexInformation>;
-    private readonly queryType: rqlQueryType; //TODO: do we need that?
     
-    constructor(activeDatabase: KnockoutObservable<database>, indexes: KnockoutObservableArray<Raven.Client.Documents.Operations.IndexInformation>, queryType: rqlQueryType) {
+    constructor(activeDatabase: KnockoutObservable<database>, indexes: KnockoutObservableArray<Raven.Client.Documents.Operations.IndexInformation>) {
         this.database = activeDatabase;
         this.indexes = indexes;
-        this.queryType = queryType;
-    }
-    
-    terms(indexName: string, collection: string, field: string, pageSize: number, callback: (terms: string[]) => void): void {
-        new getIndexTermsCommand(indexName, collection, field, this.database(), pageSize)
-            .execute()
-            .done(terms => {
-                callback(terms.Terms);
-            });
     }
 
     collections(callback: (collectionNames: string[]) => void): void {

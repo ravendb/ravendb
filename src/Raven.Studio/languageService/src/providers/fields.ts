@@ -24,7 +24,7 @@ export class AutoCompleteFields extends BaseAutocompleteProvider implements Auto
                     if (scanner.lookBack() === RqlParser.OP_Q) {
                         scanner.previous();
                     } else {
-                        // unexpected //TODO: handle this case!
+                        // unexpected
                         break;
                     }
                 }

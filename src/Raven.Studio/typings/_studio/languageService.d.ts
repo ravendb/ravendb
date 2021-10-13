@@ -7,12 +7,14 @@ interface BaseLanguageServiceRequest {
 
 interface LanguageServiceSyntaxRequest extends BaseLanguageServiceRequest {
     type: "syntax";
+    queryType: rqlQueryType;
     query: string;
 }
 
 interface LanguageServiceAutoCompleteRequest extends BaseLanguageServiceRequest {
     type: "complete";
     query: string;
+    queryType: rqlQueryType;
     position: { row: number; column: number };
 }
 
