@@ -274,8 +274,10 @@ namespace Raven.Client.Util
 
             public void Dispose()
             {
-                TcpClient?.Dispose();
-                Stream?.Dispose();
+                using (TcpClient)
+                using (Stream)
+                {
+                }
             }
         }
 

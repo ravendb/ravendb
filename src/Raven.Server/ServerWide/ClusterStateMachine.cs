@@ -3485,9 +3485,11 @@ namespace Raven.Server.ServerWide
                     {
                         try
                         {
-                            tcpClient.Client.Disconnect(false);
-                            stream.Dispose();
-                            tcpClient.Dispose();
+                            using (tcpClient)
+                            using (stream)
+                            {
+                                tcpClient.Client.Disconnect(false);
+                            }
                         }
                         catch (ObjectDisposedException)
                         {
@@ -3498,8 +3500,10 @@ namespace Raven.Server.ServerWide
             }
             catch (Exception)
             {
-                tcpClient?.Dispose();
-                stream?.Dispose();
+                using (tcpClient)
+                await using (stream)
+                {
+                }
                 throw;
             }
         }
