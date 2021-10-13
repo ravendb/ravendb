@@ -101,7 +101,7 @@ loadToOrders(orderData);
             }
         }
 
-        protected void CreateRdbmsSchema(string connectionString, string command = @"
+        internal static void CreateRdbmsSchema(string connectionString, string command = @"
 CREATE TABLE [dbo].[OrderLines]
 (
     [Id] int identity primary key,
@@ -400,7 +400,7 @@ loadToOrders(orderData);");
             }
         }
 
-        protected static int GetOrdersCount(string connectionString)
+        internal static int GetOrdersCount(string connectionString)
         {
             using (var con = new SqlConnection())
             {
