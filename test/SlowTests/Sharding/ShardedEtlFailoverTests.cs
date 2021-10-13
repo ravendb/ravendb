@@ -1,20 +1,30 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using FastTests.Client;
 using FastTests.Sharding;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
+using Raven.Server;
 using Raven.Server.Config;
+using Raven.Server.Documents;
+using Raven.Server.Documents.ETL;
+using Raven.Server.Documents.Sharding;
+using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
-using Tests.Infrastructure;
+using SlowTests.Server.Documents.ETL.Olap;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -26,16 +36,18 @@ namespace SlowTests.Sharding
         {
         }
 
-        [Fact]
-        public async Task ReplicateFromSingleSource()
+        [Theory]
+        [InlineData(2)]
+        [InlineData(3)]
+        public async Task ReplicateFromSingleSource(int replicationFactor)
         {
             var srcDb = "ReplicateFromSingleSourceSrc";
             var dstDb = "ReplicateFromSingleSourceDst";
             var srcCluster = await CreateRaftCluster(3);
             var dstCluster = await CreateRaftCluster(1);
 
-            var srcNodes = await CreateShardedDatabaseInCluster(srcDb, replicationFactor: 3, srcCluster, certificate: null);
-            var destNode = await CreateShardedDatabaseInCluster(dstDb, replicationFactor: 1, dstCluster, certificate: null);
+            var srcNodes = await CreateShardedDatabaseInCluster(srcDb, replicationFactor: replicationFactor, srcCluster, certificate: null);
+            var destNode = await CreateDatabaseInCluster(dstDb, replicationFactor: 1, dstCluster.Leader.WebUrl, certificate: null);
             var node = srcNodes.Servers.First(x => x.ServerStore.NodeTag != srcCluster.Leader.ServerStore.NodeTag).ServerStore.NodeTag;
 
             using (var src = new DocumentStore()
@@ -93,8 +105,116 @@ namespace SlowTests.Sharding
                 }
 
                 Assert.True(WaitForDocument<User>(dest, "users/1", u => u.Name == "Joe Doe", 30_000));
-                await ActionWithLeader((l) => l.ServerStore.RemoveFromClusterAsync(node), srcNodes.Servers);
-                //Thread.Sleep(100000);
+
+                await ActionWithLeader(l => l.ServerStore.RemoveFromClusterAsync(node), srcNodes.Servers);
+                await originalTaskNode.ServerStore.WaitForState(RachisState.Passive, CancellationToken.None);
+
+                using (var session = src.OpenSession())
+                {
+                    session.Store(new User
+                    {
+                        Name = "Joe Doe2"
+                    }, "users/2");
+
+                    session.SaveChanges();
+                }
+
+                Assert.True(WaitForDocument<User>(dest, "users/2", u => u.Name == "Joe Doe2", 60_000));
+                Assert.Throws<NodeIsPassiveException>(() =>
+                {
+                    using (var originalSrc = new DocumentStore
+                    {
+                        Urls = new[] { originalTaskNode.WebUrl },
+                        Database = srcDb,
+                        Conventions = new DocumentConventions
+                        {
+                            DisableTopologyUpdates = true
+                        }
+                    }.Initialize())
+                    {
+                        using (var session = originalSrc.OpenSession())
+                        {
+                            session.Store(new User()
+                            {
+                                Name = "Joe Doe3"
+                            }, "users/3");
+
+                            session.SaveChanges();
+                        }
+                    }
+                });
+            }
+        }
+
+        [Fact]
+        public async Task ReplicateFromSingleSource_Sharded_Destination()
+        {
+            var srcDb = "ReplicateFromSingleSourceSrc";
+            var dstDb = "ReplicateFromSingleSourceDst";
+            var srcCluster = await CreateRaftCluster(3);
+            var dstCluster = await CreateRaftCluster(3);
+
+            var srcNodes = await CreateShardedDatabaseInCluster(srcDb, replicationFactor: 3, srcCluster, certificate: null);
+            var destNode = await CreateShardedDatabaseInCluster(dstDb, replicationFactor: 2, dstCluster, certificate: null);
+            var node = srcNodes.Servers.First(x => x.ServerStore.NodeTag != srcCluster.Leader.ServerStore.NodeTag).ServerStore.NodeTag;
+
+            using (var src = new DocumentStore()
+            {
+                Urls = srcNodes.Servers.Select(s => s.WebUrl).ToArray(),
+                Database = srcDb,
+            }.Initialize())
+            using (var dest = new DocumentStore
+            {
+                Urls = new[] { destNode.Servers[0].WebUrl },
+                Database = dstDb,
+            }.Initialize())
+            {
+                var connectionStringName = "EtlFailover";
+                var urls = new[] { destNode.Servers[0].WebUrl };
+                var config = new RavenEtlConfiguration()
+                {
+                    Name = connectionStringName,
+                    ConnectionStringName = connectionStringName,
+                    Transforms =
+                    {
+                        new Transformation
+                        {
+                            Name = $"ETL : {connectionStringName}",
+                            Collections = new List<string>(new[] {"Users"}),
+                            Script = null,
+                            ApplyToAllDocuments = false,
+                            Disabled = false
+                        }
+                    },
+                    LoadRequestTimeoutInSec = 30,
+                    MentorNode = node
+                };
+                var connectionString = new RavenConnectionString
+                {
+                    Name = connectionStringName,
+                    Database = dest.Database,
+                    TopologyDiscoveryUrls = urls,
+                };
+
+                var result = src.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(connectionString));
+                Assert.NotNull(result.RaftCommandIndex);
+
+                src.Maintenance.Send(new AddEtlOperation<RavenConnectionString>(config));
+                var originalTaskNode = srcNodes.Servers.Single(s => s.ServerStore.NodeTag == node);
+
+                using (var session = src.OpenSession())
+                {
+                    session.Store(new User()
+                    {
+                        Name = "Joe Doe"
+                    }, "users/1");
+
+                    session.SaveChanges();
+                }
+
+                Assert.True(WaitForDocument<User>(dest, "users/1", u => u.Name == "Joe Doe", 30_000));
+
+                await ActionWithLeader(l => l.ServerStore.RemoveFromClusterAsync(node), srcNodes.Servers);
                 await originalTaskNode.ServerStore.WaitForState(RachisState.Passive, CancellationToken.None);
 
                 using (var session = src.OpenSession())
@@ -134,7 +254,7 @@ namespace SlowTests.Sharding
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Sharded GetOngoingTaskInfoOperation not implemented")]
         public async Task EtlDestinationFailoverBetweenNodesWithinSameCluster()
         {
             var srcDb = "EtlDestinationFailoverBetweenNodesWithinSameClusterSrc";
@@ -143,7 +263,7 @@ namespace SlowTests.Sharding
             var dstCluster = await CreateRaftCluster(3);
 
             var srcNodes = await CreateShardedDatabaseInCluster(srcDb, replicationFactor: 3, srcCluster, certificate: null);
-            var destNode = await CreateShardedDatabaseInCluster(dstDb, replicationFactor: 3, dstCluster, certificate: null);
+            var destNode = await CreateDatabaseInCluster(dstDb, replicationFactor: 3, dstCluster.Leader.WebUrl, certificate: null);
             var node = srcNodes.Servers.First(x => x.ServerStore.NodeTag != srcCluster.Leader.ServerStore.NodeTag).ServerStore.NodeTag;
 
             using (var src = new DocumentStore
@@ -193,15 +313,19 @@ namespace SlowTests.Sharding
                 Assert.NotNull(result.RaftCommandIndex);
 
                 var etlResult = src.Maintenance.Send(new AddEtlOperation<RavenConnectionString>(conflig));
-                var database = await srcNodes.Servers.Single(s => s.ServerStore.NodeTag == myTag)
-                    .ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(srcDb);
+                var databases = srcNodes.Servers.Single(s => s.ServerStore.NodeTag == myTag)
+                    .ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(srcDb);
 
                 var etlDone = new ManualResetEventSlim();
-                database.EtlLoader.BatchCompleted += x =>
+                foreach (var task in databases)
                 {
-                    if (x.Statistics.LoadSuccesses > 0)
-                        etlDone.Set();
-                };
+                    var db = await task;
+                    db.EtlLoader.BatchCompleted += x =>
+                    {
+                        if (x.Statistics.LoadSuccesses > 0)
+                            etlDone.Set();
+                    };
+                }
 
                 using (var session = src.OpenSession())
                 {
@@ -244,7 +368,7 @@ namespace SlowTests.Sharding
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Sharded GetOngoingTaskInfoOperation not implemented")]
         public async Task WillWorkAfterResponsibleNodeRestart()
         {
             var srcDb = "ETL-src";
@@ -253,7 +377,7 @@ namespace SlowTests.Sharding
             var srcCluster = await CreateRaftCluster(3, shouldRunInMemory: false);
             var dstCluster = await CreateRaftCluster(1);
             var srcNodes = await CreateShardedDatabaseInCluster(srcDb, replicationFactor: 2, srcCluster, certificate: null);
-            var destNode = await CreateShardedDatabaseInCluster(dstDb, replicationFactor: 1, dstCluster, certificate: null);
+            var destNode = await CreateDatabaseInCluster(dstDb, replicationFactor: 1, dstCluster.Leader.WebUrl, certificate: null);
             using (var src = new DocumentStore
             {
                 Urls = srcNodes.Servers.Select(s => s.WebUrl).ToArray(),
@@ -296,11 +420,6 @@ namespace SlowTests.Sharding
 
                 src.Maintenance.Send(new AddEtlOperation<RavenConnectionString>(config));
 
-                var ongoingTask = src.Maintenance.Send(new GetOngoingTaskInfoOperation(name, OngoingTaskType.RavenEtl));
-
-                var responsibleNodeNodeTag = ongoingTask.ResponsibleNode.NodeTag;
-                var originalTaskNodeServer = srcNodes.Servers.Single(s => s.ServerStore.NodeTag == responsibleNodeNodeTag);
-
                 using (var session = src.OpenSession())
                 {
                     session.Store(new User()
@@ -312,6 +431,11 @@ namespace SlowTests.Sharding
                 }
 
                 Assert.True(WaitForDocument<User>(dest, "users/1", u => u.Name == "Joe Doe", 30_000));
+
+                var ongoingTask = src.Maintenance.Send(new GetOngoingTaskInfoOperation(name, OngoingTaskType.RavenEtl));
+
+                var responsibleNodeNodeTag = ongoingTask.ResponsibleNode.NodeTag;
+                var originalTaskNodeServer = srcNodes.Servers.Single(s => s.ServerStore.NodeTag == responsibleNodeNodeTag);
 
                 var originalResult = DisposeServerAndWaitForFinishOfDisposal(originalTaskNodeServer);
 
@@ -385,6 +509,110 @@ namespace SlowTests.Sharding
         }
 
         [Fact]
+        public async Task CanGetLastEtagPerDbFromProcessState()
+        {
+            var srcDb = "ETL-src";
+            var dstDb = "ETL-dst";
+
+            var srcCluster = await CreateRaftCluster(3, shouldRunInMemory: false);
+            var dstCluster = await CreateRaftCluster(1);
+            var srcNodes = await CreateShardedDatabaseInCluster(srcDb, replicationFactor: 3, srcCluster, certificate: null);
+            var destNode = await CreateDatabaseInCluster(dstDb, replicationFactor: 1, dstCluster.Leader.WebUrl, certificate: null);
+            using (var src = new DocumentStore
+            {
+                Urls = srcNodes.Servers.Select(s => s.WebUrl).ToArray(),
+                Database = srcDb,
+            }.Initialize())
+            using (var dest = new DocumentStore
+            {
+                Urls = new[] { destNode.Servers[0].WebUrl },
+                Database = dstDb,
+            }.Initialize())
+            {
+                var name = "FailoverAfterRestart";
+                var urls = new[] { destNode.Servers[0].WebUrl };
+                var config = new RavenEtlConfiguration()
+                {
+                    Name = name,
+                    ConnectionStringName = name,
+                    Transforms =
+                    {
+                        new Transformation
+                        {
+                            Name = $"ETL : {name}",
+                            Collections = new List<string>(new[] {"Users"}),
+                            Script = null,
+                            ApplyToAllDocuments = false,
+                            Disabled = false
+                        }
+                    },
+                    LoadRequestTimeoutInSec = 30,
+                };
+                var connectionString = new RavenConnectionString
+                {
+                    Name = name,
+                    Database = dest.Database,
+                    TopologyDiscoveryUrls = urls,
+                };
+
+                var result = src.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(connectionString));
+                Assert.NotNull(result.RaftCommandIndex);
+
+                src.Maintenance.Send(new AddEtlOperation<RavenConnectionString>(config));
+
+
+                var dbRecord = src.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(src.Database)).Result;
+                var shardedCtx = new ShardedContext(srcCluster.Leader.ServerStore, dbRecord);
+                var ids = new[] { "users/0", "users/4", "users/1" };
+
+                using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                {
+                    for (int i = 0; i < ids.Length; i++)
+                    {
+                        var id = ids[i];
+                        var shardIndex = shardedCtx.GetShardIndex(context, id);
+                        Assert.Equal(i, shardIndex);
+                    }
+                }
+
+                using (var session = src.OpenSession())
+                {
+                    for (var i = 0; i < ids.Length; i++)
+                    {
+                        var id = ids[i];
+                        session.Store(new User
+                        {
+                            Name = "User" + i
+                        }, id);
+                    }
+
+                    session.SaveChanges();
+                }
+
+                for (var i = 0; i < ids.Length; i++)
+                {
+                    var id = ids[i];
+                    Assert.True(WaitForDocument<User>(dest, id, u => u.Name == "User" + i, 30_000));
+                }
+
+                var tasks = srcCluster.Leader.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(srcDb);
+                var dbs = new List<DocumentDatabase>();
+                foreach (var task in tasks)
+                {
+                    dbs.Add(await task);
+                }
+                var state = EtlLoader.GetProcessState(config.Transforms, dbs.First(), config.Name);
+                Assert.Equal(3, state.LastProcessedEtagPerDbId.Count);
+
+                foreach (var db in dbs)
+                {
+                    Assert.True(state.LastProcessedEtagPerDbId.TryGetValue(db.DbBase64Id, out var etag));
+                    Assert.Equal(1, etag);
+                }
+            }
+        }
+
+        [Fact]
         public async Task ShouldSendCounterChangeMadeInCluster()
         {
             var srcDb = "13288-src";
@@ -392,8 +620,8 @@ namespace SlowTests.Sharding
 
             var srcCluster = await CreateRaftCluster(2);
             var dstCluster = await CreateRaftCluster(1);
-            var srcNodes = await CreateShardedDatabaseInCluster(srcDb, 2, srcCluster);
-            var destNode = await CreateShardedDatabaseInCluster(dstDb, 1, dstCluster);
+            var srcNodes = await CreateShardedDatabaseInCluster(srcDb, 2, srcCluster, shards: 2);
+            var destNode = await CreateDatabaseInCluster(dstDb, 1, dstCluster.Leader.WebUrl);
 
             using (var src = new DocumentStore
             {
@@ -506,6 +734,153 @@ namespace SlowTests.Sharding
                     dest
                 }, "users/1", "likes", 2, TimeSpan.FromSeconds(60)));
             }
+        }
+
+        [Fact]
+        public async Task OlapTaskShouldBeHighlyAvailable()
+        {
+            var nodes = await CreateRaftCluster(3, watcherCluster: true);
+            var leader = nodes.Leader;
+            var dbName = GetDatabaseName();
+            var srcNodes = await CreateShardedDatabaseInCluster(dbName, replicationFactor: 2, nodes, shards: 3);
+
+            var stores = srcNodes.Servers.Select(s => new DocumentStore
+            {
+                Database = dbName,
+                Urls = new[] { s.WebUrl },
+                Conventions = new DocumentConventions
+                {
+                    DisableTopologyUpdates = true
+                }
+            }.Initialize())
+                .ToList();
+
+            var server = srcNodes.Servers.First(s => s != leader);
+            var store = stores.Single(s => s.Urls[0] == server.WebUrl);
+
+            Assert.Equal(store.Database, dbName);
+
+            var baseline = new DateTime(2020, 1, 1);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                for (int i = 0; i < 31; i++)
+                {
+                    await session.StoreAsync(new Query.Order
+                    {
+                        Id = $"orders/{i}",
+                        OrderedAt = baseline.AddDays(i),
+                        ShipVia = $"shippers/{i}",
+                        Company = $"companies/{i}"
+                    });
+                }
+
+                await session.SaveChangesAsync();
+            }
+
+            var script = @"
+var orderDate = new Date(this.OrderedAt);
+var year = orderDate.getFullYear();
+var month = orderDate.getMonth();
+var key = new Date(year, month);
+
+loadToOrders(partitionBy(key),
+    {
+        OrderId: id(this),
+        Company : this.Company,
+        ShipVia : this.ShipVia
+    });
+";
+
+            var connectionStringName = $"{store.Database} to Local";
+            var configName = "olap-s3";
+            var transformationName = "MonthlyOrders";
+            var path = NewDataPath(forceCreateDir: true);
+
+            var configuration = new OlapEtlConfiguration
+            {
+                Name = configName,
+                ConnectionStringName = connectionStringName,
+                RunFrequency = LocalTests.DefaultFrequency,
+                Transforms = 
+                {
+                    new Transformation
+                    {
+                        Name = transformationName,
+                        Collections = new List<string> {"Orders"},
+                        Script = script
+                    }
+                },
+                MentorNode = server.ServerStore.NodeTag
+            };
+
+            var result = store.Maintenance.Send(new PutConnectionStringOperation<OlapConnectionString>(new OlapConnectionString
+            {
+                Name = connectionStringName,
+                LocalSettings = new LocalSettings
+                {
+                    FolderPath = path
+                }
+            }));
+            Assert.NotNull(result.RaftCommandIndex);
+
+            store.Maintenance.Send(new AddEtlOperation<OlapConnectionString>(configuration));
+            var databases = srcNodes.Servers.Single(s => s.ServerStore.NodeTag == server.ServerStore.NodeTag)
+                .ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(dbName);
+
+            var etlsDone = WaitForEtlOnAllShards(server, dbName, (n, s) => s.LoadSuccesses > 0);
+            var waitHandles = etlsDone.Select(mre => mre.WaitHandle).ToArray();
+            WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(2));
+
+            var files = Directory.GetFiles(path, "*.*", SearchOption.AllDirectories);
+            var count = files.Length;
+            Assert.True(count > 0);
+
+            await ActionWithLeader(l => l.ServerStore.RemoveFromClusterAsync(server.ServerStore.NodeTag), srcNodes.Servers);
+
+            var store2 = stores.First(s => s != store);
+            using (var session = store2.OpenAsyncSession())
+            {
+                for (int i = 0; i < 28; i++)
+                {
+                    await session.StoreAsync(new Query.Order
+                    {
+                        Id = $"orders/{i + 31}",
+                        OrderedAt = baseline.AddMonths(1).AddDays(i),
+                        ShipVia = $"shippers/{i + 31}",
+                        Company = $"companies/{i + 31}"
+                    });
+                }
+
+                await session.SaveChangesAsync();
+            }
+
+            etlsDone = WaitForEtlOnAllShards(leader, dbName, (n, s) => s.LoadSuccesses > 0);
+            waitHandles = etlsDone.Select(mre => mre.WaitHandle).ToArray();
+            WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1));
+
+            files = Directory.GetFiles(path, "*.*", SearchOption.AllDirectories);
+            Assert.True(files.Length > count);
+        }
+
+        private static IEnumerable<ManualResetEventSlim> WaitForEtlOnAllShards(RavenServer server, string database, Func<string, EtlProcessStatistics, bool> predicate)
+        {
+            var dbs = server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(database).ToList();
+            var list = new List<ManualResetEventSlim>(dbs.Count);
+            foreach (var task in dbs)
+            {
+                var mre = new ManualResetEventSlim();
+                list.Add(mre);
+
+                var db = task.Result;
+                db.EtlLoader.BatchCompleted += x =>
+                {
+                    if (predicate($"{x.ConfigurationName}/{x.TransformationName}", x.Statistics))
+                        mre.Set();
+                };
+            }
+
+            return list;
         }
     }
 }

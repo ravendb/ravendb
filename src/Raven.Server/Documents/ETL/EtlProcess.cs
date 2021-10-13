@@ -683,8 +683,6 @@ namespace Raven.Server.Documents.ETL
 
                     var loadLastProcessedEtag = state.GetLastProcessedEtag(Database.DbBase64Id, _serverStore.NodeTag);
 
-                    var loadLastProcessedEtag = state.GetLastProcessedEtagForDbId(Database.DbBase64Id);
-
                     using (Statistics.NewBatch())
                     using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {

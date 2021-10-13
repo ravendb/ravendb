@@ -266,7 +266,7 @@ person.addCounter(loadCounter('down'));
             }
         }
 
-        private void AssertCounters(IDocumentStore store, params (string DocId, string CounterName, long CounterValue, bool LoadUsingStartingWith)[] items)
+        internal static void AssertCounters(IDocumentStore store, params (string DocId, string CounterName, long CounterValue, bool LoadUsingStartingWith)[] items)
         {
             using (var session = store.OpenSession())
             {
