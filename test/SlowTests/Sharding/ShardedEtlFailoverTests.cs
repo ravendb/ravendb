@@ -18,7 +18,6 @@ using Raven.Client.Exceptions.Cluster;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server;
-using Raven.Server.Documents;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide.Context;
@@ -522,110 +521,6 @@ namespace SlowTests.Sharding
 
                     Assert.True(WaitForDocument<User>(dest, "users/4", u => u.Name == "Joe Doe4", 30_000));
                 }*/
-            }
-        }
-
-        [Fact]
-        public async Task CanGetLastEtagPerDbFromProcessState()
-        {
-            var srcDb = "ETL-src";
-            var dstDb = "ETL-dst";
-
-            var srcCluster = await CreateRaftCluster(3, shouldRunInMemory: false);
-            var dstCluster = await CreateRaftCluster(1);
-            var srcNodes = await CreateShardedDatabaseInCluster(srcDb, replicationFactor: 3, srcCluster, certificate: null);
-            var destNode = await CreateDatabaseInCluster(dstDb, replicationFactor: 1, dstCluster.Leader.WebUrl, certificate: null);
-            using (var src = new DocumentStore
-            {
-                Urls = srcNodes.Servers.Select(s => s.WebUrl).ToArray(),
-                Database = srcDb,
-            }.Initialize())
-            using (var dest = new DocumentStore
-            {
-                Urls = new[] { destNode.Servers[0].WebUrl },
-                Database = dstDb,
-            }.Initialize())
-            {
-                var name = "FailoverAfterRestart";
-                var urls = new[] { destNode.Servers[0].WebUrl };
-                var config = new RavenEtlConfiguration()
-                {
-                    Name = name,
-                    ConnectionStringName = name,
-                    Transforms =
-                    {
-                        new Transformation
-                        {
-                            Name = $"ETL : {name}",
-                            Collections = new List<string>(new[] {"Users"}),
-                            Script = null,
-                            ApplyToAllDocuments = false,
-                            Disabled = false
-                        }
-                    },
-                    LoadRequestTimeoutInSec = 30,
-                };
-                var connectionString = new RavenConnectionString
-                {
-                    Name = name,
-                    Database = dest.Database,
-                    TopologyDiscoveryUrls = urls,
-                };
-
-                var result = src.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(connectionString));
-                Assert.NotNull(result.RaftCommandIndex);
-
-                src.Maintenance.Send(new AddEtlOperation<RavenConnectionString>(config));
-
-
-                var dbRecord = src.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(src.Database)).Result;
-                var shardedCtx = new ShardedContext(srcCluster.Leader.ServerStore, dbRecord);
-                var ids = new[] { "users/0", "users/4", "users/1" };
-
-                using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                {
-                    for (int i = 0; i < ids.Length; i++)
-                    {
-                        var id = ids[i];
-                        var shardIndex = shardedCtx.GetShardIndex(context, id);
-                        Assert.Equal(i, shardIndex);
-                    }
-                }
-
-                using (var session = src.OpenSession())
-                {
-                    for (var i = 0; i < ids.Length; i++)
-                    {
-                        var id = ids[i];
-                        session.Store(new User
-                        {
-                            Name = "User" + i
-                        }, id);
-                    }
-
-                    session.SaveChanges();
-                }
-
-                for (var i = 0; i < ids.Length; i++)
-                {
-                    var id = ids[i];
-                    Assert.True(WaitForDocument<User>(dest, id, u => u.Name == "User" + i, 30_000));
-                }
-
-                var tasks = srcCluster.Leader.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(srcDb);
-                var dbs = new List<DocumentDatabase>();
-                foreach (var task in tasks)
-                {
-                    dbs.Add(await task);
-                }
-                var state = EtlLoader.GetProcessState(config.Transforms, dbs.First(), config.Name);
-                Assert.Equal(3, state.LastProcessedEtagPerDbId.Count);
-
-                foreach (var db in dbs)
-                {
-                    Assert.True(state.LastProcessedEtagPerDbId.TryGetValue(db.DbBase64Id, out var etag));
-                    Assert.Equal(1, etag);
-                }
             }
         }
 

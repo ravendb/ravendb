@@ -6,7 +6,6 @@ using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Replication;
-using Raven.Client.Extensions;
 using Raven.Client.ServerWide.Operations;
 using Sparrow.Json.Parsing;
 

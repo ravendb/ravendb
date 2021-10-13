@@ -144,7 +144,7 @@ namespace Raven.Server.ServerWide.Commands.ETL
 
 #pragma warning disable 618
             if (etlState.LastProcessedEtagPerNode?.Count > 0)
-                etlState.LastProcessedEtagPerNode[NodeTag] = LastProcessedEtag;
+            etlState.LastProcessedEtagPerNode[NodeTag] = LastProcessedEtag;
 #pragma warning restore 618
 
             etlState.ChangeVector = ChangeVector;
