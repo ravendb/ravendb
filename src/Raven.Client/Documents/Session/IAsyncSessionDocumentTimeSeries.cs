@@ -46,8 +46,7 @@ namespace Raven.Client.Documents.Session
     public interface IAsyncSessionDocumentRollupTypedTimeSeries<TValues> : 
         ISessionDocumentTypedAppendTimeSeriesBase<TValues>, 
         IAsyncTimeSeriesStreamingBase<TimeSeriesRollupEntry<TValues>>,
-        ISessionDocumentDeleteTimeSeriesBase,
-        ISessionDocumentIncrementTimeSeriesBase
+        ISessionDocumentDeleteTimeSeriesBase
         where TValues : new()
     {
         Task<TimeSeriesRollupEntry<TValues>[]> GetAsync(DateTime? from = null, DateTime? to = null, int start = 0, int pageSize = int.MaxValue,
@@ -63,7 +62,8 @@ namespace Raven.Client.Documents.Session
         ISessionDocumentIncrementTimeSeriesBase
         where TValues : new()
     {
-
+        Task<TimeSeriesEntry<TValues>[]> GetAsync(DateTime? from = null, DateTime? to = null, int start = 0, int pageSize = int.MaxValue,
+            CancellationToken token = default);
     }
 
     /// <summary>
