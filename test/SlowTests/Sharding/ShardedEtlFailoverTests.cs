@@ -18,7 +18,6 @@ using Raven.Client.Exceptions.Cluster;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server;
-using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.Sharding;
@@ -254,7 +253,7 @@ namespace SlowTests.Sharding
             }
         }
 
-        [Fact(Skip = "Sharded GetOngoingTaskInfoOperation not implemented")]
+        [Fact(Skip = "Sharded PutClientConfigurationOperation not implemented")]
         public async Task EtlDestinationFailoverBetweenNodesWithinSameCluster()
         {
             var srcDb = "EtlDestinationFailoverBetweenNodesWithinSameClusterSrc";
@@ -368,7 +367,7 @@ namespace SlowTests.Sharding
             }
         }
 
-        [Fact(Skip = "Sharded GetOngoingTaskInfoOperation not implemented")]
+        [Fact(Skip = "Sharded failover on DisposeServerAndWaitForFinishOfDisposal is not implemented")]
         public async Task WillWorkAfterResponsibleNodeRestart()
         {
             var srcDb = "ETL-src";
@@ -420,38 +419,56 @@ namespace SlowTests.Sharding
 
                 src.Maintenance.Send(new AddEtlOperation<RavenConnectionString>(config));
 
+                var id = "users/1";
                 using (var session = src.OpenSession())
                 {
                     session.Store(new User()
                     {
                         Name = "Joe Doe"
-                    }, "users/1");
+                    }, id);
 
                     session.SaveChanges();
                 }
 
-                Assert.True(WaitForDocument<User>(dest, "users/1", u => u.Name == "Joe Doe", 30_000));
+                Assert.True(WaitForDocument<User>(dest, id, u => u.Name == "Joe Doe", 30_000));
 
-                var ongoingTask = src.Maintenance.Send(new GetOngoingTaskInfoOperation(name, OngoingTaskType.RavenEtl));
+                var dbRecord = src.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(src.Database)).Result;
+                var shardedCtx = new ShardedContext(srcNodes.Servers[0].ServerStore, dbRecord);
+                var shardIndex = 0;
+                using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                {
+                    shardIndex = shardedCtx.GetShardIndex(context, id);
+                }
+
+                var ongoingTask = src.Maintenance.Send(new GetOngoingTaskInfoOperation($"{name}${shardIndex}", OngoingTaskType.RavenEtl));
 
                 var responsibleNodeNodeTag = ongoingTask.ResponsibleNode.NodeTag;
+                
+                Assert.NotNull(responsibleNodeNodeTag);
+
                 var originalTaskNodeServer = srcNodes.Servers.Single(s => s.ServerStore.NodeTag == responsibleNodeNodeTag);
 
                 var originalResult = DisposeServerAndWaitForFinishOfDisposal(originalTaskNodeServer);
+
+                id = "users/5";
+                using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                {
+                    Assert.Equal(shardIndex, shardedCtx.GetShardIndex(context, id));
+                }
 
                 using (var session = src.OpenSession())
                 {
                     session.Store(new User()
                     {
                         Name = "Joe Doe2"
-                    }, "users/2");
+                    }, id);
 
                     session.SaveChanges();
                 }
 
-                Assert.True(WaitForDocument<User>(dest, "users/2", u => u.Name == "Joe Doe2", 30_000));
+                Assert.True(WaitForDocument<User>(dest, id, u => u.Name == "Joe Doe2", 30_000));
 
-                ongoingTask = src.Maintenance.Send(new GetOngoingTaskInfoOperation(name, OngoingTaskType.RavenEtl));
+/*                ongoingTask = src.Maintenance.Send(new GetOngoingTaskInfoOperation(name, OngoingTaskType.RavenEtl));
 
                 var currentNodeNodeTag = ongoingTask.ResponsibleNode.NodeTag;
                 var currentTaskNodeServer = srcNodes.Servers.Single(s => s.ServerStore.NodeTag == currentNodeNodeTag);
@@ -504,7 +521,7 @@ namespace SlowTests.Sharding
                     }
 
                     Assert.True(WaitForDocument<User>(dest, "users/4", u => u.Name == "Joe Doe4", 30_000));
-                }
+                }*/
             }
         }
 

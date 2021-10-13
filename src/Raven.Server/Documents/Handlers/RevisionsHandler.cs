@@ -19,6 +19,7 @@ using Raven.Server.Documents.Revisions;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -105,7 +106,7 @@ namespace Raven.Server.Documents.Handlers
                 ServerStore.ModifyDatabaseRevisions,
                 "read-revisions-config",
                 GetRaftRequestIdFromQuery(),
-                beforeSetupConfiguration: (string name, ref BlittableJsonReaderObject configuration, JsonOperationContext context) =>
+                beforeSetupConfiguration: (string name, ref BlittableJsonReaderObject configuration, JsonOperationContext context, ServerStore serverStore) =>
                 {
                     if (configuration == null ||
                         configuration.TryGet(nameof(RevisionsConfiguration.Collections), out BlittableJsonReaderObject collections) == false ||

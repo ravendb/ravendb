@@ -1,4 +1,8 @@
-﻿using System.Net.Http;
+﻿using System.Collections.Generic;
+using System.Linq;
+using System.Net.Http;
+using System.Threading.Tasks;
+using Nito.AsyncEx;
 using Raven.Client;
 using Raven.Server.Documents.ShardedHandlers.ShardedCommands;
 using Raven.Server.ServerWide.Context;
@@ -50,6 +54,25 @@ namespace Raven.Server.Documents.Sharding
 
             if (header.HasFlag(Headers.IfNoneMatch))
                 command.Headers["If-None-Match"] = GetStringFromHeaders("If-None-Match");
+        }
+
+        public override async Task WaitForIndexToBeApplied(TransactionOperationContext context, long index)
+        {
+            var dbs = ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(ShardedContext.DatabaseName).ToList();
+            if (dbs.Count == 0)
+            {
+                await ServerStore.Cluster.WaitForIndexNotification(index);
+            }
+            else
+            {
+                var tasks = new List<Task>();
+                foreach (var task in dbs)
+                {
+                    var db = await task;
+                    tasks.Add(db.RachisLogIndexNotifications.WaitForIndexNotification(index, ServerStore.Engine.OperationTimeout));
+                }
+                await tasks.WhenAll();
+            }
         }
     }
 }

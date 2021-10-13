@@ -646,7 +646,7 @@ namespace Raven.Server.Documents.Handlers
                 ServerStore.ModifyTimeSeriesConfiguration,
                 "read-timeseries-config",
                 GetRaftRequestIdFromQuery(),
-                beforeSetupConfiguration: (string name, ref BlittableJsonReaderObject configuration, JsonOperationContext context) =>
+                beforeSetupConfiguration: (string name, ref BlittableJsonReaderObject configuration, JsonOperationContext context, ServerStore serverStore) =>
                 {
                     if (configuration == null)
                     {

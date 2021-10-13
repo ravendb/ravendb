@@ -41,7 +41,7 @@ namespace Raven.Server.Web
 
         private RequestHandlerContext _context;
 
-        protected HttpContext HttpContext
+        internal HttpContext HttpContext
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get { return _context.HttpContext; }
@@ -97,7 +97,7 @@ namespace Raven.Server.Web
         private Stream _requestBodyStream;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        protected Stream RequestBodyStream()
+        internal Stream RequestBodyStream()
         {
             if (_requestBodyStream != null)
                 return _requestBodyStream;
@@ -276,7 +276,7 @@ namespace Raven.Server.Web
 
         private Stream _responseStream;
 
-        protected Stream ResponseBodyStream()
+        internal Stream ResponseBodyStream()
         {
             if (_responseStream != null)
                 return _responseStream;
@@ -298,7 +298,7 @@ namespace Raven.Server.Web
             return HttpContext.WebSockets.IsWebSocketRequest;
         }
 
-        protected string GetRaftRequestIdFromQuery()
+        internal string GetRaftRequestIdFromQuery()
         {
             var guid = GetStringQueryString("raft-request-id", required: false);
 
@@ -381,12 +381,12 @@ namespace Raven.Server.Web
             return result;
         }
 
-        protected long GetLongQueryString(string name)
+        internal long GetLongQueryString(string name)
         {
             return GetLongQueryString(name, true).Value;
         }
 
-        protected long? GetLongQueryString(string name, bool required)
+        internal long? GetLongQueryString(string name, bool required)
         {
             var longAsString = GetStringQueryString(name, required);
             if (longAsString == null)
@@ -415,7 +415,7 @@ namespace Raven.Server.Web
             throw new ArgumentException($"Could not parse query string '{name}' as float, value was: {result}");
         }
 
-        protected string GetStringQueryString(string name, bool required = true)
+        internal string GetStringQueryString(string name, bool required = true)
         {
             var val = HttpContext.Request.Query[name];
             if (val.Count == 0 || string.IsNullOrWhiteSpace(val[0]))
@@ -476,7 +476,7 @@ namespace Raven.Server.Web
             return val;
         }
 
-        protected bool? GetBoolValueQueryString(string name, bool required = true)
+        internal bool? GetBoolValueQueryString(string name, bool required = true)
         {
             var boolAsString = GetStringQueryString(name, required);
             if (boolAsString == null)
@@ -533,7 +533,7 @@ namespace Raven.Server.Web
             throw new ArgumentException($"Could not parse query string '{name}' as timespan val {timeSpanAsString}");
         }
 
-        protected string GetQueryStringValueAndAssertIfSingleAndNotEmpty(string name)
+        internal string GetQueryStringValueAndAssertIfSingleAndNotEmpty(string name)
         {
             var values = HttpContext.Request.Query[name];
             if (values.Count == 0 || string.IsNullOrWhiteSpace(values[0]))
@@ -629,7 +629,7 @@ namespace Raven.Server.Web
             public Dictionary<string, DatabaseAccess> AuthorizedDatabases { get; set; }
         }
 
-        protected async Task<bool> CanAccessDatabaseAsync(string dbName, bool requireAdmin, bool requireWrite)
+        internal async Task<bool> CanAccessDatabaseAsync(string dbName, bool requireAdmin, bool requireWrite)
         {
             var result = await GetAllowedDbsAsync(dbName, requireAdmin, requireWrite);
 
@@ -778,6 +778,12 @@ namespace Raven.Server.Web
         protected virtual OperationCancelToken CreateOperationToken(TimeSpan cancelAfter)
         {
             return new OperationCancelToken(cancelAfter, ServerStore.ServerShutdown, HttpContext.RequestAborted);
+        }
+
+        public virtual Task WaitForIndexToBeApplied(TransactionOperationContext context, long index)
+        {
+            return Task.CompletedTask;
+        }
+
     }
-}
 }

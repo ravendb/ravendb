@@ -1197,6 +1197,11 @@ namespace Raven.Server.ServerWide
                             {
                                 if (shardTopology.RelevantFor(removed))
                                 {
+                                    if (shardTopology.Count == 1)
+                                    {
+                                        // todo : RavenDB-17161 
+                                    }
+
                                     shardTopology.RemoveFromTopology(removed);
                                     // Explicit removing of the node means that we modify the replication factor
                                     shardTopology.ReplicationFactor = shardTopology.Count;
