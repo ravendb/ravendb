@@ -19,21 +19,26 @@ using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.SQL;
+using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.ServerWide.Operations;
+using Raven.Server.Config;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.OLAP;
 using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.Documents.Sharding;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.SqlMigration;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Server.Documents.ETL.Olap;
+using SlowTests.Server.Documents.ETL.Raven;
 using SlowTests.Server.Documents.ETL.SQL;
 using SlowTests.Server.Documents.Migration;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
+using BackupConfiguration = Raven.Server.Config.Categories.BackupConfiguration;
 
 namespace SlowTests.Sharding
 {
@@ -41,6 +46,16 @@ namespace SlowTests.Sharding
     {
         public ShardedEtlTests(ITestOutputHelper output) : base(output)
         {
+        }
+
+        protected static readonly BackupConfiguration DefaultBackupConfiguration;
+
+        static ShardedEtlTests()
+        {
+            var configuration = RavenConfiguration.CreateForTesting("foo", ResourceType.Database);
+            configuration.Initialize();
+
+            DefaultBackupConfiguration = configuration.Backup;
         }
 
         private const string DefaultFrequency = "* * * * *"; // every minute
@@ -269,8 +284,8 @@ loadToOrders(orderData);
             }
         }
 
-        [Fact]
-        public void RavenEtl_Loading_to_different_collections()
+        [Fact(Skip = "loading a related document that resides on a different shard than the parent document is not implemented")]
+        public void RavenEtl_Loading_to_different_collections_with_load_document()
         {
             using (var src = GetShardedDocumentStore())
             using (var dest = GetDocumentStore())
@@ -293,13 +308,13 @@ loadToAddresses(load(this.AddressId));
                             Age = i,
                             Name = "James",
                             LastName = "Smith",
-                            AddressId = $"addresses/{i}$users{i}"
+                            AddressId = $"addresses/{i}"
                         }, $"users/{i}");
 
                         session.Store(new Address
                         {
                             City = "New York"
-                        }, $"addresses/{i}$users{i}"); // ensure that address doc is on the same shard as user
+                        }, $"addresses/{i}");
                     }
 
                     session.SaveChanges();
@@ -326,12 +341,97 @@ loadToAddresses(load(this.AddressId));
                         metadata = session.Advanced.GetMetadataFor(person);
                         Assert.Equal("People", metadata[Constants.Documents.Metadata.Collection]);
 
-/*                        var address = session.Advanced.LoadStartingWith<Address>($"users/{i}/addresses/")[0];
+                        var address = session.Advanced.LoadStartingWith<Address>($"users/{i}/addresses/")[0];
                         Assert.NotNull(address);
                         Assert.Equal("New York", address.City);
 
                         metadata = session.Advanced.GetMetadataFor(address);
-                        Assert.Equal("Addresses", metadata[Constants.Documents.Metadata.Collection]);*/
+                        Assert.Equal("Addresses", metadata[Constants.Documents.Metadata.Collection]);
+                    }
+                }
+
+                var stats = dest.Maintenance.Send(new GetStatisticsOperation());
+
+                Assert.Equal(15, stats.CountOfDocuments);
+
+                var etlDone = WaitForEtl(src, (n, statistics) => statistics.LoadSuccesses != 0);
+
+                using (var session = src.OpenSession())
+                {
+                    session.Delete("users/3");
+
+                    session.SaveChanges();
+                }
+
+                etlDone.Wait(TimeSpan.FromSeconds(30));
+
+                using (var session = dest.OpenSession())
+                {
+                    var user = session.Load<User>("users/3");
+                    Assert.Null(user);
+
+                    var persons = session.Advanced.LoadStartingWith<Person>("users/3/people/");
+                    Assert.Equal(0, persons.Length);
+
+                    var addresses = session.Advanced.LoadStartingWith<Address>("users/3/addresses/");
+                    Assert.Equal(0, addresses.Length);
+                }
+
+                stats = dest.Maintenance.Send(new GetStatisticsOperation());
+
+                Assert.Equal(12, stats.CountOfDocuments);
+            }
+        }
+
+        [Fact]
+        public void RavenEtl_Loading_to_different_collections()
+        {
+            using (var src = GetShardedDocumentStore())
+            using (var dest = GetDocumentStore())
+            {
+                var etlsDone = WaitForEtlOnAllShards(src, (n, statistics) => statistics.LoadSuccesses != 0);
+
+                SetupRavenEtl(src, dest, "users", @"
+loadToUsers(this);
+loadToPeople({Name: this.Name + ' ' + this.LastName });
+");
+                const int count = 5;
+
+                using (var session = src.OpenSession())
+                {
+                    for (int i = 0; i < count; i++)
+                    {
+                        session.Store(new User
+                        {
+                            Age = i,
+                            Name = "James",
+                            LastName = "Smith"
+                        }, $"users/{i}");
+                    }
+
+                    session.SaveChanges();
+                }
+
+                var waitHandles = etlsDone.Select(mre => mre.WaitHandle).ToArray();
+                WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1));
+                using (var session = dest.OpenSession())
+                {
+                    for (var i = 0; i < count; i++)
+                    {
+                        var user = session.Load<User>($"users/{i}");
+                        Assert.NotNull(user);
+                        Assert.Equal("James", user.Name);
+                        Assert.Equal("Smith", user.LastName);
+
+                        var metadata = session.Advanced.GetMetadataFor(user);
+                        Assert.Equal("Users", metadata[Constants.Documents.Metadata.Collection]);
+
+                        var person = session.Advanced.LoadStartingWith<Person>($"users/{i}/people/")[0];
+                        Assert.NotNull(person);
+                        Assert.Equal("James Smith", person.Name);
+
+                        metadata = session.Advanced.GetMetadataFor(person);
+                        Assert.Equal("People", metadata[Constants.Documents.Metadata.Collection]);
                     }
                 }
 
@@ -357,14 +457,290 @@ loadToAddresses(load(this.AddressId));
 
                     var persons = session.Advanced.LoadStartingWith<Person>("users/3/people/");
                     Assert.Equal(0, persons.Length);
-
-/*                    var addresses = session.Advanced.LoadStartingWith<Address>("users/3/addresses/");
-                    Assert.Equal(0, addresses.Length);*/
                 }
 
                 stats = dest.Maintenance.Send(new GetStatisticsOperation());
 
-                Assert.Equal(7, stats.CountOfDocuments);
+                Assert.Equal(8, stats.CountOfDocuments);
+            }
+        }
+
+        [Fact]
+        public async Task RavenEtl_SetMentorToEtlAndFailover()
+        {
+            using (var src = GetShardedDocumentStore())
+            using (var dest = GetDocumentStore())
+            {
+                SetupRavenEtl(src, dest, "Users", script: null, mentor: "C");
+
+                var dbTask = Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(src.Database).First();
+                var database = await dbTask;
+
+                Assert.Equal("C", database.EtlLoader.RavenDestinations[0].MentorNode);
+
+                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+
+                using (var session = src.OpenSession())
+                {
+                    session.Store(new User()
+                    {
+                        Name = "Joe Doe2"
+                    }, "users/1");
+
+                    session.SaveChanges();
+                }
+
+                etlDone.Wait(TimeSpan.FromMinutes(1));
+
+                using (var session = dest.OpenSession())
+                {
+                    var user = session.Load<User>("users/1");
+
+                    Assert.NotNull(user);
+                    Assert.Equal("Joe Doe2", user.Name);
+                }
+
+                etlDone.Reset();
+
+                using (var session = src.OpenSession())
+                {
+                    session.Delete("users/1");
+
+                    session.SaveChanges();
+                }
+
+                etlDone.Wait(TimeSpan.FromMinutes(1));
+
+                using (var session = dest.OpenSession())
+                {
+                    var user = session.Load<User>("users/1");
+
+                    Assert.Null(user);
+                }
+            }
+        }
+
+        [Fact]
+        public void RavenEtl_Should_handle_counters()
+        {
+            using (var src = GetShardedDocumentStore())
+            using (var dest = GetDocumentStore())
+            {
+                SetupRavenEtl(src, dest, "Users", script:
+                    @"
+var counters = this['@metadata']['@counters'];
+
+this.Name = 'James';
+
+// case 1 : doc id will be preserved
+
+var doc = loadToUsers(this);
+
+for (var i = 0; i < counters.length; i++) {
+    doc.addCounter(loadCounter(counters[i]));
+}
+
+// case 2 : doc id will be generated on the destination side
+
+var person = loadToPeople({ Name: this.Name + ' ' + this.LastName });
+
+person.addCounter(loadCounter('down'));
+"
+);
+                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+
+                using (var session = src.OpenSession())
+                {
+                    session.Store(new User()
+                    {
+                        Name = "Joe",
+                        LastName = "Doe",
+                    }, "users/1");
+
+                    session.CountersFor("users/1").Increment("up", 20);
+                    session.CountersFor("users/1").Increment("down", 10);
+
+                    session.SaveChanges();
+                }
+
+                etlDone.Wait(TimeSpan.FromMinutes(1));
+
+                RavenDB_11157_Raven.AssertCounters(dest, new[]
+                {
+                    ("users/1", "up", 20L, false),
+                    ("users/1", "down", 10, false),
+                    ("users/1/people/", "down", 10, true)
+                });
+
+                string personId;
+
+                using (var session = dest.OpenSession())
+                {
+                    personId = session.Advanced.LoadStartingWith<Person>("users/1/people/")[0].Id;
+                }
+
+                etlDone.Reset();
+
+                using (var session = src.OpenSession())
+                {
+                    session.CountersFor("users/1").Delete("up");
+                    session.SaveChanges();
+                }
+
+                etlDone.Wait(TimeSpan.FromMinutes(1));
+
+                using (var session = dest.OpenSession())
+                {
+                    var user = session.Load<User>("users/1");
+
+                    var metadata = session.Advanced.GetMetadataFor(user);
+
+                    Assert.True(metadata.ContainsKey(Constants.Documents.Metadata.Counters));
+
+                    var counter = session.CountersFor("users/1").Get("up-etl");
+
+                    Assert.Null(counter); // this counter was removed
+                }
+
+                RavenDB_11157_Raven.AssertCounters(dest, new[]
+                {
+                    ("users/1", "down", 10L, false),
+                    ("users/1/people/", "down", 10, true)
+                });
+
+                etlDone.Reset();
+
+                using (var session = src.OpenSession())
+                {
+                    session.Delete("users/1");
+
+                    session.SaveChanges();
+                }
+
+                etlDone.Wait(TimeSpan.FromMinutes(1));
+
+                using (var session = dest.OpenSession())
+                {
+                    Assert.Null(session.Load<User>("users/1"));
+
+                    Assert.Null(session.CountersFor("users/1").Get("up"));
+                    Assert.Null(session.CountersFor("users/1").Get("up"));
+
+                    Assert.Empty(session.Advanced.LoadStartingWith<Person>("users/1/people/"));
+
+                    Assert.Null(session.CountersFor(personId).Get("down-etl"));
+                }
+            }
+        }
+
+        [Fact(Skip = "Sharded DeleteOngoingTaskOperation not implemented")]
+        public void CanDeleteEtl()
+        {
+            using (var store = GetShardedDocumentStore())
+            {
+                var configuration = new RavenEtlConfiguration
+                {
+                    ConnectionStringName = "test",
+                    Name = "aaa",
+                    Transforms =
+                    {
+                        new Transformation
+                        {
+                            Name = "S1",
+                            Collections = {"Users"}
+                        }
+                    }
+                };
+
+                var result = AddEtl(store, configuration, new RavenConnectionString
+                {
+                    Name = "test",
+                    TopologyDiscoveryUrls = new[] { "http://127.0.0.1:8080" },
+                    Database = "Northwind",
+                });
+
+                store.Maintenance.Send(new DeleteOngoingTaskOperation(result.TaskId, OngoingTaskType.RavenEtl));
+
+                var ongoingTask = store.Maintenance.Send(new GetOngoingTaskInfoOperation(result.TaskId, OngoingTaskType.RavenEtl));
+
+                Assert.Null(ongoingTask);
+            }
+        }
+
+        [Fact]
+        public void CanUpdateEtl()
+        {
+            using (var store = GetShardedDocumentStore())
+            {
+                var configuration = new RavenEtlConfiguration
+                {
+                    ConnectionStringName = "test",
+                    Name = "aaa",
+                    Transforms =
+                    {
+                        new Transformation
+                        {
+                            Name = "S1",
+                            Collections = {"Users"}
+                        },
+                        new Transformation
+                        {
+                            Name = "S2",
+                            Collections = {"Users"}
+                        }
+                    }
+                };
+
+                var result = AddEtl(store, configuration, new RavenConnectionString
+                {
+                    Name = "test",
+                    TopologyDiscoveryUrls = new[] { "http://127.0.0.1:8080" },
+                    Database = "Northwind",
+                });
+
+                configuration.Transforms[0].Disabled = true;
+
+                var update = store.Maintenance.Send(new UpdateEtlOperation<RavenConnectionString>(result.TaskId, configuration));
+
+                var ongoingTask = store.Maintenance.Send(new GetOngoingTaskInfoOperation(update.TaskId, OngoingTaskType.RavenEtl));
+
+                Assert.Equal(OngoingTaskState.PartiallyEnabled, ongoingTask.TaskState);
+            }
+        }
+
+        [Fact(Skip = "Sharded ToggleOngoingTaskStateOperation not implemented")]
+        public void CanDisableEtl()
+        {
+            using (var store = GetShardedDocumentStore())
+            {
+                var configuration = new RavenEtlConfiguration
+                {
+                    ConnectionStringName = "test",
+                    Name = "aaa",
+                    Transforms =
+                    {
+                        new Transformation
+                        {
+                            Name = "S1",
+                            Collections = {"Users"}
+                        }
+                    }
+                };
+
+                var result = AddEtl(store, configuration, new RavenConnectionString
+                {
+                    Name = "test",
+                    TopologyDiscoveryUrls = new[] { "http://127.0.0.1:8080" },
+                    Database = "Northwind",
+                });
+
+                var toggleResult = store.Maintenance.Send(new ToggleOngoingTaskStateOperation(result.TaskId, OngoingTaskType.RavenEtl, true));
+                Assert.NotNull(toggleResult);
+                Assert.True(toggleResult.RaftCommandIndex > 0);
+                Assert.True(toggleResult.TaskId > 0);
+
+                var ongoingTask = store.Maintenance.Send(new GetOngoingTaskInfoOperation(result.TaskId, OngoingTaskType.RavenEtl));
+                Assert.Equal(OngoingTaskState.Disabled, ongoingTask.TaskState);
             }
         }
 
@@ -681,7 +1057,7 @@ loadToOrders(partitionBy(key), orderData);
                     SetupS3OlapEtl(store, script, settings);
                     etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                    using (var s3Client = new RavenAwsS3Client(settings))
+                    using (var s3Client = new RavenAwsS3Client(settings, DefaultBackupConfiguration))
                     {
                         var prefix = $"{settings.RemoteFolderName}/Orders";
                         var cloudObjects = await s3Client.ListObjectsAsync(prefix, string.Empty, false);
@@ -690,7 +1066,7 @@ loadToOrders(partitionBy(key), orderData);
                         Assert.Contains("2020-01-01", cloudObjects.FileInfoDetails[0].FullPath);
                         Assert.Contains("2020-02-01", cloudObjects.FileInfoDetails[1].FullPath);
 
-                        var fullPath = cloudObjects.FileInfoDetails[0].FullPath.Replace("=", "%3D");
+                        var fullPath = cloudObjects.FileInfoDetails[0].FullPath;
                         var blob = await s3Client.GetObjectAsync(fullPath);
 
                         await using var ms = new MemoryStream();
@@ -714,7 +1090,7 @@ loadToOrders(partitionBy(key), orderData);
                         }
                     }
 
-                    using (var s3Client = new RavenAwsS3Client(settings))
+                    using (var s3Client = new RavenAwsS3Client(settings, DefaultBackupConfiguration))
                     {
                         var prefix = $"{settings.RemoteFolderName}/{salesTableName}";
                         var cloudObjects = await s3Client.ListObjectsAsync(prefix, string.Empty, false);
@@ -723,7 +1099,7 @@ loadToOrders(partitionBy(key), orderData);
                         Assert.Contains("2020-01-01", cloudObjects.FileInfoDetails[0].FullPath);
                         Assert.Contains("2020-02-01", cloudObjects.FileInfoDetails[1].FullPath);
 
-                        var fullPath = cloudObjects.FileInfoDetails[1].FullPath.Replace("=", "%3D");
+                        var fullPath = cloudObjects.FileInfoDetails[1].FullPath;
                         var blob = await s3Client.GetObjectAsync(fullPath);
 
                         await using var ms = new MemoryStream();

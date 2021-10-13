@@ -122,8 +122,6 @@ namespace Raven.Server.Documents
                                 await HandleSpecificClusterDatabaseChanged(
                                     shardRawRecord.DatabaseName, index, type, changeType, context, shardRawRecord);
                             }
-
-                            _shardedDatabases.TryRemove(rawRecord.DatabaseName, out var _);
                         }
                         else
                         {
