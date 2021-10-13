@@ -1,9 +1,9 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Sparrow.Server;
 using Sparrow.Server.Compression;
@@ -16,7 +16,6 @@ using Voron.Impl;
 
 namespace Corax
 {
-
     // container ids are guaranteed to be aligned on 
     // 4 bytes boundary, we're using this to store metadata
     // about the data
@@ -32,10 +31,10 @@ namespace Corax
         private readonly StorageEnvironment _environment;
         private readonly TransactionPersistentContext _transactionPersistentContext;
         private readonly bool _ownsTransaction;
-        public readonly Transaction Transaction;        
+        public readonly Transaction Transaction;
 
         public static readonly Slice PostingListsSlice, EntriesContainerSlice, FieldsSlice, NumberOfEntriesSlice;
-        
+
         // CPU bound - embarassingly parallel
         // 
         // private readonly ConcurrentDictionary<Slice, Dictionary<Slice, ConcurrentQueue<long>>> _bufferConcurrent =
@@ -44,7 +43,10 @@ namespace Corax
         private readonly Dictionary<Slice, Dictionary<Slice, List<long>>> _buffer =
             new Dictionary<Slice, Dictionary<Slice, List<long>>>(SliceComparer.Instance);
 
-        private readonly long _postingListContainerId, _entriesContainerId;
+        private readonly List<long> _entriesToDelete = new List<long>();
+
+        private readonly long _postingListContainerId,
+            _entriesContainerId;
 
         private Queue<long> _lastEntries; // keep last 256 items
 
@@ -71,7 +73,7 @@ namespace Corax
             _postingListContainerId = Transaction.OpenContainer(PostingListsSlice);
             _entriesContainerId = Transaction.OpenContainer(EntriesContainerSlice);
         }
-        
+
         public IndexWriter([NotNull] Transaction tx)
         {
             Transaction = tx;
@@ -138,7 +140,7 @@ namespace Corax
                         var fieldName = slice.Clone(context);
                         field[fieldName] = term = new List<long>();
                     }
-                        
+
                     AddMaybeAvoidDuplicate(term);
                 }
             }
@@ -169,9 +171,10 @@ namespace Corax
                     var fieldName = slice.Clone(context);
                     field[fieldName] = term = new List<long>();
                 }
+
                 AddMaybeAvoidDuplicate(term);
             }
-            else if (!fieldType.HasFlag(IndexEntryFieldType.Invalid))
+            else if (fieldType.HasFlag(IndexEntryFieldType.Invalid) == false)
             {
                 entryReader.Read(tokenField, out var value);
 
@@ -181,15 +184,133 @@ namespace Corax
                     var fieldName = slice.Clone(context);
                     field[fieldName] = term = new List<long>();
                 }
+
                 AddMaybeAvoidDuplicate(term);
             }
-            
+
             // TODO: Do we want to index nulls? If so, how do we do that?
             void AddMaybeAvoidDuplicate(List<long> term)
             {
                 if (term.Count > 0 && term[^1] == entryId)
                     return;
                 term.Add(entryId);
+            }
+        }
+
+        public void DeleteCommit(Dictionary<Slice, int> knownFields)
+        {
+            if (_entriesToDelete.Count == 0)
+                return;
+
+            var fieldsTree = Transaction.ReadTree(FieldsSlice);
+            Page page = default;
+            using var _ = Transaction.Allocator.Allocate(Container.MaxSizeInsideContainerPage, out Span<byte> tmpBuf);
+            var llt = Transaction.LowLevelTransaction;
+            List<long> ids = null;
+            foreach (var id in _entriesToDelete)
+            {
+                var entryReader = IndexSearcher.GetReaderFor(Transaction, ref page, id);
+
+                foreach ((var fieldName, var fieldId) in knownFields) // TODO: this is wrong, need to get all the fields from the entry
+                {
+                    var fieldType = entryReader.GetFieldType(fieldId);
+                    if (fieldType.HasFlag(IndexEntryFieldType.List))
+                    {
+                        var it = entryReader.ReadMany(fieldId);
+                        while (it.ReadNext())
+                        {
+                            DeleteField(id, ref entryReader, fieldName, fieldId, tmpBuf, it.Sequence);
+                        }
+                    }
+                    else
+                        DeleteField(id, ref entryReader, fieldName, fieldId, tmpBuf);
+                }
+
+                ids?.Clear();
+                Container.Delete(llt, _entriesContainerId, id);
+                llt.RootObjects.Increment(NumberOfEntriesSlice, -1);
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            void DeleteField(long id, ref IndexEntryReader entryReader, Slice fieldName, int fieldId, Span<byte> tmpBuffer, ReadOnlySpan<byte> termValue = default)
+            {
+                var fieldTree = fieldsTree.CompactTreeFor(fieldName);
+                if (termValue == default)
+                {
+                    entryReader.Read(fieldId, out var termValueSpan);
+                    termValue = termValueSpan;
+                }
+             
+                if (fieldTree.TryGetValue(termValue, out var containerId) == false)
+                    return;
+
+                if ((containerId & (long)TermIdMask.Set) != 0)
+                {
+                    var setId = containerId & ~0b11;
+                    var setStateSpan = Container.GetMutable(llt, setId);
+                    ref var setState = ref MemoryMarshal.AsRef<SetState>(setStateSpan);
+                    var set = new Set(llt, fieldName, in setState);
+                    set.Remove(id);
+                    setState = set.State;
+                }
+                else if ((containerId & (long)TermIdMask.Small) != 0)
+                {
+                    var smallSetId = containerId & ~0b11;
+                    var buffer = Container.GetMutable(llt, smallSetId);
+
+                    //get first item into ids.
+                    var itemsCount = ZigZagEncoding.Decode<int>(buffer, out var len);
+                    if (ids is null)
+                        ids = new List<long>(itemsCount);
+                    else
+                        ids.Clear();
+
+
+                    long pos = len;
+                    var currentId = 0L;
+
+                    while (pos < buffer.Length)
+                    {
+                        var delta = ZigZagEncoding.Decode<long>(buffer, out len, (int)pos);
+                        pos += len;
+                        currentId += delta;
+                        if (currentId == id)
+                            continue;
+                        ids.Add(currentId);
+                    }
+
+                    Container.Delete(llt, _postingListContainerId, smallSetId);
+                    AddNewTerm(ids, fieldTree, termValue, tmpBuffer);
+                }
+                else
+                {
+                    fieldTree.TryRemove(termValue, out var _);
+                }
+            }
+        }
+
+        public bool DeleteEntry(string key, string value)
+        {
+            try
+            {
+                var fieldsTree = Transaction.ReadTree(FieldsSlice);
+                var fieldTree = fieldsTree.CompactTreeFor(key);
+
+                if (fieldTree.TryGetValue(value, out long id) == false)
+                    return false;
+
+                if ((id & (long)TermIdMask.Set) != 0 || (id & (long)TermIdMask.Small) != 0)
+                    return false;
+                
+                if (fieldTree.TryRemove(value, out id) == false)
+                    return false;
+                
+                _entriesToDelete.Add(id);
+                return true;
+            }
+            catch
+            {
+                return false;
             }
         }
 
@@ -244,6 +365,7 @@ namespace Corax
                             cur += value;
                             entries.Add(cur);
                         }
+
                         Container.Delete(llt, _postingListContainerId, id);
                         AddNewTerm(entries, fieldTree, termsSpan, tmpBuf);
                     }
@@ -258,14 +380,15 @@ namespace Corax
                     }
                 }
             }
+
             if (_ownsTransaction)
                 Transaction.Commit();
         }
-        
+
         private unsafe void AddNewTerm(List<long> entries, CompactTree fieldTree, ReadOnlySpan<byte> termsSpan, Span<byte> tmpBuf)
         {
             // common for unique values (guid, date, etc)
-            if (entries.Count == 1) 
+            if (entries.Count == 1)
             {
                 Debug.Assert(fieldTree.TryGetValue(termsSpan, out var _) == false);
 
@@ -275,7 +398,7 @@ namespace Corax
             }
 
             entries.Sort();
-            
+
             // try to insert to container value
             //TODO: using simplest delta encoding, need to do better here
             int pos = ZigZagEncoding.Encode(tmpBuf, entries.Count);
@@ -288,7 +411,7 @@ namespace Corax
                     long entry = entries[i] - entries[i - 1];
                     if (entry == 0)
                         continue; // we don't need to store duplicates
-                    
+
                     pos += ZigZagEncoding.Encode(tmpBuf, entry, pos);
                     continue;
                 }

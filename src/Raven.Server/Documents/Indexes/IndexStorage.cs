@@ -934,7 +934,7 @@ namespace Raven.Server.Documents.Indexes
 
                 if (Enum.TryParse(result.Reader.ToStringValue(), out SearchEngineType persistedSearchEngineType) == false)
                 {
-                    throw new InvalidOperationException($"Index '{name}' does not contain valid {nameof(SearchEngineType)} property.");
+                    throw new InvalidOperationException($"Index '{name}' does not contain valid {nameof(SearchEngineType)} property. It contains: {result.Reader.ToStringValue()}.");
                 }
                
                 return persistedSearchEngineType;

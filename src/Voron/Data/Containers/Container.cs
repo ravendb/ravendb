@@ -296,12 +296,11 @@ namespace Voron.Data.Containers
                 offset = 0;
                 do
                 {
-                    count = GetEntriesInto(containerId, offset, page, items, 0, out itemsLeftOnCurrentPage);
+                    count = GetEntriesInto(containerId, ref offset, page, items, 0, out itemsLeftOnCurrentPage);
                     
                     for(int i = 0; i < count; ++i)
                         list.Add(items[i]);
                     
-                    offset += count;
                     //need read to the end of page
                 } while (itemsLeftOnCurrentPage > 0);
                 
@@ -310,7 +309,7 @@ namespace Voron.Data.Containers
             return list;
         }
 
-        public static int GetEntriesInto(long containerId, int offset, Page page, Span<long> ids, int writingBufferOffset, out int itemsLeftOnCurrentPage)
+        public static int GetEntriesInto(long containerId, ref int offset, Page page, Span<long> ids, int writingBufferOffset, out int itemsLeftOnCurrentPage)
         {
             var results = 0;
             if (page.IsOverflow)
@@ -320,18 +319,25 @@ namespace Voron.Data.Containers
                 return results;
             }
             var container = new Container(page);
-            int numberOfOffsets = container.Offsets.Length;
+            var entriesOffsets = container.Offsets;
             int i = offset;
 
-            if (page.PageNumber == containerId)
-                i += 2; // skip the free list and all pages list entries
-
-            for (; writingBufferOffset < ids.Length && i < numberOfOffsets; i++, results++)
+            if (page.PageNumber == containerId && offset == 0)
             {
-                ids[writingBufferOffset++] = page.PageNumber * Constants.Storage.PageSize + IndexToOffset(i);
+                // skip the free list and all pages list entries
+                offset += 2;
+                i += 2; 
             }
 
-            itemsLeftOnCurrentPage = numberOfOffsets - i;
+            for (; writingBufferOffset < ids.Length && i < entriesOffsets.Length; i++, offset++)
+            {
+                if (entriesOffsets[i].Size == 0) 
+                    continue;
+                ids[writingBufferOffset++] = page.PageNumber * Constants.Storage.PageSize + IndexToOffset(i);
+                results++;
+            }
+
+            itemsLeftOnCurrentPage = entriesOffsets.Length - i;
             return results;
         }
 

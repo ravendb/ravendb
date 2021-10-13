@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Corax;
+using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Exceptions;
 using Raven.Server.Utils;
@@ -24,7 +25,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             _converter = converter;
             _knownFields = _converter.GetKnownFields();
             try
-            { 
+            {
                 _indexWriter = new IndexWriter(writeTransaction);
                 _entriesCount = Convert.ToInt32(_indexWriter.GetNumberOfEntries());
             }
@@ -48,11 +49,15 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             if (_indexWriter != null)
             {
                 using (stats.For(IndexingOperation.Corax.Commit))
+                {
+                    _indexWriter.DeleteCommit(_knownFields);
                     _indexWriter.Commit();
+                }
             }
         }
 
-        public override void IndexDocument(LazyStringValue key, LazyStringValue sourceDocumentId, object document, IndexingStatsScope stats, JsonOperationContext indexContext)
+        public override void IndexDocument(LazyStringValue key, LazyStringValue sourceDocumentId, object document, IndexingStatsScope stats,
+            JsonOperationContext indexContext)
         {
             EnsureValidStats(stats);
             _entriesCount++;
@@ -61,10 +66,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
             using (Stats.ConvertStats.Start())
                 data = _converter.InsertDocumentFields(key, sourceDocumentId, document, indexContext, out lowerId);
-            
+
             using (Stats.AddStats.Start())
                 _indexWriter.Index(lowerId, data, _knownFields);
-            
+
             stats.RecordIndexingOutput();
         }
 
@@ -74,7 +79,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         {
             //todo maciej
             return (1024 * 1024, 1024 * 1024);
-           
         }
 
         public override void Optimize()
@@ -84,7 +88,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
         public override void Delete(LazyStringValue key, IndexingStatsScope stats)
         {
-            throw new NotImplementedException();
+            EnsureValidStats(stats);
+            using (Stats.DeleteStats.Start())
+                    if (_indexWriter.DeleteEntry(Constants.Documents.Indexing.Fields.DocumentIdFieldName, key.ToString()))
+                        _entriesCount--;
         }
 
         public override void DeleteBySourceDocument(LazyStringValue sourceDocumentId, IndexingStatsScope stats)
@@ -94,7 +101,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
         public override void DeleteReduceResult(LazyStringValue reduceKeyHash, IndexingStatsScope stats)
         {
-            throw new NotImplementedException();
+            EnsureValidStats(stats);
+            
+                    if (_indexWriter.DeleteEntry(Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName, reduceKeyHash.ToString()))
+                        _entriesCount--;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
