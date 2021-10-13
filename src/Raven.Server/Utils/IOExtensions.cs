@@ -73,7 +73,7 @@ namespace Raven.Server.Utils
                 }
                 catch
                 {
-                }                
+                }
                 return false;
             }
         }
@@ -140,6 +140,31 @@ namespace Raven.Server.Utils
                 catch (UnauthorizedAccessException e)
                 {
                     TryHandlingError(directory, i, e);
+                }
+            }
+        }
+
+        public static void CreateDirectory(string directory)
+        {
+            for (var i = 0; i < Retries; i++)
+            {
+                try
+                {
+                    if (Directory.Exists(directory))
+                        return;
+
+                    Directory.CreateDirectory(directory);
+                    return;
+                }
+                catch (Exception)
+                {
+                    if (i == Retries - 1)
+                        throw;
+
+                    GC.Collect();
+                    GC.WaitForPendingFinalizers();
+
+                    Thread.Sleep(100);
                 }
             }
         }
