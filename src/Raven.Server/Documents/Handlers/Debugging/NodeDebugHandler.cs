@@ -155,10 +155,10 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 {
                     var log = new List<string>();
 
-                    var tcpSocketResult = await TcpUtils.ConnectSecuredTcpSocket(info, ServerStore.Engine.ClusterCertificate, Server.CipherSuitesPolicy,
-                        TcpConnectionHeaderMessage.OperationTypes.Ping, NegotiationCallback, context, ServerStore.Engine.TcpConnectionTimeout, log, cts.Token);
-
-                    tcpSocketResult.Dispose();
+                    using (await TcpUtils.ConnectSecuredTcpSocket(info, ServerStore.Engine.ClusterCertificate, Server.CipherSuitesPolicy,
+                        TcpConnectionHeaderMessage.OperationTypes.Ping, NegotiationCallback, context, ServerStore.Engine.TcpConnectionTimeout, log, cts.Token))
+                    {
+                    }
 
                     result.Log = log;
 
