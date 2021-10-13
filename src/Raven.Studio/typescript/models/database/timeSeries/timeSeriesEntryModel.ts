@@ -57,42 +57,46 @@ class timeSeriesEntryModel {
     static readonly numberOfPossibleRollupValues = 5;
     static readonly incrementalPrefix = "INC:";
 
+    static isIncrementalName(timeSeriesName: string): boolean {
+        return timeSeriesName.toUpperCase().startsWith(timeSeriesEntryModel.incrementalPrefix);
+    }
+
+    static isRollupName(timeSeriesName: string): boolean {
+        return timeSeriesName.includes("@");
+    }
+    
     name = ko.observable<string>();
     tag = ko.observable<string>();
     timestamp = ko.observable<moment.Moment>();
-    
-    isRollupEntry = ko.observable<boolean>();
-   
-    createIncrementalTimeSeries = ko.observable<boolean>();
-    
-    isCreatingNewTimeSeries = ko.observable<boolean>();
-    
-    entryTitle: KnockoutComputed<string>;
-    isIncrementalEntry: KnockoutComputed<boolean>;
 
     values = ko.observableArray<timeSeriesValue>([]);
-    existingNumberOfValues: number = 0;
-    
     rollupValues = ko.observableArray<rollupDataModel>([]);
-
     nodesDetails = ko.observableArray<nodeData>([]);
+    
+    isCreatingNewTimeSeries = ko.observable<boolean>();
+    createIncrementalTimeSeries = ko.observable<boolean>();
+       
+    isRollupEntry = ko.observable<boolean>();
+    isIncrementalEntry: KnockoutComputed<boolean>;
 
+    entryTitle: KnockoutComputed<string>;
+    
+    existingNumberOfValues: number = 0;
     maxNumberOfValuesReachedWarning: KnockoutComputed<string>;
-
-    canEditName: boolean;
+    
     validationGroup: KnockoutValidationGroup;
     
     constructor(timeSeriesName: string, dto: Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry) {
         this.name(timeSeriesName);
         this.tag(dto.Tag);
         this.timestamp(dto.Timestamp ? moment.utc(dto.Timestamp) : null);
+        
         this.isRollupEntry(dto.IsRollup);
-
         this.isCreatingNewTimeSeries(!timeSeriesName);
         
-        if (timeSeriesName && timeSeriesName.toUpperCase().startsWith(timeSeriesEntryModel.incrementalPrefix)) {
+        if (timeSeriesName && timeSeriesEntryModel.isIncrementalName(timeSeriesName)) {
             const details = _.map(dto.NodesValues, (valuesList, nodeDetails): nodeData => {
-                const [tag, dbId] = _.split(nodeDetails, '-', 2);
+                const [tag, dbId] = nodeDetails.split('-');
                 return {
                     nodeTag: tag,
                     databaseID: dbId,
@@ -126,8 +130,6 @@ class timeSeriesEntryModel {
             this.existingNumberOfValues = this.values().length;
         }
         
-        this.canEditName = !timeSeriesName;
-
         this.initObservables();
         this.initValidation();
     }
@@ -145,9 +147,8 @@ class timeSeriesEntryModel {
             return "";
         });
 
-        this.isIncrementalEntry  = ko.pureComputed(() => {
-            return !this.isCreatingNewTimeSeries() && this.name().toUpperCase().startsWith(timeSeriesEntryModel.incrementalPrefix);
-        });
+        this.isIncrementalEntry  = ko.pureComputed(() => 
+            !this.isCreatingNewTimeSeries() && timeSeriesEntryModel.isIncrementalName(this.name()));
 
         this.entryTitle = ko.pureComputed(() => {
             const newEditPart = this.isCreatingNewTimeSeries() || !this.timestamp() ? "New" : "Edit";
@@ -186,19 +187,20 @@ class timeSeriesEntryModel {
             required: true,
             validation: [
                 {
-                    validator: () => this.isRollupEntry() || !this.canEditName || !this.name().includes("@"),
+                    validator: () => !this.isCreatingNewTimeSeries() ||
+                                     !timeSeriesEntryModel.isRollupName(this.name()),
                     message: "A Time Series name cannot contain '@'. This character is reserved for Time Series Rollups."
                 },
                 {
                     validator: () => !this.isCreatingNewTimeSeries() ||
                                      !this.createIncrementalTimeSeries() ||
-                                      this.name().toUpperCase().startsWith(timeSeriesEntryModel.incrementalPrefix),
+                                      timeSeriesEntryModel.isIncrementalName(this.name()),
                     message: `An Incremental Time Series name must start with prefix: '${timeSeriesEntryModel.incrementalPrefix}'`
                 },
                 {
                     validator: () => !this.isCreatingNewTimeSeries() ||
                                       this.createIncrementalTimeSeries() ||
-                                     !this.name().toUpperCase().startsWith(timeSeriesEntryModel.incrementalPrefix),
+                                     !timeSeriesEntryModel.isIncrementalName(this.name()),
                     message: `A regular Time Series name cannot start with prefix: '${timeSeriesEntryModel.incrementalPrefix}'`
                 }
             ]
