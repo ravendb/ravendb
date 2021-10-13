@@ -16,7 +16,7 @@ class getTimeSeriesCommand extends commandBase {
             name: this.timeSeriesName,
             pageSize: this.pageSize,
             start: this.start,
-            full: this.timeSeriesName.toUpperCase().startsWith(timeSeriesEntryModel.incrementalPrefix)
+            full: timeSeriesEntryModel.isIncrementalName(this.timeSeriesName)
         };
         
         const url = endpoints.databases.timeSeries.timeseries;

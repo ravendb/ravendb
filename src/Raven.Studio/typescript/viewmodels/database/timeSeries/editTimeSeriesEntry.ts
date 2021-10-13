@@ -81,7 +81,7 @@ class editTimeSeriesEntry extends dialogViewModelBase {
         this.model().name.subscribe(() => this.getValuesNames());
     }
     
-    private getValuesNames() {
+    private getValuesNames(): void {
         const valuesNames = this.valuesNamesProvider(this.model().name());
         this.valuesNames(valuesNames);
     }
@@ -111,16 +111,7 @@ class editTimeSeriesEntry extends dialogViewModelBase {
     }
 
     getValueOnNode(nodeIndex: number, valueIndex: number) {
-        const model = this.model();
-        
-        return ko.pureComputed(() => {
-            if (!model.nodesDetails().length) {
-                console.warn("No data in nodesDetails array");
-            }
-            
-            const valueOnNode = model.nodesDetails()[nodeIndex].nodeValues[valueIndex];
-            return valueOnNode;
-        });
+        return ko.pureComputed(() => this.model().nodesDetails()[nodeIndex].nodeValues[valueIndex]);
     }
     
     save() {
@@ -135,12 +126,8 @@ class editTimeSeriesEntry extends dialogViewModelBase {
         }
         
         this.spinners.save(true);
-        
-        const dto = model.toDto();
-        const isRollup = model.isRollupEntry();
-        const isIncremental = (model.isCreatingNewTimeSeries() && model.createIncrementalTimeSeries()) || model.isIncrementalEntry();
-        
-        new saveTimeSeriesCommand(this.documentId, model.name(), dto, this.db, isIncremental, isRollup)
+
+        new saveTimeSeriesCommand(this.documentId, model.name(), model.toDto(), this.db)
             .execute()
             .done(() => {
                 dialog.close(this, model.name());

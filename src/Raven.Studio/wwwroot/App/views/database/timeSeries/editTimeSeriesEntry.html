@@ -112,10 +112,10 @@
                                             <label class="form-control-static" data-bind="text: $root.getValueName($index())"></label>
                                         </td>
                                         <td>
-                                            <input type="text" class="form-control margin-left min-cell-width" data-bind="textInput: value" disabled/>
+                                            <input type="text" class="form-control margin-left per-node-value" data-bind="textInput: value" disabled/>
                                         </td>
                                         <td data-bind="validationOptions: { insertMessages: false }, validationElement: delta">
-                                            <input type="number" class="form-control min-cell-width" data-bind="numericInput: delta" />
+                                            <input type="number" class="form-control per-node-value" data-bind="numericInput: delta" />
                                             <div data-bind="validationElement: delta">
                                                 <div class="help-block" data-bind="validationMessage: delta"></div>
                                             </div>
@@ -129,7 +129,7 @@
                                         <!-- ko foreach: $parent.nodesDetails -->
                                         <td data-bind="collapse: $root.showValuesPerNode">
                                             <div data-bind="collapse: !$parent.newValue()">
-                                                <div class="form-control text-muted min-cell-width" data-bind="text: $root.getValueOnNode($index(), $parentContext.$index())"></div>
+                                                <div class="form-control text-muted per-node-value" data-bind="text: $root.getValueOnNode($index(), $parentContext.$index())"></div>
                                             </div>
                                         </td>
                                         <!-- /ko -->
