@@ -430,7 +430,7 @@ namespace Raven.Client.Documents.Session
             }
         }
 
-        Task<TimeSeriesEntry<TValues>[]> IAsyncSessionDocumentTypedTimeSeries<TValues>.GetAsync(DateTime? from, DateTime? to, int start, int pageSize, CancellationToken token)
+        private Task<TimeSeriesEntry<TValues>[]> GetAsyncInternal(DateTime? from, DateTime? to, int start, int pageSize, CancellationToken token)
         {
             if (NotInCache(from, to))
             {
@@ -438,6 +438,16 @@ namespace Raven.Client.Documents.Session
             }
 
             return GetTypedFromCache<TValues>(from, to, includes: null, start, pageSize, token);
+        }
+
+        Task<TimeSeriesEntry<TValues>[]> IAsyncSessionDocumentTypedTimeSeries<TValues>.GetAsync(DateTime? from, DateTime? to, int start, int pageSize, CancellationToken token)
+        {
+            return GetAsyncInternal(from, to, start, pageSize, token);
+        }
+
+        Task<TimeSeriesEntry<TValues>[]> IAsyncSessionDocumentTypedIncrementalTimeSeries<TValues>.GetAsync(DateTime? from, DateTime? to, int start, int pageSize, CancellationToken token)
+        {
+            return GetAsyncInternal(from, to, start, pageSize, token);
         }
 
         void ISessionDocumentTypedAppendTimeSeriesBase<TValues>.Append(DateTime timestamp, TValues entry, string tag)

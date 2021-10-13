@@ -62,7 +62,6 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
         internal List<DeleteOperation> Deletes;
 
-
         public string Name;
 
         public void Append(AppendOperation appendOperation)
@@ -87,7 +86,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
             var result = new TimeSeriesOperation
             {
-                Name = name,
+                Name = name
             };
 
             if (input.TryGet(nameof(Appends), out BlittableJsonReaderArray operations) && operations != null)
@@ -171,7 +170,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
             var result = new TimeSeriesOperation
             {
-                Name = name,
+                Name = name
             };
 
             if (input.TryGet(nameof(Appends), out BlittableJsonReaderArray operations) == false || operations == null)

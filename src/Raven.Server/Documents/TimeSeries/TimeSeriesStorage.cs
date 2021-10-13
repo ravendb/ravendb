@@ -1721,7 +1721,16 @@ namespace Raven.Server.Documents.TimeSeries
                                     int length = Math.Min(currentValues.Length, current.Values.Length);
                                     for (int i = 0; i < length; i++)
                                     {
-                                        current.Values.Span[i] = double.IsNaN(current.Values.Span[i]) ? currentValues[i] : current.Values.Span[i] + currentValues[i];
+                                        if (double.IsNaN(current.Values.Span[i]) == false && double.IsNaN(currentValues[i])) // local value == `Nan`, but remote has value
+                                            continue;
+                                        
+                                        if (double.IsNaN(current.Values.Span[i]) && double.IsNaN(currentValues[i]) == false) // remote value == `Nan`, but local has value
+                                        {
+                                            current.Values.Span[i] = currentValues[i];
+                                            continue;
+                                        }
+
+                                        current.Values.Span[i] = current.Values.Span[i] + currentValues[i];
                                     }
                                     compare = CompareResult.Remote;
                                 }

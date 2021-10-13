@@ -76,7 +76,7 @@ namespace Raven.Server.Documents.Handlers
                         writer.WriteComma();
 
                         writer.WritePropertyName(nameof(TimeSeriesItemDetail.NumberOfEntries));
-                        writer.WriteInteger(tsName.StartsWith(IncrementalTimeSeriesPrefix) ? -1 : stats.Count);
+                        writer.WriteInteger(CheckIfIncrementalTs(tsName) ? -1 : stats.Count);
 
                         writer.WriteComma();
 
@@ -134,6 +134,7 @@ namespace Raven.Server.Documents.Handlers
 
             var includeDoc = GetBoolValueQueryString("includeDocument", required: false) ?? false;
             var includeTags = GetBoolValueQueryString("includeTags", required: false) ?? false;
+            var fullResults = GetBoolValueQueryString("full", required: false) ?? false;
 
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
@@ -142,7 +143,7 @@ namespace Raven.Server.Documents.Handlers
                     ? new IncludeDocumentsDuringTimeSeriesLoadingCommand(context, documentId, includeDoc, includeTags)
                     : null;
 
-                var ranges = GetTimeSeriesRangeResults(context, documentId, names, fromList, toList, start, pageSize, includesCommand);
+                var ranges = GetTimeSeriesRangeResults(context, documentId, names, fromList, toList, start, pageSize, includesCommand, fullResults);
 
                 var actualEtag = CombineHashesFromMultipleRanges(ranges);
 
@@ -159,7 +160,6 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        public const string IncrementalTimeSeriesPrefix = "INC:";
         [RavenAction("/databases/*/timeseries", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task Read()
         {
@@ -174,8 +174,8 @@ namespace Raven.Server.Documents.Handlers
             var includeDoc = GetBoolValueQueryString("includeDocument", required: false) ?? false;
             var includeTags = GetBoolValueQueryString("includeTags", required: false) ?? false;
             var fullResults = GetBoolValueQueryString("full", required: false) ?? false;
-            
-            bool incrementalTimeSeries = name.StartsWith(IncrementalTimeSeriesPrefix, StringComparison.OrdinalIgnoreCase) && name.Contains('@') == false;
+
+            bool incrementalTimeSeries = CheckIfIncrementalTs(name);
             
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
@@ -218,7 +218,7 @@ namespace Raven.Server.Documents.Handlers
                 long? totalCount = null;
                 if (from <= stats.Start && to >= stats.End)
                 {
-                    totalCount = incrementalTimeSeries == false ? stats.Count : rangeResult?.Entries.Length;
+                    totalCount = incrementalTimeSeries ? rangeResult?.Entries.Length : stats.Count;
                 }
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -229,7 +229,8 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private static Dictionary<string, List<TimeSeriesRangeResult>> GetTimeSeriesRangeResults(DocumentsOperationContext context, string documentId, StringValues names, StringValues fromList, StringValues toList, int start, int pageSize, IncludeDocumentsDuringTimeSeriesLoadingCommand includes)
+        private static Dictionary<string, List<TimeSeriesRangeResult>> GetTimeSeriesRangeResults(DocumentsOperationContext context, string documentId, StringValues names, StringValues fromList, StringValues toList, int start, int pageSize, 
+            IncludeDocumentsDuringTimeSeriesLoadingCommand includes, bool fullResult = false)
         {
             if (fromList.Count == 0)
                 throw new ArgumentException("Length of query string values 'from' must be greater than zero");
@@ -251,13 +252,13 @@ namespace Raven.Server.Documents.Handlers
                     throw new InvalidOperationException($"GetMultipleTimeSeriesOperation : Missing '{nameof(TimeSeriesRange.Name)}' argument in 'TimeSeriesRange' on document '{documentId}'. " +
                                                         $"'{nameof(TimeSeriesRange.Name)}' cannot be null or empty");
 
-                bool incrementalTimeSeries = name.StartsWith(IncrementalTimeSeriesPrefix, StringComparison.OrdinalIgnoreCase) && name.Contains('@') == false;
-
                 var from = string.IsNullOrEmpty(fromList[i]) ? DateTime.MinValue : ParseDate(fromList[i], name);
                 var to = string.IsNullOrEmpty(toList[i]) ? DateTime.MaxValue : ParseDate(toList[i], name);
 
+                bool incrementalTimeSeries = CheckIfIncrementalTs(name);
+
                 var rangeResult = incrementalTimeSeries ?
-                    GetIncrementalTimeSeriesRange(context, documentId, name, from, to, ref start, ref pageSize, includes) :
+                    GetIncrementalTimeSeriesRange(context, documentId, name, from, to, ref start, ref pageSize, includes, fullResult) :
                     GetTimeSeriesRange(context, documentId, name, from, to, ref start, ref pageSize, includes);
 
                 if (rangeResult == null)
@@ -1213,6 +1214,14 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteEndObject();
                 }
             }
+        }
+
+        public static bool CheckIfIncrementalTs(string tsName)
+        {
+            if (tsName.StartsWith(Constants.Headers.IncrementalTimeSeriesPrefix, StringComparison.OrdinalIgnoreCase) == false)
+                return false;
+
+            return tsName.Contains('@') == false;
         }
     }
 }

@@ -55,6 +55,8 @@ namespace Raven.Client
             public const string ContentEncoding = "Content-Encoding";
 
             public const string ContentLength = "Content-Length";
+
+            public const string IncrementalTimeSeriesPrefix = "INC:";
         }
 
         public class Platform
