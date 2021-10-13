@@ -23,6 +23,7 @@ using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
+using Raven.Server.Documents;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.OLAP;
 using Raven.Server.Documents.PeriodicBackup.Aws;
@@ -1095,6 +1096,100 @@ person.addCounter(loadCounter('down'));
                 Assert.False(record.SqlConnectionStrings.ContainsKey("SqlConnectionString"));
                 Assert.True(record.SqlConnectionStrings.ContainsKey("New-Name"));
                 Assert.Equal(sqlConnectionString.ConnectionString, record.SqlConnectionStrings["New-Name"].ConnectionString);
+            }
+        }
+
+        [Fact]
+        public async Task CanGetLastEtagPerDbFromProcessState()
+        {
+            using (var src = GetShardedDocumentStore())
+            using (var dest = GetDocumentStore())
+            {
+                Server.ServerStore.Engine.Timeout.Disable = true;
+
+                var connectionStringName = $"{src.Database}@{src.Urls.First()} to {dest.Database}@{dest.Urls.First()}";
+
+                var config = new RavenEtlConfiguration
+                {
+                    Name = connectionStringName,
+                    ConnectionStringName = connectionStringName,
+                    Transforms =
+                    {
+                        new Transformation
+                        {
+                            Name = $"ETL : {connectionStringName}",
+                            Collections = new List<string>{ "Users" }
+                        }
+                    }
+                };
+                AddEtl(src, config,
+                    new RavenConnectionString
+                    {
+                        Name = connectionStringName,
+                        Database = dest.Database,
+                        TopologyDiscoveryUrls = dest.Urls,
+                    }
+                );
+
+                var etlsDone = WaitForEtlOnAllShards(src, (n, s) => s.LoadSuccesses > 0);
+                var dbRecord = src.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(src.Database)).Result;
+                var shardedCtx = new ShardedContext(Server.ServerStore, dbRecord);
+                var ids = new[] { "users/0", "users/4", "users/1" };
+
+                using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                {
+                    for (int i = 0; i < ids.Length; i++)
+                    {
+                        var id = ids[i];
+                        var shardIndex = shardedCtx.GetShardIndex(context, id);
+                        Assert.Equal(i, shardIndex);
+                    }
+                }
+
+                using (var session = src.OpenSession())
+                {
+                    for (var i = 0; i < ids.Length; i++)
+                    {
+                        var id = ids[i];
+                        session.Store(new User
+                        {
+                            Name = "User" + i
+                        }, id);
+                    }
+
+                    session.SaveChanges();
+                }
+
+                var waitHandles = etlsDone.Select(mre => mre.WaitHandle).ToArray();
+                WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1));
+
+                using (var session = dest.OpenSession())
+                {
+                    for (var i = 0; i < ids.Length; i++)
+                    {
+                        var id = ids[i];
+                        var user = session.Load<User>(id);
+
+                        Assert.NotNull(user);
+                        Assert.Equal("User" + i, user.Name);
+                    }
+                }
+
+                var tasks = Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(src.Database);
+                var dbs = new List<DocumentDatabase>();
+                foreach (var task in tasks)
+                {
+                    dbs.Add(await task);
+                }
+
+                var state = EtlLoader.GetProcessState(config.Transforms, dbs.First(), config.Name);
+                Assert.Equal(3, state.LastProcessedEtagPerDbId.Count);
+
+                foreach (var db in dbs)
+                {
+                    Assert.True(state.LastProcessedEtagPerDbId.TryGetValue(db.DbBase64Id, out var etag));
+                    Assert.Equal(1, etag);
+                }
             }
         }
 
