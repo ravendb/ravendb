@@ -7,21 +7,14 @@ import { ProgContext } from "../generated/BaseRqlParser";
 
 export class AutocompleteGroupBy extends BaseAutocompleteProvider implements AutocompleteProvider {
     
-    canCompleteArray(candidates: CandidatesCollection) {
-        return !candidates.rules.has(RqlParser.RULE_function);
+    canCompleteArray(stack: number[], candidates: CandidatesCollection) {
+        return stack[stack.length - 1] === RqlParser.RULE_function;
     }
     
     async collectAsync(scanner: Scanner, candidates: CandidatesCollection, parser: RqlParser, parseTree: ProgContext, writtenPart: string): Promise<autoCompleteWordList[]> {
-        const rule = AutocompleteGroupBy.findFirstRule(candidates, [RqlParser.RULE_function, RqlParser.RULE_variable, RqlParser.RULE_identifiersAllNames]);
+        const stack = AutocompleteGroupBy.findLongestRuleStack(candidates);
                
-        if (rule) {
-            const matchedRule = rule[1];
-            const inGroupBy = matchedRule.ruleList.length >= 2 && matchedRule.ruleList[0] === RqlParser.RULE_prog && matchedRule.ruleList[1] === RqlParser.RULE_groupByStatement;
-
-            if (!inGroupBy) {
-                return [];
-            }
-            
+        if (stack.length >= 2 && stack[0] === RqlParser.RULE_prog && stack[1] === RqlParser.RULE_groupByStatement) {
             const arrayFunction: autoCompleteWordList = {
                 score: AUTOCOMPLETE_SCORING.function,
                 caption: "array()",
@@ -31,7 +24,7 @@ export class AutocompleteGroupBy extends BaseAutocompleteProvider implements Aut
             
             const result: autoCompleteWordList[] = [];
 
-            if (this.canCompleteArray(candidates)) {
+            if (this.canCompleteArray(stack, candidates)) {
                 result.push(arrayFunction);
             }
             

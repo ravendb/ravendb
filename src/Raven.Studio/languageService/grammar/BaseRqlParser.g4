@@ -251,7 +251,8 @@ limitStatement
    //Capture variable name (also accept aliased names).
    
 variable
-   : prealias* (cacheParam | param)
+   : <assoc=right> variable DOT variable
+   | (cacheParam | param)
    ;
 
 param

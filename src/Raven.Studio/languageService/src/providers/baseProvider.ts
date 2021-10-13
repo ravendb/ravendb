@@ -106,6 +106,12 @@ export abstract class BaseAutocompleteProvider {
         return ["unknown", undefined];
     }
     
+    static findLongestRuleStack(candidates: CandidatesCollection): number[] {
+        const stacks = Array.from(candidates.rules.values()).map(x => x.ruleList);
+        stacks.sort((a, b) => a.length - b.length);
+        return stacks[0] || [];
+    }
+    
     static findFirstRule(candidates: CandidatesCollection, rules: number[]): [number, CandidateRule] {
         for (const rule of rules) {
             if (candidates.rules.has(rule)) {

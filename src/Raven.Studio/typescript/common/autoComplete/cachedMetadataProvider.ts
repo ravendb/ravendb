@@ -28,6 +28,8 @@ class cachedMetadataProvider implements queryCompleterProviders {
             });
             
             collectionCache.set(prefix, task);
+            
+            await this.collectionFields(collectionName, prefix, callback);
         }
     }
 
@@ -35,24 +37,28 @@ class cachedMetadataProvider implements queryCompleterProviders {
         if (this.cachedCollections) {
             const collections = await this.cachedCollections;
             callback(collections);
+        } else {
+            this.cachedCollections = new Promise<string[]>(resolve => {
+                this.parent.collections(resolve);
+            });
+            
+            await this.collections(callback);
         }
-        
-        this.cachedCollections = new Promise<string[]>(resolve => {
-            this.parent.collections(resolve);
-        });
     }
 
     async indexFields(indexName: string, callback: (fields: string[]) => void) {
         if (this.cachedIndexFields.has(indexName)) {
             const indexFields = await this.cachedIndexFields.get(indexName);
             callback(indexFields);
+        } else {
+            const task = new Promise<string[]>(resolve => {
+                this.parent.indexFields(indexName, resolve);
+            });
+
+            this.cachedIndexFields.set(indexName, task);
+
+            await this.indexFields(indexName, callback);
         }
-        
-        const task = new Promise<string[]>(resolve => {
-            this.parent.indexFields(indexName, resolve);
-        });
-        
-        this.cachedIndexFields.set(indexName, task);
     }
 
     async indexNames(callback: (indexNames: string[]) => void) {
@@ -63,6 +69,8 @@ class cachedMetadataProvider implements queryCompleterProviders {
             this.cachedIndexNames = new Promise<string[]>(resolve => {
                 this.parent.indexNames(resolve);
             });
+            
+            await this.indexNames(callback);
         }
     }
 }

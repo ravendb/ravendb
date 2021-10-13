@@ -3,7 +3,7 @@ import { AUTOCOMPLETE_META } from "../../src/providers/common";
 
 const nextKeywords = ["select", "limit", "load", "where"];
 
-describe("can complete from", function () {
+describe("can complete group by", function () {
     it("doesn't complete keywords as field name", async () => {
         const suggestions = await autocomplete(" from Orders group by |");
 
@@ -57,6 +57,22 @@ describe("can complete from", function () {
     it("doesn't suggest array inside array", async () => {
         const suggestions = await autocomplete(" from Orders group by Name, array(|");
         
+        const arraySuggestion = suggestions.find(x => x.value.startsWith("array("));
+        expect(arraySuggestion)
+            .toBeFalsy();
+    });
+    
+    it("doesn't suggest array after nested property in array", async () => {
+        const suggestions = await autocomplete('from "Orders" group by array(Lines.|');
+
+        const arraySuggestion = suggestions.find(x => x.value.startsWith("array("));
+        expect(arraySuggestion)
+            .toBeFalsy();
+    });
+
+    it("doesn't suggest array after field", async () => {
+        const suggestions = await autocomplete(" from Orders group by Name |");
+
         const arraySuggestion = suggestions.find(x => x.value.startsWith("array("));
         expect(arraySuggestion)
             .toBeFalsy();
