@@ -29,7 +29,6 @@ using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.ETL.Test;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TimeSeries;
-using Raven.Server.Monitoring.Snmp.Objects.Database;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
@@ -683,6 +682,8 @@ namespace Raven.Server.Documents.ETL
                     var state = LastProcessState = GetProcessState(Database, Configuration.Name, Transformation.Name);
 
                     var loadLastProcessedEtag = state.GetLastProcessedEtag(Database.DbBase64Id, _serverStore.NodeTag);
+
+                    var loadLastProcessedEtag = state.GetLastProcessedEtagForDbId(Database.DbBase64Id);
 
                     using (Statistics.NewBatch())
                     using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))

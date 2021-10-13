@@ -1319,7 +1319,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
             };
         }
 
-        private static async Task DeleteObjects(S3Settings s3Settings, string additionalTable = null)
+        internal static async Task DeleteObjects(S3Settings s3Settings, string additionalTable = null)
         {
             if (s3Settings == null)
                 return;

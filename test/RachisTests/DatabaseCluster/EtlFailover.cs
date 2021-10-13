@@ -276,7 +276,7 @@ namespace RachisTests.DatabaseCluster
                             Script = null,
                             ApplyToAllDocuments = false,
                             Disabled = false
-    }
+                        }
                     },
                     LoadRequestTimeoutInSec = 30,
                 };
