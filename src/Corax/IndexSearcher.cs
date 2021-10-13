@@ -52,10 +52,14 @@ namespace Corax
             int size = ZigZagEncoding.Decode<int>(data.ToSpan(), out var len);
             return data.ToUnmanagedSpan().Slice(size + len);
         }
-        
-        public IndexEntryReader GetReaderFor(long id)
+
+        public  IndexEntryReader GetReaderFor(long id)
         {
-            var data = Container.MaybeGetFromSamePage(_transaction.LowLevelTransaction, ref _lastPage, id).ToSpan();
+            return GetReaderFor(_transaction, ref _lastPage, id);
+        }
+        public static IndexEntryReader GetReaderFor(Transaction transaction, ref Page page, long id)
+        {
+            var data = Container.MaybeGetFromSamePage(transaction.LowLevelTransaction, ref page, id).ToSpan();
             int size = ZigZagEncoding.Decode<int>(data, out var len);
             return new IndexEntryReader(data.Slice(size + len));
         }

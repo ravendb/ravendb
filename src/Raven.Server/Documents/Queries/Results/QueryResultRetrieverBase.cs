@@ -757,7 +757,6 @@ namespace Raven.Server.Documents.Queries.Results
                             break;
                         case SearchEngineType.Corax:
                             throw new NotImplementedException("Extraction from Corax index is not supported yet.");
-                            break;
                         case SearchEngineType.None:
                             throw new InvalidDataException($"Unknown {nameof(Client.Documents.Indexes.SearchEngineType)}.");
                     }
