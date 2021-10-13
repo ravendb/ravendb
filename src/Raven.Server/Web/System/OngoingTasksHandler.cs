@@ -694,7 +694,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        internal static (Dictionary<string, RavenConnectionString>, Dictionary<string, SqlConnectionString>, Dictionary<string, OlapConnectionString>)
+        internal static (Dictionary<string, RavenConnectionString>, Dictionary<string, SqlConnectionString>, Dictionary<string, OlapConnectionString>, Dictionary<string, ElasticSearchConnectionString>)
             GetConnectionString(RawDatabaseRecord rawRecord, string connectionStringName, ConnectionStringType connectionStringType)
         {
             var ravenConnectionStrings = new Dictionary<string, RavenConnectionString>();
@@ -839,7 +839,7 @@ namespace Raven.Server.Web.System
                     serverStore.LicenseManager.AssertCanAddOlapEtl();
                     break;
                 case EtlType.ElasticSearch:
-                    ServerStore.LicenseManager.AssertCanAddElasticSearchEtl();
+                    serverStore.LicenseManager.AssertCanAddElasticSearchEtl();
                     break;
                 default:
                     throw new NotSupportedException($"Unknown ETL configuration type. Configuration: {etlConfiguration}");
