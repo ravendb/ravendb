@@ -1224,6 +1224,79 @@ namespace SlowTests.Client.TimeSeries.Issues
             }
         }
 
+        [Fact]
+        public async Task ReplicationShouldWorkWithMultipleIncrementAndDeleteOperations()
+        {
+            var baseline = DateTime.UtcNow;
+
+            using (var storeA = GetDocumentStore())
+            using (var storeB = GetDocumentStore())
+            {
+                using (var session = storeA.OpenSession())
+                {
+                    session.Store(new User { Name = "Oren" }, "users/ayende");
+                    session.SaveChanges();
+                }
+
+                using (var session = storeB.OpenSession())
+                {
+                    session.Store(new User { Name = "Oren" }, "users/ayende");
+                    session.SaveChanges();
+                }
+
+                for (int i = 1; i < 5; i++)
+                {
+                    using (var session = storeA.OpenSession())
+                    {
+                        var ts = session.IncrementalTimeSeriesFor("users/ayende", IncrementalTsName);
+                        ts.Increment(baseline.AddMinutes(i), new double[] { 0, i, 0, -i });
+                        session.SaveChanges();
+                    }
+                }
+
+                for (int i = 1; i < 5; i++)
+                {
+                    using (var session = storeB.OpenSession())
+                    {
+                        var ts = session.IncrementalTimeSeriesFor("users/ayende", IncrementalTsName);
+                        ts.Increment(baseline.AddMinutes(i), new double[] { -i, i, 0 });
+                        session.SaveChanges();
+                    }
+                }
+
+                using (var session = storeA.OpenSession())
+                {
+                    var ts = session.IncrementalTimeSeriesFor("users/ayende", IncrementalTsName);
+                    ts.Delete(baseline.AddMinutes(1));
+                    session.SaveChanges();
+                }
+
+                await SetupReplicationAsync(storeA, storeB);
+                await SetupReplicationAsync(storeB, storeA);
+
+                await EnsureReplicatingAsync(storeA, storeB);
+                await EnsureReplicatingAsync(storeB, storeA);
+
+                await EnsureNoReplicationLoop(Server, storeA.Database);
+                await EnsureNoReplicationLoop(Server, storeB.Database);
+
+                using (var sessionA = storeA.OpenSession())
+                using (var sessionB = storeB.OpenSession())
+                {
+                    var tsA = sessionA.IncrementalTimeSeriesFor("users/ayende", IncrementalTsName).Get();
+                    var tsB = sessionB.IncrementalTimeSeriesFor("users/ayende", IncrementalTsName).Get();
+
+                    Assert.Equal(tsA.Length, tsB.Length);
+                    Assert.Equal(3, tsA.Length);
+
+                    for (int i = 0; i < tsA.Length; i++)
+                    {
+                        Assert.True(Equals(tsA[i], tsB[i]));
+                    }
+                }
+            }
+        }
+
         private class User
         {
             public string Name;

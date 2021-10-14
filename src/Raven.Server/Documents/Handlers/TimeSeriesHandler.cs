@@ -134,7 +134,7 @@ namespace Raven.Server.Documents.Handlers
 
             var includeDoc = GetBoolValueQueryString("includeDocument", required: false) ?? false;
             var includeTags = GetBoolValueQueryString("includeTags", required: false) ?? false;
-            var fullResults = GetBoolValueQueryString("full", required: false) ?? false;
+            var returnFullResults = GetBoolValueQueryString("full", required: false) ?? false;
 
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
@@ -143,7 +143,7 @@ namespace Raven.Server.Documents.Handlers
                     ? new IncludeDocumentsDuringTimeSeriesLoadingCommand(context, documentId, includeDoc, includeTags)
                     : null;
 
-                var ranges = GetTimeSeriesRangeResults(context, documentId, names, fromList, toList, start, pageSize, includesCommand, fullResults);
+                var ranges = GetTimeSeriesRangeResults(context, documentId, names, fromList, toList, start, pageSize, includesCommand, returnFullResults);
 
                 var actualEtag = CombineHashesFromMultipleRanges(ranges);
 
@@ -230,7 +230,7 @@ namespace Raven.Server.Documents.Handlers
         }
 
         private static Dictionary<string, List<TimeSeriesRangeResult>> GetTimeSeriesRangeResults(DocumentsOperationContext context, string documentId, StringValues names, StringValues fromList, StringValues toList, int start, int pageSize, 
-            IncludeDocumentsDuringTimeSeriesLoadingCommand includes, bool fullResult = false)
+            IncludeDocumentsDuringTimeSeriesLoadingCommand includes, bool returnFullResult = false)
         {
             if (fromList.Count == 0)
                 throw new ArgumentException("Length of query string values 'from' must be greater than zero");
@@ -258,7 +258,7 @@ namespace Raven.Server.Documents.Handlers
                 bool incrementalTimeSeries = CheckIfIncrementalTs(name);
 
                 var rangeResult = incrementalTimeSeries ?
-                    GetIncrementalTimeSeriesRange(context, documentId, name, from, to, ref start, ref pageSize, includes, fullResult) :
+                    GetIncrementalTimeSeriesRange(context, documentId, name, from, to, ref start, ref pageSize, includes, returnFullResult) :
                     GetTimeSeriesRange(context, documentId, name, from, to, ref start, ref pageSize, includes);
 
                 if (rangeResult == null)
@@ -380,7 +380,7 @@ namespace Raven.Server.Documents.Handlers
         }
 
         internal static unsafe TimeSeriesRangeResult GetIncrementalTimeSeriesRange(DocumentsOperationContext context, string docId, string name, DateTime from, DateTime to, 
-            ref int start, ref int pageSize, IncludeDocumentsDuringTimeSeriesLoadingCommand includesCommand = null, bool fullResults = false)
+            ref int start, ref int pageSize, IncludeDocumentsDuringTimeSeriesLoadingCommand includesCommand = null, bool returnFullResults = false)
         {
             if (pageSize == 0)
                 return null;
@@ -427,7 +427,7 @@ namespace Raven.Server.Documents.Handlers
                     var dbId = singleResult.Tag.Substring(7); // extract dbId from tag [tag struct: "TC:XXX-dbId" - where "XXX" can be "INC"/"DEC"] 
                     var nodeTag = ChangeVectorUtils.GetNodeTagById(dbCv, dbId) ?? "A";
 
-                    if (nodeTag.Length > 1) //TODO: fix space in GetNodeTagById method
+                    if (nodeTag.Length > 1) //TODO: fix redundant whitespace in GetNodeTagById method
                         nodeTag = nodeTag[1..];
 
                     nodeTag = nodeTag + "-" + dbId;
@@ -436,7 +436,8 @@ namespace Raven.Server.Documents.Handlers
                     if (incrementalValues.TryGetValue(singleResult.Timestamp.Ticks, out var entry)) 
                     {
                         // an entry with this timestamp already exists --> sum values
-                        MergeIncrementalTimeSeriesValues(singleResult, nodeTag, values, ref entry, fullResults);
+
+                        MergeIncrementalTimeSeriesValues(singleResult, nodeTag, values, ref entry, returnFullResults);
                         continue;
                     }
 
@@ -451,7 +452,7 @@ namespace Raven.Server.Documents.Handlers
                         Timestamp = singleResult.Timestamp,
                         Values = singleResult.Values.ToArray(),
                         IsRollup = singleResult.Type == SingleResultType.RolledUp,
-                        NodesValues = fullResults ? new Dictionary<string, double[]>(){ [nodeTag] = values } : null
+                        NodesValues = returnFullResults ? new Dictionary<string, double[]>(){ [nodeTag] = values } : null
                     };
                 }
 
@@ -492,7 +493,7 @@ namespace Raven.Server.Documents.Handlers
             return result;
         }
 
-        private static void MergeIncrementalTimeSeriesValues(SingleResult singleResult, string nodeTag, double[] values, ref TimeSeriesEntry entry, bool fullResults)
+        private static void MergeIncrementalTimeSeriesValues(SingleResult singleResult, string nodeTag, double[] values, ref TimeSeriesEntry entry, bool returnFullResults)
         {
             if (entry.Values.Length < values.Length) // need to allocate more space for new values
             {
@@ -509,7 +510,7 @@ namespace Raven.Server.Documents.Handlers
                     entry.Values[i] += values[i];
             }
 
-            if (fullResults == false)
+            if (returnFullResults == false)
                 return;
             
             if (entry.NodesValues.TryGetValue(nodeTag, out var nodeValues))

@@ -12,6 +12,7 @@ using System.Text;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.TimeSeries;
+using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
@@ -1236,7 +1237,7 @@ namespace Raven.Server.Documents.TimeSeries
             IEnumerable<TimeSeriesOperation.AppendOperation> toAppend,
             string changeVectorFromReplication = null)
         {
-            if (name.StartsWith(IncrementalTimeSeriesPrefix, StringComparison.OrdinalIgnoreCase) && name.Contains('@') == false)
+            if (TimeSeriesHandler.CheckIfIncrementalTs(name))
                 throw new InvalidOperationException("Cannot perform append operations on Incremental Time Series");
 
             var holder = new SingleResult();
@@ -1268,10 +1269,7 @@ namespace Raven.Server.Documents.TimeSeries
             string name,
             IEnumerable<TimeSeriesOperation.IncrementOperation> toIncrement)
         {
-            if (name.Contains('@'))
-                throw new InvalidOperationException("Cannot perform increment operations on Rollup Time Series");
-
-            if (name.StartsWith(IncrementalTimeSeriesPrefix, StringComparison.OrdinalIgnoreCase) == false)
+            if (TimeSeriesHandler.CheckIfIncrementalTs(name) == false)
                 throw new InvalidOperationException("Cannot perform increment operations on Non Incremental Time Series");
 
             _timedCounterCacheTags ??= new Dictionary<string, List<LazyStringValue>>();
@@ -1285,6 +1283,7 @@ namespace Raven.Server.Documents.TimeSeries
             IEnumerable<SingleResult> ToResult(TimeSeriesOperation.IncrementOperation element)
             {
                 ValidateTimestamp(prevTimestamp, element.Timestamp);
+                prevTimestamp = element.Timestamp;
 
                 holder.Timestamp = element.Timestamp.EnsureUtc().EnsureMilliseconds();
                 holder.Status = TimeSeriesValuesSegment.Live;
@@ -1342,14 +1341,12 @@ namespace Raven.Server.Documents.TimeSeries
                     holder.Tag = TryGetTimedCounterTag(_documentDatabase.DbBase64Id, sign);
                     yield return holder;
                 }
-               
-                prevTimestamp = element.Timestamp;
             }
         }
 
         private static void ValidateTimestamp(DateTime prevTimestamp, DateTime elementTimestamp)
         {
-            if (elementTimestamp <= prevTimestamp)
+            if (elementTimestamp < prevTimestamp)
             {
                 throw new InvalidDataException(
                     $"The order of increment operations must be sequential, but got previous operation {prevTimestamp} and the current: {elementTimestamp}");
@@ -1389,6 +1386,7 @@ namespace Raven.Server.Documents.TimeSeries
             private readonly string _name;
             private readonly bool _fromReplication;
             private readonly IEnumerator<SingleResult> _toAppend;
+            private readonly bool _incrementalTimeSeries;
             private SingleResult _current;
 
             public DateTime Last;
@@ -1401,6 +1399,7 @@ namespace Raven.Server.Documents.TimeSeries
                 _name = name;
                 _fromReplication = fromReplication;
                 _toAppend = toAppend.GetEnumerator();
+                _incrementalTimeSeries = TimeSeriesHandler.CheckIfIncrementalTs(name);
             }
 
             public bool MoveNext()
@@ -1421,13 +1420,12 @@ namespace Raven.Server.Documents.TimeSeries
                 if (_current == null)
                     First = next.Timestamp;
 
-                bool incrementOperation = _current != null && _current.Tag?.StartsWith(TimedCounterPrefixBuffer) == true;
-                if (incrementOperation == false && currentTimestamp >= next.Timestamp)
+                if (_incrementalTimeSeries == false && currentTimestamp >= next.Timestamp)
                     throw new InvalidDataException($"The entries of '{_name}' time-series for document '{_documentId}' must be sorted by their timestamps, and cannot contain duplicate timestamps. " +
                                                    $"Got: current '{currentTimestamp:O}', next '{next.Timestamp:O}', make sure your measures have at least 1ms interval.");
                 
-                if (incrementOperation && currentTimestamp > next.Timestamp)
-                    throw new InvalidDataException($"The entries of '{_name}' time-series for document '{_documentId}' must be sorted by their timestamps. " +
+                if (_incrementalTimeSeries && currentTimestamp > next.Timestamp)
+                    throw new InvalidDataException($"The entries of '{_name}' incremental time-series for document '{_documentId}' must be sorted by their timestamps. " +
                                                    $"Got: current '{currentTimestamp:O}'.");
 
                 if (next.Values.Length == 0 && // dead values can have 0 length
@@ -1716,22 +1714,11 @@ namespace Raven.Server.Documents.TimeSeries
                             while (true)
                             {
                                 var compare = Compare(currentTime, currentValues, currentTag.ContentAsSpan(), localStatus, current, nextSegmentBaseline, timeSeriesSegment);
+
                                 if (compare == CompareResult.Addition)
                                 {
-                                    int length = Math.Min(currentValues.Length, current.Values.Length);
-                                    for (int i = 0; i < length; i++)
-                                    {
-                                        if (double.IsNaN(current.Values.Span[i]) == false && double.IsNaN(currentValues[i])) // local value == `Nan`, but remote has value
-                                            continue;
-                                        
-                                        if (double.IsNaN(current.Values.Span[i]) && double.IsNaN(currentValues[i]) == false) // remote value == `Nan`, but local has value
-                                        {
-                                            current.Values.Span[i] = currentValues[i];
-                                            continue;
-                                        }
+                                    ValuesAddition(ref current, currentValues);
 
-                                        current.Values.Span[i] = current.Values.Span[i] + currentValues[i];
-                                    }
                                     compare = CompareResult.Remote;
                                 }
 
@@ -1827,47 +1814,36 @@ namespace Raven.Server.Documents.TimeSeries
 
             if (localTime == remote.Timestamp)
             {
-                bool incrementOperation = localTag.StartsWith(TimedCounterPrefixBuffer);
+                if (holder.FromReplication && EitherOneIsMarkedAsDead(localStatus, remote, out CompareResult compareResult))
+                    return compareResult;
 
-                CompareResult compareResult;
-                if (incrementOperation)
+                if (localTag.StartsWith(TimedCounterPrefixBuffer)) // incremental time-series
                 {
                     if (remote.Tag == null || remote.Tag.StartsWith(TimedCounterPrefixBuffer) == false)
                         throw new InvalidDataException("Cannot get append operation for Incremental Time Series.");
 
-                    int cmp = localTag.SequenceCompareTo(remote.Tag.AsSpan());
-                    if (cmp == 0)
+                    int compareTags = localTag.SequenceCompareTo(remote.Tag.AsSpan());
+                    if (compareTags == 0)
                     {
-                        if (EitherOneIsMarkedAsDead(localStatus, remote, out compareResult)) 
-                            return compareResult;
+                        if (holder.FromReplication == false)
+                            return CompareResult.Addition;
 
-                        if (holder.FromReplication)
-                        {
-                            bool isIncrement = localTag.StartsWith(TimedCounterPositivePrefixBuffer);
-                            return isIncrement ? SelectLargestValue(localValues, remote, true) : SelectSmallerValue(localValues, remote);
-                        }
-                            
-                        return CompareResult.Addition;
+                        bool isIncrement = localTag.StartsWith(TimedCounterPositivePrefixBuffer);
+                        return isIncrement ? SelectLargestValue(localValues, remote, isIncrement: true) : SelectSmallerValue(localValues, remote);
                     }
 
-                    if (cmp < 0)
+                    if (compareTags < 0)
                         return CompareResult.Local | CompareResult.Merge;
                     return CompareResult.Remote | CompareResult.Merge;
                 }
 
-                if (localStatus != TimeSeriesValuesSegment.Dead && remote.Tag != null && remote.Tag.StartsWith(TimedCounterPrefixBuffer))
+                if (remote.Tag != null && remote.Tag.StartsWith(TimedCounterPrefixBuffer))
                     throw new InvalidDataException("Cannot get increment operation for Non-Incremental Time Series.");
 
                 if (holder.FromReplication == false)
-                {
-                    return CompareResult.Remote; // if not from replication, remote value is an update
-                }
+                    return CompareResult.Remote; // if not from replication & not incremental time-series, remote value is an update
 
-
-                if (EitherOneIsMarkedAsDead(localStatus, remote, out compareResult))
-                    return compareResult;
-
-                return SelectLargestValue(localValues, remote, false);
+                return SelectLargestValue(localValues, remote, isIncrement: false);
             }
 
             return CompareResult.Remote;
@@ -1937,6 +1913,24 @@ namespace Raven.Server.Documents.TimeSeries
                 return CompareResult.Local;
 
             return CompareResult.Remote;
+        }
+
+        private static void ValuesAddition(ref SingleResult current, Span<double> localValues)
+        {
+            int length = Math.Min(localValues.Length, current.Values.Length);
+            for (int i = 0; i < length; i++)
+            {
+                if (double.IsNaN(current.Values.Span[i]) == false && double.IsNaN(localValues[i])) // local value == `Nan`, but remote has value
+                    continue;
+
+                if (double.IsNaN(current.Values.Span[i]) && double.IsNaN(localValues[i]) == false) // remote value == `Nan`, but local has value
+                {
+                    current.Values.Span[i] = localValues[i];
+                    continue;
+                }
+
+                current.Values.Span[i] = current.Values.Span[i] + localValues[i];
+            }
         }
 
         public void ReplaceTimeSeriesNameInMetadata(DocumentsOperationContext ctx, string docId, string oldName, string newName)
