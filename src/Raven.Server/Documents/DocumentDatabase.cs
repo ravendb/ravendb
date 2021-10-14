@@ -271,13 +271,15 @@ namespace Raven.Server.Documents
         {
             try
             {
+                var generateNewDatabaseId = (options & InitializeOptions.GenerateNewDatabaseId) == InitializeOptions.GenerateNewDatabaseId;
+
                 Configuration.CheckDirectoryPermissions();
 
                 _addToInitLog("Initializing NotificationCenter");
                 NotificationCenter.Initialize(this);
 
                 _addToInitLog("Initializing DocumentStorage");
-                DocumentsStorage.Initialize((options & InitializeOptions.GenerateNewDatabaseId) == InitializeOptions.GenerateNewDatabaseId);
+                DocumentsStorage.Initialize(generateNewDatabaseId);
                 _addToInitLog("Starting Transaction Merger");
                 TxMerger.Start();
                 _addToInitLog("Initializing ConfigurationStorage");
@@ -302,7 +304,7 @@ namespace Raven.Server.Documents
                 PeriodicBackupRunner = new PeriodicBackupRunner(this, _serverStore, wakeup);
 
                 _addToInitLog("Initializing IndexStore (async)");
-                _indexStoreTask = IndexStore.InitializeAsync(record, index, _addToInitLog);
+                _indexStoreTask = IndexStore.InitializeAsync(record, generateNewDatabaseId, index, _addToInitLog);
                 _addToInitLog("Initializing Replication");
                 ReplicationLoader?.Initialize(record, index);
                 _addToInitLog("Initializing ETL");
