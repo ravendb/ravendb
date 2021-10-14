@@ -3,7 +3,6 @@ import shell = require("viewmodels/shell");
 import license = require("models/auth/licenseModel");
 import registration = require("viewmodels/shell/registration");
 import buildInfo = require("models/resources/buildInfo");
-import generalUtils = require("common/generalUtils");
 import accessManager = require("common/shell/accessManager");
 import forceLicenseUpdateCommand = require("commands/licensing/forceLicenseUpdateCommand");
 import getLatestVersionInfoCommand = require("commands/version/getLatestVersionInfoCommand");

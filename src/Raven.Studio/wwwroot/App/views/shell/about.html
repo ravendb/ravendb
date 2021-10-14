@@ -137,6 +137,7 @@
                     <div class="name">Max cluster memory usage</div><div class="value"><strong data-bind="text: maxMemory() + ' GB RAM'"></strong></div>
                     <div class="name">Highly available tasks</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasHighlyAvailableTasks') }"></i></div>
                     <div class="name">Dynamic database distribution</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasDynamicNodesDistribution') }"></i></div>
+                    <div class="name">TCP Data Compression</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasTcpDataCompression') }"></i></div>
 
                     <h4>Indexes</h4>
                     <div class="name">Additional Assemblies from NuGet</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasAdditionalAssembliesFromNuGet') }"></i></div>
@@ -154,6 +155,7 @@
                     <div class="name">Counters</div><div class="value"><i class="icon-checkmark"></i></div>
                     <div class="name">Time Series</div><div class="value"><i class="icon-checkmark"></i></div>
                     <div class="name">Time Series Rollups & Retention</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasTimeSeriesRollupsAndRetention') }"></i></div>
+                    <div class="name">Incremental Time Series</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasIncrementalTimeSeries') }"></i></div>
 
                     <h4>External Replication</h4>
                     <div class="name">Immediate</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasExternalReplication') }"></i></div>
@@ -175,11 +177,18 @@
                     <div class="name">RavenDB ETL</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasRavenEtl') }"></i></div>
                     <div class="name">Elasticsearch ETL</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasElasticSearchEtl') }"></i></div>
 
+                    <h4>Data Subscriptions</h4>
+                    <div class="name">Single-worker Data Subscriptions</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasSingleWorkerDataSubscriptions') }"></i></div>
+                    <div class="name">Concurrent-worker Data Subscriptions</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasConcurrentWorkerDataSubscriptions') }"></i></div>
+                    
                     <h4>Security</h4>
                     <div class="name">Certificates</div><div class="value"><i class="icon-checkmark"></i></div>
                     <div class="name">Read-only Certificates</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasReadOnlyCertificates') }"></i></div>
                     <div class="name">Encryption in transit</div><div class="value"><strong>TLS 1.2 & X.509</strong></div>
                     <div class="name">Storage encryption</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasEncryption') }"></i></div>
+
+                    <h4>Integrations</h4>
+                    <div class="name">PostgreSQL Protocol Support</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasPostgreSqlProtocolSupport') }"></i></div>
                 </div>
             </div>
             <div class="padding">
