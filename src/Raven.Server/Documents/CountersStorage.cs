@@ -1795,11 +1795,6 @@ namespace Raven.Server.Documents
             long newEtag = -1;
             for (int i = 0; i < count; i++)
             {
-                if (i > 0)
-                {
-                    sb.Append(", ");
-                }
-
                 if (i != dbIdIndex)
                 {
                     var etag = ((CounterValues*)counterToDelete.Address + i)->Etag;
@@ -1807,36 +1802,32 @@ namespace Raven.Server.Documents
                         continue;
 
                     var dbId = dbIds[i].ToString();
-
-                    sb.Append(dbId)
-                        .Append(":")
-                        .Append(etag);
-
+                    AppendDbIdAndEtag(sb, dbId, etag);
                     continue;
                 }
 
                 newEtag = _documentDatabase.DocumentsStorage.GenerateNextEtag();
-                sb.Append(_documentDatabase.DbBase64Id)
-                    .Append(":")
-                    .Append(newEtag);
+                AppendDbIdAndEtag(sb, _documentDatabase.DbBase64Id, newEtag);
             }
 
             if (newEtag == -1)
             {
                 // add local part to delete change vector
-
-                if (count > 0)
-                {
-                    sb.Append(", ");
-                }
-
                 newEtag = _documentDatabase.DocumentsStorage.GenerateNextEtag();
-                sb.Append(_documentDatabase.DbBase64Id)
-                    .Append(":")
-                    .Append(newEtag);
+                AppendDbIdAndEtag(sb, _documentDatabase.DbBase64Id, newEtag);
             }
 
             return sb.ToString();
+        }
+
+        private static void AppendDbIdAndEtag(StringBuilder sb, string dbId, long etag)
+        {
+            if (sb.Length > 0)
+                sb.Append(", ");
+
+            sb.Append(dbId)
+                .Append(':')
+                .Append(etag);
         }
 
         public static LazyStringValue ExtractDocId(JsonOperationContext context, ref TableValueReader tvr)
@@ -2094,12 +2085,7 @@ namespace Raven.Server.Documents
             var sb = new StringBuilder();
             for (int i = 0; i < mergeVectorBuffer.Count; i++)
             {
-                if (i > 0)
-                    sb.Append(", ");
-
-                sb.Append(mergeVectorBuffer[i].DbId)
-                    .Append(":")
-                    .Append(mergeVectorBuffer[i].Etag);
+                AppendDbIdAndEtag(sb, mergeVectorBuffer[i].DbId, mergeVectorBuffer[i].Etag);
             }
 
             return sb.ToString();
