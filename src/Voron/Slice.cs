@@ -29,7 +29,7 @@ namespace Voron
 
         public bool HasValue => Content.HasValue;
 
-        public int Size
+        public readonly int Size
         {
             get
             {

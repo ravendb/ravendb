@@ -82,7 +82,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         internal static TimeSeriesOperation Parse(BlittableJsonReaderObject input)
         {
             if (input.TryGet(nameof(Name), out string name) == false || name == null)
-                return ThrowMissingProperty<TimeSeriesOperation>(nameof(Name));
+                ThrowMissingProperty<TimeSeriesOperation>(nameof(Name));
 
             var result = new TimeSeriesOperation
             {
@@ -164,7 +164,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         internal static TimeSeriesOperation ParseForBulkInsert(BlittableJsonReaderObject input)
         {
             if (input.TryGet(nameof(Name), out string name) == false || name == null)
-                return ThrowMissingProperty<TimeSeriesOperation>(nameof(Name));
+                ThrowMissingProperty<TimeSeriesOperation>(nameof(Name));
 
             input.TryGet(TimeSeriesFormat, out TimeFormat format);
 
@@ -174,7 +174,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             };
 
             if (input.TryGet(nameof(Appends), out BlittableJsonReaderArray operations) == false || operations == null)
-                return ThrowMissingProperty<TimeSeriesOperation>(nameof(Appends));
+                ThrowMissingProperty<TimeSeriesOperation>(nameof(Appends));
 
             var sorted = new SortedList<long, AppendOperation>();
             foreach (var op in operations)
@@ -274,7 +274,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             throw new InvalidDataException($"Expected a string but got: {obj.GetType()}");
         }
 
-        private static T ThrowMissingProperty<T>(string prop)
+        private static void ThrowMissingProperty<T>(string prop)
         {
             throw new InvalidDataException($"Missing '{prop}' property on 'TimeSeriesOperation'");
         }

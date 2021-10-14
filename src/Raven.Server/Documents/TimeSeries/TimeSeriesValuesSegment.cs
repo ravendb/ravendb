@@ -562,7 +562,6 @@ namespace Raven.Server.Documents.TimeSeries
         {
             public byte* Pointer;
             public int Length;
-
             public byte Size => *Pointer; // the first byte is the size
 
 
@@ -575,6 +574,7 @@ namespace Raven.Server.Documents.TimeSeries
 
                 return new Span<byte>(Pointer + 1, Size);
             }
+
             public Span<byte> AsSpan()
             {
                 if (Pointer == null || Size == 0)
