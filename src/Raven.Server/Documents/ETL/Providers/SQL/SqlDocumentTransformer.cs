@@ -36,7 +36,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
 
             LoadToDestinations = destinationTables;
 
-            _tables = new Dictionary<string, SqlTableWithRecords>(destinationTables.Length);
+            _tables = new Dictionary<string, SqlTableWithRecords>(destinationTables.Length, StringComparer.OrdinalIgnoreCase);
             _tablesForScript = new List<SqlEtlTable>(destinationTables.Length);
 
             // ReSharper disable once ForCanBeConvertedToForeach
