@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Client;
 using FastTests.Sharding;
+using Nest;
 using Parquet;
 using Parquet.Data;
 using Raven.Client;
@@ -17,14 +18,17 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Documents.ETL;
+using Raven.Server.Documents.ETL.Providers.ElasticSearch;
 using Raven.Server.Documents.ETL.Providers.OLAP;
 using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.Documents.Sharding;
@@ -64,7 +68,10 @@ namespace SlowTests.Sharding
         private const string DefaultFrequency = "* * * * *"; // every minute
         private const string AllFilesPattern = "*.*";
 
-        private const string DefaultSqlScript = @"
+        private const string OrderIndexName = "orders";
+        private const string OrderLinesIndexName = "orderlines";
+
+        private const string DefaultScript = @"
 var orderData = {
     Id: id(this),
     OrderLinesCount: this.Lines.length,
@@ -1224,7 +1231,7 @@ person.addCounter(loadCounter('down'));
 
                     var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
 
-                    SetupSqlEtl(store, connectionString, DefaultSqlScript);
+                    SetupSqlEtl(store, connectionString, DefaultScript);
 
                     etlDone.Wait(TimeSpan.FromMinutes(5));
 
@@ -1278,7 +1285,7 @@ person.addCounter(loadCounter('down'));
 
                     var etlDone = WaitForEtl(store, (n, s) => SqlEtlTests.GetOrdersCount(connectionString) == testCount);
 
-                    SetupSqlEtl(store, connectionString, DefaultSqlScript);
+                    SetupSqlEtl(store, connectionString, DefaultScript);
 
                     etlDone.Wait(TimeSpan.FromMinutes(5));
 
@@ -1580,6 +1587,143 @@ loadToOrders(partitionBy(key), orderData);
             }
         }
 
+        [RequiresElasticSearchFact]
+        public void ElasticEtl_SimpleScript()
+        {
+            using (var store = GetShardedDocumentStore())
+            using (GetElasticClient(out var client))
+            {
+                SetupElasticEtl(store, DefaultScript, new List<string>() { OrderIndexName, OrderLinesIndexName });
+                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Order
+                    {
+                        Lines = new List<OrderLine>
+                        {
+                            new OrderLine
+                            {
+                                PricePerUnit = 3, 
+                                Product = "Cheese", 
+                                Quantity = 3
+                            },
+                            new OrderLine
+                            {
+                                PricePerUnit = 4, 
+                                Product = "Beer", 
+                                Quantity = 2
+                            }
+                        }
+                    });
+                    session.SaveChanges();
+                }
+
+                etlDone.Wait(TimeSpan.FromMinutes(1));
+
+                EnsureNonStaleElasticResults(client);
+
+                var ordersCount = client.Count<object>(c => c.Index(OrderIndexName));
+                var orderLinesCount = client.Count<object>(c => c.Index(OrderLinesIndexName));
+
+                Assert.Equal(1, ordersCount.Count);
+                Assert.Equal(2, orderLinesCount.Count);
+
+                etlDone.Reset();
+
+                using (var session = store.OpenSession())
+                {
+                    session.Delete("orders/1-A");
+
+                    session.SaveChanges();
+                }
+
+                etlDone.Wait(TimeSpan.FromMinutes(1));
+
+                EnsureNonStaleElasticResults(client);
+
+                var ordersCountAfterDelete = client.Count<object>(c => c.Index(OrderIndexName));
+                var orderLinesCountAfterDelete = client.Count<object>(c => c.Index(OrderLinesIndexName));
+
+                Assert.Equal(0, ordersCountAfterDelete.Count);
+                Assert.Equal(0, orderLinesCountAfterDelete.Count);
+            }
+        }
+
+        [RequiresElasticSearchFact]
+        public void ElasticEtl__SimpleScriptWithManyDocuments()
+        {
+            using (var store = GetShardedDocumentStore())
+            using (GetElasticClient(out var client))
+            {
+                var numberOfOrders = 100;
+                var numberOfLinesPerOrder = 5;
+
+                SetupElasticEtl(store, DefaultScript, new List<string>() { OrderIndexName, OrderLinesIndexName });
+                var etlsDone = WaitForEtlOnAllShards(store, (n, statistics) => statistics.LastProcessedEtag >= numberOfOrders);
+
+                for (int i = 0; i < numberOfOrders; i++)
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        Order order = new Order
+                        {
+                            Lines = new List<OrderLine>()
+                        };
+
+                        for (int j = 0; j < numberOfLinesPerOrder; j++)
+                        {
+                            order.Lines.Add(new OrderLine
+                            {
+                                PricePerUnit = j + 1, 
+                                Product = "foos/" + j, 
+                                Quantity = (i * j) % 10
+                            });
+                        }
+
+                        session.Store(order, "orders/" + i);
+
+                        session.SaveChanges();
+                    }
+                }
+
+                var waitHandles = etlsDone.Select(mre => mre.WaitHandle).ToArray();
+                WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1));
+
+                EnsureNonStaleElasticResults(client);
+
+                var ordersCount = client.Count<object>(c => c.Index(OrderIndexName));
+                var orderLinesCount = client.Count<object>(c => c.Index(OrderLinesIndexName));
+
+                Assert.Equal(numberOfOrders, ordersCount.Count);
+                Assert.Equal(numberOfOrders * numberOfLinesPerOrder, orderLinesCount.Count);
+
+                etlsDone = WaitForEtlOnAllShards(store, (n, statistics) => statistics.LastProcessedEtag >= 2 * numberOfOrders);
+
+                for (int i = 0; i < numberOfOrders; i++)
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        session.Delete("orders/" + i);
+
+                        session.SaveChanges();
+                    }
+                }
+
+                waitHandles = etlsDone.Select(mre => mre.WaitHandle).ToArray();
+                WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1));
+
+                EnsureNonStaleElasticResults(client);
+
+                Thread.Sleep(3000);
+                var ordersCountAfterDelete = client.Count<object>(c => c.Index(OrderIndexName));
+                var orderLinesCountAfterDelete = client.Count<object>(c => c.Index(OrderLinesIndexName));
+
+                Assert.Equal(0, ordersCountAfterDelete.Count);
+                Assert.Equal(0, orderLinesCountAfterDelete.Count);
+            }
+        }
+
         private static AddEtlOperationResult SetupRavenEtl(IDocumentStore src, IDocumentStore dst, string collection, string script, bool applyToAllDocuments = false, bool disabled = false, string mentor = null)
         {
             var connectionStringName = $"{src.Database}@{src.Urls.First()} to {dst.Database}@{dst.Urls.First()}";
@@ -1700,6 +1844,51 @@ loadToOrders(partitionBy(key), orderData);
             });
         }
 
+        private static void SetupElasticEtl(IDocumentStore store, string script, IEnumerable<string> collections)
+        {
+            var connectionStringName = $"{store.Database}@{store.Urls.First()} to ELASTIC";
+
+            AddEtl(store,
+                new ElasticSearchEtlConfiguration()
+                {
+                    Name = connectionStringName,
+                    ConnectionStringName = connectionStringName,
+                    ElasticIndexes =
+                    {
+                        new ElasticSearchIndex
+                        {
+                            IndexName = "Orders", 
+                            IndexIdProperty = "Id"
+                        },
+                        new ElasticSearchIndex
+                        {
+                            IndexName = "OrderLines", 
+                            IndexIdProperty = "OrderId"
+                        },
+                        new ElasticSearchIndex
+                        {
+                            IndexName = "Users", 
+                            IndexIdProperty = "UserId"
+                        }
+                    },
+                    Transforms =
+                    {
+                        new Transformation
+                        {
+                            Name = $"ETL : {connectionStringName}",
+                            Collections = new List<string>(collections),
+                            Script = script
+                        }
+                    }
+                },
+
+                new ElasticSearchConnectionString
+                {
+                    Name = connectionStringName, 
+                    Nodes = ElasticSearchTestNodes.Instance.VerifiedNodes.Value
+                });
+        }
+
         private static AddEtlOperationResult AddEtl<T>(IDocumentStore src, EtlConfiguration<T> configuration, T connectionString) where T : ConnectionString
         {
             var putResult = src.Maintenance.Send(new PutConnectionStringOperation<T>(connectionString));
@@ -1747,7 +1936,7 @@ loadToOrders(partitionBy(key), orderData);
             return list;
         }
 
-        private S3Settings GetS3Settings([CallerMemberName] string caller = null)
+        private static S3Settings GetS3Settings([CallerMemberName] string caller = null)
         {
             var s3Settings = AmazonS3FactAttribute.S3Settings;
             if (s3Settings == null)
@@ -1770,5 +1959,28 @@ loadToOrders(partitionBy(key), orderData);
                 AwsRegionName = s3Settings.AwsRegionName
             };
         }
+
+        private IDisposable GetElasticClient(out ElasticClient client)
+        {
+            var localClient = client = ElasticSearchHelper.CreateClient(new ElasticSearchConnectionString { Nodes = ElasticSearchTestNodes.Instance.VerifiedNodes.Value });
+
+            CleanupIndexes(localClient);
+
+            return new DisposableAction(() =>
+            {
+                CleanupIndexes(localClient);
+            });
+        }
+
+        private static void CleanupIndexes(ElasticClient client)
+        {
+            var response = client.Indices.Delete(Indices.All);
+        }
+
+        private static void EnsureNonStaleElasticResults(ElasticClient client)
+        {
+            client.Indices.Refresh(new RefreshRequest(Indices.All));
+        }
+
     }
 }
