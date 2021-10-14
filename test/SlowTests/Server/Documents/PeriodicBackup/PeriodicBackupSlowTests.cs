@@ -608,6 +608,51 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
+        class TestObj
+        {
+            public string Id { get; set; }
+            public string Prop { get; set; }
+        }
+
+        [Fact]
+        public async Task ClusterWideTransaction_WhenImportWithoutCompareExchange_ShouldNotFailOnAfterImportModification()
+        {
+            const string id = "test/1";
+
+            var file = GetTempFileName();
+            var (nodes, leader) = await CreateRaftCluster(3);
+            using var source = GetDocumentStore(new Options { Server = leader, ReplicationFactor = nodes.Count });
+            using var destination = GetDocumentStore(new Options { Server = leader, ReplicationFactor = nodes.Count });
+            using (var session = source.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+            {
+                var entity = new TestObj();
+                await session.StoreAsync(entity, id);
+                await session.SaveChangesAsync();
+            }
+            var result = await source.Operations.SendAsync(new GetCompareExchangeValuesOperation<TestObj>(""));
+            Assert.Single(result);
+            Assert.EndsWith(id, result.Single().Key, StringComparison.OrdinalIgnoreCase);
+
+            //Export without `CompareExchange`s
+            var exportOperation = await source.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions { OperateOnTypes = DatabaseItemType.Documents }, file);
+            await exportOperation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+            var importOperation = await destination.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
+            await importOperation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+            using (var session = destination.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+            {
+                var loadedEntity = await session.LoadAsync<TestObj>(id);
+                loadedEntity.Prop = "Toli";
+                await session.StoreAsync(loadedEntity, id);
+                await session.SaveChangesAsync();
+            }
+            using (var session = destination.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+            {
+                var loadedEntity = await session.LoadAsync<TestObj>(id);
+                Assert.Equal("Toli", loadedEntity.Prop);
+            }
+
+        }
 
         [Fact, Trait("Category", "Smuggler")]
         public async Task can_backup_and_restore_snapshot_with_compression()
