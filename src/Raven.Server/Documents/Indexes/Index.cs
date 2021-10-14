@@ -295,7 +295,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public static Index Open(string path, DocumentDatabase documentDatabase)
+        public static Index Open(string path, DocumentDatabase documentDatabase, bool generateNewDatabaseId)
         {
             var logger = LoggingSource.Instance.GetLogger<Index>(documentDatabase.Name);
 
@@ -368,6 +368,16 @@ namespace Raven.Server.Documents.Indexes
                     throw new IndexOpenException(
                         $"Could not read index type from storage in '{path}'. This indicates index data file corruption.",
                         e);
+                }
+
+                if (generateNewDatabaseId == false)
+                {
+                    var databaseId = IndexStorage.ReadDatabaseId(name, environment);
+                    if (databaseId != null) // backward compatibility
+                    {
+                        if (databaseId != documentDatabase.DbBase64Id) 
+                            throw new IndexOpenException($"Could not open index because stored database ID ('{databaseId}') is different than current database ID ('{documentDatabase.DbBase64Id}'). This is often an indication that data was copied directly from a different database.");
+                    }
                 }
 
                 switch (type)
@@ -622,7 +632,7 @@ namespace Raven.Server.Documents.Indexes
             _contextPool = new TransactionContextPool(environment, documentDatabase.Configuration.Memory.MaxContextSizeToKeep);
 
             _indexStorage = new IndexStorage(this, _contextPool, documentDatabase);
-            _indexStorage.Initialize(environment);
+            _indexStorage.Initialize(documentDatabase, environment);
 
             IndexPersistence?.Dispose();
 
@@ -996,7 +1006,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private NativeMemory.ThreadStats _indexingThreadStats; 
+        private NativeMemory.ThreadStats _indexingThreadStats;
 
         protected void ExecuteIndexing()
         {
@@ -1199,7 +1209,7 @@ namespace Raven.Server.Documents.Indexes
                                     {
                                         var originalName = Name.Replace(Constants.Documents.Indexing.SideBySideIndexNamePrefix, string.Empty, StringComparison.OrdinalIgnoreCase);
                                         _isReplacing = true;
-                                        
+
                                         if (batchCompleted)
                                         {
                                             // this side-by-side index will be replaced in a second, notify about indexing success
@@ -1467,7 +1477,7 @@ namespace Raven.Server.Documents.Indexes
 
                 DocumentDatabase.DocumentsStorage.ContextPool.Clean();
                 _contextPool.Clean();
-                
+
                 if (CalledUnderIndexingThread)
                 {
                     ByteStringMemoryCache.CleanForCurrentThread();
@@ -2413,7 +2423,7 @@ namespace Raven.Server.Documents.Indexes
         public bool NoQueryInLast10Minutes()
         {
             var last = _lastQueryingTime;
-            return last.HasValue == false || 
+            return last.HasValue == false ||
                    DocumentDatabase.Time.GetUtcNow() - last.Value > TimeSpan.FromMinutes(10);
         }
 
@@ -3498,7 +3508,7 @@ namespace Raven.Server.Documents.Indexes
         }
 
         private DateTime _lastCheckedFlushLock;
-        
+
         public bool ShouldReleaseTransactionBecauseFlushIsWaiting(IndexingStatsScope stats)
         {
             if (GlobalFlushingBehavior.GlobalFlusher.Value.HasLowNumberOfFlushingResources == false)
@@ -3613,7 +3623,7 @@ namespace Raven.Server.Documents.Indexes
                 }
             }
 
-            if (Configuration.ManagedAllocationsBatchLimit != null && 
+            if (Configuration.ManagedAllocationsBatchLimit != null &&
                 count % 128 == 0)
             {
                 var currentManagedAllocations = new Size(GC.GetAllocatedBytesForCurrentThread(), SizeUnit.Bytes);
@@ -3919,7 +3929,7 @@ namespace Raven.Server.Documents.Indexes
             IndexPersistence.Dispose();
 
             _environment.Dispose();
-            
+
             return new DisposableAction(() =>
             {
                 // restart environment
