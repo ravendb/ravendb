@@ -138,6 +138,16 @@ namespace Raven.Server.Commercial
         public bool HasPullReplicationAsSink => GetValue<bool>("pullReplicationAsSink");
 
         public bool HasTimeSeriesRollupsAndRetention => GetValue<bool>("timeSeriesRollupsAndRetention");
+        
+        public bool HasIncrementalTimeSeries => GetValue<bool>("incrementalTimeSeries");
+        
+        public bool HasTcpDataCompression => GetValue<bool>("tcpDataCompression");
+        
+        public bool HasPostgreSqlProtocolSupport => GetValue<bool>("postgresSqlProtocolSupport");
+        
+        public bool HasSingleWorkerDataSubscriptions => GetValue<bool>("singleWorkerDataSubscriptions");
+        
+        public bool HasConcurrentWorkerDataSubscriptions => GetValue<bool>("concurrentWorkerDataSubscriptions");
 
         public bool HasAdditionalAssembliesFromNuGet => GetValue<bool>("additionalAssembliesNuget");
 
@@ -199,6 +209,11 @@ namespace Raven.Server.Commercial
                 [nameof(HasPullReplicationAsHub)] = HasPullReplicationAsHub,
                 [nameof(HasPullReplicationAsSink)] = HasPullReplicationAsSink,
                 [nameof(HasTimeSeriesRollupsAndRetention)] = HasTimeSeriesRollupsAndRetention,
+                [nameof(HasIncrementalTimeSeries)] = HasIncrementalTimeSeries,
+                [nameof(HasTcpDataCompression)] = HasTcpDataCompression,
+                [nameof(HasPostgreSqlProtocolSupport)] = HasPostgreSqlProtocolSupport,
+                [nameof(HasSingleWorkerDataSubscriptions)] = HasSingleWorkerDataSubscriptions,
+                [nameof(HasConcurrentWorkerDataSubscriptions)] = HasConcurrentWorkerDataSubscriptions,
                 [nameof(HasAdditionalAssembliesFromNuGet)] = HasAdditionalAssembliesFromNuGet,
                 [nameof(IsIsv)] = IsIsv,
                 [nameof(IsCloud)] = IsCloud,
