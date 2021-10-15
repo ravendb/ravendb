@@ -12,6 +12,7 @@ import notificationCenter = require("common/notifications/notificationCenter");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import accessManager = require("common/shell/accessManager");
 import moment = require("moment");
+import connectionStatus from "models/resources/connectionStatus";
 
 class ongoingTaskBackupListModel extends ongoingTaskListModel {
     private static neverBackedUpText = "Never backed up";
@@ -225,7 +226,7 @@ class ongoingTaskBackupListModel extends ongoingTaskListModel {
     }
 
     refreshBackupInfo(reportFailure: boolean) {
-        if (shell.showConnectionLost()) {
+        if (connectionStatus.showConnectionLost()) {
             // looks like we don't have connection to server, skip index progress update 
             return $.Deferred<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskBackup>().fail();
         }

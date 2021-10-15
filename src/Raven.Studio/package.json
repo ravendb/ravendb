@@ -10,7 +10,9 @@
     "antlr4ts": "antlr4ts languageService/grammar/BaseRqlLexer.g4 -visitor -no-listener languageService/grammar/BaseRqlParser.g4 -o languageService/src/generated/",
     "test": "cd languageService/ && jest && cd ..",
     "release": "webpack  --config webpack.config.js --mode production",
-    "dist-language-service": "webpack --config languageService/webpack.config.js --mode production"
+    "dist-language-service": "webpack --config languageService/webpack.config.js --mode production",
+    "postinstall": "node scripts/fix_durandal.js"
+
   },
   "private": true,
   "devDependencies": {

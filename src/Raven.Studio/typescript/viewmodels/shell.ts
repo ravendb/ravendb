@@ -54,6 +54,8 @@ import studioSetting = require("common/settings/studioSetting");
 import detectBrowser = require("viewmodels/common/detectBrowser");
 import genUtils = require("common/generalUtils");
 import leafMenuItem = require("common/shell/menu/leafMenuItem");
+import connectionStatus from "models/resources/connectionStatus";
+import { about } from "viewmodels/shell/about";
 
 class shell extends viewModelBase {
 
@@ -65,6 +67,8 @@ class shell extends viewModelBase {
     graphHelperView = require("views/common/graphHelper.html");
     
     static studioConfigDocumentId = "Raven/StudioConfig";
+    
+    static showConnectionLost = connectionStatus.showConnectionLost;
 
     notificationCenter = notificationCenter.instance;
     
@@ -116,19 +120,6 @@ class shell extends viewModelBase {
     
     private onBootstrapFinishedTask = $.Deferred<void>();
     
-    static showConnectionLost = ko.pureComputed(() => {
-        const serverWideWebSocket = changesContext.default.serverNotifications();
-        
-        if (!serverWideWebSocket) {
-            return false;
-        }
-        
-        const errorState = serverWideWebSocket.inErrorState();
-        const ignoreError = serverWideWebSocket.ignoreWebSocketConnectionError();
-        
-        return errorState && !ignoreError;
-    });
-
     constructor() {
         super();
 
