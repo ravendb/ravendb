@@ -568,7 +568,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public Task InitializeAsync(DatabaseRecord record, bool generateNewDatabaseId, long raftIndex, Action<string> addToInitLog)
+        public Task InitializeAsync(DatabaseRecord record, long raftIndex, Action<string> addToInitLog)
         {
             if (_initialized)
                 throw new InvalidOperationException($"{nameof(IndexStore)} was already initialized.");
@@ -580,7 +580,7 @@ namespace Raven.Server.Documents.Indexes
             return Task.Run(() =>
             {
                 if (_documentDatabase.Configuration.Indexing.RunInMemory == false)
-                    OpenIndexesFromRecord(record, generateNewDatabaseId, raftIndex, addToInitLog);
+                    OpenIndexesFromRecord(record, raftIndex, addToInitLog);
 
                 HandleSorters(record, raftIndex);
             });
@@ -1265,7 +1265,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private void OpenIndexesFromRecord(DatabaseRecord record, bool generateNewDatabaseId, long raftIndex, Action<string> addToInitLog)
+        private void OpenIndexesFromRecord(DatabaseRecord record, long raftIndex, Action<string> addToInitLog)
         {
             var path = _documentDatabase.Configuration.Indexing.StoragePath;
 
@@ -1293,7 +1293,7 @@ namespace Raven.Server.Documents.Indexes
                     var sp = Stopwatch.StartNew();
 
                     addToInitLog($"Initializing static index: `{name}`");
-                    OpenIndex(path, indexPath, exceptions, name, staticIndexDefinition: definition, autoIndexDefinition: null, generateNewDatabaseId);
+                    OpenIndex(path, indexPath, exceptions, name, staticIndexDefinition: definition, autoIndexDefinition: null);
 
                     if (Logger.IsInfoEnabled)
                         Logger.Info($"Initialized static index: `{name}`, took: {sp.ElapsedMilliseconds:#,#;;0}ms");
@@ -1315,7 +1315,7 @@ namespace Raven.Server.Documents.Indexes
                     var sp = Stopwatch.StartNew();
 
                     addToInitLog($"Initializing auto index: `{name}`");
-                    OpenIndex(path, indexPath, exceptions, name, staticIndexDefinition: null, autoIndexDefinition: definition, generateNewDatabaseId);
+                    OpenIndex(path, indexPath, exceptions, name, staticIndexDefinition: null, autoIndexDefinition: definition);
 
                     if (Logger.IsInfoEnabled)
                         Logger.Info($"Initialized auto index: `{name}`, took: {sp.ElapsedMilliseconds:#,#;;0}ms");
@@ -1344,7 +1344,7 @@ namespace Raven.Server.Documents.Indexes
             var indexPath = path.Combine(safeName).FullPath;
             var exceptions = new List<Exception>();
 
-            OpenIndex(path, indexPath, exceptions, index.Name, index.GetIndexDefinition(), null, generateNewDatabaseId: false);
+            OpenIndex(path, indexPath, exceptions, index.Name, index.GetIndexDefinition(), null);
 
             if (exceptions.Count > 0)
             {
@@ -1360,13 +1360,13 @@ namespace Raven.Server.Documents.Indexes
                 });
         }
 
-        private void OpenIndex(PathSetting path, string indexPath, List<Exception> exceptions, string name, IndexDefinition staticIndexDefinition, AutoIndexDefinition autoIndexDefinition, bool generateNewDatabaseId)
+        private void OpenIndex(PathSetting path, string indexPath, List<Exception> exceptions, string name, IndexDefinition staticIndexDefinition, AutoIndexDefinition autoIndexDefinition)
         {
             Index index = null;
 
             try
             {
-                index = Index.Open(indexPath, _documentDatabase, generateNewDatabaseId);
+                index = Index.Open(indexPath, _documentDatabase, generateNewDatabaseId: false);
 
                 var differences = IndexDefinitionCompareDifferences.None;
 

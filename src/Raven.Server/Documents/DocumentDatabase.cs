@@ -271,15 +271,13 @@ namespace Raven.Server.Documents
         {
             try
             {
-                var generateNewDatabaseId = (options & InitializeOptions.GenerateNewDatabaseId) == InitializeOptions.GenerateNewDatabaseId;
-
                 Configuration.CheckDirectoryPermissions();
 
                 _addToInitLog("Initializing NotificationCenter");
                 NotificationCenter.Initialize(this);
 
                 _addToInitLog("Initializing DocumentStorage");
-                DocumentsStorage.Initialize(generateNewDatabaseId);
+                DocumentsStorage.Initialize((options & InitializeOptions.GenerateNewDatabaseId) == InitializeOptions.GenerateNewDatabaseId);
                 _addToInitLog("Starting Transaction Merger");
                 TxMerger.Start();
                 _addToInitLog("Initializing ConfigurationStorage");
@@ -304,7 +302,7 @@ namespace Raven.Server.Documents
                 PeriodicBackupRunner = new PeriodicBackupRunner(this, _serverStore, wakeup);
 
                 _addToInitLog("Initializing IndexStore (async)");
-                _indexStoreTask = IndexStore.InitializeAsync(record, generateNewDatabaseId, index, _addToInitLog);
+                _indexStoreTask = IndexStore.InitializeAsync(record, index, _addToInitLog);
                 _addToInitLog("Initializing Replication");
                 ReplicationLoader?.Initialize(record, index);
                 _addToInitLog("Initializing ETL");
@@ -672,7 +670,7 @@ namespace Raven.Server.Documents
 
                 _forTestingPurposes?.DisposeLog?.Invoke(Name, $"Drained all requests. Took: {sp.Elapsed}");
             }
-            
+
             var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(DocumentDatabase)} {Name}");
 
             _forTestingPurposes?.DisposeLog?.Invoke(Name, "Acquiring cluster lock");
@@ -1355,7 +1353,7 @@ namespace Raven.Server.Documents
                                     _logger.Operations(msg);
 
 #if !RELEASE
-                                    Console.WriteLine(msg);   
+                                    Console.WriteLine(msg);
 #endif
                                 }
                             }
