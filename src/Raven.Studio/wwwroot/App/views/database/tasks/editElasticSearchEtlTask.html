@@ -109,7 +109,7 @@
                                    data-bind="textInput: indexName">
                         </div>
                         <div class="flex-grow margin-right margin-right-sm" data-bind="validationElement: idProperty">
-                            <input type="text" class="form-control input-sm" placeholder="ID property" data-bind="textInput: idProperty">
+                            <input type="text" class="form-control input-sm" placeholder="Document ID Property Name" data-bind="textInput: idProperty">
                         </div>
                         <div class="flex-noshrink toggle input-sm">
                             <input id="toggleMode" class="styled" type="checkbox" data-bind="checked: insertOnlyMode">
@@ -137,7 +137,7 @@
                                     <div class="widthlabel"><label class="superscript">Index</label><strong data-bind="text: indexName"></strong><span class="text-warning" data-bind="visible: dirtyFlag().isDirty">&nbsp;*</span></div>
                                 </div>
                                 <div class="col-sm-4">
-                                    <div class="widthlabel"><label class="superscript">Id Property</label><strong data-bind="text: idProperty"></strong></div>
+                                    <div class="widthlabel"><label class="superscript">Document ID Property</label><strong data-bind="text: idProperty"></strong></div>
                                 </div>
                                 <div class="col-sm-4" data-bind="if: insertOnlyMode">Insert only</div>
                             </div>

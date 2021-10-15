@@ -155,6 +155,7 @@ namespace Raven.Server.Documents.Handlers.Streaming
 
                 var format = GetStringQueryString("format", false);
                 var debug = GetStringQueryString("debug", false);
+                var ignoreLimit = GetBoolValueQueryString("ignoreLimit", required: false) ?? false;
                 var properties = GetStringValuesQueryString("field", false);
                 var propertiesArray = properties.Count == 0 ? null : properties.ToArray();
                 // set the exported file name prefix
@@ -168,7 +169,7 @@ namespace Raven.Server.Documents.Handlers.Streaming
                         {
                             try
                             {
-                                await Database.QueryRunner.ExecuteStreamIndexEntriesQuery(query, queryContext, HttpContext.Response, writer, token).ConfigureAwait(false);
+                                await Database.QueryRunner.ExecuteStreamIndexEntriesQuery(query, queryContext, HttpContext.Response, writer, ignoreLimit, token).ConfigureAwait(false);
                             }
                             catch (IndexDoesNotExistException)
                             {
@@ -242,6 +243,7 @@ namespace Raven.Server.Documents.Handlers.Streaming
 
                 var format = GetStringQueryString("format", false);
                 var debug = GetStringQueryString("debug", false);
+                var ignoreLimit = GetBoolValueQueryString("ignoreLimit", required: false) ?? false;
                 var properties = GetStringValuesQueryString("field", false);
                 var propertiesArray = properties.Count == 0 ? null : properties.ToArray();
 
@@ -256,7 +258,7 @@ namespace Raven.Server.Documents.Handlers.Streaming
                         {
                             try
                             {
-                                await Database.QueryRunner.ExecuteStreamIndexEntriesQuery(query, queryContext, HttpContext.Response, writer, token).ConfigureAwait(false);
+                                await Database.QueryRunner.ExecuteStreamIndexEntriesQuery(query, queryContext, HttpContext.Response, writer, ignoreLimit, token).ConfigureAwait(false);
                             }
                             catch (IndexDoesNotExistException)
                             {

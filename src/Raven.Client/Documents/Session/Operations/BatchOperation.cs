@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
@@ -133,6 +134,9 @@ namespace Raven.Client.Documents.Session.Operations
                         break;
                     case CommandType.PATCH:
                         HandlePatch(batchResult);
+                        break;
+                    case CommandType.JsonPatch:
+                        HandleJsonPatch(batchResult);
                         break;
                     case CommandType.AttachmentPUT:
                         HandleAttachmentPut(batchResult);
@@ -388,6 +392,57 @@ namespace Raven.Client.Documents.Session.Operations
             }
         }
 
+        private void HandleJsonPatch(BlittableJsonReaderObject result)
+        {
+            if (result.TryGet(nameof(PatchStatus), out string statusAsString) == false)
+                ThrowMissingField(CommandType.JsonPatch, nameof(PatchStatus));
+
+            if (Enum.TryParse(statusAsString, ignoreCase: true, out PatchStatus status) == false)
+                ThrowInvalidValue(statusAsString, nameof(PatchStatus));
+
+            switch (status)
+            {
+                case PatchStatus.Patched:
+                    if (result.TryGet(nameof(PatchResult.ModifiedDocument), out BlittableJsonReaderObject document) == false)
+                        return;
+
+                    var id = GetLazyStringField(result, CommandType.JsonPatch, nameof(ICommandData.Id));
+
+                    if (_session.DocumentsById.TryGetValue(id, out var sessionDocumentInfo) == false)
+                        return;
+
+                    var documentInfo = GetOrAddModifications(id, sessionDocumentInfo, applyModifications: true);
+
+                    var changeVector = GetLazyStringField(result, CommandType.JsonPatch, nameof(Constants.Documents.Metadata.ChangeVector));
+                    var lastModified = GetLazyStringField(result, CommandType.JsonPatch, nameof(Constants.Documents.Metadata.LastModified));
+
+                    documentInfo.ChangeVector = changeVector;
+
+                    documentInfo.Metadata.Modifications = new DynamicJsonValue(documentInfo.Metadata)
+                    {
+                        [Constants.Documents.Metadata.Id] = id,
+                        [Constants.Documents.Metadata.ChangeVector] = changeVector,
+                        [Constants.Documents.Metadata.LastModified] = lastModified
+                    };
+
+                    using (var old = documentInfo.Document)
+                    {
+                        documentInfo.Document = document;
+
+                        ApplyMetadataModifications(id, documentInfo);
+                    }
+
+                    if (documentInfo.Entity != null)
+                    {
+                        _session.JsonConverter.PopulateEntity(documentInfo.Entity, id, documentInfo.Document, _session.JsonSerializer);
+                        var afterSaveChangesEventArgs = new AfterSaveChangesEventArgs(_session, documentInfo.Id, documentInfo.Entity);
+                        _session.OnAfterSaveChangesInvoke(afterSaveChangesEventArgs);
+                    }
+                    break;
+            }
+        }
+
+
         private void HandleDelete(BlittableJsonReaderObject batchResult)
         {
             HandleDeleteInternal(batchResult, CommandType.DELETE);
@@ -544,6 +599,11 @@ namespace Raven.Client.Documents.Session.Operations
                 ThrowMissingField(type, fieldName);
 
             return boolValue;
+        }
+
+        private static void ThrowInvalidValue(string arg, string fieldName)
+        {
+            throw new InvalidEnumArgumentException($"'{arg}' is not a valid value for field {fieldName}");
         }
 
         private static void ThrowMissingField(CommandType type, string fieldName)

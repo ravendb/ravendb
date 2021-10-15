@@ -558,7 +558,8 @@ namespace Raven.Server.Documents.Handlers
         {
             if (string.Equals(debug, "entries", StringComparison.OrdinalIgnoreCase))
             {
-                await IndexEntries(queryContext, token, tracker, method);
+                var ignoreLimit = GetBoolValueQueryString("ignoreLimit", required: false) ?? false;
+                await IndexEntries(queryContext, token, tracker, method, ignoreLimit);
                 return;
             }
 
@@ -588,12 +589,12 @@ namespace Raven.Server.Documents.Handlers
             throw new NotSupportedException($"Not supported query debug operation: '{debug}'");
         }
 
-        private async Task IndexEntries(QueryOperationContext queryContext, OperationCancelToken token, RequestTimeTracker tracker, HttpMethod method)
+        private async Task IndexEntries(QueryOperationContext queryContext, OperationCancelToken token, RequestTimeTracker tracker, HttpMethod method, bool ignoreLimit)
         {
             var indexQuery = await GetIndexQuery(queryContext.Documents, method, tracker);
             var existingResultEtag = GetLongFromHeaders("If-None-Match");
 
-            var result = await Database.QueryRunner.ExecuteIndexEntriesQuery(indexQuery, queryContext, existingResultEtag, token);
+            var result = await Database.QueryRunner.ExecuteIndexEntriesQuery(indexQuery, queryContext, ignoreLimit, existingResultEtag, token);
 
             if (result.NotModified)
             {

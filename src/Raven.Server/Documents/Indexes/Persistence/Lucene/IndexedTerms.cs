@@ -66,9 +66,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
-        public static BlittableJsonReaderObject[] ReadAllEntriesFromIndex(IndexReader reader, JsonOperationContext context, IState state)
+        public static BlittableJsonReaderObject[] ReadAllEntriesFromIndex(IndexReader reader, JsonOperationContext context, bool ignoreLimit, IState state)
         {
-            if (reader.MaxDoc > 512 * 1024)
+            if (reader.MaxDoc > 512 * 1024 && ignoreLimit == false)
             {
                 throw new InvalidOperationException($"Refusing to extract all index entries from an index with: {reader.MaxDoc:#,#;;0} " +
                                                     "entries, because of the probable time / memory costs associated with that." +
