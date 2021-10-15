@@ -10,6 +10,8 @@ import getConnectivityToLicenseServerCommand = require("commands/licensing/getCo
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import appUrl = require("common/appUrl");
 import popoverUtils = require("common/popoverUtils");
+import app = require("durandal/app");
+import feedback from "viewmodels/shell/feedback";
 
 export class about extends viewModelBase {
 
@@ -298,7 +300,8 @@ export class about extends viewModelBase {
     }
 
     openFeedbackForm() {
-        shell.openFeedbackForm();
+        const dialog = new feedback(viewModelBase.clientVersion(), buildInfo.serverBuildVersion().FullVersion);
+        app.showBootstrapDialog(dialog);
     }
 
     checkConnectionToLicenseServer() {

@@ -1,9 +1,9 @@
 ﻿/// <reference path="../../../../../typings/tsd.d.ts"/>
 import appUrl = require("common/appUrl");
 import serverWideTaskListModel = require("models/database/tasks/serverWide/serverWideTaskListModel");
-import shell = require("viewmodels/shell");
 import getAllServerWideTasksCommand = require("commands/serverWide/tasks/getAllServerWideTasksCommand");
 import generalUtils = require("common/generalUtils");
+import connectionStatus from "models/resources/connectionStatus";
 
 class serverWideExternalReplicationListModel extends serverWideTaskListModel {
     
@@ -44,7 +44,7 @@ class serverWideExternalReplicationListModel extends serverWideTaskListModel {
     }
 
     refreshExternalReplicationInfo() {
-        if (shell.showConnectionLost()) {
+        if (connectionStatus.showConnectionLost()) {
             // looks like we don't have connection to server, skip index progress update 
             return $.Deferred<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskBackup>().fail();
         }

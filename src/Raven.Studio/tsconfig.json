@@ -40,7 +40,6 @@
           "toastr",
           "diff",
           "ace",
-          "jszip",
           "bootstrap",
           "eonasdan-bootstrap-datetimepicker",
           "leaflet",

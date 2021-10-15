@@ -1,0 +1,214 @@
+const path = require("path");
+const webpack = require('webpack');
+const CircularDependencyPlugin = require("circular-dependency-plugin");
+const TerserPlugin = require("terser-webpack-plugin");
+const MiniCssExtractPlugin = require("mini-css-extract-plugin");
+const CssMinimizerPlugin = require("css-minimizer-webpack-plugin");
+const HtmlWebpackPlugin = require("html-webpack-plugin");
+const CopyPlugin = require("copy-webpack-plugin");
+const { CleanWebpackPlugin } = require('clean-webpack-plugin');
+const ZipPlugin = require("zip-webpack-plugin");
+
+const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
+
+module.exports = (env, args) => {
+    const isProductionMode = args && args.mode === 'production';
+
+    console.log(`PROD?: ${isProductionMode}`);
+
+    const cleanPlugin = new CleanWebpackPlugin({
+        verbose: true
+    });
+
+    const htmlPlugin = new HtmlWebpackPlugin({
+        template: path.join(__dirname, 'wwwroot/index.html')
+    });
+
+    const copyPlugin = new CopyPlugin({
+        patterns: [
+            {
+                from: path.resolve(__dirname, 'wwwroot/Content/ace/'),
+                to: "ace"
+            },
+            {
+                from: path.resolve(__dirname, "wwwroot/icons/"),
+            },
+            {
+                from: path.resolve(__dirname, "wwwroot/version.txt"),
+            }
+        ]
+    });
+
+    const miniCssExtractPlugin = new MiniCssExtractPlugin({
+        filename: "styles/[name].[contenthash:8].css",
+        chunkFilename: "styles/[name].[contenthash:8].css"
+    });
+    
+    const plugins = [
+        cleanPlugin,
+        miniCssExtractPlugin,
+        htmlPlugin,
+        copyPlugin,
+        new CircularDependencyPlugin({
+            // exclude detection of files based on a RegExp
+            exclude: /node_modules/,
+            failOnError: true,
+            allowAsyncCycles: false,
+            // set the current working directory for displaying module paths
+            cwd: process.cwd(),
+        }),
+        new webpack.DefinePlugin({
+            "window.ravenStudioRelease": isProductionMode
+        }),
+        new webpack.ProvidePlugin({
+            ko: "knockout",
+            "_": "lodash",
+            "jQuery": "jquery",
+            "jquery": "jquery",
+            "$": "jquery",
+            "Prism": "prismjs",
+            "QRCode": "qrcodejs",
+            'window.jQuery': 'jquery',
+            'window.ko': "knockout"
+        }),
+        new webpack.ContextReplacementPlugin(/moment[\/\\]locale$/, /(en)$/),
+        //new BundleAnalyzerPlugin()
+    ];
+
+    if (isProductionMode) {
+        plugins.push(new ZipPlugin({
+            filename: "Raven.Studio.zip"
+        }));
+    }
+    
+    return {
+        mode: isProductionMode ? "production" : "development",
+        devtool: isProductionMode ? "source-map" : "eval",
+        entry: {
+            main: "./typescript/main.ts"
+        },
+        output: {
+            path: __dirname + '/wwwroot/dist',
+            filename: 'assets/[name].[contenthash:8].js',
+            chunkFilename: "assets/[name].[contenthash:8].js",
+            publicPath: "/studio/"
+        },
+        plugins: plugins,
+        optimization: {
+            minimize: isProductionMode,
+            noEmitOnErrors: true,
+            usedExports: true,
+            minimizer: [
+                new TerserPlugin(),
+                new CssMinimizerPlugin()
+            ]
+        },
+        module: {
+            rules: [
+                {
+                    test: require.resolve('bootstrap-multiselect/dist/js/bootstrap-multiselect'),
+                    use: 'imports-loader?define=>false,this=>window',
+                },
+                {
+                    test: /\.less$/i,
+                    use: [
+                        {
+                            loader: isProductionMode
+                                ? MiniCssExtractPlugin.loader
+                                : 'style-loader'
+                        },
+                        {
+                            loader: "css-loader",
+                            options: {
+                                url: true
+                            }
+                        },
+                        {
+                            loader: 'resolve-url-loader',
+                            options: {
+                            }
+                        },
+                        {
+                            loader: "less-loader",
+                            options: {}
+                        }
+                    ]
+                },
+                { 
+                    test: /\.css$/,
+                    use: [
+                        {
+                            loader: isProductionMode
+                                ? MiniCssExtractPlugin.loader
+                                : 'style-loader'
+                        },
+                        {
+                            loader: "css-loader",
+                            options: {
+                                url: true
+                            }
+                        }
+                    ]
+                },
+                {
+                    test: /\.ts$/,
+                    use: 'ts-loader'
+                },
+                {
+                    test: /\.html$/,
+                    use: {
+                        loader: 'raw-loader',
+                        options: {
+                            esModule: false,
+                        },
+                    }
+                },
+                {
+                    test: /\.(ttf|eot|svg|woff(2)?)(\?[a-z0-9]+)?$/,
+                    loader: 'file-loader',
+                    options: {
+                        name: "[name].[hash:8].[ext]",
+                        outputPath: "assets/fonts/"
+                    }
+                },
+                {
+                    test: /\.(png|jpg|jpeg|gif|svg)$/,
+                    use: [{
+                        loader: 'url-loader',
+                        options: {
+                            name: 'assets/img/[name].[hash:8].[ext]',
+                            limit: 8192,
+                            esModule: false
+                        }
+                    }]
+                }
+            ]
+        },
+        resolve: {
+            modules: [path.resolve(__dirname, "../node_modules"), "node_modules"],
+            extensions: ['.js', '.ts', '.tsx'],
+            alias: {
+                common: path.resolve(__dirname, 'typescript/common'),
+                models: path.resolve(__dirname, 'typescript/models'),
+                commands: path.resolve(__dirname, 'typescript/commands'),
+                durandalPlugins: path.resolve(__dirname, 'typescript/durandalPlugins'),
+                viewmodels: path.resolve(__dirname, 'typescript/viewmodels'),
+                overrides: path.resolve(__dirname, 'typescript/overrides'),
+                widgets: path.resolve(__dirname, 'typescript/widgets'),
+                endpoints: path.resolve(__dirname, 'typescript/endpoints'),
+                views: path.resolve(__dirname, 'wwwroot/App/views'),
+                configuration: path.resolve(__dirname, 'typescript/configuration'),
+                
+                Content: path.resolve(__dirname, 'wwwroot/Content/'),
+                d3: path.resolve(__dirname, 'wwwroot/Content/custom_d3'),
+                qrcodejs: path.resolve(__dirname, 'wwwroot/Content/custom_qrcode'),
+                ["google.analytics"]: path.resolve(__dirname, 'wwwroot/Content/custom_ga'),
+                
+                Favico: path.resolve(__dirname, 'node_modules/favico.js/favico'),
+                durandal: path.resolve(__dirname, 'node_modules/durandal/js'),
+                plugins: path.resolve(__dirname, 'node_modules/durandal/js/plugins'),
+                jwerty: path.resolve(__dirname, 'node_modules/jwerty-globals-fixed/jwerty')
+            }
+        }
+    };
+};
