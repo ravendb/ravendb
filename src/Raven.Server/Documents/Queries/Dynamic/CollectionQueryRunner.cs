@@ -78,13 +78,13 @@ namespace Raven.Server.Documents.Queries.Dynamic
             }
         }
 
-        public override Task<IndexEntriesQueryResult> ExecuteIndexEntriesQuery(IndexQueryServerSide query, QueryOperationContext queryContext, long? existingResultEtag, OperationCancelToken token)
+        public override Task<IndexEntriesQueryResult> ExecuteIndexEntriesQuery(IndexQueryServerSide query, QueryOperationContext queryContext, bool ignoreLimit, long? existingResultEtag, OperationCancelToken token)
         {
             throw new NotSupportedException("Collection query is handled directly by documents storage so index entries aren't created underneath");
         }
 
         public override Task ExecuteStreamIndexEntriesQuery(IndexQueryServerSide query, QueryOperationContext queryContext, HttpResponse response,
-            IStreamQueryResultWriter<BlittableJsonReaderObject> writer, OperationCancelToken token)
+            IStreamQueryResultWriter<BlittableJsonReaderObject> writer, bool ignoreLimit, OperationCancelToken token)
         {
             throw new NotSupportedException("Collection query is handled directly by documents storage so index entries aren't created underneath");
         }

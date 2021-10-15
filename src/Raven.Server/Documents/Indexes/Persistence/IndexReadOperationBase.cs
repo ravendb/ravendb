@@ -44,7 +44,7 @@ namespace Raven.Server.Documents.Indexes.Persistence
             CancellationToken token);
 
         public abstract IEnumerable<BlittableJsonReaderObject> IndexEntries(IndexQueryServerSide query, Reference<int> totalResults, DocumentsOperationContext documentsContext,
-            Func<string, SpatialField> getSpatialField, CancellationToken token);
+            Func<string, SpatialField> getSpatialField, bool ignoreLimit, CancellationToken token);
 
         public abstract IEnumerable<string> DynamicEntriesFields(HashSet<string> staticFields);
 

@@ -32,13 +32,13 @@ namespace Raven.Server.Documents.Queries
             throw new NotSupportedException(ErrorMessage);
         }
 
-        public override Task<IndexEntriesQueryResult> ExecuteIndexEntriesQuery(IndexQueryServerSide query, QueryOperationContext queryContext, long? existingResultEtag, OperationCancelToken token)
+        public override Task<IndexEntriesQueryResult> ExecuteIndexEntriesQuery(IndexQueryServerSide query, QueryOperationContext queryContext, bool ignoreLimit, long? existingResultEtag, OperationCancelToken token)
         {
             throw new NotSupportedException(ErrorMessage);
         }
 
         public override Task ExecuteStreamIndexEntriesQuery(IndexQueryServerSide query, QueryOperationContext queryContext, HttpResponse response,
-            IStreamQueryResultWriter<BlittableJsonReaderObject> writer, OperationCancelToken token)
+            IStreamQueryResultWriter<BlittableJsonReaderObject> writer, bool ignoreLimit, OperationCancelToken token)
         {
             throw new NotSupportedException(ErrorMessage);
         }
