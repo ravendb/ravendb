@@ -816,17 +816,19 @@ loadToOrders(orderData);
 
                     var orderLines = result.Summary.First(x => x.IndexName == "orderlines");
 
-                    Assert.Equal(2, orderLines.Commands.Length); // delete and bulk
+                    Assert.Equal(3, orderLines.Commands.Length); // refresh, delete by query and bulk
 
-                    Assert.StartsWith("POST orderlines/_delete_by_query", orderLines.Commands[0]);
-                    Assert.StartsWith("POST orderlines/_bulk", orderLines.Commands[1]);
+                    Assert.StartsWith("POST orderlines/_refresh", orderLines.Commands[0]);
+                    Assert.StartsWith("POST orderlines/_delete_by_query", orderLines.Commands[1]);
+                    Assert.StartsWith("POST orderlines/_bulk", orderLines.Commands[2]);
 
                     var orders = result.Summary.First(x => x.IndexName == "orders");
 
-                    Assert.Equal(2, orders.Commands.Length); // delete and bulk
+                    Assert.Equal(3, orders.Commands.Length);  // refresh, delete by query and bulk
 
-                    Assert.StartsWith("POST orders/_delete_by_query", orders.Commands[0]);
-                    Assert.StartsWith("POST orders/_bulk", orders.Commands[1]);
+                    Assert.StartsWith("POST orders/_refresh", orders.Commands[0]);
+                    Assert.StartsWith("POST orders/_delete_by_query", orders.Commands[1]);
+                    Assert.StartsWith("POST orders/_bulk", orders.Commands[2]);
 
                     Assert.Equal("test output", result.DebugOutput[0]);
                 }
@@ -889,11 +891,11 @@ loadToOrders(orderData);
 
                     var orderLines = result.Summary.First(x => x.IndexName == "orderlines");
 
-                    Assert.Equal(1, orderLines.Commands.Length); // delete
+                    Assert.Equal(2, orderLines.Commands.Length); // refresh and delete by query
 
                     var orders = result.Summary.First(x => x.IndexName == "orders");
 
-                    Assert.Equal(1, orders.Commands.Length); // delete
+                    Assert.Equal(2, orders.Commands.Length); // refresh and delete by query
                 }
                 
                 using (var session = store.OpenAsyncSession())
