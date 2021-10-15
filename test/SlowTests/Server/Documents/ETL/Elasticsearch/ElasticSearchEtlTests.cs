@@ -252,18 +252,18 @@ loadToOrders(orderData);
                 var orderResponse = client.Search<object>(d => d
                     .Index(OrderIndexName)
                     .Query(q => q
-                        .Match(p => p
+                        .Term(p => p
                             .Field("Id")
-                            .Query("orders/1-a"))
+                            .Value("orders/1-a"))
                     )
                 );
 
                 var orderLineResponse = client.Search<object>(d => d
                     .Index(OrderLinesIndexName)
                     .Query(q => q
-                        .Match(p => p
+                        .Term(p => p
                             .Field("OrderId")
-                            .Query("orders/1-a"))
+                            .Value("orders/1-a"))
                     )
                 );
 
@@ -378,9 +378,9 @@ loadToOrders(orderData);
                 var orderResponse = client.Search<object>(d => d
                     .Index(OrderIndexName)
                     .Query(q => q
-                        .Match(p => p
+                        .Term(p => p
                             .Field("Id")
-                            .Query("orders/1-a"))
+                            .Value("orders/1-a"))
                     )
                 );
 
@@ -416,9 +416,9 @@ loadToOrders(orderData);
                 var orderResponse1 = client.Search<object>(d => d
                     .Index(OrderIndexName)
                     .Query(q => q
-                        .Match(p => p
+                        .Term(p => p
                             .Field("Id")
-                            .Query("orders/1-a"))
+                            .Value("orders/1-a"))
                     )
                 );
 
@@ -458,9 +458,9 @@ loadToOrders(orderData);
                 var userResponse1 = client.Search<object>(d => d
                     .Index("users")
                     .Query(q => q
-                        .MatchPhrase(p => p
+                        .Term(p => p
                             .Field("UserId")
-                            .Query("users/1"))
+                            .Value("users/1"))
                     )
                 );
 
@@ -472,9 +472,9 @@ loadToOrders(orderData);
                 var userResponse2 = client.Search<object>(d => d
                     .Index("users")
                     .Query(q => q
-                        .MatchPhrase(p => p
+                        .Term(p => p
                             .Field("UserId")
-                            .Query("people/1"))
+                            .Value("people/1"))
                     )
                 );
 
@@ -503,9 +503,9 @@ loadToOrders(orderData);
                 var userResponse3 = client.Search<object>(d => d
                     .Index("users")
                     .Query(q => q
-                        .MatchPhrase(p => p
+                        .Term(p => p
                             .Field("UserId")
-                            .Query("users/1"))
+                            .Value("users/1"))
                     )
                 );
 
@@ -517,9 +517,9 @@ loadToOrders(orderData);
                 var userResponse4 = client.Search<object>(d => d
                     .Index("users")
                     .Query(q => q
-                        .MatchPhrase(p => p
+                        .Term(p => p
                             .Field("UserId")
-                            .Query("people/1"))
+                            .Value("people/1"))
                     )
                 );
 
@@ -556,9 +556,9 @@ loadToOrders(orderData);
                 var userResponse = client.Search<object>(d => d
                     .Index("users")
                     .Query(q => q
-                        .Match(p => p
+                        .Term(p => p
                             .Field("UserId")
-                            .Query("users/1"))
+                            .Value("users/1"))
                     )
                 );
 
@@ -592,9 +592,9 @@ loadToOrders(orderData);
                 var userResponse = client.Search<object>(d => d
                     .Index("users")
                     .Query(q => q
-                        .Match(p => p
+                        .Term(p => p
                             .Field("UserId")
-                            .Query("users/1"))
+                            .Value("users/1"))
                     )
                 );
 
@@ -616,9 +616,9 @@ loadToOrders(orderData);
                 userResponse = client.Search<object>(d => d
                     .Index("users")
                     .Query(q => q
-                        .Match(p => p
+                        .Term(p => p
                             .Field("UserId")
-                            .Query("users/1"))
+                            .Value("users/1"))
                     )
                 );
 
@@ -713,7 +713,7 @@ loadToOrders(orderData);
                             }
                         },
                         AllowEtlOnNonEncryptedChannel = true
-                    }, new ElasticSearchConnectionString {Name = "test", Nodes = new[] {"http://localhost:9200"}});
+                    }, new ElasticSearchConnectionString {Name = "test", Nodes = ElasticSearchTestNodes.Instance.VerifiedNodes.Value });
 
                 var db = GetDatabase(src.Database).Result;
 
@@ -735,9 +735,9 @@ loadToOrders(orderData);
                 var userResponse1 = client.Search<object>(d => d
                     .Index("users")
                     .Query(q => q
-                        .MatchPhrase(p => p
+                        .Term(p => p
                             .Field("UserId")
-                            .Query("users/1-a"))
+                            .Value("users/1-a"))
                     )
                 );
 
