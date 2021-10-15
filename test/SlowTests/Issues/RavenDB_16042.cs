@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Orders;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
@@ -93,6 +94,52 @@ namespace SlowTests.Issues
 
                 var index = database.IndexStore.GetIndex(new Products_ByName().IndexName);
                 Assert.IsType(typeof(MapIndex), index);
+            }
+        }
+
+        [Fact]
+        public async Task Should_Be_Able_To_Restore_Snapshot_Backup()
+        {
+            var path1 = NewDataPath();
+            var path2 = NewDataPath();
+            var backupPath = NewDataPath();
+
+            IOExtensions.DeleteDirectory(path1);
+            IOExtensions.DeleteDirectory(path2);
+            IOExtensions.DeleteDirectory(backupPath);
+
+            using (var store = GetDocumentStore(new Options
+            {
+                RunInMemory = false,
+                Path = path1
+            }))
+            {
+                await new Products_ByName().ExecuteAsync(store);
+
+                var config = new PeriodicBackupConfiguration
+                {
+                    BackupType = BackupType.Snapshot,
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = backupPath
+                    },
+                    IncrementalBackupFrequency = "* * * * *" //every minute
+                };
+
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+
+                var status = await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store);
+                string backupDirectory = status.LocalBackup.BackupDirectory;
+
+                var databaseName = $"{store.Database}_restore";
+                using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration { DataDirectory = path2, BackupLocation = backupDirectory, DatabaseName = databaseName }))
+                {
+                    var database = await GetDocumentDatabaseInstanceFor(store, databaseName);
+                    Assert.Equal(databaseName, database.Name);
+
+                    var index = database.IndexStore.GetIndex(new Products_ByName().IndexName);
+                    Assert.IsType(typeof(MapIndex), index);
+                }
             }
         }
 

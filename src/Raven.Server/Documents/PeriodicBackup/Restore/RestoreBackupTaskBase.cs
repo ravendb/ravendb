@@ -35,6 +35,7 @@ using Sparrow.Utils;
 using Voron.Impl.Backup;
 using Voron.Util.Settings;
 using DatabaseSmuggler = Raven.Client.Documents.Smuggler.DatabaseSmuggler;
+using Index = Raven.Server.Documents.Indexes.Index;
 
 namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
@@ -334,6 +335,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                             result.Subscriptions.Processed = true;
                             onProgress.Invoke(result.Progress);
                         }
+
+                        if (snapshotRestore)
+                            RegenerateIndexes(configuration, database);
                     }
 
                     // after the db for restore is done, we can safely set the db state to normal and write the DatabaseRecord
@@ -394,6 +398,30 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             finally
             {
                 Dispose();
+            }
+
+            void RegenerateIndexes(RavenConfiguration configuration, DocumentDatabase database)
+            {
+                // this code will generate new DatabaseId for each index.
+                // This is something that we need to do when snapshot restore is executed to match the newly generated database id
+
+                var indexesPath = configuration.Indexing.StoragePath.FullPath;
+                foreach (var indexPath in Directory.GetDirectories(indexesPath))
+                {
+                    Index index = null;
+                    try
+                    {
+                        index = Index.Open(indexPath, database, generateNewDatabaseId: true);
+                    }
+                    catch (Exception e)
+                    {
+                        result.AddError($"Could not open index from path '{indexPath}'. Error: {e.Message}");
+                    }
+                    finally
+                    {
+                        index?.Dispose();
+                    }
+                }
             }
         }
 
