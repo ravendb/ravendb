@@ -4,7 +4,6 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents;
@@ -80,10 +79,11 @@ loadToOrders(orderData);
                 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                EnsureNonStaleElasticResults(client);
-
                 var ordersCount = client.Count<object>(c => c.Index(OrderIndexName));
                 var orderLinesCount = client.Count<object>(c => c.Index(OrderLinesIndexName));
+
+                Assert.True(ordersCount.IsValid);
+                Assert.True(orderLinesCount.IsValid);
 
                 Assert.Equal(1, ordersCount.Count);
                 Assert.Equal(2, orderLinesCount.Count);
@@ -99,10 +99,11 @@ loadToOrders(orderData);
                 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                EnsureNonStaleElasticResults(client);
-
                 var ordersCountAfterDelete = client.Count<object>(c => c.Index(OrderIndexName));
                 var orderLinesCountAfterDelete = client.Count<object>(c => c.Index(OrderLinesIndexName));
+
+                Assert.True(ordersCount.IsValid);
+                Assert.True(orderLinesCount.IsValid);
 
                 Assert.Equal(0, ordersCountAfterDelete.Count);
                 Assert.Equal(0, orderLinesCountAfterDelete.Count);
@@ -143,8 +144,6 @@ loadToOrders(orderData);
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                EnsureNonStaleElasticResults(client);
-
                 var ordersCount = client.Count<object>(c => c.Index(OrderIndexName));
                 var orderLinesCount = client.Count<object>(c => c.Index(OrderLinesIndexName));
 
@@ -165,9 +164,6 @@ loadToOrders(orderData);
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                EnsureNonStaleElasticResults(client);
-
-                Thread.Sleep(3000);
                 var ordersCountAfterDelete = client.Count<object>(c => c.Index(OrderIndexName));
                 var orderLinesCountAfterDelete = client.Count<object>(c => c.Index(OrderLinesIndexName));
 
@@ -247,8 +243,6 @@ loadToOrders(orderData);
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                EnsureNonStaleElasticResults(client);
-
                 var orderResponse = client.Search<object>(d => d
                     .Index(OrderIndexName)
                     .Query(q => q
@@ -288,8 +282,6 @@ loadToOrders(orderData);
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                EnsureNonStaleElasticResults(client);
-
                 var ordersCountAfterDelete = client.Count<object>(c => c.Index(OrderIndexName));
                 var orderLinesCountAfterDelete = client.Count<object>(c => c.Index(OrderLinesIndexName));
                 
@@ -321,8 +313,6 @@ loadToOrders(orderData);
 
                 etlDone.Wait(TimeSpan.FromSeconds(30));
 
-                EnsureNonStaleElasticResults(client);
-
                 var ordersCount = client.Count<object>(c => c.Index(OrderIndexName));
                 var orderLinesCount = client.Count<object>(c => c.Index(OrderLinesIndexName));
 
@@ -339,8 +329,6 @@ loadToOrders(orderData);
                 }
 
                 etlDone.Wait(TimeSpan.FromSeconds(90));
-
-                EnsureNonStaleElasticResults(client);
 
                 var ordersCountAfterDelete = client.Count<object>(c => c.Index(OrderIndexName));
                 var orderLinesCountAfterDelete = client.Count<object>(c => c.Index(OrderLinesIndexName));
@@ -372,8 +360,6 @@ loadToOrders(orderData);
                 var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
-
-                EnsureNonStaleElasticResults(client);
 
                 var orderResponse = client.Search<object>(d => d
                     .Index(OrderIndexName)
@@ -410,8 +396,6 @@ loadToOrders(orderData);
                 }
 
                 etlDone.Wait(TimeSpan.FromMinutes(2));
-
-                EnsureNonStaleElasticResults(client);
 
                 var orderResponse1 = client.Search<object>(d => d
                     .Index(OrderIndexName)
@@ -452,8 +436,6 @@ loadToOrders(orderData);
                 }
                 
                 etlDone.Wait(TimeSpan.FromSeconds(20));
-
-                EnsureNonStaleElasticResults(client);
 
                 var userResponse1 = client.Search<object>(d => d
                     .Index("users")
@@ -497,8 +479,6 @@ loadToOrders(orderData);
                 }
 
                 etlDone.Wait(TimeSpan.FromSeconds(20));
-
-                EnsureNonStaleElasticResults(client);
 
                 var userResponse3 = client.Search<object>(d => d
                     .Index("users")
@@ -550,8 +530,6 @@ loadToOrders(orderData);
                 }
 
                 etlDone.Wait(TimeSpan.FromSeconds(30));
-                
-                EnsureNonStaleElasticResults(client);
 
                 var userResponse = client.Search<object>(d => d
                     .Index("users")
@@ -587,8 +565,6 @@ loadToOrders(orderData);
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                EnsureNonStaleElasticResults(client);
-
                 var userResponse = client.Search<object>(d => d
                     .Index("users")
                     .Query(q => q
@@ -610,8 +586,6 @@ loadToOrders(orderData);
                 }
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
-
-                EnsureNonStaleElasticResults(client);
 
                 userResponse = client.Search<object>(d => d
                     .Index("users")
@@ -730,8 +704,6 @@ loadToOrders(orderData);
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                EnsureNonStaleElasticResults(client);
-
                 var userResponse1 = client.Search<object>(d => d
                     .Index("users")
                     .Query(q => q
@@ -816,19 +788,17 @@ loadToOrders(orderData);
 
                     var orderLines = result.Summary.First(x => x.IndexName == "orderlines");
 
-                    Assert.Equal(3, orderLines.Commands.Length); // refresh, delete by query and bulk
+                    Assert.Equal(2, orderLines.Commands.Length); // delete by query and bulk
 
-                    Assert.StartsWith("POST orderlines/_refresh", orderLines.Commands[0]);
-                    Assert.StartsWith("POST orderlines/_delete_by_query", orderLines.Commands[1]);
-                    Assert.StartsWith("POST orderlines/_bulk", orderLines.Commands[2]);
+                    Assert.StartsWith("POST orderlines/_delete_by_query?refresh=true", orderLines.Commands[0]);
+                    Assert.StartsWith("POST orderlines/_bulk?refresh=wait_for", orderLines.Commands[1]);
 
                     var orders = result.Summary.First(x => x.IndexName == "orders");
 
-                    Assert.Equal(3, orders.Commands.Length);  // refresh, delete by query and bulk
+                    Assert.Equal(2, orders.Commands.Length);  // refresh, delete by query and bulk
 
-                    Assert.StartsWith("POST orders/_refresh", orders.Commands[0]);
-                    Assert.StartsWith("POST orders/_delete_by_query", orders.Commands[1]);
-                    Assert.StartsWith("POST orders/_bulk", orders.Commands[2]);
+                    Assert.StartsWith("POST orders/_delete_by_query?refresh=true", orders.Commands[0]);
+                    Assert.StartsWith("POST orders/_bulk?refresh=wait_for", orders.Commands[1]);
 
                     Assert.Equal("test output", result.DebugOutput[0]);
                 }
@@ -891,11 +861,11 @@ loadToOrders(orderData);
 
                     var orderLines = result.Summary.First(x => x.IndexName == "orderlines");
 
-                    Assert.Equal(2, orderLines.Commands.Length); // refresh and delete by query
+                    Assert.Equal(1, orderLines.Commands.Length); // delete
 
                     var orders = result.Summary.First(x => x.IndexName == "orders");
 
-                    Assert.Equal(2, orders.Commands.Length); // refresh and delete by query
+                    Assert.Equal(1, orders.Commands.Length); // delete by query
                 }
                 
                 using (var session = store.OpenAsyncSession())

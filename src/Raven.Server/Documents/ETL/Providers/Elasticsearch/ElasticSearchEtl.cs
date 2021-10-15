@@ -127,7 +127,7 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
                 {
                     var bulkBody = PostData.MultiJson(actionDataPairs);
 
-                    var bulkIndexResponse = _client.LowLevel.Bulk<BulkResponse>(indexName, bulkBody);
+                    var bulkIndexResponse = _client.LowLevel.Bulk<BulkResponse>(indexName, bulkBody, new BulkRequestParameters { Refresh = Refresh.WaitFor });
 
                     if (bulkIndexResponse.IsValid == false)
                         ThrowElasticSearchLoadException($"Failed to index data to '{index}' index", bulkIndexResponse.ServerError, bulkIndexResponse.OriginalException,
@@ -165,17 +165,9 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
                 idsToDelete.Add(LowerCaseIndexIdProperty(delete.DocumentId));
             }
 
-            // we are about to delete by query so we need to ensure that all documents are available for search
-            // this way we won't skip just inserted documents that could not be indexed yet
-
-            var refreshResponse = _client.Indices.Refresh(new RefreshRequest(Indices.Index(indexName)));
-
-            if (refreshResponse.IsValid == false)
-                ThrowElasticSearchLoadException($"Failed to refresh index '{index}' before doing delete by query",
-                    refreshResponse.ServerError, refreshResponse.OriginalException, refreshResponse.DebugInformation);
-
             var deleteResponse = _client.DeleteByQuery<string>(d => d
                 .Index(indexName)
+                .Refresh()
                 .Query(q => q
                     .Terms(p => p
                         .Field(index.IndexIdProperty)

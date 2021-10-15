@@ -16,8 +16,6 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
             {
                 // first, delete all the rows that might already exist there
 
-                result.Add(GenerateRefreshIndexCommandText(records.IndexName.ToLower()));
-
                 result.Add(GenerateDeleteItemsCommandText(records.IndexName.ToLower(), records.IndexIdProperty,
                     records.Deletes));
             }
@@ -25,15 +23,6 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
             result.AddRange(GenerateInsertItemsCommandText(records.IndexName.ToLower(), records, context));
 
             return result;
-        }
-
-        private string GenerateRefreshIndexCommandText(string indexName)
-        {
-            var sb = new StringBuilder("POST ")
-                .Append(indexName)
-                .AppendLine("/_refresh");
-
-                return sb.ToString();
         }
 
         private string GenerateDeleteItemsCommandText(string indexName, string idField, List<ElasticSearchItem> elasticSearchItems)
@@ -62,7 +51,7 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
 
                 var sb = new StringBuilder("POST ")
                     .Append(indexName)
-                    .AppendLine("/_delete_by_query")
+                    .AppendLine("/_delete_by_query?refresh=true")
                     .AppendLine(resultJson);
 
                 return sb.ToString();
@@ -77,7 +66,7 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
             {
                 var sb = new StringBuilder("POST ")
                     .Append(indexName)
-                    .AppendLine("/_bulk");
+                    .AppendLine("/_bulk?refresh=wait_for");
 
                 foreach (var item in index.Inserts)
                 {
