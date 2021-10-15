@@ -376,7 +376,7 @@ namespace Raven.Server.Documents.Indexes
                     if (databaseId != null) // backward compatibility
                     {
                         if (databaseId != documentDatabase.DbBase64Id) 
-                            throw new IndexOpenException($"Could not open index because stored database ID ('{databaseId}') is different than current database ID ('{documentDatabase.DbBase64Id}'). This is often an indication that data was copied directly from a different database.");
+                            throw new IndexOpenException($"Could not open index because stored database ID ('{databaseId}') is different than current database ID ('{documentDatabase.DbBase64Id}'). A common reason for this is that the index was copied from another database.");
                     }
                 }
 
