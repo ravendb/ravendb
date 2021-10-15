@@ -125,7 +125,7 @@ namespace Graphs
         /// <summary>
         /// Same as NodeIndexLimit, just cast to an integer.  
         /// </summary>
-        public int NodeCount { get { return m_nodes.Count; } }
+        public long NodeCount { get { return m_nodes.Count; } }
         /// <summary>
         /// It is expected that users will want additional information associated with TYPES of the nodes of the graph.  They can
         /// do this by allocating an array of code:NodeTypeIndexLimit and then indexing this by code:NodeTypeIndex
