@@ -3,7 +3,7 @@
     <Description>Raven.Server is the database server for RavenDB</Description>
     <Authors>Hibernating Rhinos</Authors>
     <TargetFramework>net5.0</TargetFramework>
-    <RuntimeFrameworkVersion>5.0.10</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>5.0.11</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>Raven.Server</AssemblyName>
     <OutputType>Exe</OutputType>
@@ -115,8 +115,8 @@
   </ItemGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
-    <PackageReference Include="AWSSDK.Glacier" Version="3.7.0.68" />
-    <PackageReference Include="AWSSDK.S3" Version="3.7.3.1" />
+    <PackageReference Include="AWSSDK.Glacier" Version="3.7.0.82" />
+    <PackageReference Include="AWSSDK.S3" Version="3.7.3.15" />
     <PackageReference Include="Azure.Storage.Blobs" Version="12.10.0" />
     <PackageReference Include="CsvHelper" Version="27.1.1" />
     <PackageReference Include="DasMulli.Win32.ServiceUtils.Signed" Version="1.1.0" />
@@ -125,7 +125,7 @@
     </PackageReference>
     <PackageReference Include="Jint" Version="3.0.30-ravendb" />
     <PackageReference Include="Google.Api.Gax.Rest" Version="3.5.0" />
-    <PackageReference Include="Google.Cloud.Storage.V1" Version="3.5.0" />
+    <PackageReference Include="Google.Cloud.Storage.V1" Version="3.6.0" />
     <PackageReference Include="Lextm.SharpSnmpLib.Engine" Version="11.3.102" />
     <PackageReference Include="Lucene.Net" Version="3.0.52002" />
     <PackageReference Include="Lucene.Net.Contrib.Spatial.NTS" Version="3.0.52002" />
@@ -148,7 +148,7 @@
     <PackageReference Include="Oracle.ManagedDataAccess.Core" Version="3.21.3" />
     <PackageReference Include="NEST" Version="7.13.0" />
     <PackageReference Include="Portable.BouncyCastle" Version="1.8.10" />
-    <PackageReference Include="Parquet.Net" Version="3.9.0" />
+    <PackageReference Include="Parquet.Net" Version="3.9.1" />
     <PackageReference Include="Raven.CodeAnalysis" Version="1.0.11">
       <PrivateAssets>All</PrivateAssets>
     </PackageReference>

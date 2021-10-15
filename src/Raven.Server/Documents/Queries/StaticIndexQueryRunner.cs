@@ -52,7 +52,7 @@ namespace Raven.Server.Documents.Queries
             }
         }
 
-        public override async Task ExecuteStreamIndexEntriesQuery(IndexQueryServerSide query, QueryOperationContext queryContext, HttpResponse response, IStreamQueryResultWriter<BlittableJsonReaderObject> writer, OperationCancelToken token)
+        public override async Task ExecuteStreamIndexEntriesQuery(IndexQueryServerSide query, QueryOperationContext queryContext, HttpResponse response, IStreamQueryResultWriter<BlittableJsonReaderObject> writer, bool ignoreLimit, OperationCancelToken token)
         {
             var index = GetIndex(query.Metadata.IndexName);
 
@@ -60,11 +60,11 @@ namespace Raven.Server.Documents.Queries
 
             using (QueryRunner.MarkQueryAsRunning(index.Name, query, token, true))
             {
-                await index.StreamIndexEntriesQuery(response, writer, query, queryContext, token);
+                await index.StreamIndexEntriesQuery(response, writer, query, queryContext, ignoreLimit, token);
             }
         }
 
-        public override async Task<IndexEntriesQueryResult> ExecuteIndexEntriesQuery(IndexQueryServerSide query, QueryOperationContext queryContext, long? existingResultEtag, OperationCancelToken token)
+        public override async Task<IndexEntriesQueryResult> ExecuteIndexEntriesQuery(IndexQueryServerSide query, QueryOperationContext queryContext, bool ignoreLimit, long? existingResultEtag, OperationCancelToken token)
         {
             var index = GetIndex(query.Metadata.IndexName);
 
@@ -79,7 +79,7 @@ namespace Raven.Server.Documents.Queries
 
             using (QueryRunner.MarkQueryAsRunning(index.Name, query, token))
             {
-                return await index.IndexEntries(query, queryContext, token);
+                return await index.IndexEntries(query, queryContext, ignoreLimit, token);
             }
         }
 
