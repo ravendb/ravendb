@@ -105,7 +105,7 @@ namespace Raven.Server.Documents.Queries
             return await ExecuteQuery(res, query, queryContext, existingResultEtag, token);
         }
 
-        public override Task ExecuteStreamIndexEntriesQuery(IndexQueryServerSide query, QueryOperationContext queryContext, HttpResponse response, IStreamQueryResultWriter<BlittableJsonReaderObject> writer,
+        public override Task ExecuteStreamIndexEntriesQuery(IndexQueryServerSide query, QueryOperationContext queryContext, HttpResponse response, IStreamQueryResultWriter<BlittableJsonReaderObject> writer, bool ignoreLimit,
             OperationCancelToken token)
         {
             throw new NotImplementedException();
@@ -338,7 +338,7 @@ namespace Raven.Server.Documents.Queries
             throw new NotSupportedException("You cannot delete based on graph query");
         }
 
-        public override Task<IndexEntriesQueryResult> ExecuteIndexEntriesQuery(IndexQueryServerSide query, QueryOperationContext queryContext, long? existingResultEtag, OperationCancelToken token)
+        public override Task<IndexEntriesQueryResult> ExecuteIndexEntriesQuery(IndexQueryServerSide query, QueryOperationContext queryContext, bool ignoreLimit, long? existingResultEtag, OperationCancelToken token)
         {
             throw new NotSupportedException("Graph queries do not expose index queries");
         }

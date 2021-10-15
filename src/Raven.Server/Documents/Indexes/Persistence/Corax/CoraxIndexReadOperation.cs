@@ -151,7 +151,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         }
 
         public override IEnumerable<BlittableJsonReaderObject> IndexEntries(IndexQueryServerSide query, Reference<int> totalResults,
-            DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField, CancellationToken token)
+            DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField, bool ignoreLimit, CancellationToken token)
         {
             throw new NotImplementedException();
         }

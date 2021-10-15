@@ -2975,10 +2975,10 @@ namespace Raven.Server.Documents.Indexes
         }
 
         public virtual async Task StreamIndexEntriesQuery(HttpResponse response, IStreamQueryResultWriter<BlittableJsonReaderObject> writer,
-            IndexQueryServerSide query, QueryOperationContext queryContext, OperationCancelToken token)
+            IndexQueryServerSide query, QueryOperationContext queryContext, bool ignoreLimit, OperationCancelToken token)
         {
             var result = new StreamDocumentIndexEntriesQueryResult(response, writer, token);
-            await IndexEntriesQueryInternal(result, query, queryContext, token);
+            await IndexEntriesQueryInternal(result, query, queryContext, ignoreLimit, token);
             result.Flush();
 
             DocumentDatabase.QueryMetadataCache.MaybeAddToCache(query.Metadata, Name);
@@ -3279,6 +3279,7 @@ namespace Raven.Server.Documents.Indexes
             TQueryResult resultToFill,
             IndexQueryServerSide query,
             QueryOperationContext queryContext,
+            bool ignoreLimit,
             OperationCancelToken token)
           where TQueryResult : QueryResultServerSide<BlittableJsonReaderObject>
         {
@@ -3348,7 +3349,7 @@ namespace Raven.Server.Documents.Indexes
                         {
                             var totalResults = new Reference<int>();
 
-                            foreach (var indexEntry in reader.IndexEntries(query, totalResults, queryContext.Documents, GetOrAddSpatialField, token.Token))
+                            foreach (var indexEntry in reader.IndexEntries(query, totalResults, queryContext.Documents, GetOrAddSpatialField, ignoreLimit, token.Token))
                             {
                                 resultToFill.TotalResults = totalResults.Value;
                                 resultToFill.LongTotalResults = totalResults.Value;
@@ -3583,10 +3584,11 @@ namespace Raven.Server.Documents.Indexes
         public virtual async Task<IndexEntriesQueryResult> IndexEntries(
             IndexQueryServerSide query,
             QueryOperationContext queryContext,
+            bool ignoreLimit,
             OperationCancelToken token)
         {
             var result = new IndexEntriesQueryResult();
-            await IndexEntriesQueryInternal(result, query, queryContext, token);
+            await IndexEntriesQueryInternal(result, query, queryContext, ignoreLimit, token);
             return result;
         }
 
