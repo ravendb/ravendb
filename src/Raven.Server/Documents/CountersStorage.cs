@@ -964,7 +964,7 @@ namespace Raven.Server.Documents
                                     ThrowMissingProperty(counterKeySlice, CounterNames);
                                 }
 
-                                if (MergeCounterIfNeeded(context, localCounters, ref prop, putCountersData.DbIdsHolder, sourceDbIds, sourceCounterNames, originalNames,
+                                if (MergeCounterIfNeeded(context, localCounters, ref prop, putCountersData.DbIdsHolder, sourceDbIds, sourceCounterNames, originalNames, documentId,
                                         out var localCounterValues, out var changeType) == false)
                                 {
                                     continue;
@@ -1105,6 +1105,7 @@ namespace Raven.Server.Documents
             BlittableJsonReaderArray sourceDbIds,
             BlittableJsonReaderObject sourceCounterNames,
             BlittableJsonReaderObject localCounterNames,
+            string docId,
             out BlittableJsonReaderObject.RawBlob localCounterValues,
             out CounterChangeTypes changeType)
         {
@@ -1182,7 +1183,7 @@ namespace Raven.Server.Documents
                             if (deletedLocalCounter == deletedSourceCounter)
                                 return false;
 
-                            var mergedCv = MergeDeletedCounterVectors(deletedLocalCounter, deletedSourceCounter);
+                            var mergedCv = MergeDeletedCounterVectors(deletedLocalCounter, deletedSourceCounter, docId, counterName);
 
                             localCounters.Modifications ??= new DynamicJsonValue(localCounters);
                             localCounters.Modifications[counterName] = mergedCv;
@@ -2083,12 +2084,12 @@ namespace Raven.Server.Documents
             return list.ToArray();
         }
 
-        private static string MergeDeletedCounterVectors(string deletedA, string deletedB)
+        private static string MergeDeletedCounterVectors(string deletedA, string deletedB, string docId, string counterName)
         {
             var mergeVectorBuffer = new List<ChangeVectorEntry>();
 
-            MergeDeletedCounterVector(deletedA, mergeVectorBuffer);
-            MergeDeletedCounterVector(deletedB, mergeVectorBuffer);
+            MergeDeletedCounterVector(deletedA, mergeVectorBuffer, docId, counterName);
+            MergeDeletedCounterVector(deletedB, mergeVectorBuffer, docId, counterName);
 
             var sb = new StringBuilder();
             for (int i = 0; i < mergeVectorBuffer.Count; i++)
@@ -2104,7 +2105,7 @@ namespace Raven.Server.Documents
             return sb.ToString();
         }
 
-        private static void MergeDeletedCounterVector(string deletedCounterVector, List<ChangeVectorEntry> entries)
+        private static void MergeDeletedCounterVector(string deletedCounterVector, List<ChangeVectorEntry> entries, string docId, string counterName)
         {
             if (string.IsNullOrEmpty(deletedCounterVector))
                 return;
@@ -2122,7 +2123,7 @@ namespace Raven.Server.Documents
                     : span.Slice(currentPos);
 
                 if (long.TryParse(etagStr, out var etag) == false)
-                    throw new InvalidDataException("Invalid deleted counter string: " + deletedCounterVector);
+                    throw new InvalidDataException($"Invalid deleted counter string: '{deletedCounterVector}'. On document : '{docId}', Counter name : '{counterName}'");
 
                 var found = false;
                 for (int i = 0; i < entries.Count; i++)
