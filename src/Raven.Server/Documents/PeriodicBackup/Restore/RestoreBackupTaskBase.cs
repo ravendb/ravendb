@@ -406,6 +406,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 // This is something that we need to do when snapshot restore is executed to match the newly generated database id
 
                 var indexesPath = configuration.Indexing.StoragePath.FullPath;
+                if (Directory.Exists(indexesPath) == false)
+                    return;
+
                 foreach (var indexPath in Directory.GetDirectories(indexesPath))
                 {
                     Index index = null;
