@@ -153,10 +153,12 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 
                 using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
-                    List<string> log = new();
+                    var log = new List<string>();
 
-                    await TcpUtils.ConnectSecuredTcpSocket(info, ServerStore.Engine.ClusterCertificate, Server.CipherSuitesPolicy,
-                        TcpConnectionHeaderMessage.OperationTypes.Ping, NegotiationCallback, context, ServerStore.Engine.TcpConnectionTimeout, log, cts.Token);
+                    using (await TcpUtils.ConnectSecuredTcpSocket(info, ServerStore.Engine.ClusterCertificate, Server.CipherSuitesPolicy,
+                        TcpConnectionHeaderMessage.OperationTypes.Ping, NegotiationCallback, context, ServerStore.Engine.TcpConnectionTimeout, log, cts.Token))
+                    {
+                    }
 
                     result.Log = log;
 

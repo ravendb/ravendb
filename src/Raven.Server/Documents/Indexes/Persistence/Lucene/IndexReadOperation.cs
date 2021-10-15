@@ -861,7 +861,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
-        public IEnumerable<BlittableJsonReaderObject> IndexEntries(IndexQueryServerSide query, Reference<int> totalResults, DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField, CancellationToken token)
+        public IEnumerable<BlittableJsonReaderObject> IndexEntries(IndexQueryServerSide query, Reference<int> totalResults, DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField, bool ignoreLimit, CancellationToken token)
         {
             var docsToGet = GetPageSize(_searcher, query.PageSize);
             var position = query.Start;
@@ -870,7 +870,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             using (GetSort(query, _index, getSpatialField, documentsContext, out var sort))
             {
                 var search = ExecuteQuery(luceneQuery, query.Start, docsToGet, sort);
-                var termsDocs = IndexedTerms.ReadAllEntriesFromIndex(_searcher.IndexReader, documentsContext, _state);
+                var termsDocs = IndexedTerms.ReadAllEntriesFromIndex(_searcher.IndexReader, documentsContext, ignoreLimit, _state);
 
                 totalResults.Value = search.TotalHits;
 

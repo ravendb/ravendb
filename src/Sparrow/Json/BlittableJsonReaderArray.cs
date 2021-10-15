@@ -339,5 +339,11 @@ namespace Sparrow.Json
             AssertContextNotDisposed();
             return _count;
         }
+
+        public void EnsureArrayModifiable()
+        {
+            Modifications ??= new DynamicJsonArray(this);
+            Modifications.SkipOriginalArray = true;
+        }
     }
 }

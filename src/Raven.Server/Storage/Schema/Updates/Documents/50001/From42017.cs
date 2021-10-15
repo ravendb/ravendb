@@ -382,7 +382,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                                     ThrowMissingProperty(counterKeySlice, CounterNames);
                                 }
 
-                                if (step.DocumentsStorage.CountersStorage.MergeCounterIfNeeded(context, localCounters, ref prop, putCountersData.DbIdsHolder, sourceDbIds, sourceCounterNames, originalNames,
+                                if (step.DocumentsStorage.CountersStorage.MergeCounterIfNeeded(context, localCounters, ref prop, putCountersData.DbIdsHolder, sourceDbIds, sourceCounterNames, originalNames, documentId,
                                         out _, out var changeType) == false)
                                 {
                                     continue;

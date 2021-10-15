@@ -815,6 +815,16 @@ namespace Raven.Server.Documents.Handlers
 
                             break;
 
+                        case CommandType.JsonPatch:
+                            
+                            cmd.JsonPatchCommand.ExecuteDirectly(context);
+
+                            var lastChangeVectorJsonPatch = cmd.JsonPatchCommand.HandleReply(Reply, ModifiedCollections, Database);
+
+                            if (lastChangeVectorJsonPatch != null)
+                                LastChangeVector = lastChangeVectorJsonPatch;
+                            break;
+
                         case CommandType.DELETE:
                             if (cmd.IdPrefixed == false)
                             {
@@ -1087,6 +1097,7 @@ namespace Raven.Server.Documents.Handlers
 
                             Reply.Add(forceRevisionReply);
                             break;
+                        
                     }
                 }
 

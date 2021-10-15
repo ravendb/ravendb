@@ -12,6 +12,7 @@ using Microsoft.Net.Http.Headers;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Commands.Batches;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.TimeSeries;
@@ -20,6 +21,7 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.Util;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.ShardedHandlers;
+using Raven.Server.Documents.TransactionCommands;
 using Raven.Server.Exceptions;
 using Raven.Server.ServerWide;
 using Raven.Server.Smuggler;
@@ -28,6 +30,7 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Utils;
+using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -41,6 +44,7 @@ namespace Raven.Server.Documents.Handlers
             public BlittableJsonReaderArray Ids;
             public BlittableJsonReaderObject Document;
             public PatchRequest Patch;
+            public List<JsonPatchCommand.Command> JsonPatchCommands;
             public BlittableJsonReaderObject PatchArgs;
             public PatchRequest PatchIfMissing;
             public BlittableJsonReaderObject CreateIfMissing;
@@ -60,6 +64,9 @@ namespace Raven.Server.Documents.Handlers
 
             [JsonIgnore]
             public PatchDocumentCommandBase PatchCommand;
+
+            [JsonIgnore]
+            public JsonPatchCommand JsonPatchCommand;
 
             #region Attachment
 
@@ -305,6 +312,15 @@ namespace Raven.Server.Documents.Handlers
                                     identityPartsSeparator: separator
                                 );
                         }
+
+                    if (commandData.Type == CommandType.JsonPatch)
+                    {
+                        commandData.JsonPatchCommand = new JsonPatchCommand(
+                            commandData.Id, 
+                            commandData.JsonPatchCommands, 
+                            commandData.ReturnDocument,
+                            context);
+                    }
 
                         if (commandData.Type == CommandType.BatchPATCH)
                         {
@@ -782,6 +798,13 @@ namespace Raven.Server.Documents.Handlers
                         commandData.Patch = PatchRequest.Parse(patch, out commandData.PatchArgs);
                         break;
 
+                    case CommandPropertyName.JsonPatch:
+                        while (parser.Read() == false)
+                            await RefillParserBuffer(stream, buffer, parser, token);
+                        var jsonPatch = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token);
+                        commandData.JsonPatchCommands = JsonPatchCommand.Parse(jsonPatch);
+                        break;
+
                     case CommandPropertyName.TimeSeries:
                         while (parser.Read() == false)
                             await RefillParserBuffer(stream, buffer, parser, token);
@@ -1141,9 +1164,12 @@ namespace Raven.Server.Documents.Handlers
 
             #endregion RavenData
 
-            FromEtl
+            FromEtl,
+
+            JsonPatch
 
             // other properties are ignore (for legacy support)
+
         }
 
         private static unsafe CommandPropertyName GetPropertyType(JsonParserState state)
@@ -1279,6 +1305,11 @@ namespace Raven.Server.Documents.Handlers
                         return CommandPropertyName.ForceRevisionCreationStrategy;
                     return CommandPropertyName.NoSuchProperty;
 
+                case 9:
+                    if (*(long*)state.StringBuffer == 7166459905131377482 &&
+                        state.StringBuffer[8] == (byte)'h')
+                        return CommandPropertyName.JsonPatch;
+                    return CommandPropertyName.NoSuchProperty;
                 default:
                     return CommandPropertyName.NoSuchProperty;
             }
@@ -1423,6 +1454,11 @@ namespace Raven.Server.Documents.Handlers
                         *(int*)(state.StringBuffer + sizeof(long) + sizeof(long)) == 1869182049 &&
                         state.StringBuffer[sizeof(long) + sizeof(long) + sizeof(int)] == (byte)'n')
                         return CommandType.ForceRevisionCreation;
+                    break;
+                case 9:
+                    if (*(long*)state.StringBuffer == 7166459905131377482 &&
+                        state.StringBuffer[8] == (byte)'h')
+                        return CommandType.JsonPatch;
                     break;
             }
 

@@ -146,7 +146,7 @@ namespace Raven.Server.Documents.Queries
         }
 
         public override async Task ExecuteStreamIndexEntriesQuery(IndexQueryServerSide query, QueryOperationContext queryContext, HttpResponse response,
-            IStreamQueryResultWriter<BlittableJsonReaderObject> writer, OperationCancelToken token)
+            IStreamQueryResultWriter<BlittableJsonReaderObject> writer, bool ignoreLimit, OperationCancelToken token)
         {
             Exception lastException = null;
             for (var i = 0; i < NumberOfRetries; i++)
@@ -154,7 +154,7 @@ namespace Raven.Server.Documents.Queries
                 try
                 {
                     queryContext.CloseTransaction();
-                    await GetRunner(query).ExecuteStreamIndexEntriesQuery(query, queryContext, response, writer, token);
+                    await GetRunner(query).ExecuteStreamIndexEntriesQuery(query, queryContext, response, writer, ignoreLimit, token);
                     return;
                 }
                 catch (ObjectDisposedException e)
@@ -318,14 +318,14 @@ namespace Raven.Server.Documents.Queries
             throw CreateRetriesFailedException(lastException);
         }
 
-        public override async Task<IndexEntriesQueryResult> ExecuteIndexEntriesQuery(IndexQueryServerSide query, QueryOperationContext queryContext, long? existingResultEtag, OperationCancelToken token)
+        public override async Task<IndexEntriesQueryResult> ExecuteIndexEntriesQuery(IndexQueryServerSide query, QueryOperationContext queryContext, bool ignoreLimit, long? existingResultEtag, OperationCancelToken token)
         {
             Exception lastException = null;
             for (var i = 0; i < NumberOfRetries; i++)
             {
                 try
                 {
-                    return await GetRunner(query).ExecuteIndexEntriesQuery(query, queryContext, existingResultEtag, token);
+                    return await GetRunner(query).ExecuteIndexEntriesQuery(query, queryContext, ignoreLimit, existingResultEtag, token);
                 }
                 catch (ObjectDisposedException e)
                 {

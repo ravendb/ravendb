@@ -201,6 +201,70 @@ DROP DATABASE [SqlReplication-{dbName}]";
         }
 
         [Fact]
+        public async Task CanLoadToTableWithSchemaName()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
+                {
+                    CreateRdbmsSchema(connectionString);
+
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        await session.StoreAsync(new Order());
+                        await session.SaveChangesAsync();
+                    }
+
+                    var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+
+                    var tableNameWithSchema = $"{schemaName}.Orders";
+
+                    string scriptWithSchema = "loadTo('" + tableNameWithSchema + "', { Id: id(this),  TotalCost: 0 } );";
+
+                    var connectionStringName = $"{store.Database}@{store.Urls.First()} to SQL DB";
+
+                    AddEtl(store, new SqlEtlConfiguration()
+                    {
+                        Name = connectionStringName,
+                        ConnectionStringName = connectionStringName,
+                        SqlTables =
+                        {
+                            new SqlEtlTable {TableName = tableNameWithSchema, DocumentIdColumn = "Id"},
+                        },
+                        Transforms =
+                        {
+                            new Transformation()
+                            {
+                                Name = "Orders",
+                                Collections = new List<string> {"Orders"},
+                                Script = scriptWithSchema
+                            }
+                        }
+                    }, new SqlConnectionString
+                    {
+                        Name = connectionStringName,
+                        ConnectionString = connectionString,
+                        FactoryName = "System.Data.SqlClient"
+                    });
+
+                    etlDone.Wait(TimeSpan.FromMinutes(5));
+
+                    using (var con = new SqlConnection())
+                    {
+                        con.ConnectionString = connectionString;
+                        con.Open();
+
+                        using (var dbCommand = con.CreateCommand())
+                        {
+                            dbCommand.CommandText = " SELECT COUNT(*) FROM Orders";
+                            Assert.Equal(1, dbCommand.ExecuteScalar());
+                        }
+                    }
+                }
+            }
+        }
+
+        [Fact]
         public async Task NullPropagation()
         {
             using (var store = GetDocumentStore())
