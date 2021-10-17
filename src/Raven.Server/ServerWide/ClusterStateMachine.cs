@@ -1179,15 +1179,18 @@ namespace Raven.Server.ServerWide
                             }
                         }
 
-                        if (record.IsSharded == false && record.Topology.RelevantFor(removed))
+                        if (record.IsSharded == false)
                         {
-                            record.Topology.RemoveFromTopology(removed);
-                            // Explicit removing of the node means that we modify the replication factor
-                            record.Topology.ReplicationFactor = record.Topology.Count;
-                            if (record.Topology.Count == 0)
+                            if (record.Topology.RelevantFor(removed))
                             {
-                                DeleteDatabaseRecord(context, index, items, lowerKey, record, serverStore);
-                                continue;
+                                record.Topology.RemoveFromTopology(removed);
+                                // Explicit removing of the node means that we modify the replication factor
+                                record.Topology.ReplicationFactor = record.Topology.Count;
+                                if (record.Topology.Count == 0)
+                                {
+                                    DeleteDatabaseRecord(context, index, items, lowerKey, record, serverStore);
+                                    continue;
+                                }
                             }
                         }
                         else
@@ -1490,9 +1493,8 @@ namespace Raven.Server.ServerWide
 
             if (record.IsSharded)
             {
-                for (int i = 0; i < record.Shards.Length; i++)
+                foreach (var shard in ShardHelper.GetShardNames(record))
                 {
-                    var shard = record.DatabaseName + "$" + i;
                     var shardValuesPrefix = Helpers.ClusterStateMachineValuesPrefix(shard).ToLowerInvariant();
                     using (Slice.From(context.Allocator, shardValuesPrefix, out var loweredKey))
                     {

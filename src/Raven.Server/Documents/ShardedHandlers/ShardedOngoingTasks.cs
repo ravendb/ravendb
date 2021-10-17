@@ -97,11 +97,15 @@ namespace Raven.Server.Documents.ShardedHandlers
 
                     switch (type)
                     {
-                        case OngoingTaskType.Replication:
                         case OngoingTaskType.Subscription:
+                            // todo https://issues.hibernatingrhinos.com/issue/RavenDB-13113
+                            break;
                         case OngoingTaskType.PullReplicationAsSink:
+                        case OngoingTaskType.Replication:
+                            // todo https://issues.hibernatingrhinos.com/issue/RavenDB-13110
+                            break;
                         case OngoingTaskType.Backup:
-                            // todo
+                            // todo https://issues.hibernatingrhinos.com/issue/RavenDB-13112
                             break;
                         case OngoingTaskType.PullReplicationAsHub:
                             throw new BadRequestException("Getting task info for " + OngoingTaskType.PullReplicationAsHub + " is not supported");
