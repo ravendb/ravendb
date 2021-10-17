@@ -327,7 +327,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                 var djv = new DynamicJsonValue
                 {
                     [nameof(Timestamp)] = Timestamp,
-                    [nameof(Values)] = new DynamicJsonArray(Values.Select(x => (object)x)),
+                    [nameof(Values)] = new DynamicJsonArray(Values),
                 };
 
                 if (Tag != null)
@@ -396,7 +396,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                 return new DynamicJsonValue
                 {
                     [nameof(Timestamp)] = Timestamp,
-                    [nameof(Values)] = new DynamicJsonArray(Values.Select(x => (object)x))
+                    [nameof(Values)] = new DynamicJsonArray(Values)
                 };
             }
         }
