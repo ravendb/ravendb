@@ -660,7 +660,7 @@ namespace Raven.Server.Documents.TimeSeries
                 {
                     // TODO: RavenDB-14851 currently this is not working as expected, and cause values to disappear
                     // we can put the segment directly only if the incoming segment doesn't overlap with any existing one
-                    // using (Slice.From(context.Allocator, key.Content.Ptr, key.Size - sizeof(long), ByteStringType.Immutable, out var prefix))
+                    // using (Slice.From(context.Allocator, dbId.Content.Ptr, dbId.Size - sizeof(long), ByteStringType.Immutable, out var prefix))
                     // {
                     //     if (IsOverlapWithHigherSegment(prefix) == false)
                     //     {
@@ -1254,13 +1254,13 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        private Dictionary<string, List<LazyStringValue>> _timedCounterCacheTags;
+        private Dictionary<string, List<LazyStringValue>> _incrementalPrefixByDbId;
         private static readonly byte[] TimedCounterPrefixBuffer = Encoding.UTF8.GetBytes(TimedCounterPrefix);
-        private static readonly byte[] TimedCounterPositivePrefixBuffer = Encoding.UTF8.GetBytes(TimedCounterPositivePrefix);
+        private static readonly byte[] IncrementPrefixBuffer = Encoding.UTF8.GetBytes(IncrementPrefix);
         private const string IncrementalTimeSeriesPrefix = "INC:";
         private const string TimedCounterPrefix = "TC:";
-        private const string TimedCounterPositivePrefix = TimedCounterPrefix + "INC-";
-        private const string TimedCounterNegativePrefix = TimedCounterPrefix + "DEC-";
+        private const string IncrementPrefix = TimedCounterPrefix + "INC-";
+        private const string DecrementPrefix = TimedCounterPrefix + "DEC-";
         
         public string IncrementTimestamp(
             DocumentsOperationContext context,
@@ -1272,7 +1272,7 @@ namespace Raven.Server.Documents.TimeSeries
             if (TimeSeriesHandler.CheckIfIncrementalTs(name) == false)
                 throw new InvalidOperationException("Cannot perform increment operations on Non Incremental Time Series");
 
-            _timedCounterCacheTags ??= new Dictionary<string, List<LazyStringValue>>();
+            _incrementalPrefixByDbId ??= new Dictionary<string, List<LazyStringValue>>();
             DateTime prevTimestamp = DateTime.MinValue;
 
             var holder = new SingleResult();
@@ -1303,8 +1303,8 @@ namespace Raven.Server.Documents.TimeSeries
                         switch (Math.Sign(value))
                         {
                             case 0:
-                                positiveValues.Add(value);
-                                negativeValues.Add(value);
+                                positiveValues.Add(0);
+                                negativeValues.Add(0);
                                 zeroCount++;
                                 break;
                             case > 0:
@@ -1366,18 +1366,18 @@ namespace Raven.Server.Documents.TimeSeries
             return sign;
         }
 
-        private LazyStringValue TryGetTimedCounterTag(string key, int sign)
+        private LazyStringValue TryGetTimedCounterTag(string dbId, int sign)
         {
-            if (_timedCounterCacheTags.ContainsKey(key) == false)
+            if (_incrementalPrefixByDbId.ContainsKey(dbId) == false)
             {
-                _timedCounterCacheTags[key] = new List<LazyStringValue>()
+                _incrementalPrefixByDbId[dbId] = new List<LazyStringValue>()
                 {
-                    _context.GetLazyString(TimedCounterPositivePrefix + key),
-                    _context.GetLazyString(TimedCounterNegativePrefix + key)
+                    _context.GetLazyString(IncrementPrefix + dbId),
+                    _context.GetLazyString(DecrementPrefix + dbId)
                 };
             }
 
-            return sign >= 0 ? _timedCounterCacheTags[key][0] : _timedCounterCacheTags[key][1];
+            return sign >= 0 ? _incrementalPrefixByDbId[dbId][0] : _incrementalPrefixByDbId[dbId][1];
         }
 
         private class AppendEnumerator : IEnumerator<SingleResult>
@@ -1828,7 +1828,7 @@ namespace Raven.Server.Documents.TimeSeries
                         if (holder.FromReplication == false)
                             return CompareResult.Addition;
 
-                        bool isIncrement = localTag.StartsWith(TimedCounterPositivePrefixBuffer);
+                        bool isIncrement = localTag.StartsWith(IncrementPrefixBuffer);
                         return isIncrement ? SelectLargestValue(localValues, remote, isIncrement: true) : SelectSmallerValue(localValues, remote);
                     }
 

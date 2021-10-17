@@ -425,7 +425,7 @@ namespace Raven.Server.Documents.Handlers
                     includesCommand?.Fill(singleResult.Tag);
 
                     var dbId = singleResult.Tag.Substring(7); // extract dbId from tag [tag struct: "TC:XXX-dbId" - where "XXX" can be "INC"/"DEC"] 
-                    var nodeTag = ChangeVectorUtils.GetNodeTagById(dbCv, dbId) ?? "A";
+                    var nodeTag = ChangeVectorUtils.GetNodeTagById(dbCv, dbId) ?? "?";
 
                     if (nodeTag.Length > 1) //TODO: fix redundant whitespace in GetNodeTagById method
                         nodeTag = nodeTag[1..];
