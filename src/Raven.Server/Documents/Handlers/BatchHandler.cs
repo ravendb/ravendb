@@ -81,8 +81,8 @@ namespace Raven.Server.Documents.Handlers
                 {
                     if (command.IsClusterTransaction)
                     {
-                        var clusterTransactionHandler = new ClusterTransactionRequestHandler(this, Database.Name, Database.IdentityPartsSeparator);
-                        await clusterTransactionHandler.Handle(context, command.ParsedCommands);
+                        var clusterTransactionHandler = new ClusterTransactionRequestProcessor(this, Database.Name, Database.IdentityPartsSeparator);
+                        await clusterTransactionHandler.Process(context, command.ParsedCommands);
                         return;
                     }
 

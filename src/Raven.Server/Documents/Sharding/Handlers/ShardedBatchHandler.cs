@@ -62,8 +62,8 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 {
                     if (batch.IsClusterTransaction)
                     {
-                        var clusterTransactionHandler = new ClusterTransactionRequestHandler(this, ShardedContext.DatabaseName, ShardedContext.IdentitySeparator);
-                        await clusterTransactionHandler.Handle(context, batch.ParsedCommands);
+                        var clusterTransactionHandler = new ClusterTransactionRequestProcessor(this, ShardedContext.DatabaseName, ShardedContext.IdentitySeparator);
+                        await clusterTransactionHandler.Process(context, batch.ParsedCommands);
                         return;
                     }
 
