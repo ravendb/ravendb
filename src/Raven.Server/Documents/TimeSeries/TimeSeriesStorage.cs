@@ -1261,7 +1261,10 @@ namespace Raven.Server.Documents.TimeSeries
         private const string TimedCounterPrefix = "TC:";
         private const string IncrementPrefix = TimedCounterPrefix + "INC-";
         private const string DecrementPrefix = TimedCounterPrefix + "DEC-";
-        
+
+        [ThreadStatic]
+        private static double[] _tempHolder;
+
         public string IncrementTimestamp(
             DocumentsOperationContext context,
             string documentId,
@@ -1287,61 +1290,61 @@ namespace Raven.Server.Documents.TimeSeries
 
                 holder.Timestamp = element.Timestamp.EnsureUtc().EnsureMilliseconds();
                 holder.Status = TimeSeriesValuesSegment.Live;
+                holder.Values = element.Values;
+                var firstPositive = element.Values[0] >= 0;
+                holder.Tag = TryGetTimedCounterTag(_documentDatabase.DbBase64Id, firstPositive);
 
-                bool splitOperation = false;
-                if (element.Values.Length > 1)
+                for (int i = 1; i < element.Values.Length; i++)
                 {
-                    // if element values include positive & negative values 
-                    // we need to split the operation - one operation with positive values for increment and other for decrement
+                    bool currentPositive = element.Values[i] >= 0;
+                    if (firstPositive == currentPositive) 
+                        continue;
 
-                    var positiveValues = new List<double>();
-                    var negativeValues = new List<double>();
-
-                    int zeroCount = 0, incCount = 0, decCount = 0;
-                    foreach (var value in element.Values)
+                    foreach (var singleResult in RareMixedPositiveAndNegativeValues(element, holder))
                     {
-                        switch (Math.Sign(value))
-                        {
-                            case 0:
-                                positiveValues.Add(0);
-                                negativeValues.Add(0);
-                                zeroCount++;
-                                break;
-                            case > 0:
-                                positiveValues.Add(value);
-                                negativeValues.Add(0);
-                                incCount++;
-                                break;
-                            default:
-                                negativeValues.Add(value);
-                                positiveValues.Add(0);
-                                decCount++;
-                                break;
-                        }
+                        yield return singleResult;
                     }
 
-                    if (incCount + zeroCount < element.Values.Length && decCount + zeroCount < element.Values.Length)
-                    {
-                        splitOperation = true;
-
-                        holder.Values = negativeValues.ToArray();
-                        holder.Tag = TryGetTimedCounterTag(_documentDatabase.DbBase64Id, -1);
-                        yield return holder;
-
-                        holder.Values = positiveValues.ToArray();
-                        holder.Tag = TryGetTimedCounterTag(_documentDatabase.DbBase64Id, 1);
-                        yield return holder;
-                    }
+                    yield break;
                 }
+                yield return holder;
+            }
+        }
 
-                if (splitOperation == false)
+        private IEnumerable<SingleResult> RareMixedPositiveAndNegativeValues(TimeSeriesOperation.IncrementOperation element, SingleResult holder)
+        {
+            _tempHolder ??= new double[32];
+            Array.Copy(element.Values, _tempHolder, element.Values.Length);
+            holder.Tag = TryGetTimedCounterTag(_documentDatabase.DbBase64Id, positive: false);
+
+            for (int j = 0; j < element.Values.Length; j++)
+            {
+                if (element.Values[j]>= 0)
                 {
-                    var sign = TryGetValuesSign(element.Values);
-                    holder.Values = element.Values;
-                    holder.Tag = TryGetTimedCounterTag(_documentDatabase.DbBase64Id, sign);
-                    yield return holder;
+                    element.Values[j] = 0;
                 }
             }
+
+            yield return holder;
+
+            holder.Tag = TryGetTimedCounterTag(_documentDatabase.DbBase64Id, positive: true);
+            Array.Copy(_tempHolder, element.Values, element.Values.Length);
+
+            // to avoid replication loop we will return new increment operation just in case we have non zero values
+            var nonZeroValues = 0;
+            for (int j = 0; j < element.Values.Length; j++)
+            {
+                if (element.Values[j] <= 0)
+                {
+                    element.Values[j] = 0;
+                }
+                else
+                {
+                    nonZeroValues++;
+                }
+            }
+            if(nonZeroValues > 0)
+                yield return holder;
         }
 
         private static void ValidateTimestamp(DateTime prevTimestamp, DateTime elementTimestamp)
@@ -1353,20 +1356,7 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        private static int TryGetValuesSign(IEnumerable<double> values)
-        {
-            int sign = 0;
-            foreach (var value in values)
-            {
-                sign = Math.Sign(value);
-                if (sign != 0)
-                    break;
-            }
-
-            return sign;
-        }
-
-        private LazyStringValue TryGetTimedCounterTag(string dbId, int sign)
+        private LazyStringValue TryGetTimedCounterTag(string dbId, bool positive)
         {
             if (_incrementalPrefixByDbId.ContainsKey(dbId) == false)
             {
@@ -1377,7 +1367,7 @@ namespace Raven.Server.Documents.TimeSeries
                 };
             }
 
-            return sign >= 0 ? _incrementalPrefixByDbId[dbId][0] : _incrementalPrefixByDbId[dbId][1];
+            return positive ? _incrementalPrefixByDbId[dbId][0] : _incrementalPrefixByDbId[dbId][1];
         }
 
         private class AppendEnumerator : IEnumerator<SingleResult>
@@ -1837,11 +1827,11 @@ namespace Raven.Server.Documents.TimeSeries
                     return CompareResult.Remote | CompareResult.Merge;
                 }
 
-                if (remote.Tag != null && remote.Tag.StartsWith(TimedCounterPrefixBuffer))
-                    throw new InvalidDataException("Cannot get increment operation for Non-Incremental Time Series.");
-
                 if (holder.FromReplication == false)
                     return CompareResult.Remote; // if not from replication & not incremental time-series, remote value is an update
+
+                if (remote.Tag != null && remote.Tag.StartsWith(TimedCounterPrefixBuffer))
+                    throw new InvalidDataException("Cannot get increment operation for Non-Incremental Time Series.");
 
                 return SelectLargestValue(localValues, remote, isIncrement: false);
             }
