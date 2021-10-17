@@ -19,20 +19,20 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers
 {
-    public class ClusterTransactionRequestHandler
+    public class ClusterTransactionRequestProcessor
     {
         private readonly RequestHandler _handler;
         private readonly string _database;
         private readonly char _identitySeparator;
 
-        public ClusterTransactionRequestHandler(RequestHandler handler, string database, char identitySeparator)
+        public ClusterTransactionRequestProcessor(RequestHandler handler, string database, char identitySeparator)
         {
             _handler = handler;
             _database = database;
             _identitySeparator = identitySeparator;
         }
 
-        public async Task Handle(JsonOperationContext context, ArraySegment<BatchRequestParser.CommandData> parsedCommands)
+        public async Task Process(JsonOperationContext context, ArraySegment<BatchRequestParser.CommandData> parsedCommands)
         {
             var waitForIndexesTimeout = _handler.GetTimeSpanQueryString("waitForIndexesTimeout", required: false);
             var waitForIndexThrow = _handler.GetBoolValueQueryString("waitForIndexThrow", required: false) ?? true;
