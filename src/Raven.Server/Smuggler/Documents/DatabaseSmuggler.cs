@@ -606,7 +606,7 @@ namespace Raven.Server.Smuggler.Documents
             var throwOnCollectionMismatchError = _options.OperateOnTypes.HasFlag(DatabaseItemType.Tombstones) == false;
             using (var actions = _destination.Documents(throwOnCollectionMismatchError))
             {
-                List<LazyStringValue> legacyIdsToDelete = null;
+                List<string> legacyIdsToDelete = null;
                 foreach (var item in _source.GetDocuments(_options.Collections, actions))
                 {
                     _token.ThrowIfCancellationRequested();
@@ -690,7 +690,7 @@ namespace Raven.Server.Smuggler.Documents
             return result.Documents;
         }
 
-        private void TryHandleLegacyDocumentTombstones(List<LazyStringValue> legacyIdsToDelete, IDocumentActions actions, SmugglerResult result)
+        private void TryHandleLegacyDocumentTombstones(List<string> legacyIdsToDelete, IDocumentActions actions, SmugglerResult result)
         {
             if (legacyIdsToDelete == null)
                 return;
@@ -732,7 +732,7 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        private bool SkipDocument(BuildVersionType buildType, bool isPreV4Revision, DocumentItem item, SmugglerResult result, ref List<LazyStringValue> legacyIdsToDelete)
+        private bool SkipDocument(BuildVersionType buildType, bool isPreV4Revision, DocumentItem item, SmugglerResult result, ref List<string> legacyIdsToDelete)
         {
             if (buildType == BuildVersionType.V3 == false)
                 return false;
@@ -748,7 +748,7 @@ namespace Raven.Server.Smuggler.Documents
 
             if ((item.Document.NonPersistentFlags & NonPersistentDocumentFlags.LegacyDeleteMarker) == NonPersistentDocumentFlags.LegacyDeleteMarker)
             {
-                legacyIdsToDelete ??= new List<LazyStringValue>();
+                legacyIdsToDelete ??= new List<string>();
                 legacyIdsToDelete.Add(item.Document.Id);
                 return true;
             }
