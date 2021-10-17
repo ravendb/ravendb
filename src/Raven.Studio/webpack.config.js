@@ -21,7 +21,9 @@ module.exports = (env, args) => {
     });
 
     const htmlPlugin = new HtmlWebpackPlugin({
-        template: path.join(__dirname, 'wwwroot/index.html')
+        template: path.join(__dirname, 'wwwroot/index.html'),
+        inject: true,
+        chunks: ["main"]
     });
 
     const copyPlugin = new CopyPlugin({
@@ -40,8 +42,8 @@ module.exports = (env, args) => {
     });
 
     const miniCssExtractPlugin = new MiniCssExtractPlugin({
-        filename: "styles/[name].[contenthash:8].css",
-        chunkFilename: "styles/[name].[contenthash:8].css"
+        filename: "styles/[name].css",
+        chunkFilename: "styles/[name].css"
     });
     
     const plugins = [
@@ -85,7 +87,10 @@ module.exports = (env, args) => {
         mode: isProductionMode ? "production" : "development",
         devtool: isProductionMode ? "source-map" : "eval",
         entry: {
-            main: "./typescript/main.ts"
+            main: "./typescript/main.ts",
+            "styles": "./wwwroot/Content/css/styles.less",
+            "styles-blue": "./wwwroot/Content/css/styles-blue.less",
+            "styles-light": "./wwwroot/Content/css/styles-light.less"
         },
         output: {
             path: __dirname + '/wwwroot/dist',

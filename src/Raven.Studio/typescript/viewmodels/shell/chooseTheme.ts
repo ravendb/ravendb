@@ -6,7 +6,7 @@ class chooseTheme extends dialogViewModelBase {
     
     static readonly supportedThemes = ["blue", "dark", "light"];
     static readonly themeLocalStorageKey = "raven-theme";
-    static readonly stylesheetPrefix = "Content/css/";
+    static readonly stylesheetPrefix = "styles/";
     
     static readonly defaultTheme = "dark";
     
