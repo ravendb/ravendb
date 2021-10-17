@@ -2,7 +2,7 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import spatialMarkersLayerModel = require("models/database/query/spatialMarkersLayerModel");
 import document = require("models/database/documents/document");
 import documentMetadata = require("models/database/documents/documentMetadata");
-import { Control, IconOptions, MarkerClusterGroup } from "leaflet";
+import { Control, IconOptions, MarkerClusterGroup, TileLayer } from "leaflet";
 import genUtils = require("common/generalUtils");
 import spatialCircleModel = require("models/database/query/spatialCircleModel");
 import spatialPolygonModel = require("models/database/query/spatialPolygonModel");
@@ -22,12 +22,12 @@ class spatialQueryMap extends viewModelBase {
         this.polygonsLayer(polygons);
     }
 
-    compositionComplete() {
+    compositionComplete(): void {
         super.compositionComplete();
         this.createMap();
     }
     
-    private createMap() {
+    private createMap(): void {
         const osmMap = this.getStreetMapTileLayer();
         const otmMap = this.getTopographyMapTileLayer();
         const baseLayers = {
@@ -119,21 +119,21 @@ class spatialQueryMap extends viewModelBase {
         this.map.fitBounds(mapBounds, {padding: [50, 50]});
     }
     
-    private getStreetMapTileLayer() {
+    private getStreetMapTileLayer(): TileLayer {
         const osmLink = `<a href="http://openstreetmap.org">OpenStreetMap</a>`;
         const osmUrl = 'http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
         const osmAttrib = `&copy; ${osmLink} Contributors`;
         return L.tileLayer(osmUrl, {attribution: osmAttrib});
     }
     
-    private getTopographyMapTileLayer() {
+    private getTopographyMapTileLayer(): TileLayer {
         const otmLink = `<a href="http://opentopomap.org/">OpenTopoMap</a>`;
         const otmUrl = `http://{s}.tile.opentopomap.org/{z}/{x}/{y}.png`;
         const otmAttrib = `&copy; ${otmLink} Contributors`;
         return L.tileLayer(otmUrl, {attribution: otmAttrib});
     } 
     
-    onResize() {
+    onResize(): void {
         this.map.invalidateSize();
     }
 }
