@@ -49,7 +49,7 @@
           "webcola": ["node_modules/webcola/dist/index.d.ts"],
           "Favico":  ["node_modules/favico.js/favico.js"],
           "moment": ["node_modules/moment/moment.d.ts"],
-          "jszip":  ["node_modules/jszip/index.d.ts"],
+          "jszip":  ["typings/jszip.d.ts"],
           "viewmodels/*":  ["typescript/viewmodels/*"],
           "models/*":  ["typescript/models/*"],
           "common/*": ["typescript/common/*"],

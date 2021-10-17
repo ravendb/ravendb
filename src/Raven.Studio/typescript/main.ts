@@ -1,69 +1,68 @@
 /// <reference path="../typings/tsd.d.ts" />
 
-requirejs.config({
-    paths: {
-        text: "../lib/requirejs-text/text",
-        durandal: "../lib/Durandal/js",
-        plugins: "../lib/Durandal/js/plugins",
-        ace: "../Content/ace",
-        forge: "../lib/forge/js"
-    },
+import { overrideViews } from "./overrides/views";
+import { overrideComposition } from "./overrides/composition";
+import { overrideSystem } from "./overrides/system";
 
-    map: {
-      '*' : {
-          "jszip": "../lib/jszip/dist/jszip",
-          "jszip-utils": "../lib/jszip-utils/dist/jszip-utils",
-          "d3": "../Content/custom_d3",
-          "cola": "../lib/webcola/WebCola/cola.min",
-          "rbush": "../Content/rbush/rbush",
-          "toastr": "../lib/toastr/toastr",
-          "quickselect": "../Content/rbush/quickselect",
-          "moment": "../lib/moment/moment",
-          "plugins/bootstrapModal": "../App/plugins/bootstrapModal",
-          "diff": "../lib/diff/index"
-      }  
-    },
+import "bootstrap/dist/js/bootstrap";
+import "jquery-fullscreen-plugin/jquery.fullscreen";
+import "bootstrap-select";
 
-    // 0 disables the timeout completely, default is 7 seconds
-    waitSeconds: 30
-});
+import "bootstrap-multiselect";
+import "jquery-blockui";
 
-define("jquery", () => jQuery);
-define("knockout", () => ko); 
+import "bootstrap-duration-picker/src/bootstrap-duration-picker";
+import "eonasdan-bootstrap-datetimepicker/src/js/bootstrap-datetimepicker";
 
-define(["durandal/system", "durandal/app", "durandal/viewLocator", "plugins/dialog", "durandal/composition"], (system: any, app: any, viewLocator: any, dialog: any, composition: any) => {
-    system.debug(!(window as any).ravenStudioRelease);
-    
-    app.title = "Raven.Studio";
-    dialog.MessageBox.setViewUrl("views/dialog.html");
+import system from "durandal/system";
+import app from "durandal/app";
 
-    app.configurePlugins({
-        router: true,
-        dialog: true,
-        widget: true,
-        bootstrapModal: true
-    });
+require("prismjs/components/prism-javascript");
+require("prismjs/components/prism-csharp");
 
-    app.start().then(() => {
-        //Replace 'viewmodels' in the moduleId with 'views' to locate the view.
-        //Look for partial views in a 'views' folder in the root.
-        viewLocator.useConvention();
+overrideSystem();
+overrideComposition();
+overrideViews();
 
-        if ("WebSocket" in window) {
-            //Show the app by setting the root view model for our application with a transition.
-            
-            if (window.location.pathname.startsWith("/studio")) {
-                app.setRoot("viewmodels/shell");
-            } else if (window.location.pathname.startsWith("/eula")) {
-                app.setRoot("viewmodels/eulaShell");
-            } else {
-                app.setRoot("viewmodels/wizard/setupShell")
-            }
-            
-            composition.defaultTransitionName = "fadeIn";
+const ko = require("knockout");
+require("knockout.validation");
+require("knockout-postbox");
+require("knockout-delegated-events"); 
+const { DirtyFlag } = require("./external/dirtyFlag");
+ko.DirtyFlag = DirtyFlag;
+
+system.debug(!(window as any).ravenStudioRelease);
+
+//TODO:  dialog.MessageBox.setViewUrl("views/dialog.html"); //TODO:
+
+app.title = "Raven.Studio";
+
+const router = require('plugins/router');
+router.install();
+
+const bootstrapModal = require("durandalPlugins/bootstrapModal");
+bootstrapModal.install();
+
+const dialog = require("plugins/dialog");
+dialog.install({});
+
+const pluginWidget = require("plugins/widget");
+pluginWidget.install({});
+
+app.start().then(() => {
+    if ("WebSocket" in window) {
+        if (window.location.pathname.startsWith("/studio")) {
+            const shell = require("viewmodels/shell");
+            app.setRoot(shell);
+        } else if (window.location.pathname.startsWith("/eula")) {
+            const eulaShell = require("viewmodels/eulaShell");
+            app.setRoot(eulaShell);
         } else {
-            //The browser doesn't support WebSocket
-            app.showBootstrapMessage("Your browser isn't supported. Please use a modern browser!", ":-(", []);
+            const setupShell = require("viewmodels/wizard/setupShell");
+            app.setRoot(setupShell);
         }
-    });
+    } else {
+        //The browser doesn't support WebSocket
+        app.showBootstrapMessage("Your browser isn't supported. Please use a modern browser!", ":-(", []);
+    }
 });
