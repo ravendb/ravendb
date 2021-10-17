@@ -79,7 +79,7 @@ class timeSeriesEntryModel {
     isRollupEntry = ko.observable<boolean>();
     isIncrementalEntry: KnockoutComputed<boolean>;
 
-    entryTitle: KnockoutComputed<string>;
+    entryTitle = ko.observable<string>();
     
     existingNumberOfValues: number = 0;
     maxNumberOfValuesReachedWarning: KnockoutComputed<string>;
@@ -150,14 +150,11 @@ class timeSeriesEntryModel {
         this.isIncrementalEntry  = ko.pureComputed(() => 
             !this.isCreatingNewTimeSeries() && timeSeriesEntryModel.isIncrementalName(this.name()));
 
-        this.entryTitle = ko.pureComputed(() => {
-            const newEditPart = this.isCreatingNewTimeSeries() || !this.timestamp() ? "New" : "Edit";
-            const entryPart = " Time Series Entry";
-            const incPart = this.createIncrementalTimeSeries() || this.isIncrementalEntry() ? " - Incremental" : "";
-            const rollupPart = this.isRollupEntry() ? " - Rollup" : "";
-
-            return newEditPart + entryPart + incPart + rollupPart;
-        });
+        const newEditPart = this.isCreatingNewTimeSeries() || !this.timestamp() ? "New" : "Edit";
+        const entryPart = " Time Series Entry";
+        const incPart = this.createIncrementalTimeSeries() || this.isIncrementalEntry() ? " - Incremental" : "";
+        const rollupPart = this.isRollupEntry() ? " - Rollup" : "";
+        this.entryTitle(newEditPart + entryPart + incPart + rollupPart);
     }
 
     addValue(): void {
@@ -259,7 +256,7 @@ class timeSeriesEntryModel {
             Tag: this.tag(),
             Timestamp: this.timestamp().utc().format(generalUtils.utcFullDateFormat),
             Values: this.isRollupEntry() ? this.flattenRollupValues() :
-                                           this.values().map(x => this.isIncrementalEntry() ? x.delta() : x.value())
+                this.values().map(x => this.isIncrementalEntry() && this.entryTitle().startsWith("Edit") ? x.delta() : x.value())
         }
     }
     
