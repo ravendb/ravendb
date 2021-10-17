@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using Raven.Client.ServerWide;
 
 namespace Raven.Server.Utils
 {
@@ -43,6 +45,14 @@ namespace Raven.Server.Utils
         public static bool IsShardedName(string name)
         {
             return name.IndexOf('$') != -1;
+        }
+
+        public static IEnumerable<string> GetShardNames(DatabaseRecord record)
+        {
+            for (int i = 0; i < record.Shards.Length; i++)
+            {
+                yield return $"{record.DatabaseName}${i}";
+            }
         }
     }
 }
