@@ -76,7 +76,7 @@ namespace Raven.Server.Documents.Handlers
                         writer.WriteComma();
 
                         writer.WritePropertyName(nameof(TimeSeriesItemDetail.NumberOfEntries));
-                        writer.WriteInteger(CheckIfIncrementalTs(tsName) ? -1 : stats.Count);
+                        writer.WriteInteger(stats.Count);
 
                         writer.WriteComma();
 
@@ -426,10 +426,6 @@ namespace Raven.Server.Documents.Handlers
 
                     var dbId = singleResult.Tag.Substring(7); // extract dbId from tag [tag struct: "TC:XXX-dbId" - where "XXX" can be "INC"/"DEC"] 
                     var nodeTag = ChangeVectorUtils.GetNodeTagById(dbCv, dbId) ?? "?";
-
-                    if (nodeTag.Length > 1) //TODO: fix redundant whitespace in GetNodeTagById method
-                        nodeTag = nodeTag[1..];
-
                     nodeTag = nodeTag + "-" + dbId;
                     var values = singleResult.Values.ToArray();
 
@@ -474,7 +470,8 @@ namespace Raven.Server.Documents.Handlers
                     From = lastSeenEntry,
                     To = to,
                     Entries = Array.Empty<TimeSeriesEntry>(),
-                    Hash = hash
+                    Hash = hash,
+                    NextStartPosition = start
                 };
             }
             else
@@ -484,7 +481,8 @@ namespace Raven.Server.Documents.Handlers
                     From = (initialStart > 0) ? incrementalValues.Values.ToArray()[0].Timestamp : from,
                     To = hasMore ? incrementalValues.Values.Last().Timestamp : to,
                     Entries = incrementalValues.Values.ToArray(),
-                    Hash = hash
+                    Hash = hash,
+                    NextStartPosition = start
                 };
             }
 
@@ -718,6 +716,13 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteComma();
                     writer.WritePropertyName(nameof(TimeSeriesRangeResult.Includes));
                     writer.WriteObject(rangeResult.Includes);
+                }
+
+                if (rangeResult.NextStartPosition.HasValue)
+                {
+                    writer.WriteComma();
+                    writer.WritePropertyName(nameof(TimeSeriesRangeResult.NextStartPosition));
+                    writer.WriteInteger(Math.Abs(rangeResult.NextStartPosition.Value));
                 }
             }
             writer.WriteEndObject();
