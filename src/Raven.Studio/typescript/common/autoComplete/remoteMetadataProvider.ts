@@ -36,6 +36,8 @@ class remoteMetadataProvider implements queryCompleterProviders {
                         callback(result);
                     }
                 });
+        } else {
+            callback({});
         }
     }
 

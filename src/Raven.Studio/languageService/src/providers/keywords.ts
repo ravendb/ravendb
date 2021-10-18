@@ -62,6 +62,9 @@ const alreadyHandledTokenTypes: number[] = [
     RqlParser.METADATA,
     RqlParser.AS,
     RqlParser.ALL_DOCS,
+    RqlParser.OR,
+    RqlParser.AND,
+    RqlParser.INDEX,
     ...rootKeywords
 ] 
 
@@ -78,6 +81,13 @@ export class AutocompleteKeywords extends BaseAutocompleteProvider implements Au
             && specialFunctionRule.ruleList[1] === RqlParser.RULE_whereStatement;
 
         if (!inWhereSpecialFunction) {
+            return [];
+        }
+        
+        // check if we are not inside another special function! - we can't nest them
+        const inSpecialFunction = specialFunctionRule.ruleList.find(x => x === RqlParser.RULE_specialParam);
+
+        if (inSpecialFunction) {
             return [];
         }
 
@@ -155,6 +165,24 @@ export class AutocompleteKeywords extends BaseAutocompleteProvider implements Au
             score: AUTOCOMPLETE_SCORING.keyword
         }
     }
+
+    static handleOrOperator(): autoCompleteWordList {
+        return {
+            value: "or ", 
+            caption: "or",
+            meta: AUTOCOMPLETE_META.operator,
+            score: AUTOCOMPLETE_SCORING.operator
+        }
+    }
+
+    static handleAndOperator(): autoCompleteWordList {
+        return {
+            value: "and ",
+            caption: "and",
+            meta: AUTOCOMPLETE_META.operator,
+            score: AUTOCOMPLETE_SCORING.operator
+        }
+    }
     
     static handleAllDocs(): autoCompleteWordList {
         return {
@@ -165,12 +193,30 @@ export class AutocompleteKeywords extends BaseAutocompleteProvider implements Au
         }
     }
     
-    static handleRootKeywords(candidates: CandidatesCollection, parser: RqlParser, writtenText: string): autoCompleteWordList[] {
+    static canUseRootKeyword(keyword: number, candidates: CandidatesCollection, parseTree: ProgContext) {
+        const [queryType] = AutocompleteKeywords.detectQueryType(parseTree);
+        
+        if (keyword === RqlParser.GROUP_BY && queryType === "index") {
+            // Can't use 'group by' when querying on an Index. 'group by' can be used only when querying on collections.
+            return false;
+        }
+        
+        return true;
+    }
+    
+    static handleRootKeywords(candidates: CandidatesCollection, parser: RqlParser, parseTree: ProgContext, writtenText: string): autoCompleteWordList[] {
         const result: autoCompleteWordList[] = [];
+        
+        if (candidates.rules.has(RqlParser.RULE_rootKeywords)) {
+            // we use root keywords as escape hatch to allow field names like FROM, WHERE etc
+            // if we have root keywords rule it means where are inside some block
+            // so don't complete keywords
+            return [];
+        }
 
         // we iterate here in order keywords appear in RQL
         for (const keyword of rootKeywords) {
-            if (candidates.tokens.has(keyword)) {
+            if (candidates.tokens.has(keyword) && AutocompleteKeywords.canUseRootKeyword(keyword, candidates, parseTree)) {
                 const displayName = parser.vocabulary.getDisplayName(keyword).toLowerCase(); 
                 result.push({
                     caption: displayName,
@@ -220,8 +266,16 @@ export class AutocompleteKeywords extends BaseAutocompleteProvider implements Au
         if (candidates.tokens.has(RqlParser.AS)) {
             completions.push(AutocompleteKeywords.handleAsOperator());
         }
+
+        if (candidates.tokens.has(RqlParser.OR)) {
+            completions.push(AutocompleteKeywords.handleOrOperator());
+        }
         
-        completions.push(...AutocompleteKeywords.handleRootKeywords(candidates, parser, writtenText));
+        if (candidates.tokens.has(RqlParser.AND)) {
+            completions.push(AutocompleteKeywords.handleAndOperator());
+        }
+        
+        completions.push(...AutocompleteKeywords.handleRootKeywords(candidates, parser, parseTree, writtenText));
 
         AutocompleteKeywords.debugRemainingTokens(candidates, parser, writtenText); //TODO: comment out!
        

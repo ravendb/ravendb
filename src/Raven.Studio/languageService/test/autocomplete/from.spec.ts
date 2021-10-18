@@ -93,10 +93,16 @@ describe("can complete from", function () {
     });
     
     describe("from index", function () {
-        it("doesn't repeat last token", async function () {
+        it("can complete index", async function () {
             const suggestions = await autocomplete(`from index|`);
             expect(suggestions.map(x => x.caption))
-                .not.toIncludeAllMembers(["index"]);
+                .toIncludeAllMembers(["index"]);
+        });
+        
+        it("can complete partial index", async function () {
+            const suggestions = await autocomplete(`from ind|`);
+            expect(suggestions.map(x => x.caption))
+                .toIncludeAllMembers(["index"]);
         });
         
         it("can complete index name - no index yet defined", async function () {
