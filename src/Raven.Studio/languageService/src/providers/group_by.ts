@@ -7,7 +7,7 @@ import { ProgContext } from "../generated/BaseRqlParser";
 
 export class AutocompleteGroupBy extends BaseAutocompleteProvider implements AutocompleteProvider {
     
-    canCompleteArray(stack: number[], candidates: CandidatesCollection) {
+    canCompleteArray(stack: number[]) {
         return stack[stack.length - 1] === RqlParser.RULE_function;
     }
     
@@ -24,7 +24,7 @@ export class AutocompleteGroupBy extends BaseAutocompleteProvider implements Aut
             
             const result: autoCompleteWordList[] = [];
 
-            if (this.canCompleteArray(stack, candidates)) {
+            if (this.canCompleteArray(stack)) {
                 result.push(arrayFunction);
             }
             

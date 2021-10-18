@@ -77,7 +77,7 @@ expr
    | specialFunctions # specialFunctionst
    | inFunction # inExpr
    | betweenFunction # betweenExpr
-   | function # normalFunc
+   | funcExpr=function # normalFunc
    | TRUE AND NOT? expr # booleanExpression
    ;
 
@@ -251,9 +251,15 @@ limitStatement
    //Capture variable name (also accept aliased names).
    
 variable
-   : <assoc=right> variable DOT variable
-   | (cacheParam | param)
+   : name=memberName DOT member=variable
+   | name=memberName
    ;
+
+memberName
+    :
+    cacheParam | param
+    ;
+    
 
 param
    : (NUM | WORD | date | STRING | ID OP_PAR CL_PAR | identifiersAllNames) asArray?
@@ -278,11 +284,13 @@ variableOrFunction
    //Function definition. It accept function with aliases, params or param-free.
    
 function
-   : (variable OP_PAR ((literal) //Parser should throw when comma occures at first place in parenthesis
-   (COMMA (literal))*)? CL_PAR)
+   : addr=variable OP_PAR args=arguments? CL_PAR
    ;
-   //Use tokens like string
+
+arguments:
+    literal (COMMA literal)*;
    
+      
 identifiersWithoutRootKeywords
    : ALL
    | AND

@@ -60,11 +60,11 @@ export class ErrorCollector {
             onLexerError: function () { self._lexerErrors.push([...arguments] as any); }
         }
     }
-    
 }
 
-export async function autocomplete(input: string): Promise<autoCompleteWordList[]> {
+export async function autocomplete(input: string, metadataProvider: queryCompleterProviders = new FakeMetadataProvider()): Promise<autoCompleteWordList[]> {
+    console.log("query = " + input);
     const { inputWithoutCaret, position } = extractCaretPosition(input);
-    const engine = new autoCompleteEngine(new FakeMetadataProvider());
+    const engine = new autoCompleteEngine(metadataProvider);
     return await engine.complete(inputWithoutCaret, position);
 }

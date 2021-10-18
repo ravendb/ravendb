@@ -9,7 +9,7 @@ export const AUTOCOMPLETE_SCORING = {
     keyword: 1004,
     field: 1020,
     index: 1010,
-    collection: 1010
+    collection: 1030
 }
 
 export const AUTOCOMPLETE_META = {

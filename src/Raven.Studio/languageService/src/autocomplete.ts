@@ -50,7 +50,8 @@ export const ignoredTokens: number[] = [
 const noSeparatorRequiredFor = new Set<number>([
     RqlParser.OP_PAR,
     RqlParser.CL_PAR,
-    RqlParser.DOT
+    RqlParser.DOT,
+    RqlParser.COMMA
 ]);
 
 export function createScannerWithSeek(inputStream: CommonTokenStream, caretPosition: CaretPosition): { scanner: Scanner, caretIndex: number } {
@@ -122,9 +123,12 @@ export class autoCompleteEngine {
             RqlParser.RULE_indexName,
             RqlParser.RULE_specialFunctionName,
             RqlParser.RULE_variable,
+            RqlParser.RULE_rootKeywords,
             RqlParser.RULE_function,
             RqlParser.RULE_orderBySortingAs,
-            RqlParser.RULE_orderByOrder
+            RqlParser.RULE_orderByOrder,
+            RqlParser.RULE_identifiersWithoutRootKeywords,
+            RqlParser.RULE_identifiersAllNames
         ]);
 
         core.translateRulesTopDown = true;
@@ -134,8 +138,8 @@ export class autoCompleteEngine {
             core.showDebugOutput = true;
             core.showResult = true;
         }
-
-        const { scanner, caretIndex} = createScannerWithSeek(parser.inputStream as CommonTokenStream, caretPosition);
+        
+        const { scanner, caretIndex } = createScannerWithSeek(parser.inputStream as CommonTokenStream, caretPosition);
 
         const candidates = core.collectCandidates(caretIndex);
 

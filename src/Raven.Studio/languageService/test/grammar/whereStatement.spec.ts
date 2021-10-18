@@ -2,7 +2,7 @@
 import {
     BetweenExprContext,
     BinaryExpressionContext, CollectionByNameContext,
-    EqualExpressionContext,
+    EqualExpressionContext, FunctionContext, NormalFuncContext,
 } from "../../src/generated/BaseRqlParser";
 
 describe("WHERE statement parser", function () {
@@ -107,4 +107,32 @@ describe("WHERE statement parser", function () {
             .toBeTruthy();
     });
 
+        it("parsing function", function () {
+           const { parseTree, parser } = parseRql("from test where first.second.third(argument)");
+           
+           expect(parser.numberOfSyntaxErrors)
+               .toEqual(0);
+           
+           const where = parseTree.whereStatement();
+            const expr = where.expr();
+            expect(expr)
+                .toBeInstanceOf(NormalFuncContext);
+            const func = expr as NormalFuncContext;
+            
+            const firstMember = (func._funcExpr as FunctionContext)._addr;
+            expect(firstMember._name.text)
+                .toEqual("first");
+            
+            const secondMember = firstMember._member;
+            expect(secondMember._name.text)
+                .toEqual("second");
+
+            const thirdMember = secondMember._member;
+            expect(thirdMember._name.text)
+                .toEqual("third");
+
+            expect((func._funcExpr as FunctionContext)._args.text)
+                .toEqual("argument");
+        });
+    
 });

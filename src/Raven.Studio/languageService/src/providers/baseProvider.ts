@@ -90,7 +90,7 @@ export abstract class BaseAutocompleteProvider {
     }
     
     static detectQueryType(parseTree: ProgContext): [QueryType, string] {
-        const from = parseTree.fromStatement();
+        const from = parseTree.exception ? null : parseTree.fromStatement();
         if (!from) {
             return ["unknown", undefined];
         }

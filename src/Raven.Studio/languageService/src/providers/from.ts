@@ -26,12 +26,21 @@ export class AutocompleteFrom extends BaseAutocompleteProvider implements Autoco
         if (candidates.rules.has(RqlParser.RULE_collectionName)) {
             const collections = await this.fetchCollectionNames();
             
-            return collections.map(c => ({
+            const mappedCollections = collections.map(c => ({
                 meta: AUTOCOMPLETE_META.collection,
                 score: AUTOCOMPLETE_SCORING.collection,
                 caption: c,
                 value: AutocompleteFrom.quote(c, quoteType === "Single" ? "Single" : "Double") + " "
             }));
+            
+            const indexSuggestion: autoCompleteWordList = {
+                value: "index ",
+                caption: "index",
+                meta: AUTOCOMPLETE_META.keyword,
+                score: AUTOCOMPLETE_SCORING.keyword
+            };
+            
+            return [...mappedCollections, indexSuggestion];
         }
         
         if (candidates.rules.has(RqlParser.RULE_indexName)) {
