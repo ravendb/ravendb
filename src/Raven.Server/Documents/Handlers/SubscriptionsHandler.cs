@@ -258,7 +258,7 @@ namespace Raven.Server.Documents.Handlers
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                if (GetAllInternal(Database.SubscriptionStorage, context, Database.Name, name, id, running, history, start, pageSize, out IEnumerable<SubscriptionGeneralDataAndStats> subscriptions))
+                if (GetAllInternal(Database.SubscriptionStorage, context, Database.Name, name, id, running, history, start, pageSize, out IEnumerable<SubscriptionGeneralDataAndStats> subscriptions) == false)
                 {
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                     return;
@@ -289,13 +289,13 @@ namespace Raven.Server.Documents.Handlers
                 {
 
                     subscriptions = Array.Empty<SubscriptionGeneralDataAndStats>();
-                    return true;
+                    return false;
                 }
 
                 subscriptions = new[] {subscription};
             }
 
-            return false;
+            return true;
         }
 
         internal static void WriteGetAllResult(AsyncBlittableJsonTextWriter writer, IEnumerable<SubscriptionGeneralDataAndStats> subscriptions, TransactionOperationContext context)

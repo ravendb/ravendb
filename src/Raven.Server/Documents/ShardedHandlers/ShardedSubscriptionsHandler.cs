@@ -207,7 +207,7 @@ namespace Raven.Server.Documents.ShardedHandlers
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                if (SubscriptionsHandler.GetAllInternal(ShardedContext.ShardedSubscriptionStorage, context, ShardedContext.DatabaseName, name, id, running, history, start, pageSize, out IEnumerable<SubscriptionGeneralDataAndStats> subscriptions))
+                if (SubscriptionsHandler.GetAllInternal(ShardedContext.ShardedSubscriptionStorage, context, ShardedContext.DatabaseName, name, id, running, history, start, pageSize, out IEnumerable<SubscriptionGeneralDataAndStats> subscriptions) == false)
                 {
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                     return;
@@ -301,7 +301,6 @@ namespace Raven.Server.Documents.ShardedHandlers
                     await Task.WhenAll(tasks);
 
                     await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                    using (context.OpenReadTransaction())
                     {
                         writer.WriteStartObject();
                         writer.WritePropertyName("Results");

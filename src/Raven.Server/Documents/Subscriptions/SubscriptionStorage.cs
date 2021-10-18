@@ -104,9 +104,9 @@ namespace Raven.Server.Documents.Subscriptions
                 SubscriptionName = name,
                 LastTimeServerMadeProgressWithDocuments = DateTime.UtcNow,
                 LastKnownSubscriptionChangeVector = previousChangeVector,
-                ShardName = shardData.ShardName,
-                ShardDbId = shardData.DatabaseId,
-                ShardLocalChangeVector = shardData.LocalChangeVector,
+                ShardName = shardData?.ShardName,
+                ShardDbId = shardData?.DatabaseId,
+                ShardLocalChangeVector = shardData?.LocalChangeVector,
             };
 
             var (etag, _) = await _serverStore.SendToLeaderAsync(command);
@@ -121,7 +121,7 @@ namespace Raven.Server.Documents.Subscriptions
                 HasHighlyAvailableTasks = _serverStore.LicenseManager.HasHighlyAvailableTasks(),
                 SubscriptionName = name,
                 LastClientConnectionTime = DateTime.UtcNow,
-                ShardName = shardData.ShardName
+                ShardName = shardData?.ShardName
             };
 
             var (etag, _) = await _serverStore.SendToLeaderAsync(command);

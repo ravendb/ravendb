@@ -89,7 +89,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/collections/cv", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        [RavenAction("/databases/*/collections/last-change-vector", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetLastDocumentChangeVectorForCollection()
         {
             var collection = GetStringQueryString("collection");

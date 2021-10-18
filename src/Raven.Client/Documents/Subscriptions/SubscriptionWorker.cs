@@ -171,118 +171,145 @@ namespace Raven.Client.Documents.Subscriptions
 
         internal int? SubscriptionTcpVersion;
 
-        private async Task<Stream> ConnectToServer(CancellationToken token)
+        internal class SubscriptionConnectionResult
         {
-            var command = new GetTcpInfoForRemoteTaskCommand("Subscription/" + _dbName, _dbName, _options?.SubscriptionName, verifyDatabase: true);
+            public Stream Stream;
+            public TcpClient TcpClient;
+            public ServerNode RedirectNode;
+            public TcpConnectionHeaderMessage.SupportedFeatures SupportedFeatures;
+            public int TcpVersion;
+            public string NodeTag;
+        }
 
-            var requestExecutor = _store.GetRequestExecutor(_dbName);
-
+        internal async Task<Stream> ConnectToServer(string dbName, ServerNode redirectNode, SubscriptionWorkerOptions options, RequestExecutor requestExecutor, int? subscriptionTcpVersion, CancellationToken token)
+        {
             using (requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                TcpConnectionInfo tcpInfo;
-                if (_redirectNode != null)
+                var command = new GetTcpInfoForRemoteTaskCommand("Subscription/" + dbName, dbName, options?.SubscriptionName, verifyDatabase: true);
+                SubscriptionConnectionResult subscriptionConnectResult;
+                try
                 {
-                    try
-                    {
-                        await requestExecutor.ExecuteAsync(_redirectNode, null, context, command, shouldRetry: false, sessionInfo: null, token: token)
-                            .ConfigureAwait(false);
-                        tcpInfo = command.Result;
-                    }
-                    catch (ClientVersionMismatchException)
-                    {
-                        tcpInfo = await LegacyTryGetTcpInfo(requestExecutor, context, _redirectNode, token).ConfigureAwait(false);
-                    }
-                    catch (Exception)
-                    {
-                        // if we failed to talk to a node, we'll forget about it and let the topology to
-                        // redirect us to the current node
-                        _redirectNode = null;
-                        throw;
-                    }
+                    subscriptionConnectResult = await ConnectToServerInternal(dbName, redirectNode, options, requestExecutor, context, command, subscriptionTcpVersion, token).ConfigureAwait(false);
+                }
+                catch (Exception)
+                {
+                    // if we failed to talk to a node, we'll forget about it and let the topology to
+                    // redirect us to the current node
+                    _redirectNode = null;
+                    throw;
+                }
+
+                // assign subscription properties
+                _stream = subscriptionConnectResult.Stream;
+                _tcpClient = subscriptionConnectResult.TcpClient;
+                _redirectNode = subscriptionConnectResult.RedirectNode;
+                _supportedFeatures = subscriptionConnectResult.SupportedFeatures;
+                SubscriptionTcpVersion = subscriptionConnectResult.TcpVersion;
+
+                _subscriptionLocalRequestExecutor?.Dispose();
+                _subscriptionLocalRequestExecutor = RequestExecutor.CreateForSingleNodeWithoutConfigurationUpdates(command.RequestedNode.Url, dbName, requestExecutor.Certificate, _store.Conventions);
+                _store.RegisterEvents(_subscriptionLocalRequestExecutor);
+
+                return subscriptionConnectResult.Stream;
+            }
+        }
+
+        internal static async Task<SubscriptionConnectionResult> ConnectToServerInternal(string dbName, ServerNode redirectNode, SubscriptionWorkerOptions options, RequestExecutor requestExecutor,
+            JsonOperationContext context, GetTcpInfoForRemoteTaskCommand command, int? subscriptionTcpVersion, CancellationToken token)
+        {
+            var result = new SubscriptionConnectionResult();
+
+            TcpConnectionInfo tcpInfo;
+            try
+            {
+                if (redirectNode != null)
+                {
+                    await requestExecutor.ExecuteAsync(redirectNode, nodeIndex: null, context, command, shouldRetry: false, sessionInfo: null, token: token)
+                        .ConfigureAwait(false);
+                    tcpInfo = command.Result;
                 }
                 else
                 {
-                    try
+                    await requestExecutor.ExecuteAsync(command, context, sessionInfo: null, token: token).ConfigureAwait(false);
+                    tcpInfo = command.Result;
+                
+                    if (tcpInfo.NodeTag != null)
                     {
-                        await requestExecutor.ExecuteAsync(command, context, sessionInfo: null, token: token).ConfigureAwait(false);
-                        tcpInfo = command.Result;
-                        if (tcpInfo.NodeTag != null)
-                        {
-                            _redirectNode = requestExecutor.Topology.Nodes.FirstOrDefault(x => x.ClusterTag == tcpInfo.NodeTag);
-                        }
-                    }
-                    catch (ClientVersionMismatchException)
-                    {
-                        tcpInfo = await LegacyTryGetTcpInfo(requestExecutor, context, token).ConfigureAwait(false);
+                        result.RedirectNode = requestExecutor.Topology.Nodes.FirstOrDefault(x => x.ClusterTag == tcpInfo.NodeTag);
                     }
                 }
 
-                var result = await TcpUtils.ConnectSecuredTcpSocket(
-                    tcpInfo,
-                    _store.Certificate,
+                Debug.Assert(tcpInfo.NodeTag == command.RequestedNode.ClusterTag);
+                result.NodeTag = command.RequestedNode.ClusterTag;
+            }
+            catch (ClientVersionMismatchException)
+            {
+                tcpInfo = await LegacyTryGetTcpInfo(requestExecutor, context, redirectNode, dbName, token).ConfigureAwait(false);
+            }
+
+            result.TcpClient.NoDelay = true;
+            result.TcpClient.SendBufferSize = options?.SendBufferSizeInBytes ?? SubscriptionWorkerOptions.DefaultSendBufferSizeInBytes;
+            result.TcpClient.ReceiveBufferSize = options?.ReceiveBufferSizeInBytes ?? SubscriptionWorkerOptions.DefaultReceiveBufferSizeInBytes;
+            result.TcpVersion = subscriptionTcpVersion ?? TcpConnectionHeaderMessage.SubscriptionTcpVersion;
+
+            var connectResult = await TcpUtils.ConnectSecuredTcpSocket(
+                tcpInfo,
+                requestExecutor.Certificate,
 #if SSL_STREAM_CIPHERSUITESPOLICY_SUPPORT
-                    null,
+                null,
 #endif
-                    TcpConnectionHeaderMessage.OperationTypes.Subscription,
-                    NegotiateProtocolVersionForSubscriptionAsync,
-                    context,
-                    requestExecutor.DefaultTimeout,
-                    null
+                TcpConnectionHeaderMessage.OperationTypes.Subscription,
+                (url, info, stream, operationContext, logs) => NegotiateProtocolVersionForSubscriptionAsync(dbName, url, info, stream, operationContext, result, logs),
+                context,
+                requestExecutor.DefaultTimeout,
+                null
 #if TCP_CLIENT_CANCELLATIONTOKEN_SUPPORT
                     ,
                     token
 #endif
-                    ).ConfigureAwait(false);
+            ).ConfigureAwait(false);
 
-                _tcpClient = result.TcpClient;
-                _stream = result.Stream;
-                _supportedFeatures = result.SupportedFeatures;
+            result.TcpClient = connectResult.TcpClient;
+            result.Stream = connectResult.Stream;
+            result.SupportedFeatures = connectResult.SupportedFeatures;
 
-                _tcpClient.NoDelay = true;
-                _tcpClient.SendBufferSize = _options?.SendBufferSizeInBytes ?? SubscriptionWorkerOptions.DefaultSendBufferSizeInBytes;
-                _tcpClient.ReceiveBufferSize = _options?.ReceiveBufferSizeInBytes ?? SubscriptionWorkerOptions.DefaultReceiveBufferSizeInBytes;
-
-                if (_supportedFeatures.ProtocolVersion <= 0)
-                {
-                    throw new InvalidOperationException(
-                        $"{_options.SubscriptionName}: TCP negotiation resulted with an invalid protocol version:{_supportedFeatures.ProtocolVersion}");
-                }
+            if (result.SupportedFeatures.ProtocolVersion <= 0)
+            {
+                throw new InvalidOperationException($"{options?.SubscriptionName}: TCP negotiation resulted with an invalid protocol version: {result.SupportedFeatures.ProtocolVersion}");
+            }
 
 #if !(NETSTANDARD2_0 || NETSTANDARD2_1 || NETCOREAPP2_1)
-                if (_supportedFeatures.DataCompression)
-                    _stream = new ReadWriteCompressedStream(_stream);
+            if (result.SupportedFeatures.DataCompression)
+                result.Stream = new ReadWriteCompressedStream(result.Stream);
 #endif
 
-                using (var optionsJson = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_options, context))
-                {
-                    await optionsJson.WriteJsonToAsync(_stream, token).ConfigureAwait(false);
-                    await _stream.FlushAsync(token).ConfigureAwait(false);
-                }
+            using (var optionsJson = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(options, context))
+            {
+                await optionsJson.WriteJsonToAsync(result.Stream, token).ConfigureAwait(false);
 
-                _subscriptionLocalRequestExecutor?.Dispose();
-                _subscriptionLocalRequestExecutor = RequestExecutor.CreateForSingleNodeWithoutConfigurationUpdates(command.RequestedNode.Url, _dbName, requestExecutor.Certificate, _store.Conventions);
-                _store.RegisterEvents(_subscriptionLocalRequestExecutor);
-
-                return _stream;
+                await result.Stream.FlushAsync(token).ConfigureAwait(false);
             }
+
+            return result;
         }
 
-        private async Task<TcpConnectionHeaderMessage.SupportedFeatures> NegotiateProtocolVersionForSubscriptionAsync(string chosenUrl, TcpConnectionInfo tcpInfo, Stream stream, JsonOperationContext context, List<string> _)
+        private static async Task<TcpConnectionHeaderMessage.SupportedFeatures> NegotiateProtocolVersionForSubscriptionAsync(
+            string dbName, string chosenUrl, TcpConnectionInfo tcpInfo, Stream stream, JsonOperationContext context, SubscriptionConnectionResult result, List<string> _)
         {
             bool compressionSupport = false;
 #if NETCOREAPP3_1_OR_GREATER
-            var version = SubscriptionTcpVersion ?? TcpConnectionHeaderMessage.SubscriptionTcpVersion;
+            var version = result.TcpVersion;
             if (version >= 53_000)
                 compressionSupport = true;
 #endif
 
             var parameters = new AsyncTcpNegotiateParameters
             {
-                Database = _store.GetDatabase(_dbName),
+                Database = dbName,
                 Operation = TcpConnectionHeaderMessage.OperationTypes.Subscription,
-                Version = SubscriptionTcpVersion ?? TcpConnectionHeaderMessage.SubscriptionTcpVersion,
-                ReadResponseAndGetVersionCallbackAsync = ReadServerResponseAndGetVersionAsync,
-                DestinationNodeTag = CurrentNodeTag,
+                Version = result.TcpVersion,
+                ReadResponseAndGetVersionCallbackAsync = async (operationContext, writer, _, _) => await ReadServerResponseAndGetVersionAsync(dbName, operationContext, writer, stream, chosenUrl).ConfigureAwait(false),
+                DestinationNodeTag = result.RedirectNode?.ClusterTag,
                 DestinationUrl = chosenUrl,
                 DestinationServerId = tcpInfo.ServerId,
                 CompressionSupport = compressionSupport
@@ -291,44 +318,9 @@ namespace Raven.Client.Documents.Subscriptions
             return await TcpNegotiation.NegotiateProtocolVersionAsync(context, stream, parameters).ConfigureAwait(false);
         }
 
-        private async Task<TcpConnectionInfo> LegacyTryGetTcpInfo(RequestExecutor requestExecutor, JsonOperationContext context, CancellationToken token)
+        private static async Task<int> ReadServerResponseAndGetVersionAsync(string dbName, JsonOperationContext operationContext, AsyncBlittableJsonTextWriter writer, Stream stream, string destinationUrl)
         {
-            var tcpCommand = new GetTcpInfoCommand("Subscription/" + _dbName, _dbName);
-            try
-            {
-                await requestExecutor.ExecuteAsync(tcpCommand, context, sessionInfo: null, token: token)
-                    .ConfigureAwait(false);
-            }
-            catch (Exception)
-            {
-                _redirectNode = null;
-                throw;
-            }
-
-            return tcpCommand.Result;
-        }
-
-        private async Task<TcpConnectionInfo> LegacyTryGetTcpInfo(RequestExecutor requestExecutor, JsonOperationContext context, ServerNode node, CancellationToken token)
-        {
-            var tcpCommand = new GetTcpInfoCommand("Subscription/" + _dbName, _dbName);
-            try
-            {
-                await requestExecutor.ExecuteAsync(node, null, context, tcpCommand, shouldRetry: false, sessionInfo: null, token: token)
-                    .ConfigureAwait(false);
-            }
-            catch (Exception)
-            {
-                _redirectNode = null;
-                throw;
-            }
-
-            return tcpCommand.Result;
-        }
-
-        private async ValueTask<int> ReadServerResponseAndGetVersionAsync(JsonOperationContext context, AsyncBlittableJsonTextWriter writer, Stream stream, string destinationUrl)
-        {
-            //Reading reply from server
-            using (var response = await context.ReadForMemoryAsync(stream, "Subscription/tcp-header-response").ConfigureAwait(false))
+            using (var response = await operationContext.ReadForMemoryAsync(stream, $"Subscription/{dbName}/tcp-header-response").ConfigureAwait(false))
             {
                 var reply = JsonDeserializationClient.TcpConnectionHeaderResponse(response);
 
@@ -338,7 +330,7 @@ namespace Raven.Client.Documents.Subscriptions
                         return reply.Version;
 
                     case TcpConnectionStatus.AuthorizationFailed:
-                        throw new AuthorizationException($"Cannot access database {_dbName} because " + reply.Message);
+                        throw new AuthorizationException($"Cannot access database {dbName} because " + reply.Message);
 
                     case TcpConnectionStatus.TcpVersionMismatch:
                         if (reply.Version != TcpNegotiation.OutOfRangeStatus)
@@ -346,8 +338,8 @@ namespace Raven.Client.Documents.Subscriptions
                             return reply.Version;
                         }
                         //Kindly request the server to drop the connection
-                        await SendDropMessageAsync(context, writer, reply).ConfigureAwait(false);
-                        throw new InvalidOperationException($"Can't connect to database {_dbName} because: {reply.Message}");
+                        await SendDropMessageAsync(operationContext, writer, reply, dbName).ConfigureAwait(false);
+                        throw new InvalidOperationException($"Can't connect to database {dbName} because: {reply.Message}");
 
                     case TcpConnectionStatus.InvalidNetworkTopology:
                         throw new InvalidNetworkTopologyException($"Failed to connect to url {destinationUrl} because: {reply.Message}");
@@ -356,11 +348,26 @@ namespace Raven.Client.Documents.Subscriptions
             }
         }
 
-        private async ValueTask SendDropMessageAsync(JsonOperationContext context, AsyncBlittableJsonTextWriter writer, TcpConnectionHeaderResponse reply)
+        internal static async Task<TcpConnectionInfo> LegacyTryGetTcpInfo(RequestExecutor requestExecutor, JsonOperationContext context, ServerNode node, string dbName, CancellationToken token)
+        {
+            var tcpCommand = new GetTcpInfoCommand("Subscription/" + dbName, dbName);
+            if (node == null)
+            {
+                await requestExecutor.ExecuteAsync(tcpCommand, context, sessionInfo: null, token: token).ConfigureAwait(false);
+            }
+            else
+            {
+                await requestExecutor.ExecuteAsync(node, null, context, tcpCommand, shouldRetry: false, sessionInfo: null, token: token).ConfigureAwait(false);
+            }
+
+            return tcpCommand.Result;
+        }
+
+        internal static async ValueTask SendDropMessageAsync(JsonOperationContext context, AsyncBlittableJsonTextWriter writer, TcpConnectionHeaderResponse reply, string dbName)
         {
             context.Write(writer, new DynamicJsonValue
             {
-                [nameof(TcpConnectionHeaderMessage.DatabaseName)] = _dbName,
+                [nameof(TcpConnectionHeaderMessage.DatabaseName)] = dbName,
                 [nameof(TcpConnectionHeaderMessage.Operation)] = TcpConnectionHeaderMessage.OperationTypes.Drop.ToString(),
                 [nameof(TcpConnectionHeaderMessage.OperationVersion)] = TcpConnectionHeaderMessage.GetOperationTcpVersion(TcpConnectionHeaderMessage.OperationTypes.Drop),
                 [nameof(TcpConnectionHeaderMessage.Info)] =
@@ -378,7 +385,7 @@ namespace Raven.Client.Documents.Subscriptions
                     DatabaseDoesNotExistException.ThrowWithMessage(_dbName, connectionStatus.Message);
             }
             if (connectionStatus.Type != SubscriptionConnectionServerMessage.MessageType.ConnectionStatus)
-                throw new Exception(
+                throw new InvalidOperationException(
                     $"Server returned illegal type message when expecting connection status, was: {connectionStatus.Type}{Environment.NewLine}Message: {connectionStatus.Message}{Environment.NewLine}Exception: {connectionStatus.Exception}");
 
             switch (connectionStatus.Status)
@@ -442,7 +449,7 @@ namespace Raven.Client.Documents.Subscriptions
 
                 using (contextPool.AllocateOperationContext(out JsonOperationContext context))
                 using (context.GetMemoryBuffer(out var buffer))
-                using (var tcpStream = await ConnectToServer(_processingCts.Token).ConfigureAwait(false))
+                using (var tcpStream = await ConnectToServer(_dbName, _redirectNode, _options, _store.GetRequestExecutor(_dbName), SubscriptionTcpVersion, _processingCts.Token).ConfigureAwait(false))
                 {
                     _processingCts.Token.ThrowIfCancellationRequested();
 

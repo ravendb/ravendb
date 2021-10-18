@@ -15,7 +15,7 @@ namespace Raven.Server.Documents.Sharding.Commands
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
-            url = $"{node.Url}/databases/{node.Database}/collections/cv?collection={UrlEncode(_collection)}";
+            url = $"{node.Url}/databases/{node.Database}/collections/last-change-vector?collection={UrlEncode(_collection)}";
 
             var request = new HttpRequestMessage
             {

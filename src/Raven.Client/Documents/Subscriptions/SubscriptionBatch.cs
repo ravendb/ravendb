@@ -58,9 +58,9 @@ namespace Raven.Client.Documents.Subscriptions
         private readonly GenerateEntityIdOnTheClient _generateEntityIdOnTheClient;
 
         public List<Item> Items { get; } = new List<Item>();
-        private List<BlittableJsonReaderObject> _includes;
-        private List<(BlittableJsonReaderObject Includes, Dictionary<string, string[]> IncludedCounterNames)> _counterIncludes;
-        private List<BlittableJsonReaderObject> _timeSeriesIncludes;
+        internal List<BlittableJsonReaderObject> _includes;
+        internal List<(BlittableJsonReaderObject Includes, Dictionary<string, string[]> IncludedCounterNames)> _counterIncludes;
+        internal List<BlittableJsonReaderObject> _timeSeriesIncludes;
 
         public IDocumentSession OpenSession()
         {
@@ -255,6 +255,54 @@ namespace Raven.Client.Documents.Subscriptions
         private static void ThrowRequired(string name)
         {
             throw new InvalidOperationException("Document must have a " + name);
+        }
+
+        private SubscriptionBatch()
+        {
+        }
+
+        internal SubscriptionBatch<T> Clone(JsonOperationContext context)
+        {
+            var batch = new SubscriptionBatch<T>();
+            foreach (var item in Items)
+            {
+                batch.Items.Add(new Item
+                {
+                    Id = item.Id,
+                    RawResult = item.RawResult.Clone(context),
+                    RawMetadata = item.RawMetadata.Clone(context),
+                    ExceptionMessage = item.ExceptionMessage
+                });
+            }
+
+            if (_includes != null && _includes.Count > 0)
+            {
+                batch._includes = new List<BlittableJsonReaderObject>();
+                foreach (var item in _includes)
+                {
+                    batch._includes.Add(item.Clone(context));
+                }
+            }
+
+            if (_counterIncludes != null && _counterIncludes.Count > 0)
+            {
+                batch._counterIncludes = new List<(BlittableJsonReaderObject Includes, Dictionary<string, string[]> IncludedCounterNames)>();
+                foreach (var tuple in _counterIncludes)
+                {
+                    batch._counterIncludes.Add((tuple.Includes.Clone(context), new Dictionary<string, string[]>(tuple.IncludedCounterNames)));
+                }
+            }
+
+            if (_timeSeriesIncludes != null && _timeSeriesIncludes.Count > 0)
+            {
+                batch._timeSeriesIncludes = new List<BlittableJsonReaderObject>();
+                foreach (var item in _timeSeriesIncludes)
+                {
+                    batch._timeSeriesIncludes.Add(item.Clone(context));
+                }
+            }
+     
+            return batch;
         }
     }
 }

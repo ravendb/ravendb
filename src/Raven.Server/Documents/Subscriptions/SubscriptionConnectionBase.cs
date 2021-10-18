@@ -150,18 +150,18 @@ namespace Raven.Server.Documents.Subscriptions
             }
         }
 
-        internal static async Task WriteJsonAsync(DynamicJsonValue value, TcpConnectionOptions _tcpConnection)
+        internal static async Task WriteJsonAsync(DynamicJsonValue value, TcpConnectionOptions tcpConnection)
         {
             int writtenBytes;
-            using (_tcpConnection.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, _tcpConnection.Stream))
+            using (tcpConnection.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, tcpConnection.Stream))
             {
                 context.Write(writer, value);
                 writtenBytes = writer.Position;
             }
 
-            await _tcpConnection.Stream.FlushAsync();
-            _tcpConnection.RegisterBytesSent(writtenBytes);
+            await tcpConnection.Stream.FlushAsync();
+            tcpConnection.RegisterBytesSent(writtenBytes);
         }
 
         internal static async Task ReportExceptionToClient(ServerStore server, TcpConnectionOptions tcpConnectionOptions, SubscriptionConnectionBase connection, Exception ex, Logger logger, int recursionDepth = 0)
