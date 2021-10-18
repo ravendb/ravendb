@@ -530,5 +530,84 @@ namespace SlowTests.Issues
                 }
             }
         }
+
+        [Fact]
+        public async Task RevertToTombstone()
+        {
+            using (var store = GetDocumentStore())
+            {
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+
+                DateTime last = default;
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var person = new Person
+                    {
+                        Name = "Name1"
+                    };
+                    await session.StoreAsync(person, "foo/bar");
+                    session.CountersFor("foo/bar").Increment("Downloads", 100);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.Delete("foo/bar");
+                    await session.SaveChangesAsync();
+                    last = DateTime.UtcNow;
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var person = new Person
+                    {
+                        Name = "Name2"
+                    };
+                    await session.StoreAsync(person, "foo/bar");
+                    await session.SaveChangesAsync();
+
+                }
+                var db = await GetDocumentDatabaseInstanceFor(store);
+
+                RevertResult result;
+                using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
+                {
+                    result = (RevertResult)await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last, TimeSpan.FromMinutes(60), onProgress: null,
+                        token: token);
+                }
+
+                Assert.Equal(4, result.ScannedRevisions);
+                Assert.Equal(1, result.ScannedDocuments);
+                Assert.Equal(1, result.RevertedDocuments);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var persons = await session.Advanced.Revisions.GetForAsync<Person>("foo/bar");
+                    Assert.Equal(5, persons.Count);
+
+                    var metadata = session.Advanced.GetMetadataFor(persons[0]);
+                    Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.DeleteRevision | DocumentFlags.Reverted).ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var person = new Person
+                    {
+                        Name = "Name1"
+                    };
+                    await session.StoreAsync(person, "foo/bar");
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var foo = await session.LoadAsync<User>("foo/bar");
+                    var metadata = session.Advanced.GetMetadataFor(foo);
+                    var flags = metadata.GetString(Constants.Documents.Metadata.Flags);
+                    Assert.DoesNotContain(DocumentFlags.HasCounters.ToString(), flags);
+                }
+            }
+        }
     }
 }

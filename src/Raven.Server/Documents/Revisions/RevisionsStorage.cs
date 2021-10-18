@@ -1500,9 +1500,10 @@ namespace Raven.Server.Documents.Revisions
                 foreach (var document in _list)
                 {
                     _token.ThrowIfCancellationRequested();
-                    CollectionName collectionName = RemoveOldMetadataInfo(context, documentsStorage, document);
+
                     if (document.Data != null)
                     {
+                        CollectionName collectionName = RemoveOldMetadataInfo(context, documentsStorage, document);
                         InsertNewMetadataInfo(context, documentsStorage, document, collectionName);
 
                         var flag = document.Flags | DocumentFlags.Reverted;
@@ -1525,6 +1526,11 @@ namespace Raven.Server.Documents.Revisions
             private static void InsertNewMetadataInfo(DocumentsOperationContext context, DocumentsStorage documentsStorage, Document document, CollectionName collectionName)
             {
                 documentsStorage.AttachmentsStorage.PutAttachmentRevert(context, document, out bool has);
+                RevertCounters(context, documentsStorage, document, collectionName);
+            }
+
+            private static void RevertCounters(DocumentsOperationContext context, DocumentsStorage documentsStorage, Document document, CollectionName collectionName)
+            {
                 if (document.TryGetMetadata(out BlittableJsonReaderObject metadata) &&
                     metadata.TryGet(Constants.Documents.Metadata.RevisionCounters, out BlittableJsonReaderObject counters))
                 {
@@ -1540,7 +1546,7 @@ namespace Raven.Server.Documents.Revisions
 
             private static CollectionName RemoveOldMetadataInfo(DocumentsOperationContext context, DocumentsStorage documentsStorage, Document document)
             {
-                documentsStorage.AttachmentsStorage.DeleteAttachmentDirect2(context, document.LowerId);
+                documentsStorage.AttachmentsStorage.DeleteAttachmentBeforeRevert(context, document.LowerId);
                 var collectionName = documentsStorage.ExtractCollectionName(context, document.Data);
                 documentsStorage.CountersStorage.DeleteCountersForDocument(context, document.Id, collectionName);
                 return collectionName;

@@ -400,7 +400,7 @@ namespace Raven.Server.Documents
                 return UpdateDocumentAfterAttachmentChange(context, lowerDocumentId, documentId, tvr, null);
             }
         }
-        public void DeleteAttachmentDirect2(DocumentsOperationContext context, LazyStringValue lowerDocId)
+        public void DeleteAttachmentBeforeRevert(DocumentsOperationContext context, LazyStringValue lowerDocId)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, lowerDocId, out Slice lowerId, out Slice idSlice))
