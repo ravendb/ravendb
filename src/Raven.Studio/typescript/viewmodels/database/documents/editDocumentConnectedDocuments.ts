@@ -18,6 +18,7 @@ import downloader = require("common/downloader");
 import viewHelpers = require("common/helpers/view/viewHelpers");
 import editDocumentUploader = require("viewmodels/database/documents/editDocumentUploader");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
+import timeSeriesEntryModel = require("models/database/timeSeries/timeSeriesEntryModel");
 
 type connectedDocsTabs = "attachments" | "counters" | "revisions" | "related" | "recent" | "timeSeries";
 type connectedItemType = connectedDocumentItem | attachmentItem | counterItem | timeSeriesItem;
@@ -200,7 +201,7 @@ class connectedDocuments {
         
         this.timeSeriesColumns = [
             new textColumn<timeSeriesItem>(this.gridController() as virtualGridController<any>, x => x.name, "Timeseries Name", "145px"),
-            new textColumn<timeSeriesItem>(this.gridController() as virtualGridController<any>, x => x.numberOfEntries === -1 ? "N/A" : generalUtils.siFormat(x.numberOfEntries), "Timeseries items count", "60px"),
+            new textColumn<timeSeriesItem>(this.gridController() as virtualGridController<any>, x => x.numberOfEntries.toLocaleString(), "Timeseries items count", "60px"),
             new textColumn<timeSeriesItem>(this.gridController() as virtualGridController<any>, x => dateFormatter(x.startDate) + " - " + dateFormatter(x.endDate), "Timeseries date range", "170px"),
             new actionColumn<timeSeriesItem>(this.gridController() as virtualGridController<any>,
                 x => this.goToTimeSeriesEdit(x),
@@ -242,19 +243,25 @@ class connectedDocuments {
         this.gridResetSubscription = connectedDocuments.currentTab.subscribe(() => this.gridController().reset());
 
         this.columnPreview.install(".document-items-grid", ".document-items-tooltip",
-                                    (item: connectedItemType, 
-                                     column: virtualColumn, 
-                                     e: JQueryEventObject, 
-                                     onValue: (context: any, valueToCopy?: string) => void) => {
-                                         if (column instanceof textColumn) {
-                                             if (column.header === "Timeseries date range") {
-                                                 onValue((item as timeSeriesItem).startDate + " - " + (item as timeSeriesItem).endDate);
-                                             } else {
-                                                 const value = column.getCellValue(item);
-                                                 onValue(value);
-                                             }
-                                         }
-                                   });
+            (item: connectedItemType,
+             column: virtualColumn,
+             e: JQueryEventObject,
+             onValue: (context: any, valueToCopy?: string) => void) => {
+                const timeSeriesItem = (item as timeSeriesItem);
+                
+                if (column instanceof textColumn) {
+                    if (column.header === "Timeseries date range") {
+                        onValue(timeSeriesItem.startDate + " - " + timeSeriesItem.endDate);
+                    } else if (column.header === "Timeseries items count" && timeSeriesEntryModel.isIncrementalName(timeSeriesItem.name)) {
+                        // TODO: add link to documentation when available..
+                        onValue(`Raw number of incremental entries.<br>May have duplicate entries for the same timestamp per node.`,
+                            timeSeriesItem.numberOfEntries.toLocaleString());
+                    } else {
+                        const value = column.getCellValue(item);
+                        onValue(value);
+                    }
+                }
+            });
     }
 
     dispose() {
