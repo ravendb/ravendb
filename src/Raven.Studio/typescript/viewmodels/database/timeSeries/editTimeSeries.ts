@@ -38,7 +38,7 @@ class timeSeriesInfo {
     
     private initObservables(): void {
         this.nameAndNumberFormatted = ko.pureComputed(() => {
-            const numberPart = this.numberOfEntries() === -1 ? "N/A" : generalUtils.formatNumberToStringFixed(this.numberOfEntries(), 0);
+            const numberPart = this.numberOfEntries().toLocaleString();
             const moreResultsPart = this.hasMoreResults() ? "+" : "";
             
             return `${this.name()} (${numberPart}${moreResultsPart})`;
