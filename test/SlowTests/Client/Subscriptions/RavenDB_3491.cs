@@ -249,7 +249,7 @@ namespace SlowTests.Client.Subscriptions
 
                         var db = await GetDatabase(store.Database);
                         var subscriptionState = db.SubscriptionStorage.GetSubscriptionFromServerStore(subscriptionName);
-                        subscriptionReleasedAwaiter = db.SubscriptionStorage.GetSubscriptionConnectionInUseAwaiter(subscriptionState.SubscriptionId);
+                        //subscriptionReleasedAwaiter = db.SubscriptionStorage.GetSubscriptionConnectionInUseAwaiter(subscriptionState.SubscriptionId);
 
                         dynamic doc;
                         Assert.True(docs.TryTake(out doc, _waitForDocTimeout));
@@ -285,7 +285,7 @@ namespace SlowTests.Client.Subscriptions
                     }
                 }
 
-                Assert.True(Task.WaitAll(new[] {subscriptionReleasedAwaiter}, 250));
+                //Assert.True(Task.WaitAll(new[] {subscriptionReleasedAwaiter}, 250));
                 
                 using (var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(subscriptionName) {
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
