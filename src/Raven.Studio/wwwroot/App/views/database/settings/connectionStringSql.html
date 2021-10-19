@@ -2,7 +2,7 @@
     <label class="control-label">Name</label>
     <div class="flex-grow">
         <input class="form-control" data-bind="textInput: connectionStringName, enable: isNew, attr: { 'title': isNew() ? 'Enter any name of your choice for this connection string' : '' }" 
-               placeholder="Enter a name for the connection string">           
+               placeholder="Enter a name for the connection string">
     </div>
 </div>
 <div class="form-group" data-bind="validationElement: factoryName">
@@ -19,6 +19,8 @@
 <div class="form-group" data-bind="validationElement: connectionString">
     <label class="control-label">Connection string</label>
     <div class="flex-grow">
-        <textarea class="form-control" data-bind="textInput: connectionString" rows="3" title="The connection string for the sql server" placeholder="Enter the complete connection string for the sql server"></textarea>
+        <textarea class="form-control" rows="3"
+                  data-bind="textInput: connectionString, attr: { placeholder: nameFor(factoryName()) ? 'Enter the complete connection string for the ' + nameFor(factoryName()) : 'Enter connection string' }">
+        </textarea>
     </div>
 </div>

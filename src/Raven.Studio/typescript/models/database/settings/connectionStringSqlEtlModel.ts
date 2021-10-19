@@ -10,15 +10,15 @@ class connectionStringSqlEtlModel extends connectionStringModel {
     static sqlProviders: Array<valueAndLabelItem<string, string>> = [
         { value: "System.Data.SqlClient", label: "Microsoft SQL Server (System.Data.SqlClient)" },
         { value: "MySql.Data.MySqlClient", label: "MySQL Server (MySql.Data.MySqlClient)" },
-        { value: "Npgsql",label: "PostgreSQL (Npgsql)" },
-        { value: "Oracle.ManagedDataAccess.Client", label: "Oracle (Oracle.ManagedDataAccess.Client)" },
+        { value: "Npgsql",label: "PostgreSQL Server (Npgsql)" },
+        { value: "Oracle.ManagedDataAccess.Client", label: "Oracle Database Server (Oracle.ManagedDataAccess.Client)" },
     ];
     
     connectionString = ko.observable<string>();
     factoryName = ko.observable<string>();
     
     validationGroup: KnockoutValidationGroup;
-    testConnectionValidationGroup: KnockoutValidationGroup;  
+    testConnectionValidationGroup: KnockoutValidationGroup;
     
     dirtyFlag: () => DirtyFlag;
 
@@ -35,7 +35,7 @@ class connectionStringSqlEtlModel extends connectionStringModel {
         ], false, jsonUtil.newLineNormalizingHashFunction);
     }
 
-    update(dto: Raven.Client.Documents.Operations.ETL.SQL.SqlConnectionString) {
+    update(dto: Raven.Client.Documents.Operations.ETL.SQL.SqlConnectionString): void {
         super.update(dto);
         
         this.connectionStringName(dto.Name); 
@@ -43,7 +43,7 @@ class connectionStringSqlEtlModel extends connectionStringModel {
         this.factoryName(dto.FactoryName);
     }
 
-    initValidation() {
+    initValidation(): void {
         super.initValidation();
         
         this.connectionStringName.extend({
@@ -70,9 +70,14 @@ class connectionStringSqlEtlModel extends connectionStringModel {
         })
     }
     
-    labelFor(input: string) {
+    labelFor(input: string): string {
         const provider = connectionStringSqlEtlModel.sqlProviders.find(x => x.value === input);
         return provider ? provider.label : null;
+    }
+    
+    nameFor(input: string): string {
+        const provider = connectionStringSqlEtlModel.sqlProviders.find(x => x.value === input);
+        return provider ? provider.label.split("(")[0] : null;
     }
 
     static empty(): connectionStringSqlEtlModel {
@@ -93,12 +98,12 @@ class connectionStringSqlEtlModel extends connectionStringModel {
         };
     }
     
-    testConnection(db: database) : JQueryPromise<Raven.Server.Web.System.NodeConnectionTestResult> {
+    testConnection(db: database): JQueryPromise<Raven.Server.Web.System.NodeConnectionTestResult> {
         return new testSqlConnectionStringCommand(db, this.connectionString(), this.factoryName())
             .execute();
     }
 
-    saveConnectionString(db: database) : JQueryPromise<void> {
+    saveConnectionString(db: database): JQueryPromise<void> {
         return new saveConnectionStringCommand(db, this)
             .execute();
     }
