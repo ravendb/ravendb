@@ -162,7 +162,7 @@ namespace SlowTests.Issues
         [Fact]
         public async Task RemoveEntryFromRaftLogTest()
         {
-            var (_, leader) = await CreateRaftCluster(3);
+            var (_, leader) = await CreateRaftCluster(3, watcherCluster: true);
             var database = GetDatabaseName();
 
             await CreateDatabaseInClusterInner(new DatabaseRecord(database), 3, leader.WebUrl, null);
@@ -172,7 +172,8 @@ namespace SlowTests.Issues
                 Urls = new[] { leader.WebUrl }
             }.Initialize())
             {
-                leader.ServerStore.Engine.StateMachine.Validator = new TestCommandValidator();
+                await ActionWithLeader(l => l.ServerStore.Engine.StateMachine.Validator = new TestCommandValidator());
+
                 var documentDatabase = await leader.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
 
                 var cmd = new RachisConsensusTestBase.TestCommandWithRaftId("test", RaftIdGenerator.NewId());
@@ -202,6 +203,7 @@ namespace SlowTests.Issues
                 }
 
                 long index = 0;
+
                 foreach (var server in Servers)
                 {
                     index = 0;
@@ -212,7 +214,9 @@ namespace SlowTests.Issues
                         server.ServerStore.Engine.GetLastCommitIndex(context, out index, out long term);
                     }
 
-                    server.ServerStore.Engine.RemoveEntryFromRaftLog(index + 1);
+                    var res = await WaitForValueAsync(async () => server.ServerStore.Engine.RemoveEntryFromRaftLog(index + 1), true);
+
+                    Assert.True(res);
                 }
 
                 long index2 = 0;
@@ -226,6 +230,7 @@ namespace SlowTests.Issues
                         using (var tx = context.OpenReadTransaction())
                         {
                             server.ServerStore.Engine.GetLastCommitIndex(context, out index2, out long term);
+
                         }
 
                         return index2 > index;
@@ -235,8 +240,8 @@ namespace SlowTests.Issues
 
                 foreach (var server in Servers)
                 {
-                    var val = WaitForValueAsync(() => server.ServerStore.DatabasesLandlord.IsDatabaseLoaded("Toli"), true);
-                    Assert.True(val.Result);
+                    var val = await WaitForValueAsync(() => server.ServerStore.DatabasesLandlord.IsDatabaseLoaded("Toli"), true);
+                    Assert.True(val);
                 }
             }
         }
