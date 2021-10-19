@@ -200,6 +200,62 @@ DROP DATABASE [SqlReplication-{dbName}]";
             }
         }
 
+
+
+        [Fact]
+        public async Task ShouldHandleCaseMismatchBetweenTableDefinitionAndLoadTo()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
+                {
+                    CreateRdbmsSchema(connectionString);
+
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        await session.StoreAsync(new Order
+                        {
+                            OrderLines = new List<OrderLine>
+                            {
+                                new OrderLine {Cost = 3, Product = "Milk", Quantity = 3}, new OrderLine {Cost = 4, Product = "Bear", Quantity = 2},
+                            }
+                        });
+                        await session.SaveChangesAsync();
+                    }
+
+                    var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+
+                    string script = @"
+var orderData = {
+    Id: id(this),
+    OrderLinesCount: this.OrderLines.length,
+    TotalCost: 0
+};
+
+loadToOrDerS(orderData); // note 'OrDerS' here vs 'Orders' defined in the configuration
+";
+
+                    SetupSqlEtl(store, connectionString, script);
+
+                    WaitForUserToContinueTheTest(store);
+
+                    etlDone.Wait(TimeSpan.FromMinutes(5));
+
+                    using (var con = new SqlConnection())
+                    {
+                        con.ConnectionString = connectionString;
+                        con.Open();
+
+                        using (var dbCommand = con.CreateCommand())
+                        {
+                            dbCommand.CommandText = " SELECT COUNT(*) FROM Orders";
+                            Assert.Equal(1, dbCommand.ExecuteScalar());
+                        }
+                    }
+                }
+            }
+        }
+
         [Fact]
         public async Task NullPropagation()
         {
