@@ -20,12 +20,15 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP.Handlers
 
                 var testScript = JsonDeserializationServer.TestOlapEtlScript(testConfig);
 
-                var result = (OlapEtlTestScriptResult)OlapEtl.TestScript(testScript, Database, ServerStore, context);
-
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+                using (OlapEtl.TestScript(testScript, Database, ServerStore, context, out var testResult))
                 {
-                    var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(result);
-                    writer.WriteObject(context.ReadObject(djv, "olap-etl-test"));
+                    var result = (OlapEtlTestScriptResult)testResult;
+                    
+                    await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+                    {
+                        var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(result);
+                        writer.WriteObject(context.ReadObject(djv, "olap-etl-test"));
+                    }
                 }
             }
         }

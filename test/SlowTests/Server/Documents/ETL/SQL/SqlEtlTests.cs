@@ -648,7 +648,7 @@ var nameArr = this.StepName.split('.'); loadToOrders({});");
 
                     using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
-                        var result = (SqlEtlTestScriptResult)SqlEtl.TestScript(
+                        using(SqlEtl.TestScript(
                             new TestSqlEtlScript
                             {
                                 PerformRolledBackTransaction = performRolledBackTransaction,
@@ -671,23 +671,25 @@ var nameArr = this.StepName.split('.'); loadToOrders({});");
                                         }
                                     }
                                 }
-                            }, database, database.ServerStore, context);
+                            }, database, database.ServerStore, context, out var testResult))
+                        {
+                            var result = (SqlEtlTestScriptResult)testResult;
+                            Assert.Equal(0, result.TransformationErrors.Count);
+                            Assert.Equal(0, result.LoadErrors.Count);
+                            Assert.Equal(0, result.SlowSqlWarnings.Count);
 
-                        Assert.Equal(0, result.TransformationErrors.Count);
-                        Assert.Equal(0, result.LoadErrors.Count);
-                        Assert.Equal(0, result.SlowSqlWarnings.Count);
+                            Assert.Equal(2, result.Summary.Count);
 
-                        Assert.Equal(2, result.Summary.Count);
+                            var orderLines = result.Summary.First(x => x.TableName == "OrderLines");
 
-                        var orderLines = result.Summary.First(x => x.TableName == "OrderLines");
+                            Assert.Equal(3, orderLines.Commands.Length); // delete and two inserts
 
-                        Assert.Equal(3, orderLines.Commands.Length); // delete and two inserts
+                            var orders = result.Summary.First(x => x.TableName == "Orders");
 
-                        var orders = result.Summary.First(x => x.TableName == "Orders");
+                            Assert.Equal(2, orders.Commands.Length); // delete and insert
 
-                        Assert.Equal(2, orders.Commands.Length); // delete and insert
-
-                        Assert.Equal("test output", result.DebugOutput[0]);
+                            Assert.Equal("test output", result.DebugOutput[0]);
+                        }
                     }
                 }
             }
@@ -728,7 +730,7 @@ var nameArr = this.StepName.split('.'); loadToOrders({});");
 
                     using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
-                        var result = (SqlEtlTestScriptResult)SqlEtl.TestScript(
+                        using(SqlEtl.TestScript(
                             new TestSqlEtlScript
                             {
                                 PerformRolledBackTransaction = performRolledBackTransaction,
@@ -744,20 +746,23 @@ var nameArr = this.StepName.split('.'); loadToOrders({});");
                                         new SqlEtlTable {TableName = "OrderLines", DocumentIdColumn = "OrderId"},
                                         new SqlEtlTable {TableName = "NotUsedInScript", DocumentIdColumn = "OrderId"},
                                     },
-                                    Transforms = { new Transformation() { Collections = { "Orders" }, Name = "OrdersAndLines", Script = defaultScript } }
+                                    Transforms = {new Transformation() {Collections = {"Orders"}, Name = "OrdersAndLines", Script = defaultScript}}
                                 }
-                            }, database, database.ServerStore, context);
+                            }, database, database.ServerStore, context, out var testResult))
+                        {
+                            var result = (SqlEtlTestScriptResult)testResult;
+                            
+                            Assert.Equal(0, result.TransformationErrors.Count);
+                            Assert.Equal(0, result.LoadErrors.Count);
+                            Assert.Equal(0, result.SlowSqlWarnings.Count);
+                            Assert.Equal(2, result.Summary.Count);
 
-                        Assert.Equal(0, result.TransformationErrors.Count);
-                        Assert.Equal(0, result.LoadErrors.Count);
-                        Assert.Equal(0, result.SlowSqlWarnings.Count);
-                        Assert.Equal(2, result.Summary.Count);
+                            var orderLines = result.Summary.First(x => x.TableName == "OrderLines");
+                            Assert.Equal(1, orderLines.Commands.Length); // delete
 
-                        var orderLines = result.Summary.First(x => x.TableName == "OrderLines");
-                        Assert.Equal(1, orderLines.Commands.Length); // delete
-
-                        var orders = result.Summary.First(x => x.TableName == "Orders");
-                        Assert.Equal(1, orders.Commands.Length); // delete
+                            var orders = result.Summary.First(x => x.TableName == "Orders");
+                            Assert.Equal(1, orders.Commands.Length); // delete
+                        }
                     }
 
                     using (var session = store.OpenAsyncSession())
