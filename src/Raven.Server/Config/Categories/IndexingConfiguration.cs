@@ -229,6 +229,12 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.MaxNumberOfConcurrentlyRunningIndexes", ConfigurationEntryScope.ServerWideOnly)]
         public int? MaxNumberOfConcurrentlyRunningIndexes { get; set; }
 
+        [Description("EXPERT: Allows to open an index without checking if current Database ID matched the one for which index was created.")]
+        [DefaultValue(false)]
+        [IndexUpdateType(IndexUpdateType.None)]
+        [ConfigurationEntry("Indexing.SkipDatabaseIdValidationOnIndexOpening", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public bool SkipDatabaseIdValidationOnIndexOpening { get; set; }
+
         protected override void ValidateProperty(PropertyInfo property)
         {
             var updateTypeAttribute = property.GetCustomAttribute<IndexUpdateTypeAttribute>();

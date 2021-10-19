@@ -370,12 +370,12 @@ namespace Raven.Server.Documents.Indexes
                         e);
                 }
 
-                if (generateNewDatabaseId == false)
+                if (documentDatabase.Configuration.Indexing.SkipDatabaseIdValidationOnIndexOpening == false && generateNewDatabaseId == false)
                 {
                     var databaseId = IndexStorage.ReadDatabaseId(name, environment);
                     if (databaseId != null) // backward compatibility
                     {
-                        if (databaseId != documentDatabase.DbBase64Id) 
+                        if (databaseId != documentDatabase.DbBase64Id)
                             throw new IndexOpenException($"Could not open index because stored database ID ('{databaseId}') is different than current database ID ('{documentDatabase.DbBase64Id}'). A common reason for this is that the index was copied from another database.");
                     }
                 }
