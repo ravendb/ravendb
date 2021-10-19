@@ -289,6 +289,8 @@ namespace Raven.Server.Utils
                 return null;
 
             var start = changeVector.LastIndexOf(", ", endOfNodeTag - 1, StringComparison.OrdinalIgnoreCase) + 1;
+            if (start > 1)
+                start++;
 
             return changeVector.Substring(start, endOfNodeTag - start);
         }
