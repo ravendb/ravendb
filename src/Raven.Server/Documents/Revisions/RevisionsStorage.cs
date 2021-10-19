@@ -286,6 +286,9 @@ namespace Raven.Server.Documents.Revisions
                 if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByAttachmentUpdate))
                     return false;
 
+                if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByTimeSeriesUpdate))
+                    return false;
+
                 if (configuration == ConflictConfiguration.Default || configuration.Disabled)
                     return false;
             }
