@@ -120,13 +120,15 @@ namespace Raven.Server.Commercial
         public bool HasRavenEtl => GetValue<bool>("ravenEtl");
 
         public bool HasSqlEtl => GetValue<bool>("sqlEtl");
-        
+
         public bool HasOlapEtl => GetValue<bool>("olapEtl");
 
-        public bool HasElasticSearchEtl => GetValue<bool>("elasticsearchEtl");
+        public bool HasElasticSearchEtl => GetValue<bool>("elasticSearchEtl");
+
+        public bool HasPostgreSqlIntegration => GetValue<bool>("postgreSqlIntegration");
 
         public bool HasSnmpMonitoring => GetValue<bool>("snmp");
-        
+
         public bool HasMonitoringEndpoints => GetValue<bool>("monitoringEndpoints");
 
         public bool HasReadOnlyCertificates => GetValue<bool>("readOnlyCertificates");
@@ -146,6 +148,10 @@ namespace Raven.Server.Commercial
         public bool HasConcurrentWorkerDataSubscriptions => GetValue<bool>("concurrentWorkerDataSubscriptions");
 
         public bool HasAdditionalAssembliesFromNuGet => GetValue<bool>("additionalAssembliesNuget");
+
+        public bool HasTcpDataCompression => GetValue<bool>("tcpDataCompression");
+
+        public bool HasConcurrentSubscriptions => GetValue<bool>("concurrentSubscriptions");
 
         public bool IsIsv => GetValue<bool>("redist");
 
@@ -195,8 +201,9 @@ namespace Raven.Server.Commercial
                 [nameof(HasDelayedExternalReplication)] = HasDelayedExternalReplication,
                 [nameof(HasRavenEtl)] = HasRavenEtl,
                 [nameof(HasSqlEtl)] = HasSqlEtl,
-                [nameof(HasElasticSearchEtl)] = HasElasticSearchEtl,
                 [nameof(HasOlapEtl)] = HasOlapEtl,
+                [nameof(HasElasticSearchEtl)] = HasElasticSearchEtl,
+                [nameof(HasPostgreSqlIntegration)] = HasPostgreSqlIntegration,
                 [nameof(HasSnmpMonitoring)] = HasSnmpMonitoring,
                 [nameof(HasMonitoringEndpoints)] = HasMonitoringEndpoints,
                 [nameof(HasReadOnlyCertificates)] = HasReadOnlyCertificates,
@@ -209,6 +216,8 @@ namespace Raven.Server.Commercial
                 [nameof(HasPostgreSqlProtocolSupport)] = HasPostgreSqlProtocolSupport,
                 [nameof(HasConcurrentWorkerDataSubscriptions)] = HasConcurrentWorkerDataSubscriptions,
                 [nameof(HasAdditionalAssembliesFromNuGet)] = HasAdditionalAssembliesFromNuGet,
+                [nameof(HasTcpDataCompression)] = HasTcpDataCompression,
+                [nameof(HasConcurrentSubscriptions)] = HasConcurrentSubscriptions,
                 [nameof(IsIsv)] = IsIsv,
                 [nameof(IsCloud)] = IsCloud,
                 [nameof(CanAutoRenewLetsEncryptCertificate)] = CanAutoRenewLetsEncryptCertificate
