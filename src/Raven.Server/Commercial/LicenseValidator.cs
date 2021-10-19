@@ -69,7 +69,7 @@ namespace Raven.Server.Commercial
                         ValueType.Int8 => (int)br.ReadByte(),
                         ValueType.Int32 => br.ReadInt32(),
                         ValueType.Date => FromDosDate(br.ReadUInt16()),
-                        ValueType.String => Encoding.UTF8.GetString(br.ReadBytes((int)br.ReadByte())),
+                        ValueType.String => GetString(br.ReadBytes((int)br.ReadByte())),
                         _ => throw new ArgumentOutOfRangeException(),
                     };
 
@@ -132,6 +132,13 @@ namespace Raven.Server.Commercial
 
             licenseProperty = Terms[index];
             return true;
+        }
+
+        private static string GetString(byte[] bytes)
+        {
+            var chars = new char[bytes.Length / sizeof(char)];
+            Buffer.BlockCopy(bytes, 0, chars, 0, bytes.Length);
+            return new string(chars);
         }
 
         private class Keys
