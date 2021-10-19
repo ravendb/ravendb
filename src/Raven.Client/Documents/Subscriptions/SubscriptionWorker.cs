@@ -544,11 +544,8 @@ namespace Raven.Client.Documents.Subscriptions
                                     if (_forTestingPurposes?.CloseThisWorkerBeforeAck == 2)
                                     {
                                         //_forTestingPurposes.mre.Wait();
-                                        Console.WriteLine($"closed.");
                                         throw new RavenException("Simulated Exception to close subscription");
                                     }
-
-                                    Console.WriteLine($"batch with docs {String.Join(",", batch.Items.Select(i => i.Id))} is closing..");
 
                                     await SendAckAsync(lastReceivedChangeVector, tcpStream, context, _processingCts.Token).ConfigureAwait(false);
                                 }
