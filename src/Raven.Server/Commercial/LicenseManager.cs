@@ -1415,12 +1415,23 @@ namespace Raven.Server.Commercial
             if (IsValid(out var licenseLimit) == false)
                 throw licenseLimit;
 
-            if (LicenseStatus.HasElasticSearchEtl != false)
+            if (LicenseStatus.HasElasticSearchEtl)
                 return;
 
-            // TODO arek
-            //const string message = "Your current license doesn't include the ElasticSearch ETL feature";
-            //throw GenerateLicenseLimit(LimitType.ElasticSearchEtl, message);
+            const string message = "Your current license doesn't include the ElasticSearch ETL feature";
+            throw GenerateLicenseLimit(LimitType.ElasticSearchEtl, message);
+        }
+
+        public void AssertCanAddConcurrentSubscriptions()
+        {
+            if (IsValid(out var licenseLimit) == false)
+                throw licenseLimit;
+
+            if (LicenseStatus.HasConcurrentSubscriptions)
+                return;
+
+            const string message = "Your current license doesn't include the Concurrent Subscriptions feature";
+            throw GenerateLicenseLimit(LimitType.ConcurrentSubscriptions, message);
         }
 
         public void AssertCanAddOlapEtl()
