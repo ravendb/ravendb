@@ -68,12 +68,15 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.Handlers
                 var dbDoc = await context.ReadForMemoryAsync(RequestBodyStream(), "TestSqlEtlScript");
                 var testScript = JsonDeserializationServer.TestSqlEtlScript(dbDoc);
 
-                var result = (SqlEtlTestScriptResult)SqlEtl.TestScript(testScript, Database, ServerStore, context);
-
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+                using (SqlEtl.TestScript(testScript, Database, ServerStore, context, out var testResult))
                 {
-                    var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(result);
-                    writer.WriteObject(context.ReadObject(djv, "et/sql/test"));
+                    var result = (SqlEtlTestScriptResult)testResult;
+                    
+                    await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+                    {
+                        var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(result);
+                        writer.WriteObject(context.ReadObject(djv, "et/sql/test"));
+                    }
                 }
             }
         }
