@@ -65,7 +65,6 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    WaitForUserToContinueTheTest(store);
                     var rev = await session.Advanced.Revisions.GetForAsync<User>("users/1");
                     Assert.Equal(5, rev.Count);
 
@@ -142,12 +141,17 @@ namespace SlowTests.Issues
 
                 using (var session = store1.OpenAsyncSession())
                 {
+                    var foo = await session.LoadAsync<User>("foo/bar");
+                    var metadata = session.Advanced.GetMetadataFor(foo);
+                    var flags = metadata.GetString(Constants.Documents.Metadata.Flags);
+                    Assert.Contains(DocumentFlags.Reverted.ToString(), flags);
+                    Assert.False(flags.Contains(DocumentFlags.Resolved.ToString()));
+
                     var persons = await session.Advanced.Revisions.GetForAsync<Person>("foo/bar");
                     Assert.Equal(5, persons.Count);
 
-                    WaitForUserToContinueTheTest(store1);
                     Assert.Equal("Name2", persons[0].Name);
-                    var metadata = session.Advanced.GetMetadataFor(persons[0]);
+                    metadata = session.Advanced.GetMetadataFor(persons[0]);
                     Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.Revision | DocumentFlags.Reverted).ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
 
                     Assert.Equal("Name3", persons[1].Name);
@@ -447,15 +451,18 @@ namespace SlowTests.Issues
                         await session.SaveChangesAsync();
                     }
                 }
-                WaitForUserToContinueTheTest(store);
                 using (var session = store.OpenAsyncSession())
                 {
+                    var foo = await session.LoadAsync<Person>("foo/bar");
+                    var metadata = session.Advanced.GetMetadataFor(foo);
+                    var flags = metadata.GetString(Constants.Documents.Metadata.Flags);
+                    Assert.False(flags.Contains(DocumentFlags.Reverted.ToString()));
+
                     var persons = await session.Advanced.Revisions.GetForAsync<Person>("foo/bar");
                     Assert.Equal(4, persons.Count);
 
-                    WaitForUserToContinueTheTest(store);
                     Assert.Equal("Name1", persons[0].Name);
-                    var metadata = session.Advanced.GetMetadataFor(persons[0]);
+                    metadata = session.Advanced.GetMetadataFor(persons[0]);
                     Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.Revision | DocumentFlags.HasAttachments).ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
                 }
             }
@@ -520,12 +527,16 @@ namespace SlowTests.Issues
                 WaitForUserToContinueTheTest(store);
                 using (var session = store.OpenAsyncSession())
                 {
+                    var foo = await session.LoadAsync<Person>("foo/bar");
+                    var metadata = session.Advanced.GetMetadataFor(foo);
+                    var flags = metadata.GetString(Constants.Documents.Metadata.Flags);
+                    Assert.False(flags.Contains(DocumentFlags.Reverted.ToString()));
+
                     var persons = await session.Advanced.Revisions.GetForAsync<Person>("foo/bar");
                     Assert.Equal(4, persons.Count);
 
-                    WaitForUserToContinueTheTest(store);
                     Assert.Equal("Name1", persons[0].Name);
-                    var metadata = session.Advanced.GetMetadataFor(persons[0]);
+                    metadata = session.Advanced.GetMetadataFor(persons[0]);
                     Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.Revision | DocumentFlags.HasCounters).ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
                 }
             }
@@ -583,6 +594,8 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenAsyncSession())
                 {
+                    var foo = await session.LoadAsync<User>("foo/bar");
+                    Assert.Null(foo);
                     var persons = await session.Advanced.Revisions.GetForAsync<Person>("foo/bar");
                     Assert.Equal(5, persons.Count);
 
