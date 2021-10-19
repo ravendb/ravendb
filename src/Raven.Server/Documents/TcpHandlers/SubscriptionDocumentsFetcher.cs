@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -76,7 +77,6 @@ namespace Raven.Server.Documents.TcpHandlers
                 return GetRevisionsToSend(docsContext, includesCmd, _subscriptionConnectionsState.GetRevisionsFromResend(clusterOperationContext), startEtag);
             }
 
-
             return GetDocumentsToSend(docsContext, includesCmd, _subscriptionConnectionsState.GetDocumentsFromResend(clusterOperationContext), startEtag);
         }
         
@@ -89,24 +89,13 @@ namespace Raven.Server.Documents.TcpHandlers
 
             using (_db.Scripts.GetScriptRunner(_patch, true, out var run))
             {
-                var docs = _collection switch
-                {
-                    Constants.Documents.Collections.AllDocumentsCollection =>
-                        _db.DocumentsStorage.GetDocumentsFrom(docsContext, startEtag + 1, 0, long.MaxValue),
-                    _ =>
-                        _db.DocumentsStorage.GetDocumentsFrom(
-                            docsContext,
-                            _collection,
-                            startEtag + 1,
-                            0,
-                            long.MaxValue)
-                };
+                var docsByEtag = GetDocumentsByEtag(docsContext, startEtag);
 
-                var resendDocs = GetResendDocuments(docsContext, resendDocuments);
+                var resendDocs = GetDocumentsFromResend(docsContext, resendDocuments);
 
-                var documents = GetMergeEnumerators(resendDocs, docs);
+                var docs = MergeEnumerators(resendDocs, docsByEtag);
 
-                foreach (var doc in documents)
+                foreach (var doc in docs)
                 {
                     using (doc.Data)
                     {
@@ -168,12 +157,30 @@ namespace Raven.Server.Documents.TcpHandlers
             }
         }
 
-        private IEnumerable<Document> GetResendDocuments(DocumentsOperationContext docsContext, IEnumerable<DocumentRecord> documents)
+        private IEnumerable<Document> GetDocumentsByEtag(DocumentsOperationContext docsContext, long startEtag)
         {
+            var docs = _collection switch
+            {
+                Constants.Documents.Collections.AllDocumentsCollection =>
+                    _db.DocumentsStorage.GetDocumentsFrom(docsContext, startEtag + 1, 0, long.MaxValue),
+                _ =>
+                    _db.DocumentsStorage.GetDocumentsFrom(
+                        docsContext,
+                        _collection,
+                        startEtag + 1,
+                        0,
+                        long.MaxValue)
+            };
+            return docs;
+        }
+
+        private IEnumerable<Document> GetDocumentsFromResend(DocumentsOperationContext docsContext, IEnumerable<DocumentRecord> documents)
+        {
+            // resend docs are un-ordered
             foreach (var record in documents)
             {
                 var current = _db.DocumentsStorage.GetDocumentOrTombstone(docsContext, record.DocumentId, throwOnConflict: false);
-                if (HasDocBeenUpdatedBeyondGivenChangeVector(current, record.ChangeVector) == SubscriptionConnectionsState.DocumentState.Unchanged)
+                if (HasDocBeenUpdatedBeyondGivenChangeVector(current, record.ChangeVector))
                 {
                     Debug.Assert(current.Document != null, "Document does not exist");
                     yield return current.Document;
@@ -181,37 +188,34 @@ namespace Raven.Server.Documents.TcpHandlers
             }
         }
 
-        internal SubscriptionConnectionsState.DocumentState HasDocBeenUpdatedBeyondGivenChangeVector(DocumentsStorage.DocumentOrTombstone item, string currentChangeVector)
+        internal bool HasDocBeenUpdatedBeyondGivenChangeVector(DocumentsStorage.DocumentOrTombstone item, string currentChangeVector)
         {
             if (item.Document != null)
             {
                 switch (_db.DocumentsStorage.GetConflictStatus(item.Document.ChangeVector, currentChangeVector))
                 {
                     case ConflictStatus.Update:
-                        return SubscriptionConnectionsState.DocumentState.Updated;
+                        // If document was updated, but the subscription went too far.
+                        // We need to resend it
+                        return _db.DocumentsStorage.GetConflictStatus(item.Document.ChangeVector, _subscriptionConnectionsState.LastChangeVectorSent) == ConflictStatus.AlreadyMerged;
 
                     case ConflictStatus.AlreadyMerged:
-                        return SubscriptionConnectionsState.DocumentState.Unchanged;
+                        return true;
 
                     case ConflictStatus.Conflict:
-                        return SubscriptionConnectionsState.DocumentState.Conflicted;
+                        return false;
 
                     default:
                         throw new InvalidEnumArgumentException();
                 }
             }
-            else if (item.Tombstone != null)
-            {
-                return SubscriptionConnectionsState.DocumentState.Deleted;
-            }
-            else
-            {
-                return SubscriptionConnectionsState.DocumentState.Conflicted;
-            }
+            // TODO: we probably need to delete it from the resend table
+            // we don't send tombstones
+            return false;
         }
 
 
-        private IEnumerable<(Document previous, Document current)> GetRevisionsEnumerator(IEnumerable<(Document previous, Document current)> enumerable) {
+        private IEnumerable<(Document Previous, Document Current)> GetRevisionsEnumerator(IEnumerable<(Document previous, Document current)> enumerable) {
             foreach (var item in enumerable)
             {
                 if (item.current.Flags.HasFlag(DocumentFlags.DeleteRevision))
@@ -225,6 +229,11 @@ namespace Raven.Server.Documents.TcpHandlers
             }
         }
 
+        public class SubscriptionRevision : Document
+        {
+            public string Previous;
+        }
+
         private IEnumerable<(Document Doc, Exception Exception)> GetRevisionsToSend(
             DocumentsOperationContext docsContext,
             IncludeDocumentsCommand includesCmd,
@@ -234,24 +243,18 @@ namespace Raven.Server.Documents.TcpHandlers
             int numberOfDocs = 0;
             Size size = new Size(0, SizeUnit.Megabytes);
 
-            var collectionName = new CollectionName(_collection);
             using (_db.Scripts.GetScriptRunner(_patch, true, out var run))
             {
-                var revisionsEnumertor = _collection switch
-                    {
-                        Constants.Documents.Collections.AllDocumentsCollection =>
-                            _db.DocumentsStorage.RevisionsStorage.GetRevisionsFrom(docsContext, startEtag + 1, 0, long.MaxValue),
-                        _ =>
-                            _db.DocumentsStorage.RevisionsStorage.GetRevisionsFrom(docsContext, collectionName, startEtag + 1, long.MaxValue)
-                    };
+                var revisionsByEtag = GetRevisionsByEtag(docsContext, startEtag);
                 
-                var resendEnumerator = GetRevisionsFromResend(docsContext, resendRevisions);
+                var revisionsFromResend = GetRevisionsFromResend(docsContext, resendRevisions);
 
-                var revisions = GetMergeEnumerators(resendEnumerator, revisionsEnumertor);
+                var revisions = MergeEnumerators(revisionsFromResend, revisionsByEtag);
 
                 foreach (var revisionTuple in GetRevisionsEnumerator(revisions))
                 {
-                    var item = (revisionTuple.current ?? revisionTuple.previous);
+                    var item = (revisionTuple.Current ?? revisionTuple.Previous);
+                    Debug.Assert(revisionTuple.Current != null);
                     Debug.Assert(item != null);
                     size.Add(item.Data.Size, SizeUnit.Bytes);
                     if (ShouldSendDocumentWithRevisions(_subscription, run, _patch, docsContext, item, revisionTuple, out var transformResult, out var exception) == false)
@@ -266,7 +269,7 @@ namespace Raven.Server.Documents.TcpHandlers
                         else
                         {
                             // make sure that if we read a lot of irrelevant documents, we send keep alive over the network
-                            yield return (new Document
+                            yield return (new SubscriptionRevision
                             {
                                 Data = null,
                                 ChangeVector = item.ChangeVector,
@@ -275,7 +278,8 @@ namespace Raven.Server.Documents.TcpHandlers
                                 Flags = item.Flags,
                                 StorageId = item.StorageId,
                                 NonPersistentFlags = item.NonPersistentFlags,
-                                TransactionMarker = item.TransactionMarker
+                                TransactionMarker = item.TransactionMarker,
+                                Previous = revisionTuple.Previous?.ChangeVector ?? string.Empty
                             }, null);
                         }
                     }
@@ -285,11 +289,11 @@ namespace Raven.Server.Documents.TcpHandlers
                         {
                             if (transformResult == null)
                             {
-                                yield return (revisionTuple.current, null);
+                                yield return (revisionTuple.Current, null);
                             }
                             else
                             {
-                                var projection = new Document
+                                var projection = new SubscriptionRevision
                                 {
                                     Id = item.Id,
                                     Etag = item.Etag,
@@ -300,7 +304,8 @@ namespace Raven.Server.Documents.TcpHandlers
                                     Flags = item.Flags,
                                     StorageId = item.StorageId,
                                     NonPersistentFlags = item.NonPersistentFlags,
-                                    TransactionMarker = item.TransactionMarker
+                                    TransactionMarker = item.TransactionMarker,
+                                    Previous = revisionTuple.Previous?.ChangeVector ?? string.Empty
                                 };
 
                                 yield return (projection, null);
@@ -316,17 +321,32 @@ namespace Raven.Server.Documents.TcpHandlers
             }
         }
 
-        private IEnumerable<T> GetMergeEnumerators<T>(IEnumerable<T> resendItems, IEnumerable<T> items)
+        private IEnumerable<(Document, Document)> GetRevisionsByEtag(DocumentsOperationContext docsContext, long startEtag)
         {
-            var hasResend = false;
+            return _collection switch
+            {
+                Constants.Documents.Collections.AllDocumentsCollection =>
+                    _db.DocumentsStorage.RevisionsStorage.GetRevisionsFrom(docsContext, startEtag + 1, 0, long.MaxValue),
+                _ =>
+                    _db.DocumentsStorage.RevisionsStorage.GetRevisionsFrom(docsContext, new CollectionName(_collection), startEtag + 1, long.MaxValue)
+            };
+        }
+
+        private bool _fetchingFromResend;
+
+        private IEnumerable<T> MergeEnumerators<T>(IEnumerable<T> resendItems, IEnumerable<T> items)
+        {
+            _fetchingFromResend = false;
             foreach (var item in resendItems)
             {
-                hasResend = true;
+                _fetchingFromResend = true;
                 yield return item;
             }
 
-            if (hasResend)
+            if (_fetchingFromResend)
             {
+                // we don't mix documents from resend and regular, so we need to do another round when we are done with the resend
+                _subscriptionConnectionsState.NotifyHasMoreDocs(); 
                 yield break;
             }
 
@@ -336,12 +356,12 @@ namespace Raven.Server.Documents.TcpHandlers
             }
         }
 
-        private IEnumerable<(Document Current, Document Previous)> GetRevisionsFromResend(DocumentsOperationContext context, IEnumerable<RevisionRecord> resend)
+        private IEnumerable<(Document Previous, Document Current)> GetRevisionsFromResend(DocumentsOperationContext context, IEnumerable<RevisionRecord> resend)
         {
             foreach (var r in resend)
             {
-                yield return (_db.DocumentsStorage.RevisionsStorage.GetRevision(context, r.Current),
-                    _db.DocumentsStorage.RevisionsStorage.GetRevision(context, r.Previous));
+                Console.WriteLine($"from resend {r.Previous} - {r.Current}");
+                yield return (_db.DocumentsStorage.RevisionsStorage.GetRevision(context, r.Previous), _db.DocumentsStorage.RevisionsStorage.GetRevision(context, r.Current));
             }
         }
 
@@ -355,12 +375,16 @@ namespace Raven.Server.Documents.TcpHandlers
         {
             transformResult = null;
             exception = null;
-            var conflictStatus = ChangeVectorUtils.GetConflictStatus(
-                remoteAsString: doc.ChangeVector,
-                localAsString: subscriptionState.ChangeVectorForNextBatchStartingPoint);
 
-            if (conflictStatus == ConflictStatus.AlreadyMerged)
-                return false;
+            if (_fetchingFromResend == false)
+            {
+                var conflictStatus = ChangeVectorUtils.GetConflictStatus(
+                    remoteAsString: doc.ChangeVector,
+                    localAsString: subscriptionState.ChangeVectorForNextBatchStartingPoint);
+
+                if (conflictStatus == ConflictStatus.AlreadyMerged)
+                    return false;
+            }
             
             if (patch == null)
                 return true;
@@ -393,12 +417,16 @@ namespace Raven.Server.Documents.TcpHandlers
         {
             exception = null;
             transformResult = null;
-            var conflictStatus = ChangeVectorUtils.GetConflictStatus(
-                remoteAsString: item.ChangeVector,
-                localAsString: subscriptionState.ChangeVectorForNextBatchStartingPoint);
 
-            if (conflictStatus == ConflictStatus.AlreadyMerged)
-                return false;
+            if (_fetchingFromResend == false)
+            {
+                var conflictStatus = ChangeVectorUtils.GetConflictStatus(
+                    remoteAsString: item.ChangeVector,
+                    localAsString: subscriptionState.ChangeVectorForNextBatchStartingPoint);
+
+                if (conflictStatus == ConflictStatus.AlreadyMerged)
+                    return false;
+            }
 
             revision.Current?.EnsureMetadata();
             revision.Previous?.EnsureMetadata();

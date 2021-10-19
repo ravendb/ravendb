@@ -69,7 +69,6 @@ namespace Raven.Server.ServerWide
             [nameof(UpdateExternalReplicationStateCommand)] = Base40CommandsVersion,
             [nameof(UpdateTopologyCommand)] = Base40CommandsVersion,
             [nameof(AcknowledgeSubscriptionBatchCommand)] = Base40CommandsVersion,
-            [nameof(RecordBatchSubscriptionDocumentsCommand)] = Base40CommandsVersion,
             [nameof(DeleteSubscriptionCommand)] = Base40CommandsVersion,
             [nameof(PutSubscriptionCommand)] = Base40CommandsVersion,
             [nameof(ToggleSubscriptionStateCommand)] = Base40CommandsVersion,
@@ -146,7 +145,8 @@ namespace Raven.Server.ServerWide
             [nameof(EditLockModeCommand)] = 52_000,
             [nameof(PutRollingIndexCommand)] = 52_000,
 
-            [nameof(EditPostgreSqlConfigurationCommand)] = 53_000
+            [nameof(EditPostgreSqlConfigurationCommand)] = 53_000,
+            [nameof(RecordBatchSubscriptionDocumentsCommand)] = 53_000,
         };
 
         public static bool CanPutCommand(string command)

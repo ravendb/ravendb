@@ -1752,7 +1752,7 @@ namespace Raven.Server.Documents.Revisions
                     if (take-- <= 0)
                         yield break;
 
-                    yield return document.current;
+                    yield return document.Current;
                 }
             }
         }
@@ -1785,7 +1785,7 @@ namespace Raven.Server.Documents.Revisions
             return true;
         }
 
-        public IEnumerable<(Document previous, Document current)> GetRevisionsFrom(DocumentsOperationContext context, CollectionName collectionName, long etag, long take)
+        public IEnumerable<(Document Previous, Document Current)> GetRevisionsFrom(DocumentsOperationContext context, CollectionName collectionName, long etag, long take)
         {
             var tableName = collectionName.GetTableName(CollectionTableType.Revisions);
             var table = context.Transaction.InnerTransaction.OpenTable(RevisionsSchema, tableName);
@@ -1795,7 +1795,7 @@ namespace Raven.Server.Documents.Revisions
             return GetCurrentAndPreviousRevisionsFrom(context, iterator, table, take);
         }
 
-        private IEnumerable<(Document previous, Document current)> GetCurrentAndPreviousRevisionsFrom(DocumentsOperationContext context, IEnumerable<Table.TableValueHolder> iterator, Table table, long take)
+        private IEnumerable<(Document Previous, Document Current)> GetCurrentAndPreviousRevisionsFrom(DocumentsOperationContext context, IEnumerable<Table.TableValueHolder> iterator, Table table, long take)
         {
             if (table == null)
                 yield break;
@@ -1818,6 +1818,7 @@ namespace Raven.Server.Documents.Revisions
                     foreach (var prevTvr in table.SeekBackwardFrom(docsSchemaIndex, prefix, idAndEtag, 1))
                     {
                         var previous = TableValueToRevision(context, ref prevTvr.Result.Reader);
+
                         yield return (previous, current);
                         hasPrevious = true;
                         break;
