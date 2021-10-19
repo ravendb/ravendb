@@ -102,7 +102,7 @@ namespace Raven.Server.Smuggler.Migration
             }
         }
 
-        protected async ValueTask WriteDocumentWithAttachmentAsync(IDocumentActions documentActions, DocumentsOperationContext context, Stream dataStream, string key, BlittableJsonReaderObject metadata)
+        protected async ValueTask WriteDocumentWithAttachmentAsync(IDocumentActions documentActions, JsonOperationContext context, Stream dataStream, string key, BlittableJsonReaderObject metadata)
         {
             await using (dataStream)
             {

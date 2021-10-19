@@ -117,9 +117,9 @@ namespace Raven.Server.Documents.Handlers.Admin
 
         private async Task HandleLegacyIndexesAsync()
         {
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (ContextPool.AllocateOperationContext(out JsonOperationContext jsonOperationContext))
             await using (var stream = new ArrayStream(RequestBodyStream(), nameof(DatabaseItemType.Indexes)))
-            using (var source = new StreamSource(stream, context, Database))
+            using (var source = new StreamSource(stream, jsonOperationContext, Database.Name))
             {
                 var destination = new DatabaseDestination(Database);
                 var options = new DatabaseSmugglerOptionsServerSide
@@ -127,7 +127,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                     OperateOnTypes = DatabaseItemType.Indexes
                 };
 
-                var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, options);
+                var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, jsonOperationContext, options);
                 await smuggler.ExecuteAsync();
             }
         }

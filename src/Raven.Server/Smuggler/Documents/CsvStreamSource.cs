@@ -51,7 +51,7 @@ namespace Raven.Server.Smuggler.Documents
     {
         private readonly DocumentDatabase _database;
         private readonly Stream _stream;
-        private readonly DocumentsOperationContext _context;
+        private readonly JsonOperationContext _context;
         private SmugglerResult _result;
         private DatabaseItemType _currentType;
         private readonly string _collection;
@@ -74,7 +74,7 @@ namespace Raven.Server.Smuggler.Documents
 
         private readonly List<IDisposable> _disposables = new List<IDisposable>();
 
-        public CsvStreamSource(DocumentDatabase database, Stream stream, DocumentsOperationContext context, string collection, CsvImportOptions csvConfig)
+        public CsvStreamSource(DocumentDatabase database, Stream stream, JsonOperationContext context, string collection, CsvImportOptions csvConfig)
         {
             _database = database;
             _stream = stream;
@@ -212,6 +212,11 @@ namespace Raven.Server.Smuggler.Documents
             return Task.FromResult(new DatabaseRecord());
         }
 
+        public Task<DatabaseRecord> GetShardedDatabaseRecordAsync()
+        {
+            throw new NotImplementedException();
+        }
+
         public async IAsyncEnumerable<DocumentItem> GetDocumentsAsync(List<string> collectionsToExport, INewDocumentActions actions)
         {
             var line = 0;
@@ -238,7 +243,7 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        private DocumentItem ConvertRecordToDocumentItem(DocumentsOperationContext context, string[] csvReaderCurrentRecord, string[] csvReaderFieldHeaders, string collection)
+        private DocumentItem ConvertRecordToDocumentItem(JsonOperationContext context, string[] csvReaderCurrentRecord, string[] csvReaderFieldHeaders, string collection)
         {
             try
             {
@@ -399,7 +404,7 @@ namespace Raven.Server.Smuggler.Documents
             return AsyncEnumerable.Empty<(string Prefix, long Value, long Index)>();
         }
 
-        public IAsyncEnumerable<(CompareExchangeKey Key, long Index, BlittableJsonReaderObject Value)> GetCompareExchangeValuesAsync(INewCompareExchangeActions actions)
+        public IAsyncEnumerable<(CompareExchangeKey Key, long Index, BlittableJsonReaderObject Value)> GetCompareExchangeValuesAsync()
         {
             return AsyncEnumerable.Empty<(CompareExchangeKey Key, long Index, BlittableJsonReaderObject Value)>();
         }
@@ -442,6 +447,11 @@ namespace Raven.Server.Smuggler.Documents
         public SmugglerSourceType GetSourceType()
         {
             return SmugglerSourceType.Import;
+        }
+
+        public Stream GetAttachmentStream(LazyStringValue hash, out string tag)
+        {
+            throw new NotImplementedException();
         }
 
         public void Dispose()

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
@@ -21,30 +22,31 @@ namespace Raven.Server.Smuggler.Documents.Data
         Task<DatabaseItemType> GetNextTypeAsync();
 
         Task<DatabaseRecord> GetDatabaseRecordAsync();
+        Task<DatabaseRecord> GetShardedDatabaseRecordAsync();
 
-        IAsyncEnumerable<DocumentItem> GetDocumentsAsync(List<string> collectionsToExport, INewDocumentActions actions);
+        IAsyncEnumerable<DocumentItem> GetDocumentsAsync(List<string> collectionsToExport, INewDocumentActions actions = null);
 
-        IAsyncEnumerable<DocumentItem> GetRevisionDocumentsAsync(List<string> collectionsToExport, INewDocumentActions actions);
+        IAsyncEnumerable<DocumentItem> GetRevisionDocumentsAsync(List<string> collectionsToExport, INewDocumentActions actions = null);
 
-        IAsyncEnumerable<DocumentItem> GetLegacyAttachmentsAsync(INewDocumentActions actions);
+        IAsyncEnumerable<DocumentItem> GetLegacyAttachmentsAsync(INewDocumentActions actions = null);
 
         IAsyncEnumerable<string> GetLegacyAttachmentDeletionsAsync();
 
         IAsyncEnumerable<string> GetLegacyDocumentDeletionsAsync();
 
-        IAsyncEnumerable<Tombstone> GetTombstonesAsync(List<string> collectionsToExport, INewDocumentActions actions);
+        IAsyncEnumerable<Tombstone> GetTombstonesAsync(List<string> collectionsToExport, INewDocumentActions actions = null);
 
-        IAsyncEnumerable<DocumentConflict> GetConflictsAsync(List<string> collectionsToExport, INewDocumentActions actions);
+        IAsyncEnumerable<DocumentConflict> GetConflictsAsync(List<string> collectionsToExport, INewDocumentActions actions = null);
 
         IAsyncEnumerable<IndexDefinitionAndType> GetIndexesAsync();
 
         IAsyncEnumerable<(string Prefix, long Value, long Index)> GetIdentitiesAsync();
 
-        IAsyncEnumerable<(CompareExchangeKey Key, long Index, BlittableJsonReaderObject Value)> GetCompareExchangeValuesAsync(INewCompareExchangeActions actions);
+        IAsyncEnumerable<(CompareExchangeKey Key, long Index, BlittableJsonReaderObject Value)> GetCompareExchangeValuesAsync();
 
         IAsyncEnumerable<(CompareExchangeKey Key, long Index)> GetCompareExchangeTombstonesAsync();
 
-        IAsyncEnumerable<CounterGroupDetail> GetCounterValuesAsync(List<string> collectionsToExport, ICounterActions actions);
+        IAsyncEnumerable<CounterGroupDetail> GetCounterValuesAsync(List<string> collectionsToExport, ICounterActions actions = null);
 
         IAsyncEnumerable<CounterDetail> GetLegacyCounterValuesAsync();
 
@@ -57,6 +59,8 @@ namespace Raven.Server.Smuggler.Documents.Data
         Task<long> SkipTypeAsync(DatabaseItemType type, Action<long> onSkipped, CancellationToken token);
 
         SmugglerSourceType GetSourceType();
+
+        Stream GetAttachmentStream(LazyStringValue hash, out string tag);
     }
 
     public enum SmugglerSourceType

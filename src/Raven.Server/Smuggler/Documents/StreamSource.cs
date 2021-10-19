@@ -23,11 +23,11 @@ using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers;
+using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
-using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Documents.Processors;
 using Sparrow;
@@ -36,6 +36,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
+using Sparrow.Threading;
 using Voron;
 using Constants = Raven.Client.Constants;
 using Size = Sparrow.Size;
@@ -45,8 +46,7 @@ namespace Raven.Server.Smuggler.Documents
     public class StreamSource : ISmugglerSource, IDisposable
     {
         private readonly PeepingTomStream _peepingTomStream;
-        private readonly DocumentsOperationContext _context;
-        private readonly DocumentDatabase _database;
+        private readonly JsonOperationContext _context;
         private readonly Logger _log;
 
         private JsonOperationContext.MemoryBuffer _buffer;
@@ -64,13 +64,18 @@ namespace Raven.Server.Smuggler.Documents
 
         private Size _totalObjectsRead = new Size(0, SizeUnit.Bytes);
         private DatabaseItemType _operateOnTypes;
+        public List<IDisposable> _toDispose;
+        private readonly DatabaseSmugglerOptionsServerSide _options;
+        private readonly ByteStringContext _byteStringContext;
 
-        public StreamSource(Stream stream, DocumentsOperationContext context, DocumentDatabase database)
+        public StreamSource(Stream stream, JsonOperationContext context, string databaseName, DatabaseSmugglerOptionsServerSide options = null)
         {
             _peepingTomStream = new PeepingTomStream(stream, context);
             _context = context;
-            _database = database;
-            _log = LoggingSource.Instance.GetLogger<StreamSource>(database.Name);
+            _log = LoggingSource.Instance.GetLogger<StreamSource>(databaseName);
+            _options = options ?? new DatabaseSmugglerOptionsServerSide();
+            _byteStringContext = new ByteStringContext(SharedMultipleUseFlag.None);
+
         }
 
         public async Task<SmugglerInitializeResult> InitializeAsync(DatabaseSmugglerOptionsServerSide options, SmugglerResult result)
@@ -79,6 +84,7 @@ namespace Raven.Server.Smuggler.Documents
             _returnBuffer = _context.GetMemoryBuffer(out _buffer);
             _state = new JsonParserState();
             _parser = new UnmanagedJsonParser(_context, _state, "file");
+            _toDispose = new List<IDisposable>();
 
             if (await UnmanagedJsonParserHelper.ReadAsync(_peepingTomStream, _parser, _state, _buffer) == false)
                 UnmanagedJsonParserHelper.ThrowInvalidJson("Unexpected end of json.", _peepingTomStream, _parser);
@@ -575,9 +581,9 @@ namespace Raven.Server.Smuggler.Documents
             return databaseRecord;
         }
 
-        public IAsyncEnumerable<(CompareExchangeKey Key, long Index, BlittableJsonReaderObject Value)> GetCompareExchangeValuesAsync(INewCompareExchangeActions actions)
+        public IAsyncEnumerable<(CompareExchangeKey Key, long Index, BlittableJsonReaderObject Value)> GetCompareExchangeValuesAsync()
         {
-            return InternalGetCompareExchangeValuesAsync(actions);
+            return InternalGetCompareExchangeValuesAsync();
         }
 
         public IAsyncEnumerable<(CompareExchangeKey Key, long Index)> GetCompareExchangeTombstonesAsync()
@@ -699,6 +705,7 @@ namespace Raven.Server.Smuggler.Documents
                     }
 
                     var segment = await ReadSegmentAsync(size);
+
                     yield return new TimeSeriesItem
                     {
                         DocId = docId,
@@ -706,7 +713,8 @@ namespace Raven.Server.Smuggler.Documents
                         Baseline = baseline,
                         Collection = collection,
                         ChangeVector = cv,
-                        Segment = segment
+                        Segment = segment,
+                        SegmentSize = size
                     };
                 }
             }
@@ -740,6 +748,7 @@ namespace Raven.Server.Smuggler.Documents
                 size -= read.BytesRead;
             }
 
+
             unsafe
             {
                 return new TimeSeriesValuesSegment(mem.Address, segmentSize);
@@ -751,11 +760,11 @@ namespace Raven.Server.Smuggler.Documents
             parser.SetBuffer(value.Buffer, value.Size);
         }
 
-        private async IAsyncEnumerable<(CompareExchangeKey Key, long Index, BlittableJsonReaderObject Value)> InternalGetCompareExchangeValuesAsync(INewCompareExchangeActions actions)
+        private async IAsyncEnumerable<(CompareExchangeKey Key, long Index, BlittableJsonReaderObject Value)> InternalGetCompareExchangeValuesAsync()
         {
             var state = new JsonParserState();
             using (var parser = new UnmanagedJsonParser(_context, state, "Import/CompareExchange"))
-            using (var builder = new BlittableJsonDocumentBuilder(actions.GetContextForNewCompareExchangeValue(),
+            using (var builder = new BlittableJsonDocumentBuilder(_context,
                 BlittableJsonDocumentBuilder.UsageMode.ToDisk, "Import/CompareExchange", parser, state))
             {
                 await foreach (var reader in ReadArrayAsync())
@@ -821,8 +830,7 @@ namespace Raven.Server.Smuggler.Documents
                 }
 
                 values = ConvertToBlob(values, actions);
-
-                actions.RegisterForDisposal(reader);
+                _toDispose.Add(reader);
 
                 yield return new CounterGroupDetail
                 {
@@ -836,10 +844,14 @@ namespace Raven.Server.Smuggler.Documents
         private unsafe BlittableJsonReaderObject ConvertToBlob(BlittableJsonReaderObject values, ICounterActions actions)
         {
             var scopes = new List<ByteStringContext<ByteStringMemoryCache>.InternalScope>();
-
             try
             {
-                var context = actions.GetContextForNewDocument();
+                JsonOperationContext context;
+                if (actions != null)
+                    context = actions.GetContextForNewDocument();
+                else
+                    context = GetContextForNewDocument();
+
                 Debug.Assert(context == values._context);
                 values.TryGet(CountersStorage.Values, out BlittableJsonReaderObject counterValues);
 
@@ -855,8 +867,7 @@ namespace Raven.Server.Smuggler.Documents
 
                     var arr = (BlittableJsonReaderArray)prop.Value;
                     var sizeToAllocate = CountersStorage.SizeOfCounterValues * arr.Length / 2;
-
-                    scopes.Add(context.Allocator.Allocate(sizeToAllocate, out var newVal));
+                    scopes.Add(_byteStringContext.Allocate(sizeToAllocate, out var newVal));
 
                     for (int j = 0; j < arr.Length; j += 2)
                     {
@@ -1149,7 +1160,7 @@ namespace Raven.Server.Smuggler.Documents
             return count;
         }
 
-        private async IAsyncEnumerable<BlittableJsonReaderObject> ReadArrayAsync(INewDocumentActions actions = null)
+        private async IAsyncEnumerable<BlittableJsonReaderObject> ReadArrayAsync(ICounterActions actions = null)
         {
             if (await UnmanagedJsonParserHelper.ReadAsync(_peepingTomStream, _parser, _state, _buffer) == false)
                 UnmanagedJsonParserHelper.ThrowInvalidJson("Unexpected end of json", _peepingTomStream, _parser);
@@ -1170,7 +1181,7 @@ namespace Raven.Server.Smuggler.Documents
                     if (_state.CurrentTokenType == JsonParserToken.EndArray)
                         break;
 
-                    if (actions != null)
+                    if ( actions != null)
                     {
                         var oldContext = context;
                         context = actions.GetContextForNewDocument();
@@ -1219,6 +1230,12 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
+        public JsonOperationContext GetContextForNewDocument()
+        {
+            _context.CachedProperties.NewDocument();
+            return _context;
+        }
+
         private async IAsyncEnumerable<DocumentItem> ReadLegacyAttachmentsAsync(INewDocumentActions actions)
         {
             if (await UnmanagedJsonParserHelper.ReadAsync(_peepingTomStream, _parser, _state, _buffer) == false)
@@ -1240,7 +1257,7 @@ namespace Raven.Server.Smuggler.Documents
                     if (_state.CurrentTokenType == JsonParserToken.EndArray)
                         break;
 
-                    if (actions != null)
+                    if(actions != null)
                     {
                         var oldContext = context;
                         context = actions.GetContextForNewDocument();
@@ -1263,9 +1280,10 @@ namespace Raven.Server.Smuggler.Documents
 
                     var attachment = new DocumentItem.AttachmentStream
                     {
-                        Stream = actions.GetTempStream()
+                        Stream = actions != null ? actions.GetTempStream() : GetTempStream()
                     };
-
+                    if (actions == null)
+                        _toDispose.Add(attachment);
                     var attachmentInfo = ProcessLegacyAttachment(context, data, ref attachment);
                     if (ShouldSkip(attachmentInfo))
                         continue;
@@ -1279,7 +1297,7 @@ namespace Raven.Server.Smuggler.Documents
                             ChangeVector = string.Empty,
                             Flags = DocumentFlags.HasAttachments,
                             NonPersistentFlags = NonPersistentDocumentFlags.FromSmuggler,
-                            LastModified = _database.Time.GetUtcNow(),
+                            LastModified = DateTime.Today.ToUniversalTime(),
                         },
                         Attachments = new List<DocumentItem.AttachmentStream>
                         {
@@ -1305,7 +1323,7 @@ namespace Raven.Server.Smuggler.Documents
             return attachmentInfo.Key.EndsWith(".deleting") || attachmentInfo.Key.EndsWith(".downloading");
         }
 
-        public static BlittableJsonReaderObject WriteDummyDocumentForAttachment(DocumentsOperationContext context, LegacyAttachmentDetails details)
+        public static BlittableJsonReaderObject WriteDummyDocumentForAttachment(JsonOperationContext context, LegacyAttachmentDetails details)
         {
             var attachment = new DynamicJsonValue
             {
@@ -1369,6 +1387,7 @@ namespace Raven.Server.Smuggler.Documents
                             builder = CreateBuilder(context, modifier);
                         }
                     }
+
                     builder.Renew("import/object", BlittableJsonDocumentBuilder.UsageMode.ToDisk);
 
                     context.CachedProperties.NewDocument();
@@ -1395,8 +1414,11 @@ namespace Raven.Server.Smuggler.Documents
 
                         var attachment = new DocumentItem.AttachmentStream
                         {
-                            Stream = actions.GetTempStream()
+                            Stream = actions != null ? actions.GetTempStream() : GetTempStream()
                         };
+                        if (actions == null)
+                            _toDispose.Add(attachment.Stream);
+
                         attachment = await ProcessAttachmentStreamAsync(context, data, attachment);
                         attachments.Add(attachment);
                         continue;
@@ -1432,7 +1454,7 @@ namespace Raven.Server.Smuggler.Documents
                             ChangeVector = modifier.ChangeVector,
                             Flags = modifier.Flags,
                             NonPersistentFlags = modifier.NonPersistentFlags,
-                            LastModified = modifier.LastModified ?? _database.Time.GetUtcNow(),
+                            LastModified = modifier.LastModified ?? DateTime.Today.ToUniversalTime(),
                         },
                         Attachments = attachments
                     };
@@ -1444,6 +1466,15 @@ namespace Raven.Server.Smuggler.Documents
                 builder.Dispose();
                 modifier.Dispose();
             }
+        }
+
+        public Stream GetTempStream()
+        {
+            var tempFileName = $"{Guid.NewGuid()}.smuggler";
+            if (_options.EncryptionKey != null)
+                return new DecryptingXChaCha20Oly1305Stream(new StreamsTempFile(tempFileName, true).StartNewStream(), Convert.FromBase64String(_options.EncryptionKey));
+
+            return new StreamsTempFile(tempFileName, false).StartNewStream();
         }
 
         private async IAsyncEnumerable<Tombstone> ReadTombstonesAsync(INewDocumentActions actions = null)
@@ -1539,7 +1570,7 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        private async IAsyncEnumerable<DocumentConflict> ReadConflictsAsync(INewDocumentActions actions = null)
+        private async IAsyncEnumerable<DocumentConflict> ReadConflictsAsync(INewDocumentActions actions)
         {
             if (await UnmanagedJsonParserHelper.ReadAsync(_peepingTomStream, _parser, _state, _buffer) == false)
                 UnmanagedJsonParserHelper.ThrowInvalidJson("Unexpected end of json", _peepingTomStream, _parser);
@@ -1610,7 +1641,7 @@ namespace Raven.Server.Smuggler.Documents
         }
 
         internal unsafe LegacyAttachmentDetails ProcessLegacyAttachment(
-            DocumentsOperationContext context,
+            JsonOperationContext context,
             BlittableJsonReaderObject data,
             ref DocumentItem.AttachmentStream attachment)
         {
@@ -1654,7 +1685,7 @@ namespace Raven.Server.Smuggler.Documents
         }
 
         public static LegacyAttachmentDetails GenerateLegacyAttachmentDetails(
-            DocumentsOperationContext context,
+            JsonOperationContext context,
             Stream decodedStream,
             string key,
             BlittableJsonReaderObject metadata,
@@ -1664,10 +1695,11 @@ namespace Raven.Server.Smuggler.Documents
             var hash = AsyncHelpers.RunSync(() => AttachmentsStorageHelper.CopyStreamToFileAndCalculateHash(context, decodedStream, stream, CancellationToken.None));
             attachment.Stream.Flush();
             var lazyHash = context.GetLazyString(hash);
-            attachment.Base64HashDispose = Slice.External(context.Allocator, lazyHash, out attachment.Base64Hash);
+            var allocator = new ByteStringContext(new SharedMultipleUseFlag()); // TODO 
+            attachment.Base64HashDispose = Slice.External(allocator, lazyHash, out attachment.Base64Hash);
             var tag = $"{DummyDocumentPrefix}{key}{RecordSeparator}d{RecordSeparator}{key}{RecordSeparator}{hash}{RecordSeparator}";
             var lazyTag = context.GetLazyString(tag);
-            attachment.TagDispose = Slice.External(context.Allocator, lazyTag, out attachment.Tag);
+            attachment.TagDispose = Slice.External(allocator, lazyTag, out attachment.Tag);
             var id = GetLegacyAttachmentId(key);
             var lazyId = context.GetLazyString(id);
 
@@ -1696,7 +1728,7 @@ namespace Raven.Server.Smuggler.Documents
         private const char RecordSeparator = (char)SpecialChars.RecordSeparator;
         private const string DummyDocumentPrefix = "files/";
 
-        public async Task<DocumentItem.AttachmentStream> ProcessAttachmentStreamAsync(DocumentsOperationContext context, BlittableJsonReaderObject data, DocumentItem.AttachmentStream attachment)
+        public async Task<DocumentItem.AttachmentStream> ProcessAttachmentStreamAsync(JsonOperationContext context, BlittableJsonReaderObject data, DocumentItem.AttachmentStream attachment)
         {
             if (data.TryGet(nameof(AttachmentName.Hash), out LazyStringValue hash) == false ||
                 data.TryGet(nameof(AttachmentName.Size), out long size) == false ||
@@ -1707,8 +1739,10 @@ namespace Raven.Server.Smuggler.Documents
                 _returnWriteBuffer = _context.GetMemoryBuffer(out _writeBuffer);
 
             attachment.Data = data;
-            attachment.Base64HashDispose = Slice.External(context.Allocator, hash, out attachment.Base64Hash);
-            attachment.TagDispose = Slice.External(context.Allocator, tag, out attachment.Tag);
+            var allocator = new ByteStringContext(new SharedMultipleUseFlag());
+            _toDispose.Add(allocator);
+            attachment.Base64HashDispose = Slice.External(allocator, hash, out attachment.Base64Hash);
+            attachment.TagDispose = Slice.External(allocator, tag, out attachment.Tag);
 
             while (size > 0)
             {
@@ -1812,6 +1846,17 @@ namespace Raven.Server.Smuggler.Documents
                 return DatabaseItemType.LegacyAttachmentDeletions;
 
             return DatabaseItemType.Unknown;
+        }
+
+        public Stream GetAttachmentStream(LazyStringValue hash, out string tag)
+        {
+            tag = null;
+            return null;
+        }
+
+        public Task<DatabaseRecord> GetShardedDatabaseRecordAsync()
+        {
+            throw new NotImplementedException();
         }
 
         public void Dispose()

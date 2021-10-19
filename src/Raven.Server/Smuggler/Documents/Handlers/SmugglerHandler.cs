@@ -192,12 +192,13 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             OperationCancelToken token)
         {
             using (token)
+            using (context.DocumentDatabase.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext jsonOperationContext))
             {
                 var source = new DatabaseSource(Database, startDocumentEtag, startRaftIndex, Logger);
                 await using (var outputStream = GetOutputStream(ResponseBodyStream(), options))
                 {
                     var destination = new StreamDestination(outputStream, context, source);
-                    var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, options, onProgress: onProgress, token: token.Token);
+                    var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, jsonOperationContext, options, onProgress: onProgress, token: token.Token);
                     return await smuggler.ExecuteAsync();
                 }
             }
@@ -236,11 +237,11 @@ namespace Raven.Server.Smuggler.Documents.Handlers
 
                 await using (var stream = new GZipStream(new BufferedStream(await GetImportStream(), 128 * Voron.Global.Constants.Size.Kilobyte), CompressionMode.Decompress))
                 using (var token = CreateOperationToken())
-                using (var source = new StreamSource(stream, context, Database))
+                using (var source = new StreamSource(stream, context, Database.Name))
                 {
                     var destination = new DatabaseDestination(Database);
 
-                    var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, options, token: token.Token);
+                    var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, context, options, token: token.Token);
 
                     var result = await smuggler.ExecuteAsync();
 
@@ -312,11 +313,11 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                         using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                         await using (var file = await getFile())
                         await using (var stream = new GZipStream(new BufferedStream(file, 128 * Voron.Global.Constants.Size.Kilobyte), CompressionMode.Decompress))
-                        using (var source = new StreamSource(stream, context, Database))
+                        using (var source = new StreamSource(stream, context, Database.Name))
                         {
                             var destination = new DatabaseDestination(Database);
 
-                            var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time);
+                            var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, context);
 
                             var result = await smuggler.ExecuteAsync();
                             results.Enqueue(result);
@@ -864,7 +865,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             using (var source = new CsvStreamSource(Database, stream, context, entity, csvConfig))
             {
                 var destination = new DatabaseDestination(Database);
-                var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, options, result, onProgress, token.Token);
+                var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, context, options, result, onProgress, token.Token);
 
                 await smuggler.ExecuteAsync();
             }
@@ -872,12 +873,13 @@ namespace Raven.Server.Smuggler.Documents.Handlers
 
         private async Task DoImportInternalAsync(DocumentsOperationContext context, Stream stream, DatabaseSmugglerOptionsServerSide options, SmugglerResult result, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
+            context.DocumentDatabase.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext jsonOperationContext);
             await using (stream)
             using (token)
-            using (var source = new StreamSource(stream, context, Database))
+            using (var source = new StreamSource(stream, context, Database.Name))
             {
                 var destination = new DatabaseDestination(Database, token.Token);
-                var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, options, result, onProgress, token.Token);
+                var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, jsonOperationContext, options, result, onProgress, token.Token);
 
                 await smuggler.ExecuteAsync();
             }

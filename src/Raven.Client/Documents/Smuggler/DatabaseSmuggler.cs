@@ -395,12 +395,12 @@ namespace Raven.Client.Documents.Smuggler
             }
         }
 
-        private class StreamContentWithConfirmation : StreamContent
+        internal class StreamContentWithConfirmation : StreamContent
         {
             private readonly TaskCompletionSource<object> _tcs;
             private readonly DatabaseSmuggler _parent;
 
-            public StreamContentWithConfirmation(Stream content, TaskCompletionSource<object> tcs, DatabaseSmuggler parent) : base(content)
+            public StreamContentWithConfirmation(Stream content, TaskCompletionSource<object> tcs, DatabaseSmuggler parent = null) : base(content)
             {
                 _tcs = tcs ?? throw new ArgumentNullException(nameof(tcs));
                 _parent = parent;
@@ -408,7 +408,7 @@ namespace Raven.Client.Documents.Smuggler
 
             protected override async Task SerializeToStreamAsync(Stream stream, TransportContext context)
             {
-                _parent.ForTestingPurposes?.BeforeSerializeToStreamAsync?.Invoke();
+                _parent?.ForTestingPurposes?.BeforeSerializeToStreamAsync?.Invoke();
 
                 await base.SerializeToStreamAsync(stream, context).ConfigureAwait(false);
                 _tcs.TrySetResult(null);

@@ -29,11 +29,11 @@ namespace SlowTests.Issues
 
                 using (DocumentDatabase database = CreateDocumentDatabase())
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                using (var source = new StreamSource(stream, context, database))
+                using (var source = new StreamSource(stream, context, database.Name))
                 {
                     var destination = new DatabaseDestination(database);
 
-                    var smuggler = new DatabaseSmuggler(database, source, destination, database.Time, new DatabaseSmugglerOptionsServerSide
+                    var smuggler = new DatabaseSmuggler(database, source, destination, database.Time, context, new DatabaseSmugglerOptionsServerSide
                     {
                         TransformScript = "this['Test'] = 'NewValue';"
                     });
