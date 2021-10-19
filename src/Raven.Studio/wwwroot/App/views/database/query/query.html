@@ -243,8 +243,8 @@
             </button>
             <button type="button" class="btn btn-sm results-btn"
                     data-bind="click: $root.goToSpatialMapTab, css: { active: showMapView, 'btn-spinner': spinners.isLoadingSpatialResults }, visible: isSpatialQuery">
-                <i class="icon-spatial-map-view"></i><span>Spatial Map</span> &nbsp;
-                <span class="label" data-bind="text: numberOfMarkersText, visible: !spinners.isLoadingSpatialResults() && spatialDataLoadedCounter(),
+                <i class="icon-spatial-map-view"></i><span>Spatial Map</span>
+                <span class="label margin-left margin-left-xs" data-bind="text: numberOfMarkersText, visible: !spinners.isLoadingSpatialResults() && allSpatialResultsItems().length,
                                                css: { 'label-primary': totalResultsForUi(), 'label-default': !totalResultsForUi() }">
                 </span>
             </button>
