@@ -57,6 +57,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Server;
+using Sparrow.Server.Utils;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron;
@@ -82,6 +83,7 @@ namespace Raven.Server.ServerWide
         public static readonly TableSchema IdentitiesSchema;
         public static readonly TableSchema CertificatesSchema;
         public static readonly TableSchema ReplicationCertificatesSchema;
+        public static readonly TableSchema SubscriptionStateSchema;
 
         public class ServerWideConfigurationKey
         {
@@ -128,6 +130,30 @@ namespace Raven.Server.ServerWide
             KeyIndex
         }
 
+        public enum SubscriptionStateDocumentTable
+        {
+            Key, // Database SEP SubscriptionId SEP DocumentId - all lower case
+            ChangeVector, 
+            BatchId,
+        }
+
+        public enum SubscriptionStateRevisionTable
+        {
+            // Note, either previous or current change vector may be null
+            Key, // Database SEP SubscriptionId SEP Previous Change Vector SEP CurrentChangeVector - all lower case
+            ChangeVector,
+            BatchId,
+        }
+
+        public enum SubscriptionStateTable
+        {
+            // Note, either previous or current change vector may be null
+            Key, // Database SEP SubscriptionId SEP DocumentId - all lower case
+            ChangeVector,
+            BatchId,
+            Type
+        }
+
         public static readonly Slice Items;
         public static readonly Slice CompareExchange;
         public static readonly Slice CompareExchangeTombstones;
@@ -141,6 +167,9 @@ namespace Raven.Server.ServerWide
         public static readonly Slice CertificatesHashSlice;
         public static readonly Slice ReplicationCertificatesSlice;
         public static readonly Slice ReplicationCertificatesHashSlice;
+        public static readonly Slice SubscriptionState;
+        public static readonly Slice SubscriptionStateKeySlice;
+        public static readonly Slice SubscriptionStateByBatchIdSlice;
 
         public enum CertificatesTable
         {
@@ -174,6 +203,10 @@ namespace Raven.Server.ServerWide
                 Slice.From(ctx, "CertificatesHashSlice", out CertificatesHashSlice);
                 Slice.From(ctx, "ReplicationCertificatesSlice", out ReplicationCertificatesSlice);
                 Slice.From(ctx, "ReplicationCertificatesHashSlice", out ReplicationCertificatesHashSlice);
+                Slice.From(ctx, "SubscriptionState", out SubscriptionState);
+                Slice.From(ctx, "SubscriptionStateKey", out SubscriptionStateKeySlice);
+                Slice.From(ctx, "SubscriptionStateByBatchId", out SubscriptionStateByBatchIdSlice);
+
             }
 
             ItemsSchema = new TableSchema();
@@ -268,6 +301,22 @@ namespace Raven.Server.ServerWide
                 Count = 1,
                 IsGlobal = false,
                 Name = ReplicationCertificatesHashSlice
+            });
+
+            SubscriptionStateSchema = new TableSchema();
+            SubscriptionStateSchema.DefineKey(new TableSchema.SchemaIndexDef
+            {
+                StartIndex = (int)SubscriptionStateTable.Key,
+                Count =  1,
+                IsGlobal = false,
+                Name = SubscriptionStateKeySlice
+            });
+            SubscriptionStateSchema.DefineIndex(new TableSchema.SchemaIndexDef
+            {
+                StartIndex = (int)SubscriptionStateTable.BatchId,
+                Count = 1,
+                IsGlobal = false,
+                Name = SubscriptionStateByBatchIdSlice
             });
         }
 
@@ -430,9 +479,13 @@ namespace Raven.Server.ServerWide
                         UpdateDatabase(context, type, cmd, index, leader, serverStore);
                         break;
 
+                    case nameof(AcknowledgeSubscriptionBatchCommand):
+                        SetValueForTypedDatabaseCommand(context, type, cmd, index, leader, out _);
+                        ExecuteAcknowledgeSubscriptionBatch(context, cmd, index);
+                        break;
+                    case nameof(RecordBatchSubscriptionDocumentsCommand):
                     case nameof(UpdatePeriodicBackupStatusCommand):
                     case nameof(UpdateExternalReplicationStateCommand):
-                    case nameof(AcknowledgeSubscriptionBatchCommand):
                     case nameof(PutSubscriptionCommand):
                     case nameof(DeleteSubscriptionCommand):
                     case nameof(UpdateEtlProcessStateCommand):
@@ -666,6 +719,167 @@ namespace Raven.Server.ServerWide
                     }
                 }, null);
             }
+        }
+
+        private unsafe void ExecuteAcknowledgeSubscriptionBatch(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index)
+        {
+            if (cmd.TryGet(nameof(AcknowledgeSubscriptionBatchCommand.SubscriptionId), out long subscriptionId) == false)
+            {
+                throw new RachisApplyException($"'{nameof(AcknowledgeSubscriptionBatchCommand.SubscriptionId)}' is missing in '{nameof(AcknowledgeSubscriptionBatchCommand)}'.");
+            }
+            if (cmd.TryGet(nameof(AcknowledgeSubscriptionBatchCommand.DatabaseName), out string databaseName) == false)
+            {
+                throw new RachisApplyException($"'{nameof(AcknowledgeSubscriptionBatchCommand.DatabaseName)}' is missing in '{nameof(AcknowledgeSubscriptionBatchCommand)}'.");
+            }
+
+            if (cmd.TryGet(nameof(AcknowledgeSubscriptionBatchCommand.BatchId), out long batchId) == false)
+            {
+                throw new RachisApplyException($"'{nameof(AcknowledgeSubscriptionBatchCommand.BatchId)}' is missing in '{nameof(AcknowledgeSubscriptionBatchCommand)}'.");
+            }
+            if (cmd.TryGet(nameof(AcknowledgeSubscriptionBatchCommand.DocumentsToResend), out BlittableJsonReaderArray documentsToResend) == false)
+            {
+                throw new RachisApplyException($"'{nameof(AcknowledgeSubscriptionBatchCommand.DocumentsToResend)}' is missing in '{nameof(AcknowledgeSubscriptionBatchCommand)}'.");
+            }
+            
+            var subscriptionState = context.Transaction.InnerTransaction.OpenTable(SubscriptionStateSchema, SubscriptionState);
+            var bigEndBatchId = Bits.SwapBytes(batchId);
+            using var _ = Slice.External(context.Allocator, (byte*)&bigEndBatchId, sizeof(long), out var batchIdSlice);
+            subscriptionState.DeleteForwardFrom(SubscriptionStateSchema.Indexes[SubscriptionStateByBatchIdSlice], batchIdSlice, 
+                false, long.MaxValue, shouldAbort: tvh =>
+            {
+                var recordBatchId = Bits.SwapBytes(*(long*)tvh.Reader.Read((int)SubscriptionStateTable.BatchId, out var size));
+                return recordBatchId != batchId;
+            });
+            using var __ = Slice.From(context.Allocator, "", out var changeVectorSlice);
+
+            using (Slice.From(context.Allocator, databaseName.ToLowerInvariant(), out var dbSlice))
+            {
+                foreach (LazyStringValue docId in documentsToResend)
+                {
+                    using (subscriptionState.Allocate(out var tvb))
+                    {
+                        using var ___ = Slice.From(context.Allocator, docId.ToLowerInvariant(), out var docIdSlice);
+
+                        tvb.Add(dbSlice);
+                        tvb.Add(subscriptionId);
+                        tvb.Add((byte)30);//TODO stav: const this
+                        tvb.Add(docIdSlice);
+                        tvb.Add(changeVectorSlice);
+                        tvb.Add(Bits.SwapBytes(index)); // batch id - but non existent one, will resend those...
+                        tvb.Add((byte)ItemType.Document);
+
+                        subscriptionState.Set(tvb);
+                    }
+                }
+            }
+        }
+        
+        public IEnumerable<DocumentRecord> GetDocumentsFromResend(ClusterOperationContext context, string database, long subscriptionId, HashSet<long> activeBatches)
+        {
+            var subscriptionState = context.Transaction.InnerTransaction.OpenTable(SubscriptionStateSchema, SubscriptionState);
+            using (GetDatabaseAndSubscriptionKeyPrefix(context, database, subscriptionId, out var prefix))
+            using(Slice.External(context.Allocator, prefix, out var prefixSlice))
+            {
+                foreach (var (key, tvh) in subscriptionState.SeekByPrimaryKeyPrefix(prefixSlice, Slices.Empty, 0))
+                {
+                    long batchId = Bits.SwapBytes(tvh.Reader.ReadLong((int)SubscriptionStateTable.BatchId));
+                    if (activeBatches.Contains(batchId))
+                        continue;
+                    string id = tvh.Reader.ReadStringWithPrefix((int)SubscriptionStateTable.Key, prefix.Length);
+                    string cv = tvh.Reader.ReadString((int)SubscriptionStateTable.ChangeVector);
+                    var type = ReadEnum(tvh);
+                    if(type != ItemType.Document)
+                        continue;
+                    yield return new DocumentRecord()
+                    {
+                        DocumentId = id,
+                        ChangeVector = cv
+                    };
+                }
+            }
+        }
+        public IEnumerable<RevisionRecord> GetRevisionsFromResend(ClusterOperationContext context, string database, long subscriptionId, HashSet<long> activeBatches)
+        {
+            var subscriptionState = context.Transaction.InnerTransaction.OpenTable(SubscriptionStateSchema, SubscriptionState);
+            using (GetDatabaseAndSubscriptionKeyPrefix(context, database, subscriptionId, out var prefix))
+            using (Slice.External(context.Allocator, prefix, out var prefixSlice))
+            {
+                foreach (var (key, tvh) in subscriptionState.SeekByPrimaryKeyPrefix(prefixSlice, Slices.Empty, 0))
+                {
+                    long batchId = Bits.SwapBytes(tvh.Reader.ReadLong((int)SubscriptionStateTable.BatchId));
+                    if (activeBatches.Contains(batchId))
+                        continue;
+                    string current = tvh.Reader.ReadStringWithPrefix((int)SubscriptionStateTable.Key, prefix.Length);
+                    string previous = tvh.Reader.ReadString((int)SubscriptionStateTable.ChangeVector);
+                    var type = ReadEnum(tvh);
+                    if(type != ItemType.Revision)
+                        continue;
+                    yield return new RevisionRecord()
+                    {
+                        Current = current,
+                        Previous = previous
+                    };
+                }
+            }
+        }
+
+        private static unsafe ItemType ReadEnum(Table.TableValueHolder tvh)
+        {
+            var ptr= tvh.Reader.Read((int)SubscriptionStateTable.Type, out var size);
+            Debug.Assert(size == sizeof(byte));
+            return (ItemType)(*ptr);
+        }
+
+        public bool IsDocumentInActiveBatch(ClusterOperationContext context, string database, long subscriptionId, string documentId, HashSet<long> activeBatches)
+        {
+            var subscriptionState = context.Transaction.InnerTransaction.OpenTable(SubscriptionStateSchema, SubscriptionState);
+            using (GetDatabaseAndSubscriptionAndDocumentKey(context, database, subscriptionId, documentId, out var key))
+            using (Slice.External(context.Allocator,key, out var keySlice))
+            {
+                if (subscriptionState.ReadByKey(keySlice, out var reader) == false)
+                {
+                    return false;
+                }
+                long batchId = reader.ReadLong((int)SubscriptionStateTable.BatchId);
+                return activeBatches.Contains(batchId);
+            }
+        }
+        
+        public string GetLastActiveChangeVector(ClusterOperationContext context, string database, long subscriptionId, string documentId)
+        {
+            var subscriptionState = context.Transaction.InnerTransaction.OpenTable(SubscriptionStateSchema, SubscriptionState);
+            using (GetDatabaseAndSubscriptionAndDocumentKey(context, database, subscriptionId, documentId, out var key))
+            using (Slice.External(context.Allocator,key, out var keySlice))
+            {
+                if (subscriptionState.ReadByKey(keySlice, out var reader) == false)
+                {
+                    return null;
+                }
+                return reader.ReadString((int)SubscriptionStateTable.ChangeVector);
+            }
+        }
+
+        private static unsafe ByteStringContext<ByteStringMemoryCache>.InternalScope GetDatabaseAndSubscriptionKeyPrefix(ClusterOperationContext context, string database, long subscriptionId, out ByteString prefix)
+        {
+            using var _ = Slice.From(context.Allocator, database.ToLowerInvariant(), out var dbName);
+            var rc = context.Allocator.Allocate(dbName.Size + sizeof(long) + sizeof(byte), out prefix);
+            dbName.CopyTo(prefix.Ptr);
+            *(prefix.Ptr + dbName.Size) = SpecialChars.RecordSeparator;
+            *(long*)(prefix.Ptr + dbName.Size + sizeof(byte)) = subscriptionId;
+            return rc;
+        }
+        
+        internal static unsafe ByteStringContext<ByteStringMemoryCache>.InternalScope GetDatabaseAndSubscriptionAndDocumentKey(ClusterOperationContext context, string database, long subscriptionId, string documentId, out ByteString key)
+        {
+            // databaseName/SubId
+            using var _ = Slice.From(context.Allocator, database.ToLowerInvariant(), out var dbName);
+            using var __ = Slice.From(context.Allocator, documentId.ToLowerInvariant(), out var docId);
+            var rc = context.Allocator.Allocate(dbName.Size + sizeof(long) + sizeof(byte) + docId.Size, out key);
+            dbName.CopyTo(key.Ptr);
+            *(key.Ptr + dbName.Size) = SpecialChars.RecordSeparator;
+            *(long*)(key.Ptr + dbName.Size + sizeof(byte)) = subscriptionId;
+            docId.CopyTo(key.Ptr + dbName.Size + sizeof(long) + sizeof(byte));
+            return rc;
         }
 
         private void ExecutePutSubscriptionBatch(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index, string type)
@@ -2432,6 +2646,8 @@ namespace Raven.Server.ServerWide
             IdentitiesSchema.Create(context.Transaction.InnerTransaction, Identities, 32);
             CertificatesSchema.Create(context.Transaction.InnerTransaction, CertificatesSlice, 32);
             ReplicationCertificatesSchema.Create(context.Transaction.InnerTransaction, ReplicationCertificatesSlice, 32);
+            SubscriptionStateSchema.Create(context.Transaction.InnerTransaction, SubscriptionState, 32);
+
             context.Transaction.InnerTransaction.CreateTree(TransactionCommandsCountPerDatabase);
             context.Transaction.InnerTransaction.CreateTree(LocalNodeStateTreeName);
             context.Transaction.InnerTransaction.CreateTree(CompareExchangeExpirationStorage.CompareExchangeByExpiration);
