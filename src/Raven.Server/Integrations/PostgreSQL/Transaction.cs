@@ -20,13 +20,15 @@ namespace Raven.Server.Integrations.PostgreSQL
         public TransactionState State { get; private set; } = TransactionState.Idle;
         public DocumentDatabase DocumentDatabase { get; }
         public MessageReader MessageReader { get; private set; }
+        public string Username { get; private set; }
         
         private PgQuery _currentQuery;
         
-        public Transaction(DocumentDatabase documentDatabase, MessageReader messageReader)
+        public Transaction(DocumentDatabase documentDatabase, MessageReader messageReader, string username)
         {
             DocumentDatabase = documentDatabase;
             MessageReader = messageReader;
+            Username = username;
         }
 
         public void Init(string cleanQueryText, int[] parametersDataTypes)

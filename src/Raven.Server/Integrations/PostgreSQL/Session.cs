@@ -131,7 +131,7 @@ namespace Raven.Server.Integrations.PostgreSQL
 
             try
             {
-                using var transaction = new Transaction(database, new MessageReader());
+                using var transaction = new Transaction(database, new MessageReader(), _clientOptions["user"]);
 
                 // Authentication
                 await writer.WriteAsync(messageBuilder.AuthenticationCleartextPassword(), _token);

@@ -28,12 +28,16 @@ namespace Raven.Server.Integrations.PostgreSQL
             _port = _server.Configuration.Integrations.PostgreSQL.Port;
         }
 
+        public bool Active { get; private set; }
+
         public void Start()
         {
             _tcpListener = new TcpListener(IPAddress.Any, _port);
             _tcpListener.Start();
 
             _listenTask = ListenToConnectionsAsync();
+
+            Active = true;
         }
 
         public void Stop()
@@ -44,19 +48,8 @@ namespace Raven.Server.Integrations.PostgreSQL
             {
                 task.Wait();
             }
-        }
 
-        public bool Active
-        {
-            get
-            {
-                if (_disposed)
-                {
-                    throw new ObjectDisposedException(GetType().FullName);
-                }
-
-                return true;
-            }
+            Active = false;
         }
 
         public async Task HandleConnection(TcpClient client)

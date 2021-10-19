@@ -1859,6 +1859,12 @@ namespace Raven.Server.ServerWide
             return SendToLeaderAsync(editDocumentsCompression);
         }
 
+        //todo pfyasu - fill method below
+        public Task<(long Index, object Result)> ModifyPostgreSQLConfiguration(TransactionOperationContext context, string databaseName, BlittableJsonDocumentBuilder configurationJson, string raftRequestId)
+        {
+            throw new NotImplementedException();
+        }
+
         public Task<(long Index, object Result)> ModifyDatabaseRefresh(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject configurationJson, string raftRequestId)
         {
             var refresh = JsonDeserializationCluster.RefreshConfiguration(configurationJson);

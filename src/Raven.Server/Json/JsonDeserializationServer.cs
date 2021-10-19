@@ -47,6 +47,7 @@ using Raven.Server.Web.System;
 using Sparrow.Json;
 using FacetSetup = Raven.Client.Documents.Queries.Facets.FacetSetup;
 using Raven.Server.Documents.ETL.Providers.OLAP.Test;
+using Raven.Server.Integrations.PostgreSQL.Handlers;
 
 namespace Raven.Server.Json
 {
@@ -101,6 +102,8 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, TimeSeriesIndexDefinition> TimeSeriesIndexDefinition = GenerateJsonDeserializationRoutine<TimeSeriesIndexDefinition>();
 
         public static readonly Func<BlittableJsonReaderObject, SorterDefinition> SorterDefinition = GenerateJsonDeserializationRoutine<SorterDefinition>();
+
+        public static readonly Func<BlittableJsonReaderObject, PostgreSQLNewUser> PostgreSQLNewUser = GenerateJsonDeserializationRoutine<PostgreSQLNewUser>();
 
         public static readonly Func<BlittableJsonReaderObject, AnalyzerDefinition> AnalyzerDefinition = GenerateJsonDeserializationRoutine<AnalyzerDefinition>();
 
