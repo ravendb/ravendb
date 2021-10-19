@@ -337,7 +337,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                         }
 
                         if (snapshotRestore)
-                            RegenerateIndexes(configuration, database);
+                            RegenerateDatabaseIdInIndexes(configuration, database);
                     }
 
                     // after the db for restore is done, we can safely set the db state to normal and write the DatabaseRecord
@@ -400,7 +400,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 Dispose();
             }
 
-            void RegenerateIndexes(RavenConfiguration configuration, DocumentDatabase database)
+            void RegenerateDatabaseIdInIndexes(RavenConfiguration configuration, DocumentDatabase database)
             {
                 // this code will generate new DatabaseId for each index.
                 // This is something that we need to do when snapshot restore is executed to match the newly generated database id
