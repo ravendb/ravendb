@@ -64,7 +64,7 @@ class spatialQueryMap extends viewModelBase {
             const markers = markersLayer.geoPoints().map(point => {
                 return L.marker([point.Latitude, point.Longitude], { icon: ravenMarker })
                     .bindTooltip(point.PopupContent.getId(), { direction: 'top' })
-                    .bindPopup(generatePopupHtml(point.PopupContent), { "className" : "custom-popup", "maxWidth": 600, "maxHeight": 400 } );
+                    .bindPopup(() => generatePopupHtml(point.PopupContent), { "className" : "custom-popup", "maxWidth": 600, "maxHeight": 400 } );
             });
 
             const markersGroup = L.markerClusterGroup();

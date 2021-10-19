@@ -226,7 +226,6 @@ class query extends viewModelBase {
     showMapView: KnockoutComputed<boolean>;
     numberOfMarkers = ko.observable<number>(0);
     numberOfMarkersText: KnockoutComputed<string>;
-    spatialDataLoadedCounter = ko.observable<number>(0);
     spatialResultsOnMapText: KnockoutComputed<string>;
     hasMoreSpatialResultsForMap = ko.observable<boolean>(false);
     allSpatialResultsItems = ko.observableArray<document>([]);
@@ -1284,7 +1283,7 @@ class query extends viewModelBase {
         const spatialProperties = queryResults.additionalResultInfo.SpatialProperties;
         if (spatialProperties && queryResults.items.length) {
             this.isSpatialQuery(true);
-            this.spatialDataLoadedCounter(0);
+            this.allSpatialResultsItems([]);
         }
     }
     
@@ -1478,8 +1477,8 @@ class query extends viewModelBase {
         this.spinners.isLoadingSpatialResults(true);
         this.failedToGetResultsForSpatial(false);
 
-        const command = new queryCommand(this.activeDatabase(), 
-                                         this.spatialDataLoadedCounter() * query.maxSpatialResultsToFetch,
+        const command = new queryCommand(this.activeDatabase(),
+                                         this.allSpatialResultsItems().length,
                                          query.maxSpatialResultsToFetch + 1,
                                          this.criteria().clone(),
                                          !this.cacheEnabled());
@@ -1488,7 +1487,6 @@ class query extends viewModelBase {
                 const spatialProperties = queryResults.additionalResultInfo.SpatialProperties;
                 this.populateSpatialMap(queryResults, spatialProperties);
                 this.currentTab(this.spatialMap());
-                this.spatialDataLoadedCounter(this.spatialDataLoadedCounter() + 1);
             })
             .fail(() => this.failedToGetResultsForSpatial(true))
             .always(() => this.spinners.isLoadingSpatialResults(false));
@@ -1508,11 +1506,7 @@ class query extends viewModelBase {
             this.hasMoreSpatialResultsForMap(true);
         }
 
-        if (this.spatialDataLoadedCounter() === 0) {
-            this.allSpatialResultsItems(queryResults.items);
-        } else {
-            this.allSpatialResultsItems.push(...queryResults.items);
-        }
+        this.allSpatialResultsItems.push(...queryResults.items);
 
         for (let i = 0; i < spatialProperties.length; i++) {
             const latitudeProperty = spatialProperties[i].LatitudeProperty;
@@ -1521,10 +1515,9 @@ class query extends viewModelBase {
             let pointsArray: geoPointInfo[] = [];
             for (let i = 0; i < this.allSpatialResultsItems().length; i++) {
                 const item = this.allSpatialResultsItems()[i];
-                const flatItem = generalUtils.flattenObj(item, "");
 
-                const latitudeValue = _.get(flatItem, latitudeProperty) as number;
-                const longitudeValue = _.get(flatItem, longitudeProperty) as number;
+                const latitudeValue = _.get(item, latitudeProperty) as number;
+                const longitudeValue = _.get(item, longitudeProperty) as number;
 
                 if (latitudeValue != null && longitudeValue != null) {
                     const point: geoPointInfo = { Latitude: latitudeValue, Longitude: longitudeValue, PopupContent: item };
@@ -1597,7 +1590,7 @@ class query extends viewModelBase {
         this.graphQueryResults.onResize();
         if (this.currentTab() === this.spatialMap()) {
             this.spatialMap().onResize();
-            this.spatialDataLoadedCounter(0);
+            this.allSpatialResultsItems([]);
             this.loadMoreSpatialResultsToMap();
         }
     }
