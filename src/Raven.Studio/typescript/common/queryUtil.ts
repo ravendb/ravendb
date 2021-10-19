@@ -51,7 +51,7 @@ class queryUtil {
     static escapeCollectionOrFieldName(name: string) : string {
         // wrap collection name in 'collection name' if it has spaces.
         // @ is allowed (ex. @all_docs) - but only in front
-        if (/^@?[0-9a-zA-Z_]+$/.test(name)) {
+        if (/^@?[0-9a-zA-Z_]+$/.test(name) && name.toLowerCase() != 'index') {
             return name;
         }
 
@@ -59,7 +59,7 @@ class queryUtil {
     }
     
     static escapeTimeSeriesName(name: string): string {
-        // wrap collection name in 'collection name' if it has spaces.
+        // wrap time series name in 'time series name' if it has spaces.
         if (/^[0-9a-zA-Z_]+$/.test(name)) {
             return name;
         }
