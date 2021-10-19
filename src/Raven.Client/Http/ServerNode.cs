@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace Raven.Client.Http
 {
@@ -26,9 +27,12 @@ namespace Raven.Client.Http
 
         public override bool Equals(object obj)
         {
-            if (ReferenceEquals(null, obj)) return false;
-            if (ReferenceEquals(this, obj)) return true;
-            if (obj.GetType() != GetType()) return false;
+            if (ReferenceEquals(null, obj))
+                return false;
+            if (ReferenceEquals(this, obj))
+                return true;
+            if (obj.GetType() != GetType())
+                return false;
             return Equals((ServerNode)obj);
         }
 
@@ -40,6 +44,33 @@ namespace Raven.Client.Http
                 hashCode = (hashCode * 397) ^ (Database?.GetHashCode() ?? 0);
                 return hashCode;
             }
+        }
+
+        internal static List<ServerNode> CreateFrom(ClusterTopology topology)
+        {
+            var nodes = new List<ServerNode>();
+            if (topology == null)
+                return nodes;
+
+            foreach (var member in topology.Members)
+            {
+                nodes.Add(new ServerNode
+                {
+                    Url = member.Value,
+                    ClusterTag = member.Key
+                });
+            }
+
+            foreach (var watcher in topology.Watchers)
+            {
+                nodes.Add(new ServerNode
+                {
+                    Url = watcher.Value,
+                    ClusterTag = watcher.Key
+                });
+            }
+
+            return nodes;
         }
     }
 }

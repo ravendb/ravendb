@@ -99,23 +99,7 @@ namespace Raven.Client.Http
                     ClusterTopologyLocalCache.TrySaving(TopologyHash, command.Result, Conventions, context);
 
                     var results = command.Result;
-                    var nodes = new List<ServerNode>();
-                    foreach (var member in results.Topology.Members)
-                    {
-                        nodes.Add(new ServerNode
-                        {
-                            Url = member.Value,
-                            ClusterTag = member.Key
-                        });
-                    }
-                    foreach (var watcher in results.Topology.Watchers)
-                    {
-                        nodes.Add(new ServerNode
-                        {
-                            Url = watcher.Value,
-                            ClusterTag = watcher.Key
-                        });
-                    }
+                    var nodes = ServerNode.CreateFrom(results.Topology);
 
                     var newTopology = new Topology
                     {
@@ -177,28 +161,13 @@ namespace Raven.Client.Http
             if (clusterTopology == null)
                 return false;
 
-            var nodes = new List<ServerNode>();
-            foreach (var member in clusterTopology.Topology.Members)
-            {
-                nodes.Add(new ServerNode
-                {
-                    Url = member.Value,
-                    ClusterTag = member.Key
-                });
-            }
-            foreach (var watcher in clusterTopology.Topology.Watchers)
-            {
-                nodes.Add(new ServerNode
-                {
-                    Url = watcher.Value,
-                    ClusterTag = watcher.Key
-                });
-            }
+            var nodes = ServerNode.CreateFrom(clusterTopology.Topology);
 
             _nodeSelector = new NodeSelector(new Topology
             {
                 Nodes = nodes
             });
+
             return true;
         }
     }
