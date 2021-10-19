@@ -141,17 +141,11 @@ namespace Raven.Server.Commercial
 
         public bool HasTimeSeriesRollupsAndRetention => GetValue<bool>("timeSeriesRollupsAndRetention");
         
-        public bool HasTcpDataCompression => GetValue<bool>("tcpDataCompression");
-        
-        public bool HasPostgreSqlProtocolSupport => GetValue<bool>("postgresSqlProtocolSupport");
-        
-        public bool HasConcurrentWorkerDataSubscriptions => GetValue<bool>("concurrentWorkerDataSubscriptions");
-
         public bool HasAdditionalAssembliesFromNuGet => GetValue<bool>("additionalAssembliesNuget");
 
         public bool HasTcpDataCompression => GetValue<bool>("tcpDataCompression");
 
-        public bool HasConcurrentSubscriptions => GetValue<bool>("concurrentSubscriptions");
+        public bool HasConcurrentDataSubscriptions => GetValue<bool>("concurrentDataSubscriptions");
 
         public bool IsIsv => GetValue<bool>("redist");
 
@@ -212,12 +206,9 @@ namespace Raven.Server.Commercial
                 [nameof(HasPullReplicationAsHub)] = HasPullReplicationAsHub,
                 [nameof(HasPullReplicationAsSink)] = HasPullReplicationAsSink,
                 [nameof(HasTimeSeriesRollupsAndRetention)] = HasTimeSeriesRollupsAndRetention,
-                [nameof(HasTcpDataCompression)] = HasTcpDataCompression,
-                [nameof(HasPostgreSqlProtocolSupport)] = HasPostgreSqlProtocolSupport,
-                [nameof(HasConcurrentWorkerDataSubscriptions)] = HasConcurrentWorkerDataSubscriptions,
                 [nameof(HasAdditionalAssembliesFromNuGet)] = HasAdditionalAssembliesFromNuGet,
                 [nameof(HasTcpDataCompression)] = HasTcpDataCompression,
-                [nameof(HasConcurrentSubscriptions)] = HasConcurrentSubscriptions,
+                [nameof(HasConcurrentDataSubscriptions)] = HasConcurrentDataSubscriptions,
                 [nameof(IsIsv)] = IsIsv,
                 [nameof(IsCloud)] = IsCloud,
                 [nameof(CanAutoRenewLetsEncryptCertificate)] = CanAutoRenewLetsEncryptCertificate

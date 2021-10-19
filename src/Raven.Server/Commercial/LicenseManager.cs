@@ -1422,12 +1422,12 @@ namespace Raven.Server.Commercial
             throw GenerateLicenseLimit(LimitType.ElasticSearchEtl, message);
         }
 
-        public void AssertCanAddConcurrentSubscriptions()
+        public void AssertCanAddConcurrentDataSubscriptions()
         {
             if (IsValid(out var licenseLimit) == false)
                 throw licenseLimit;
 
-            if (LicenseStatus.HasConcurrentSubscriptions)
+            if (LicenseStatus.HasConcurrentDataSubscriptions)
                 return;
 
             const string message = "Your current license doesn't include the Concurrent Subscriptions feature";
