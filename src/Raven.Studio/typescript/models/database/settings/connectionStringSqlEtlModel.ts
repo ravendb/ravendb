@@ -8,10 +8,10 @@ import jsonUtil = require("common/jsonUtil");
 class connectionStringSqlEtlModel extends connectionStringModel {
 
     static sqlProviders: Array<valueAndLabelItem<string, string>> = [
-        { value: "System.Data.SqlClient", label: "Microsoft SQL Server (System.Data.SqlClient)" },
-        { value: "MySql.Data.MySqlClient", label: "MySQL Server (MySql.Data.MySqlClient)" },
-        { value: "Npgsql",label: "PostgreSQL Server (Npgsql)" },
-        { value: "Oracle.ManagedDataAccess.Client", label: "Oracle Database Server (Oracle.ManagedDataAccess.Client)" },
+        { value: "System.Data.SqlClient", label: "Microsoft SQL Server" },
+        { value: "MySql.Data.MySqlClient", label: "MySQL Server" },
+        { value: "Npgsql", label: "PostgreSQL" },
+        { value: "Oracle.ManagedDataAccess.Client", label: "Oracle Database" },
     ];
     
     connectionString = ko.observable<string>();
@@ -70,14 +70,14 @@ class connectionStringSqlEtlModel extends connectionStringModel {
         })
     }
     
-    labelFor(input: string): string {
-        const provider = connectionStringSqlEtlModel.sqlProviders.find(x => x.value === input);
+    simpleNameFor(factoryName: string): string {
+        const provider = connectionStringSqlEtlModel.sqlProviders.find(x => x.value === factoryName);
         return provider ? provider.label : null;
     }
     
-    nameFor(input: string): string {
-        const provider = connectionStringSqlEtlModel.sqlProviders.find(x => x.value === input);
-        return provider ? provider.label.split("(")[0] : null;
+    fullNameFor(factoryName: string): string {
+        const provider = connectionStringSqlEtlModel.sqlProviders.find(x => x.value === factoryName);
+        return provider ? `${provider.label} (${provider.value})` : null;
     }
 
     static empty(): connectionStringSqlEtlModel {
@@ -106,6 +106,15 @@ class connectionStringSqlEtlModel extends connectionStringModel {
     saveConnectionString(db: database): JQueryPromise<void> {
         return new saveConnectionStringCommand(db, this)
             .execute();
+    }
+    
+    factoryPlaceHolder(factoryName: string) {
+        const simpleName = this.simpleNameFor(factoryName);
+        if (!factoryName) {
+            return "Enter connection string";
+        }
+        
+        return ko.pureComputed(() => `Enter the complete connection string for the ${simpleName}`);
     }
 }
 
