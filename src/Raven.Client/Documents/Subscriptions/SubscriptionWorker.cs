@@ -247,9 +247,7 @@ namespace Raven.Client.Documents.Subscriptions
                 tcpInfo = await LegacyTryGetTcpInfo(requestExecutor, context, redirectNode, dbName, token).ConfigureAwait(false);
             }
 
-            result.TcpClient.NoDelay = true;
-            result.TcpClient.SendBufferSize = options?.SendBufferSizeInBytes ?? SubscriptionWorkerOptions.DefaultSendBufferSizeInBytes;
-            result.TcpClient.ReceiveBufferSize = options?.ReceiveBufferSizeInBytes ?? SubscriptionWorkerOptions.DefaultReceiveBufferSizeInBytes;
+
             result.TcpVersion = subscriptionTcpVersion ?? TcpConnectionHeaderMessage.SubscriptionTcpVersion;
 
             var connectResult = await TcpUtils.ConnectSecuredTcpSocket(
@@ -270,6 +268,9 @@ namespace Raven.Client.Documents.Subscriptions
             ).ConfigureAwait(false);
 
             result.TcpClient = connectResult.TcpClient;
+            result.TcpClient.NoDelay = true;
+            result.TcpClient.SendBufferSize = options?.SendBufferSizeInBytes ?? SubscriptionWorkerOptions.DefaultSendBufferSizeInBytes;
+            result.TcpClient.ReceiveBufferSize = options?.ReceiveBufferSizeInBytes ?? SubscriptionWorkerOptions.DefaultReceiveBufferSizeInBytes;
             result.Stream = connectResult.Stream;
             result.SupportedFeatures = connectResult.SupportedFeatures;
 

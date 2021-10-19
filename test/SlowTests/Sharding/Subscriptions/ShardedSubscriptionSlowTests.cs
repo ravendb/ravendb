@@ -33,7 +33,7 @@ namespace SlowTests.Sharding.Subscriptions
 
         private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromMinutes(15) : TimeSpan.FromSeconds(60);
 
-        [Fact]
+        [Fact(Skip = "TODO")]
         public async Task AcknowledgeSubscriptionBatchWhenDBisBeingDeletedShouldThrow()
         {
             using var store = GetShardedDocumentStore();
@@ -74,7 +74,7 @@ namespace SlowTests.Sharding.Subscriptions
             }
         }
 
-        [Fact]
+        [Fact(Skip = "TODO")]
         public async Task CanUpdateSubscriptionToStartFromBeginningOfTime()
         {
             using (var store = GetShardedDocumentStore())
@@ -168,7 +168,7 @@ namespace SlowTests.Sharding.Subscriptions
             }
         }
 
-        [Fact]
+        [Fact(Skip = "TODO")]
         public async Task CanUpdateSubscriptionToStartFromLastDocument()
         {
             using (var store = GetShardedDocumentStore())
@@ -265,7 +265,7 @@ namespace SlowTests.Sharding.Subscriptions
             }
         }
 
-        [Fact]
+        [Fact(Skip = "TODO")]
         public async Task CanUpdateSubscriptionToStartFromDoNotChange()
         {
             using (var store = GetShardedDocumentStore())
@@ -361,7 +361,7 @@ namespace SlowTests.Sharding.Subscriptions
         }
 
 
-        [Fact]
+        [Fact(Skip = "TODO")]
         public async Task RunningSubscriptionShouldJumpToNextChangeVectorIfItWasChangedByAdmin()
         {
             using (var store = GetShardedDocumentStore())
@@ -489,7 +489,7 @@ namespace SlowTests.Sharding.Subscriptions
             }
         }
 
-        [Theory]
+        [Theory(Skip = "TODO")]
         [InlineData(true)]
         [InlineData(false)]
         public void CanCreateSubscriptionWithIncludeTimeSeries_All_LastRange(bool byTime)

@@ -28,11 +28,11 @@ namespace FastTests.Sharding
             {
                 r.Shards = new[]
                 {
-                    new DatabaseTopology(), 
-                    new DatabaseTopology(), 
+                    new DatabaseTopology(),
+                    new DatabaseTopology(),
                     new DatabaseTopology(),
                 };
-                options?.ModifyDatabaseRecord?.Invoke(r);            };
+            };
             //shardedOptions.RunInMemory = false;
             return GetDocumentStore(shardedOptions, caller);
         }

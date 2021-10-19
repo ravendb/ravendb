@@ -28,7 +28,7 @@ namespace SlowTests.Sharding.Subscriptions
 
         private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromMinutes(15) : TimeSpan.FromSeconds(60);
 
-        [Fact]
+        [Fact(Skip = "TODO")]
         public async Task CanRunShardedSubscriptionInCluster()
         {
             var db = GetDatabaseName();
@@ -75,7 +75,7 @@ namespace SlowTests.Sharding.Subscriptions
             }
         }
 
-        [Fact]
+        [Fact(Skip = "TODO")]
         public async Task SubscriptionShouldTryConnectWithTimeoutIfShardUnavailable()
         {
             int rf = 1;
@@ -227,7 +227,7 @@ namespace SlowTests.Sharding.Subscriptions
             }
         }
 
-        [Fact]
+        [Fact(Skip = "TODO")]
         public async Task SubscriptionShouldFailoverIfNodeIsDownButShardIsAvailable()
         {
             int rf = 2;
