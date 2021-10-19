@@ -60,11 +60,7 @@ namespace Raven.Server.Commercial
 
                 while (ms.Position < buffer.Length)
                 {
-                    if (TryGetTermIndexAndType(br, out string licenseProperty, out ValueType type) == false)
-                    {
-                        //new license property
-                        continue;
-                    }
+                    var licensePropertyExists = TryGetTermIndexAndType(br, out string licenseProperty, out ValueType type);
 
                     object val = type switch
                     {
@@ -76,6 +72,12 @@ namespace Raven.Server.Commercial
                         ValueType.String => Encoding.UTF8.GetString(br.ReadBytes((int)br.ReadByte())),
                         _ => throw new ArgumentOutOfRangeException(),
                     };
+
+                    if (licensePropertyExists == false)
+                    {
+                        //new license property
+                        continue;
+                    }
 
                     result[licenseProperty] = val;
                 }
