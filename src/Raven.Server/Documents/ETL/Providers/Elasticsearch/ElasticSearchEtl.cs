@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using Elasticsearch.Net;
 using Nest;
 using Raven.Client.Documents.Operations.Counters;
@@ -16,12 +17,15 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Json.Sync;
 
 namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
 {
     public class ElasticSearchEtl : EtlProcess<ElasticSearchItem, ElasticSearchIndexWithRecords, ElasticSearchEtlConfiguration, ElasticSearchConnectionString, EtlStatsScope, EtlPerformanceOperation>
     {
         internal const string IndexBulkAction = @"{""index"":{""_id"":null}}";
+
+        internal static byte[] IndexBulkActionBytes = Encoding.UTF8.GetBytes(IndexBulkAction);
 
         private readonly HashSet<string> _existingIndexes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -103,31 +107,35 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
                 string indexName = index.IndexName.ToLower();
 
                 EnsureIndexExists(indexName, index);
-                
-                var actionDataPairs = new List<string>();
-
-                foreach (ElasticSearchItem insert in index.Inserts)
-                {
-                    if (insert.Property == null) 
-                        continue;
-
-                    using (var json = EnsureLowerCasedIndexIdProperty(context, insert.Property.RawValue, index))
-                    {
-                        actionDataPairs.Add(IndexBulkAction); // action
-                        actionDataPairs.Add(json.ToString()); // json data
-                    }
-
-                    count++;
-                }
 
                 if (index.InsertOnlyMode == false)
                     count += DeleteByQueryOnIndexIdProperty(index);
 
-                if (actionDataPairs.Count > 0)
+                if (index.Inserts.Count > 0)
                 {
-                    var bulkBody = PostData.MultiJson(actionDataPairs);
+                    var streamHandler = PostData.StreamHandler(index.Inserts, (inserts, stream) =>
+                    {
+                        foreach (ElasticSearchItem insert in inserts)
+                        {
+                            if (insert.Property == null)
+                                continue;
 
-                    var bulkIndexResponse = _client.LowLevel.Bulk<BulkResponse>(indexName, bulkBody, new BulkRequestParameters { Refresh = Refresh.WaitFor });
+                            stream.Write(IndexBulkActionBytes);
+
+                            using (var json = EnsureLowerCasedIndexIdProperty(context, insert.Property.RawValue, index))
+                            using (var writer = new BlittableJsonTextWriter(context, stream))
+                            {
+                                writer.WriteNewLine();
+                                writer.WriteObject(json);
+                                writer.WriteNewLine();
+                            }
+
+                            count++;
+                        }
+                    }, (i, s, token) => throw new NotSupportedException("We don't use async bulk method"));
+
+                    
+                    var bulkIndexResponse = _client.LowLevel.Bulk<BulkResponse>(indexName, streamHandler, new BulkRequestParameters { Refresh = Refresh.WaitFor });
 
                     if (bulkIndexResponse.IsValid == false)
                         ThrowElasticSearchLoadException($"Failed to index data to '{index}' index", bulkIndexResponse.ServerError, bulkIndexResponse.OriginalException,
