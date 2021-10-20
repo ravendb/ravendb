@@ -66,7 +66,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             _database.TombstoneCleaner.Subscribe(this);
             IOExtensions.DeleteDirectory(_tempBackupPath.FullPath);
-            Directory.CreateDirectory(_tempBackupPath.FullPath);
+            IOExtensions.CreateDirectory(_tempBackupPath.FullPath);
         }
 
         public NextBackup GetNextBackupDetails(

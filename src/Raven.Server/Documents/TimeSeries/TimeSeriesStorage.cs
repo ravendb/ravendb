@@ -1626,7 +1626,7 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        public void AddTimeSeriesNameToMetadata(DocumentsOperationContext ctx, string docId, string tsName)
+        public void AddTimeSeriesNameToMetadata(DocumentsOperationContext ctx, string docId, string tsName, NonPersistentDocumentFlags nonPersistentFlags = NonPersistentDocumentFlags.None)
         {
             var tss = _documentDatabase.DocumentsStorage.TimeSeriesStorage;
             if (tss.Stats.GetStats(ctx, docId, tsName).Count == 0)
@@ -1696,7 +1696,7 @@ namespace Raven.Server.Documents.TimeSeries
             using (data)
             {
                 var newDocumentData = ctx.ReadObject(doc.Data, docId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-                _documentDatabase.DocumentsStorage.Put(ctx, doc.Id, null, newDocumentData, flags: flags, nonPersistentFlags: NonPersistentDocumentFlags.ByTimeSeriesUpdate);
+                _documentDatabase.DocumentsStorage.Put(ctx, doc.Id, null, newDocumentData, flags: flags, nonPersistentFlags: nonPersistentFlags |= NonPersistentDocumentFlags.ByTimeSeriesUpdate);
             }
         }
 

@@ -286,6 +286,9 @@ namespace Raven.Server.Documents.Revisions
                 if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByAttachmentUpdate))
                     return false;
 
+                if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByTimeSeriesUpdate))
+                    return false;
+
                 if (configuration == ConflictConfiguration.Default || configuration.Disabled)
                     return false;
             }
@@ -1540,7 +1543,11 @@ namespace Raven.Server.Documents.Revisions
 
                     if (document.Data != null)
                     {
-                        documentsStorage.Put(context, document.Id, null, document.Data, flags: DocumentFlags.Reverted);
+                        CollectionName collectionName = RemoveOldMetadataInfo(context, documentsStorage, document);
+                        InsertNewMetadataInfo(context, documentsStorage, document, collectionName);
+
+                        var flag = document.Flags | DocumentFlags.Reverted;
+                        documentsStorage.Put(context, document.Id, null, document.Data, flags: flag.Strip(DocumentFlags.Revision | DocumentFlags.Conflicted | DocumentFlags.Resolved) );
                     }
                     else
                     {
@@ -1554,6 +1561,35 @@ namespace Raven.Server.Documents.Revisions
                 }
 
                 return _list.Count;
+            }
+
+            private static void InsertNewMetadataInfo(DocumentsOperationContext context, DocumentsStorage documentsStorage, Document document, CollectionName collectionName)
+            {
+                documentsStorage.AttachmentsStorage.PutAttachmentRevert(context, document, out bool has);
+                RevertCounters(context, documentsStorage, document, collectionName);
+            }
+
+            private static void RevertCounters(DocumentsOperationContext context, DocumentsStorage documentsStorage, Document document, CollectionName collectionName)
+            {
+                if (document.TryGetMetadata(out BlittableJsonReaderObject metadata) &&
+                    metadata.TryGet(Constants.Documents.Metadata.RevisionCounters, out BlittableJsonReaderObject counters))
+                {
+                    var counterNames = counters.GetPropertyNames();
+
+                    foreach (var cn in counterNames)
+                    {
+                        var val = counters.TryGetMember(cn, out object value);
+                        documentsStorage.CountersStorage.PutCounter(context, document.Id, collectionName.Name, cn, (long)value);
+                    }
+                }
+            }
+
+            private static CollectionName RemoveOldMetadataInfo(DocumentsOperationContext context, DocumentsStorage documentsStorage, Document document)
+            {
+                documentsStorage.AttachmentsStorage.DeleteAttachmentBeforeRevert(context, document.LowerId);
+                var collectionName = documentsStorage.ExtractCollectionName(context, document.Data);
+                documentsStorage.CountersStorage.DeleteCountersForDocument(context, document.Id, collectionName);
+                return collectionName;
             }
 
             public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)

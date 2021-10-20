@@ -52,6 +52,8 @@ namespace SlowTests.Voron.Backups
                 tx.Commit();
             }
 
+            long nextPageNumberBeforeBackup = Env.NextPageNumber;
+
             BackupMethods.Incremental.ToFile(Env, _incrementalBackupTestUtils.IncrementalBackupFile(0));
 
             var options = StorageEnvironmentOptions.ForPath(_incrementalBackupTestUtils.RestoredStoragePath);
@@ -61,6 +63,7 @@ namespace SlowTests.Voron.Backups
 
             using (var env = new StorageEnvironment(options))
             {
+                Assert.Equal(nextPageNumberBeforeBackup, env.NextPageNumber);
 
                 using (var tx = env.ReadTransaction())
                 {
@@ -256,6 +259,8 @@ namespace SlowTests.Voron.Backups
             var usedByLastTransaction = Env.Journal.CurrentFile.WritePosIn4KbPosition - writePos;
             Assert.Equal(0, usedByLastTransaction);
 
+            long nextPageNumberBeforeBackup = Env.NextPageNumber;
+
             backedUpPages = BackupMethods.Incremental.ToFile(Env, _incrementalBackupTestUtils.IncrementalBackupFile(1));
 
             Assert.Equal(usedByLastTransaction, backedUpPages);
@@ -271,6 +276,8 @@ namespace SlowTests.Voron.Backups
 
             using (var env = new StorageEnvironment(options))
             {
+                Assert.Equal(nextPageNumberBeforeBackup, env.NextPageNumber);
+
                 using (var tx = env.ReadTransaction())
                 {
                     var tree = tx.CreateTree("foo");
@@ -317,6 +324,8 @@ namespace SlowTests.Voron.Backups
                 tx.Commit();
             }
 
+            long nextPageNumberBeforeBackup = Env.NextPageNumber;
+
             BackupMethods.Incremental.ToFile(Env, _incrementalBackupTestUtils.IncrementalBackupFile(0));
 
             var options = StorageEnvironmentOptions.ForPath(_incrementalBackupTestUtils.RestoredStoragePath);
@@ -329,6 +338,8 @@ namespace SlowTests.Voron.Backups
 
             using (var env = new StorageEnvironment(options))
             {
+                Assert.Equal(nextPageNumberBeforeBackup, env.NextPageNumber);
+
                 using (var tx = env.ReadTransaction())
                 {
                     var tree = tx.ReadTree("test");
