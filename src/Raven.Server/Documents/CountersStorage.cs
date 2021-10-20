@@ -1140,7 +1140,7 @@ namespace Raven.Server.Documents
                         {
                             // blob + delete => resolve conflict
 
-                            var conflictStatus = CompareCounterValuesAndDeletedCounter(sourceBlob, deletedLocalCounter, dbIdsHolder.dbIdsList, false, out _);
+                            var conflictStatus = CompareCounterValuesAndDeletedCounter(sourceBlob, deletedLocalCounter, dbIdsHolder.dbIdsList, remoteDelete: false, docId, counterName, out _);
 
                             switch (conflictStatus)
                             {
@@ -1195,7 +1195,7 @@ namespace Raven.Server.Documents
                             // delete + blob => resolve conflict
 
                             var conflictStatus =
-                                CompareCounterValuesAndDeletedCounter(localCounterValues, deletedSourceCounter, dbIdsHolder.dbIdsList, true, out var deletedCv);
+                                CompareCounterValuesAndDeletedCounter(localCounterValues, deletedSourceCounter, dbIdsHolder.dbIdsList, remoteDelete: true, docId, counterName, out var deletedCv);
 
                             switch (conflictStatus)
                             {
@@ -1968,13 +1968,13 @@ namespace Raven.Server.Documents
         }
 
         private static ConflictStatus CompareCounterValuesAndDeletedCounter(BlittableJsonReaderObject.RawBlob counterValues, string deletedCounter,
-            List<LazyStringValue> dbIds, bool remoteDelete, out ChangeVectorEntry[] deletedCv)
+            List<LazyStringValue> dbIds, bool remoteDelete, string docId, string counterName, out ChangeVectorEntry[] deletedCv)
         {
             //any missing entries from a change vector are assumed to have zero value
             var blobHasLargerEntries = false;
             var deleteHasLargerEntries = false;
 
-            deletedCv = DeletedCounterToChangeVectorEntries(deletedCounter);
+            deletedCv = DeletedCounterToChangeVectorEntries(deletedCounter, docId, counterName);
 
             var sizeOfValues = counterValues.Length / SizeOfCounterValues;
 
@@ -2038,7 +2038,7 @@ namespace Raven.Server.Documents
         }
 
         // We aren't using ChangeVectorParser here because we don't store the node tag in the counters
-        private static ChangeVectorEntry[] DeletedCounterToChangeVectorEntries(string changeVector)
+        private static ChangeVectorEntry[] DeletedCounterToChangeVectorEntries(string changeVector, string docId, string counterName)
         {
             if (string.IsNullOrEmpty(changeVector))
                 return Array.Empty<ChangeVectorEntry>();
@@ -2058,7 +2058,7 @@ namespace Raven.Server.Documents
                     : span.Slice(currentPos);
 
                 if (long.TryParse(etagStr, out var etag) == false)
-                    throw new InvalidDataException("Invalid deleted counter string: " + changeVector);
+                    throw new InvalidDataException($"Invalid deleted counter string: '{changeVector}'. On document: '{docId}', Counter name: '{counterName}'");
 
                 list.Add(new ChangeVectorEntry
                 {
@@ -2109,7 +2109,7 @@ namespace Raven.Server.Documents
                     : span.Slice(currentPos);
 
                 if (long.TryParse(etagStr, out var etag) == false)
-                    throw new InvalidDataException($"Invalid deleted counter string: '{deletedCounterVector}'. On document : '{docId}', Counter name : '{counterName}'");
+                    throw new InvalidDataException($"Invalid deleted counter string: '{deletedCounterVector}'. On document: '{docId}', Counter name: '{counterName}'");
 
                 var found = false;
                 for (int i = 0; i < entries.Count; i++)
