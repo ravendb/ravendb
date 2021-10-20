@@ -1,9 +1,9 @@
 import { CaretPosition } from "./types";
 import { parseRql } from "./parser";
-import { RqlQueryVisitor } from "./rqlQueryVisitor";
+import { RqlQueryMetaInfo, RqlQueryVisitor } from "./rqlQueryVisitor";
 import { RqlParser } from "./RqlParser";
-import { CodeCompletionCore, SymbolTable } from "antlr4-c3";
-import { AutocompleteProvider } from "./providers/common";
+import { CodeCompletionCore } from "antlr4-c3";
+import { AutocompleteContext, AutocompleteProvider } from "./providers/common";
 import { AutocompleteFrom } from "./providers/from";
 import { AutocompleteKeywords } from "./providers/keywords";
 import { CommonTokenStream } from "antlr4ts";
@@ -103,15 +103,15 @@ export class autoCompleteEngine {
         const { parseTree, parser } = parseRql(input);
 
         return await this.getSuggestionsForParseTree(
-            parser, parseTree, () => new RqlQueryVisitor().visit(parseTree), caret, writtenPart);
+            parser, parseTree, () => new RqlQueryVisitor(queryType).visit(parseTree), caret, writtenPart);
     }
 
     async getSuggestionsForParseTree(
         parser: RqlParser,
         parseTree: ProgContext,
-        symbolTableFn: () => SymbolTable,
+        queryMetaInfoProvider: () => RqlQueryMetaInfo,
         caretPosition: CaretPosition,
-        writtenPart: string
+        writtenText: string
     ): Promise<autoCompleteWordList[]> {
         const core = new CodeCompletionCore(parser);
 
@@ -139,18 +139,29 @@ export class autoCompleteEngine {
             core.showResult = true;
         }
         
+        const queryMetaInfo = queryMetaInfoProvider();
+        
         const { scanner, caretIndex } = createScannerWithSeek(parser.inputStream as CommonTokenStream, caretPosition);
 
         const candidates = core.collectCandidates(caretIndex);
 
         const completions: autoCompleteWordList[] = [];
 
+        const ctx: AutocompleteContext = {
+            scanner,
+            candidates,
+            parser,
+            parseTree,
+            writtenText,
+            queryMetaInfo
+        };
+        
         for (const provider of this.providers) {
             if (provider.collect) {
-                completions.push(...provider.collect(scanner, candidates, parser, parseTree, writtenPart));
+                completions.push(...provider.collect(ctx));
             }
             if (provider.collectAsync) {
-                const providerCompletions = await provider.collectAsync(scanner, candidates, parser, parseTree, writtenPart);
+                const providerCompletions = await provider.collectAsync(ctx);
                 if (providerCompletions.length > 0) {
                     completions.push(...providerCompletions);
                 }

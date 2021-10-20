@@ -1,9 +1,6 @@
-import { CandidatesCollection } from "antlr4-c3/out/src/CodeCompletionCore";
 import { BaseAutocompleteProvider } from "./baseProvider";
-import { Scanner } from "../scanner";
-import { AUTOCOMPLETE_META, AUTOCOMPLETE_SCORING, AutocompleteProvider } from "./common";
+import { AUTOCOMPLETE_META, AUTOCOMPLETE_SCORING, AutocompleteContext, AutocompleteProvider } from "./common";
 import { RqlParser } from "../RqlParser";
-import { ProgContext } from "../generated/BaseRqlParser";
 
 export class AutocompleteGroupBy extends BaseAutocompleteProvider implements AutocompleteProvider {
     
@@ -11,7 +8,8 @@ export class AutocompleteGroupBy extends BaseAutocompleteProvider implements Aut
         return stack[stack.length - 1] === RqlParser.RULE_function;
     }
     
-    async collectAsync(scanner: Scanner, candidates: CandidatesCollection, parser: RqlParser, parseTree: ProgContext, writtenPart: string): Promise<autoCompleteWordList[]> {
+    async collectAsync(ctx: AutocompleteContext): Promise<autoCompleteWordList[]> {
+        const { candidates } = ctx;
         const stack = AutocompleteGroupBy.findLongestRuleStack(candidates);
                
         if (stack.length >= 2 && stack[0] === RqlParser.RULE_prog && stack[1] === RqlParser.RULE_groupByStatement) {
