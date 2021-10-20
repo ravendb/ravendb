@@ -106,11 +106,11 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="3.1.20" />
     <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="3.1.20" />
     <PackageReference Include="Microsoft.Win32.Registry" Version="4.7.0" />
-    <PackageReference Include="MySql.Data" Version="8.0.26" />
+    <PackageReference Include="MySql.Data" Version="8.0.27" />
     <PackageReference Include="NCrontab.Advanced" Version="1.3.28" />
     <PackageReference Include="Npgsql" Version="5.0.10" />
     <PackageReference Include="Oracle.ManagedDataAccess.Core" Version="3.21.1" />
-    <PackageReference Include="Portable.BouncyCastle" Version="1.8.10" />
+    <PackageReference Include="Portable.BouncyCastle" Version="1.9.0" />
     <PackageReference Include="Raven.CodeAnalysis" Version="1.0.11">
       <PrivateAssets>All</PrivateAssets>
     </PackageReference>

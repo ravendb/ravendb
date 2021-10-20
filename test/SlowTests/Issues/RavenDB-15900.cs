@@ -44,7 +44,7 @@ namespace SlowTests.Issues
             var database = GetDatabaseName();
 
             await CreateDatabaseInClusterInner(new DatabaseRecord(database), 3, leader.WebUrl, null);
-            using (var store = new DocumentStore {Database = database, Urls = new[] {leader.WebUrl}}.Initialize())
+            using (var store = new DocumentStore { Database = database, Urls = new[] { leader.WebUrl } }.Initialize())
             {
                 leader.ServerStore.Engine.StateMachine.Validator = new TestCommandValidator();
                 var documentDatabase = await leader.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
@@ -82,7 +82,7 @@ namespace SlowTests.Issues
                     leader.ServerStore.Engine.GetLastCommitIndex(context, out index, out long term);
                 }
 
-                var nodelist = await store.Maintenance.SendAsync(new RemoveEntryFromRaftLogOperation(index+1));
+                var nodelist = await store.Maintenance.SendAsync(new RemoveEntryFromRaftLogOperation(index + 1));
 
                 long index2 = 0;
                 foreach (var server in Servers)
@@ -214,7 +214,7 @@ namespace SlowTests.Issues
                         server.ServerStore.Engine.GetLastCommitIndex(context, out index, out long term);
                     }
 
-                    var res = await WaitForValueAsync(async () => server.ServerStore.Engine.RemoveEntryFromRaftLog(index + 1), true);
+                    var res = await WaitForValueAsync(() => server.ServerStore.Engine.RemoveEntryFromRaftLog(index + 1), true);
 
                     Assert.True(res);
                 }
@@ -236,7 +236,7 @@ namespace SlowTests.Issues
                         return index2 > index;
                     }, true);
                 }
-                Assert.True(index2 > index,$"State machine is stuck. raft index was {index}, after remove raft entry index is {index2} ");
+                Assert.True(index2 > index, $"State machine is stuck. raft index was {index}, after remove raft entry index is {index2} ");
 
                 foreach (var server in Servers)
                 {
