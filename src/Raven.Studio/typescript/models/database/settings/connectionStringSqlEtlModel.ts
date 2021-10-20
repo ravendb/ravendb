@@ -108,9 +108,9 @@ class connectionStringSqlEtlModel extends connectionStringModel {
             .execute();
     }
     
-    factoryPlaceHolder(factoryName: string) {
-        const simpleName = this.simpleNameFor(factoryName);
-        if (!factoryName) {
+    factoryPlaceHolder(factoryName: KnockoutObservable<string>) {
+        const simpleName = this.simpleNameFor(factoryName());
+        if (!factoryName()) {
             return "Enter connection string";
         }
         
