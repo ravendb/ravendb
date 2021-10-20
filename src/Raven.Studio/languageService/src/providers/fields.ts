@@ -4,6 +4,7 @@ import { Scanner } from "../scanner";
 import { RqlParser } from "../RqlParser";
 import { AutocompleteUtils } from "../autocompleteUtils";
 import { CandidateRule } from "antlr4-c3/out/src/CodeCompletionCore";
+import { LiteralContext } from "../generated/BaseRqlParser";
 
 export class AutoCompleteFields extends BaseAutocompleteProvider implements AutocompleteProvider {
     
@@ -72,6 +73,79 @@ export class AutoCompleteFields extends BaseAutocompleteProvider implements Auto
             prefix: "",
             pathWoPrefix: fieldPrefix
         }
+    }
+    
+    private collectIncludeFields(rule: CandidateRule, fieldPrefix: string, ctx: AutocompleteContext): autoCompleteWordList[] {
+        if (fieldPrefix) {
+            return [];
+        }
+        
+        // only suggest when inside include
+        if (!rule.ruleList.find(x => x === RqlParser.RULE_includeStatement)) {
+            return [];
+        }
+        
+        const results: autoCompleteWordList[] = [
+            {
+                value: "counters(",
+                caption: "counters(name)",
+                meta: AUTOCOMPLETE_META.function,
+                score: AUTOCOMPLETE_SCORING.function
+            },
+            {
+                value: "timeseries(",
+                caption: "timeseries(name, from?, to?)",
+                meta: AUTOCOMPLETE_META.function,
+                score: AUTOCOMPLETE_SCORING.function
+            },
+            {
+                value: "cmpxchg(",
+                caption: "cmpxchg(name)",
+                meta: AUTOCOMPLETE_META.function,
+                score: AUTOCOMPLETE_SCORING.function
+            },
+            {
+                value: "highlight() ",
+                caption: "highlight(field, fragmentLength, fragmentCount)",
+                meta: AUTOCOMPLETE_META.function,
+                score: AUTOCOMPLETE_SCORING.function
+            }
+        ];
+        
+        let hasTimings = false;
+        let hasExplanations = false;
+        
+        const includeStmt = ctx.parseTree.includeStatement();
+        for (const child of includeStmt.children) {
+            if (child && child instanceof LiteralContext) {
+                if (child.text.toLocaleLowerCase().startsWith("timings(")) {
+                    hasTimings = true;
+                }
+                if (child.text.toLocaleLowerCase().startsWith("explanations(")) {
+                    hasExplanations = true;
+                }
+            }
+        }
+
+        if (!hasTimings) {
+            results.push( {
+                value: "timings() ",
+                caption: "timings()",
+                meta: AUTOCOMPLETE_META.function,
+                score: AUTOCOMPLETE_SCORING.function
+            });
+        }
+
+        if (!hasExplanations) {
+            results.push({
+                value: "explanations(",
+                caption: "explanations()",
+                meta: AUTOCOMPLETE_META.function,
+                score: AUTOCOMPLETE_SCORING.function
+            });
+        }
+        
+        return results;
     }
     
     private collectGroupByFields(rule: CandidateRule, fieldPrefix: string, ctx: AutocompleteContext): autoCompleteWordList[] {
@@ -145,7 +219,11 @@ export class AutoCompleteFields extends BaseAutocompleteProvider implements Auto
             
             const filteredGroupByFunctions = filterTokens(writtenText, groupByFunctions, x => x.value);
             
-            return [...filteredFields, ...filteredGroupByFunctions];
+            const includeFunctions = this.collectIncludeFields(rule, fieldPrefix, ctx);
+            
+            const filteredIncludeFunctions = filterTokens(writtenText, includeFunctions, x => x.value);
+            
+            return [...filteredFields, ...filteredGroupByFunctions, ...filteredIncludeFunctions];
         }
         
         return [];
