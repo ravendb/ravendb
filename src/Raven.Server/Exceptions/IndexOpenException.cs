@@ -4,7 +4,7 @@ namespace Raven.Server.Exceptions
 {
     public class IndexDisposingException : Exception
     {
-     
+
         public IndexDisposingException()
         {
         }
@@ -20,6 +20,11 @@ namespace Raven.Server.Exceptions
 
     public class IndexOpenException : Exception
     {
+        public IndexOpenException(string message)
+            : base(message)
+        {
+        }
+
         public IndexOpenException(string message, Exception e)
             : base(message, e)
         {

@@ -211,6 +211,12 @@ namespace Voron.Impl.Journal
 
                             if (lastReadHeaderPtr != null)
                             {
+                                if (lastFlushedJournal != -1 && lastReadHeaderPtr->TransactionId < lastFlushedTxId)
+                                {
+                                    throw new InvalidOperationException(
+                                        $"After recovering {pager} file we got tx {lastReadHeaderPtr->TransactionId} as the last one but it's lower than last flushed transaction - tx {lastFlushedTxId} (from {StorageEnvironmentOptions.JournalName(lastFlushedJournal)})");
+                                }
+
                                 *txHeader = *lastReadHeaderPtr;
                                 lastFlushedTxId = txHeader->TransactionId;
 
@@ -323,7 +329,7 @@ namespace Voron.Impl.Journal
                     "First transaction initializing the structure of Voron database is corrupted. Cannot access internal database metadata. Create a new database to recover.");
 
             Debug.Assert(lastFlushedTxId >= 0);
-            Debug.Assert(lastFlushedJournal >= 0);
+            // Debug.Assert(lastFlushedJournal >= 0); explicitly commented - it's valid state to not flush any pages from processed journal if we had already everything synced or journal was empty
             Debug.Assert(lastProcessedJournal >= 0);
 
             if (journalFiles.Count > 0)
@@ -361,7 +367,7 @@ namespace Voron.Impl.Journal
 #if DEBUG
                 if (instanceOfLastFlushedJournal == null)
                 {
-                    Debug.Assert(toDelete.Count == 0 || (toDelete.Count == 1 && deleteLastJournal),
+                    Debug.Assert(toDelete.Count == 0 || (toDelete.Count >= 1 && deleteLastJournal),
                         $"Last flushed journal (number: {lastFlushedJournal}) doesn't exist so we didn't call {nameof(_journalApplicator.SetLastFlushed)}" +
                         $" and didn't mark to delete last journal but," +
                         $" there are still some journals to delete ({string.Join(", ", toDelete.Select(x => x.Number))}. )");
@@ -1145,7 +1151,11 @@ namespace Voron.Impl.Journal
 
                     _currentTotalWrittenBytes = Interlocked.Read(ref _parent._totalWrittenButUnsyncedBytes);
                     _lastFlushed.Journal.SetLastReadTxHeader(_lastFlushed.TransactionId, ref _transactionHeader);
-                    if (_lastFlushed.TransactionId != _transactionHeader.TransactionId)
+
+                    if (_transactionHeader.HeaderMarker != Constants.TransactionHeaderMarker)
+                        return false;
+
+                    if ( _lastFlushed.TransactionId != _transactionHeader.TransactionId)
                     {
                         ThrowErrorWhenSyncingDataFile(_lastFlushed, _transactionHeader, _parent._waj._env);
                     }
