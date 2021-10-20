@@ -660,7 +660,7 @@ namespace Raven.Server.Documents
 
                 ForTestingPurposes?.DisposeLog?.Invoke(Name, $"Drained all requests. Took: {sp.Elapsed}");
             }
-            
+
             var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(DocumentDatabase)} {Name}");
 
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Acquiring cluster lock");
@@ -1329,7 +1329,7 @@ namespace Raven.Server.Documents
                                     _logger.Operations(msg);
 
 #if !RELEASE
-                                    Console.WriteLine(msg);   
+                                    Console.WriteLine(msg);
 #endif
                                 }
                             }

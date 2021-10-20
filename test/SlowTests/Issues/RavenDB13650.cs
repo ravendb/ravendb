@@ -16,7 +16,9 @@ namespace SlowTests.Issues
 
         private class User
         {
+#pragma warning disable 649
             public Dictionary<string, string> Items;
+#pragma warning restore 649
         }
 
         private class User_Index : AbstractIndexCreationTask<User>

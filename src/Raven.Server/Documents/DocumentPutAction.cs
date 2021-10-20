@@ -174,6 +174,10 @@ namespace Raven.Server.Documents
                     {
                         flags = flags.Strip(DocumentFlags.FromReplication);
 
+                        if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByAttachmentUpdate) ||
+                            nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByCountersUpdate))
+                            flags = flags.Strip(DocumentFlags.Reverted);
+
                         if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByAttachmentUpdate) == false &&
                             oldFlags.Contain(DocumentFlags.HasAttachments))
                         {

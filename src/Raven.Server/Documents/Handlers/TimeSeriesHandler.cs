@@ -956,7 +956,7 @@ namespace Raven.Server.Documents.Handlers
                             if (tss.TryAppendEntireSegmentFromSmuggler(context, slicer.TimeSeriesKeySlice, collectionName, item))
                             {
                                 // on import we remove all @time-series from the document, so we need to re-add them
-                                tss.AddTimeSeriesNameToMetadata(context, item.DocId, item.Name);
+                                tss.AddTimeSeriesNameToMetadata(context, item.DocId, item.Name, NonPersistentDocumentFlags.FromSmuggler);
                                 continue;
                             }
                         }
