@@ -78,7 +78,7 @@ namespace Raven.Server.Commercial
             }
         }
 
-        public int Version => GetValue<int?>("version") / 10 ?? -1;
+        public double Version => GetValue<int?>("version") / (double)10 ?? -1;
 
         public DateTime? Expiration => GetValue<DateTime?>("expiration");
 
@@ -186,7 +186,7 @@ namespace Raven.Server.Commercial
                 [nameof(ErrorMessage)] = ErrorMessage,
 
                 [nameof(Type)] = Type.ToString(),
-                [nameof(Version)] = Type.ToString(),
+                [nameof(Version)] = Version.ToString(),
                 [nameof(Expiration)] = Expiration,
                 [nameof(MaxMemory)] = MaxMemory,
                 [nameof(MaxCores)] = MaxCores,
