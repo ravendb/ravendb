@@ -203,6 +203,20 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
+        [RavenAction("/databases/*/transformers/$", "PUT", AuthorizationStatus.ValidUser, EndpointType.Write)]
+        public Task PutTransformer()
+        {
+            // nothing to do here
+            return Task.CompletedTask;
+        }
+
+        [RavenAction("/databases/*/transformers/$", "DELETE", AuthorizationStatus.ValidUser, EndpointType.Write)]
+        public Task DeleteTransformer()
+        {
+            // nothing to do here
+            return Task.CompletedTask;
+        }
+
         private Guid GetRemoteServerInstanceId()
         {
             var remoteServerIdString = GetQueryStringValueAndAssertIfSingleAndNotEmpty("dbid");
