@@ -4,11 +4,25 @@ import { AUTOCOMPLETE_META } from "../../src/providers/common";
 describe("can complete fields", function () {
     
     describe("from collection", function () {
-        it("can complete in group by", async function () {
+        it("can complete in group by - w/o prefix", async function () {
             const suggestions = await autocomplete("from Orders group by | ");
 
             expect(suggestions.map(x => x.caption))
                 .toIncludeAllMembers(["Company", "Employee"]);
+        });
+
+        it("can complete in group by - w/ prefix", async function () {
+            const suggestions = await autocomplete("from Orders as o group by o.| ");
+
+            expect(suggestions.map(x => x.caption))
+                .toIncludeAllMembers(["Company", "Employee"]);
+        });
+
+        it("can complete nested field in group by - w/ prefix", async function () {
+            const suggestions = await autocomplete("from Orders as o group by o.Lines[].| ");
+
+            expect(suggestions.map(x => x.caption))
+                .toIncludeAllMembers(["PricePerUnit", "Quantity"]);
         });
 
         it("can complete partial in group by ", async function () {
@@ -89,7 +103,7 @@ describe("can complete fields", function () {
         });
         
         
-        it("can complete index fields", async function() {
+        it("can complete index fields - w/o prefix", async function() {
             const suggestions = await autocomplete("from index 'Orders/ByCompany' select | ");
             
             const indexFields = ["Company", "Count", "Total"];
@@ -97,6 +111,35 @@ describe("can complete fields", function () {
             for (const field of indexFields) {
                 expect(suggestions.find(x => x.value.startsWith(field)))
                     .toBeTruthy();
+            }
+        });
+
+        it("can complete index fields - w/ prefix", async function() {
+            const suggestions = await autocomplete("from index 'Orders/ByCompany' as iii select iii.| ");
+
+            const indexFields = ["Company", "Count", "Total"];
+
+            for (const field of indexFields) {
+                expect(suggestions.find(x => x.value.startsWith(field)))
+                    .toBeTruthy();
+            }
+        });
+        
+        it("can complete fields with prefix when prefix is defined", async function() {
+            const suggestions = await autocomplete("from index 'Orders/ByCompany' as iii where |");
+
+            const indexFields = ["Company", "Count", "Total"];
+
+            for (const field of indexFields) {
+                const suggestionWithPrefix = suggestions.find(x => x.value.startsWith("iii." + field));
+                expect(suggestionWithPrefix)
+                    .toBeTruthy();
+                expect(suggestionWithPrefix.caption)
+                    .toStartWith("iii.");
+                
+                // we should only suggest fields with prefix
+                expect(suggestions.find(x => x.value.startsWith(field)))
+                    .toBeFalsy();
             }
         });
     });

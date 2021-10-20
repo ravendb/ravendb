@@ -1,9 +1,7 @@
-import { CandidatesCollection } from "antlr4-c3/out/src/CodeCompletionCore";
 import { BaseAutocompleteProvider } from "./baseProvider";
-import { Scanner } from "../scanner";
-import { AUTOCOMPLETE_META, AUTOCOMPLETE_SCORING, AutocompleteProvider } from "./common";
+import { AUTOCOMPLETE_META, AUTOCOMPLETE_SCORING, AutocompleteContext, AutocompleteProvider } from "./common";
 import { RqlParser } from "../RqlParser";
-import { ProgContext } from "../generated/BaseRqlParser";
+import { AutocompleteUtils } from "../autocompleteUtils";
 
 export class AutocompleteFrom extends BaseAutocompleteProvider implements AutocompleteProvider {
     
@@ -15,13 +13,9 @@ export class AutocompleteFrom extends BaseAutocompleteProvider implements Autoco
         return new Promise<string[]>(resolve => this.metadataProvider.indexNames(resolve));
     }
     
-    async collectAsync(scanner: Scanner, 
-                       candidates: CandidatesCollection, 
-                       parser: RqlParser, 
-                       parseTree: ProgContext, 
-                       writtenPart: string, 
-                       ): Promise<autoCompleteWordList[]> {
-        const quoteType = AutocompleteFrom.detectQuoteType(writtenPart);
+    async collectAsync(ctx: AutocompleteContext): Promise<autoCompleteWordList[]> {
+        const { writtenText, candidates } = ctx;
+        const quoteType = AutocompleteFrom.detectQuoteType(writtenText);
         
         if (candidates.rules.has(RqlParser.RULE_collectionName)) {
             const collections = await this.fetchCollectionNames();
@@ -30,7 +24,7 @@ export class AutocompleteFrom extends BaseAutocompleteProvider implements Autoco
                 meta: AUTOCOMPLETE_META.collection,
                 score: AUTOCOMPLETE_SCORING.collection,
                 caption: c,
-                value: AutocompleteFrom.quote(c, quoteType === "Single" ? "Single" : "Double") + " "
+                value: AutocompleteUtils.quote(c, quoteType === "Single" ? "Single" : "Double") + " "
             }));
             
             const indexSuggestion: autoCompleteWordList = {
@@ -49,7 +43,7 @@ export class AutocompleteFrom extends BaseAutocompleteProvider implements Autoco
                 meta: AUTOCOMPLETE_META.index,
                 score: AUTOCOMPLETE_SCORING.index,
                 caption: index,
-                value: AutocompleteFrom.quote(index, quoteType === "Single" ? "Single" : "Double") + " "
+                value: AutocompleteUtils.quote(index, quoteType === "Single" ? "Single" : "Double") + " "
             }));
         }
         

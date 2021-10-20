@@ -1,4 +1,6 @@
-﻿import {autocomplete} from "../autocompleteUtils";
+﻿import { autocomplete } from "../autocompleteUtils";
+
+const groupByFunctions = ["key()", "count()", "sum("];
 
 
 describe("can complete select", function () {
@@ -62,5 +64,37 @@ describe("can complete select", function () {
         
         expect(suggestions)
             .toBeEmpty();
+    });
+    
+    it("can suggest distinct in select stmt", async () => {
+        const suggestions = await autocomplete("from Orders select | ");
+        
+        expect(suggestions.find(x => x.value.startsWith("distinct")))
+            .toBeTruthy();
+    });
+
+    it("doesn't suggest distinct in select stmt, when after field", async () => {
+        const suggestions = await autocomplete("from Orders select Name, | ");
+
+        expect(suggestions.find(x => x.value.startsWith("distinct")))
+            .toBeFalsy();
+    });
+    
+    it("doesn't suggest group functions when no group by", async () => {
+        const suggestions = await autocomplete("from Orders select |");
+
+        for (const func of groupByFunctions) {
+            expect(suggestions.find(x => x.value.startsWith(func)))
+                .toBeFalsy();
+        }
+    });
+
+    it("can suggest group functions when group by is defined", async () => {
+        const suggestions = await autocomplete("from Orders group by Company select |");
+
+        for (const func of groupByFunctions) {
+            expect(suggestions.find(x => x.value.startsWith(func)))
+                .toBeTruthy();
+        }
     });
 });

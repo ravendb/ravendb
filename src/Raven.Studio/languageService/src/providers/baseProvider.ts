@@ -1,14 +1,13 @@
-import { CollectionByIndexContext, CollectionByNameContext, ProgContext } from "../generated/BaseRqlParser";
 import { CandidateRule, CandidatesCollection } from "antlr4-c3/out/src/CodeCompletionCore";
 
-export type QueryType = "index" | "collection" | "unknown";
+export type QuerySource = "index" | "collection" | "unknown";
 export type QuoteType = "None" | "Single" | "Double";
 
 
 const ident = x => x;
 
 export function filterTokens<T>(text: string, candidates: T[], extractor: (val: T) => string = ident) {
-    if (text.trim().length == 0) {
+    if (text.trim().length == 0 || candidates.length === 0) {
         return candidates;
     } else {
         return candidates.filter(c => {
@@ -27,19 +26,17 @@ export abstract class BaseAutocompleteProvider {
         this.metadataProvider = metadataProvider;
     }
 
-    async getPossibleFields(parseTree: ProgContext, prefix: string): Promise<string[]> {
-        const [queryType, source] = BaseAutocompleteProvider.detectQueryType(parseTree);
-
+    async getPossibleFields(querySource: QuerySource, sourceName: string, prefix: string): Promise<string[]> {
         return new Promise<string[]>(resolve => {
-            switch (queryType) {
+            switch (querySource) {
                 case "unknown":
                     resolve([]);
                     break;
                 case "index":
-                    this.metadataProvider.indexFields(source, resolve);
+                    this.metadataProvider.indexFields(sourceName, resolve);
                     break;
                 case "collection":
-                    this.metadataProvider.collectionFields(source, prefix, fields => resolve(Object.keys(fields)));
+                    this.metadataProvider.collectionFields(sourceName, prefix, fields => resolve(Object.keys(fields)));
                     break;
             }
         });
@@ -58,52 +55,6 @@ export abstract class BaseAutocompleteProvider {
             default:
                 return "None";
         }
-    }
-    
-    static quote(input: string, quoteType: QuoteType): string {
-        switch (quoteType) {
-            case "None":
-                return input;
-            case "Double":
-                return `"${input.replace(/"/g, '\"')}"`;
-            case "Single":
-                return `'${input.replace(/'/g, "\'")}'`;
-        }
-    }
-    
-    static unquote(input: string): string {
-        if (!input) {
-            return input;
-        }
-        
-        if (input.startsWith("'") && input.endsWith("'")) {
-            const unquoted = input.substring(1, input.length - 1);
-            return unquoted.replace(/\\'/g, "'");
-        }
-        
-        if (input.startsWith('"') && input.endsWith('"')) {
-            const unquoted = input.substring(1, input.length - 1);
-            return unquoted.replace(/\\"/g, '"');
-        }
-        
-        return input;
-    }
-    
-    static detectQueryType(parseTree: ProgContext): [QueryType, string] {
-        const from = parseTree.exception ? null : parseTree.fromStatement();
-        if (!from) {
-            return ["unknown", undefined];
-        }
-        
-        if (from instanceof CollectionByNameContext) {
-            return ["collection", this.unquote(from.collectionName().text)];
-        }
-
-        if (from instanceof CollectionByIndexContext) {
-            return ["index", this.unquote(from.indexName().text)];
-        }
-        
-        return ["unknown", undefined];
     }
     
     static findLongestRuleStack(candidates: CandidatesCollection): number[] {

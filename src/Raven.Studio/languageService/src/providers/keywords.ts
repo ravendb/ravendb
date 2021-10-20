@@ -1,9 +1,7 @@
 import { CandidatesCollection } from "antlr4-c3/out/src/CodeCompletionCore";
 import { RqlParser } from "../RqlParser";
 import { BaseAutocompleteProvider, filterTokens } from "./baseProvider";
-import { Scanner } from "../scanner";
-import { AUTOCOMPLETE_META, AUTOCOMPLETE_SCORING, AutocompleteProvider } from "./common";
-import { ProgContext } from "../generated/BaseRqlParser";
+import { AUTOCOMPLETE_META, AUTOCOMPLETE_SCORING, AutocompleteContext, AutocompleteProvider } from "./common";
 
 const rootKeywords: number[] = [
     RqlParser.FROM,
@@ -65,6 +63,9 @@ const alreadyHandledTokenTypes: number[] = [
     RqlParser.OR,
     RqlParser.AND,
     RqlParser.INDEX,
+    RqlParser.DISTINCT,
+    RqlParser.UPDATE,
+    RqlParser.JS_SELECT,
     ...rootKeywords
 ] 
 
@@ -192,11 +193,29 @@ export class AutocompleteKeywords extends BaseAutocompleteProvider implements Au
             score: AUTOCOMPLETE_SCORING.collection
         }
     }
+
+    static handleDistinct(): autoCompleteWordList {
+        return {
+            value: "distinct ",
+            caption: "distinct",
+            score: AUTOCOMPLETE_SCORING.keyword,
+            meta: AUTOCOMPLETE_META.keyword
+        }
+    }
     
-    static canUseRootKeyword(keyword: number, candidates: CandidatesCollection, parseTree: ProgContext) {
-        const [queryType] = AutocompleteKeywords.detectQueryType(parseTree);
+    static handleUpdate(): autoCompleteWordList {
+        return {
+            value: "update ",
+            caption: "update",
+            score: AUTOCOMPLETE_SCORING.keyword,
+            meta: AUTOCOMPLETE_META.keyword
+        }
+    }
+    
+    static canUseRootKeyword(keyword: number, ctx: AutocompleteContext) {
+        const querySource = ctx.queryMetaInfo.querySourceType;
         
-        if (keyword === RqlParser.GROUP_BY && queryType === "index") {
+        if (keyword === RqlParser.GROUP_BY && querySource === "index") {
             // Can't use 'group by' when querying on an Index. 'group by' can be used only when querying on collections.
             return false;
         }
@@ -204,7 +223,8 @@ export class AutocompleteKeywords extends BaseAutocompleteProvider implements Au
         return true;
     }
     
-    static handleRootKeywords(candidates: CandidatesCollection, parser: RqlParser, parseTree: ProgContext, writtenText: string): autoCompleteWordList[] {
+    static handleRootKeywords(ctx: AutocompleteContext): autoCompleteWordList[] {
+        const { candidates, parser, parseTree, writtenText} = ctx;
         const result: autoCompleteWordList[] = [];
         
         if (candidates.rules.has(RqlParser.RULE_rootKeywords)) {
@@ -216,7 +236,7 @@ export class AutocompleteKeywords extends BaseAutocompleteProvider implements Au
 
         // we iterate here in order keywords appear in RQL
         for (const keyword of rootKeywords) {
-            if (candidates.tokens.has(keyword) && AutocompleteKeywords.canUseRootKeyword(keyword, candidates, parseTree)) {
+            if (candidates.tokens.has(keyword) && AutocompleteKeywords.canUseRootKeyword(keyword, ctx)) {
                 const displayName = parser.vocabulary.getDisplayName(keyword).toLowerCase(); 
                 result.push({
                     caption: displayName,
@@ -240,7 +260,8 @@ export class AutocompleteKeywords extends BaseAutocompleteProvider implements Au
         return filterTokens(writtenText, result, x => x.value);
     }
     
-    collect(scanner: Scanner, candidates: CandidatesCollection, parser: RqlParser, parseTree: ProgContext, writtenText: string): autoCompleteWordList[] {
+    collect(ctx: AutocompleteContext): autoCompleteWordList[] {
+        const { candidates, writtenText, parseTree, parser } = ctx;
         const completions: autoCompleteWordList[] = [];
                 
         if (candidates.rules.has(RqlParser.RULE_specialFunctionName)) {
@@ -274,8 +295,16 @@ export class AutocompleteKeywords extends BaseAutocompleteProvider implements Au
         if (candidates.tokens.has(RqlParser.AND)) {
             completions.push(AutocompleteKeywords.handleAndOperator());
         }
+
+        if (candidates.tokens.has(RqlParser.DISTINCT)) {
+            completions.push(AutocompleteKeywords.handleDistinct());
+        }
+
+        if (candidates.tokens.has(RqlParser.UPDATE) && ctx.queryMetaInfo.queryType === "Update") {
+            completions.push(AutocompleteKeywords.handleUpdate());
+        }
         
-        completions.push(...AutocompleteKeywords.handleRootKeywords(candidates, parser, parseTree, writtenText));
+        completions.push(...AutocompleteKeywords.handleRootKeywords(ctx));
 
         AutocompleteKeywords.debugRemainingTokens(candidates, parser, writtenText); //TODO: comment out!
        
@@ -291,7 +320,9 @@ export class AutocompleteKeywords extends BaseAutocompleteProvider implements Au
             }
         }); 
 
-        console.log("REMAINING TOKENS = ", ...filterTokens(writtenText, tokens));
+        if (tokens.length) {
+            console.log("REMAINING TOKENS = ", tokens);
+        }
     }
     
 }
