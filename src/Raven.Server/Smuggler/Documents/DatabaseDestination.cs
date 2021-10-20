@@ -591,7 +591,7 @@ namespace Raven.Server.Smuggler.Documents
                     await SendAddOrUpdateCommandsAsync(_context);
 
                 if (_clusterTransactionCommands.Length >= BatchSize)
-                    await SendClusterTransactionsAsync(_context);
+                    await SendClusterTransactionsAsync();
             }
 
             public async ValueTask WriteTombstoneKeyAsync(string key)
@@ -610,44 +610,52 @@ namespace Raven.Server.Smuggler.Documents
                 using (_documentContextHolder)
                 using (_clusterTransactionCommands)
                 {
-                    await SendClusterTransactionsAsync(_context);
+                    await SendClusterTransactionsAsync();
                     await SendAddOrUpdateCommandsAsync(_context);
                     await SendRemoveCommandsAsync(_context);
                 }
             }
 
-            private async ValueTask SendClusterTransactionsAsync(JsonOperationContext context)
+            private async ValueTask SendClusterTransactionsAsync()
             {
                 if (_clusterTransactionCommands.Length == 0)
                     return;
 
-                using (_database.ClusterTransactionWaiter.CreateTask(out var taskId))
+                var parsedCommands = _clusterTransactionCommands.GetArraySegment();
+
+                var raftRequestId = RaftIdGenerator.NewId();
+                var options = new ClusterTransactionCommand.ClusterTransactionOptions(string.Empty, disableAtomicDocumentWrites: false, ClusterCommandsVersionManager.CurrentClusterMinimalVersion);
+                var topology = _database.ServerStore.LoadDatabaseTopology(_database.Name);
+
+                var clusterTransactionCommand = new ClusterTransactionCommand(_database.Name, _database.IdentityPartsSeparator, topology, parsedCommands, options, raftRequestId);
+                clusterTransactionCommand.FromBackup = true;
+
+                var clusterTransactionResult = await _database.ServerStore.SendToLeaderAsync(clusterTransactionCommand);
+                for (int i = 0; i < _clusterTransactionCommands.Length; i++)
                 {
-                    var parsedCommands = _clusterTransactionCommands.GetArraySegment();
-
-                    var raftRequestId = RaftIdGenerator.NewId();
-                    var options = new ClusterTransactionCommand.ClusterTransactionOptions(taskId, disableAtomicDocumentWrites: false, ClusterCommandsVersionManager.CurrentClusterMinimalVersion);
-                    var topology = _database.ServerStore.LoadDatabaseTopology(_database.Name);
-
-                    var clusterTransactionCommand = new ClusterTransactionCommand(_database.Name, _database.IdentityPartsSeparator, topology, parsedCommands, options, raftRequestId);
-                    clusterTransactionCommand.FromBackup = true;
-
-                    var clusterTransactionResult = await _database.ServerStore.SendToLeaderAsync(clusterTransactionCommand);
-                    for (int i = 0; i < _clusterTransactionCommands.Length; i++)
-                    { 
-                        _clusterTransactionCommands[i].Document.Dispose();
-                        _clusterTransactionCommands[i].OriginalChangeVector.Dispose();
-                    }
-             
-                    _clusterTransactionCommands.Clear();
-                    _documentContextHolder.Reset();
-
-                    if (clusterTransactionResult.Result is List<string> errors)
-                        throw new ConcurrencyException($"Failed to execute cluster transaction due to the following issues: {string.Join(Environment.NewLine, errors)}"); //TODO
-
-                    await _database.ServerStore.Cluster.WaitForIndexNotification(clusterTransactionResult.Index);
-                    await _database.ClusterTransactionWaiter.WaitForResults(taskId, _token);
+                    _clusterTransactionCommands[i].Document.Dispose();
+                    _clusterTransactionCommands[i].OriginalChangeVector.Dispose();
                 }
+
+                _clusterTransactionCommands.Clear();
+                _documentContextHolder.Reset();
+
+                if (clusterTransactionResult.Result is List<string> errors)
+                    throw new ConcurrencyException($"Failed to execute cluster transaction due to the following issues: {string.Join(Environment.NewLine, errors)}");
+
+                await _database.ServerStore.Cluster.WaitForIndexNotification(clusterTransactionResult.Index);
+
+                //When restoring from snapshot the database doesn't exist yet and we cannot rely on the DocumentDatabase to execute the database cluster transaction commands
+                using (_database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext writeContext))
+                using (writeContext.OpenWriteTransaction())
+                using (var rawDatabaseRecord = _database.ServerStore.Cluster.ReadRawDatabaseRecord(writeContext, _database.Name, out _))
+                {
+                    if (rawDatabaseRecord.DatabaseState == DatabaseStateStatus.RestoreInProgress)
+                    {
+                        await _database.ExecuteClusterTransaction(writeContext);
+                    }
+                }
+                await _database.RachisLogIndexNotifications.WaitForIndexNotification(clusterTransactionResult.Index, _token);
             }
 
             private async ValueTask SendAddOrUpdateCommandsAsync(JsonOperationContext context)

@@ -90,7 +90,7 @@ namespace SlowTests.Voron
 
             StopDatabase();
 
-            CorruptJournal(lastJournal, 4 * Constants.Size.Kilobyte * 4);
+            CorruptJournal(lastJournal, 4 * Constants.Size.Kilobyte * 4 - 1000);
 
             StartDatabase();
 
@@ -336,7 +336,7 @@ namespace SlowTests.Voron
 
             StopDatabase();
 
-            CorruptJournal(lastJournal, Constants.Size.Kilobyte * 4 + (int)Marshal.OffsetOf<TransactionHeader>(nameof(TransactionHeader.LastPageNumber)), 4, 0);
+            CorruptJournal(lastJournal, Constants.Size.Kilobyte * 4 + (int)Marshal.OffsetOf<TransactionHeader>(nameof(TransactionHeader.LastPageNumber)), 4, 0, preserveValue: true);
 
             StartDatabase();
 
@@ -463,7 +463,7 @@ namespace SlowTests.Voron
             ZipFile.ExtractToDirectory(fullZipPath, directory);
         }
 
-        private void CorruptJournal(long journal, long position, int numberOfCorruptedBytes = Constants.Size.Kilobyte * 4, byte value = 42)
+        private void CorruptJournal(long journal, long position, int numberOfCorruptedBytes = Constants.Size.Kilobyte * 4, byte value = 42, bool preserveValue = false)
         {
             Options.Dispose();
             Options = StorageEnvironmentOptions.ForPath(DataDir);
@@ -490,7 +490,10 @@ namespace SlowTests.Voron
 
                 for (int i = 0; i < buffer.Length; i++)
                 {
-                    buffer[i] = value;
+                    if (buffer[i] != value || preserveValue)
+                        buffer[i] = value;
+                    else
+                        buffer[i] = (byte)(value + 1); // we really want to change the original value here so it must not stay the same
                 }
                 fileStream.Position = position;
                 fileStream.Write(buffer, 0, buffer.Length);

@@ -288,10 +288,17 @@
                     <small class="text-muted">We're here for you <br />24/7</small>
                 </div>
                 <div class="community">
-                    <a href="https://groups.google.com/forum/#!forum/ravendb" target="_blank" class="btn btn-info btn-block">
+                        <div class="dropup">
+                            <button class="btn btn-info btn-block dropdown-toggle" type="button" id="dropdownMenu2" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                         <i class="icon-newtab"></i> <span>ACCESS</span>
-                    </a>
+                                <span class="caret"></span>
+                            </button>
+                            <ul class="dropdown-menu" aria-labelledby="dropdownMenu2">
+                                <li><a href="https://github.com/ravendb/ravendb/discussions" target="_blank">Github Discussions </a></li>
+                                <li><a href="https://groups.google.com/forum/#!forum/ravendb" target="_blank">Google Groups (Archive) </a></li>
+                            </ul>
                 </div>
+                    </div>
                 <div class="grid-span-2 professional production" data-bind="visible: canUpgradeSupport">
                     <a target="_blank" class="btn btn-success btn-block" data-bind="attr: { href: isCloud() ? 'https://cloud.ravendb.net/pricing#support-options' : 'http://ravendb.net/support' }">
                         <i class="icon-umbrella"></i> <span>UPGRADE</span>
@@ -299,7 +306,15 @@
                 </div>
             </div>
             <div class="padding" data-bind="visible: !hasLicense()">
-                <a href="https://groups.google.com/forum/#!forum/ravendb" target="_blank" class="btn btn-info btn-block"><i class="icon-newtab"></i> <span>ACCESS</span></a>
+                    <div class="dropup">
+                        <button class="btn btn-info btn-block dropdown-toggle" type="button" id="dropdownMenu2" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            <i class="icon-newtab"></i> <span>ACCESS</span>
+                            <span class="caret"></span>
+                        </button>
+                        <ul class="dropdown-menu" aria-labelledby="dropdownMenu2">
+                            <li><a href="https://github.com/ravendb/ravendb/discussions" target="_blank">Github Discussions </a></li>
+                            <li><a href="https://groups.google.com/forum/#!forum/ravendb" target="_blank">Google Groups (Archive) </a></li>
+                        </ul>
             </div>
         </div>
     </div>

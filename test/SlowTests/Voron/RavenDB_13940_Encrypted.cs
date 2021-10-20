@@ -422,7 +422,7 @@ namespace SlowTests.Voron
 
             StopDatabase();
 
-            CorruptJournal(lastJournal, sizeof(TransactionHeader) + 5, Constants.Size.Kilobyte * 4 * 6);
+            CorruptJournal(lastJournal, sizeof(TransactionHeader) + 5, Constants.Size.Kilobyte * 4 * 7);
 
             Assert.Throws<InvalidJournalException>(StartDatabase);
         }

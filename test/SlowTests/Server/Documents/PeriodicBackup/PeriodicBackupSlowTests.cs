@@ -10,6 +10,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Utils;
 using Newtonsoft.Json;
 using Raven.Client;
 using Raven.Client.Documents;
@@ -532,6 +533,125 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     }
                 }
             }
+        }
+
+        [Theory, Trait("Category", "Smuggler")]
+        [InlineData(BackupType.Snapshot)]
+        [InlineData(BackupType.Backup)]
+        public async Task can_backup_and_restore_snapshot_with_compare_exchange(BackupType backupType)
+        {
+            var ids = Enumerable.Range(0, 2 * 1024) // DatabaseDestination.DatabaseCompareExchangeActions.BatchSize
+                .Select(i => "users/" + i).ToArray();
+
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            using var store = GetDocumentStore();
+            await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+
+            using (var session = store.OpenAsyncSession(new SessionOptions
+            {
+                TransactionMode = TransactionMode.ClusterWide
+            }))
+            {
+                foreach (var id in ids)
+                {
+                    await session.StoreAsync(new User(), id);
+                }
+                await session.SaveChangesAsync();
+            }
+
+            var sourceStats = await store.Maintenance.SendAsync(new GetDetailedStatisticsOperation());
+            Assert.Equal(ids.Length, sourceStats.CountOfCompareExchange);
+
+            var config = Backup.CreateBackupConfiguration(backupPath, backupType: backupType);
+            config.SnapshotSettings = new SnapshotSettings { CompressionLevel = CompressionLevel.NoCompression };
+            var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+
+            var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDatabaseEtag;
+            await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
+            
+            // restore the database with a different name
+            string restoredDatabaseName = GetDatabaseName();
+            var backupLocation = Directory.GetDirectories(backupPath).First();
+
+            using (ReadOnly(backupLocation))
+            using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
+            {
+                BackupLocation = backupLocation,
+                DatabaseName = restoredDatabaseName
+            }))
+            {
+                using var destination = new DocumentStore { Urls = store.Urls, Database = restoredDatabaseName }.Initialize();
+
+                using (var session = destination.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                {
+                    var users = await session.LoadAsync<User>(ids);
+                    Assert.All(users.Values, Assert.NotNull);
+                }
+
+                var restoreStats = await destination.Maintenance.SendAsync(new GetDetailedStatisticsOperation());
+                Assert.Equal(sourceStats.CountOfCompareExchange, restoreStats.CountOfCompareExchange);
+
+                using (var session = destination.OpenAsyncSession(new SessionOptions{TransactionMode = TransactionMode.ClusterWide}))
+                {
+                    var user = await session.LoadAsync<User>(ids[0]);
+
+                    await session.StoreAsync(user);
+
+                    await session.SaveChangesAsync();
+                }
+                
+                using (var session = destination.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                {
+                    await session.StoreAsync(new User(), ids[0]);
+                    await Assert.ThrowsAnyAsync<ConcurrencyException>(async () => await session.SaveChangesAsync());
+                }
+            }
+        }
+
+        class TestObj
+        {
+            public string Id { get; set; }
+            public string Prop { get; set; }
+        }
+
+        [Fact]
+        public async Task ClusterWideTransaction_WhenImportWithoutCompareExchange_ShouldNotFailOnAfterImportModification()
+        {
+            const string id = "test/1";
+
+            var file = GetTempFileName();
+            var (nodes, leader) = await CreateRaftCluster(3);
+            using var source = GetDocumentStore(new Options { Server = leader, ReplicationFactor = nodes.Count });
+            using var destination = GetDocumentStore(new Options { Server = leader, ReplicationFactor = nodes.Count });
+            using (var session = source.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+            {
+                var entity = new TestObj();
+                await session.StoreAsync(entity, id);
+                await session.SaveChangesAsync();
+            }
+            var result = await source.Operations.SendAsync(new GetCompareExchangeValuesOperation<TestObj>(""));
+            Assert.Single(result);
+            Assert.EndsWith(id, result.Single().Key, StringComparison.OrdinalIgnoreCase);
+
+            //Export without `CompareExchange`s
+            var exportOperation = await source.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions { OperateOnTypes = DatabaseItemType.Documents }, file);
+            await exportOperation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+            var importOperation = await destination.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
+            await importOperation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+            using (var session = destination.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+            {
+                var loadedEntity = await session.LoadAsync<TestObj>(id);
+                loadedEntity.Prop = "Toli";
+                await session.StoreAsync(loadedEntity, id);
+                await session.SaveChangesAsync();
+            }
+            using (var session = destination.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+            {
+                var loadedEntity = await session.LoadAsync<TestObj>(id);
+                Assert.Equal("Toli", loadedEntity.Prop);
+            }
+
         }
 
         [Fact, Trait("Category", "Smuggler")]

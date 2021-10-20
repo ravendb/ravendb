@@ -133,7 +133,8 @@ f();
             debug: criteria.indexEntries() ? "entries" : undefined,
             addTimeSeriesNames: true,
             addSpatialProperties: true,
-            metadataOnly: typeof(criteria.metadataOnly()) !== 'undefined' ? criteria.metadataOnly() : undefined
+            metadataOnly: typeof(criteria.metadataOnly()) !== 'undefined' ? criteria.metadataOnly() : undefined,
+            ignoreLimit: this.criteria.ignoreIndexQueryLimit()
         };
         
         let urlArgs = this.urlEncodeArgs(argsForPOST);
