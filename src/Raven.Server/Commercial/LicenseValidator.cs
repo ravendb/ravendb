@@ -20,7 +20,7 @@ namespace Raven.Server.Commercial
             "pullReplicationAsHub", "pullReplicationAsSink", "encryptedBackup", "letsEncryptAutoRenewal", "cloud",
             "documentsCompression", "timeSeriesRollupsAndRetention", "additionalAssembliesNuget",
             "monitoringEndpoints", "olapEtl", "readOnlyCertificates",
-            "elasticSearchEtl", "postgreSqlIntegration", "tcpDataCompression", "concurrentSubscriptions"
+            "tcpDataCompression", "concurrentSubscriptions", "elasticSearchEtl", "powerBI", "postgreSqlIntegration"
         };
 
         private enum ValueType : byte

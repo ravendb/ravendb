@@ -19,6 +19,42 @@ namespace Raven.Server.Commercial
 
         public string Status => Attributes == null ? "AGPL - Open Source" : "Commercial";
 
+        public DateTime FirstServerStartDate { get; set; }
+
+        private T GetValue<T>(string attributeName)
+        {
+            if (Attributes == null)
+                return default(T);
+
+            if (Attributes.TryGetValue(attributeName, out object value) == false)
+                return default(T);
+
+            if (value is T == false)
+                return default(T);
+
+            return (T)value;
+        }
+
+        public bool Expired
+        {
+            get
+            {
+                if (Type == LicenseType.None)
+                    return false;
+
+                if (Expiration == null)
+                    return true;
+
+                return IsIsv ?
+                    Expiration < RavenVersionAttribute.Instance.ReleaseDate :
+                    DateTime.Compare(Expiration.Value, DateTime.UtcNow) < 0;
+            }
+        }
+
+        public double Ratio => Math.Max((double)MaxMemory / MaxCores, 1);
+
+        private int MaxClusterSizeInternal => GetValue<int?>("maxClusterSize") ?? 1;
+
         public LicenseType Type
         {
             get
@@ -42,45 +78,21 @@ namespace Raven.Server.Commercial
             }
         }
 
-        public DateTime FirstServerStartDate { get; set; }
-
-        private T GetValue<T>(string attributeName)
-        {
-            if (Attributes == null)
-                return default(T);
-
-            if (Attributes.TryGetValue(attributeName, out object value) == false)
-                return default(T);
-
-            if (value is T == false)
-                return default(T);
-
-            return (T)value;
-        }
+        public int Version => GetValue<int?>("version") / 10 ?? -1;
 
         public DateTime? Expiration => GetValue<DateTime?>("expiration");
 
-        public bool Expired
-        {
-            get
-            {
-                if (Type == LicenseType.None)
-                    return false;
-
-                if (Expiration == null)
-                    return true;
-
-                return IsIsv ?
-                    Expiration < RavenVersionAttribute.Instance.ReleaseDate :
-                    DateTime.Compare(Expiration.Value, DateTime.UtcNow) < 0;
-            }
-        }
+        public int MaxMemory => GetValue<int?>("memory") ?? 6;
 
         public int MaxCores => GetValue<int?>("cores") ?? 3;
 
-        public int MaxMemory => GetValue<int?>("memory") ?? 6;
+        public bool IsIsv => GetValue<bool>("redist");
 
-        public double Ratio => Math.Max((double)MaxMemory / MaxCores, 1);
+        public bool HasEncryption => GetValue<bool>("encryption");
+
+        public bool HasSnmpMonitoring => GetValue<bool>("snmp");
+
+        public bool DistributedCluster => GetValue<bool>("distributedCluster");
 
         public int MaxClusterSize
         {
@@ -97,22 +109,12 @@ namespace Raven.Server.Commercial
             }
         }
 
-        private int MaxClusterSizeInternal => GetValue<int?>("maxClusterSize") ?? 1;
-
-        public bool DistributedCluster => GetValue<bool>("distributedCluster");
-
         public bool HasSnapshotBackups => GetValue<bool>("snapshotBackup");
 
         public bool HasCloudBackups => GetValue<bool>("cloudBackup");
 
-        public bool HasEncryptedBackups => GetValue<bool>("encryptedBackup");
-
         public bool HasDynamicNodesDistribution => GetValue<bool>("dynamicNodesDistribution");
 
-        public bool HasEncryption => GetValue<bool>("encryption");
-
-        public bool HasDocumentsCompression => GetValue<bool>("documentsCompression");
-        
         public bool HasExternalReplication => GetValue<bool>("externalReplication");
 
         public bool HasDelayedExternalReplication => GetValue<bool>("delayedExternalReplication");
@@ -121,35 +123,13 @@ namespace Raven.Server.Commercial
 
         public bool HasSqlEtl => GetValue<bool>("sqlEtl");
 
-        public bool HasOlapEtl => GetValue<bool>("olapEtl");
-
-        public bool HasElasticSearchEtl => GetValue<bool>("elasticSearchEtl");
-
-        public bool HasPostgreSqlIntegration => GetValue<bool>("postgreSqlIntegration");
-
-        public bool HasSnmpMonitoring => GetValue<bool>("snmp");
-
-        public bool HasMonitoringEndpoints => GetValue<bool>("monitoringEndpoints");
-
-        public bool HasReadOnlyCertificates => GetValue<bool>("readOnlyCertificates");
-
         public bool HasHighlyAvailableTasks => GetValue<bool>("highlyAvailableTasks");
 
         public bool HasPullReplicationAsHub => GetValue<bool>("pullReplicationAsHub");
 
         public bool HasPullReplicationAsSink => GetValue<bool>("pullReplicationAsSink");
 
-        public bool HasTimeSeriesRollupsAndRetention => GetValue<bool>("timeSeriesRollupsAndRetention");
-        
-        public bool HasAdditionalAssembliesFromNuGet => GetValue<bool>("additionalAssembliesNuget");
-
-        public bool HasTcpDataCompression => GetValue<bool>("tcpDataCompression");
-
-        public bool HasConcurrentDataSubscriptions => GetValue<bool>("concurrentDataSubscriptions");
-
-        public bool IsIsv => GetValue<bool>("redist");
-
-        public bool IsCloud => GetValue<bool>("cloud");
+        public bool HasEncryptedBackups => GetValue<bool>("encryptedBackup");
 
         public bool CanAutoRenewLetsEncryptCertificate
         {
@@ -168,50 +148,77 @@ namespace Raven.Server.Commercial
             }
         }
 
+        public bool IsCloud => GetValue<bool>("cloud");
+
+        public bool HasDocumentsCompression => GetValue<bool>("documentsCompression");
+
+        public bool HasTimeSeriesRollupsAndRetention => GetValue<bool>("timeSeriesRollupsAndRetention");
+
+        public bool HasAdditionalAssembliesFromNuGet => GetValue<bool>("additionalAssembliesNuget");
+
+        public bool HasMonitoringEndpoints => GetValue<bool>("monitoringEndpoints");
+
+        public bool HasOlapEtl => GetValue<bool>("olapEtl");
+
+        public bool HasReadOnlyCertificates => GetValue<bool>("readOnlyCertificates");
+
+        public bool HasTcpDataCompression => GetValue<bool>("tcpDataCompression");
+
+        public bool HasConcurrentDataSubscriptions => GetValue<bool>("concurrentDataSubscriptions");
+
+        public bool HasElasticSearchEtl => GetValue<bool>("elasticSearchEtl");
+
+        public bool HasPowerBI => GetValue<bool>("powerBI");
+
+        public bool HasPostgreSqlIntegration => GetValue<bool>("postgreSqlIntegration");
+
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
                 [nameof(Id)] = Id?.ToString(),
                 [nameof(LicensedTo)] = LicensedTo,
-                [nameof(Attributes)] = TypeConverter.ToBlittableSupportedType(Attributes),
-                [nameof(FirstServerStartDate)] = FirstServerStartDate,
-                [nameof(ErrorMessage)] = ErrorMessage,
-                [nameof(MaxCores)] = MaxCores,
-                [nameof(MaxMemory)] = MaxMemory,
-                [nameof(MaxClusterSize)] = MaxClusterSizeInternal,
-                [nameof(Ratio)] = Ratio.ToString(CultureInfo.InvariantCulture),
-                [nameof(Expiration)] = Expiration,
-                [nameof(Expired)] = Expired,
                 [nameof(Status)] = Status,
+                [nameof(Expired)] = Expired,
+                [nameof(FirstServerStartDate)] = FirstServerStartDate,
+                [nameof(Ratio)] = Ratio.ToString(CultureInfo.InvariantCulture),
+                [nameof(Attributes)] = TypeConverter.ToBlittableSupportedType(Attributes),
+                [nameof(ErrorMessage)] = ErrorMessage,
+
                 [nameof(Type)] = Type.ToString(),
-                [nameof(HasDynamicNodesDistribution)] = HasDynamicNodesDistribution,
+                [nameof(Version)] = Type.ToString(),
+                [nameof(Expiration)] = Expiration,
+                [nameof(MaxMemory)] = MaxMemory,
+                [nameof(MaxCores)] = MaxCores,
+                [nameof(IsIsv)] = IsIsv,
                 [nameof(HasEncryption)] = HasEncryption,
-                [nameof(HasDocumentsCompression)] = HasDocumentsCompression,
+                [nameof(HasSnmpMonitoring)] = HasSnmpMonitoring,
+                [nameof(DistributedCluster)] = DistributedCluster,
+                [nameof(MaxClusterSize)] = MaxClusterSizeInternal,
                 [nameof(HasSnapshotBackups)] = HasSnapshotBackups,
                 [nameof(HasCloudBackups)] = HasCloudBackups,
-                [nameof(HasEncryptedBackups)] = HasEncryptedBackups,
+                [nameof(HasDynamicNodesDistribution)] = HasDynamicNodesDistribution,
                 [nameof(HasExternalReplication)] = HasExternalReplication,
                 [nameof(HasDelayedExternalReplication)] = HasDelayedExternalReplication,
                 [nameof(HasRavenEtl)] = HasRavenEtl,
                 [nameof(HasSqlEtl)] = HasSqlEtl,
-                [nameof(HasOlapEtl)] = HasOlapEtl,
-                [nameof(HasElasticSearchEtl)] = HasElasticSearchEtl,
-                [nameof(HasPostgreSqlIntegration)] = HasPostgreSqlIntegration,
-                [nameof(HasSnmpMonitoring)] = HasSnmpMonitoring,
-                [nameof(HasMonitoringEndpoints)] = HasMonitoringEndpoints,
-                [nameof(HasReadOnlyCertificates)] = HasReadOnlyCertificates,
-                [nameof(DistributedCluster)] = DistributedCluster,
                 [nameof(HasHighlyAvailableTasks)] = HasHighlyAvailableTasks,
                 [nameof(HasPullReplicationAsHub)] = HasPullReplicationAsHub,
                 [nameof(HasPullReplicationAsSink)] = HasPullReplicationAsSink,
+                [nameof(HasEncryptedBackups)] = HasEncryptedBackups,
+                [nameof(CanAutoRenewLetsEncryptCertificate)] = CanAutoRenewLetsEncryptCertificate,
+                [nameof(IsCloud)] = IsCloud,
+                [nameof(HasDocumentsCompression)] = HasDocumentsCompression,
                 [nameof(HasTimeSeriesRollupsAndRetention)] = HasTimeSeriesRollupsAndRetention,
                 [nameof(HasAdditionalAssembliesFromNuGet)] = HasAdditionalAssembliesFromNuGet,
+                [nameof(HasMonitoringEndpoints)] = HasMonitoringEndpoints,
+                [nameof(HasOlapEtl)] = HasOlapEtl,
+                [nameof(HasReadOnlyCertificates)] = HasReadOnlyCertificates,
                 [nameof(HasTcpDataCompression)] = HasTcpDataCompression,
-                [nameof(HasConcurrentDataSubscriptions)] = HasConcurrentDataSubscriptions,
-                [nameof(IsIsv)] = IsIsv,
-                [nameof(IsCloud)] = IsCloud,
-                [nameof(CanAutoRenewLetsEncryptCertificate)] = CanAutoRenewLetsEncryptCertificate
+                [nameof(HasConcurrentDataSubscriptions)] = CanAutoRenewLetsEncryptCertificate,
+                [nameof(HasElasticSearchEtl)] = HasElasticSearchEtl,
+                [nameof(HasPowerBI)] = HasPowerBI,
+                [nameof(HasPostgreSqlIntegration)] = HasPostgreSqlIntegration
             };
         }
     }
