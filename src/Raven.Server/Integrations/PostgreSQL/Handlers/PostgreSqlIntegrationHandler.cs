@@ -24,7 +24,7 @@ namespace Raven.Server.Integrations.PostgreSQL.Handlers
                 new() { Username = "User2" }
             };
 
-            var dto = new PostgreSqlUsernamesList { Users = usernames };
+            var dto = new PostgreSqlUsernames { Users = usernames };
 
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
