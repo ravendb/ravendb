@@ -35,6 +35,7 @@ using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents;
+using Raven.Server.Integrations.PostgreSQL.Commands;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -425,6 +426,7 @@ namespace Raven.Server.ServerWide
                     case nameof(EditDocumentsCompressionCommand):
                     case nameof(UpdateUnusedDatabaseIdsCommand):
                     case nameof(EditLockModeCommand):
+                    case nameof(EditPostgreSqlConfigurationCommand):
                         UpdateDatabase(context, type, cmd, index, leader, serverStore);
                         break;
 
@@ -2367,6 +2369,7 @@ namespace Raven.Server.ServerWide
                 case nameof(EditRefreshCommand):
                 case nameof(EditDatabaseClientConfigurationCommand):
                 case nameof(EditLockModeCommand):
+                case nameof(EditPostgreSqlConfigurationCommand):
                     databaseRecord.EtagForBackup = index;
                     break;
             }

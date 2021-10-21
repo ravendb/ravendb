@@ -1,7 +1,16 @@
-﻿namespace Raven.Client.ServerWide.Operations.Integrations.PostgreSQL
+﻿using Sparrow.Json.Parsing;
+
+namespace Raven.Client.ServerWide.Operations.Integrations.PostgreSQL
 {
-    public class PostgreSQLConfiguration
+    public class PostgreSqlConfiguration : IDynamicJson
     {
-        public PostgreSQLAuthenticationConfiguration AuthenticationConfiguration;
+        public PostgreSqlAuthenticationConfiguration Authentication;
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue()
+            {
+                [nameof(Authentication)] = Authentication.ToJson()
+            };
+        }
     }
 }

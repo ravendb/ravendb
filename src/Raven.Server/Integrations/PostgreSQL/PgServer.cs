@@ -25,7 +25,7 @@ namespace Raven.Server.Integrations.PostgreSQL
         {
             _server = server;
             _processId = Process.GetCurrentProcess().Id;
-            _port = _server.Configuration.Integrations.PostgreSQL.Port;
+            _port = _server.Configuration.Integrations.PostgreSql.Port;
         }
 
         public bool Active { get; private set; }

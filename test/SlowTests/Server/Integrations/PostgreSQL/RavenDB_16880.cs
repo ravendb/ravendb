@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
@@ -12,6 +13,12 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Documents.Operations.Integrations;
+using Raven.Client.Documents.Smuggler;
+using Raven.Client.ServerWide.Operations;
+using Raven.Client.ServerWide.Operations.Integrations.PostgreSQL;
+using Raven.Server;
+using Raven.Server.Config;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -23,12 +30,24 @@ namespace SlowTests.Server.Integrations.PostgreSQL
         {
         }
 
+        private RavenServer GetServerWithRunningPostgres()
+        {
+            return GetNewServer(new ServerCreationOptions()
+            {
+                CustomSettings = new Dictionary<string, string>()
+                {
+                    { RavenConfiguration.GetKey(x => x.Integrations.PostgreSql.Enabled), "true"}
+                }
+            });
+        }
+
         [Fact]
         public async Task ForSpecificCollection_GetCorrectNumberOfRecords()
         {
             const string query = "from Employees";
 
-            using (var store = GetDocumentStore())
+            using (var server = GetServerWithRunningPostgres())
+            using (var store = GetDocumentStore(new Options { Server = server}))
             {
                 CreateNorthwindDatabase(store);
 
@@ -229,6 +248,56 @@ namespace SlowTests.Server.Integrations.PostgreSQL
             }
         }
 
+
+        [Fact]
+        public async Task CanExportAndImportPostgreSqlIntegrationConfiguration()
+        {
+            using (var srcStore = GetDocumentStore())
+            using (var dstStore = GetDocumentStore())
+
+            {
+                srcStore.Maintenance.Send(new ConfigurePostgreSqlOperation(new PostgreSqlConfiguration
+                {
+                    Authentication = new PostgreSqlAuthenticationConfiguration()
+                    {
+                        Users = new List<PostgreSqlUser>()
+                        {
+                            new PostgreSqlUser()
+                            {
+                                Username = "arek",
+                                Password = "foo!@22"
+                            }
+                        }
+                    }
+                }));
+
+                var record = await srcStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(srcStore.Database));
+
+                Assert.NotNull(record.Integrations);
+                Assert.NotNull(record.Integrations.PostgreSql);
+                Assert.Equal(1, record.Integrations.PostgreSql.Authentication.Users.Count);
+
+                Assert.Contains("arek", record.Integrations.PostgreSql.Authentication.Users.First().Username);
+                Assert.Contains("foo!@22", record.Integrations.PostgreSql.Authentication.Users.First().Password);
+
+                var exportFile = GetTempFileName();
+
+                var exportOperation = await srcStore.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), exportFile);
+                await exportOperation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                var operation = await dstStore.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), exportFile);
+                await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                record = await dstStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(dstStore.Database));
+
+                Assert.NotNull(record.Integrations);
+                Assert.NotNull(record.Integrations.PostgreSql);
+                Assert.Equal(1, record.Integrations.PostgreSql.Authentication.Users.Count);
+
+                Assert.Contains("arek", record.Integrations.PostgreSql.Authentication.Users.First().Username);
+                Assert.Contains("foo!@22", record.Integrations.PostgreSql.Authentication.Users.First().Password);
+            }
+        }
 
         private DataTable Select(
             NpgsqlConnection connection,
