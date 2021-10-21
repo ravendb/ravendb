@@ -13,6 +13,7 @@ namespace Raven.Server.Integrations.PostgreSQL
         private readonly RavenServer _server;
         private readonly ConcurrentDictionary<TcpClient, Task> _connections = new();
         private readonly CancellationTokenSource _cts = new();
+        private readonly SemaphoreSlim _locker = new SemaphoreSlim(1, 1);
         private readonly int _processId;
         private readonly int _port;
 
@@ -26,11 +27,37 @@ namespace Raven.Server.Integrations.PostgreSQL
             _server = server;
             _processId = Process.GetCurrentProcess().Id;
             _port = _server.Configuration.Integrations.PostgreSql.Port;
+
+            _server.ServerStore.LicenseManager.LicenseChanged += OnLicenseChanged;
         }
 
         public bool Active { get; private set; }
 
-        public void Start()
+        public void Execute()
+        {
+            if (_server.Configuration.Integrations.PostgreSql.Enabled == false)
+                return;
+
+            _locker.Wait();
+
+            try
+            {
+                var activate = _server.ServerStore.LicenseManager.CanUsePostgreSqlIntegration(withNotification: true);
+                if (activate)
+                {
+                    if (Active)
+                        throw new InvalidOperationException("Cannot start PgServer because it is already activated. Should not happen!");
+
+                    Start();
+                }
+            }
+            finally
+            {
+                _locker.Release();
+            }
+        }
+
+        private void Start()
         {
             _tcpListener = new TcpListener(IPAddress.Any, _port);
             _tcpListener.Start();
@@ -40,7 +67,7 @@ namespace Raven.Server.Integrations.PostgreSQL
             Active = true;
         }
 
-        public void Stop()
+        private void Stop()
         {
             _tcpListener.Stop();
             _cts.Cancel();
@@ -61,6 +88,7 @@ namespace Raven.Server.Integrations.PostgreSQL
                     Interlocked.Increment(ref _sessionIdentifier),
                     _processId,
                     _server.ServerStore.DatabasesLandlord,
+                    _server.Certificate.Certificate != null,
                     _server.AuthenticateAsServerIfSslNeeded,
                     _cts.Token);
 
@@ -94,6 +122,42 @@ namespace Raven.Server.Integrations.PostgreSQL
                 }
 
                 _connections.TryAdd(client, HandleConnection(client));
+            }
+        }
+
+        internal int GetListenerPort()
+        {
+            int port = ((IPEndPoint)_tcpListener.LocalEndpoint).Port;
+
+            return port;
+        }
+
+        private void OnLicenseChanged()
+        {
+            if (_server.Configuration.Integrations.PostgreSql.Enabled == false)
+                return;
+
+            _locker.Wait();
+
+            try
+            {
+                var activate = _server.ServerStore.LicenseManager.CanUsePostgreSqlIntegration(withNotification: true);
+                if (activate)
+                {
+                    if (Active == false)
+                        Start();
+                }
+                else
+                {
+                    Stop();
+                }
+            }
+            catch (ObjectDisposedException)
+            {
+            }
+            finally
+            {
+                _locker.Release();
             }
         }
 

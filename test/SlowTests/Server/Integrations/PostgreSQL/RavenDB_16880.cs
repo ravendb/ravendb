@@ -30,15 +30,20 @@ namespace SlowTests.Server.Integrations.PostgreSQL
         {
         }
 
-        private RavenServer GetServerWithRunningPostgres()
+        private RavenServer GetServerWithRunningPostgres(out int postgresPort)
         {
-            return GetNewServer(new ServerCreationOptions()
+            var server = GetNewServer(new ServerCreationOptions()
             {
                 CustomSettings = new Dictionary<string, string>()
                 {
-                    { RavenConfiguration.GetKey(x => x.Integrations.PostgreSql.Enabled), "true"}
+                    { RavenConfiguration.GetKey(x => x.Integrations.PostgreSql.Enabled), "true"},
+                    { RavenConfiguration.GetKey(x => x.Integrations.PostgreSql.Port), "0"} // a free port will be allocated so tests can run in parallel
                 }
             });
+
+            postgresPort = server.PostgresServer.GetListenerPort();
+
+            return server;
         }
 
         [Fact]
@@ -46,7 +51,7 @@ namespace SlowTests.Server.Integrations.PostgreSQL
         {
             const string query = "from Employees";
 
-            using (var server = GetServerWithRunningPostgres())
+            using (var server = GetServerWithRunningPostgres(out var postgresPort))
             using (var store = GetDocumentStore(new Options { Server = server}))
             {
                 CreateNorthwindDatabase(store);
@@ -57,7 +62,7 @@ namespace SlowTests.Server.Integrations.PostgreSQL
                         .Query<Employee>()
                         .ToListAsync();
 
-                    var result = await Act(store, query);
+                    var result = await Act(store, query, postgresPort);
 
                     Assert.NotNull(result);
                     Assert.NotEmpty(result.Rows);
@@ -71,7 +76,8 @@ namespace SlowTests.Server.Integrations.PostgreSQL
         {
             const string query = "from Employees select LastName, FirstName";
 
-            using (var store = GetDocumentStore())
+            using (var server = GetServerWithRunningPostgres(out var postgresPort))
+            using (var store = GetDocumentStore(new Options { Server = server }))
             {
                 CreateNorthwindDatabase(store);
 
@@ -81,7 +87,7 @@ namespace SlowTests.Server.Integrations.PostgreSQL
                         .AsyncRawQuery<JObject>(query)
                         .ToArrayAsync();
 
-                    var result = await Act(store, query);
+                    var result = await Act(store, query, postgresPort);
 
                     Assert.NotNull(result);
                     Assert.NotEmpty(result.Rows);
@@ -99,14 +105,15 @@ namespace SlowTests.Server.Integrations.PostgreSQL
                 "\r\nwhere TABLE_SCHEMA not in ('information_schema', 'pg_catalog')" +
                 "\r\norder by TABLE_SCHEMA, TABLE_NAME";
 
-            using (var store = GetDocumentStore())
+            using (var server = GetServerWithRunningPostgres(out var postgresPort))
+            using (var store = GetDocumentStore(new Options { Server = server }))
             {
                 CreateNorthwindDatabase(store);
 
                 var collections = await store.Maintenance
                     .SendAsync(new GetCollectionStatisticsOperation());
 
-                var result = await Act(store, postgresQuery);
+                var result = await Act(store, postgresQuery, postgresPort);
 
                 Assert.NotNull(result);
                 Assert.NotEmpty(result.Columns);
@@ -123,11 +130,12 @@ namespace SlowTests.Server.Integrations.PostgreSQL
             const string secondField = "LastName";
             string query = $"from Employees select {firstField}, {secondField}";
 
-            using (var store = GetDocumentStore())
+            using (var server = GetServerWithRunningPostgres(out var postgresPort))
+            using (var store = GetDocumentStore(new Options { Server = server }))
             {
                 CreateNorthwindDatabase(store);
 
-                var result = await Act(store, query);
+                var result = await Act(store, query, postgresPort);
 
                 Assert.NotNull(result);
                 Assert.NotEmpty(result.Columns);
@@ -146,11 +154,12 @@ namespace SlowTests.Server.Integrations.PostgreSQL
             string query = $"from Employees select {firstField}, {secondField}";
             const string idField = "id()";
 
-            using (var store = GetDocumentStore())
+            using (var server = GetServerWithRunningPostgres(out var postgresPort))
+            using (var store = GetDocumentStore(new Options { Server = server }))
             {
                 CreateNorthwindDatabase(store);
 
-                var result = await Act(store, query);
+                var result = await Act(store, query, postgresPort);
 
                 Assert.NotNull(result);
                 Assert.NotEmpty(result.Columns);
@@ -165,7 +174,8 @@ namespace SlowTests.Server.Integrations.PostgreSQL
         {
             const string query = "from index 'Orders/Totals'";
 
-            using (var store = GetDocumentStore())
+            using (var server = GetServerWithRunningPostgres(out var postgresPort))
+            using (var store = GetDocumentStore(new Options { Server = server }))
             {
                 CreateNorthwindDatabase(store);
 
@@ -193,7 +203,7 @@ namespace SlowTests.Server.Integrations.PostgreSQL
                         .AsyncRawQuery<JObject>(query)
                         .ToArrayAsync();
 
-                    var result = await Act(store, query);
+                    var result = await Act(store, query, postgresPort);
 
                     Assert.NotNull(result);
                     Assert.NotEmpty(result.Rows);
@@ -208,7 +218,8 @@ namespace SlowTests.Server.Integrations.PostgreSQL
             const string query = "from index 'Orders/Totals' select Total";
             const string totalField = "Total";
 
-            using (var store = GetDocumentStore())
+            using (var server = GetServerWithRunningPostgres(out var postgresPort))
+            using (var store = GetDocumentStore(new Options { Server = server }))
             {
                 CreateNorthwindDatabase(store);
 
@@ -236,7 +247,7 @@ namespace SlowTests.Server.Integrations.PostgreSQL
                         .AsyncRawQuery<JObject>(query)
                         .ToArrayAsync();
 
-                    var result = await Act(store, query);
+                    var result = await Act(store, query, postgresPort);
 
                     Assert.NotNull(result);
                     Assert.NotEmpty(result.Rows);
@@ -322,11 +333,10 @@ namespace SlowTests.Server.Integrations.PostgreSQL
             return dt;
         }
 
-        private string GetConnectionString(DocumentStore store)
+        private string GetConnectionString(DocumentStore store, int postgresPort)
         {
             const string correctUid = "root";
             const string correctPassword = "test";
-            const string postgresPort = "5433";
 
             var uri = new Uri(store.Urls.First());
 
@@ -347,9 +357,9 @@ namespace SlowTests.Server.Integrations.PostgreSQL
         }
 
 
-        private async Task<DataTable> Act(DocumentStore store, string query)
+        private async Task<DataTable> Act(DocumentStore store, string query, int postgresPort)
         {
-            var connectionString = GetConnectionString(store);
+            var connectionString = GetConnectionString(store, postgresPort);
 
             await using var connection = new NpgsqlConnection(connectionString);
             await connection.OpenAsync();
