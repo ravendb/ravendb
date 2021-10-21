@@ -44,6 +44,7 @@ using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.ServerWide.Operations.Configuration;
+using Raven.Client.ServerWide.Operations.Integrations.PostgreSQL;
 using Raven.Client.ServerWide.Operations.Logs;
 using Raven.Client.ServerWide.Operations.Migration;
 using Raven.Client.ServerWide.Operations.OngoingTasks;
@@ -576,8 +577,8 @@ namespace TypingsGenerator
             scripter.AddType(typeof(AnalyzerDefinition));
             
             // integrations
-            scripter.AddType(typeof(PostgreSQLNewUser));
-            scripter.AddType(typeof(PostgreSQLUsernamesList));
+            scripter.AddType(typeof(PostgreSqlUser));
+            scripter.AddType(typeof(PostgreSqlUsernames));
             
             scripter.AddType(typeof(StudioTasksHandler.OfflineMigrationValidation));
 
