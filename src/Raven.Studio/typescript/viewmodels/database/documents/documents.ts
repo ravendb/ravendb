@@ -418,7 +418,7 @@ class documents extends viewModelBase {
     queryCollection() {
         const query = queryCriteria.empty();
         const collection = this.currentCollection();
-        const queryText = "from " + queryUtil.escapeCollectionOrFieldName(collection.collectionNameForQuery);
+        const queryText = "from " + queryUtil.wrapWithSingleQuotes(collection.collectionNameForQuery);
         
         query.queryText(queryText);
         query.name("Recent query (" + collection.collectionNameForQuery + ")");
