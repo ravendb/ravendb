@@ -61,6 +61,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 int read = 0;
                 int docsToLoad = pageSize;
                 Skip(ref result, position, ref read, skippedResults, out var readCounter, ref ids, token);
+                /*if (position != 0)
+*/
                 
                 while (read != 0)
                 {
