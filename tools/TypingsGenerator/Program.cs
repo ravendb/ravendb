@@ -77,6 +77,7 @@ using Raven.Server.Documents.Revisions;
 using Raven.Server.Documents.Studio;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
+using Raven.Server.Integrations.PostgreSQL.Handlers;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.NotificationCenter.Notifications.Server;
@@ -573,6 +574,10 @@ namespace TypingsGenerator
             // custom sorters & analyzers
             scripter.AddType(typeof(SorterDefinition));
             scripter.AddType(typeof(AnalyzerDefinition));
+            
+            // integrations
+            scripter.AddType(typeof(PostgreSQLNewUser));
+            scripter.AddType(typeof(PostgreSQLUsernamesList));
             
             scripter.AddType(typeof(StudioTasksHandler.OfflineMigrationValidation));
 

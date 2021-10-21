@@ -1,0 +1,94 @@
+<div class="flex-vertical absolute-fill content-margin" id="integrations">
+    <div class="row flex-row flex-grow flex-stretch-items">
+        <div class="col-sm-12 col-lg-6 flex-vertical">
+            <div class="scroll flex-grow">
+                <div class="hr-title on-base-background margin-top margin-top-lg">
+                    <h5><strong>postgreSQL</strong> credentials</h5><hr>
+                    <button class="btn btn-sm btn-primary" title="Add new credentials"
+                            data-bind="click: onAddPostgreSqlCredentials, requiredAccess: 'DatabaseAdmin'">
+                        <i class="icon-plus"></i><span>Add</span>
+                    </button> 
+                </div>
+                <div data-bind="if: postgreSqlCredentials().length === 0">
+                    <div class="text-center">
+                        <i class="icon-lg icon-empty-set text-muted"></i>
+                        <h3 class="text-center text-muted margin-top">No PostgreSQL credentials have been defined</h3>
+                    </div>
+                </div>
+                <div data-bind="foreach: postgreSqlCredentials">
+                    <div class="panel padding padding-sm flex-horizontal destination-item panel-hover"
+                         data-bind="css: { 'active': $root.editedPostgreSqlCredentials() && $data === $root.editedPostgreSqlCredentials().username() }">
+                        <a href="#" class="connection-string-title flex-grow text-elipsis" data-bind="attr: { title: $data }">
+                            <h4 class="text-elipsis">
+                                <span data-bind="text: $data"></span>
+                            </h4>
+                        </a>
+                        <div class="actions">
+                            <button class="btn btn-danger" title="Remove credentials"
+                                    data-bind="click: $parent.onConfirmDelete.bind($parent, $data), requiredAccess: 'DatabaseAdmin'">
+                                <i class="icon-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-12 col-lg-6 flex-vertical" data-bind="visible: editedPostgreSqlCredentials()">
+            <div class="panel slidein-style">
+                <div class="flex-horizontal padding">
+                    <h3 class="flex-grow" data-bind="visible: editedPostgreSqlCredentials">PostgreSQL Credentials</h3>
+                    <button class="close flex-start" data-bind="click: onCloseEdit"><i class="icon-cancel"></i></button>
+                </div>
+                <form class="flex-form padding" autocomplete="off">
+                    <div data-bind="with: editedPostgreSqlCredentials">
+                        <div class="form-group" data-bind="validationElement: username">
+                            <label class="control-label">Username</label>
+                            <div class="flex-grow">
+                                <input class="form-control" data-bind="textInput: username" placeholder="Enter username" />
+                            </div>
+                        </div>
+                        <div class="form-group" data-bind="validationElement: password">
+                            <label class="control-label">Password</label>
+                            <div class="flex-grow">
+                                <input class="form-control" data-bind="textInput: password" type="password" placeholder="Enter password">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex-horizontal">
+                        <div class="flex-grow"></div>
+                        <div class="margin-top margin-top-lg">
+                            <span data-bind="if: editedPostgreSqlCredentials">
+                                <button class="btn btn-info disabled" title="Test credentials - TBD.."
+                                        data-bind="click: onTestPostgreSqlCredentials, disable: $root.spinners.test, css: { 'btn-spinner': $root.spinners.test }" >
+                                    <i class="icon-rocket"></i>
+                                    <span>Test Credentials</span>
+                                </button>
+                            </span>
+                            <span data-bind="template: { name: 'cancel-save' }"></span>
+                        </div>
+                    </div>
+                </form>
+                <div class="panel-addon" data-bind="with: testConnectionResult">
+                    <div class="padding bg-success small" data-bind="visible: Success">
+                        <div data-bind="visible: $root.editedPostgreSqlCredentials()">Credentials successfully validated</div>
+                    </div>
+                    <div data-bind="if: !Success">
+                        <div class="padding bg-danger small">
+                            <h2>Credentials failed!</h2>
+                            <div data-bind="text: $root.errorText"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="text/html" id="cancel-save">
+    <button class="btn btn-default" data-bind="click: onCloseEdit">
+        <i class="icon-cancel"></i><span>Cancel</span>
+    </button>
+    <button class="btn btn-success" title="Click to save credentials" data-bind="click: onSavePostgreSqlCredentials">
+        <i class="icon-check"></i><span>Save</span>
+    </button>
+</script>
