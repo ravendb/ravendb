@@ -218,7 +218,7 @@ namespace Raven.Server.Documents.Handlers
                 long? totalCount = null;
                 if (from <= stats.Start && to >= stats.End)
                 {
-                    totalCount = incrementalTimeSeries ? rangeResult?.Entries.Length : stats.Count;
+                    totalCount =  stats.Count;
                 }
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -400,6 +400,7 @@ namespace Raven.Server.Documents.Handlers
             var initialStart = start;
             var hasMore = false;
             DateTime lastSeenEntry = from;
+            var skippedResults = 0;
 
             includesCommand?.InitializeNewRangeResult(state);
 
@@ -432,7 +433,7 @@ namespace Raven.Server.Documents.Handlers
                     if (incrementalValues.TryGetValue(singleResult.Timestamp.Ticks, out var entry)) 
                     {
                         // an entry with this timestamp already exists --> sum values
-
+                        skippedResults++;
                         MergeIncrementalTimeSeriesValues(singleResult, nodeTag, values, ref entry, returnFullResults);
                         continue;
                     }
@@ -471,7 +472,7 @@ namespace Raven.Server.Documents.Handlers
                     To = to,
                     Entries = Array.Empty<TimeSeriesEntry>(),
                     Hash = hash,
-                    NextStartPosition = start
+                    SkippedResults = skippedResults
                 };
             }
             else
@@ -482,7 +483,7 @@ namespace Raven.Server.Documents.Handlers
                     To = hasMore ? incrementalValues.Values.Last().Timestamp : to,
                     Entries = incrementalValues.Values.ToArray(),
                     Hash = hash,
-                    NextStartPosition = start
+                    SkippedResults = skippedResults
                 };
             }
 
@@ -718,11 +719,11 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteObject(rangeResult.Includes);
                 }
 
-                if (rangeResult.NextStartPosition.HasValue)
+                if (rangeResult.SkippedResults.HasValue)
                 {
                     writer.WriteComma();
-                    writer.WritePropertyName(nameof(TimeSeriesRangeResult.NextStartPosition));
-                    writer.WriteInteger(Math.Abs(rangeResult.NextStartPosition.Value));
+                    writer.WritePropertyName(nameof(TimeSeriesRangeResult.SkippedResults));
+                    writer.WriteInteger(Math.Abs(rangeResult.SkippedResults.Value));
                 }
             }
             writer.WriteEndObject();
