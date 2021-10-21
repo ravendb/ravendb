@@ -7,7 +7,6 @@ using FastTests;
 using FastTests.Server.Replication;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session.TimeSeries;
-using Raven.Client.Exceptions;
 using Raven.Client;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.NotificationCenter.Notifications;
@@ -1193,6 +1192,154 @@ namespace SlowTests.Client.TimeSeries.Issues
                     Assert.Equal(1, ts.Length);
                     Assert.Equal(630, ts[0].Value);
                 }
+            }
+        }
+
+        [Fact]
+        public async Task GetIncrementalTimeSeriesFullResultsShouldWork2()
+        {
+            var baseline = DateTime.UtcNow;
+
+            using (var storeA = GetDocumentStore())
+            using (var storeB = GetDocumentStore())
+            {
+                using (var session = storeA.OpenSession())
+                {
+                    session.Store(new User { Name = "Oren" }, "users/ayende");
+                    session.SaveChanges();
+                }
+
+                using (var session = storeB.OpenSession())
+                {
+                    session.Store(new User { Name = "Oren" }, "users/ayende");
+                    session.SaveChanges();
+                }
+
+                using (var session = storeA.OpenSession())
+                {
+                    var ts = session.IncrementalTimeSeriesFor("users/ayende", IncrementalTsName);
+
+                    for (int j = 0; j < 100; j++)
+                        ts.Increment(baseline.AddMinutes(j), 1);
+
+                    session.SaveChanges();
+                }
+                
+                using (var session = storeB.OpenSession())
+                {
+                    var ts = session.IncrementalTimeSeriesFor("users/ayende", IncrementalTsName);
+
+                    for (int j = 0; j < 100; j++)
+                        ts.Increment(baseline.AddMinutes(j), 1);
+
+                    session.SaveChanges();
+                }
+                
+                await SetupReplicationAsync(storeA, storeB);
+                await SetupReplicationAsync(storeB, storeA);
+
+                await EnsureReplicatingAsync(storeA, storeB);
+                await EnsureReplicatingAsync(storeB, storeA);
+
+                await EnsureNoReplicationLoop(Server, storeA.Database);
+                await EnsureNoReplicationLoop(Server, storeB.Database);
+
+                var stores = new [] {storeA, storeB};
+
+                foreach (var store in stores)
+                {
+                    var values = store.Operations
+                        .Send(new GetTimeSeriesOperation("users/ayende", IncrementalTsName, returnFullResults: true));
+
+                    Assert.NotNull(values.TotalResults);
+                    Assert.NotNull(values.SkippedResults);
+
+                    Assert.Equal(200, values.TotalResults);
+                    Assert.Equal(100, values.SkippedResults);
+
+                    foreach (var entry in values.Entries)
+                    {
+                        Assert.NotEmpty(entry.NodesValues);
+                        Assert.Equal(2, entry.NodesValues.Count);
+
+                        foreach (var nodeValue in entry.NodesValues)
+                        {
+                            Assert.Equal(1, nodeValue.Value.Length);
+                            Assert.Equal(1, nodeValue.Value[0]);
+                        }
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CheckSkippedResultsCalculation()
+        {
+            var baseline = DateTime.UtcNow;
+
+            using (var storeA = GetDocumentStore())
+            using (var storeB = GetDocumentStore())
+            {
+                using (var session = storeA.OpenSession())
+                {
+                    session.Store(new User { Name = "Oren" }, "users/ayende");
+                    session.SaveChanges();
+                }
+
+                using (var session = storeB.OpenSession())
+                {
+                    session.Store(new User { Name = "Oren" }, "users/ayende");
+                    session.SaveChanges();
+                }
+
+                using (var session = storeA.OpenSession())
+                {
+                    var ts = session.IncrementalTimeSeriesFor("users/ayende", IncrementalTsName);
+
+                    for (int j = 0; j < 100; j++)
+                        ts.Increment(baseline.AddMinutes(j), 1);
+
+                    session.SaveChanges();
+                }
+
+                using (var session = storeB.OpenSession())
+                {
+                    var ts = session.IncrementalTimeSeriesFor("users/ayende", IncrementalTsName);
+
+                    for (int j = 0; j < 100; j++)
+                        ts.Increment(baseline.AddMinutes(j), 1);
+
+                    session.SaveChanges();
+                }
+
+                await SetupReplicationAsync(storeA, storeB);
+                await SetupReplicationAsync(storeB, storeA);
+
+                await EnsureReplicatingAsync(storeA, storeB);
+                await EnsureReplicatingAsync(storeB, storeA);
+
+                await EnsureNoReplicationLoop(Server, storeA.Database);
+                await EnsureNoReplicationLoop(Server, storeB.Database);
+
+                var start = 0;
+                var pageSize = 100;
+                var values = storeA.Operations
+                    .Send(new GetTimeSeriesOperation("users/ayende", IncrementalTsName, start: 0, pageSize: pageSize/2, returnFullResults: true));
+
+                Assert.Equal(50, values.Entries.Length);
+
+                // we get 50 unique entries but we read 100 entries from the segment
+                // so next call we should start from position 101: numberOfUniqueEntries + skippedResults 
+                Assert.Equal(50, values.SkippedResults); 
+
+                var nextStart = values.Entries.Length + values.SkippedResults;
+                Assert.NotNull(nextStart);
+
+                values = storeA.Operations
+                    .Send(new GetTimeSeriesOperation("users/ayende", IncrementalTsName, start: (int)nextStart , pageSize: pageSize / 2, returnFullResults: true));
+
+                Assert.Equal(50, values.Entries.Length);
+                Assert.Equal(50, values.SkippedResults);
             }
         }
 

@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Linq;
 using System.Runtime.Serialization;
 using Raven.Client.Documents.Session.TimeSeries;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.TimeSeries
 {
@@ -11,7 +13,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         public TimeSeriesEntry[] Entries;
         public long? TotalResults;
         internal string Hash;
-        public int? NextStartPosition;
+        public int? SkippedResults;
 
         public BlittableJsonReaderObject Includes;
 
