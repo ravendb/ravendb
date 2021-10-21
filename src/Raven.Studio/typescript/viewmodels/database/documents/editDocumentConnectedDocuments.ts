@@ -201,7 +201,13 @@ class connectedDocuments {
         
         this.timeSeriesColumns = [
             new textColumn<timeSeriesItem>(this.gridController() as virtualGridController<any>, x => x.name, "Timeseries Name", "145px"),
-            new textColumn<timeSeriesItem>(this.gridController() as virtualGridController<any>, x => x.numberOfEntries.toLocaleString(), "Timeseries items count", "60px"),
+            new textColumn<timeSeriesItem>(
+                this.gridController() as virtualGridController<any>, 
+                    x => x.numberOfEntries.toLocaleString() + (timeSeriesEntryModel.isIncrementalName(x.name) ? ' <i class="icon-info"></i> ' : ''), 
+                "Timeseries items count",
+                "60px", {
+                    useRawValue: () => true
+                }),
             new textColumn<timeSeriesItem>(this.gridController() as virtualGridController<any>, x => dateFormatter(x.startDate) + " - " + dateFormatter(x.endDate), "Timeseries date range", "170px"),
             new actionColumn<timeSeriesItem>(this.gridController() as virtualGridController<any>,
                 x => this.goToTimeSeriesEdit(x),
@@ -252,10 +258,14 @@ class connectedDocuments {
                 if (column instanceof textColumn) {
                     if (column.header === "Timeseries date range") {
                         onValue(timeSeriesItem.startDate + " - " + timeSeriesItem.endDate);
-                    } else if (column.header === "Timeseries items count" && timeSeriesEntryModel.isIncrementalName(timeSeriesItem.name)) {
+                    } else if (column.header === "Timeseries items count") {
                         // TODO: add link to documentation when available..
-                        onValue(`Raw number of incremental entries.<br>May have duplicate entries for the same timestamp per node.`,
-                            timeSeriesItem.numberOfEntries.toLocaleString());
+                        if (timeSeriesEntryModel.isIncrementalName(timeSeriesItem.name))  {
+                            onValue(`Raw number of incremental entries: ${timeSeriesItem.numberOfEntries.toLocaleString()}<br>May have duplicate entries for the same timestamp per node.`,
+                                timeSeriesItem.numberOfEntries.toLocaleString());
+                        } else {
+                            onValue(timeSeriesItem.numberOfEntries.toLocaleString());
+                        }
                     } else {
                         const value = column.getCellValue(item);
                         onValue(value);

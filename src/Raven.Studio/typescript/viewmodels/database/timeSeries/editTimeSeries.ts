@@ -70,7 +70,7 @@ class editTimeSeries extends viewModelBase {
     private gridController = ko.observable<virtualGridController<Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry>>();
     private columnPreview = new columnPreviewPlugin<Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry>();
 
-    private nextItemToFetchIndex = undefined as number;
+    private nextItemToFetchIndex = 0 as number;
     
     private columnsCacheInfo = {
         hasTag: false,
@@ -271,14 +271,16 @@ class editTimeSeries extends viewModelBase {
         const db = this.activeDatabase();
 
         if (timeSeriesName) {
-            new getTimeSeriesCommand(this.documentId(), timeSeriesName, db, this.nextItemToFetchIndex || 0, 101, true)
+            new getTimeSeriesCommand(this.documentId(), timeSeriesName, db, this.nextItemToFetchIndex, 100, true)
                 .execute()
                 .done(result => {
-                    const hasMore = result.Entries.length === 101;
                     const totalCount = skip + result.Entries.length;
+                    const skipped = result.SkippedResults || 0;
+
+                    const hasMore = this.nextItemToFetchIndex + result.Entries.length + skipped < result.TotalResults;
+                    
                     if (hasMore) {
-                        result.Entries.pop();
-                        this.nextItemToFetchIndex = skip + result.Entries.length;
+                        this.nextItemToFetchIndex += result.Entries.length + skipped;
                     } else {
                         this.nextItemToFetchIndex = 0;
                     }
@@ -288,14 +290,14 @@ class editTimeSeries extends viewModelBase {
                     
                     const series = this.getSeriesFromList(timeSeriesName);
                     if (series) {
-                        const countForUI = hasMore ? totalCount -1 : totalCount;
+                        const countForUI = hasMore ? totalCount - 1 : totalCount;
                         series.numberOfEntries(countForUI);
                         series.hasMoreResults(hasMore);
                     }
 
                     fetchTask.resolve({
                         items,
-                        totalResultCount
+                        totalResultCount: hasMore ? totalResultCount + 1 : totalResultCount
                     })
                 })
                 .fail((response: JQueryXHR) => {
@@ -435,7 +437,9 @@ class editTimeSeries extends viewModelBase {
                         this.refresh();
                 }
             })
-            .always(() => this.nextItemToFetchIndex = 0);
+            .always(() => {
+                this.nextItemToFetchIndex = 0;
+            });
     }
     
     createTimeSeries(createNew: boolean) {
