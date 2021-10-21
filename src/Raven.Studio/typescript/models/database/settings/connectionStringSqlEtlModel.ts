@@ -109,12 +109,15 @@ class connectionStringSqlEtlModel extends connectionStringModel {
     }
     
     factoryPlaceHolder(factoryName: KnockoutObservable<string>) {
-        const simpleName = this.simpleNameFor(factoryName());
-        if (!factoryName()) {
-            return "Enter connection string";
-        }
-        
-        return ko.pureComputed(() => `Enter the complete connection string for the ${simpleName}`);
+        return ko.pureComputed(() => {
+            const simpleName = this.simpleNameFor(factoryName());
+            
+            if (!factoryName()) {
+                return "Enter connection string";
+            }
+            
+            return  `Enter the complete connection string for the ${simpleName}`;
+        });
     }
 }
 
