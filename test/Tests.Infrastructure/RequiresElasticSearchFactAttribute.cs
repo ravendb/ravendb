@@ -5,9 +5,16 @@ namespace Tests.Infrastructure
 {
     public class RequiresElasticSearchFactAttribute : FactAttribute
     {
+        private static readonly bool _canConnect;
+
+        static RequiresElasticSearchFactAttribute()
+        {
+            _canConnect = ElasticSearchTestNodes.Instance.CanConnect();
+        }
+
         public RequiresElasticSearchFactAttribute()
         {
-            if (ElasticSearchTestNodes.Instance.CanConnect() == false)
+            if (_canConnect == false)
                 Skip = "Test requires ElasticSearch instance";
         }
     }
