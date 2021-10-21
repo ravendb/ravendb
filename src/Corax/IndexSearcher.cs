@@ -53,10 +53,11 @@ namespace Corax
             return data.ToUnmanagedSpan().Slice(size + len);
         }
 
-        public  IndexEntryReader GetReaderFor(long id)
+        public IndexEntryReader GetReaderFor(long id)
         {
             return GetReaderFor(_transaction, ref _lastPage, id);
         }
+        
         public static IndexEntryReader GetReaderFor(Transaction transaction, ref Page page, long id)
         {
             var data = Container.MaybeGetFromSamePage(transaction.LowLevelTransaction, ref page, id).ToSpan();
@@ -131,7 +132,7 @@ namespace Corax
             if (terms == null)
                 return MultiTermMatch.CreateEmpty(_transaction.Allocator);
 
-            if (inTerms.Count > 1 && inTerms.Count <= 16)
+            if (inTerms.Count is > 1 and <= 16)
             {
                 var stack = new BinaryMatch[inTerms.Count / 2];
                 for (int i = 0; i < inTerms.Count / 2; i++)

@@ -50,8 +50,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             {
                 using (stats.For(IndexingOperation.Corax.Commit))
                 {
-                    _indexWriter.DeleteCommit(_knownFields);
-                    _indexWriter.Commit();
+                    _indexWriter.Commit(_knownFields);
                 }
             }
         }
@@ -90,8 +89,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         {
             EnsureValidStats(stats);
             using (Stats.DeleteStats.Start())
-                    if (_indexWriter.DeleteEntry(Constants.Documents.Indexing.Fields.DocumentIdFieldName, key.ToString()))
-                        _entriesCount--;
+                if (_indexWriter.TryDeleteEntry(Constants.Documents.Indexing.Fields.DocumentIdFieldName, key.ToString()))
+                {
+                    _entriesCount--;
+                }
         }
 
         public override void DeleteBySourceDocument(LazyStringValue sourceDocumentId, IndexingStatsScope stats)
@@ -102,9 +103,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         public override void DeleteReduceResult(LazyStringValue reduceKeyHash, IndexingStatsScope stats)
         {
             EnsureValidStats(stats);
-            
-                    if (_indexWriter.DeleteEntry(Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName, reduceKeyHash.ToString()))
-                        _entriesCount--;
+
+            if (_indexWriter.TryDeleteEntry(Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName, reduceKeyHash.ToString()))
+            {
+                _entriesCount--;
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

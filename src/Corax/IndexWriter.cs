@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -197,21 +198,20 @@ namespace Corax
             }
         }
 
-        public void DeleteCommit(Dictionary<Slice, int> knownFields)
+        private void DeleteCommit(Dictionary<Slice, int> knownFields, Span<byte> tmpBuf, Tree fieldsTree)
         {
             if (_entriesToDelete.Count == 0)
                 return;
-
-            var fieldsTree = Transaction.ReadTree(FieldsSlice);
+            
             Page page = default;
-            using var _ = Transaction.Allocator.Allocate(Container.MaxSizeInsideContainerPage, out Span<byte> tmpBuf);
             var llt = Transaction.LowLevelTransaction;
             List<long> ids = null;
+            
             foreach (var id in _entriesToDelete)
             {
                 var entryReader = IndexSearcher.GetReaderFor(Transaction, ref page, id);
 
-                foreach ((var fieldName, var fieldId) in knownFields) // TODO: this is wrong, need to get all the fields from the entry
+                foreach (var (fieldName, fieldId) in knownFields) // TODO maciej: this is wrong, need to get all the fields from the entry
                 {
                     var fieldType = entryReader.GetFieldType(fieldId);
                     if (fieldType.HasFlag(IndexEntryFieldType.List))
@@ -219,28 +219,27 @@ namespace Corax
                         var it = entryReader.ReadMany(fieldId);
                         while (it.ReadNext())
                         {
-                            DeleteField(id, ref entryReader, fieldName, fieldId, tmpBuf, it.Sequence);
+                            DeleteField(id, fieldName, tmpBuf, it.Sequence);
                         }
                     }
                     else
-                        DeleteField(id, ref entryReader, fieldName, fieldId, tmpBuf);
+                    {
+                        entryReader.Read(fieldId, out Span<byte> termValue);
+                        DeleteField(id, fieldName, tmpBuf, termValue);
+                    }
                 }
 
                 ids?.Clear();
                 Container.Delete(llt, _entriesContainerId, id);
                 llt.RootObjects.Increment(NumberOfEntriesSlice, -1);
+                var numberOfEntries = llt.RootObjects.ReadInt64(NumberOfEntriesSlice) ?? 0;
+                Debug.Assert(numberOfEntries >= 0);
             }
 
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            void DeleteField(long id, ref IndexEntryReader entryReader, Slice fieldName, int fieldId, Span<byte> tmpBuffer, ReadOnlySpan<byte> termValue = default)
+            void DeleteField(long id, Slice fieldName, Span<byte> tmpBuffer, ReadOnlySpan<byte> termValue)
             {
                 var fieldTree = fieldsTree.CompactTreeFor(fieldName);
-                if (termValue == default)
-                {
-                    entryReader.Read(fieldId, out var termValueSpan);
-                    termValue = termValueSpan;
-                }
-             
+             //todo maciej: got some issue here after refactoring
                 if (fieldTree.TryGetValue(termValue, out var containerId) == false)
                     return;
 
@@ -260,10 +259,8 @@ namespace Corax
 
                     //get first item into ids.
                     var itemsCount = ZigZagEncoding.Decode<int>(buffer, out var len);
-                    if (ids is null)
-                        ids = new List<long>(itemsCount);
-                    else
-                        ids.Clear();
+                    ids ??= new List<long>(itemsCount);
+                    ids.Clear();
 
 
                     long pos = len;
@@ -289,35 +286,34 @@ namespace Corax
             }
         }
 
-        public bool DeleteEntry(string key, string value)
+        public bool TryDeleteEntry(string key, string term)
         {
-            try
-            {
-                var fieldsTree = Transaction.ReadTree(FieldsSlice);
-                var fieldTree = fieldsTree.CompactTreeFor(key);
-
-                if (fieldTree.TryGetValue(value, out long id) == false)
-                    return false;
-
-                if ((id & (long)TermIdMask.Set) != 0 || (id & (long)TermIdMask.Small) != 0)
-                    return false;
-                
-                if (fieldTree.TryRemove(value, out id) == false)
-                    return false;
-                
-                _entriesToDelete.Add(id);
-                return true;
-            }
-            catch
-            {
+            var fieldsTree = Transaction.ReadTree(FieldsSlice);
+            var fieldTree = fieldsTree.CompactTreeFor(key);
+            var entriesCount = Transaction.LowLevelTransaction.RootObjects.ReadInt64(NumberOfEntriesSlice) ?? 0;
+            Debug.Assert(entriesCount - _entriesToDelete.Count >= 1);
+            
+            if (fieldTree.TryGetValue(term, out long id) == false)
                 return false;
-            }
+
+            if ((id & (long)TermIdMask.Set) != 0 || (id & (long)TermIdMask.Small) != 0)
+                throw new InvalidDataException($"Cannot delete {term} in {key} because it's not {nameof(TermIdMask.Single)}.");
+                    
+            if (fieldTree.TryRemove(term, out id) == false)
+                return false;
+
+            _entriesToDelete.Add(id);
+            return true;
         }
 
-        public void Commit()
+        public void Commit(Dictionary<Slice, int> knownFields = null)
         {
             using var _ = Transaction.Allocator.Allocate(Container.MaxSizeInsideContainerPage, out Span<byte> tmpBuf);
             Tree fieldsTree = Transaction.CreateTree(FieldsSlice);
+            
+            if(knownFields != null)
+                DeleteCommit(knownFields, tmpBuf, fieldsTree);
+            
             foreach (var (field, terms) in _buffer)
             {
                 var fieldTree = fieldsTree.CompactTreeFor(field);

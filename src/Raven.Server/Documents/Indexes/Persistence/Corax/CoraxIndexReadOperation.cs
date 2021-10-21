@@ -50,7 +50,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             if (isDistinctCount)
                 pageSize = int.MaxValue;
             var position = query.Start;
-            long readCounter = 0;
 
             IQueryMatch result = _coraxQueryEvaluator.Search(query, fieldsToFetch);
             if (result == null)
@@ -60,43 +59,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             try
             {
                 int read = 0;
-
-                //escaping already returned docs.
-                // Q: Can Corax have "skip" method inside? It's inefficient to copy values only for skipping.
                 int docsToLoad = pageSize;
-                if (position != 0)
-                {
-                    int emptyRead = position / BufferSize;
-                    do
-                    {
-                        read = result.Fill(ids);
-                        readCounter += read;
-                        emptyRead--;
-                    } while (emptyRead > 0);
-
-                    position %= BufferSize; // move into <0;_bufferSize> set.
-                    //I know there is a cost of copying this but it's max _bufferSize and make code much simpler.
-                    if (position >= readCounter)
-                    {
-                        totalResults.Value = Convert.ToInt32(readCounter);
-                        skippedResults.Value = 0;
-                        yield break;
-                    }
-                    else if (position != read)
-                        ids[position..read].CopyTo(ids, 0);
-                    else
-                        ids[0] = ids[position];
-
-                    read -= position;
-                }
-
-                // first Fill operation would be done outside loop because we need to check if there is already some data read.
-                if (read == 0)
-                {
-                    read = result.Fill(ids);
-                    readCounter += read;
-                }
-
+                Skip(ref result, position, ref read, skippedResults, out var readCounter, ref ids, token);
+                
                 while (read != 0)
                 {
                     for (int i = 0; i < read && docsToLoad != 0; --docsToLoad, ++i)
@@ -162,12 +127,18 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             int fieldId = 0;
             HashSet<string> results = new();
 
-            if (field.In(Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName, Constants.Documents.Indexing.Fields.DocumentIdFieldName) == false)
+            if ((field is Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName or Constants.Documents.Indexing.Fields.DocumentIdFieldName) == false)
             {
-                var fieldDefinition = _index.Definition.IndexFields.Values.First(x => x.Name == field);
-                if (fieldDefinition is null)
-                    throw new Exception("Wrong field name");
-                fieldId = fieldDefinition.Id;
+                fieldId = -1;
+                foreach (var indexField in _index.Definition.IndexFields.Values)
+                {
+                    if (indexField.Name == field)
+                    {
+                        fieldId = indexField.Id;
+                    }
+                }
+                if (fieldId == -1)
+                    throw new InvalidDataException($"Cannot find {field} field in {_index.Name}'s terms.");
             }
 
             var ids = ArrayPool<long>.Shared.Rent(BufferSize);
@@ -227,7 +198,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         }
 
 
-        private void Skip<TQueryMatch>(ref TQueryMatch result, int position, ref int read, Reference<int> skippedResults, out int readCounter, ref long[] ids,
+        private void Skip<TQueryMatch>(ref TQueryMatch result, int position, ref int read, Reference<int> skippedResults, out long readCounter, ref long[] ids,
             CancellationToken token) where TQueryMatch : IQueryMatch
         {
             readCounter = 0;
