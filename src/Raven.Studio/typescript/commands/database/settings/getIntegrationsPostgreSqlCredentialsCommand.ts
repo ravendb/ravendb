@@ -2,7 +2,7 @@ import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 import endpoints = require("endpoints");
 
-class getIntegrationsCredentialsCommand extends commandBase {
+class getIntegrationsPostgreSqlCredentialsCommand extends commandBase {
 
     constructor(private db: database) {
         super();
@@ -16,4 +16,4 @@ class getIntegrationsCredentialsCommand extends commandBase {
     }
 }
 
-export = getIntegrationsCredentialsCommand;
+export = getIntegrationsPostgreSqlCredentialsCommand;
