@@ -24,7 +24,7 @@ using Voron;
 
 namespace Raven.Server.Documents.Subscriptions
 {
-    public class SubscriptionConnectionsState
+    public class SubscriptionConnectionsState : IDisposable
     {
         private readonly string _subscriptionName;
         private readonly long _subscriptionId;
@@ -32,6 +32,8 @@ namespace Raven.Server.Documents.Subscriptions
         private readonly DocumentsStorage _documentsStorage;
         private readonly SubscriptionState _subscriptionState;
         private ConcurrentSet<SubscriptionConnection> _connections;
+        public Task GetSubscriptionInUseAwaiter => Task.WhenAll(_connections.Select(c => c.SubscriptionConnectionTask));
+
         private int _maxConcurrentConnections;
 
         private AsyncManualResetEvent _waitForMoreDocuments;
@@ -59,6 +61,8 @@ namespace Raven.Server.Documents.Subscriptions
         public string LastChangeVectorSent;
 
         public string PreviouslyRecordedChangeVector;
+        private readonly IDisposable _disposableNotificationsRegistration;
+
         public SubscriptionConnectionsState(string subscriptionName, long subscriptionId, SubscriptionStorage storage, SubscriptionConnection connection)
         {
             //the first connection to join creates this object and decides all details of the subscription
@@ -74,7 +78,7 @@ namespace Raven.Server.Documents.Subscriptions
 
             CancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_documentsStorage.DocumentDatabase.DatabaseShutdown);
             _waitForMoreDocuments = new AsyncManualResetEvent(CancellationTokenSource.Token);
-            var disposableNotificationsRegistration = RegisterForNotificationOnNewDocuments(connection); //TODO stav: dispose of this
+            _disposableNotificationsRegistration = RegisterForNotificationOnNewDocuments(connection); //TODO stav: dispose of this
 
             _subscriptionActivelyWorkingLock = new SemaphoreSlim(1);
             LastChangeVectorSent = connection.SubscriptionState.ChangeVectorForNextBatchStartingPoint;
@@ -85,16 +89,6 @@ namespace Raven.Server.Documents.Subscriptions
             DocumentsOperationContext docsContext, IncludeDocumentsCommand includesCmd)
         {
             return fetcher.GetDataToSend(clusterOperationContext, docsContext, includesCmd, GetLastEtagSent());
-        }
-
-        public IEnumerable<DocumentRecord> GetDocumentsFromResend(ClusterOperationContext clusterOperationContext)
-        {
-            return GetDocumentsFromResend(clusterOperationContext, _connections.Select(conn => conn.CurrentBatchId).ToHashSet());
-        }
-
-        public IEnumerable<RevisionRecord> GetRevisionsFromResend(ClusterOperationContext clusterOperationContext)
-        {
-            return GetRevisionsFromResend(clusterOperationContext, _connections.Select(conn => conn.CurrentBatchId).ToHashSet());
         }
 
         public IEnumerable<DocumentRecord> GetDocumentsFromResend(ClusterOperationContext context, HashSet<long> activeBatches)
@@ -118,6 +112,20 @@ namespace Raven.Server.Documents.Subscriptions
                         DocumentId = id,
                         ChangeVector = cv
                     };
+                }
+            }
+        }
+
+        public long GetNumberOfResendDocuments()
+        {
+            using (DocumentDatabase.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var subscriptionState = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.SubscriptionStateSchema, ClusterStateMachine.SubscriptionState);
+                using (GetDatabaseAndSubscriptionKeyPrefix(context, DocumentDatabase.Name, SubscriptionId, SubscriptionType.Document, out var prefix))
+                using (Slice.External(context.Allocator, prefix, out var prefixSlice))
+                {
+                    return subscriptionState.SeekByPrimaryKeyPrefix(prefixSlice, Slices.Empty, 0).Count();
                 }
             }
         }
@@ -389,16 +397,9 @@ namespace Raven.Server.Documents.Subscriptions
 
         public void DropSingleConnection(SubscriptionConnection connection)
         {
-            if (_connections.Contains(connection))
+            if (_connections.TryRemove(connection))
             {
-                try
-                {
-                    _connections.TryRemove(connection);
-                }
-                finally
-                {
-                    NotifyHasMoreDocs(); //upon connection fail, all recorded docs should be resent
-                }
+                NotifyHasMoreDocs(); //upon connection fail, all recorded docs should be resent
             }
         }
 
@@ -469,7 +470,7 @@ namespace Raven.Server.Documents.Subscriptions
             {
                 try
                 {
-                    conn.CancellationTokenSource.Cancel();
+                    CancelSingleConnection(conn, null);
                 }
                 catch
                 {
@@ -477,7 +478,7 @@ namespace Raven.Server.Documents.Subscriptions
                 }
             }
         }
-
+        
         public void Dispose()
         {
             try
@@ -489,6 +490,8 @@ namespace Raven.Server.Documents.Subscriptions
             {
                 // ignored: If we've failed to raise the cancellation token, it means that it's already raised
             }
+
+            _disposableNotificationsRegistration?.Dispose();
         }
 
         private static ByteStringContext<ByteStringMemoryCache>.InternalScope GetDatabaseAndSubscriptionKeyPrefix(ClusterOperationContext context, string database, long subscriptionId, SubscriptionType type, out ByteString prefix)

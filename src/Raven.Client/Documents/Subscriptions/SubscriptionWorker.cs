@@ -19,7 +19,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Sockets;
-//using System.Reflection.Metadata.Ecma335;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
@@ -113,7 +112,11 @@ namespace Raven.Client.Documents.Subscriptions
                 {
                     try
                     {
-                        await _subscriptionTask.ConfigureAwait(false);
+                        if (await _subscriptionTask.WaitWithTimeout(TimeSpan.FromSeconds(60)).ConfigureAwait(false) == false)
+                        {
+                            if (_logger.IsInfoEnabled)
+                                _logger.Info($"Subscription worker for '{SubscriptionName}' wasn't done after 60 seconds", new TimeoutException());
+                        }
                     }
                     catch (Exception)
                     {
@@ -541,12 +544,6 @@ namespace Raven.Client.Documents.Subscriptions
                             {
                                 if (tcpStream != null) //possibly prevent ObjectDisposedException
                                 {
-                                    if (_forTestingPurposes?.CloseThisWorkerBeforeAck == 2)
-                                    {
-                                        //_forTestingPurposes.mre.Wait();
-                                        throw new RavenException("Simulated Exception to close subscription");
-                                    }
-
                                     await SendAckAsync(lastReceivedChangeVector, tcpStream, context, _processingCts.Token).ConfigureAwait(false);
                                 }
                             }
@@ -913,8 +910,6 @@ namespace Raven.Client.Documents.Subscriptions
         internal class TestingStuff
         {
             internal bool SimulateUnexpectedException;
-            internal int CloseThisWorkerBeforeAck;
-            internal ManualResetEventSlim mre = new ();
         }
     }
 }
