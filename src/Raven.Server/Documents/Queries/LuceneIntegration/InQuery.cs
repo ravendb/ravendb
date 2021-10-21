@@ -122,7 +122,7 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
             private readonly IndexReader _reader;
             private readonly IState _state;
             private readonly Similarity _similarity;
-            private EagerInScorer _inner;
+            private FastBitArrayScorer  _inner;
 
             internal LazyInitInScorer(InQuery parent, IndexReader reader, IState state, Similarity similarity) : base(similarity)
             {
@@ -132,9 +132,28 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
                 _similarity = similarity;
             }
 
-            private EagerInScorer InitIfNeeded()
+            private FastBitArrayScorer InitIfNeeded()
             {
-                return _inner ??= new EagerInScorer(_parent, _reader, _state, _similarity);
+                if (_inner != null)
+                    return _inner;
+                
+                var docs = new FastBitArray(_reader.MaxDoc);
+                bool hasValue = false;
+                foreach (string match in _parent.Matches)
+                {
+                    using var termDocs = _reader.TermDocs(new Term(_parent.Field, match), _state);
+                    while (termDocs.Next(_state))
+                    {
+                        if (hasValue == false)
+                        {
+                            hasValue = true;
+                        }
+
+                        docs.Set(termDocs.Doc);
+                    }
+                }
+
+                return _inner = new FastBitArrayScorer(docs, _similarity, disposeArray: true);
             }
 
             public override int DocID()
@@ -257,3 +276,4 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
         }
     }
 }
+

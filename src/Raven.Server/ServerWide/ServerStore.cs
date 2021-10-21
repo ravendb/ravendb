@@ -13,6 +13,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Lucene.Net.Search;
+using Microsoft.Extensions.Caching.Memory;
 using NCrontab.Advanced;
 using NCrontab.Advanced.Extensions;
 using Raven.Client.Documents.Changes;
@@ -82,13 +83,14 @@ using Sparrow.Utils;
 using Voron;
 using Voron.Exceptions;
 using Constants = Raven.Client.Constants;
+using MemoryCache = Raven.Server.Utils.MemoryCache;
 
 namespace Raven.Server.ServerWide
 {
     /// <summary>
     /// Persistent store for server-wide configuration, such as cluster settings, database configuration, etc
     /// </summary>
-    public class ServerStore : IDisposable
+    public class ServerStore : IDisposable, ILowMemoryHandler
     {
         private const string ResourceName = nameof(ServerStore);
 
@@ -141,6 +143,12 @@ namespace Raven.Server.ServerWide
         {
             // we want our servers to be robust get early errors about such issues
             MemoryInformation.EnableEarlyOutOfMemoryChecks = true;
+
+            QueryClauseCache = new MemoryCache(new MemoryCacheOptions
+            {
+                SizeLimit = configuration.Indexing.QueryClauseCacheSize.GetValue(SizeUnit.Bytes),
+                ExpirationScanFrequency = configuration.Indexing.QueryClauseCacheExpirationScanFrequency.AsTimeSpan
+            });
 
             Configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
 
@@ -3409,6 +3417,20 @@ namespace Raven.Server.ServerWide
             internal Action BeforePutLicenseCommandHandledInOnValueChanged;
             internal bool StopIndex;
             internal Action<CompareExchangeCommandBase> ModifyCompareExchangeTimeout;
+        }
+        
+        public readonly MemoryCache QueryClauseCache;
+
+        public void LowMemory(LowMemorySeverity lowMemorySeverity)
+        {
+            if (lowMemorySeverity != LowMemorySeverity.ExtremelyLow)
+                return;
+            // just discard the whole thing
+            QueryClauseCache.Clear();
+        }
+
+        public void LowMemoryOver()
+        {
         }
     }
 }
