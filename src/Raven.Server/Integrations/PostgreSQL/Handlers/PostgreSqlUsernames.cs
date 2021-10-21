@@ -2,11 +2,11 @@
 
 namespace Raven.Server.Integrations.PostgreSQL.Handlers
 {
-    public class PostgreSqlUsernamesList
+    public class PostgreSqlUsernames
     {
         public List<User> Users { get; set; }
 
-        public PostgreSqlUsernamesList()
+        public PostgreSqlUsernames()
         {
             Users = new List<User>();
         }
