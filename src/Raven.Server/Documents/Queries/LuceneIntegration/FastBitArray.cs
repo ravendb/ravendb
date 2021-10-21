@@ -2,6 +2,7 @@
 using System.Buffers;
 using System.Collections.Generic;
 using System.Numerics;
+using Sparrow;
 
 namespace Raven.Server.Documents.Queries.LuceneIntegration
 {
@@ -9,6 +10,8 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
     {
         private ulong[] _bits;
         public bool Disposed => _bits == null;
+        public Size Size => new Size(_bits.Length * sizeof(long), SizeUnit.Bytes);
+
         public FastBitArray(int countOfBits)
         {
             _bits = ArrayPool<ulong>.Shared.Rent(countOfBits / 64 + (countOfBits % 64 == 0 ? 0 : 1));
@@ -18,6 +21,20 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
         public void Set(int index)
         {
             _bits[index / 64] |= 1UL << index % 64;
+        }
+
+        public int IndexOfFirstSetBit()
+        {
+            for (int i = 0; i < _bits.Length; i++)
+            {
+                if (_bits[i] == 0) 
+                    continue;
+                
+                int count = BitOperations.TrailingZeroCount(_bits[i]);
+                return i * 64 + count;
+            }
+
+            return -1;
         }
 
         public IEnumerable<int> Iterate(int from)
