@@ -20,6 +20,20 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
             _bits[index / 64] |= 1UL << index % 64;
         }
 
+        public int IndexOfFirstSetBit()
+        {
+            for (int i = 0; i < _bits.Length; i++)
+            {
+                if (_bits[i] == 0) 
+                    continue;
+                
+                int count = BitOperations.TrailingZeroCount(_bits[i]);
+                return i * 64 + count;
+            }
+
+            return -1;
+        }
+
         public IEnumerable<int> Iterate(int from)
         {
             // https://lemire.me/blog/2018/02/21/iterating-over-set-bits-quickly/

@@ -8,6 +8,7 @@ using Lucene.Net.Analysis.Tokenattributes;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Raven.Client;
+using Raven.Server.Documents.Queries.LuceneIntegration;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Queries
@@ -334,19 +335,21 @@ This edge-case has a very slim chance of happening, but still we should not igno
             if (minTermIsNullOrStar && maxTermIsNullOrStar)
                 return new WildcardQuery(new Term(fieldName, Asterisk));
 
-            return new TermRangeQuery(fieldName, minTermIsNullOrStar ? null : GetTermValue(minValue, minValueType, exact), maxTermIsNullOrStar ? null : GetTermValue(maxValue, maxValueType, exact), inclusiveMin, inclusiveMax);
+            var range = new TermRangeQuery(fieldName, minTermIsNullOrStar ? null : GetTermValue(minValue, minValueType, exact), maxTermIsNullOrStar ? null : GetTermValue(maxValue, maxValueType, exact), inclusiveMin, inclusiveMax);
+            return new CachingQuery(range);
         }
 
         private static Query CreateRange(string fieldName, long minValue, bool inclusiveMin, long maxValue, bool inclusiveMax)
         {
-            return NumericRangeQuery.NewLongRange(fieldName, 4, minValue, maxValue, inclusiveMin, inclusiveMax);
+            var query= NumericRangeQuery.NewLongRange(fieldName, 4, minValue, maxValue, inclusiveMin, inclusiveMax);
+            return new CachingQuery(query);
         }
 
         private static Query CreateRange(string fieldName, double minValue, bool inclusiveMin, double maxValue, bool inclusiveMax)
         {
             var query = NumericRangeQuery.NewDoubleRange(fieldName, 4, minValue, maxValue, inclusiveMin, inclusiveMax);
             
-            return query;
+            return new CachingQuery(query);
         }
     }
 }
