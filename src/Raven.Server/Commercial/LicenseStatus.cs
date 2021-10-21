@@ -78,7 +78,7 @@ namespace Raven.Server.Commercial
             }
         }
 
-        public double Version => GetValue<int?>("version") / (double)10 ?? -1;
+        public int Version => GetValue<int?>("version") ?? -1;
 
         public DateTime? Expiration => GetValue<DateTime?>("expiration");
 
