@@ -2,9 +2,9 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import eventsCollector = require("common/eventsCollector");
 import generalUtils = require("common/generalUtils");
 import postgreSqlCredentialsModel = require("models/database/settings/postgreSqlCredentialsModel");
-import getIntegrationsCredentialsCommand = require("commands/database/settings/getIntegrationsCredentialsCommand");
-import saveIntegrationsCredentialsCommand = require("commands/database/settings/saveIntegrationsCredentialsCommand");
-import deleteIntegrationsCredentialsCommand = require("../../../commands/database/settings/deleteIntegrationsCredentialsCommand");
+import getIntegrationsPostgreSqlCredentialsCommand = require("commands/database/settings/getIntegrationsPostgreSqlCredentialsCommand");
+import saveIntegrationsPostgreSqlCredentialsCommand = require("commands/database/settings/saveIntegrationsPostgreSqlCredentialsCommand");
+import deleteIntegrationsPostgreSqlCredentialsCommand = require("commands/database/settings/deleteIntegrationsPostgreSqlCredentialsCommand");
 
 class integrations extends viewModelBase {
    
@@ -42,7 +42,7 @@ class integrations extends viewModelBase {
     }
     
     private getAllIntegrationsCredentials(): JQueryPromise<Raven.Server.Integrations.PostgreSQL.Handlers.PostgreSQLUsernamesList> {
-        return new getIntegrationsCredentialsCommand(this.activeDatabase())
+        return new getIntegrationsPostgreSqlCredentialsCommand(this.activeDatabase())
             .execute()
             .done((result: Raven.Server.Integrations.PostgreSQL.Handlers.PostgreSQLUsernamesList) => {
                 const users = result.Users.map(x => x.Username);
@@ -64,7 +64,7 @@ class integrations extends viewModelBase {
     }
 
     private deleteIntegrationCredentials(username: string): void {
-        new deleteIntegrationsCredentialsCommand(this.activeDatabase(), username)
+        new deleteIntegrationsPostgreSqlCredentialsCommand(this.activeDatabase(), username)
             .execute()
             .done(() => {
                 this.getAllIntegrationsCredentials();
@@ -75,10 +75,7 @@ class integrations extends viewModelBase {
     onAddPostgreSqlCredentials(): void {
         eventsCollector.default.reportEvent("PostgreSQL credentials", "add-postgreSql-credentials");
         
-        this.editedPostgreSqlCredentials(postgreSqlCredentialsModel.empty());
-        
-        this.editedPostgreSqlCredentials().username.subscribe(() => this.clearTestResult());
-        this.editedPostgreSqlCredentials().password.subscribe(() => this.clearTestResult());
+        this.editedPostgreSqlCredentials(postgreSqlCredentialsModel.empty(() => this.clearTestResult()));
         this.clearTestResult();
     }
 
@@ -89,7 +86,7 @@ class integrations extends viewModelBase {
                 return;
             }
             
-            new saveIntegrationsCredentialsCommand(this.activeDatabase(), modelToSave.toDto())
+            new saveIntegrationsPostgreSqlCredentialsCommand(this.activeDatabase(), modelToSave.toDto())
                 .execute()
                 .done(() => {
                     this.getAllIntegrationsCredentials();

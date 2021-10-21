@@ -4,17 +4,27 @@ class postgreSqlCredentialsModel {
 
     username = ko.observable<string>();
     password = ko.observable<string>();
+    
+    clearMethod: () => void;
 
     validationGroup: KnockoutValidationGroup;
 
-    constructor(dto: Raven.Server.Integrations.PostgreSQL.Handlers.PostgreSQLNewUser) {
+    constructor(dto: Raven.Server.Integrations.PostgreSQL.Handlers.PostgreSQLNewUser, clearMethod: () => void) {
         this.username(dto.Username);
         this.password(dto.Password);
         
+        this.clearMethod = clearMethod;
+        
+        this.initObservables(); 
         this.initValidation();
     }
 
-    initValidation(): void {
+    private initObservables(): void {
+        this.username.subscribe(() => this.clearMethod());
+        this.password.subscribe(() => this.clearMethod());
+    }
+    
+    private initValidation(): void {
         this.username.extend({
             required: true
         });
@@ -29,11 +39,11 @@ class postgreSqlCredentialsModel {
         });
     }
 
-    static empty(): postgreSqlCredentialsModel {
+    static empty(clearMethod: () => void): postgreSqlCredentialsModel {
         return new postgreSqlCredentialsModel({
             Username: null,
             Password: null
-        });
+        }, clearMethod);
     }
     
     toDto(): Raven.Server.Integrations.PostgreSQL.Handlers.PostgreSQLNewUser {

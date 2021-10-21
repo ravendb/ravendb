@@ -3,7 +3,7 @@
         <div class="col-sm-12 col-lg-6 flex-vertical">
             <div class="scroll flex-grow">
                 <div class="hr-title on-base-background margin-top margin-top-lg">
-                    <h5><strong>postgreSQL</strong> credentials</h5><hr>
+                    <h5><strong>PostgreSQL</strong> credentials</h5><hr>
                     <button class="btn btn-sm btn-primary" title="Add new credentials"
                             data-bind="click: onAddPostgreSqlCredentials, requiredAccess: 'DatabaseAdmin'">
                         <i class="icon-plus"></i><span>Add</span>
@@ -57,13 +57,14 @@
                     <div class="flex-horizontal">
                         <div class="flex-grow"></div>
                         <div class="margin-top margin-top-lg">
-                            <span data-bind="if: editedPostgreSqlCredentials">
-                                <button class="btn btn-info disabled" title="Test credentials - TBD.."
-                                        data-bind="click: onTestPostgreSqlCredentials, disable: $root.spinners.test, css: { 'btn-spinner': $root.spinners.test }" >
-                                    <i class="icon-rocket"></i>
-                                    <span>Test Credentials</span>
-                                </button>
-                            </span>
+<!--                            TODO - return the test button when imlemented on server side -->
+<!--                            <span data-bind="if: editedPostgreSqlCredentials">-->
+<!--                                <button class="btn btn-info disabled" title="Click to test credentials"-->
+<!--                                        data-bind="click: onTestPostgreSqlCredentials, disable: $root.spinners.test, css: { 'btn-spinner': $root.spinners.test }" >-->
+<!--                                    <i class="icon-rocket"></i>-->
+<!--                                    <span>Test Credentials</span>-->
+<!--                                </button>-->
+<!--                            </span>-->
                             <span data-bind="template: { name: 'cancel-save' }"></span>
                         </div>
                     </div>
