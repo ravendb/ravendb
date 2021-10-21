@@ -12,7 +12,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Integrations.PostgreSQL.Handlers
 {
-    public class PostgreSQLHandler : DatabaseRequestHandler
+    public class PostgreSqlHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/admin/integration/postgresql/users", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetUsernamesList()
@@ -24,7 +24,7 @@ namespace Raven.Server.Integrations.PostgreSQL.Handlers
                 new() { Username = "User2" }
             };
 
-            var dto = new PostgreSQLUsernamesList { Users = usernames };
+            var dto = new PostgreSqlUsernamesList { Users = usernames };
 
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
@@ -48,7 +48,7 @@ namespace Raven.Server.Integrations.PostgreSQL.Handlers
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 var newUserRequest = await context.ReadForMemoryAsync(RequestBodyStream(), "PostgreSQLNewUser");
-                var newUserDto = JsonDeserializationServer.PostgreSQLNewUser(newUserRequest);
+                var newUserDto = JsonDeserializationServer.PostgreSqlUser(newUserRequest);
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
@@ -97,6 +97,12 @@ namespace Raven.Server.Integrations.PostgreSQL.Handlers
             }
 
             NoContentStatus();
+        }
+
+        [RavenAction("/databases/*/admin/integration/postgresql/config", "POST", AuthorizationStatus.DatabaseAdmin)]
+        public async Task ConfigPostgreSql()
+        {
+            await DatabaseConfigurations(ServerStore.ModifyPostgreSqlConfiguration, "read-postgresql-config", GetRaftRequestIdFromQuery());
         }
     }
 }

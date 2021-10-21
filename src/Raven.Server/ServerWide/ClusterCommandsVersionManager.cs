@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using Raven.Server.Integrations.PostgreSQL.Commands;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.Analyzers;
 using Raven.Server.ServerWide.Commands.ConnectionStrings;
@@ -143,6 +144,8 @@ namespace Raven.Server.ServerWide
 
             [nameof(EditLockModeCommand)] = 52_000,
             [nameof(PutRollingIndexCommand)] = 52_000,
+
+            [nameof(EditPostgreSqlConfigurationCommand)] = 53_000
         };
 
         public static bool CanPutCommand(string command)

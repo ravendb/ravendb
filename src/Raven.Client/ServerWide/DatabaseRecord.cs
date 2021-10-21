@@ -89,7 +89,7 @@ namespace Raven.Client.ServerWide
 
         public RefreshConfiguration Refresh;
 
-        public IntegrationsConfiguration Integrations;
+        public IntegrationConfigurations Integrations;
 
         public List<PeriodicBackupConfiguration> PeriodicBackups = new List<PeriodicBackupConfiguration>();
 

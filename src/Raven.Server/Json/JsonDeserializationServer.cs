@@ -18,6 +18,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.ServerWide.Operations.Configuration;
+using Raven.Client.ServerWide.Operations.Integrations.PostgreSQL;
 using Raven.Client.ServerWide.Operations.Logs;
 using Raven.Client.ServerWide.Operations.Migration;
 using Raven.Client.ServerWide.Tcp;
@@ -103,7 +104,7 @@ namespace Raven.Server.Json
 
         public static readonly Func<BlittableJsonReaderObject, SorterDefinition> SorterDefinition = GenerateJsonDeserializationRoutine<SorterDefinition>();
 
-        public static readonly Func<BlittableJsonReaderObject, PostgreSQLNewUser> PostgreSQLNewUser = GenerateJsonDeserializationRoutine<PostgreSQLNewUser>();
+        public static readonly Func<BlittableJsonReaderObject, PostgreSqlUser> PostgreSqlUser = GenerateJsonDeserializationRoutine<PostgreSqlUser>();
 
         public static readonly Func<BlittableJsonReaderObject, AnalyzerDefinition> AnalyzerDefinition = GenerateJsonDeserializationRoutine<AnalyzerDefinition>();
 

@@ -16,6 +16,7 @@ using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Configuration;
+using Raven.Client.ServerWide.Operations.Integrations.PostgreSQL;
 using Raven.Client.ServerWide.Operations.OngoingTasks;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Replication;
@@ -133,6 +134,8 @@ namespace Raven.Server.ServerWide
         public static Func<BlittableJsonReaderObject, RollingIndex> RollingIndexes = GenerateJsonDeserializationRoutine<RollingIndex>();
         public static Func<BlittableJsonReaderObject, SorterDefinition> SorterDefinition = GenerateJsonDeserializationRoutine<SorterDefinition>();
 
+        public static Func<BlittableJsonReaderObject, PostgreSqlConfiguration> PostgreSqlConfiguration = GenerateJsonDeserializationRoutine<PostgreSqlConfiguration>();
+
         public static readonly Dictionary<string, Func<BlittableJsonReaderObject, CommandBase>> Commands = new Dictionary<string, Func<BlittableJsonReaderObject, CommandBase>>
         {
             [nameof(UnregisterReplicationHubAccessCommand)] = GenerateJsonDeserializationRoutine<UnregisterReplicationHubAccessCommand>(),
@@ -236,7 +239,7 @@ namespace Raven.Server.ServerWide
             [nameof(PutServerWideSorterCommand)] = GenerateJsonDeserializationRoutine<PutServerWideSorterCommand>(),
             [nameof(DeleteServerWideSorterCommand)] = GenerateJsonDeserializationRoutine<DeleteServerWideSorterCommand>(),
             [nameof(EditLockModeCommand)] = GenerateJsonDeserializationRoutine<EditLockModeCommand>(),
-            [nameof(EditPostgreSQLConfigurationCommand)] = GenerateJsonDeserializationRoutine<EditPostgreSQLConfigurationCommand>()
+            [nameof(EditPostgreSqlConfigurationCommand)] = GenerateJsonDeserializationRoutine<EditPostgreSqlConfigurationCommand>()
         };
     }
 }

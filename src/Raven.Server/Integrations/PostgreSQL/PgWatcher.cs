@@ -18,7 +18,7 @@ namespace Raven.Server.Integrations.PostgreSQL
         
         private void OnLicenseChanged()
         {
-            if (_server.Configuration.Integrations.PostgreSQL.Enabled == false)
+            if (_server.Configuration.Integrations.PostgreSql.Enabled == false)
                 return;
 
             _locker.Wait();
@@ -51,7 +51,7 @@ namespace Raven.Server.Integrations.PostgreSQL
 
         public void Execute()
         {
-            if (_server.Configuration.Integrations.PostgreSQL.Enabled == false)
+            if (_server.Configuration.Integrations.PostgreSql.Enabled == false)
                 return;
 
             _locker.Wait();

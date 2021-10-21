@@ -23,8 +23,10 @@ using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations.Integrations.PostgreSQL;
 using Raven.Client.Util;
 using Raven.Server.Config;
+using Raven.Server.Config.Categories;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Json;
@@ -382,6 +384,24 @@ namespace Raven.Server.Smuggler.Documents
                             _writer.WritePropertyName(nameof(databaseRecord.ElasticSearchEtls));
                             WriteElasticSearchEtls(databaseRecord.ElasticSearchEtls);
                         }
+
+                        if (databaseRecord.Integrations != null)
+                        {
+                            _writer.WriteComma();
+                            _writer.WritePropertyName(nameof(databaseRecord.Integrations));
+
+                            _writer.WriteStartObject();
+
+                            if (databaseRecordItemType.Contain(DatabaseRecordItemType.PostreSQLIntegration))
+                            {
+                                _writer.WritePropertyName(nameof(databaseRecord.Integrations.PostgreSql));
+                                WritePostgreSqlConfiguration(databaseRecord.Integrations.PostgreSql);
+                            }
+
+                            _writer.WriteEndObject();
+                        }
+
+                        
 
                         break;
                 }
@@ -776,6 +796,16 @@ namespace Raven.Server.Smuggler.Documents
                 }
 
                 _writer.WriteEndObject();
+            }
+
+            private void WritePostgreSqlConfiguration(PostgreSqlConfiguration postgreSqlConfig)
+            {
+                if (postgreSqlConfig == null)
+                {
+                    _writer.WriteNull();
+                    return;
+                }
+                _context.Write(_writer, postgreSqlConfig.ToJson());
             }
 
             public ValueTask DisposeAsync()

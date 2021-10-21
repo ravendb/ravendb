@@ -11,20 +11,20 @@ namespace Raven.Server.Config.Categories
     {
         public IntegrationsConfiguration()
         {
-            PostgreSQL = new PostgreSQLConfiguration();
+            PostgreSql = new PostgreSqlConfiguration();
         }
 
-        public PostgreSQLConfiguration PostgreSQL { get; }
+        public PostgreSqlConfiguration PostgreSql { get; }
 
         public override void Initialize(IConfigurationRoot settings, HashSet<string> settingsNames, IConfigurationRoot serverWideSettings, HashSet<string> serverWideSettingsNames, ResourceType type, string resourceName)
         {
             base.Initialize(settings, settingsNames, serverWideSettings, serverWideSettingsNames, type, resourceName);
-            PostgreSQL.Initialize(settings, settingsNames, serverWideSettings, serverWideSettingsNames, type, resourceName);
+            PostgreSql.Initialize(settings, settingsNames, serverWideSettings, serverWideSettingsNames, type, resourceName);
 
             Initialized = true;
         }
 
-        public class PostgreSQLConfiguration : ConfigurationCategory
+        public class PostgreSqlConfiguration : ConfigurationCategory
         {
             [Description("Indicates if PostgreSQL integration is enabled or not. Default: false")]
             [DefaultValue(false)]

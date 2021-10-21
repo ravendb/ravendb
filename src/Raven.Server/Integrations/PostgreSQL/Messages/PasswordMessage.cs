@@ -21,13 +21,14 @@ namespace Raven.Server.Integrations.PostgreSQL.Messages
             using (context.OpenReadTransaction())
                 databaseRecord = serverStore.Cluster.ReadDatabase(context, databaseName, out long index);
 
-            var result = databaseRecord.Integrations.PostgreSQL.AuthenticationConfiguration.UsernamesAndPasswords;
+            var result = databaseRecord.Integrations.PostgreSql.Authentication.Users;
 
-            var password = result[transaction.Username];
-            if (Password.Equals(password) == false)
-            {
-                throw new PgFatalException(PgErrorCodes.InvalidPassword, "Authentication failed, password is invalid.");
-            }
+            // TODO arek
+            //var password = result[transaction.Username];
+            //if (Password.Equals(password) == false)
+            //{
+            //    throw new PgFatalException(PgErrorCodes.InvalidPassword, "Authentication failed, password is invalid.");
+            //}
 
             await writer.WriteAsync(messageBuilder.AuthenticationOk(), token);
         }

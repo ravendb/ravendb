@@ -27,6 +27,7 @@ using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.TransactionCommands;
+using Raven.Server.Integrations.PostgreSQL.Commands;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
@@ -1106,6 +1107,14 @@ namespace Raven.Server.Smuggler.Documents
 
                     tasks.Add(_database.ServerStore.SendToLeaderAsync(new EditDatabaseClientConfigurationCommand(databaseRecord.Client, _database.Name, RaftIdGenerator.DontCareId)));
                     progress.ClientConfigurationUpdated = true;
+                }
+
+                if (databaseRecord.Integrations?.PostgreSql != null && databaseRecordItemType.HasFlag(DatabaseRecordItemType.PostreSQLIntegration))
+                {
+                    if (_log.IsInfoEnabled)
+                        _log.Info("Configuring PostgreSQL integration from smuggler");
+                    tasks.Add(_database.ServerStore.SendToLeaderAsync(new EditPostgreSqlConfigurationCommand(databaseRecord.Integrations.PostgreSql, _database.Name, RaftIdGenerator.DontCareId)));
+                    progress.PostreSQLConfigurationUpdated = true;
                 }
 
                 if (databaseRecord.UnusedDatabaseIds != null && databaseRecord.UnusedDatabaseIds.Count > 0)
