@@ -285,9 +285,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             if (_fieldsToFetch is null)
                 throw new InvalidQueryException("Field doesn't found in Index.");
             
-            if (_fieldsToFetch.IndexFields.ContainsKey(fieldName))
+            if (_fieldsToFetch.IndexFields.TryGetValue(fieldName, out var indexField))
             {
-                return _fieldsToFetch.IndexFields[fieldName].Id;
+                return indexField.Id;
             }
             
             throw new InvalidDataException($"Field {fieldName} does not found in current index.");

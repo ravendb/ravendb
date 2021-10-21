@@ -6,6 +6,7 @@ using Corax;
 using Corax.Queries;
 using FastTests.Voron;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq;
 using Sparrow;
 using Sparrow.Server;
 using Sparrow.Threading;
