@@ -37,7 +37,7 @@ namespace Raven.Client.Documents.Operations.Integrations
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/admin/integration/postgresql/config";
+                url = $"{node.Url}/databases/{node.Database}/admin/integrations/postgresql/config";
 
                 var request = new HttpRequestMessage
                 {
