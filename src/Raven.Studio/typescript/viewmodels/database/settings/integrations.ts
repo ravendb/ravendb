@@ -41,10 +41,10 @@ class integrations extends viewModelBase {
         return this.getAllIntegrationsCredentials();
     }
     
-    private getAllIntegrationsCredentials(): JQueryPromise<Raven.Server.Integrations.PostgreSQL.Handlers.PostgreSQLUsernamesList> {
+    private getAllIntegrationsCredentials(): JQueryPromise<Raven.Server.Integrations.PostgreSQL.Handlers.PostgreSqlUsernames> {
         return new getIntegrationsPostgreSqlCredentialsCommand(this.activeDatabase())
             .execute()
-            .done((result: Raven.Server.Integrations.PostgreSQL.Handlers.PostgreSQLUsernamesList) => {
+            .done((result: Raven.Server.Integrations.PostgreSQL.Handlers.PostgreSqlUsernames) => {
                 const users = result.Users.map(x => x.Username);
                 this.postgreSqlCredentials(_.sortBy(users, userName => userName.toLowerCase()));
             });
@@ -75,7 +75,7 @@ class integrations extends viewModelBase {
     onAddPostgreSqlCredentials(): void {
         eventsCollector.default.reportEvent("PostgreSQL credentials", "add-postgreSql-credentials");
         
-        this.editedPostgreSqlCredentials(postgreSqlCredentialsModel.empty(() => this.clearTestResult()));
+        this.editedPostgreSqlCredentials(new postgreSqlCredentialsModel(() => this.clearTestResult()));
         this.clearTestResult();
     }
 
@@ -86,7 +86,7 @@ class integrations extends viewModelBase {
                 return;
             }
             
-            new saveIntegrationsPostgreSqlCredentialsCommand(this.activeDatabase(), modelToSave.toDto())
+            new saveIntegrationsPostgreSqlCredentialsCommand(this.activeDatabase(), modelToSave.username(), modelToSave.password())
                 .execute()
                 .done(() => {
                     this.getAllIntegrationsCredentials();
