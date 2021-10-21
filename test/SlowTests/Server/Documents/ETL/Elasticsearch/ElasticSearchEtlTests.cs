@@ -171,6 +171,7 @@ loadToOrders(orderData);
                 Assert.Equal(0, orderLinesCountAfterDelete.Count);
             }
         }
+
         [Fact]
         public void Simple_script_error_expected()
         {
@@ -892,7 +893,7 @@ loadToOrders(orderData);
             }
         }
 
-        [Fact]
+        [RequiresElasticSearchFact]
         public async Task ShouldImportTask()
         {
             using (var srcStore = GetDocumentStore())
