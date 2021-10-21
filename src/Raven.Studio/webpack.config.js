@@ -101,7 +101,7 @@ module.exports = (env, args) => {
         plugins: plugins,
         optimization: {
             minimize: isProductionMode,
-            noEmitOnErrors: true,
+            emitOnErrors: false,
             usedExports: true,
             minimizer: [
                 new TerserPlugin(),
@@ -112,7 +112,7 @@ module.exports = (env, args) => {
             rules: [
                 {
                     test: require.resolve('bootstrap-multiselect/dist/js/bootstrap-multiselect'),
-                    use: 'imports-loader?define=>false,this=>window',
+                    use: 'imports-loader?type=commonjs&wrapper=window&additionalCode=var%20define=false;',
                 },
                 {
                     test: /\.less$/i,
@@ -129,13 +129,11 @@ module.exports = (env, args) => {
                             }
                         },
                         {
-                            loader: 'resolve-url-loader',
-                            options: {
-                            }
-                        },
-                        {
                             loader: "less-loader",
-                            options: {}
+                            options: {
+                                implementation: require("less"),
+                                sourceMap: false
+                            }
                         }
                     ]
                 },
