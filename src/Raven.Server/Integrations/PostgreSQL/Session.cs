@@ -19,6 +19,7 @@ namespace Raven.Server.Integrations.PostgreSQL
         private readonly int _identifier;
         private readonly int _processId;
         private readonly DatabasesLandlord _databasesLandlord;
+        private readonly bool _isServerSecured;
         private readonly CancellationToken _token;
         private Dictionary<string, string> _clientOptions;
 
@@ -27,6 +28,7 @@ namespace Raven.Server.Integrations.PostgreSQL
             int identifier,
             int processId,
             DatabasesLandlord databasesLandlord,
+            bool isServerSecured,
             Func<Stream, Task<(Stream, X509Certificate2)>> authenticateAsServerIfSslNeeded,
             CancellationToken token)
         {
@@ -34,6 +36,7 @@ namespace Raven.Server.Integrations.PostgreSQL
             _identifier = identifier;
             _processId = processId;
             _databasesLandlord = databasesLandlord;
+            _isServerSecured = isServerSecured;
             _authenticateAsServerIfSslNeeded = authenticateAsServerIfSslNeeded;
             _token = token;
             _clientOptions = null;
@@ -133,11 +136,19 @@ namespace Raven.Server.Integrations.PostgreSQL
             {
                 using var transaction = new Transaction(database, new MessageReader(), _clientOptions["user"]);
 
-                // Authentication
-                await writer.WriteAsync(messageBuilder.AuthenticationCleartextPassword(), _token);
-                var authMessage = await transaction.MessageReader.GetUninitializedMessage(reader, _token);
-                await authMessage.Init(transaction.MessageReader, reader, _token);
-                await authMessage.Handle(transaction, messageBuilder, reader, writer, _token);
+                if (_isServerSecured)
+                {
+                    // Authentication is required only when running in secured mode
+
+                    await writer.WriteAsync(messageBuilder.AuthenticationCleartextPassword(), _token);
+                    var authMessage = await transaction.MessageReader.GetUninitializedMessage(reader, _token);
+                    await authMessage.Init(transaction.MessageReader, reader, _token);
+                    await authMessage.Handle(transaction, messageBuilder, reader, writer, _token);
+                }
+                else
+                {
+                    await writer.WriteAsync(messageBuilder.AuthenticationOk(), _token);
+                }
 
                 await writer.WriteAsync(messageBuilder.ParameterStatusMessages(PgConfig.ParameterStatusList), _token);
                 await writer.WriteAsync(messageBuilder.BackendKeyData(_processId, _identifier), _token);
