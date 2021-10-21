@@ -18,11 +18,11 @@
                 <div data-bind="foreach: postgreSqlCredentials">
                     <div class="panel padding padding-sm flex-horizontal destination-item panel-hover"
                          data-bind="css: { 'active': $root.editedPostgreSqlCredentials() && $data === $root.editedPostgreSqlCredentials().username() }">
-                        <a href="#" class="connection-string-title flex-grow text-elipsis" data-bind="attr: { title: $data }">
-                            <h4 class="text-elipsis">
+                        <div class="connection-string-title flex-grow text-elipsis" data-bind="attr: { title: $data }">
+                            <h4 class="text-elipsis margin-left">
                                 <span data-bind="text: $data"></span>
                             </h4>
-                        </a>
+                        </div>
                         <div class="actions">
                             <button class="btn btn-danger" title="Remove credentials"
                                     data-bind="click: $parent.onConfirmDelete.bind($parent, $data), requiredAccess: 'DatabaseAdmin'">
