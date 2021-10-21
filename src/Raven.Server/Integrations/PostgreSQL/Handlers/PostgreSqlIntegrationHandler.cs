@@ -12,9 +12,9 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Integrations.PostgreSQL.Handlers
 {
-    public class PostgreSqlHandler : DatabaseRequestHandler
+    public class PostgreSqlIntegrationHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/admin/integration/postgresql/users", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        [RavenAction("/databases/*/admin/integrations/postgresql/users", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetUsernamesList()
         {
             //todo pfyasu: delete lines below - debug only
@@ -42,7 +42,7 @@ namespace Raven.Server.Integrations.PostgreSQL.Handlers
             }
         }
 
-        [RavenAction("/databases/*/admin/integration/postgresql/user", "PUT", AuthorizationStatus.DatabaseAdmin)]
+        [RavenAction("/databases/*/admin/integrations/postgresql/user", "PUT", AuthorizationStatus.DatabaseAdmin)]
         public async Task AddUser()
         {
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -75,7 +75,7 @@ namespace Raven.Server.Integrations.PostgreSQL.Handlers
             NoContentStatus();
         }
 
-        [RavenAction("/databases/*/admin/integration/postgresql/user", "DELETE", AuthorizationStatus.DatabaseAdmin)]
+        [RavenAction("/databases/*/admin/integrations/postgresql/user", "DELETE", AuthorizationStatus.DatabaseAdmin)]
         public async Task DeleteUser()
         {
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -99,7 +99,7 @@ namespace Raven.Server.Integrations.PostgreSQL.Handlers
             NoContentStatus();
         }
 
-        [RavenAction("/databases/*/admin/integration/postgresql/config", "POST", AuthorizationStatus.DatabaseAdmin)]
+        [RavenAction("/databases/*/admin/integrations/postgresql/config", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task ConfigPostgreSql()
         {
             await DatabaseConfigurations(ServerStore.ModifyPostgreSqlConfiguration, "read-postgresql-config", GetRaftRequestIdFromQuery());
