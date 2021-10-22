@@ -47,7 +47,6 @@ module.exports = (env, args) => {
     });
     
     const plugins = [
-        cleanPlugin,
         miniCssExtractPlugin,
         htmlPlugin,
         copyPlugin,
@@ -76,8 +75,9 @@ module.exports = (env, args) => {
         new webpack.ContextReplacementPlugin(/moment[\/\\]locale$/, /(en)$/),
         //new BundleAnalyzerPlugin()
     ];
-
+    
     if (isProductionMode) {
+        plugins.unshift(cleanPlugin);
         plugins.push(new ZipPlugin({
             filename: "Raven.Studio.zip"
         }));
@@ -94,8 +94,8 @@ module.exports = (env, args) => {
         },
         output: {
             path: __dirname + '/wwwroot/dist',
-            filename: 'assets/[name].[contenthash:8].js',
-            chunkFilename: "assets/[name].[contenthash:8].js",
+            filename: isProductionMode ? 'assets/[name].[contenthash:8].js' : 'assets/[name].js',
+            chunkFilename: isProductionMode ? "assets/[name].[contenthash:8].js" : "assets/[name].js",
             publicPath: "/studio/"
         },
         plugins: plugins,
@@ -118,9 +118,7 @@ module.exports = (env, args) => {
                     test: /\.less$/i,
                     use: [
                         {
-                            loader: isProductionMode
-                                ? MiniCssExtractPlugin.loader
-                                : 'style-loader'
+                            loader: MiniCssExtractPlugin.loader
                         },
                         {
                             loader: "css-loader",
