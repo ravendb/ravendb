@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
@@ -156,6 +157,12 @@ namespace TypingsGenerator
             Directory.CreateDirectory(TargetDirectory);
             scripter
                 .SaveToDirectory(TargetDirectory);
+            
+            var endpoints = new EndpointsExporter();
+            endpoints.Create(TargetDirectory);
+            
+            var configuration = new ConfigurationExporter();
+            configuration.Create(TargetDirectory);
         }
 
         private static Scripter ConfigureTypes(Scripter scripter)

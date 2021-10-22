@@ -198,9 +198,10 @@ module.exports = (env, args) => {
                 viewmodels: path.resolve(__dirname, 'typescript/viewmodels'),
                 overrides: path.resolve(__dirname, 'typescript/overrides'),
                 widgets: path.resolve(__dirname, 'typescript/widgets'),
-                endpoints: path.resolve(__dirname, 'typescript/endpoints'),
                 views: path.resolve(__dirname, 'wwwroot/App/views'),
-                configuration: path.resolve(__dirname, 'typescript/configuration'),
+
+                endpoints: path.resolve(__dirname, 'typings/server/endpoints'),
+                configuration: path.resolve(__dirname, 'typings/server/configuration'),
                 
                 Content: path.resolve(__dirname, 'wwwroot/Content/'),
                 d3: path.resolve(__dirname, 'wwwroot/Content/custom_d3'),
