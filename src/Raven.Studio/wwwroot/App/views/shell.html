@@ -1,5 +1,5 @@
 <div class="layout-container" data-bind="css: { 'cloud-cluster-admin': applyColorCustomization, 'collapse-menu': collapseMenu() || smallScreen(), 'pin-notifications': notificationCenter.pinNotifications(), 'show-notifications': notificationCenter.showNotifications(), 'show-search': searchBox.showSearchSmallScreen() }">
-    <div data-bind="compose: browserAlert"></div>
+    <div data-bind="compose: { model: browserAlert }"></div>
     <aside class="top-alert" data-bind="visible: developerLicense">
         Developer License - Not for Production Use
     </aside>
@@ -387,7 +387,7 @@
     <div class="connection-lost" data-bind="css: { show: $root.constructor.showConnectionLost }">
         <div class="absolute-center">
             <h3>Connection lost</h3>
-            <img src="Content/img/connection-lost.svg" width="260" />
+            <img src="../../Content/img/connection-lost.svg" width="260" />
             <p class="small">Studio may not work correctly until reload</p>
             <button class="btn" data-bind="click: ignoreWebSocketError"><i class="icon-warning"></i><span>Ignore</span></button>&nbsp;&nbsp;
             <button class="btn btn-primary" onclick="location.reload();">
@@ -399,4 +399,5 @@
     <div data-bind="if: displayUsageStatsInfo()">
         <div data-bind="compose: usageStatsView"></div>
     </div>
-    <div class="graph-helper" data-bind="compose: graphHelperView"></div></div>
+    <div class="graph-helper" data-bind="compose: $root.graphHelperView"></div>
+</div>

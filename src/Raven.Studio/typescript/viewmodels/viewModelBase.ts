@@ -27,16 +27,16 @@ abstract class viewModelBase {
     protected isOperatorOrAbove = accessManager.default.isOperatorOrAbove;
     protected isClusterAdminOrClusterNode = accessManager.default.isClusterAdminOrClusterNode;
     
-    view: string;
+    view: { default: string };
     
     getView() {
         if (!this.view) {
             throw new Error("Looks like you forgot to define view in: " + this.constructor.name);
         }
-        if (!this.view.startsWith("<")) {
+        if (!this.view.default.trim().startsWith("<")) {
             console.warn("View doesn't start with '<'");
         }
-        return this.view;
+        return this.view.default || this.view;
     }
     
     downloader = new downloader();

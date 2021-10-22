@@ -5,7 +5,7 @@
 /// <reference path="server/include.ts"/>
 
 declare module "*.html" {
-    var _temp: string;
+    var _temp: { default: string };
     export = _temp;
 }
 

@@ -15,6 +15,7 @@ import defaultAceCompleter = require("common/defaultAceCompleter");
 class migrateRavenDbDatabase extends viewModelBase {
 
     view = require("views/database/tasks/migrateRavenDbDatabase.html");
+    smugglerDatabaseRecordView = require("views/database/tasks/smugglerDatabaseRecord.html");
 
     model = new migrateRavenDbDatabaseModel();
     completer = defaultAceCompleter.completer();
