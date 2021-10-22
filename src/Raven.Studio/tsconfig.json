@@ -56,8 +56,8 @@
           "widgets/*": ["typescript/widgets/*"],
           "commands/*": ["typescript/commands/*"],
           "knockout": ["node_modules/@types/knockout"],
-          "endpoints": ["typescript/endpoints"],
-          "configuration": ["typescript/configuration"]
+          "endpoints": ["typings/server/endpoints"],
+          "configuration": ["typings/server/configuration"]
       }
   },
   "exclude": [
