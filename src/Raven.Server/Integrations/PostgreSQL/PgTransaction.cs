@@ -15,7 +15,7 @@ namespace Raven.Server.Integrations.PostgreSQL
         Failed = (byte)'E'
     }
 
-    public class Transaction : IDisposable
+    public class PgTransaction : IDisposable
     {
         public TransactionState State { get; private set; } = TransactionState.Idle;
         public DocumentDatabase DocumentDatabase { get; }
@@ -24,7 +24,7 @@ namespace Raven.Server.Integrations.PostgreSQL
         
         private PgQuery _currentQuery;
         
-        public Transaction(DocumentDatabase documentDatabase, MessageReader messageReader, string username)
+        public PgTransaction(DocumentDatabase documentDatabase, MessageReader messageReader, string username)
         {
             DocumentDatabase = documentDatabase;
             MessageReader = messageReader;

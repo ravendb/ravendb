@@ -21,7 +21,7 @@ namespace Raven.Server.Integrations.PostgreSQL.Messages
             return len;
         }
 
-        protected override async Task HandleMessage(Transaction transaction, MessageBuilder messageBuilder, PipeWriter writer, CancellationToken token)
+        protected override async Task HandleMessage(PgTransaction transaction, MessageBuilder messageBuilder, PipeWriter writer, CancellationToken token)
         {
             // TODO: Maybe support multiple SELECT statements in one query - requires parsing the SQL
             using var query = PgQuery.CreateInstance(QueryString, null, transaction.DocumentDatabase);
@@ -36,7 +36,7 @@ namespace Raven.Server.Integrations.PostgreSQL.Messages
             await writer.WriteAsync(messageBuilder.ReadyForQuery(transaction.State), token);
         }
 
-        public override async Task HandleError(PgErrorException e, Transaction transaction, MessageBuilder messageBuilder, PipeWriter writer, CancellationToken token)
+        public override async Task HandleError(PgErrorException e, PgTransaction transaction, MessageBuilder messageBuilder, PipeWriter writer, CancellationToken token)
         {
             await base.HandleError(e, transaction, messageBuilder, writer, token);
             await writer.WriteAsync(messageBuilder.ReadyForQuery(transaction.State), token);

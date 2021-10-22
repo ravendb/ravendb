@@ -157,12 +157,12 @@ namespace Raven.Server.Integrations.PostgreSQL.Messages
             }
         }
 
-        public virtual async Task Handle(Transaction transaction, MessageBuilder messageBuilder, PipeReader reader, PipeWriter writer, CancellationToken token)
+        public virtual async Task Handle(PgTransaction transaction, MessageBuilder messageBuilder, PipeReader reader, PipeWriter writer, CancellationToken token)
         {
             await HandleMessage(transaction, messageBuilder, writer, token);
         }
 
-        public virtual async Task HandleError(PgErrorException e, Transaction transaction, MessageBuilder messageBuilder, PipeWriter writer, CancellationToken token)
+        public virtual async Task HandleError(PgErrorException e, PgTransaction transaction, MessageBuilder messageBuilder, PipeWriter writer, CancellationToken token)
         {
             // Should assume none of the members are properly initialized
             await writer.WriteAsync(messageBuilder.ErrorResponse(
@@ -174,6 +174,6 @@ namespace Raven.Server.Integrations.PostgreSQL.Messages
 
         protected abstract Task<int> InitMessage(MessageReader messageReader, PipeReader reader, int msgLen, CancellationToken token);
 
-        protected abstract Task HandleMessage(Transaction transaction, MessageBuilder messageBuilder, PipeWriter writer, CancellationToken token);
+        protected abstract Task HandleMessage(PgTransaction transaction, MessageBuilder messageBuilder, PipeWriter writer, CancellationToken token);
     }
 }

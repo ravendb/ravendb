@@ -34,7 +34,7 @@ namespace Raven.Server.Integrations.PostgreSQL.Messages
             return len;
         }
 
-        protected override async Task HandleMessage(Transaction transaction, MessageBuilder messageBuilder, PipeWriter writer, CancellationToken token)
+        protected override async Task HandleMessage(PgTransaction transaction, MessageBuilder messageBuilder, PipeWriter writer, CancellationToken token)
         {
             // Note: It's not an error to close a non existing named portal/statement
             if (string.IsNullOrEmpty(ObjectName))

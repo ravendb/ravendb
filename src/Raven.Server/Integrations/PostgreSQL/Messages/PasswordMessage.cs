@@ -1,4 +1,5 @@
 ﻿using System.IO.Pipelines;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.ServerWide;
@@ -11,7 +12,7 @@ namespace Raven.Server.Integrations.PostgreSQL.Messages
     {
         public string Password;
 
-        protected override async Task HandleMessage(Transaction transaction, MessageBuilder messageBuilder, PipeWriter writer, CancellationToken token)
+        protected override async Task HandleMessage(PgTransaction transaction, MessageBuilder messageBuilder, PipeWriter writer, CancellationToken token)
         {
             var serverStore = transaction.DocumentDatabase.ServerStore;
             var databaseName = transaction.DocumentDatabase.Name;
@@ -21,7 +22,13 @@ namespace Raven.Server.Integrations.PostgreSQL.Messages
             using (context.OpenReadTransaction())
                 databaseRecord = serverStore.Cluster.ReadDatabase(context, databaseName, out long index);
 
-            var result = databaseRecord.Integrations.PostgreSql.Authentication.Users;
+            var users = databaseRecord.Integrations.PostgreSql.Authentication.Users;
+
+            //var user = users
+            //    .Where(x => x.Username == transaction.Username)
+                
+
+
 
             // TODO arek
             //var password = result[transaction.Username];

@@ -7,7 +7,7 @@ namespace Raven.Server.Integrations.PostgreSQL.Messages
 {
     public abstract class ExtendedProtocolMessage : Message
     {
-        public override async Task Handle(Transaction transaction, MessageBuilder messageBuilder, PipeReader reader, PipeWriter writer, CancellationToken token)
+        public override async Task Handle(PgTransaction transaction, MessageBuilder messageBuilder, PipeReader reader, PipeWriter writer, CancellationToken token)
         {
             if (transaction.State == TransactionState.Failed && this is not Sync)
                 return;
@@ -15,7 +15,7 @@ namespace Raven.Server.Integrations.PostgreSQL.Messages
             await base.Handle(transaction, messageBuilder, reader, writer, token);
         }
 
-        public override async Task HandleError(PgErrorException e, Transaction transaction, MessageBuilder messageBuilder, PipeWriter writer, CancellationToken token)
+        public override async Task HandleError(PgErrorException e, PgTransaction transaction, MessageBuilder messageBuilder, PipeWriter writer, CancellationToken token)
         {
             transaction.Fail();
             await base.HandleError(e, transaction, messageBuilder, writer, token);
