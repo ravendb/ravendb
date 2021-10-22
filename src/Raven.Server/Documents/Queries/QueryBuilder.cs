@@ -212,13 +212,13 @@ namespace Raven.Server.Documents.Queries
                                     case OperatorType.NotEqual:
                                         return LuceneQueryHelper.NotEqual(luceneFieldName, termType, valueAsString, exact);
                                     case OperatorType.LessThan:
-                                        return LuceneQueryHelper.LessThan(luceneFieldName, termType, valueAsString, exact);
+                                        return LuceneQueryHelper.LessThan(index, luceneFieldName, termType, valueAsString, exact);
                                     case OperatorType.GreaterThan:
-                                        return LuceneQueryHelper.GreaterThan(luceneFieldName, termType, valueAsString, exact);
+                                        return LuceneQueryHelper.GreaterThan(index, luceneFieldName, termType, valueAsString, exact);
                                     case OperatorType.LessThanEqual:
-                                        return LuceneQueryHelper.LessThanOrEqual(luceneFieldName, termType, valueAsString, exact);
+                                        return LuceneQueryHelper.LessThanOrEqual(index, luceneFieldName, termType, valueAsString, exact);
                                     case OperatorType.GreaterThanEqual:
-                                        return LuceneQueryHelper.GreaterThanOrEqual(luceneFieldName, termType, valueAsString, exact);
+                                        return LuceneQueryHelper.GreaterThanOrEqual(index, luceneFieldName, termType, valueAsString, exact);
                                 }
                                 break;
                             case LuceneFieldType.Long:
@@ -227,17 +227,17 @@ namespace Raven.Server.Documents.Queries
                                 switch (where.Operator)
                                 {
                                     case OperatorType.Equal:
-                                            return LuceneQueryHelper.Equal(luceneFieldName, valueAsLong);
+                                            return LuceneQueryHelper.Equal(index, luceneFieldName, valueAsLong);
                                     case OperatorType.NotEqual:
-                                            return LuceneQueryHelper.NotEqual(luceneFieldName, valueAsLong);
+                                            return LuceneQueryHelper.NotEqual(index, luceneFieldName, valueAsLong);
                                     case OperatorType.LessThan:
-                                            return LuceneQueryHelper.LessThan(luceneFieldName, valueAsLong);
+                                            return LuceneQueryHelper.LessThan(index, luceneFieldName, valueAsLong);
                                     case OperatorType.GreaterThan:
-                                            return LuceneQueryHelper.GreaterThan(luceneFieldName, valueAsLong);
+                                            return LuceneQueryHelper.GreaterThan(index, luceneFieldName, valueAsLong);
                                     case OperatorType.LessThanEqual:
-                                            return LuceneQueryHelper.LessThanOrEqual(luceneFieldName, valueAsLong);
+                                            return LuceneQueryHelper.LessThanOrEqual(index, luceneFieldName, valueAsLong);
                                     case OperatorType.GreaterThanEqual:
-                                            return LuceneQueryHelper.GreaterThanOrEqual(luceneFieldName, valueAsLong);
+                                            return LuceneQueryHelper.GreaterThanOrEqual(index, luceneFieldName, valueAsLong);
                                 }
                                 break;
                             case LuceneFieldType.Double:
@@ -246,17 +246,17 @@ namespace Raven.Server.Documents.Queries
                                 switch (where.Operator)
                                 {
                                     case OperatorType.Equal:
-                                            return LuceneQueryHelper.Equal(luceneFieldName, valueAsDouble);
+                                            return LuceneQueryHelper.Equal(index, luceneFieldName, valueAsDouble);
                                     case OperatorType.NotEqual:
-                                            return LuceneQueryHelper.NotEqual(luceneFieldName, valueAsDouble);
+                                            return LuceneQueryHelper.NotEqual(index, luceneFieldName, valueAsDouble);
                                     case OperatorType.LessThan:
-                                            return LuceneQueryHelper.LessThan(luceneFieldName, valueAsDouble);
+                                            return LuceneQueryHelper.LessThan(index, luceneFieldName, valueAsDouble);
                                     case OperatorType.GreaterThan:
-                                            return LuceneQueryHelper.GreaterThan(luceneFieldName, valueAsDouble);
+                                            return LuceneQueryHelper.GreaterThan(index, luceneFieldName, valueAsDouble);
                                     case OperatorType.LessThanEqual:
-                                            return LuceneQueryHelper.LessThanOrEqual(luceneFieldName, valueAsDouble);
+                                            return LuceneQueryHelper.LessThanOrEqual(index, luceneFieldName, valueAsDouble);
                                     case OperatorType.GreaterThanEqual:
-                                            return LuceneQueryHelper.GreaterThanOrEqual(luceneFieldName, valueAsDouble);
+                                            return LuceneQueryHelper.GreaterThanOrEqual(index, luceneFieldName, valueAsDouble);
                                 }
                                 break;
                             default:
@@ -490,17 +490,17 @@ namespace Raven.Server.Documents.Queries
 
                     var valueFirstAsString = GetValueAsString(valueFirst);
                     var valueSecondAsString = GetValueAsString(valueSecond);
-                    betweenQuery = LuceneQueryHelper.Between(luceneFieldName, termType, valueFirstAsString, be.MinInclusive, valueSecondAsString, be.MaxInclusive, exact);
+                    betweenQuery = LuceneQueryHelper.Between(index, luceneFieldName, termType, valueFirstAsString, be.MinInclusive, valueSecondAsString, be.MaxInclusive, exact);
                     break;
                 case LuceneFieldType.Long:
                     var valueFirstAsLong = (long)valueFirst;
                     var valueSecondAsLong = (long)valueSecond;
-                    betweenQuery =  LuceneQueryHelper.Between(luceneFieldName, valueFirstAsLong, be.MinInclusive, valueSecondAsLong, be.MaxInclusive);
+                    betweenQuery =  LuceneQueryHelper.Between(index, luceneFieldName, valueFirstAsLong, be.MinInclusive, valueSecondAsLong, be.MaxInclusive);
                     break;
                 case LuceneFieldType.Double:
                     var valueFirstAsDouble = (double)valueFirst;
                     var valueSecondAsDouble = (double)valueSecond;
-                    betweenQuery = LuceneQueryHelper.Between(luceneFieldName, valueFirstAsDouble, be.MinInclusive, valueSecondAsDouble, be.MaxInclusive);
+                    betweenQuery = LuceneQueryHelper.Between(index, luceneFieldName, valueFirstAsDouble, be.MinInclusive, valueSecondAsDouble, be.MaxInclusive);
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(fieldType), fieldType, null);

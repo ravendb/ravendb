@@ -30,6 +30,7 @@ namespace Raven.Server.Config.Categories
         {
             _root = root;
 
+            QueryClauseCacheSize = new Size(PlatformDetails.Is32Bits ? 32 : 1024, SizeUnit.Megabytes);
             MaximumSizePerSegment = new Size(PlatformDetails.Is32Bits ? 128 : 1024, SizeUnit.Megabytes);
             LargeSegmentSizeToMerge = new Size(PlatformDetails.Is32Bits ? 16 : 32, SizeUnit.Megabytes);
 
@@ -152,6 +153,21 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.MapTimeoutInSec", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public TimeSetting MapTimeout { get; protected set; }
 
+        [Description("EXPERT: Maximum size that the query clause cache will utilize for caching partial query clasues, this value is global for the database")]
+        [DefaultValue(DefaultValueSetInConstructor)]
+        [SizeUnit((SizeUnit.Megabytes))]
+        [IndexUpdateType(IndexUpdateType.Refresh)]
+        [ConfigurationEntry("Indexing.QueryClauseCacheSizeInMb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public Size QueryClauseCacheSize { get; protected set; }
+
+        [Description("EXPERT: Frequency to scan the query clause cache for expired values")]
+        [DefaultValue(180)]
+        [TimeUnit(TimeUnit.Seconds)]
+        [IndexUpdateType(IndexUpdateType.Refresh)]
+        [ConfigurationEntry("Indexing.QueryClauseCacheExpirationScanFrequencyInSeconds", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public TimeSetting QueryClauseCacheExpirationScanFrequency { get; protected set; }
+
+        
         [Description("Maximum number of mapped documents. Cannot be less than 128. By default 'null' - no limit.")]
         [DefaultValue(null)]
         [MinValue(128)]

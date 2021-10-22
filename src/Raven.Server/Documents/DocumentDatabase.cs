@@ -6,6 +6,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Caching.Memory;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Smuggler;
@@ -46,6 +47,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Json.Sync;
 using Sparrow.Logging;
+using Sparrow.LowMemory;
 using Sparrow.Platform;
 using Sparrow.Server;
 using Sparrow.Server.Json.Sync;
@@ -63,7 +65,7 @@ using Size = Raven.Client.Util.Size;
 
 namespace Raven.Server.Documents
 {
-    public class DocumentDatabase : IDisposable
+    public class DocumentDatabase : IDisposable, ILowMemoryHandler
     {
         private readonly ServerStore _serverStore;
         private readonly Action<string> _addToInitLog;
@@ -119,6 +121,9 @@ namespace Raven.Server.Documents
                 if (configuration.Initialized == false)
                     throw new InvalidOperationException("Cannot create a new document database instance without initialized configuration");
 
+                
+                QueryClauseCache = new MemoryCache(GetMemoryCacheOptions(configuration));
+                
                 if (Configuration.Core.RunInMemory == false)
                 {
                     _addToInitLog("Creating db.lock file");
@@ -182,6 +187,15 @@ namespace Raven.Server.Documents
                 Dispose();
                 throw;
             }
+        }
+
+        private static MemoryCacheOptions GetMemoryCacheOptions(RavenConfiguration configuration)
+        {
+            return new MemoryCacheOptions
+            {
+                SizeLimit = configuration.Indexing.QueryClauseCacheSize.GetValue(SizeUnit.Bytes),
+                ExpirationScanFrequency = configuration.Indexing.QueryClauseCacheExpirationScanFrequency.AsTimeSpan
+            };
         }
 
         public ServerStore ServerStore => _serverStore;
@@ -432,6 +446,7 @@ namespace Raven.Server.Documents
 
         private int _clusterTransactionDelayOnFailure = 1000;
         private FileLocker _fileLocker;
+        public MemoryCache QueryClauseCache;
 
         private async Task ExecuteClusterTransactionTask()
         {
@@ -1783,6 +1798,15 @@ namespace Raven.Server.Documents
 
                 return new DisposableAction(() => ActionToCallDuringDocumentDatabaseInternalDispose = null);
             }
+        }
+
+        public void LowMemory(LowMemorySeverity lowMemorySeverity)
+        {
+            QueryClauseCache = new MemoryCache(GetMemoryCacheOptions(Configuration));
+        }
+
+        public void LowMemoryOver()
+        {
         }
     }
 

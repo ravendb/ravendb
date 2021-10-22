@@ -10,6 +10,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Caching.Memory;
 using Nito.AsyncEx;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
@@ -88,6 +89,8 @@ namespace Raven.Server.Documents.Indexes
 
     public abstract class Index : ITombstoneAware, IDisposable, ILowMemoryHandler
     {
+        public MemoryCache QueryClauseCache => DocumentDatabase.QueryClauseCache;
+        
         private int _writeErrors;
 
         private int _unexpectedErrors;

@@ -2,22 +2,109 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using JetBrains.Annotations;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
+using Lucene.Net.Search.Function;
 using Lucene.Net.Store;
+using Microsoft.Extensions.Caching.Memory;
+using Sparrow.Collections;
 using Sparrow.LowMemory;
+using Sparrow.Threading;
 
 namespace Raven.Server.Documents.Queries.LuceneIntegration
 {
     public class CachingQuery : Query
     {
-        private static readonly ConditionalWeakTable<object, ConcurrentDictionary<string, FastBitArray>> _readerCache = new();
+        private static ConditionalWeakTable<IndexReader, IndexReaderCachedQueries> CacheByReader = new();
+
+        private static MultipleUseFlag InLowMemoryMode = new();
+        
+        [UsedImplicitly]
+        private static CacheByReaderCleaner Cleaner = new();
+
+        private class CacheByReaderCleaner : ILowMemoryHandler
+        {
+            public CacheByReaderCleaner()
+            {
+                LowMemoryNotification.Instance.RegisterLowMemoryHandler(this);
+            }
+            
+            public void LowMemory(LowMemorySeverity lowMemorySeverity)
+            {
+                InLowMemoryMode.Raise();
+                if (lowMemorySeverity != LowMemorySeverity.ExtremelyLow)
+                    return;
+                // can't call clear, etc, just forget the whole thing, so GC will clean
+                CacheByReader = new();
+            }
+
+            public void LowMemoryOver()
+            {
+                InLowMemoryMode.Lower();
+            }
+        }
+
+        public class QueryCacheKey
+        {
+            public string Query;
+            public string Owner;
+
+            protected bool Equals(QueryCacheKey other)
+            {
+                return Query == other.Query && Owner == other.Owner;
+            }
+
+            public override bool Equals(object obj)
+            {
+                if (ReferenceEquals(null, obj)) return false;
+                if (ReferenceEquals(this, obj)) return true;
+                if (obj.GetType() != this.GetType()) return false;
+                return Equals((QueryCacheKey)obj);
+            }
+
+            public override int GetHashCode()
+            {
+                return HashCode.Combine(Query, Owner);
+            }
+        }
+        
+        public class IndexReaderCachedQueries
+        {
+            public ConcurrentSet<string> CachedQueries = new();
+            public MemoryCache Cache;
+            // This is globally unique, but this value is per reader, so we 
+            // can control over memory better at the database level
+            public string UniqueId;
+            public WeakReference WeakSelf;
+
+            public IndexReaderCachedQueries()
+            {
+                UniqueId = Guid.NewGuid().ToString();
+                WeakSelf = new(this);
+            }
+
+            ~IndexReaderCachedQueries()
+            {
+                var key = new QueryCacheKey
+                {
+                    Owner = UniqueId
+                };
+                foreach (string cachedQuery in CachedQueries)
+                {
+                    key.Query = cachedQuery;
+                    Cache.Remove(key);
+                }
+            }
+        }
 
         private readonly Query _inner;
+        private readonly Raven.Server.Documents.Indexes.Index _index;
 
-        public CachingQuery(Query inner)
+        public CachingQuery(Query inner, Raven.Server.Documents.Indexes.Index index)
         {
             _inner = inner;
+            _index = index;
         }
 
         public override Query Rewrite(IndexReader reader, IState state)
@@ -26,7 +113,7 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
             if (ReferenceEquals(rewrite, _inner))
                 return this;
 
-            return new CachingQuery(rewrite);
+            return new CachingQuery(rewrite, _index);
         }
 
         public override Weight CreateWeight(Searcher searcher, IState state)
@@ -60,14 +147,19 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
             public override Scorer Scorer(IndexReader reader, bool scoreDocsInOrder, bool topScorer, IState state)
             {
                 Debug.Assert(reader is ReadOnlySegmentReader); // we assume that only segments go here
-                var cacheKey = _parent.ToString();
 
-                var cache = _readerCache.GetOrCreateValue(reader);
-                Debug.Assert(cache != null, nameof(cache) + " != null");
-                // This is immutable, so we can safely cache the values for this segment
-                if (cache.TryGetValue(cacheKey, out var results) == false)
+                var clauseCache = _parent._index.QueryClauseCache;
+                var cachedQueries = CacheByReader.GetValue(reader, _ => new IndexReaderCachedQueries { Cache = clauseCache });
+                
+                // The reader is immutable, so we can safely cache the values for this segment
+                var queryCacheKey = new QueryCacheKey { Owner = cachedQueries.UniqueId, Query = _parent.ToString(), };
+                if (clauseCache.TryGetValue(queryCacheKey, out FastBitArray results) == false)
                 {
                     var scorer = _inner.Scorer(reader, scoreDocsInOrder, topScorer, state);
+
+                    if (InLowMemoryMode.IsRaised())
+                        return scorer;// let's not do any caching in this mode... 
+                        
                     results = new FastBitArray(reader.MaxDoc);
                     while (true)
                     {
@@ -76,11 +168,37 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
                             break;
                         results.Set(doc);
                     }
-                    cache.TryAdd(cacheKey, results);
+
+                    clauseCache.Set(queryCacheKey, 
+                        results,
+                        new MemoryCacheEntryOptions
+                        {
+                            Size = reader.MaxDoc / 64, 
+                            PostEvictionCallbacks =
+                            {
+                                new PostEvictionCallbackRegistration
+                                {
+                                    State = cachedQueries.WeakSelf,
+                                    EvictionCallback = EvictionCallback
+                                }
+                            }
+                        });
+                    cachedQueries.CachedQueries.Add(queryCacheKey.Query);
                 }
 
                 Similarity similarity = _parent.GetSimilarity(_searcher);
                 return new FastBitArrayScorer(results, similarity);
+            }
+
+            private static void EvictionCallback(object key, object value, EvictionReason _, object state)
+            {
+                if (((WeakReference)state).Target is IndexReaderCachedQueries ircq)
+                {
+                    var ck = (QueryCacheKey)key;
+                    ircq.CachedQueries.TryRemove(ck.Query);
+                }
+
+                ((FastBitArray)value).Dispose();
             }
 
             public override float GetSumOfSquaredWeights()
@@ -91,6 +209,7 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
             public override Query Query => _parent;
             public override float Value => _inner.Value;
         }
+
 
         protected bool Equals(CachingQuery other)
         {
