@@ -1,7 +1,10 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations.Integrations.PostgreSQL;
+using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Json;
 using Raven.Server.Routing;
@@ -17,15 +20,6 @@ namespace Raven.Server.Integrations.PostgreSQL.Handlers
         [RavenAction("/databases/*/admin/integrations/postgresql/users", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetUsernamesList()
         {
-            //todo pfyasu: delete lines below - debug only
-            var usernames = new List<User>
-            {
-                new() { Username = "User1" },
-                new() { Username = "User2" }
-            };
-
-            var dto = new PostgreSqlUsernames { Users = usernames };
-
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 DatabaseRecord databaseRecord;
@@ -34,10 +28,25 @@ namespace Raven.Server.Integrations.PostgreSQL.Handlers
                 using (transactionOperationContext.OpenReadTransaction())
                     databaseRecord = Database.ServerStore.Cluster.ReadDatabase(transactionOperationContext, Database.Name, out long index);
 
+                var usernames = new List<User>();
+
+                var users = databaseRecord?.Integrations?.PostgreSql?.Authentication?.Users;
+
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
+                    if (users != null)
+                    {
+                        foreach (var user in users)
+                        {
+                            var username = new User { Username = user.Username };
+                            usernames.Add(username);
+                        }
+                    }
+
+                    var dto = new PostgreSqlUsernames { Users = usernames };
+
                     var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(dto);
-                    writer.WriteObject(context.ReadObject(djv, "PostgreSQLUsernamesList"));
+                    writer.WriteObject(context.ReadObject(djv, "PostgreSqlUsernames"));
                 }
             }
         }
@@ -48,27 +57,61 @@ namespace Raven.Server.Integrations.PostgreSQL.Handlers
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 var newUserRequest = await context.ReadForMemoryAsync(RequestBodyStream(), "PostgreSQLNewUser");
-                var newUserDto = JsonDeserializationServer.PostgreSqlUser(newUserRequest);
+                var dto = JsonDeserializationServer.PostgreSqlUser(newUserRequest);
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    //todo pfyasu check user with username from dtos already exists in db
-                    if (string.IsNullOrEmpty(newUserDto.Username))
+                    if (string.IsNullOrEmpty(dto.Username))
                     {
                         HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
                         context.Write(writer, new DynamicJsonValue { ["Error"] = "Username is null or empty." });
                         return;
                     }
 
-                    if (string.IsNullOrEmpty(newUserDto.Password))
+                    if (string.IsNullOrEmpty(dto.Password))
                     {
                         HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
                         context.Write(writer, new DynamicJsonValue { ["Error"] = "Password is null or empty." });
                         return;
                     }
 
-                    //todo pfyasu delete line below - debug only
-                    System.Console.WriteLine($"New user (username: {newUserDto.Username} | password: {newUserDto.Password}) has been added");
+                    DatabaseRecord databaseRecord;
+
+                    using (Database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext transactionOperationContext))
+                    using (transactionOperationContext.OpenReadTransaction())
+                        databaseRecord = Database.ServerStore.Cluster.ReadDatabase(transactionOperationContext, Database.Name, out long index);
+
+                    var newUser = new PostgreSqlUser
+                    {
+                        Username = dto.Username,
+                        Password = dto.Password
+                    };
+
+                    var config = databaseRecord.Integrations?.PostgreSql;
+
+                    if (config == null)
+                    {
+                        config = new PostgreSqlConfiguration()
+                        {
+                            Authentication = new PostgreSqlAuthenticationConfiguration()
+                            {
+                                Users = new List<PostgreSqlUser>()
+                            }
+                        };
+                    }
+
+                    var users = config.Authentication.Users;
+
+                    if (users.Any(x => x.Username == dto.Username))
+                    {
+                        HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                        context.Write(writer, new DynamicJsonValue { ["Error"] = $"{dto.Username} username already exists." });
+                        return;
+                    }
+
+                    users.Add(newUser);
+
+                    await DatabaseConfigurations(ServerStore.ModifyPostgreSqlConfiguration, RaftIdGenerator.DontCareId, config);
                 }
             }
 
@@ -91,8 +134,35 @@ namespace Raven.Server.Integrations.PostgreSQL.Handlers
                         return;
                     }
 
-                    //todo pfyasu delete line below - debug only
-                    System.Console.WriteLine($"{username} user has been deleted");
+                    DatabaseRecord databaseRecord;
+
+                    using (Database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext transactionOperationContext))
+                    using (transactionOperationContext.OpenReadTransaction())
+                        databaseRecord = Database.ServerStore.Cluster.ReadDatabase(transactionOperationContext, Database.Name, out long index);
+
+                    var config = databaseRecord.Integrations?.PostgreSql;
+
+                    if (config == null)
+                    {
+                        HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                        context.Write(writer, new DynamicJsonValue {["Error"] = "Unable to get usernames from database record"});
+                        return;
+                    }
+
+                    var users = config.Authentication.Users;
+
+                    var userToDelete = users.SingleOrDefault(x => x.Username == username);
+
+                    if (userToDelete == null)
+                    {
+                        HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                        context.Write(writer, new DynamicJsonValue { ["Error"] = $"{username} username does not exist." });
+                        return;
+                    }
+
+                    users.Remove(userToDelete);
+
+                    await DatabaseConfigurations(ServerStore.ModifyPostgreSqlConfiguration, RaftIdGenerator.DontCareId, config);
                 }
             }
 

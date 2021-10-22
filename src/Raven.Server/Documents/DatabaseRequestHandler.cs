@@ -46,42 +46,58 @@ namespace Raven.Server.Documents
             return Task.CompletedTask;
         }
 
-        protected delegate void RefAction(string databaseName, ref BlittableJsonReaderObject configuration, JsonOperationContext context);
+        protected delegate void RefAction<T>(string databaseName, ref T configuration, JsonOperationContext context);
 
-        protected delegate Task<(long, object)> SetupFunc(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject json, string raftRequestId);
+        protected delegate Task<(long, object)> SetupFunc<T>(TransactionOperationContext context, string databaseName, T json, string raftRequestId);
 
-        protected async Task DatabaseConfigurations(SetupFunc setupConfigurationFunc,
+        protected async Task DatabaseConfigurations(SetupFunc<BlittableJsonReaderObject> setupConfigurationFunc,
            string debug,
            string raftRequestId,
-           RefAction beforeSetupConfiguration = null,
+           RefAction<BlittableJsonReaderObject> beforeSetupConfiguration = null,
            Action<DynamicJsonValue, BlittableJsonReaderObject, long> fillJson = null,
            HttpStatusCode statusCode = HttpStatusCode.OK)
         {
-            if (await CanAccessDatabaseAsync(Database.Name, requireAdmin: true, requireWrite: true) == false)
-                return;
-
-            if (ResourceNameValidator.IsValidResourceName(Database.Name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
-                throw new BadRequestException(errorMessage);
-
-            await ServerStore.EnsureNotPassiveAsync();
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var configurationJson = await context.ReadForMemoryAsync(RequestBodyStream(), debug);
-                beforeSetupConfiguration?.Invoke(Database.Name, ref configurationJson, context);
+                var result = await DatabaseConfigurations(setupConfigurationFunc, raftRequestId, configurationJson, beforeSetupConfiguration);
 
-                var (index, _) = await setupConfigurationFunc(context, Database.Name, configurationJson, raftRequestId);
-                await WaitForIndexToBeApplied(context, index);
+                if (result.Configuration == null)
+                    return;
+
                 HttpContext.Response.StatusCode = (int)statusCode;
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     var json = new DynamicJsonValue
                     {
-                        ["RaftCommandIndex"] = index,
+                        ["RaftCommandIndex"] = result.Index
                     };
-                    fillJson?.Invoke(json, configurationJson, index);
+                    fillJson?.Invoke(json, result.Configuration, result.Index);
                     context.Write(writer, json);
                 }
+            }
+        }
+
+
+        protected async Task<(long Index, T Configuration)> DatabaseConfigurations<T>(SetupFunc<T> setupConfigurationFunc, string raftRequestId, T configurationJson, RefAction<T> beforeSetupConfiguration = null)
+        {
+            if (await CanAccessDatabaseAsync(Database.Name, requireAdmin: true, requireWrite: true) == false)
+                return (-1, default);
+
+            if (ResourceNameValidator.IsValidResourceName(Database.Name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
+                throw new BadRequestException(errorMessage);
+
+            await ServerStore.EnsureNotPassiveAsync();
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                beforeSetupConfiguration?.Invoke(Database.Name, ref configurationJson, context);
+
+                var (index, _) = await setupConfigurationFunc(context, Database.Name, configurationJson, raftRequestId);
+                await WaitForIndexToBeApplied(context, index);
+
+                return (index, configurationJson);
             }
         }
 
