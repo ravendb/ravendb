@@ -166,22 +166,17 @@ module.exports = (env, args) => {
                 },
                 {
                     test: /\.(ttf|eot|svg|woff(2)?)(\?[a-z0-9]+)?$/,
-                    loader: 'file-loader',
-                    options: {
-                        name: "[name].[hash:8].[ext]",
-                        outputPath: "assets/fonts/"
+                    type: "asset",
+                    generator: {
+                        filename: 'assets/fonts/[name].[hash:8][ext][query]',
                     }
                 },
                 {
                     test: /\.(png|jpg|jpeg|gif|svg)$/,
-                    use: [{
-                        loader: 'url-loader',
-                        options: {
-                            name: 'assets/img/[name].[hash:8].[ext]',
-                            limit: 8192,
-                            esModule: false
-                        }
-                    }]
+                    type: "asset",
+                    generator: {
+                        filename: 'assets/img/[name].[hash:8][ext][query]'
+                    }
                 }
             ]
         },

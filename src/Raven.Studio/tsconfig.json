@@ -36,7 +36,6 @@
           "webcola",
           "jquery.blockui",
           "prismjs",
-          "node-forge",
           "toastr",
           "diff",
           "ace",
@@ -57,7 +56,8 @@
           "commands/*": ["typescript/commands/*"],
           "knockout": ["node_modules/@types/knockout"],
           "endpoints": ["typings/server/endpoints"],
-          "configuration": ["typings/server/configuration"]
+          "configuration": ["typings/server/configuration"],
+          "node-forge": ["typings/custom_node-forge.d.ts"]
       }
   },
   "exclude": [

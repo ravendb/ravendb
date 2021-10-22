@@ -92,6 +92,8 @@ src/Raven.Studio/typings/server/configuration.ts
 src/Raven.Studio/typings/server/include.ts
 src/Raven.Studio/typings/**/*.d.ts
 !src/Raven.Studio/typings/npmTypes.d.ts
+!src/Raven.Studio/typings/custom_jszip.d.ts
+!src/Raven.Studio/typings/custom_node-forge.d.ts
 src/Raven.Studio/typings/globals
 src/Raven.Studio/typings/modules
 !src/Raven.Studio/typings/_studio/**/*.d.ts
