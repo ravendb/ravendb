@@ -216,7 +216,7 @@ class columnsSelector<T> {
         const list = $(".columns-list-container .column-list")[0];
 
         // ReSharper disable once WrongExpressionStatement
-        const sort = new Sortable(list,
+        const sort = new Sortable(list as HTMLElement,
         {
             handle: ".column-rearrange",
             onEnd: (event: { oldIndex: number, newIndex: number }) => {

@@ -128,7 +128,7 @@ class runningQueries extends viewModelBase {
 
                 if (!_.isUndefined(value)) {
                     const json = JSON.stringify(value, null, 4);
-                    const html = highlight(json, languages.javascript);
+                    const html = highlight(json, languages.javascript, "js");
                     onValue(html, json);
                 }
             });

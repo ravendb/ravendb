@@ -22,7 +22,7 @@ class showDataDialog extends dialogViewModelBase {
             return generalUtils.escapeHtml(input);
         }
         
-        return highlight(input, languages[this.lang]);
+        return highlight(input, languages[this.lang], this.lang);
     });
 
     constructor(private title: string, inputData: string, private lang: supportedLangs, elementToFocusOnDismissal?: string) {

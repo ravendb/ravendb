@@ -22,7 +22,7 @@ class createSampleData extends viewModelBase {
     classesVisible = ko.observable<boolean>(false);
 
     classDataFormatted = ko.pureComputed(() => {
-        return highlight(this.classData(), languages.javascript);
+        return highlight(this.classData(), languages.javascript, "js");
     });
 
     constructor() {

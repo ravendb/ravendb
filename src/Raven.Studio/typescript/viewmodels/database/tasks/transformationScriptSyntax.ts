@@ -202,7 +202,7 @@ loadToOrders(partitionBy(['year', year], ['customPartitionName', $customPartitio
     olapEtlSampleCustomPartitionHtml = transformationScriptSyntax.highlightJavascript(transformationScriptSyntax.olapEtlSampleCustomPartitionText);
 
     static highlightJavascript(source: string) {
-        return highlight(source, languages.javascript);
+        return highlight(source, languages.javascript, "js");
     }
 }
 

@@ -251,11 +251,11 @@ class documents extends viewModelBase {
                     fullDocumentsProvider.resolvePropertyValue(doc, column, (v: any) => {
                         if (!_.isUndefined(v)) {
                             const json = JSON.stringify(v, null, 4);
-                            const html = highlight(json, languages.javascript);
+                            const html = highlight(json, languages.javascript, "js");
                             onValue(html, json);
                         }
                     }, error => {
-                        const html = highlight("Unable to generate column preview: " + error.toString(), languages.javascript);
+                        const html = highlight("Unable to generate column preview: " + error.toString(), languages.javascript, "js");
                         onValue(html);
                     });
                 }

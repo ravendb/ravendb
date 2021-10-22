@@ -57,12 +57,12 @@ select new {
         {
             title: "Csharp - Additional Source",
             text: additionalAssemblySyntax.additionalSourceCsharpText,
-            html: highlight(additionalAssemblySyntax.additionalSourceCsharpText, languages.csharp)
+            html: highlight(additionalAssemblySyntax.additionalSourceCsharpText, languages.csharp, "csharp")
         },
         {
             title: "Csharp - Usage in Map",
             text: additionalAssemblySyntax.usageInMapCsharpText,
-            html: highlight(additionalAssemblySyntax.usageInMapCsharpText, languages.csharp)
+            html: highlight(additionalAssemblySyntax.usageInMapCsharpText, languages.csharp, "csharp")
         }
     ];
 }

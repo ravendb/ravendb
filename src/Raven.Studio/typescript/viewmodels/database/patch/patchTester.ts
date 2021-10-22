@@ -109,7 +109,7 @@ class patchTester extends viewModelBase {
                 return "";
             } else {
                 const json = JSON.stringify(value, null, 4);
-                return highlight(json, languages.javascript);
+                return highlight(json, languages.javascript, "js");
             }
         });
     }

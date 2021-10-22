@@ -33,7 +33,7 @@ return docs[0];
     }
     
     scriptHtml = ko.pureComputed(() => {
-        return highlight(conflictResolutionScriptSyntax.sampleScript, languages.javascript);
+        return highlight(conflictResolutionScriptSyntax.sampleScript, languages.javascript, "js");
     });
 
 }

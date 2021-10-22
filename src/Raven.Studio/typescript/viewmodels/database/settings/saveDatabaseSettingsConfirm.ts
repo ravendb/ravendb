@@ -11,7 +11,7 @@ class saveDatabaseSettingsConfirm extends confirmViewModelBase<confirmDialogResu
         super();
 
         const settingsJson = JSON.stringify(databaseSettingsToSave, null, 4);
-        const settingsHtml = highlight(settingsJson, languages.javascript)
+        const settingsHtml = highlight(settingsJson, languages.javascript, "js")
 
         this.settingsToSaveText = settingsHtml;
     }

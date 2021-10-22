@@ -48,7 +48,7 @@ class expiration extends viewModelBase {
             }
         });
         
-        this.expirationSampleFormatted = highlight(JSON.stringify(expiration.expirationSample, null, 4), languages.javascript);
+        this.expirationSampleFormatted = highlight(JSON.stringify(expiration.expirationSample, null, 4), languages.javascript, "js");
     }
     
     canActivate(args: any) {
