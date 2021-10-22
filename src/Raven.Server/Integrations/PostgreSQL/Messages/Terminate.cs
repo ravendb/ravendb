@@ -12,7 +12,7 @@ namespace Raven.Server.Integrations.PostgreSQL.Messages
             return Task.FromResult(0);
         }
 
-        protected override Task HandleMessage(Transaction transaction, MessageBuilder messageBuilder, PipeWriter writer, CancellationToken token)
+        protected override Task HandleMessage(PgTransaction transaction, MessageBuilder messageBuilder, PipeWriter writer, CancellationToken token)
         {
             throw new PgTerminateReceivedException();
         }

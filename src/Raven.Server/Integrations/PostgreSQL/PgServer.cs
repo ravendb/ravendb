@@ -83,7 +83,7 @@ namespace Raven.Server.Integrations.PostgreSQL
         {
             try
             {
-                var session = new Session(
+                var session = new PgSession(
                     client,
                     Interlocked.Increment(ref _sessionIdentifier),
                     _processId,

@@ -11,7 +11,7 @@ namespace Raven.Server.Integrations.PostgreSQL.Messages
             return Task.FromResult(0);
         }
 
-        protected override async Task HandleMessage(Transaction transaction, MessageBuilder messageBuilder, PipeWriter writer, CancellationToken token)
+        protected override async Task HandleMessage(PgTransaction transaction, MessageBuilder messageBuilder, PipeWriter writer, CancellationToken token)
         {
             await writer.FlushAsync(token);
         }

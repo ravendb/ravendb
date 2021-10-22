@@ -12,7 +12,7 @@ using Raven.Server.Integrations.PostgreSQL.Messages;
 
 namespace Raven.Server.Integrations.PostgreSQL
 {
-    public class Session
+    public class PgSession
     {
         private readonly TcpClient _client;
         private readonly Func<Stream, Task<(Stream, X509Certificate2)>> _authenticateAsServerIfSslNeeded;
@@ -23,7 +23,7 @@ namespace Raven.Server.Integrations.PostgreSQL
         private readonly CancellationToken _token;
         private Dictionary<string, string> _clientOptions;
 
-        public Session(
+        public PgSession(
             TcpClient client,
             int identifier,
             int processId,
@@ -134,7 +134,7 @@ namespace Raven.Server.Integrations.PostgreSQL
 
             try
             {
-                using var transaction = new Transaction(database, new MessageReader(), _clientOptions["user"]);
+                using var transaction = new PgTransaction(database, new MessageReader(), _clientOptions["user"]);
 
                 if (_isServerSecured)
                 {
