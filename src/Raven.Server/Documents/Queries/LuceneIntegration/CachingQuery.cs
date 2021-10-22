@@ -93,7 +93,16 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
                 foreach (string cachedQuery in CachedQueries)
                 {
                     key.Query = cachedQuery;
-                    Cache.Remove(key);
+                    try
+                    {
+                        Cache.Remove(key);
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                        // we may run this after the cache is released, so 
+                        // might nothing needs to be done here
+                        return;
+                    }
                 }
             }
         }
