@@ -39,7 +39,7 @@ class conflictItem {
         if (dto.Doc) {
             const json = JSON.stringify(dto.Doc, null, 4);
             this.originalValue(json);
-            this.formattedValue(highlight(json, languages.javascript));
+            this.formattedValue(highlight(json, languages.javascript, "js"));
             this.deletedMarker(false);
             this.changeVector(changeVectorUtils.formatChangeVector(dto.ChangeVector, useLongChangeVectorFormat));
         } else {

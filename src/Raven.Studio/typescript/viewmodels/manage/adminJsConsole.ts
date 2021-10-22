@@ -90,7 +90,7 @@ class adminJsConsole extends viewModelBase {
                 return "";
             }
 
-            return highlight(item.code, languages.javascript);
+            return highlight(item.code, languages.javascript, "js");
         });
         this.filteredScripts = ko.pureComputed(() => {
             let text = this.filters.searchText();

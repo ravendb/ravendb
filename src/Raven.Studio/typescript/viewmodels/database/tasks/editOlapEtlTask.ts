@@ -167,7 +167,7 @@ class olapTaskTestMode {
                             const metaDto = docDto["@metadata"];
                             documentMetadata.filterMetadata(metaDto);
                             const text = JSON.stringify(docDto, null, 4);
-                            this.loadedDocument(highlight(text, languages.javascript));
+                            this.loadedDocument(highlight(text, languages.javascript, "js"));
                             this.loadedDocumentId(doc.getId());
 
                             $('.test-container a[href="#documentPreview"]').tab('show');

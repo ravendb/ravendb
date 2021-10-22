@@ -11,6 +11,8 @@ import { highlight, languages } from "prismjs";
 import L = require("leaflet");
 import "leaflet.markercluster";
 
+const markerIcon = require("../../../../wwwroot/Content/img/leaflet/marker-icon.svg");
+
 class spatialQueryMap extends viewModelBase {
 
     view = require("views/database/query/spatialQueryMap.html");
@@ -47,7 +49,7 @@ class spatialQueryMap extends viewModelBase {
             documentMetadata.filterMetadata(metaDto);
 
             let text = JSON.stringify(docDto, null, 4);
-            text = highlight(text, languages.javascript);
+            text = highlight(text, languages.javascript, "js");
 
             return `<div>
                           <h4>Document: ${genUtils.escapeHtml(doc.getId())}</h4>
@@ -59,7 +61,7 @@ class spatialQueryMap extends viewModelBase {
         const markersGroups: MarkerClusterGroup[] = [];
 
         const ravenMarker = L.icon({
-            iconUrl: 'Content/img/leaflet/marker-icon.svg',
+            iconUrl: markerIcon,
             iconSize: [35, 26],
             iconAnchor: [17, 22],
             popupAnchor: [5, -22],

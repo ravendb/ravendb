@@ -175,7 +175,7 @@ class manageDatabaseGroup extends viewModelBase {
 
         const list = $(".nodes-list .not-deleted-nodes")[0];
 
-        this.sortable = new Sortable(list,
+        this.sortable = new Sortable(list as HTMLElement,
             {
                 onEnd: (event: { oldIndex: number, newIndex: number }) => {
                     const nodes = this.nodes();

@@ -71,12 +71,12 @@ map('People', function (person) { return {
         {
             title: "Csharp - Additional Source",
             text: additionalSourceSyntax.additionalSourceCsharpText,
-            html: highlight(additionalSourceSyntax.additionalSourceCsharpText, languages.csharp)
+            html: highlight(additionalSourceSyntax.additionalSourceCsharpText, languages.csharp, "csharp")
         },
         {
             title: "Csharp - Usage in Map",
             text: additionalSourceSyntax.usageInMapCsharpText,
-            html: highlight(additionalSourceSyntax.usageInMapCsharpText, languages.csharp)
+            html: highlight(additionalSourceSyntax.usageInMapCsharpText, languages.csharp, "csharp")
         }
     ];
 
@@ -84,12 +84,12 @@ map('People', function (person) { return {
         {
             title: "Javascript - Additional Source",
             text: additionalSourceSyntax.additionalSourceJavascriptText,
-            html: highlight(additionalSourceSyntax.additionalSourceJavascriptText, languages.javascript)
+            html: highlight(additionalSourceSyntax.additionalSourceJavascriptText, languages.javascript, "csharp")
         },
         {
             title: "Javascript - Usage in Map",
             text: additionalSourceSyntax.usageInMapJavascriptText,
-            html: highlight(additionalSourceSyntax.usageInMapJavascriptText, languages.javascript)
+            html: highlight(additionalSourceSyntax.usageInMapJavascriptText, languages.javascript, "csharp")
         }
     ];
 }

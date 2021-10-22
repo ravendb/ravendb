@@ -115,7 +115,7 @@ class ravenTaskTestMode {
                             const metaDto = docDto["@metadata"];
                             documentMetadata.filterMetadata(metaDto);
                             const text = JSON.stringify(docDto, null, 4);
-                            this.loadedDocument(highlight(text, languages.javascript));
+                            this.loadedDocument(highlight(text, languages.javascript, "js"));
                             this.loadedDocumentId(doc.getId());
 
                             $('.test-container a[href="#documentPreview"]').tab('show');
@@ -145,7 +145,7 @@ class ravenTaskTestMode {
                     this.testResults(simulationResult.Commands.map((command: Raven.Client.Documents.Commands.Batches.ICommandData): resultItem => {
 
                         const json = JSON.stringify(command, null, 4);
-                        const html = highlight(json, languages.javascript);
+                        const html = highlight(json, languages.javascript, "js");
                         
                         return {
                             header: command.Type + " " + command.Id,

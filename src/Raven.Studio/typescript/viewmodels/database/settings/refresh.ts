@@ -48,7 +48,7 @@ class refresh extends viewModelBase {
             }
         });
         
-        this.refreshSampleFormatted = highlight(JSON.stringify(refresh.refreshSample, null, 4), languages.javascript);
+        this.refreshSampleFormatted = highlight(JSON.stringify(refresh.refreshSample, null, 4), languages.javascript, "js");
     }
     
     canActivate(args: any) {

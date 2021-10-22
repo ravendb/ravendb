@@ -141,7 +141,7 @@ class debugAdvancedThreadsRuntime extends viewModelBase {
                         UserProcessorTime: entry.UserProcessorTime
                     };
                     const json = JSON.stringify(timings, null, 4);
-                    const html = highlight(json, languages.javascript);
+                    const html = highlight(json, languages.javascript, "js");
                     onValue(html, json);
                 } else if (column.header === "Start Time") {
                     onValue(moment.utc(entry.StartingTime), entry.StartingTime);

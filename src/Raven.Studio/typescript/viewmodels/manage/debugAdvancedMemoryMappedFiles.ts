@@ -122,7 +122,7 @@ class memoryMappedFiles extends viewModelBase {
                                     e: JQueryEventObject, onValue: (context: any, valueToCopy?: string) => void) => {
             if (column.header === "Total Mapped") {
                 const json = JSON.stringify(entry.Mappings, null, 4);
-                const html = highlight(json, languages.javascript);
+                const html = highlight(json, languages.javascript, "js");
                 onValue(html, json);
             } else {
                 const value = column.getCellValue(entry);
