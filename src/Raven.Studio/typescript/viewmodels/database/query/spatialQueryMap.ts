@@ -11,7 +11,7 @@ import { highlight, languages } from "prismjs";
 import L = require("leaflet");
 import "leaflet.markercluster";
 
-const markerIcon = require("../../../../wwwroot/Content/img/leaflet/marker-icon.svg");
+const markerIcon = require("Content/img/leaflet/marker-icon.svg");
 
 class spatialQueryMap extends viewModelBase {
 
