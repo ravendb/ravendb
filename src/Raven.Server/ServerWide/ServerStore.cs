@@ -32,6 +32,7 @@ using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations.Configuration;
+using Raven.Client.ServerWide.Operations.Integrations.PostgreSQL;
 using Raven.Client.ServerWide.Operations.OngoingTasks;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
@@ -1864,9 +1865,14 @@ namespace Raven.Server.ServerWide
         {
             var config = JsonDeserializationCluster.PostgreSqlConfiguration(configurationJson);
 
+            return ModifyPostgreSqlConfiguration(context, databaseName, config, raftRequestId);
+        }
+
+        public Task<(long Index, object Result)> ModifyPostgreSqlConfiguration(TransactionOperationContext context, string databaseName, PostgreSqlConfiguration configuration, string raftRequestId)
+        {
             // TODO arek LicenseManager.assertcanusepo
 
-            var editPostgreSqlConfiguration = new EditPostgreSqlConfigurationCommand(config, databaseName, raftRequestId);
+            var editPostgreSqlConfiguration = new EditPostgreSqlConfigurationCommand(configuration, databaseName, raftRequestId);
             return SendToLeaderAsync(editPostgreSqlConfiguration);
         }
 

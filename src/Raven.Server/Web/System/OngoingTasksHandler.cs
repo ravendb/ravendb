@@ -749,7 +749,7 @@ namespace Raven.Server.Web.System
             var configurationName = GetStringQueryString("configurationName"); // etl task name
             var transformationName = GetStringQueryString("transformationName");
 
-            await DatabaseConfigurations((_, databaseName, etlConfiguration, guid) => ServerStore.RemoveEtlProcessState(_, databaseName, configurationName, transformationName, guid), "etl-reset", GetRaftRequestIdFromQuery());
+            await DatabaseConfigurations((_, databaseName, etlConfiguration, guid) => ServerStore.RemoveEtlProcessState(_, databaseName, configurationName, transformationName, guid), "etl-reset", GetRaftRequestIdFromQuery(), statusCode: HttpStatusCode.OK);
         }
 
         [RavenAction("/databases/*/admin/etl", "PUT", AuthorizationStatus.DatabaseAdmin)]
