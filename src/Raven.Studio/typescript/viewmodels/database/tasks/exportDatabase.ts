@@ -22,6 +22,7 @@ class exportDatabase extends viewModelBase {
 
     view = require("views/database/tasks/exportDatabase.html");
     setupEncryptionKeyView = require("views/resources/setupEncryptionKey.html");
+    smugglerDatabaseRecordView = require("views/database/tasks/smugglerDatabaseRecord.html");
 
     completer = defaultAceCompleter.completer();
     model = new exportDatabaseModel();

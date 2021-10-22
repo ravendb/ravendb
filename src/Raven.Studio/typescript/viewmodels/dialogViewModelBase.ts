@@ -11,16 +11,16 @@ type dialogViewModelBaseOptions = {
 
 abstract class dialogViewModelBase {
 
-    view: string;
+    view: { default: string };
     
     getView() {
         if (!this.view) {
             throw new Error("Looks like you forgot to define view in: " + this);
         }
-        if (!this.view.startsWith("<")) {
+        if (!this.view.default.trim().startsWith("<")) {
             console.warn("View doesn't start with '<'");
         }
-        return this.view;
+        return this.view.default;
     }
     
     protected activeDatabase = activeDatabaseTracker.default.database;

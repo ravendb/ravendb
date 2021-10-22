@@ -158,10 +158,7 @@ module.exports = (env, args) => {
                 {
                     test: /\.html$/,
                     use: {
-                        loader: 'raw-loader',
-                        options: {
-                            esModule: false,
-                        },
+                        loader: 'html-loader'
                     }
                 },
                 {

@@ -29,6 +29,7 @@ import generalUtils = require("common/generalUtils");
 class ongoingTasks extends viewModelBase {
 
     view = require("views/database/tasks/ongoingTasks.html");
+    databaseGroupLegendView = require("views/partial/databaseGroupLegend.html");
     
     private clusterManager = clusterTopologyManager.default;
     myNodeTag = ko.observable<string>();
