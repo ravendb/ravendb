@@ -63,6 +63,28 @@ namespace Raven.Server.Documents.Subscriptions
         public string PreviouslyRecordedChangeVector;
         private readonly IDisposable _disposableNotificationsRegistration;
 
+        // dummy state
+        private SubscriptionConnectionsState(DocumentsStorage storage, SubscriptionState state)
+        {
+            //the first connection to join creates this object and decides all details of the subscription
+            _subscriptionName = "dummy";
+            _subscriptionId = -0x42;
+            _documentsStorage = storage;
+            Query = state.Query;
+            IsConcurrent = false;
+            
+            _subscriptionStorage = storage.DocumentDatabase.SubscriptionStorage;
+
+            CancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_documentsStorage.DocumentDatabase.DatabaseShutdown);
+            _waitForMoreDocuments = new AsyncManualResetEvent(CancellationTokenSource.Token);
+
+            _subscriptionActivelyWorkingLock = new SemaphoreSlim(1);
+            LastChangeVectorSent = state.ChangeVectorForNextBatchStartingPoint;
+            PreviouslyRecordedChangeVector = LastChangeVectorSent;
+        }
+
+        public static SubscriptionConnectionsState CreateDummyState(DocumentsStorage storage, SubscriptionState state) => new (storage, state);
+
         public SubscriptionConnectionsState(string subscriptionName, long subscriptionId, SubscriptionStorage storage, SubscriptionConnection connection)
         {
             //the first connection to join creates this object and decides all details of the subscription
@@ -83,12 +105,6 @@ namespace Raven.Server.Documents.Subscriptions
             _subscriptionActivelyWorkingLock = new SemaphoreSlim(1);
             LastChangeVectorSent = connection.SubscriptionState.ChangeVectorForNextBatchStartingPoint;
             PreviouslyRecordedChangeVector = LastChangeVectorSent;
-        }
-
-        public IEnumerable<(Document Doc, Exception Exception)> GetNextBatch(ClusterOperationContext clusterOperationContext, SubscriptionDocumentsFetcher fetcher,
-            DocumentsOperationContext docsContext, IncludeDocumentsCommand includesCmd)
-        {
-            return fetcher.GetDataToSend(clusterOperationContext, docsContext, includesCmd, GetLastEtagSent());
         }
 
         public IEnumerable<DocumentRecord> GetDocumentsFromResend(ClusterOperationContext context, HashSet<long> activeBatches)

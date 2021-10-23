@@ -53,11 +53,7 @@ namespace Raven.Server.Documents.Handlers
                     Query = tryout.Query
                 };
 
-                var fetcher = new SubscriptionDocumentsFetcher(Database, int.MaxValue, -0x42,
-                    new IPEndPoint(HttpContext.Connection.RemoteIpAddress, HttpContext.Connection.RemotePort), sub.Collection, sub.Revisions, state, patch, null);
-
-                //TODO stav: fix this endpoint. fetcher's last argument is null
-
+                
                 var includeCmd = new IncludeDocumentsCommand(Database.DocumentsStorage, context, sub.Includes, isProjection: patch != null);
 
                 if (Enum.TryParse(
@@ -91,11 +87,18 @@ namespace Raven.Server.Documents.Handlers
                 var timeLimit = TimeSpan.FromSeconds(GetIntValueQueryString("timeLimit", false) ?? 15);
                 var startEtag = cv.Etag;
                 
+                var fetcher = new DummyDocumentSubscriptionBatchProcessor(Database, state, sub.Collection);
+                fetcher.SetConnectionInfo(new SubscriptionWorkerOptions("dummy"), state, new IPEndPoint(HttpContext.Connection.RemoteIpAddress, HttpContext.Connection.RemotePort));
+                fetcher.AddScript(patch);
+
+                using (fetcher)
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 using (Database.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext clusterOperationContext))
                 using (clusterOperationContext.OpenReadTransaction())
                 using (context.OpenReadTransaction())
                 {
+                    fetcher.Initialize(clusterOperationContext, context, includeCmd);
+
                     writer.WriteStartObject();
                     writer.WritePropertyName("Results");
                     writer.WriteStartArray();
@@ -104,7 +107,10 @@ namespace Raven.Server.Documents.Handlers
                     {
                         var first = true;
                         var lastEtag = startEtag;
-                        foreach (var itemDetails in fetcher.GetDataToSend(clusterOperationContext, context, includeCmd, startEtag))
+                        
+                        fetcher.SetStartEtag(startEtag);
+
+                        foreach (var itemDetails in fetcher.Fetch())
                         {
                             if (itemDetails.Doc.Data != null)
                             {
