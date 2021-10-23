@@ -143,7 +143,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                 using (subscriptionStateTable.Allocate(out var tvb))
                 {
                     using var _ = Slice.External(context.Allocator, key, out var keySlice);
-                    using var __ = Slice.From(context.Allocator, revisionRecord.Previous, out var changeVectorSlice);
+                    using var __ = Slice.From(context.Allocator, revisionRecord.Previous ?? string.Empty, out var changeVectorSlice);
 
                     tvb.Add(keySlice);
                     tvb.Add(changeVectorSlice); //prev change vector
