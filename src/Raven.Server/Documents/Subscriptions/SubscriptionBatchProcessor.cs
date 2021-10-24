@@ -48,14 +48,13 @@ namespace Raven.Server.Documents.Subscriptions
 
         private protected IEnumerable<T> GetEnumerator()
         {
-            FetchingFrom = FetchingOrigin.None;
+            FetchingFrom = FetchingOrigin.Resend;
             foreach (var item in FetchFromResend())
             {
-                FetchingFrom = FetchingOrigin.Resend;
                 yield return item;
             }
 
-            if (FetchingFrom == FetchingOrigin.Resend)
+            if (DocSent)
             {
                 // we don't mix resend and regular, so we need to do another round when we are done with the resend
                 SubscriptionConnectionsState.NotifyHasMoreDocs(); 
@@ -152,6 +151,7 @@ namespace Raven.Server.Documents.Subscriptions
 
             CollectedDocuments ??= new List<CollectedDocument>();
             CollectedDocuments?.Clear();
+            DocSent = false;
         }
 
         public abstract IEnumerable<(Document Doc, Exception Exception)> Fetch();
@@ -173,6 +173,13 @@ namespace Raven.Server.Documents.Subscriptions
             None,
             Resend,
             Storage
+        }
+
+        protected bool DocSent;
+
+        public void MarkDocumentSent()
+        {
+            DocSent = true;
         }
 
         protected FetchingOrigin FetchingFrom;
@@ -245,7 +252,7 @@ namespace Raven.Server.Documents.Subscriptions
 
             var transformResult = DocsContext.ReadObject(new DynamicJsonValue
             {
-                ["Current"] = item.Current.Data,
+                ["Current"] = item.Current.Flags.Contain(DocumentFlags.DeleteRevision) ? null : item.Current.Data,
                 ["Previous"] = item.Previous?.Data
             }, item.Current.Id);
 
@@ -263,6 +270,7 @@ namespace Raven.Server.Documents.Subscriptions
                 var result = Patch.MatchCriteria(Run, DocsContext, transformResult, ProjectionMetadataModifier.Instance, ref item.Current.Data);
                 if (result == false)
                 {
+                    item.Current.Data = null;
                     reason = $"{item.Current.Id} filtered by criteria";
                     return false;
                 }
@@ -277,7 +285,7 @@ namespace Raven.Server.Documents.Subscriptions
             }
         }
 
-        protected override IEnumerable<(Document, Document)> FetchByEtag()
+        protected override IEnumerable<(Document Previous, Document Current)> FetchByEtag()
         {
             return Collection switch
             {
@@ -288,7 +296,7 @@ namespace Raven.Server.Documents.Subscriptions
             };
         }
 
-        protected override IEnumerable<(Document, Document)> FetchFromResend()
+        protected override IEnumerable<(Document Previous, Document Current)> FetchFromResend()
         {
             foreach (var r in SubscriptionConnectionsState.GetRevisionsFromResend(ClusterContext, Active))
             {
@@ -311,7 +319,7 @@ namespace Raven.Server.Documents.Subscriptions
             foreach (var item in GetEnumerator())
             {
                 Debug.Assert(item.Current != null);
-                if(item.Current == null)
+                if (item.Current == null)
                     continue; // this shouldn't happened, but in release let's keep running
 
                 size += new Size(item.Current.Data?.Size ?? 0, SizeUnit.Bytes);
@@ -328,6 +336,9 @@ namespace Raven.Server.Documents.Subscriptions
                             PreviousChangeVector = item.Previous?.ChangeVector
                         });
 
+                        if (IncludesCmd != null && Run != null)
+                            IncludesCmd.AddRange(Run.Includes, item.Current.Id);
+
                         yield return (item.Current, null);
                     }
                     else
@@ -336,9 +347,6 @@ namespace Raven.Server.Documents.Subscriptions
                         {
                             Logger.Info(reason, exception);
                         }
-
-                        if (IncludesCmd != null && Run != null)
-                            IncludesCmd.AddRange(Run.Includes, item.Current.Id);
 
                         if (exception != null)
                         {
@@ -418,8 +426,15 @@ namespace Raven.Server.Documents.Subscriptions
                             Logger.Info(reason, exception);
                         }
 
-                        item.Data = null;
-                        yield return (item, exception);
+                        if (exception != null)
+                        {
+                            yield return (item, exception);
+                        }
+                        else
+                        {
+                            item.Data = null;
+                            yield return (item, null);
+                        }
                     }
 
                     item.Data?.Dispose();
@@ -458,6 +473,22 @@ namespace Raven.Server.Documents.Subscriptions
                 }
             }
 
+            if (FetchingFrom == FetchingOrigin.Resend)
+            {
+                var current = Database.DocumentsStorage.GetDocumentOrTombstone(DocsContext, item.Id, throwOnConflict: false);
+                if (ShouldFetchFromResend(current, item.ChangeVector) == false)
+                {
+                    item.ChangeVector = string.Empty;
+                    reason = $"Skip {item.Id} from resend";
+                    return false;
+                }
+
+                Debug.Assert(current.Document != null, "Document does not exist");
+                item.Data = current.Document.Data;
+                item.Etag = current.Document.Etag;
+                item.ChangeVector = current.Document.ChangeVector;
+            }
+
             if (Patch == null)
                 return true;
 
@@ -468,6 +499,7 @@ namespace Raven.Server.Documents.Subscriptions
 
                 if (result == false)
                 {
+                    item.Data = null;
                     reason = $"{item.Id} filtered out by criteria";
                     return false;
                 }
@@ -515,40 +547,37 @@ namespace Raven.Server.Documents.Subscriptions
         {
             foreach (var record in SubscriptionConnectionsState.GetDocumentsFromResend(ClusterContext, Active))
             {
-                var current = Database.DocumentsStorage.GetDocumentOrTombstone(DocsContext, record.DocumentId, throwOnConflict: false);
-                if (ShouldFetchFromResend(current, record.ChangeVector))
+                yield return new Document
                 {
-                    Debug.Assert(current.Document != null, "Document does not exist");
-                    yield return current.Document;
-                }
-                // TODO stav: consider what happened to the heartbeat if we skip here a lot
+                    Id = DocsContext.GetLazyString(record.DocumentId), 
+                    ChangeVector = record.ChangeVector
+                };
             }
         }
 
         private bool ShouldFetchFromResend(DocumentsStorage.DocumentOrTombstone item, string currentChangeVector)
         {
-            if (item.Document != null)
-            {
-                switch (Database.DocumentsStorage.GetConflictStatus(item.Document.ChangeVector, currentChangeVector))
-                {
-                    case ConflictStatus.Update:
-                        // If document was updated, but the subscription went too far.
-                        // We need to resend it
-                        return Database.DocumentsStorage.GetConflictStatus(item.Document.ChangeVector, SubscriptionConnectionsState.LastChangeVectorSent) == ConflictStatus.AlreadyMerged;
-
-                    case ConflictStatus.AlreadyMerged:
-                        return true;
-
-                    case ConflictStatus.Conflict:
-                        return false;
-
-                    default:
-                        throw new InvalidEnumArgumentException();
-                }
-            }
             // TODO stav: we probably need to delete it from the resend table
             // we don't send tombstones
-            return false;
+            if (item.Document == null) 
+                return false;
+
+            switch (Database.DocumentsStorage.GetConflictStatus(item.Document.ChangeVector, currentChangeVector))
+            {
+                case ConflictStatus.Update:
+                    // If document was updated, but the subscription went too far.
+                    // We need to resend it
+                    return Database.DocumentsStorage.GetConflictStatus(item.Document.ChangeVector, SubscriptionConnectionsState.LastChangeVectorSent) == ConflictStatus.AlreadyMerged;
+
+                case ConflictStatus.AlreadyMerged:
+                    return true;
+
+                case ConflictStatus.Conflict:
+                    return false;
+
+                default:
+                    throw new InvalidEnumArgumentException();
+            }
         }
     }
 
