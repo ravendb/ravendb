@@ -132,8 +132,17 @@ namespace Raven.Server.Smuggler.Migration
 
             if (importInfo != null)
             {
-                databaseSmugglerOptionsServerSide.OperateOnTypes |= DatabaseItemType.Tombstones;
-                databaseSmugglerOptionsServerSide.OperateOnTypes |= DatabaseItemType.CompareExchangeTombstones;
+                if (Options.OperateOnTypes.HasFlag(DatabaseItemType.Documents))
+                {
+                    databaseSmugglerOptionsServerSide.OperateOnTypes |= DatabaseItemType.Tombstones;
+                    Options.OperateOnTypes |= DatabaseItemType.Tombstones;
+                }
+
+                if (Options.OperateOnTypes.HasFlag(DatabaseItemType.CompareExchange))
+                {
+                    databaseSmugglerOptionsServerSide.OperateOnTypes |= DatabaseItemType.CompareExchangeTombstones;
+                    Options.OperateOnTypes |= DatabaseItemType.CompareExchangeTombstones;
+                }
             }
 
             var json = JsonConvert.SerializeObject(databaseSmugglerOptionsServerSide);
