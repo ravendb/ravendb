@@ -39,10 +39,10 @@ namespace Raven.Server.Smuggler.Migration
 
             await MigrateDatabase(operationId, importInfo);
 
-            await SaveLastState(operationId);
+            await SaveLastState(operationId, importInfo);
         }
 
-        private async Task SaveLastState(long operationId)
+        private async Task SaveLastState(long operationId, ImportInfo previousImportInfo)
         {
             var retries = 0;
             using (Parameters.Database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -85,6 +85,7 @@ namespace Raven.Server.Smuggler.Migration
                     var importInfo = new ImportInfo
                     {
                         LastEtag = smugglerResult.GetLastEtag() + 1,
+                        LastRaftIndex = Math.Max(previousImportInfo?.LastRaftIndex ?? 0, smugglerResult.GetLastRaftIndex() + 1),
                         ServerUrl = Options.ServerUrl,
                         DatabaseName = Options.DatabaseName
                     };
@@ -123,7 +124,8 @@ namespace Raven.Server.Smuggler.Migration
         private async Task MigrateDatabase(long operationId, ImportInfo importInfo)
         {
             var startDocumentEtag = importInfo?.LastEtag ?? 0;
-            var url = $"{Options.ServerUrl}/databases/{Options.DatabaseName}/smuggler/export?operationId={operationId}&startEtag={startDocumentEtag}";
+            var startRaftIndex = importInfo?.LastRaftIndex ?? 0;
+            var url = $"{Options.ServerUrl}/databases/{Options.DatabaseName}/smuggler/export?operationId={operationId}&startEtag={startDocumentEtag}&startRaftIndex={startRaftIndex}";
             var databaseSmugglerOptionsServerSide = new DatabaseSmugglerOptionsServerSide
             {
                 OperateOnTypes = Options.OperateOnTypes,
@@ -248,6 +250,8 @@ namespace Raven.Server.Smuggler.Migration
     public class ImportInfo
     {
         public long LastEtag { get; set; }
+
+        public long LastRaftIndex { get; set; }
 
         public string ServerUrl { get; set; }
 
