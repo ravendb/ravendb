@@ -442,7 +442,7 @@ namespace Raven.Server.Documents.Subscriptions
             return true;
         }
 
-        public SubscriptionConnectionsState GetSubscriptionConnections(TransactionOperationContext context, string subscriptionName)
+        public SubscriptionConnectionsState GetSubscriptionConnectionsState(TransactionOperationContext context, string subscriptionName)
         {
             var subscriptionBlittable = _serverStore.Cluster.Read(context, SubscriptionState.GenerateSubscriptionItemKeyName(_db.Name, subscriptionName));
             if (subscriptionBlittable == null)
@@ -595,7 +595,7 @@ namespace Raven.Server.Documents.Subscriptions
         {
             foreach (var state in _subscriptions)
             {
-                if (state.Value.GetConnections().Count != 0)
+                if (state.Value.IsSubscriptionActive())
                     continue;
 
                 _subscriptions.Remove(state.Key, out _);

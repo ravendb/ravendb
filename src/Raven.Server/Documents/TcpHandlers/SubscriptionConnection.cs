@@ -1480,13 +1480,15 @@ namespace Raven.Server.Documents.TcpHandlers
 
     public class SubscriptionConnectionsDetails
     {
-        public List<SubscriptionConnectionDetails> Details;
+        public List<SubscriptionConnectionDetails> Results;
+        public string SubscriptionMode;
 
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
-                [nameof(Details)] = new DynamicJsonArray(Details.Select(d=>d.ToJson()))
+                [nameof(Results)] = new DynamicJsonArray(Results.Select(d=>d.ToJson())),
+                [nameof(SubscriptionMode)] = SubscriptionMode
             };
         }
     }

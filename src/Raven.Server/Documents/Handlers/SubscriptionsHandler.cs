@@ -238,16 +238,9 @@ namespace Raven.Server.Documents.Handlers
                     return;
                 }
 
-                var subscriptionConnections = Database.SubscriptionStorage.GetSubscriptionConnections(context, subscriptionName);
+                var subscriptionConnections = Database.SubscriptionStorage.GetSubscriptionConnectionsState(context, subscriptionName);
 
                 var details = subscriptionConnections.GetSubscriptionConnectionsDetails();
-                if (subscriptionConnections.IsConcurrent == false)
-                {
-                    context.Write(writer, details.Details.First().ToJson());
-                    return;
-                }
-
-                //TODO: return all connections' details
 
                 context.Write(writer, details.ToJson());
             }
