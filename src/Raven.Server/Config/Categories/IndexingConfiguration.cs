@@ -153,20 +153,27 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.MapTimeoutInSec", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public TimeSetting MapTimeout { get; protected set; }
 
-        [Description("EXPERT: Maximum size that the query clause cache will utilize for caching partial query clasues, this value is global for the database")]
+        [Description("EXPERT: Maximum size that the query clause cache will utilize for caching partial query clasues, this value is global for the server," +
+                     " but can be set to 0 to disable query clause caching on a particular database or index")]
         [DefaultValue(DefaultValueSetInConstructor)]
         [SizeUnit((SizeUnit.Megabytes))]
         [IndexUpdateType(IndexUpdateType.Refresh)]
-        [ConfigurationEntry("Indexing.QueryClauseCacheSizeInMb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        [ConfigurationEntry("Indexing.QueryClauseCacheSizeInMb", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public Size QueryClauseCacheSize { get; protected set; }
 
         [Description("EXPERT: Frequency to scan the query clause cache for expired values")]
         [DefaultValue(180)]
         [TimeUnit(TimeUnit.Seconds)]
         [IndexUpdateType(IndexUpdateType.Refresh)]
-        [ConfigurationEntry("Indexing.QueryClauseCacheExpirationScanFrequencyInSeconds", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        [ConfigurationEntry("Indexing.QueryClauseCacheExpirationScanFrequencyInSeconds", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting QueryClauseCacheExpirationScanFrequency { get; protected set; }
-
+        
+        [Description("EXPERT: Frequency to scan the query clause cache for expired values")]
+        [DefaultValue(180)]
+        [TimeUnit(TimeUnit.Seconds)]
+        [IndexUpdateType(IndexUpdateType.Refresh)]
+        [ConfigurationEntry("Indexing.QueryClauseCacheRepeatedQueriesTimeFrameInSeconds", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
+        public TimeSetting QueryClauseCacheRepeatedQueriesTimeFrame { get; protected set; }
         
         [Description("Maximum number of mapped documents. Cannot be less than 128. By default 'null' - no limit.")]
         [DefaultValue(null)]

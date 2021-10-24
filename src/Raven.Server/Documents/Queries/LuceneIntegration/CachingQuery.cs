@@ -1,13 +1,12 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using JetBrains.Annotations;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
-using Lucene.Net.Search.Function;
 using Lucene.Net.Store;
 using Microsoft.Extensions.Caching.Memory;
+using Raven.Server.Utils;
 using Sparrow.Collections;
 using Sparrow.LowMemory;
 using Sparrow.Threading;
@@ -18,7 +17,7 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
     {
         private static ConditionalWeakTable<IndexReader, IndexReaderCachedQueries> CacheByReader = new();
 
-        private static MultipleUseFlag InLowMemoryMode = new();
+        public static MultipleUseFlag InLowMemoryMode = new();
         
         [UsedImplicitly]
         private static CacheByReaderCleaner Cleaner = new();
@@ -71,11 +70,14 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
         
         public class IndexReaderCachedQueries
         {
+            public SizeLimitedConcurrentDictionary<QueryCacheKey, DateTime> PreviousClauses = new(500);
             public ConcurrentSet<string> CachedQueries = new();
             public MemoryCache Cache;
             // This is globally unique, but this value is per reader, so we 
             // can control over memory better at the database level
             public string UniqueId;
+            public string Database;
+            public string Index;
             public WeakReference WeakSelf;
 
             public IndexReaderCachedQueries()
@@ -109,11 +111,13 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
 
         private readonly Query _inner;
         private readonly Raven.Server.Documents.Indexes.Index _index;
+        private readonly string _query;
 
-        public CachingQuery(Query inner, Raven.Server.Documents.Indexes.Index index)
+        public CachingQuery(Query inner, Raven.Server.Documents.Indexes.Index index, string query)
         {
             _inner = inner;
             _index = index;
+            _query = query;
         }
 
         public override Query Rewrite(IndexReader reader, IState state)
@@ -122,7 +126,7 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
             if (ReferenceEquals(rewrite, _inner))
                 return this;
 
-            return new CachingQuery(rewrite, _index);
+            return new CachingQuery(rewrite, _index, _query);
         }
 
         public override Weight CreateWeight(Searcher searcher, IState state)
@@ -157,14 +161,31 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
             {
                 Debug.Assert(reader is ReadOnlySegmentReader); // we assume that only segments go here
 
-                var clauseCache = _parent._index.QueryClauseCache;
-                var cachedQueries = CacheByReader.GetValue(reader, _ => new IndexReaderCachedQueries { Cache = clauseCache });
+                var clauseCache = _parent._index.DocumentDatabase.ServerStore.QueryClauseCache;
+                if (CacheByReader.TryGetValue(reader, out IndexReaderCachedQueries cachedQueries) == false)
+                {
+                    cachedQueries = CacheByReader.GetValue(reader, _ => new IndexReaderCachedQueries
+                    {
+                        Cache = clauseCache,
+                        Database = _parent._index.DocumentDatabase.Name,
+                        Index = _parent._index.Name,
+                    });
+                }
                 
                 // The reader is immutable, so we can safely cache the values for this segment
-                var queryCacheKey = new QueryCacheKey { Owner = cachedQueries.UniqueId, Query = _parent.ToString(), };
+                Debug.Assert(cachedQueries != null, nameof(cachedQueries) + " != null");
+                var queryCacheKey = new QueryCacheKey { Owner = cachedQueries.UniqueId, Query = _parent._query, };
+                DateTime now = DateTime.UtcNow;
                 if (clauseCache.TryGetValue(queryCacheKey, out FastBitArray results) == false)
                 {
                     var scorer = _inner.Scorer(reader, scoreDocsInOrder, topScorer, state);
+                    // we only add the clause to the cache after if we see it more than once in a 5 minutes period
+                    if (cachedQueries.PreviousClauses.TryGetValue(queryCacheKey, out var previouslySeen) == false ||
+                        (now - previouslySeen) > _parent._index.Configuration.QueryClauseCacheRepeatedQueriesTimeFrame.AsTimeSpan)
+                    {
+                        cachedQueries.PreviousClauses.Set(queryCacheKey, now);
+                        return scorer;
+                    }
 
                     if (InLowMemoryMode.IsRaised())
                         return scorer;// let's not do any caching in this mode... 

@@ -89,8 +89,6 @@ namespace Raven.Server.Documents.Indexes
 
     public abstract class Index : ITombstoneAware, IDisposable, ILowMemoryHandler
     {
-        public MemoryCache QueryClauseCache => DocumentDatabase.QueryClauseCache;
-        
         private int _writeErrors;
 
         private int _unexpectedErrors;

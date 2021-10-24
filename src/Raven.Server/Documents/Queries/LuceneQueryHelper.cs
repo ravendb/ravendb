@@ -9,6 +9,7 @@ using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Raven.Client;
 using Raven.Server.Documents.Queries.LuceneIntegration;
+using Sparrow;
 using Sparrow.Json;
 using Index = Raven.Server.Documents.Indexes.Index;
 
@@ -338,20 +339,28 @@ This edge-case has a very slim chance of happening, but still we should not igno
                 return new WildcardQuery(new Term(fieldName, Asterisk));
 
             var range = new TermRangeQuery(fieldName, minTermIsNullOrStar ? null : GetTermValue(minValue, minValueType, exact), maxTermIsNullOrStar ? null : GetTermValue(maxValue, maxValueType, exact), inclusiveMin, inclusiveMax);
-            return new CachingQuery(range, index);
+            return MaybeCacheQuery(index, range);
         }
 
         private static Query CreateRange(Index index, string fieldName, long minValue, bool inclusiveMin, long maxValue, bool inclusiveMax)
         {
             var query= NumericRangeQuery.NewLongRange(fieldName, 4, minValue, maxValue, inclusiveMin, inclusiveMax);
-            return new CachingQuery(query, index);
+            return MaybeCacheQuery(index, query);
         }
 
         private static Query CreateRange(Index index, string fieldName, double minValue, bool inclusiveMin, double maxValue, bool inclusiveMax)
         {
             var query = NumericRangeQuery.NewDoubleRange(fieldName, 4, minValue, maxValue, inclusiveMin, inclusiveMax);
             
-            return new CachingQuery(query, index);
+            return MaybeCacheQuery(index, query);
+        }
+
+        private static Query MaybeCacheQuery(Index index, Query query)
+        {
+             
+            if (index.Configuration.QueryClauseCacheSize.GetValue(SizeUnit.Bytes) == 0) // disabled
+                return query;
+            return new CachingQuery(query, index, query.ToString());
         }
     }
 }

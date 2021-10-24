@@ -13,6 +13,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Lucene.Net.Search;
+using Microsoft.Extensions.Caching.Memory;
 using NCrontab.Advanced;
 using NCrontab.Advanced.Extensions;
 using Raven.Client.Documents.Changes;
@@ -86,7 +87,7 @@ namespace Raven.Server.ServerWide
     /// <summary>
     /// Persistent store for server-wide configuration, such as cluster settings, database configuration, etc
     /// </summary>
-    public class ServerStore : IDisposable
+    public class ServerStore : IDisposable, ILowMemoryHandler
     {
         private const string ResourceName = nameof(ServerStore);
 
@@ -139,6 +140,8 @@ namespace Raven.Server.ServerWide
         {
             // we want our servers to be robust get early errors about such issues
             MemoryInformation.EnableEarlyOutOfMemoryChecks = true;
+
+            QueryClauseCache = new MemoryCache(GetMemoryCacheOptions(configuration));
 
             Configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
 
@@ -3395,6 +3398,30 @@ namespace Raven.Server.ServerWide
         internal class TestingStuff
         {
             internal Action BeforePutLicenseCommandHandledInOnValueChanged;
+        }
+        
+        
+        public MemoryCache QueryClauseCache;
+        private static MemoryCacheOptions GetMemoryCacheOptions(RavenConfiguration configuration)
+        {
+            return new MemoryCacheOptions
+            {
+                SizeLimit = configuration.Indexing.QueryClauseCacheSize.GetValue(SizeUnit.Bytes),
+                ExpirationScanFrequency = configuration.Indexing.QueryClauseCacheExpirationScanFrequency.AsTimeSpan
+            };
+        }
+
+        public void LowMemory(LowMemorySeverity lowMemorySeverity)
+        {
+            if (lowMemorySeverity != LowMemorySeverity.ExtremelyLow)
+                return;
+            // just discard the whole thing
+            QueryClauseCache = new MemoryCache(GetMemoryCacheOptions(Configuration));
+        }
+
+        public void LowMemoryOver()
+        {
+            throw new NotImplementedException();
         }
     }
 }
