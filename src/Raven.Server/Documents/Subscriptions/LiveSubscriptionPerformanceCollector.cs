@@ -61,7 +61,7 @@ namespace Raven.Server.Documents.Subscriptions
 
                 foreach (var kvp in _perSubscriptionConnectionStats)
                 {
-                    var subscriptionConnections = Database.SubscriptionStorage.GetSubscriptionConnections(context, kvp.Value.Handler.SubscriptionName);
+                    var subscriptionConnections = Database.SubscriptionStorage.GetSubscriptionConnectionsState(context, kvp.Value.Handler.SubscriptionName);
                     if (subscriptionConnections != null)
                     {
                         var connectionAggregators =
@@ -89,7 +89,7 @@ namespace Raven.Server.Documents.Subscriptions
 
                 foreach (var kvp in _perSubscriptionBatchStats)
                 {
-                    var subscriptionConnections = Database.SubscriptionStorage.GetSubscriptionConnections(context, kvp.Value.Handler.SubscriptionName);
+                    var subscriptionConnections = Database.SubscriptionStorage.GetSubscriptionConnectionsState(context, kvp.Value.Handler.SubscriptionName);
                     if (subscriptionConnections != null)
                     {
                         var batchesAggregators = new List<SubscriptionBatchStatsAggregator>();
@@ -167,7 +167,7 @@ namespace Raven.Server.Documents.Subscriptions
                     using (context.OpenReadTransaction())
                     {
                         // check for 'in progress' connection info
-                        var subscriptionConnections = Database.SubscriptionStorage.GetSubscriptionConnections(context, subscriptionName);
+                        var subscriptionConnections = Database.SubscriptionStorage.GetSubscriptionConnectionsState(context, subscriptionName);
                         if (subscriptionConnections != null)
                         {
                             foreach (var connection in subscriptionConnections.GetConnections())
@@ -219,7 +219,7 @@ namespace Raven.Server.Documents.Subscriptions
                     // 2. get 'inProgress' batch info
                     using (context.OpenReadTransaction())
                     {
-                        var inProgressConnections = Database.SubscriptionStorage.GetSubscriptionConnections(context, subscriptionName);
+                        var inProgressConnections = Database.SubscriptionStorage.GetSubscriptionConnectionsState(context, subscriptionName);
 
                         foreach (var connection in inProgressConnections.GetConnections())
                         {

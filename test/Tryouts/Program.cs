@@ -2,9 +2,9 @@ using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using FastTests.Blittable;
+using FastTests.Client.Subscriptions;
 using FastTests.Client;
 using RachisTests;
-using SlowTests.Client.Subscriptions;
 using SlowTests.Issues;
 using SlowTests.MailingList;
 using SlowTests.Rolling;
@@ -31,10 +31,10 @@ namespace Tryouts
                 {
                     using (var testOutputHelper = new ConsoleTestOutputHelper())
                     //using (var test = new RollingIndexesClusterTests(testOutputHelper))
-                    using (var test = new RavenDB_3491(testOutputHelper))
+                    using (var test = new SubscriptionsBasic(testOutputHelper))
                     {
                         //await test.RemoveNodeFromDatabaseGroupWhileRollingDeployment();
-                        await test.SubscribtionWithEtag_MultipleOpens();
+                        await test.ShouldStopPullingDocsAndCloseSubscriptionOnSubscriberErrorByDefault();
                     }
                 }
                 catch (Exception e)
