@@ -601,7 +601,7 @@ namespace FastTests.Client.Subscriptions
                     return subscriptionTask;
                 }).WaitAsync(_reasonableWaitTime));
 
-                store.Subscriptions.DropConnection(id);
+                store.Subscriptions.DropAllConnections(id);
 
                 notThrowingSubscriptionWorker = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
                 {
@@ -744,7 +744,7 @@ namespace FastTests.Client.Subscriptions
 
                     Assert.True(docs.TryTake(out _, _reasonableWaitTime));
                     Assert.True(docs.TryTake(out _, _reasonableWaitTime));
-                    store.Subscriptions.DropConnection(id);
+                    store.Subscriptions.DropAllConnections(id);
 
                     try
                     {
