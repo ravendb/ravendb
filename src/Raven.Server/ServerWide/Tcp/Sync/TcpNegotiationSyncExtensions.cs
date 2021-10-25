@@ -22,7 +22,7 @@ namespace Raven.Server.ServerWide.Tcp.Sync
             using (var writer = new BlittableJsonTextWriter(context, stream))
             {
                 var current = parameters.Version;
-                bool dataCompression = false;
+                bool dataCompression;
                 while (true)
                 {
                     if (parameters.CancellationToken.IsCancellationRequested)
@@ -64,6 +64,7 @@ namespace Raven.Server.ServerWide.Tcp.Sync
 
                 var supportedFeatures = TcpConnectionHeaderMessage.GetSupportedFeaturesFor(parameters.Operation, current);
                 supportedFeatures.DataCompression = dataCompression;
+
                 return supportedFeatures;
             }
         }

@@ -32,13 +32,17 @@ namespace Raven.Client.ServerWide.Tcp
             await using (var writer = new AsyncBlittableJsonTextWriter(context, stream))
             {
                 var current = parameters.Version;
+                bool dataCompression;
                 while (true)
                 {
                     if (parameters.CancellationToken.IsCancellationRequested)
                         throw new OperationCanceledException($"Stopped TCP negotiation for {parameters.Operation} because of cancellation request");
 
                     await SendTcpVersionInfoAsync(context, writer, parameters, current).ConfigureAwait(false);
-                    var version = await parameters.ReadResponseAndGetVersionCallbackAsync(context, writer, stream, parameters.DestinationUrl).ConfigureAwait(false);
+                    var response = await parameters.ReadResponseAndGetVersionCallbackAsync(context, writer, stream, parameters.DestinationUrl).ConfigureAwait(false);
+                    var version = response.Version;
+                    dataCompression = response.DataCompression;
+
                     if (Log.IsInfoEnabled)
                     {
                         Log.Info($"Read response from {parameters.SourceNodeTag ?? parameters.DestinationUrl} for '{parameters.Operation}', received version is '{version}'");
@@ -67,7 +71,11 @@ namespace Raven.Client.ServerWide.Tcp
                 {
                     Log.Info($"{parameters.DestinationNodeTag ?? parameters.DestinationUrl} agreed on version '{current}' for {parameters.Operation}.");
                 }
-                return TcpConnectionHeaderMessage.GetSupportedFeaturesFor(parameters.Operation, current);
+
+                var supportedFeatures = TcpConnectionHeaderMessage.GetSupportedFeaturesFor(parameters.Operation, current);
+                supportedFeatures.DataCompression = dataCompression;
+                
+                return supportedFeatures;
             }
         }
 
@@ -107,7 +115,7 @@ namespace Raven.Client.ServerWide.Tcp
         /// If the respond is 'None' the function should throw.
         /// If the respond is 'TcpMismatch' the function should return the read version.
         /// </summary>
-        public Func<JsonOperationContext, AsyncBlittableJsonTextWriter, Stream, string, ValueTask<int>> ReadResponseAndGetVersionCallbackAsync { get; set; }
+        public Func<JsonOperationContext, AsyncBlittableJsonTextWriter, Stream, string, ValueTask<TcpConnectionHeaderMessage.NegotiationResponse>> ReadResponseAndGetVersionCallbackAsync { get; set; }
     }
 
     public abstract class AbstractTcpNegotiateParameters

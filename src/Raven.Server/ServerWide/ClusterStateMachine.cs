@@ -3411,7 +3411,7 @@ namespace Raven.Server.ServerWide
             return size;
         }
 
-        private async ValueTask<int> ClusterReadResponseAndGetVersion(JsonOperationContext ctx, AsyncBlittableJsonTextWriter writer, Stream stream, string url)
+        private async ValueTask<TcpConnectionHeaderMessage.NegotiationResponse> ClusterReadResponseAndGetVersion(JsonOperationContext ctx, AsyncBlittableJsonTextWriter writer, Stream stream, string url)
         {
             using (var response = await ctx.ReadForMemoryAsync(stream, "cluster-ConnectToPeer-header-response"))
             {
@@ -3419,14 +3419,19 @@ namespace Raven.Server.ServerWide
                 switch (reply.Status)
                 {
                     case TcpConnectionStatus.Ok:
-                        return reply.Version;
-
+                        return new TcpConnectionHeaderMessage.NegotiationResponse
+                        {
+                            Version = reply.Version
+                        };
                     case TcpConnectionStatus.AuthorizationFailed:
                         throw new AuthorizationException($"Unable to access  {url} because {reply.Message}");
                     case TcpConnectionStatus.TcpVersionMismatch:
                         if (reply.Version != TcpNegotiation.OutOfRangeStatus)
                         {
-                            return reply.Version;
+                            return new TcpConnectionHeaderMessage.NegotiationResponse
+                            {
+                                Version = reply.Version
+                            };
                         }
                         //Kindly request the server to drop the connection
                         ctx.Write(writer, new DynamicJsonValue
@@ -3442,7 +3447,10 @@ namespace Raven.Server.ServerWide
                 }
             }
 
-            return TcpConnectionHeaderMessage.ClusterTcpVersion;
+            return new TcpConnectionHeaderMessage.NegotiationResponse
+            {
+                Version = TcpConnectionHeaderMessage.ClusterTcpVersion
+            };
         }
 
         public override async Task<RachisConnection> ConnectToPeer(string url, string tag, X509Certificate2 certificate, CancellationToken token)
