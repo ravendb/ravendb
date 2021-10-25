@@ -57,8 +57,6 @@ namespace Raven.Server.Integrations.PostgreSQL
                 if (certificate == null)
                 {
                     await writer.WriteAsync(messageBuilder.SSLResponse(false), _token);
-
-                    await reader.CompleteAsync();
                     initialMessage = await messageReader.ReadInitialMessage(reader, _token);
                 }
                 else
