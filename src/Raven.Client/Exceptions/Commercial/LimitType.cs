@@ -55,6 +55,9 @@ namespace Raven.Client.Exceptions.Commercial
         [Description("PostgreSql Integration")]
         PostgreSqlIntegration,
 
+        [Description("Power BI")]
+        PowerBI,
+
         [Description("Delayed External Replication")]
         DelayedExternalReplication,
 
