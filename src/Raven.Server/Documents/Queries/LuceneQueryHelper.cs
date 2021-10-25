@@ -8,6 +8,7 @@ using Lucene.Net.Analysis.Tokenattributes;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Raven.Client;
+using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Queries.LuceneIntegration;
 using Sparrow;
 using Sparrow.Json;
@@ -357,7 +358,9 @@ This edge-case has a very slim chance of happening, but still we should not igno
 
         private static Query MaybeCacheQuery(Index index, Query query)
         {
-             
+            if (index.DocumentDatabase.Configuration.Core.FeaturesAvailability != FeaturesAvailability.Experimental)
+                return query;
+            
             if (index.Configuration.QueryClauseCacheSize.GetValue(SizeUnit.Bytes) == 0) // disabled
                 return query;
             return new CachingQuery(query, index, query.ToString());

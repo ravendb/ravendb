@@ -474,7 +474,7 @@ namespace Raven.Server.Documents.Queries
                     return TranslateOperationOnLong(index, luceneFieldName, ticks, @where.Operator);
             }
 
-            var ticksAligned = ticks / TimeSpan.TicksPerDay;
+            var ticksAligned = ticks - (ticks % TimeSpan.TicksPerDay);
             if (ticksAligned == ticks) // aligned already on a day boundary
                 return TranslateOperationOnLong(index, luceneFieldName, ticks, @where.Operator);
 
@@ -549,8 +549,8 @@ namespace Raven.Server.Documents.Queries
         {
             string luceneFieldName = fieldName + Constants.Documents.Indexing.Fields.TimeFieldSuffix;
 
-            var ticksFirstAligned = ticksFirst / TimeSpan.TicksPerDay;
-            var ticksSecondAligned = ticksSecond / TimeSpan.TicksPerDay;
+            var ticksFirstAligned = ticksFirst - (ticksFirst % TimeSpan.TicksPerDay);
+            var ticksSecondAligned = ticksSecond - ( ticksSecond % TimeSpan.TicksPerDay);
             if (ticksFirstAligned == ticksFirst && ticksSecond == ticksSecondAligned || // already aligned on day boundary 
                 ticksFirstAligned == ticksSecondAligned) // or belonging to the same day...
             {
@@ -567,7 +567,7 @@ namespace Raven.Server.Documents.Queries
             }
 
             var endInclusive = be.MaxInclusive || ticksSecond != ticksSecondAligned;
-            bq.Add(LuceneQueryHelper.Between(index, luceneFieldName, ticksFirstAligned, startInclusive, ticksFirstAligned, endInclusive), Occur.SHOULD);
+            bq.Add(LuceneQueryHelper.Between(index, luceneFieldName, ticksFirstAligned, startInclusive, ticksSecondAligned, endInclusive), Occur.SHOULD);
             if (ticksSecond != ticksSecondAligned)
             {
                 bq.Add(LuceneQueryHelper.Between(index, luceneFieldName, ticksSecondAligned, true, ticksSecond, be.MaxInclusive), Occur.SHOULD);

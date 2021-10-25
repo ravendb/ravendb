@@ -147,7 +147,7 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
                     }
                 }
                 
-                return _inner ??= new FastBitArrayScorer(results, _similarity);
+                return _inner ??= new FastBitArrayScorer(results, _similarity, disposeArray: true);
             }
 
             public override int DocID()

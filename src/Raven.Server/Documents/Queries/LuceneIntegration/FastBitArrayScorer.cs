@@ -8,11 +8,13 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
     public class FastBitArrayScorer : Scorer
     {
         private FastBitArray _docs;
+        private readonly bool _disposeArray;
         private IEnumerator<int> _enum;
         private int _currentDocId;
-        internal FastBitArrayScorer(FastBitArray docs, Similarity similarity) : base(similarity)
+        internal FastBitArrayScorer(FastBitArray docs, Similarity similarity, bool disposeArray) : base(similarity)
         {
             _docs = docs;
+            _disposeArray = disposeArray;
             _currentDocId = _docs.IndexOfFirstSetBit(); // may have a match on the first value
             _enum = _docs.Iterate(0).GetEnumerator();
         }
@@ -31,7 +33,10 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
             }
             _enum?.Dispose();
             _enum = null;
-            _docs.Dispose();
+            if (_disposeArray)
+            {
+                _docs.Dispose();
+            }
             _currentDocId = NO_MORE_DOCS;
             return NO_MORE_DOCS;
         }

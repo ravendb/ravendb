@@ -7,9 +7,11 @@ using Lucene.Net.Search;
 using Lucene.Net.Store;
 using Microsoft.Extensions.Caching.Memory;
 using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Collections;
 using Sparrow.LowMemory;
 using Sparrow.Threading;
+using MemoryCache = Raven.Server.Utils.MemoryCache;
 
 namespace Raven.Server.Documents.Queries.LuceneIntegration
 {
@@ -48,6 +50,8 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
         {
             public string Query;
             public string Owner;
+            public string Database;
+            public string Index;
 
             protected bool Equals(QueryCacheKey other)
             {
@@ -76,8 +80,6 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
             // This is globally unique, but this value is per reader, so we 
             // can control over memory better at the database level
             public string UniqueId;
-            public string Database;
-            public string Index;
             public WeakReference WeakSelf;
 
             public IndexReaderCachedQueries()
@@ -167,8 +169,6 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
                     cachedQueries = CacheByReader.GetValue(reader, _ => new IndexReaderCachedQueries
                     {
                         Cache = clauseCache,
-                        Database = _parent._index.DocumentDatabase.Name,
-                        Index = _parent._index.Name,
                     });
                 }
                 
@@ -199,11 +199,15 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
                         results.Set(doc);
                     }
 
+
+                    queryCacheKey.Database = _parent._index.DocumentDatabase.Name;
+                    queryCacheKey.Index = _parent._index.Name;
+                    
                     clauseCache.Set(queryCacheKey, 
                         results,
                         new MemoryCacheEntryOptions
                         {
-                            Size = reader.MaxDoc / 64, 
+                            Size = results.Size.GetValue(SizeUnit.Bytes), 
                             PostEvictionCallbacks =
                             {
                                 new PostEvictionCallbackRegistration
@@ -217,7 +221,7 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
                 }
 
                 Similarity similarity = _parent.GetSimilarity(_searcher);
-                return new FastBitArrayScorer(results, similarity);
+                return new FastBitArrayScorer(results, similarity, disposeArray: false);
             }
 
             private static void EvictionCallback(object key, object value, EvictionReason _, object state)
@@ -261,7 +265,7 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
 
         public override string ToString(string field)
         {
-            return $"Caching({_inner.ToString(field)})";
+            return $"Caching({_query})";
         }
     }
 }

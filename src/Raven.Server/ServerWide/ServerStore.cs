@@ -81,6 +81,7 @@ using Sparrow.Utils;
 using Voron;
 using Voron.Exceptions;
 using Constants = Raven.Client.Constants;
+using MemoryCache = Raven.Server.Utils.MemoryCache;
 
 namespace Raven.Server.ServerWide
 {
@@ -141,7 +142,11 @@ namespace Raven.Server.ServerWide
             // we want our servers to be robust get early errors about such issues
             MemoryInformation.EnableEarlyOutOfMemoryChecks = true;
 
-            QueryClauseCache = new MemoryCache(GetMemoryCacheOptions(configuration));
+            QueryClauseCache = new MemoryCache(new MemoryCacheOptions
+            {
+                SizeLimit = configuration.Indexing.QueryClauseCacheSize.GetValue(SizeUnit.Bytes),
+                ExpirationScanFrequency = configuration.Indexing.QueryClauseCacheExpirationScanFrequency.AsTimeSpan
+            });
 
             Configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
 
@@ -3400,23 +3405,14 @@ namespace Raven.Server.ServerWide
             internal Action BeforePutLicenseCommandHandledInOnValueChanged;
         }
         
-        
-        public MemoryCache QueryClauseCache;
-        private static MemoryCacheOptions GetMemoryCacheOptions(RavenConfiguration configuration)
-        {
-            return new MemoryCacheOptions
-            {
-                SizeLimit = configuration.Indexing.QueryClauseCacheSize.GetValue(SizeUnit.Bytes),
-                ExpirationScanFrequency = configuration.Indexing.QueryClauseCacheExpirationScanFrequency.AsTimeSpan
-            };
-        }
+        public readonly MemoryCache QueryClauseCache;
 
         public void LowMemory(LowMemorySeverity lowMemorySeverity)
         {
             if (lowMemorySeverity != LowMemorySeverity.ExtremelyLow)
                 return;
             // just discard the whole thing
-            QueryClauseCache = new MemoryCache(GetMemoryCacheOptions(Configuration));
+            QueryClauseCache.Clear();
         }
 
         public void LowMemoryOver()
