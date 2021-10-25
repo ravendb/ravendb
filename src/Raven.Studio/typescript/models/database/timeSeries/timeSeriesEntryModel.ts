@@ -95,7 +95,7 @@ class timeSeriesEntryModel {
         this.isCreatingNewTimeSeries(!timeSeriesName);
         
         if (timeSeriesName && timeSeriesEntryModel.isIncrementalName(timeSeriesName)) {
-            const details = _.map(dto.NodesValues, (valuesList, nodeDetails): nodeData => {
+            const details = _.map(dto.NodeValues, (valuesList, nodeDetails): nodeData => {
                 const [tag, dbId] = nodeDetails.split('-');
                 return {
                     nodeTag: tag,
@@ -266,7 +266,7 @@ class timeSeriesEntryModel {
             Tag: null,
             Values: [],
             IsRollup: timeSeriesName && timeSeriesName.includes("@"),
-            NodesValues: null
+            NodeValues: null
         });
     }
 }
