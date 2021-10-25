@@ -11,7 +11,7 @@ abstract class abstractChartsWebsocketWidget<
     TConfig = unknown, 
     TState = unknown
     > extends websocketBasedWidget<TPayload, TConfig, TState> {
-
+    
     protected readonly throttledShowHistory: (date: Date) => void;
 
     protected charts: lineChart[] = [];

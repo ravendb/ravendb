@@ -12,6 +12,8 @@ interface memoryUsageState {
 
 class memoryUsageWidget extends abstractChartsWebsocketWidget<Raven.Server.Dashboard.Cluster.Notifications.MemoryUsagePayload, memoryUsage, void, memoryUsageState> {
 
+    view = require("views/resources/widgets/memoryUsageWidget.html");
+    
     showProcessDetails = ko.observable<boolean>(false);
     showMachineDetails = ko.observable<boolean>(false);
     
