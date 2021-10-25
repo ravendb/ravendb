@@ -6,8 +6,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
-using System.Security.Cryptography;
 using System.Text;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
@@ -29,7 +27,6 @@ using Sparrow.Server.Utils;
 using Voron;
 using Voron.Data.Tables;
 using Voron.Impl;
-using MemoryStream = System.IO.MemoryStream;
 
 namespace Raven.Server.Documents.TimeSeries
 {
@@ -130,14 +127,6 @@ namespace Raven.Server.Documents.TimeSeries
             Stats = new TimeSeriesStats(this, tx);
             Rollups = new TimeSeriesRollups(_documentDatabase);
             _logger = LoggingSource.Instance.GetLogger<TimeSeriesStorage>(documentDatabase.Name);
-        }
-
-        public static DateTime ExtractDateTimeFromKey(Slice key)
-        {
-            var span = key.AsSpan();
-            var timeSlice = span.Slice(span.Length - sizeof(long), sizeof(long));
-            var baseline = Bits.SwapBytes(MemoryMarshal.Read<long>(timeSlice));
-            return new DateTime(baseline * 10_000);
         }
 
         public long PurgeSegmentsAndDeletedRanges(DocumentsOperationContext context, string collection, long upto, long numberOfEntriesToDelete)
@@ -1272,7 +1261,6 @@ namespace Raven.Server.Documents.TimeSeries
                 throw new InvalidOperationException("Cannot perform increment operations on Non Incremental Time Series");
 
             _incrementalPrefixByDbId ??= new Dictionary<string, string[]>();
-            _incrementalPrefixByDbId ??= new Dictionary<string, string[]>();
             DateTime prevTimestamp = DateTime.MinValue;
 
             var holder = new SingleResult();
@@ -1353,7 +1341,7 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        private LazyStringValue TryGetTimedCounterTag(DocumentsOperationContext context, string dbId, bool positive)
+        private LazyStringValue TryGetTimedCounterTag(JsonOperationContext context, string dbId, bool positive)
         {
             if (_incrementalPrefixByDbId.TryGetValue(dbId, out var values) == false)
                 _incrementalPrefixByDbId[dbId] = values = new[] { IncrementPrefix + dbId, DecrementPrefix + dbId };
