@@ -2,13 +2,10 @@
 using System.Buffers;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using Corax;
 using Corax.Queries;
 using Raven.Client;
-using Raven.Client.Documents.Linq;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Results;
@@ -61,9 +58,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 int read = 0;
                 int docsToLoad = pageSize;
                 Skip(ref result, position, ref read, skippedResults, out var readCounter, ref ids, token);
-                /*if (position != 0)
-*/
-                
+               
                 while (read != 0)
                 {
                     for (int i = 0; i < read && docsToLoad != 0; --docsToLoad, ++i)

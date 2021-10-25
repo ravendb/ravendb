@@ -18,7 +18,7 @@ namespace FastTests.Corax
     {
         private List<IndexSingleNumericalEntry<long>> longList = new();
         private IndexSearcher _indexSearcher;
-        private const int IndexId = 0, ContentId = 1;
+        private const int IndexId = 0, ContentId = 1, ValueId = 2;
 
         public OrderBySortingTests(ITestOutputHelper output) : base(output)
         {
@@ -53,6 +53,27 @@ namespace FastTests.Corax
             }
         }
 
+        [Fact]
+        public void CompoundOrderBy()
+        {
+            ComplexOrderByData();
+            IndexEntries();
+            using var searcher = new IndexSearcher(Env);
+            {
+                var match0 = searcher.AllEntries();
+                var match1 = searcher.OrderByAscending(match0, ValueId, MatchCompareFieldType.Sequence, innerComparer: new SortingMatch.DescendingMatchComparer(searcher, ContentId, MatchCompareFieldType.Integer));
+                
+                List<string> sortedByCorax = new();
+                Span<long> ids = stackalloc long[16];
+                var read = match1.Fill(ids);
+                Assert.Equal(3, read);
+                Assert.Equal(longList[0].Id, searcher.GetIdentityFor(ids[2]));
+                Assert.Equal(longList[1].Id, searcher.GetIdentityFor(ids[1]));
+                Assert.Equal(longList[2].Id, searcher.GetIdentityFor(ids[0]));
+
+            }
+        }
+        
         private static int CompareAscending(IndexSingleNumericalEntry<long> value1, IndexSingleNumericalEntry<long> value2)
         {
             return value1.Content.CompareTo(value2.Content);
@@ -69,11 +90,34 @@ namespace FastTests.Corax
                 longList.Add(new IndexSingleNumericalEntry<long>
                 {
                     Id = $"list/{i}",
-                    Content = i
+                    Content = i,
+                    Value = $"{i}"
                 });
             }
         }
 
+        private void ComplexOrderByData()
+        {
+            longList.Add(new IndexSingleNumericalEntry<long>()
+            {
+                Id = $"list/1",
+                Content = 1,
+                Value = "test"
+            });
+            longList.Add(new IndexSingleNumericalEntry<long>()
+            {
+                Id = $"list/2",
+                Content = 2,
+                Value = "test"
+            });
+            longList.Add(new IndexSingleNumericalEntry<long>()
+            {
+                Id = $"list/3",
+                Content = 3,
+                Value = "test"
+            });
+        }
+        
         private void IndexEntries()
         {
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
@@ -98,6 +142,7 @@ namespace FastTests.Corax
         {
             entryWriter.Write(IndexId, Encoding.UTF8.GetBytes(entry.Id));
             entryWriter.Write(ContentId, Encoding.UTF8.GetBytes(entry.Content.ToString()), entry.Content, Convert.ToDouble(entry.Content));
+            entryWriter.Write(ValueId, Encoding.UTF8.GetBytes(entry.Value));
             entryWriter.Finish(out var output);
             return output;
         }
@@ -106,11 +151,13 @@ namespace FastTests.Corax
         {
             Slice.From(bsc, "Id", ByteStringType.Immutable, out Slice idSlice);
             Slice.From(bsc, "Content", ByteStringType.Immutable, out Slice contentSlice);
-
+            Slice.From(bsc, "Value", ByteStringType.Immutable, out Slice valueSlice);
             return new Dictionary<Slice, int>
             {
                 [idSlice] = IndexId,
                 [contentSlice] = ContentId,
+                [valueSlice] = ValueId
+                
             };
         }
 
@@ -118,6 +165,8 @@ namespace FastTests.Corax
         {
             public string Id { get; set; }
             public T Content { get; set; }
+            
+            public string Value { get; set; }
         }
     }
 }

@@ -18,8 +18,8 @@ namespace Corax.Queries
 
         int CompareById(long idx, long idy);
 
-        int CompareSequence(ReadOnlySpan<byte> sx, ReadOnlySpan<byte> sy);
-        int CompareNumerical<T>(T sx, T sy) where T : unmanaged;
+        int CompareSequence(ReadOnlySpan<byte> sx, ReadOnlySpan<byte> sy, long idx, long idy);
+        int CompareNumerical<T>(T sx, T sy, long idx, long idy) where T : unmanaged;
     }
 
     internal static class BasicComparers

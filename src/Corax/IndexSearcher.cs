@@ -175,29 +175,31 @@ namespace Corax
             return MultiTermMatch.Create(new MultiTermMatch<StartWithTermProvider>(_transaction.Allocator, new StartWithTermProvider(this, _transaction.Allocator, terms, field, 0, startWith)));
         }
 
-        public SortingMatch OrderByAscending<TInner>(in TInner set, int fieldId, MatchCompareFieldType entryFieldType = MatchCompareFieldType.Sequence, int take = -1)
+        public SortingMatch OrderByAscending<TInner>(in TInner set, int fieldId, MatchCompareFieldType entryFieldType = MatchCompareFieldType.Sequence, int take = -1, IMatchComparer innerComparer = null)
             where TInner : IQueryMatch
         {
-            return OrderBy<TInner, AscendingMatchComparer>(in set, fieldId, entryFieldType, take);
+            return OrderBy<TInner, AscendingMatchComparer>(in set, fieldId, entryFieldType, take, innerComparer);
         }
 
-        public SortingMatch OrderByDescending<TInner>(in TInner set, int fieldId, MatchCompareFieldType entryFieldType = MatchCompareFieldType.Sequence, int take = -1)
+        public SortingMatch OrderByDescending<TInner>(in TInner set, int fieldId, MatchCompareFieldType entryFieldType = MatchCompareFieldType.Sequence, int take = -1, IMatchComparer innerComparer = null)
             where TInner : IQueryMatch
         {
-            return OrderBy<TInner, DescendingMatchComparer>(in set, fieldId, entryFieldType, take);
+            return OrderBy<TInner, DescendingMatchComparer>(in set, fieldId, entryFieldType, take, innerComparer);
         }
 
-        public SortingMatch OrderBy<TInner, TComparer>(in TInner set, int fieldId, MatchCompareFieldType entryFieldType = MatchCompareFieldType.Sequence, int take = -1)
+        
+        
+        public SortingMatch OrderBy<TInner, TComparer>(in TInner set, int fieldId, MatchCompareFieldType entryFieldType = MatchCompareFieldType.Sequence, int take = -1, IMatchComparer innerComparer = null)
             where TInner : IQueryMatch
             where TComparer : IMatchComparer
         {
             if (typeof(TComparer) == typeof(AscendingMatchComparer))
             {
-                return Create(new SortingMatch<TInner, AscendingMatchComparer>(this, set, new AscendingMatchComparer(this, fieldId, entryFieldType), take));
+                return Create(new SortingMatch<TInner, AscendingMatchComparer>(this, set, new AscendingMatchComparer(this, fieldId, entryFieldType, innerComparer), take));
             }
             else if (typeof(TComparer) == typeof(DescendingMatchComparer))
             {
-                return Create(new SortingMatch<TInner, DescendingMatchComparer>(this, set, new DescendingMatchComparer(this, fieldId, entryFieldType), take));
+                return Create(new SortingMatch<TInner, DescendingMatchComparer>(this, set, new DescendingMatchComparer(this, fieldId, entryFieldType, innerComparer), take));
             }
             else if (typeof(TComparer) == typeof(CustomMatchComparer))
             {
@@ -207,6 +209,25 @@ namespace Corax
             throw new ArgumentException($"The comparer of type {typeof(TComparer).Name} is not supported. Isn't {nameof(OrderByCustomOrder)} the right call for it?");
         }
 
+        public IMatchComparer CreateInnerComparer<TComparer>(int fieldId, MatchCompareFieldType entryFieldType = MatchCompareFieldType.Sequence, IMatchComparer innerComparer = null)
+        {
+            if (typeof(TComparer) == typeof(AscendingMatchComparer))
+            {
+                return new AscendingMatchComparer(this, fieldId, entryFieldType, innerComparer);
+            }
+            if (typeof(TComparer) == typeof(DescendingMatchComparer))
+            {
+                return new DescendingMatchComparer(this, fieldId, entryFieldType, innerComparer);
+            }
+            
+            else if (typeof(TComparer) == typeof(CustomMatchComparer))
+            {
+                throw new ArgumentException($"Custom comparers can only be created through the {nameof(OrderByCustomOrder)}");
+            }
+
+            throw new ArgumentException($"The comparer of type {typeof(TComparer).Name} is not supported. Isn't {nameof(OrderByCustomOrder)} the right call for it?");
+        }
+        
         public SortingMatch OrderBy<TInner, TComparer>(in TInner set, in TComparer comparer, int take = -1)
             where TInner : IQueryMatch
             where TComparer : struct, IMatchComparer

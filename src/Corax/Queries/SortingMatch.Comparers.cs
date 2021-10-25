@@ -73,7 +73,7 @@ namespace Corax.Queries
 
                     if (readX && readY)
                     {
-                        return comparer.CompareSequence(resultX, resultY);
+                        return comparer.CompareSequence(resultX, resultY, x, y);
                     }
                     else if (readX)
                         return 1;
@@ -90,7 +90,7 @@ namespace Corax.Queries
 
                     if (readX && readY)
                     {
-                        return comparer.CompareNumerical(resultX, resultY);
+                        return comparer.CompareNumerical(resultX, resultY, x, y);
                     }
                     else if (readX)
                         return 1;
@@ -112,7 +112,7 @@ namespace Corax.Queries
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public int CompareNumerical<T>(T sx, T sy) where T : unmanaged
+            public int CompareNumerical<T>(T sx, T sy, long idx, long idy) where T : unmanaged
             {
                 if (typeof(T) == typeof(long))
                     return _compareLongFunc((long)(object)sx, (long)(object)sy);
@@ -123,10 +123,28 @@ namespace Corax.Queries
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public int CompareSequence(ReadOnlySpan<byte> sx, ReadOnlySpan<byte> sy)
+            public int CompareSequence(ReadOnlySpan<byte> sx, ReadOnlySpan<byte> sy, long idx, long idy)
             {
                 return _compareSequenceFunc(sx, sy);
             }
+        }
+
+        public unsafe readonly struct DefaultMatchComparer : IMatchComparer
+        {
+            public static readonly IMatchComparer Instance = new DefaultMatchComparer();
+
+            private DefaultMatchComparer(int _)
+            {
+                
+            }
+
+            public MatchCompareFieldType FieldType => default;
+            public int FieldId => default;
+            public int CompareById(long idx, long idy) => 0;
+
+            public int CompareSequence(ReadOnlySpan<byte> sx, ReadOnlySpan<byte> sy, long idx, long idy) => 0;
+
+            public int CompareNumerical<T>(T sx, T sy, long idx, long idy) where T : unmanaged => 0;
         }
 
         public unsafe struct AscendingMatchComparer : IMatchComparer
@@ -135,16 +153,19 @@ namespace Corax.Queries
             private readonly int _fieldId;
             private readonly delegate*<ref AscendingMatchComparer, long, long, int> _compareFunc;
             private readonly MatchCompareFieldType _fieldType;
+            private readonly IMatchComparer _innerComparer;
 
             public int FieldId => _fieldId;
             public MatchCompareFieldType FieldType => _fieldType;
 
-            public AscendingMatchComparer(IndexSearcher searcher, int fieldId, MatchCompareFieldType entryFieldType)
+            public AscendingMatchComparer(IndexSearcher searcher, int fieldId, MatchCompareFieldType entryFieldType, in IMatchComparer innerComparer = null)
             {
                 _searcher = searcher;
                 _fieldId = fieldId;
                 _fieldType = entryFieldType;
-
+                _innerComparer = innerComparer ?? DefaultMatchComparer.Instance;
+                
+                [SkipLocalsInit]
                 static int CompareWithLoadSequence(ref AscendingMatchComparer comparer, long x, long y)
                 {
                     var readerX = comparer._searcher.GetReaderFor(x);
@@ -152,18 +173,18 @@ namespace Corax.Queries
 
                     var readerY = comparer._searcher.GetReaderFor(y);
                     var readY = readerY.Read(comparer._fieldId, out var resultY);
-
                     if (readX && readY)
                     {
-                        return comparer.CompareSequence(resultX, resultY);
+                        return comparer.CompareSequence(resultX, resultY, x, y);
                     }
                     else if (readX)
                         return 1;
                     return -1;
                 }
 
+                [SkipLocalsInit]
                 static int CompareWithLoadNumerical<T>(ref AscendingMatchComparer comparer, long x, long y) where T : unmanaged
-{
+                {
                     var readerX = comparer._searcher.GetReaderFor(x);
                     var readX = readerX.Read<T>(comparer._fieldId, out var resultX);
 
@@ -172,7 +193,7 @@ namespace Corax.Queries
 
                     if (readX && readY)
                     {
-                        return comparer.CompareNumerical(resultX, resultY);
+                        return comparer.CompareNumerical(resultX, resultY, x, y);
                     }
                     else if (readX)
                         return 1;
@@ -192,17 +213,24 @@ namespace Corax.Queries
             {
                 return _compareFunc(ref this, idx, idy);
             }
-
+            
+            [SkipLocalsInit]
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public int CompareNumerical<T>(T sx, T sy) where T : unmanaged
+            public int CompareNumerical<T>(T sx, T sy, long idx, long idy) where T : unmanaged
             {
-                return BasicComparers.CompareAscending(sx, sy);
+                int result;
+                if ((result = BasicComparers.CompareAscending(sx, sy)) == 0)
+                    result = _innerComparer.CompareById(idx, idy);
+                return result;
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public int CompareSequence(ReadOnlySpan<byte> sx, ReadOnlySpan<byte> sy)
+            public int CompareSequence(ReadOnlySpan<byte> sx, ReadOnlySpan<byte> sy, long idx, long idy)
             {
-                return BasicComparers.CompareAscending(sx, sy);
+                int result;
+                if ((result = BasicComparers.CompareAscending(sx, sy)) == 0)
+                    result = _innerComparer.CompareById(idx, idy);
+                return result;
             }
         }
 
@@ -212,16 +240,19 @@ namespace Corax.Queries
             private readonly int _fieldId;
             private readonly delegate*<ref DescendingMatchComparer, long, long, int> _compareFunc;
             private readonly MatchCompareFieldType _fieldType;
-
+            private readonly IMatchComparer _innerComparer;
+            
             public int FieldId => _fieldId;
             public MatchCompareFieldType FieldType => _fieldType;
 
-            public DescendingMatchComparer(IndexSearcher searcher, int fieldId, MatchCompareFieldType entryFieldType)
+            public DescendingMatchComparer(IndexSearcher searcher, int fieldId, MatchCompareFieldType entryFieldType, in IMatchComparer innerComparer = null)
             {
                 _searcher = searcher;
                 _fieldId = fieldId;
                 _fieldType = entryFieldType;
-
+                _innerComparer = innerComparer ?? DefaultMatchComparer.Instance;
+                
+                [SkipLocalsInit]
                 static int CompareWithLoadSequence(ref DescendingMatchComparer comparer, long x, long y)
                 {
                     var readerX = comparer._searcher.GetReaderFor(x);
@@ -232,13 +263,14 @@ namespace Corax.Queries
 
                     if (readX && readY)
                     {
-                        return comparer.CompareSequence(resultX, resultY);
+                        return comparer.CompareSequence(resultX, resultY, x, y);
                     }
                     else if (readX)
                         return -1;
                     return 1;
                 }
 
+                [SkipLocalsInit]
                 static int CompareWithLoadNumerical<T>(ref DescendingMatchComparer comparer, long x, long y) where T : unmanaged
                 {
                     var readerX = comparer._searcher.GetReaderFor(x);
@@ -249,7 +281,7 @@ namespace Corax.Queries
 
                     if (readX && readY)
                     {
-                        return comparer.CompareNumerical(resultX, resultY);
+                        return comparer.CompareNumerical(resultX, resultY, x ,y);
                     }
                     else if (readX)
                         return -1;
@@ -270,16 +302,24 @@ namespace Corax.Queries
                 return _compareFunc(ref this, idx, idy);
             }
 
+            [SkipLocalsInit]
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public int CompareNumerical<T>(T sx, T sy) where T : unmanaged
+            public int CompareNumerical<T>(T sx, T sy, long idx, long idy) where T : unmanaged
             {
-                return -BasicComparers.CompareAscending(sx, sy);
+                int result;
+                if((result = -BasicComparers.CompareAscending(sx, sy)) == 0)
+                    result = _innerComparer.CompareById(idx, idy);
+                return result;
             }
 
+            [SkipLocalsInit]
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public int CompareSequence(ReadOnlySpan<byte> sx, ReadOnlySpan<byte> sy)
+            public int CompareSequence(ReadOnlySpan<byte> sx, ReadOnlySpan<byte> sy, long idx, long idy)
             {
-                return -BasicComparers.CompareAscending(sx, sy);
+                int result;
+                if((result = -BasicComparers.CompareAscending(sx, sy)) == 0)
+                    result = _innerComparer.CompareById(idx, idy);
+                return result;
             }
         }
     }

@@ -211,21 +211,43 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
         private IQueryMatch OrderBy(IQueryMatch match, List<(QueryExpression Expression, OrderByFieldType FieldType, bool Ascending)> orders)
         {
-            //todo maciej: add support for function in orderby. Also need to implement this as corax method.
-            // e.g. _searcher.OrderBy([fields], [as_], [asc_desc]);
-            foreach (var order in orders)
+            (QueryExpression Expression, OrderByFieldType FieldType, bool Ascending) order;
+            IMatchComparer comparer = null;
+            MatchCompareFieldType orderTypeField;
+            int id;
+            
+            if (orders.Count > 1)
             {
-                if (order.Expression is not FieldExpression fe) continue;
-                var id = GetFieldIdInIndex(GetField(fe));
-                var orderTypeField = OrderTypeFieldConventer(order.FieldType);
-                
-                match = order.Ascending 
-                    ? _searcher.OrderByAscending(match, id, orderTypeField)
-                    : _searcher.OrderByDescending(match, id, orderTypeField);
-
+                for (int i = orders.Count - 1; i >= 1; --i)
+                {
+                    order = orders[i];
+                    if (order.Expression is not FieldExpression fe)
+                        throw new InvalidDataException($"Unexpected {order.Expression.GetType()} in ORDER BY statement. In ORDER BY you can only use {nameof(FieldExpression)}.");
+                    id = GetFieldIdInIndex(GetField(fe));
+                    orderTypeField = OrderTypeFieldConventer(order.FieldType);
+                    if (order.Ascending)
+                        comparer = _searcher.CreateInnerComparer<SortingMatch.AscendingMatchComparer>(id, orderTypeField, comparer);
+                    else
+                        comparer = _searcher.CreateInnerComparer<SortingMatch.DescendingMatchComparer>(id, orderTypeField, comparer);
+                }
             }
 
-            return match;
+            
+            if (orders.Count > 0)
+            {
+                order = orders[0];
+                if (order.Expression is not FieldExpression fe)
+                    throw new InvalidDataException($"Unexpected {order.Expression.GetType()} in ORDER BY statement. In ORDER BY you can only use {nameof(FieldExpression)}.");
+                id = GetFieldIdInIndex(GetField(fe));
+                orderTypeField = OrderTypeFieldConventer(order.FieldType);
+                
+                match = order.Ascending 
+                    ? _searcher.OrderByAscending(match, id, orderTypeField, innerComparer: comparer)
+                    : _searcher.OrderByDescending(match, id, orderTypeField, innerComparer: comparer);
+                return match;
+            }
+
+            throw new ArgumentException($"Empty ORDER BY statement.");
         }
         
         private (ValueTokenType ValueType, object FieldValue) GetValue(ValueExpression expr)

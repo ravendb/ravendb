@@ -63,15 +63,17 @@ namespace Corax.Queries
                     {
                         return _comparer.CompareSequence(
                             new ReadOnlySpan<byte>(((SequenceItem)(object)ix.Value).Ptr, ((SequenceItem)(object)ix.Value).Size),
-                            new ReadOnlySpan<byte>(((SequenceItem)(object)iy.Value).Ptr, ((SequenceItem)(object)iy.Value).Size));
+                            new ReadOnlySpan<byte>(((SequenceItem)(object)iy.Value).Ptr, ((SequenceItem)(object)iy.Value).Size), 
+                            ix.Key, 
+                            iy.Key);
                     }
                     else if (typeof(W) == typeof(NumericalItem<long>))
                     {
-                        return _comparer.CompareNumerical(((NumericalItem<long>)(object)ix.Value).Value, ((NumericalItem<long>)(object)iy.Value).Value);
+                        return _comparer.CompareNumerical(((NumericalItem<long>)(object)ix.Value).Value, ((NumericalItem<long>)(object)iy.Value).Value, ix.Key, iy.Key);
                     }
                     else if (typeof(W) == typeof(NumericalItem<double>))
                     {
-                        return _comparer.CompareNumerical(((NumericalItem<double>)(object)ix.Value).Value, ((NumericalItem<double>)(object)iy.Value).Value);
+                        return _comparer.CompareNumerical(((NumericalItem<double>)(object)ix.Value).Value, ((NumericalItem<double>)(object)iy.Value).Value, ix.Key,iy.Key);
                     }
                 }
                 else if (ix.Key > 0)
