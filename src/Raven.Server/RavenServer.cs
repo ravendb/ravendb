@@ -287,7 +287,7 @@ namespace Raven.Server
                 if (Logger.IsInfoEnabled)
                     Logger.Info($"Initialized Server... {WebUrl}");
 
-                _tcpListenerStatus = StartTcpListener();
+                _tcpListenerStatus = StartTcpListener(ListenToNewTcpConnection);
 
                 try
                 {
@@ -1729,7 +1729,7 @@ namespace Raven.Server
             PostgresServer.Execute();
         }
 
-        public TcpListenerStatus StartTcpListener()
+        public TcpListenerStatus StartTcpListener(Action<TcpListener> listenToNewTcpConnection, int? customPort = null)
         {
             var port = 0;
             var status = new TcpListenerStatus();
@@ -1744,7 +1744,7 @@ namespace Raven.Server
                 {
                     var host = new Uri(serverUrl).DnsSafeHost;
 
-                    StartListeners(host, port, status);
+                    StartListeners(host, customPort ?? port, status, listenToNewTcpConnection);
                 }
             }
             else if (tcpServerUrl.Length == 1 && ushort.TryParse(tcpServerUrl[0], out ushort shortPort))
@@ -1753,7 +1753,7 @@ namespace Raven.Server
                 {
                     var host = new Uri(serverUrl).DnsSafeHost;
 
-                    StartListeners(host, shortPort, status);
+                    StartListeners(host, customPort ?? shortPort, status, listenToNewTcpConnection);
                 }
             }
             else
@@ -1765,14 +1765,14 @@ namespace Raven.Server
                     if (uri.IsDefaultPort == false)
                         port = uri.Port;
 
-                    StartListeners(host, port, status);
+                    StartListeners(host, customPort ?? port, status, ListenToNewTcpConnection);
                 }
             }
 
             return status;
         }
 
-        private void StartListeners(string host, int port, TcpListenerStatus status)
+        private void StartListeners(string host, int port, TcpListenerStatus status, Action<TcpListener> listenToNewTcpConnection)
         {
             try
             {
@@ -1819,7 +1819,7 @@ namespace Raven.Server
                     port = listenerLocalEndpoint.Port;
                     for (int i = 0; i < 4; i++)
                     {
-                        ListenToNewTcpConnection(listener);
+                        listenToNewTcpConnection(listener);
                     }
                 }
 
