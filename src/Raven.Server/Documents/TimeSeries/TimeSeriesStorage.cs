@@ -60,7 +60,7 @@ namespace Raven.Server.Documents.TimeSeries
         private HashSet<string> _tableCreated = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         public readonly TimeSeriesStats Stats;
         public readonly TimeSeriesRollups Rollups;
-        
+
         static TimeSeriesStorage()
         {
             using (StorageEnvironment.GetStaticContext(out ByteStringContext ctx))
@@ -118,7 +118,6 @@ namespace Raven.Server.Documents.TimeSeries
         }
 
         private readonly Logger _logger;
-        private readonly DocumentsOperationContext _context;
 
         public TimeSeriesStorage(DocumentDatabase documentDatabase, Transaction tx)
         {
@@ -131,8 +130,6 @@ namespace Raven.Server.Documents.TimeSeries
             Stats = new TimeSeriesStats(this, tx);
             Rollups = new TimeSeriesRollups(_documentDatabase);
             _logger = LoggingSource.Instance.GetLogger<TimeSeriesStorage>(documentDatabase.Name);
-
-            _documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out _context);
         }
 
         public static DateTime ExtractDateTimeFromKey(Slice key)
@@ -1044,7 +1041,7 @@ namespace Raven.Server.Documents.TimeSeries
             public bool AddNewValue(DateTime time, Span<double> values, Span<byte> tagSlice, ref TimeSeriesValuesSegment segment, ulong status)
             {
                 var retryAppend = AddValueInternal(time, values, tagSlice, ref segment, status);
-                if(retryAppend == false)
+                if (retryAppend == false)
                     _context.DocumentDatabase.TimeSeriesPolicyRunner?.MarkForPolicy(_context, SliceHolder, time, status);
                 return retryAppend;
             }
@@ -1058,7 +1055,7 @@ namespace Raven.Server.Documents.TimeSeries
             {
                 var timestampDiff = ((time - BaselineDate).Ticks / 10_000);
                 var inRange = timestampDiff < int.MaxValue;
-                if (inRange == false ||  segment.Append(_context.Allocator, (int)timestampDiff, values, tagSlice, status) == false)
+                if (inRange == false || segment.Append(_context.Allocator, (int)timestampDiff, values, tagSlice, status) == false)
                 {
                     var segmentLastTimestamp = segment.GetLastTimestamp(BaselineDate);
                     if (segmentLastTimestamp == BaselineDate && time == segmentLastTimestamp) // all the entries in the segment has the same timestamp
@@ -1077,7 +1074,7 @@ namespace Raven.Server.Documents.TimeSeries
                         TrimSegmentToDate(time);
                         return true;
                     }
-  
+
                     FlushCurrentSegment(ref segment, values, tagSlice, status);
                     UpdateBaseline(timestampDiff);
                 }
@@ -1091,7 +1088,7 @@ namespace Raven.Server.Documents.TimeSeries
                           $"An evict operation has performed for replication on doc: {_docId}, name: {_name} at {BaselineDate}. " +
                           $"The following values has been removed [{string.Join(", ", values.ToArray())}]";
 
-                
+
                 var alert = AlertRaised.Create(_context.DocumentDatabase.Name, "Time series segment is full - merge operation has performed", msg,
                     AlertType.Replication, NotificationSeverity.Warning);
                 _tss._documentDatabase.NotificationCenter.Add(alert);
@@ -1196,10 +1193,10 @@ namespace Raven.Server.Documents.TimeSeries
             {
                 using (_context.Allocator.Allocate(timeSeriesSegment.NumberOfBytes, out var currentSegmentBuffer))
                 {
-                   Memory.Copy(currentSegmentBuffer.Ptr, timeSeriesSegment.Ptr, timeSeriesSegment.NumberOfBytes);
+                    Memory.Copy(currentSegmentBuffer.Ptr, timeSeriesSegment.Ptr, timeSeriesSegment.NumberOfBytes);
                     var readOnlySegment = new TimeSeriesValuesSegment(currentSegmentBuffer.Ptr, timeSeriesSegment.NumberOfBytes);
                     Debug.Assert(timeSeriesSegment.Capacity == MaxSegmentSize);
-                    var newSegment= new TimeSeriesValuesSegment(timeSeriesSegment.Ptr, timeSeriesSegment.Capacity);
+                    var newSegment = new TimeSeriesValuesSegment(timeSeriesSegment.Ptr, timeSeriesSegment.Capacity);
                     newSegment.Initialize(timeSeriesSegment.NumberOfValues);
 
                     foreach (var segmentValue in readOnlySegment.YieldAllValues(_context, BaselineDate, includeDead: false))
@@ -1254,10 +1251,9 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        private Dictionary<string, List<LazyStringValue>> _incrementalPrefixByDbId;
+        private Dictionary<string, string[]> _incrementalPrefixByDbId;
         private static readonly byte[] TimedCounterPrefixBuffer = Encoding.UTF8.GetBytes(TimedCounterPrefix);
         private static readonly byte[] IncrementPrefixBuffer = Encoding.UTF8.GetBytes(IncrementPrefix);
-        private const string IncrementalTimeSeriesPrefix = "INC:";
         private const string TimedCounterPrefix = "TC:";
         private const string IncrementPrefix = TimedCounterPrefix + "INC-";
         private const string DecrementPrefix = TimedCounterPrefix + "DEC-";
@@ -1275,7 +1271,8 @@ namespace Raven.Server.Documents.TimeSeries
             if (TimeSeriesHandler.CheckIfIncrementalTs(name) == false)
                 throw new InvalidOperationException("Cannot perform increment operations on Non Incremental Time Series");
 
-            _incrementalPrefixByDbId ??= new Dictionary<string, List<LazyStringValue>>();
+            _incrementalPrefixByDbId ??= new Dictionary<string, string[]>();
+            _incrementalPrefixByDbId ??= new Dictionary<string, string[]>();
             DateTime prevTimestamp = DateTime.MinValue;
 
             var holder = new SingleResult();
@@ -1292,15 +1289,15 @@ namespace Raven.Server.Documents.TimeSeries
                 holder.Status = TimeSeriesValuesSegment.Live;
                 holder.Values = element.Values;
                 var firstPositive = element.Values[0] >= 0;
-                holder.Tag = TryGetTimedCounterTag(_documentDatabase.DbBase64Id, firstPositive);
+                holder.Tag = TryGetTimedCounterTag(context, _documentDatabase.DbBase64Id, firstPositive);
 
                 for (int i = 1; i < element.Values.Length; i++)
                 {
                     bool currentPositive = element.Values[i] >= 0;
-                    if (firstPositive == currentPositive) 
+                    if (firstPositive == currentPositive)
                         continue;
 
-                    foreach (var singleResult in RareMixedPositiveAndNegativeValues(element, holder))
+                    foreach (var singleResult in RareMixedPositiveAndNegativeValues(context, element, holder))
                     {
                         yield return singleResult;
                     }
@@ -1311,15 +1308,15 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        private IEnumerable<SingleResult> RareMixedPositiveAndNegativeValues(TimeSeriesOperation.IncrementOperation element, SingleResult holder)
+        private IEnumerable<SingleResult> RareMixedPositiveAndNegativeValues(DocumentsOperationContext context, TimeSeriesOperation.IncrementOperation element, SingleResult holder)
         {
             _tempHolder ??= new double[32];
             Array.Copy(element.Values, _tempHolder, element.Values.Length);
-            holder.Tag = TryGetTimedCounterTag(_documentDatabase.DbBase64Id, positive: false);
+            holder.Tag = TryGetTimedCounterTag(context, _documentDatabase.DbBase64Id, positive: false);
 
             for (int j = 0; j < element.Values.Length; j++)
             {
-                if (element.Values[j]>= 0)
+                if (element.Values[j] >= 0)
                 {
                     element.Values[j] = 0;
                 }
@@ -1327,7 +1324,7 @@ namespace Raven.Server.Documents.TimeSeries
 
             yield return holder;
 
-            holder.Tag = TryGetTimedCounterTag(_documentDatabase.DbBase64Id, positive: true);
+            holder.Tag = TryGetTimedCounterTag(context, _documentDatabase.DbBase64Id, positive: true);
             Array.Copy(_tempHolder, element.Values, element.Values.Length);
 
             // to avoid replication loop we will return new increment operation just in case we have non zero values
@@ -1343,7 +1340,7 @@ namespace Raven.Server.Documents.TimeSeries
                     nonZeroValues++;
                 }
             }
-            if(nonZeroValues > 0)
+            if (nonZeroValues > 0)
                 yield return holder;
         }
 
@@ -1356,18 +1353,14 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        private LazyStringValue TryGetTimedCounterTag(string dbId, bool positive)
+        private LazyStringValue TryGetTimedCounterTag(DocumentsOperationContext context, string dbId, bool positive)
         {
-            if (_incrementalPrefixByDbId.ContainsKey(dbId) == false)
-            {
-                _incrementalPrefixByDbId[dbId] = new List<LazyStringValue>()
-                {
-                    _context.GetLazyString(IncrementPrefix + dbId),
-                    _context.GetLazyString(DecrementPrefix + dbId)
-                };
-            }
+            if (_incrementalPrefixByDbId.TryGetValue(dbId, out var values) == false)
+                _incrementalPrefixByDbId[dbId] = values = new[] { IncrementPrefix + dbId, DecrementPrefix + dbId };
 
-            return positive ? _incrementalPrefixByDbId[dbId][0] : _incrementalPrefixByDbId[dbId][1];
+            var value = positive ? values[0] : values[1];
+
+            return context.GetLazyString(value);
         }
 
         private class AppendEnumerator : IEnumerator<SingleResult>
@@ -1413,7 +1406,7 @@ namespace Raven.Server.Documents.TimeSeries
                 if (_incrementalTimeSeries == false && currentTimestamp >= next.Timestamp)
                     throw new InvalidDataException($"The entries of '{_name}' time-series for document '{_documentId}' must be sorted by their timestamps, and cannot contain duplicate timestamps. " +
                                                    $"Got: current '{currentTimestamp:O}', next '{next.Timestamp:O}', make sure your measures have at least 1ms interval.");
-                
+
                 if (_incrementalTimeSeries && currentTimestamp > next.Timestamp)
                     throw new InvalidDataException($"The entries of '{_name}' incremental time-series for document '{_documentId}' must be sorted by their timestamps. " +
                                                    $"Got: current '{currentTimestamp:O}'.");
@@ -1497,9 +1490,9 @@ namespace Raven.Server.Documents.TimeSeries
                                 break;
                             }
 
-                            if (EnsureNumberOfValues(segmentHolder.ReadOnlySegment.NumberOfValues, ref current) && name.StartsWith(IncrementalTimeSeriesPrefix) == false)
+                            if (EnsureNumberOfValues(segmentHolder.ReadOnlySegment.NumberOfValues, ref current) && name.StartsWith(Constants.Headers.IncrementalTimeSeriesPrefix) == false)
                             {
-                                if ( TryAppendToCurrentSegment(context, segmentHolder, appendEnumerator, current, out var newValueFetched))
+                                if (TryAppendToCurrentSegment(context, segmentHolder, appendEnumerator, current, out var newValueFetched))
                                     break;
 
                                 if (newValueFetched)
@@ -1659,7 +1652,7 @@ namespace Raven.Server.Documents.TimeSeries
 
         public bool SplitSegment(
            DocumentsOperationContext context,
-            TimeSeriesSegmentHolder timeSeriesSegment, 
+            TimeSeriesSegmentHolder timeSeriesSegment,
            IEnumerator<SingleResult> reader,
             SingleResult current)
         {
@@ -1880,7 +1873,7 @@ namespace Raven.Server.Documents.TimeSeries
             var compare = localValues.SequenceCompareTo(remote.Values.Span);
             if (compare >= 0)
                 return CompareResult.Local;
-            
+
             return CompareResult.Remote;
         }
 

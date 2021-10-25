@@ -176,7 +176,7 @@ namespace Raven.Server.Documents.Handlers
             var fullResults = GetBoolValueQueryString("full", required: false) ?? false;
 
             bool incrementalTimeSeries = CheckIfIncrementalTs(name);
-            
+
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
@@ -200,7 +200,7 @@ namespace Raven.Server.Documents.Handlers
                     ? new IncludeDocumentsDuringTimeSeriesLoadingCommand(context, documentId, includeDoc, includeTags)
                     : null;
 
-                var rangeResult = incrementalTimeSeries ? 
+                var rangeResult = incrementalTimeSeries ?
                     GetIncrementalTimeSeriesRange(context, documentId, name, from, to, ref start, ref pageSize, includesCommand, fullResults) :
                     GetTimeSeriesRange(context, documentId, name, from, to, ref start, ref pageSize, includesCommand);
 
@@ -218,7 +218,7 @@ namespace Raven.Server.Documents.Handlers
                 long? totalCount = null;
                 if (from <= stats.Start && to >= stats.End)
                 {
-                    totalCount =  stats.Count;
+                    totalCount = stats.Count;
                 }
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -229,7 +229,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private static Dictionary<string, List<TimeSeriesRangeResult>> GetTimeSeriesRangeResults(DocumentsOperationContext context, string documentId, StringValues names, StringValues fromList, StringValues toList, int start, int pageSize, 
+        private static Dictionary<string, List<TimeSeriesRangeResult>> GetTimeSeriesRangeResults(DocumentsOperationContext context, string documentId, StringValues names, StringValues fromList, StringValues toList, int start, int pageSize,
             IncludeDocumentsDuringTimeSeriesLoadingCommand includes, bool returnFullResult = false)
         {
             if (fromList.Count == 0)
@@ -379,7 +379,7 @@ namespace Raven.Server.Documents.Handlers
             return result;
         }
 
-        internal static unsafe TimeSeriesRangeResult GetIncrementalTimeSeriesRange(DocumentsOperationContext context, string docId, string name, DateTime from, DateTime to, 
+        internal static unsafe TimeSeriesRangeResult GetIncrementalTimeSeriesRange(DocumentsOperationContext context, string docId, string name, DateTime from, DateTime to,
             ref int start, ref int pageSize, IncludeDocumentsDuringTimeSeriesLoadingCommand includesCommand = null, bool returnFullResults = false)
         {
             if (pageSize == 0)
@@ -430,7 +430,7 @@ namespace Raven.Server.Documents.Handlers
                     nodeTag = nodeTag + "-" + dbId;
                     var values = singleResult.Values.ToArray();
 
-                    if (incrementalValues.TryGetValue(singleResult.Timestamp.Ticks, out var entry)) 
+                    if (incrementalValues.TryGetValue(singleResult.Timestamp.Ticks, out var entry))
                     {
                         // an entry with this timestamp already exists --> sum values
                         skippedResults++;
@@ -449,7 +449,7 @@ namespace Raven.Server.Documents.Handlers
                         Timestamp = singleResult.Timestamp,
                         Values = singleResult.Values.ToArray(),
                         IsRollup = singleResult.Type == SingleResultType.RolledUp,
-                        NodesValues = returnFullResults ? new Dictionary<string, double[]>(){ [nodeTag] = values } : null
+                        NodeValues = returnFullResults ? new Dictionary<string, double[]>() { [nodeTag] = values } : null
                     };
                 }
 
@@ -511,23 +511,23 @@ namespace Raven.Server.Documents.Handlers
 
             if (returnFullResults == false)
                 return;
-            
-            if (entry.NodesValues.TryGetValue(nodeTag, out var nodeValues))
+
+            if (entry.NodeValues.TryGetValue(nodeTag, out var nodeValues))
             {
-                    if (nodeValues.Length < values.Length) // need to allocate more space for new values
-                    {
-                        for (int i = 0; i < nodeValues.Length; i++)
-                            values[i] += nodeValues[i];
+                if (nodeValues.Length < values.Length) // need to allocate more space for new values
+                {
+                    for (int i = 0; i < nodeValues.Length; i++)
+                        values[i] += nodeValues[i];
 
-                        entry.NodesValues[nodeTag] = values;
-                        return;
-                    }
+                    entry.NodeValues[nodeTag] = values;
+                    return;
+                }
 
-                    for (int i = 0; i < values.Length; i++)
-                        nodeValues[i] += values[i];
+                for (int i = 0; i < values.Length; i++)
+                    nodeValues[i] += values[i];
             }
             else
-                entry.NodesValues[nodeTag] = values;
+                entry.NodeValues[nodeTag] = values;
         }
 
         public static unsafe DateTime ParseDate(string dateStr, string name)
@@ -751,8 +751,8 @@ namespace Raven.Server.Documents.Handlers
                     writer.WritePropertyName(nameof(TimeSeriesEntry.IsRollup));
                     writer.WriteBool(entries[i].IsRollup);
 
-                    if (entries[i].NodesValues != null && entries[i].NodesValues.Count > 0)
-                        WriteNodesValues(writer, entries[i].NodesValues);
+                    if (entries[i].NodeValues != null && entries[i].NodeValues.Count > 0)
+                        WriteNodeValues(writer, entries[i].NodeValues);
                 }
                 writer.WriteEndObject();
             }
@@ -760,14 +760,14 @@ namespace Raven.Server.Documents.Handlers
             writer.WriteEndArray();
         }
 
-        private static void WriteNodesValues(AsyncBlittableJsonTextWriter writer, Dictionary<string, double[]> nodesValues)
+        private static void WriteNodeValues(AsyncBlittableJsonTextWriter writer, Dictionary<string, double[]> nodeValues)
         {
             writer.WriteComma();
-            writer.WritePropertyName(nameof(TimeSeriesEntry.NodesValues));
+            writer.WritePropertyName(nameof(TimeSeriesEntry.NodeValues));
             writer.WriteStartObject();
 
-            int i = nodesValues.Count;
-            foreach (var value in nodesValues)
+            int i = nodeValues.Count;
+            foreach (var value in nodeValues)
             {
                 writer.WriteArray(value.Key, value.Value);
 
@@ -1063,7 +1063,7 @@ namespace Raven.Server.Documents.Handlers
 
                     changes += _operation.Increments.Count;
                 }
-                
+
                 if (_operation.Appends?.Count > 0 == false)
                     return changes;
 

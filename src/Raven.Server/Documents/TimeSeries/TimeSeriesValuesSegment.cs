@@ -95,7 +95,7 @@ namespace Raven.Server.Documents.TimeSeries
 
         private void InvalidCapacity()
         {
-            throw new ArgumentOutOfRangeException($"Maximum capacity for segment is 2KB, but was: " + _capacity);
+            throw new ArgumentOutOfRangeException("Maximum capacity for segment is 2KB, but was: " + _capacity);
         }
 
         private static int GetDataStart(SegmentHeader* header) => sizeof(SegmentHeader) + sizeof(StatefulTimestampValue) * header->NumberOfValues + header->SizeOfTags;
@@ -483,7 +483,7 @@ namespace Raven.Server.Documents.TimeSeries
                     {
                         length--;
                     }
-                    
+
                     yield return new SingleResult
                     {
                         Timestamp = current,
@@ -572,7 +572,7 @@ namespace Raven.Server.Documents.TimeSeries
                     return Span<byte>.Empty;
                 }
 
-                return new Span<byte>(Pointer + 1, Size);
+                return new Span<byte>(Pointer + 1, Size); // take the content without the size byte
             }
 
             public Span<byte> AsSpan()
@@ -626,7 +626,7 @@ namespace Raven.Server.Documents.TimeSeries
                         return false;
 
                     if (_parent.Version == SegmentVersion.V50000 &&  // fix legacy issue RavenDB-15617
-                        previousTimestamp == timestamp) 
+                        previousTimestamp == timestamp)
                         continue;
 
                     return true;
