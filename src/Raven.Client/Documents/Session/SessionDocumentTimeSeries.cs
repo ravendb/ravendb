@@ -28,17 +28,17 @@ namespace Raven.Client.Documents.Session
             _asyncSessionTimeSeries = new AsyncSessionDocumentTimeSeries<TimeSeriesEntry>(session, entity, name);
         }
 
-        void ISessionDocumentAppendTimeSeriesBase.Append(DateTime timestamp, IEnumerable<double> values, string tag = null)
+        void ISessionDocumentAppendTimeSeriesBase.Append(DateTime timestamp, IEnumerable<double> values, string tag)
         {
             _asyncSessionTimeSeries.Append(timestamp, values, tag);
         }
 
-        void ISessionDocumentAppendTimeSeriesBase.Append(DateTime timestamp, double value, string tag = null)
+        void ISessionDocumentAppendTimeSeriesBase.Append(DateTime timestamp, double value, string tag)
         {
             _asyncSessionTimeSeries.Append(timestamp, value, tag);
         }
 
-        void ISessionDocumentTypedAppendTimeSeriesBase<TValues>.Append(DateTime timestamp, TValues value, string tag = null)
+        void ISessionDocumentTypedAppendTimeSeriesBase<TValues>.Append(DateTime timestamp, TValues value, string tag)
         {
             _asyncSessionTimeSeries.Append(timestamp, value, tag);
         }
@@ -98,7 +98,7 @@ namespace Raven.Client.Documents.Session
             return GetInternal(from, to, start, pageSize);
         }
 
-        void ISessionDocumentDeleteTimeSeriesBase.Delete(DateTime? from = null, DateTime? to = null)
+        void ISessionDocumentDeleteTimeSeriesBase.Delete(DateTime? from, DateTime? to)
         {
             _asyncSessionTimeSeries.Delete(from, to);
         }

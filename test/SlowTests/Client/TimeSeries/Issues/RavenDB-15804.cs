@@ -1126,11 +1126,11 @@ namespace SlowTests.Client.TimeSeries.Issues
                     var ts = session.IncrementalTimeSeriesFor("users/karmel", IncrementalTsName).Get(DateTime.MinValue, DateTime.MaxValue).ToList();
                 }
 
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 {
                     var e = Assert.ThrowsAsync<InvalidDataException>(async () =>
                     {
-                        var ts = session.IncrementalTimeSeriesFor("users/karmel", p1.GetTimeSeriesName(IncrementalTsName)).Get();
+                        var ts = await session.IncrementalTimeSeriesFor("users/karmel", p1.GetTimeSeriesName(IncrementalTsName)).GetAsync();
                     });
 
                     await e;
@@ -1321,7 +1321,6 @@ namespace SlowTests.Client.TimeSeries.Issues
                 await EnsureNoReplicationLoop(Server, storeA.Database);
                 await EnsureNoReplicationLoop(Server, storeB.Database);
 
-                var start = 0;
                 var pageSize = 100;
                 var values = storeA.Operations
                     .Send(new GetTimeSeriesOperation("users/ayende", IncrementalTsName, start: 0, pageSize: pageSize / 2, returnFullResults: true));
