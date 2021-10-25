@@ -1,24 +1,27 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
+using Sparrow.Logging;
 
 namespace Raven.Server.Integrations.PostgreSQL
 {
     public class PgServer : IDisposable
     {
+        private readonly Logger _logger = LoggingSource.Instance.GetLogger<PgServer>("Postgres Server");
+
         private readonly RavenServer _server;
         private readonly ConcurrentDictionary<TcpClient, Task> _connections = new();
         private readonly CancellationTokenSource _cts = new();
         private readonly SemaphoreSlim _locker = new SemaphoreSlim(1, 1);
+        private readonly ConcurrentQueue<TcpListener> _listeners = new ConcurrentQueue<TcpListener>();
         private readonly int _processId;
         private readonly int _port;
 
-        private Task _listenTask = Task.CompletedTask;
-        private TcpListener _tcpListener;
         private int _sessionIdentifier;
         private bool _disposed;
         
@@ -59,21 +62,30 @@ namespace Raven.Server.Integrations.PostgreSQL
 
         private void Start()
         {
-            _tcpListener = new TcpListener(IPAddress.Any, _port);
-            _tcpListener.Start();
-
-            _listenTask = ListenToConnectionsAsync();
+            _server.StartTcpListener(ListenToConnections, _port);
 
             Active = true;
         }
 
         private void Stop()
         {
-            _tcpListener.Stop();
             _cts.Cancel();
+
+            foreach (var tcpListener in _listeners)
+            {
+                tcpListener.Stop();
+            }
+            
             foreach (var (_, task) in _connections)
             {
-                task.Wait();
+                try
+                {
+                    task.Wait();
+                }
+                catch (OperationCanceledException)
+                {
+                    // ignore
+                }
             }
 
             Active = false;
@@ -81,11 +93,13 @@ namespace Raven.Server.Integrations.PostgreSQL
 
         public async Task HandleConnection(TcpClient client)
         {
+            int identifier = Interlocked.Increment(ref _sessionIdentifier);
+
             try
             {
                 var session = new PgSession(
                     client,
-                    Interlocked.Increment(ref _sessionIdentifier),
+                    identifier,
                     _processId,
                     _server.ServerStore.DatabasesLandlord,
                     _server.Certificate.Certificate != null,
@@ -96,7 +110,8 @@ namespace Raven.Server.Integrations.PostgreSQL
             }
             catch (Exception e)
             {
-                // TODO: Error handling (won't be needed after integration as Raven.Server has this logic already)
+                if (_logger.IsOperationsEnabled)
+                    _logger.Operations($"Failed to handle Postgres connection (session ID: {identifier})", e);
             }
         }
 
@@ -106,28 +121,44 @@ namespace Raven.Server.Integrations.PostgreSQL
             GC.SuppressFinalize(this);
         }
 
-        private async Task ListenToConnectionsAsync()
+        private void ListenToConnections(TcpListener tcpListener)
         {
-            while (_cts.IsCancellationRequested == false)
+            Task.Factory.StartNew(async () =>
             {
-                TcpClient client;
+                _listeners.Enqueue(tcpListener);
+
+                TcpClient client = null;
+
                 try
                 {
-                    client = await _tcpListener.AcceptTcpClientAsync();
-                }
-                catch (Exception e)
-                {
-                    // TODO: Error handling (won't be needed after integration as Raven.Server has this logic already)
-                    throw;
-                }
+                    while (_cts.IsCancellationRequested == false)
+                    {
+                        try
+                        {
+                            client = await tcpListener.AcceptTcpClientAsync();
+                        }
+                        catch (Exception e)
+                        {
+                            if (_logger.IsOperationsEnabled)
+                                _logger.Operations($"Failed to accept TCP client (port: {((IPEndPoint)tcpListener.LocalEndpoint).Port})", e);
+                        }
 
-                _connections.TryAdd(client, HandleConnection(client));
-            }
+                        _connections.TryAdd(client, HandleConnection(client));
+                    }
+                }
+                finally
+                {
+                    client?.Dispose();
+                }
+            });
         }
 
         internal int GetListenerPort()
         {
-            int port = ((IPEndPoint)_tcpListener.LocalEndpoint).Port;
+            if (_listeners.Count == 0)
+                throw new InvalidOperationException("There is no TCP listener");
+           
+            int port = ((IPEndPoint)_listeners.First().LocalEndpoint).Port;
 
             return port;
         }
@@ -166,15 +197,8 @@ namespace Raven.Server.Integrations.PostgreSQL
             if (_disposed)
                 return;
 
-            if (disposing)
-            {
-                _tcpListener.Stop();
-                _cts.Cancel();
-                foreach (var (_, task) in _connections)
-                {
-                    task.Wait();
-                }
-            }
+            if (disposing) 
+                Stop();
 
             _disposed = true;
         }
