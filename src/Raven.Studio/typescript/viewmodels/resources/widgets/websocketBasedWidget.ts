@@ -2,6 +2,19 @@ import widget = require("viewmodels/resources/widgets/widget");
 import clusterDashboardWebSocketClient = require("common/clusterDashboardWebSocketClient");
 
 abstract class websocketBasedWidget<TData, TConfig = unknown, TState = unknown> extends widget<TConfig, TState> {
+
+    abstract view: { default: string };
+    
+    getView() {
+        if (!this.view) {
+            throw new Error("Looks like you forgot to define view in: " + this.constructor.name);
+        }
+        if (!this.view.default.trim().startsWith("<")) {
+            console.warn("View doesn't start with '<'");
+        }
+        return this.view.default || this.view;
+    }
+    
     abstract onData(nodeTag: string, data: TData): void;
 
     supportedOnNode(targetNodeTag: string, currentServerNodeTag: string): boolean {

@@ -5,6 +5,8 @@ import abstractChartsWebsocketWidget = require("viewmodels/resources/widgets/abs
 
 class indexingWidget extends abstractChartsWebsocketWidget<Raven.Server.Dashboard.Cluster.Notifications.IndexingSpeedPayload, indexingSpeed> {
 
+    view = require("views/resources/widgets/indexingWidget.html");
+    
     indexedPerSecondChart: lineChart;
     mappedPerSecondChart: lineChart;
     reducedPerSecondChart: lineChart;

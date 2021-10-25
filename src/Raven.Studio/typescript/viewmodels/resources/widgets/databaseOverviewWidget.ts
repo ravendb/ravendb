@@ -10,6 +10,8 @@ import databaseOverviewItem = require("models/resources/widgets/databaseOverview
 
 class databaseOverviewWidget extends abstractDatabaseAndNodeAwareTableWidget<Raven.Server.Dashboard.Cluster.Notifications.DatabaseOverviewPayload,
     perNodeStatItems<databaseOverviewItem>, databaseOverviewItem> {
+
+    view = require("views/resources/widgets/databaseOverviewWidget.html");
     
     getType(): Raven.Server.Dashboard.Cluster.ClusterDashboardNotificationType {
         return "DatabaseOverview";

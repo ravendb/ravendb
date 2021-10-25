@@ -10,6 +10,8 @@ interface trafficState {
 
 class trafficWidget extends abstractChartsWebsocketWidget<Raven.Server.Dashboard.Cluster.Notifications.TrafficWatchPayload, serverTraffic, void, trafficState> {
 
+    view = require("views/resources/widgets/trafficWidget.html");
+    
     showWritesDetails = ko.observable<boolean>(false);
     showDataWrittenDetails = ko.observable<boolean>(false);
     
