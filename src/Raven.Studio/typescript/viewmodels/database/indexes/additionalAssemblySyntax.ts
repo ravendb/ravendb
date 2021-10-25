@@ -5,6 +5,7 @@ import { highlight, languages } from "prismjs";
 class additionalAssemblySyntax extends dialogViewModelBase {
 
     view = require("views/database/indexes/additionalAssemblySyntax.html");
+    additionalTextView = require("views/database/indexes/additionalTabsCommonText.html");
 
     dialogContainer: Element;
 

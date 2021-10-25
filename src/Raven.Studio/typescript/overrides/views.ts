@@ -8,16 +8,11 @@ export function overrideViews() {
     const locateView = viewLocator.locateView;
     viewLocator.locateView = function(viewOrUrlOrId: any, area: string) {
         // HTML here will be passed into `processMarkup`
-        if ("string" === typeof viewOrUrlOrId && $.trim(viewOrUrlOrId).charAt(0) === '<') {
-            return system.defer(function(dfd: DurandalDeferred<any>) {
-                const element = viewEngine.processMarkup(viewOrUrlOrId);
-                dfd.resolve(element.cloneNode(true));
-            });
-        }
+        const possibleViewToUse = viewOrUrlOrId && viewOrUrlOrId.default ? viewOrUrlOrId.default : viewOrUrlOrId;
         
-        if (viewOrUrlOrId.default && "string" === typeof viewOrUrlOrId.default && $.trim(viewOrUrlOrId.default).charAt(0) === '<') {
+        if ("string" === typeof possibleViewToUse && $.trim(possibleViewToUse).charAt(0) === '<') {
             return system.defer(function(dfd: DurandalDeferred<any>) {
-                const element = viewEngine.processMarkup(viewOrUrlOrId.default);
+                const element = viewEngine.processMarkup(possibleViewToUse);
                 dfd.resolve(element.cloneNode(true));
             });
         }
