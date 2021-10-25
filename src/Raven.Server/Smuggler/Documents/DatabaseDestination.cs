@@ -1109,7 +1109,7 @@ namespace Raven.Server.Smuggler.Documents
                     progress.ClientConfigurationUpdated = true;
                 }
 
-                if (databaseRecord.Integrations?.PostgreSql != null && databaseRecordItemType.HasFlag(DatabaseRecordItemType.PostreSQLIntegration))
+                if (databaseRecord.Integrations?.PostgreSql != null && databaseRecordItemType.HasFlag(DatabaseRecordItemType.PostgreSQLIntegration))
                 {
                     if (_log.IsInfoEnabled)
                         _log.Info("Configuring PostgreSQL integration from smuggler");
