@@ -325,7 +325,7 @@ namespace Raven.Client.Documents.Subscriptions
             return tcpCommand.Result;
         }
 
-        private async ValueTask<int> ReadServerResponseAndGetVersionAsync(JsonOperationContext context, AsyncBlittableJsonTextWriter writer, Stream stream, string destinationUrl)
+        private async ValueTask<TcpConnectionHeaderMessage.NegotiationResponse> ReadServerResponseAndGetVersionAsync(JsonOperationContext context, AsyncBlittableJsonTextWriter writer, Stream stream, string destinationUrl)
         {
             //Reading reply from server
             using (var response = await context.ReadForMemoryAsync(stream, "Subscription/tcp-header-response").ConfigureAwait(false))
@@ -335,7 +335,11 @@ namespace Raven.Client.Documents.Subscriptions
                 switch (reply.Status)
                 {
                     case TcpConnectionStatus.Ok:
-                        return reply.Version;
+                        return new TcpConnectionHeaderMessage.NegotiationResponse
+                        {
+                            Version = reply.Version, 
+                            DataCompression = reply.DataCompression
+                        };
 
                     case TcpConnectionStatus.AuthorizationFailed:
                         throw new AuthorizationException($"Cannot access database {_dbName} because " + reply.Message);
@@ -343,7 +347,11 @@ namespace Raven.Client.Documents.Subscriptions
                     case TcpConnectionStatus.TcpVersionMismatch:
                         if (reply.Version != TcpNegotiation.OutOfRangeStatus)
                         {
-                            return reply.Version;
+                            return new TcpConnectionHeaderMessage.NegotiationResponse
+                            {
+                                Version = reply.Version,
+                                DataCompression = reply.DataCompression
+                            };
                         }
                         //Kindly request the server to drop the connection
                         await SendDropMessageAsync(context, writer, reply).ConfigureAwait(false);
@@ -352,7 +360,12 @@ namespace Raven.Client.Documents.Subscriptions
                     case TcpConnectionStatus.InvalidNetworkTopology:
                         throw new InvalidNetworkTopologyException($"Failed to connect to url {destinationUrl} because: {reply.Message}");
                 }
-                return reply.Version;
+
+                return new TcpConnectionHeaderMessage.NegotiationResponse
+                {
+                    Version = reply.Version,
+                    DataCompression = reply.DataCompression
+                };
             }
         }
 

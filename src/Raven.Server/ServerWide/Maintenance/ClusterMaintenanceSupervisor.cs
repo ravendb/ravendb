@@ -441,7 +441,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 return await TcpNegotiation.NegotiateProtocolVersionAsync(context, stream, parameters);
             }
 
-            private async ValueTask<int> SupervisorReadResponseAndGetVersionAsync(JsonOperationContext ctx, AsyncBlittableJsonTextWriter writer, Stream stream, string url)
+            private async ValueTask<TcpConnectionHeaderMessage.NegotiationResponse> SupervisorReadResponseAndGetVersionAsync(JsonOperationContext ctx, AsyncBlittableJsonTextWriter writer, Stream stream, string url)
             {
                 using (var responseJson = await ctx.ReadForMemoryAsync(stream, _readStatusUpdateDebugString + "/Read-Handshake-Response"))
                 {
@@ -449,15 +449,20 @@ namespace Raven.Server.ServerWide.Maintenance
                     switch (headerResponse.Status)
                     {
                         case TcpConnectionStatus.Ok:
-                            return headerResponse.Version;
-
+                            return new TcpConnectionHeaderMessage.NegotiationResponse
+                            {
+                                Version = headerResponse.Version
+                            };
                         case TcpConnectionStatus.AuthorizationFailed:
                             throw new AuthorizationException(
                                 $"Node with ClusterTag = {ClusterTag} replied to initial handshake with authorization failure {headerResponse.Message}");
                         case TcpConnectionStatus.TcpVersionMismatch:
                             if (headerResponse.Version != TcpNegotiation.OutOfRangeStatus)
                             {
-                                return headerResponse.Version;
+                                return new TcpConnectionHeaderMessage.NegotiationResponse
+                                {
+                                    Version = headerResponse.Version
+                                };
                             }
                             //Kindly request the server to drop the connection
                             await WriteOperationHeaderToRemoteAsync(writer, headerResponse.Version, drop: true);
