@@ -392,7 +392,7 @@ namespace Raven.Server.Smuggler.Documents
 
                             _writer.WriteStartObject();
 
-                            if (databaseRecordItemType.Contain(DatabaseRecordItemType.PostreSQLIntegration))
+                            if (databaseRecordItemType.Contain(DatabaseRecordItemType.PostgreSQLIntegration))
                             {
                                 _writer.WritePropertyName(nameof(databaseRecord.Integrations.PostgreSql));
                                 WritePostgreSqlConfiguration(databaseRecord.Integrations.PostgreSql);
