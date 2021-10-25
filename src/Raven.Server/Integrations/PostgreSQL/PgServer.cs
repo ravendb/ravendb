@@ -31,12 +31,17 @@ namespace Raven.Server.Integrations.PostgreSQL
             _processId = Process.GetCurrentProcess().Id;
             _port = _server.Configuration.Integrations.PostgreSql.Port;
 
-            _server.ServerStore.LicenseManager.LicenseChanged += OnLicenseChanged;
+            _server.ServerStore.LicenseManager.LicenseChanged += HandleServerActivation;
         }
 
         public bool Active { get; private set; }
 
         public void Execute()
+        {
+            HandleServerActivation();
+        }
+
+        private void HandleServerActivation()
         {
             if (_server.Configuration.Integrations.PostgreSql.Enabled == false)
                 return;
@@ -45,7 +50,20 @@ namespace Raven.Server.Integrations.PostgreSQL
 
             try
             {
-                var activate = _server.ServerStore.LicenseManager.CanUsePostgreSqlIntegration(withNotification: true);
+                bool activate = false;
+
+                if (_server.ServerStore.LicenseManager.CanUsePowerBi(withNotification: false))
+                {
+                    // TODO are - check is once again with notification enabled on first powerbi query
+                    activate = true;
+                }
+                else if (_server.ServerStore.LicenseManager.CanUsePostgreSqlIntegration(withNotification: false))
+                {
+                    // TODO arek - assert experimental feature
+
+                    activate = true;
+                }
+
                 if (activate)
                 {
                     if (Active)
@@ -53,6 +71,13 @@ namespace Raven.Server.Integrations.PostgreSQL
 
                     Start();
                 }
+                else
+                {
+                    Stop();
+                }
+            }
+            catch (ObjectDisposedException)
+            {
             }
             finally
             {
@@ -69,6 +94,9 @@ namespace Raven.Server.Integrations.PostgreSQL
 
         private void Stop()
         {
+            if (Active == false)
+                return;
+
             _cts.Cancel();
 
             foreach (var tcpListener in _listeners)
@@ -161,35 +189,6 @@ namespace Raven.Server.Integrations.PostgreSQL
             int port = ((IPEndPoint)_listeners.First().LocalEndpoint).Port;
 
             return port;
-        }
-
-        private void OnLicenseChanged()
-        {
-            if (_server.Configuration.Integrations.PostgreSql.Enabled == false)
-                return;
-
-            _locker.Wait();
-
-            try
-            {
-                var activate = _server.ServerStore.LicenseManager.CanUsePostgreSqlIntegration(withNotification: true);
-                if (activate)
-                {
-                    if (Active == false)
-                        Start();
-                }
-                else
-                {
-                    Stop();
-                }
-            }
-            catch (ObjectDisposedException)
-            {
-            }
-            finally
-            {
-                _locker.Release();
-            }
         }
 
         private void Dispose(bool disposing)

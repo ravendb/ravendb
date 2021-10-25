@@ -1501,7 +1501,7 @@ namespace Raven.Server.Commercial
 
             var value = LicenseStatus.HasPostgreSqlIntegration;
             if (withNotification == false)
-                return false;
+                return value;
 
             if (value)
             {
@@ -1511,6 +1511,26 @@ namespace Raven.Server.Commercial
 
             const string details = "Your current license doesn't include the PostgreSql integration feature";
             GenerateLicenseLimit(LimitType.PostgreSqlIntegration, details, addNotification: true);
+            return false;
+        }
+
+        public bool CanUsePowerBi(bool withNotification)
+        {
+            if (IsValid(out _) == false)
+                return false;
+
+            var value = LicenseStatus.HasPowerBI;
+            if (withNotification == false)
+                return value;
+
+            if (value)
+            {
+                DismissLicenseLimit(LimitType.PowerBI);
+                return true;
+            }
+
+            const string details = "Your current license doesn't include the Power BI feature";
+            GenerateLicenseLimit(LimitType.PowerBI, details, addNotification: true);
             return false;
         }
 
