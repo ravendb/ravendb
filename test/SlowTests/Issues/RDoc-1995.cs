@@ -3,7 +3,6 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
 using Raven.Server.Smuggler.Migration;
@@ -37,7 +36,7 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                await Migrate(store1, store2);
+                await Migrate(store1, store2, DatabaseItemType.Documents | DatabaseItemType.CompareExchange);
 
                 using (var session = store2.OpenAsyncSession(new SessionOptions
                 {
@@ -62,7 +61,7 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                await Migrate(store1, store2);
+                await Migrate(store1, store2, DatabaseItemType.Documents | DatabaseItemType.CompareExchange);
 
                 using (var session = store2.OpenAsyncSession(new SessionOptions
                 {
@@ -79,30 +78,70 @@ namespace SlowTests.Issues
         }
 
         [Fact]
+        public async Task Can_Live_Import_Documents_Incremental()
+        {
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
+            {
+                const string id = "test";
+
+                using (var session = store1.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Grisha" }, id);
+                    await session.SaveChangesAsync();
+                }
+
+                await Migrate(store1, store2, DatabaseItemType.Documents);
+                await Migrate(store1, store2, DatabaseItemType.Documents);
+
+                using (var session = store2.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>(id);
+                    Assert.NotNull(user);
+                }
+
+                using (var session = store2.OpenAsyncSession())
+                {
+                    session.Delete(id);
+                    await session.SaveChangesAsync();
+                }
+
+                await Migrate(store1, store2, DatabaseItemType.Documents);
+
+                using (var session = store2.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>(id);
+                    Assert.Null(user);
+                }
+            }
+        }
+
+        [Fact]
         public async Task Can_Live_Import_CompareExchange_Incremental()
         {
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
-                const string id1 = "test1";
+                const string id = "test";
 
                 using (var session = store1.OpenAsyncSession(new SessionOptions
                 {
                     TransactionMode = TransactionMode.ClusterWide
                 }))
                 {
-                    session.Advanced.ClusterTransaction.CreateCompareExchangeValue(id1, 3);
+                    session.Advanced.ClusterTransaction.CreateCompareExchangeValue(id, 3);
                     await session.SaveChangesAsync();
                 }
 
-                await Migrate(store1, store2);
+                await Migrate(store1, store2, DatabaseItemType.CompareExchange);
+                await Migrate(store1, store2, DatabaseItemType.CompareExchange);
 
                 using (var session = store2.OpenAsyncSession(new SessionOptions
                 {
                     TransactionMode = TransactionMode.ClusterWide
                 }))
                 {
-                    var cmpValue = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<int>(id1);
+                    var cmpValue = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<int>(id);
                     Assert.NotNull(cmpValue);
                 }
 
@@ -111,49 +150,25 @@ namespace SlowTests.Issues
                     TransactionMode = TransactionMode.ClusterWide
                 }))
                 {
-                    var cmpValue = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<int>(id1);
-                    session.Advanced.ClusterTransaction.DeleteCompareExchangeValue(id1, cmpValue.Index);
+                    var cmpValue = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<int>(id);
+                    session.Advanced.ClusterTransaction.DeleteCompareExchangeValue(id, cmpValue.Index);
                     await session.SaveChangesAsync();
                 }
 
-                await Migrate(store1, store2);
+                await Migrate(store1, store2, DatabaseItemType.CompareExchange);
 
                 using (var session = store2.OpenAsyncSession(new SessionOptions
                 {
                     TransactionMode = TransactionMode.ClusterWide
                 }))
                 {
-                    var cmpValue = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<int>(id1);
+                    var cmpValue = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<int>(id);
                     Assert.Null(cmpValue);
-                }
-
-                const string id2 = "test2";
-                using (var session = store1.OpenAsyncSession(new SessionOptions
-                {
-                    TransactionMode = TransactionMode.ClusterWide
-                }))
-                {
-                    session.Advanced.ClusterTransaction.CreateCompareExchangeValue(id2, 5);
-                    await session.SaveChangesAsync();
-                }
-
-                await Migrate(store1, store2);
-
-                using (var session = store2.OpenAsyncSession(new SessionOptions
-                {
-                    TransactionMode = TransactionMode.ClusterWide
-                }))
-                {
-                    var cmpValue1 = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<int>(id1);
-                    Assert.Null(cmpValue1);
-
-                    var cmpValue2 = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<int>(id2);
-                    Assert.NotNull(cmpValue2);
                 }
             }
         }
 
-        private async Task Migrate(DocumentStore store1, DocumentStore store2)
+        private async Task Migrate(DocumentStore store1, DocumentStore store2, DatabaseItemType operateOnTypes)
         {
             var migrate = new Migrator(
                 new DatabasesMigrationConfiguration
@@ -161,7 +176,11 @@ namespace SlowTests.Issues
                     ServerUrl = Server.WebUrl,
                     Databases = new List<DatabaseMigrationSettings>
                     {
-                        new DatabaseMigrationSettings {DatabaseName = store1.Database, OperateOnTypes = DatabaseItemType.Documents,}
+                        new DatabaseMigrationSettings
+                        {
+                            DatabaseName = store1.Database,
+                            OperateOnTypes = DatabaseItemType.Documents
+                        }
                     }
                 }, Server.ServerStore);
 
@@ -169,7 +188,11 @@ namespace SlowTests.Issues
 
             var operationId =
                 migrate.StartMigratingSingleDatabase(
-                    new DatabaseMigrationSettings {DatabaseName = store1.Database, OperateOnTypes = DatabaseItemType.Documents | DatabaseItemType.CompareExchange,},
+                    new DatabaseMigrationSettings
+                    {
+                        DatabaseName = store1.Database,
+                        OperateOnTypes = operateOnTypes,
+                    },
                     GetDocumentDatabaseInstanceFor(store2).Result);
 
             WaitForValue(() =>

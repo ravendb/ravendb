@@ -84,7 +84,7 @@ namespace Raven.Server.Smuggler.Migration
 
                     var importInfo = new ImportInfo
                     {
-                        LastEtag = smugglerResult.GetLastEtag() + 1,
+                        LastEtag = Math.Max(previousImportInfo?.LastEtag ?? 0, smugglerResult.GetLastEtag() + 1),
                         LastRaftIndex = Math.Max(previousImportInfo?.LastRaftIndex ?? 0, smugglerResult.GetLastRaftIndex() + 1),
                         ServerUrl = Options.ServerUrl,
                         DatabaseName = Options.DatabaseName
