@@ -304,7 +304,24 @@ namespace Raven.Server.Documents.Subscriptions
 
             return true;
         }
-        
+
+        public bool DropSingleSubscriptionConnection(long subscriptionId, long? connectionId, SubscriptionException ex)
+        {
+            if (_subscriptions.TryRemove(subscriptionId, out SubscriptionConnectionsState subscriptionConnectionsState) == false)
+                return false;
+
+            var connectionToDrop = subscriptionConnectionsState.GetConnections().FirstOrDefault(conn => conn.ConnectionId == connectionId);
+            if (connectionToDrop == null)
+                return false;
+            
+            subscriptionConnectionsState.DropSingleConnection(connectionToDrop);
+            if (_logger.IsInfoEnabled)
+                _logger.Info(
+                    $"Connection with id {connectionId} in subscription with id '{subscriptionId}' and name '{subscriptionConnectionsState.SubscriptionName}' was dropped. Reason: {ex.Message}");
+
+            return true;
+        }
+
         public IEnumerable<SubscriptionGeneralDataAndStats> GetAllSubscriptions(TransactionOperationContext serverStoreContext, bool history, int start, int take)
         {
             foreach (var keyValue in ClusterStateMachine.ReadValuesStartingWith(serverStoreContext, SubscriptionState.SubscriptionPrefix(_db.Name)))
