@@ -16,7 +16,7 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
             {
                 // first, delete all the rows that might already exist there
 
-                result.Add(GenerateDeleteItemsCommandText(records.IndexName.ToLower(), records.IndexIdProperty,
+                result.Add(GenerateDeleteItemsCommandText(records.IndexName.ToLower(), records.DocumentIdProperty,
                     records.Deletes));
             }
 

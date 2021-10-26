@@ -184,8 +184,8 @@ loadToOrders(orderData);
                         Name = "myFirstEtl",
                         ElasticIndexes =
                         {
-                            new ElasticSearchIndex {IndexName = OrderIndexName, IndexIdProperty = "Id"},
-                            new ElasticSearchIndex {IndexName = OrderLinesIndexName, IndexIdProperty = "OrderId"},
+                            new ElasticSearchIndex {IndexName = OrderIndexName, DocumentIdProperty = "Id"},
+                            new ElasticSearchIndex {IndexName = OrderLinesIndexName, DocumentIdProperty = "OrderId"},
                         },
                         Transforms =
                         {
@@ -682,7 +682,7 @@ loadToOrders(orderData);
                     {
                         ConnectionStringName = "test",
                         Name = "myFirstEtl",
-                        ElasticIndexes = { new ElasticSearchIndex { IndexName = "Users", IndexIdProperty = "UserId" }, },
+                        ElasticIndexes = { new ElasticSearchIndex { IndexName = "Users", DocumentIdProperty = "UserId" }, },
                         Transforms =
                         {
                             new Transformation
@@ -776,9 +776,9 @@ loadToOrders(orderData);
                                 ConnectionStringName = "simulate",
                                 ElasticIndexes =
                                 {
-                                    new ElasticSearchIndex { IndexName = "Orders", IndexIdProperty = "Id" },
-                                    new ElasticSearchIndex { IndexName = "OrderLines", IndexIdProperty = "OrderId" },
-                                    new ElasticSearchIndex { IndexName = "NotUsedInScript", IndexIdProperty = "OrderId" },
+                                    new ElasticSearchIndex { IndexName = "Orders", DocumentIdProperty = "Id" },
+                                    new ElasticSearchIndex { IndexName = "OrderLines", DocumentIdProperty = "OrderId" },
+                                    new ElasticSearchIndex { IndexName = "NotUsedInScript", DocumentIdProperty = "OrderId" },
                                 },
                                 Transforms =
                                 {
@@ -856,9 +856,9 @@ loadToOrders(orderData);
                                 ConnectionStringName = "simulate",
                                 ElasticIndexes =
                                 {
-                                    new ElasticSearchIndex { IndexName = "Orders", IndexIdProperty = "Id" },
-                                    new ElasticSearchIndex { IndexName = "OrderLines", IndexIdProperty = "OrderId" },
-                                    new ElasticSearchIndex { IndexName = "NotUsedInScript", IndexIdProperty = "OrderId" },
+                                    new ElasticSearchIndex { IndexName = "Orders", DocumentIdProperty = "Id" },
+                                    new ElasticSearchIndex { IndexName = "OrderLines", DocumentIdProperty = "OrderId" },
+                                    new ElasticSearchIndex { IndexName = "NotUsedInScript", DocumentIdProperty = "OrderId" },
                                 },
                                 Transforms =
                                 {
@@ -927,9 +927,9 @@ loadToOrders(orderData);
                     ConnectionStringName = connectionStringName,
                     ElasticIndexes =
                     {
-                        new ElasticSearchIndex {IndexName = $"Orders", IndexIdProperty = "Id"},
-                        new ElasticSearchIndex {IndexName = $"OrderLines", IndexIdProperty = "OrderId"},
-                        new ElasticSearchIndex {IndexName = $"Users", IndexIdProperty = "UserId"},
+                        new ElasticSearchIndex {IndexName = $"Orders", DocumentIdProperty = "Id"},
+                        new ElasticSearchIndex {IndexName = $"OrderLines", DocumentIdProperty = "OrderId"},
+                        new ElasticSearchIndex {IndexName = $"Users", DocumentIdProperty = "UserId"},
                     },
                     Transforms =
                     {
