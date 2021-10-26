@@ -396,7 +396,8 @@ namespace Raven.Server.Documents.Subscriptions
                     new SubscriptionConnectionDetails
                     {
                         ClientUri = connection.ClientUri,
-                        ConnectionId = connection.ConnectionId
+                        ConnectionId = connection.ConnectionId,
+                        Strategy = connection.Strategy
                     });
             }
 
