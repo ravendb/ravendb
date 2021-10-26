@@ -43,7 +43,6 @@ export const ignoredTokens: number[] = [
     RqlParser.NOT,
     RqlParser.NULL,
     RqlParser.TRUE,
-    RqlParser.JS_FUNCTION_DECLARATION,
     RqlParser.TIMESERIES_FUNCTION_DECLARATION
 ];
 

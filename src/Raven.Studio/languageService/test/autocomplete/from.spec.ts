@@ -25,6 +25,22 @@ describe("can complete from", function () {
             .not.toInclude("Orders");
     });
     
+    describe("declare function", function() {
+        it("can complete declare function - empty query", async () => {
+            const suggestions = await autocomplete(`|`);
+            const declare = suggestions.find(x => x.value.startsWith("declare "));
+            expect(declare)
+                .toBeTruthy();
+        });
+
+        it("can complete declare function - before from stmt", async () => {
+            const suggestions = await autocomplete(`|  from 'Orders' `);
+            const declare = suggestions.find(x => x.value.startsWith("declare "));
+            expect(declare)
+                .toBeTruthy();
+        });
+    });
+    
     describe("from collection", function () {
         
         it("can complete @all_docs", async function() {

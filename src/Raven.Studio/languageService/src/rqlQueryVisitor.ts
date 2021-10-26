@@ -2,16 +2,21 @@ import { AbstractParseTreeVisitor } from "antlr4ts/tree";
 import { BaseRqlParserVisitor } from "./generated/BaseRqlParserVisitor";
 import {
     CollectionByIndexContext,
-    CollectionByNameContext,
+    CollectionByNameContext, JsFunctionContext,
 } from "./generated/BaseRqlParser";
 import { QuerySource } from "./providers/baseProvider";
 import { AutocompleteUtils } from "./autocompleteUtils";
+
+export interface JsFunctionDeclaration {
+    name: string;
+}
 
 export class RqlQueryMetaInfo {
     fromAlias: string; 
     queryType: rqlQueryType;
     querySourceType: QuerySource;
     querySourceName: string;
+    jsFunctions: JsFunctionDeclaration[];
 }
 
 export class RqlQueryVisitor extends AbstractParseTreeVisitor<RqlQueryMetaInfo> implements BaseRqlParserVisitor<RqlQueryMetaInfo> {
@@ -23,6 +28,7 @@ export class RqlQueryVisitor extends AbstractParseTreeVisitor<RqlQueryMetaInfo> 
         this.meta = new RqlQueryMetaInfo();
         this.meta.queryType = queryType;
         this.meta.querySourceType = "unknown";
+        this.meta.jsFunctions = [];
     }
 
     visitCollectionByIndex(ctx: CollectionByIndexContext): RqlQueryMetaInfo {
@@ -32,6 +38,16 @@ export class RqlQueryVisitor extends AbstractParseTreeVisitor<RqlQueryMetaInfo> 
         }
         this.meta.querySourceType = "index";
         this.meta.querySourceName = AutocompleteUtils.unquote(ctx.indexName().text);
+        return this.visitChildren(ctx);
+    }
+    
+    visitJsFunction(ctx: JsFunctionContext): RqlQueryMetaInfo {
+        for (const functionName of ctx.JFN_WORD()) {
+            this.meta.jsFunctions.push({
+                name: functionName.text
+            });
+        }
+        
         return this.visitChildren(ctx);
     }
 

@@ -21,6 +21,22 @@ describe("can complete order by ", function () {
         expect(companyField)
             .toBeTruthy();
     });
+
+    it("can complete order by random()", async () => {
+        const suggestions = await autocomplete("from Orders order by |");
+
+        const randomField = suggestions.find(x => x.value.startsWith("random()"));
+        expect(randomField)
+            .toBeTruthy();
+    });
+
+    it("can complete order by score()", async () => {
+        const suggestions = await autocomplete("from Orders order by |");
+
+        const scoreField = suggestions.find(x => x.value.startsWith("score()"));
+        expect(scoreField)
+            .toBeTruthy();
+    });
     
     it("can complete next keywords after field", async () => {
         const suggestions = await autocomplete("from Orders order by Company |");
