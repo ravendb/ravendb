@@ -2,7 +2,9 @@
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Pipelines;
+using System.Net.Security;
 using System.Net.Sockets;
+using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,6 +17,7 @@ namespace Raven.Server.Integrations.PostgreSQL
     public class PgSession
     {
         private readonly TcpClient _client;
+        private readonly RavenServer.CertificateHolder _serverCertificate;
         private readonly Func<Stream, Task<(Stream, X509Certificate2)>> _authenticateAsServerIfSslNeeded;
         private readonly int _identifier;
         private readonly int _processId;
@@ -23,8 +26,8 @@ namespace Raven.Server.Integrations.PostgreSQL
         private readonly CancellationToken _token;
         private Dictionary<string, string> _clientOptions;
 
-        public PgSession(
-            TcpClient client,
+        public PgSession(TcpClient client,
+            RavenServer.CertificateHolder serverCertificate,
             int identifier,
             int processId,
             DatabasesLandlord databasesLandlord,
@@ -33,6 +36,7 @@ namespace Raven.Server.Integrations.PostgreSQL
             CancellationToken token)
         {
             _client = client;
+            _serverCertificate = serverCertificate;
             _identifier = identifier;
             _processId = processId;
             _databasesLandlord = databasesLandlord;
@@ -42,29 +46,45 @@ namespace Raven.Server.Integrations.PostgreSQL
             _clientOptions = null;
         }
 
-        private async Task HandleInitialMessage(Stream stream, PipeReader reader, PipeWriter writer, MessageBuilder messageBuilder)
+        private async Task<Stream> HandleInitialMessage(Stream stream, PipeReader reader, PipeWriter writer, MessageBuilder messageBuilder)
         {
+            var streamToUse = stream;
+
             var messageReader = new MessageReader();
 
             var initialMessage = await messageReader.ReadInitialMessage(reader, _token);
 
             if (initialMessage is SSLRequest)
             {
-                X509Certificate2 certificate;
+                //X509Certificate2 certificate;
 
-                (stream, certificate) = await _authenticateAsServerIfSslNeeded(stream);
+                //(stream, certificate) = await _authenticateAsServerIfSslNeeded(stream);
 
-                if (certificate == null)
+                //if (certificate == null)
+                //{
+                //    await writer.WriteAsync(messageBuilder.SSLResponse(false), _token);
+                //    initialMessage = await messageReader.ReadInitialMessage(reader, _token);
+                //}
+                //else
+                //{
+                //    await writer.WriteAsync(messageBuilder.SSLResponse(true), _token);
+                //    var encryptedReader = PipeReader.Create(stream);
+                //    initialMessage = await messageReader.ReadInitialMessage(encryptedReader, _token);
+                //}
+
+                await writer.WriteAsync(messageBuilder.SSLResponse(true), _token);
+                var sslStream = new SslStream(stream, false, (sender, certificate, chain, errors) => true);
+                await sslStream.AuthenticateAsServerAsync(new SslServerAuthenticationOptions
                 {
-                    await writer.WriteAsync(messageBuilder.SSLResponse(false), _token);
-                    initialMessage = await messageReader.ReadInitialMessage(reader, _token);
-                }
-                else
-                {
-                    await writer.WriteAsync(messageBuilder.SSLResponse(true), _token);
-                    var encryptedReader = PipeReader.Create(stream);
-                    initialMessage = await messageReader.ReadInitialMessage(encryptedReader, _token);
-                }
+                    ServerCertificate = _serverCertificate.Certificate,
+                    ClientCertificateRequired = false,
+                    EnabledSslProtocols = SslProtocols.Ssl3 | SslProtocols.Tls11 | SslProtocols.Tls12 | SslProtocols.Tls13
+                }, _token);
+
+                streamToUse = sslStream;
+
+                var encryptedReader = PipeReader.Create(sslStream);
+                initialMessage = await messageReader.ReadInitialMessage(encryptedReader, _token);
             }
 
             switch (initialMessage)
@@ -77,33 +97,39 @@ namespace Raven.Server.Integrations.PostgreSQL
                         PgSeverity.Fatal,
                         PgErrorCodes.ProtocolViolation,
                         "SSLRequest received twice"), _token);
-                    return;
+                    return streamToUse;
                 case Cancel cancel: 
                     // TODO: Support Cancel message
                     await writer.WriteAsync(messageBuilder.ErrorResponse(
                         PgSeverity.Fatal,
                         PgErrorCodes.FeatureNotSupported,
                         "Cancel message support not implemented."), _token);
-                    return;
+                    return streamToUse;
                 default:
                     await writer.WriteAsync(messageBuilder.ErrorResponse(
                         PgSeverity.Fatal,
                         PgErrorCodes.ProtocolViolation,
                         "Invalid first message received"), _token);
-                    return;
+                    return streamToUse;
             }
+
+            return streamToUse;
         }
 
         public async Task Run()
         {
             using var _ = _client;
             using var messageBuilder = new MessageBuilder();
-            await using var stream = _client.GetStream();
+            //todo pfyasu using below
+            Stream stream = _client.GetStream();
 
             var reader = PipeReader.Create(stream);
             var writer = PipeWriter.Create(stream);
 
-            await HandleInitialMessage(stream, reader, writer, messageBuilder);
+            stream = await HandleInitialMessage(stream, reader, writer, messageBuilder);
+
+            reader = PipeReader.Create(stream);
+            writer = PipeWriter.Create(stream);
 
             if (_clientOptions == null) //TODO pfyasu maybe unused when cancel message will be implemented
                 return;
