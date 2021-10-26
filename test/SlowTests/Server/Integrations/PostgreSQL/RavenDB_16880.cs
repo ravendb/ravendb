@@ -17,6 +17,7 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.ServerWide.Operations.Integrations.PostgreSQL;
+using Raven.Server;
 using Raven.Server.Config;
 using Xunit;
 using Xunit.Abstractions;
@@ -30,6 +31,9 @@ namespace SlowTests.Server.Integrations.PostgreSQL
             { RavenConfiguration.GetKey(x => x.Integrations.PostgreSql.Enabled), "true"},
             { RavenConfiguration.GetKey(x => x.Integrations.PostgreSql.Port), "0"} // a free port will be allocated so tests can run in parallel
         };
+
+        private const string correctUid = "root";
+        private const string correctPassword = "test";
 
         public RavenDB_16880(ITestOutputHelper output) : base(output)
         {
@@ -52,7 +56,7 @@ namespace SlowTests.Server.Integrations.PostgreSQL
                         .Query<Employee>()
                         .ToListAsync();
 
-                    var result = await Act(store, query, Server.PostgresServer.GetListenerPort());
+                    var result = await Act(store, query, Server);
 
                     Assert.NotNull(result);
                     Assert.NotEmpty(result.Rows);
@@ -78,7 +82,7 @@ namespace SlowTests.Server.Integrations.PostgreSQL
                         .AsyncRawQuery<JObject>(query)
                         .ToArrayAsync();
 
-                    var result = await Act(store, query, Server.PostgresServer.GetListenerPort());
+                    var result = await Act(store, query, Server);
 
                     Assert.NotNull(result);
                     Assert.NotEmpty(result.Rows);
@@ -105,7 +109,7 @@ namespace SlowTests.Server.Integrations.PostgreSQL
                 var collections = await store.Maintenance
                     .SendAsync(new GetCollectionStatisticsOperation());
 
-                var result = await Act(store, postgresQuery, Server.PostgresServer.GetListenerPort());
+                var result = await Act(store, postgresQuery, Server);
 
                 Assert.NotNull(result);
                 Assert.NotEmpty(result.Columns);
@@ -128,7 +132,7 @@ namespace SlowTests.Server.Integrations.PostgreSQL
             {
                 CreateNorthwindDatabase(store);
 
-                var result = await Act(store, query, Server.PostgresServer.GetListenerPort());
+                var result = await Act(store, query, Server);
 
                 Assert.NotNull(result);
                 Assert.NotEmpty(result.Columns);
@@ -153,7 +157,7 @@ namespace SlowTests.Server.Integrations.PostgreSQL
             {
                 CreateNorthwindDatabase(store);
 
-                var result = await Act(store, query, Server.PostgresServer.GetListenerPort());
+                var result = await Act(store, query, Server);
 
                 Assert.NotNull(result);
                 Assert.NotEmpty(result.Columns);
@@ -198,7 +202,7 @@ namespace SlowTests.Server.Integrations.PostgreSQL
                         .AsyncRawQuery<JObject>(query)
                         .ToArrayAsync();
 
-                    var result = await Act(store, query, Server.PostgresServer.GetListenerPort());
+                    var result = await Act(store, query, Server);
 
                     Assert.NotNull(result);
                     Assert.NotEmpty(result.Rows);
@@ -243,7 +247,7 @@ namespace SlowTests.Server.Integrations.PostgreSQL
                         .AsyncRawQuery<JObject>(query)
                         .ToArrayAsync();
 
-                    var result = await Act(store, query, Server.PostgresServer.GetListenerPort());
+                    var result = await Act(store, query, Server);
 
                     Assert.NotNull(result);
                     Assert.NotEmpty(result.Rows);
@@ -326,13 +330,28 @@ namespace SlowTests.Server.Integrations.PostgreSQL
             {
                 CreateNorthwindDatabase(store);
 
+                store.Maintenance.Send(new ConfigurePostgreSqlOperation(new PostgreSqlConfiguration
+                {
+                    Authentication = new PostgreSqlAuthenticationConfiguration()
+                    {
+                        Users = new List<PostgreSqlUser>()
+                        {
+                            new PostgreSqlUser()
+                            {
+                                Username = correctUid,
+                                Password = correctPassword
+                            }
+                        }
+                    }
+                }));
+
                 using (var session = store.OpenAsyncSession())
                 {
                     var employees = await session
                         .Query<Employee>()
                         .ToListAsync();
 
-                    var result = await Act(store, query, Server.PostgresServer.GetListenerPort());
+                    var result = await Act(store, query, Server);
 
                     Assert.NotNull(result);
                     Assert.NotEmpty(result.Rows);
@@ -364,17 +383,20 @@ namespace SlowTests.Server.Integrations.PostgreSQL
             return dt;
         }
 
-        private string GetConnectionString(DocumentStore store, int postgresPort)
+        private string GetConnectionString(DocumentStore store, RavenServer server)
         {
-            const string correctUid = "root";
-            const string correctPassword = "test";
-
             var uri = new Uri(store.Urls.First());
 
-            var host = uri.Host;
+            var host = server.GetListenIpAddresses(uri.Host).First().ToString();
             var database = store.Database;
+            var port = server.PostgresServer.GetListenerPort();
 
-            var connectionString = $"Host={host};Port={postgresPort};Database={database};Uid={correctUid};Password={correctPassword};";
+            string connectionString;
+
+            if (server.Certificate.Certificate == null)
+                connectionString = $"Host={host};Port={port};Database={database};Uid={correctUid};";
+            else
+                connectionString = $"Host={host};Port={port};Database={database};Uid={correctUid};Password={correctPassword};SSL Mode=Prefer;Trust Server Certificate=true";
 
             return connectionString;
         }
@@ -388,9 +410,9 @@ namespace SlowTests.Server.Integrations.PostgreSQL
         }
 
 
-        private async Task<DataTable> Act(DocumentStore store, string query, int postgresPort)
+        private async Task<DataTable> Act(DocumentStore store, string query, RavenServer server)
         {
-            var connectionString = GetConnectionString(store, postgresPort);
+            var connectionString = GetConnectionString(store, server);
 
             await using var connection = new NpgsqlConnection(connectionString);
             await connection.OpenAsync();
