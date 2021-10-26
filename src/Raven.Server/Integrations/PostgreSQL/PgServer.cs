@@ -127,6 +127,7 @@ namespace Raven.Server.Integrations.PostgreSQL
             {
                 var session = new PgSession(
                     client,
+                    _server.Certificate,
                     identifier,
                     _processId,
                     _server.ServerStore.DatabasesLandlord,
