@@ -13,7 +13,7 @@ class deleteIntegrationsCredentialsCommand extends commandBase {
             username: this.username
         };
         
-        const url = endpoints.databases.postgreSQL.adminIntegrationPostgresqlUser + this.urlEncodeArgs(args);
+        const url = endpoints.databases.postgreSqlIntegration.adminIntegrationsPostgresqlUser + this.urlEncodeArgs(args);
 
         return this.del<void>(url, null, this.db)
             .done(() => this.reportSuccess(`Successfully deleted credentials for user - ${this.username}`))
