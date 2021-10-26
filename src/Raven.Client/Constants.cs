@@ -206,6 +206,8 @@ namespace Raven.Client
             public class Collections
             {
                 public const string AllDocumentsCollection = "@all_docs";
+
+                public const string EmptyCollection = "@empty";
             }
 
             public class Indexing
