@@ -67,39 +67,38 @@ namespace Raven.Server.Documents.Replication
                     Flags = flags
                 };
 
-                if (CheckCollectionEquality(documentsContext, id, conflictedDoc.Collection, lastModifiedTicks, doc, changeVector, flags))
-                    return;
-
-                if (TryResolveConflictByScript(
-                    documentsContext,
-                    conflictedDoc))
-                    return;
-
-                if (_database.ReplicationLoader.ConflictSolverConfig?.ResolveToLatest ?? true)
+                if (CheckCollectionEquality(documentsContext, id, conflictedDoc.Collection) == false)
                 {
-                    var conflicts = new List<DocumentConflict>
+                    if (TryResolveConflictByScript(
+                        documentsContext,
+                        conflictedDoc))
+                        return;
+
+                    if (_database.ReplicationLoader.ConflictSolverConfig?.ResolveToLatest ?? true)
                     {
-                        conflictedDoc.Clone()
-                    };
-                    conflicts.AddRange(_database.DocumentsStorage.ConflictsStorage.GetConflictsFor(documentsContext, id));
+                        var conflicts = new List<DocumentConflict>
+                        {
+                            conflictedDoc.Clone()
+                        };
+                        conflicts.AddRange(_database.DocumentsStorage.ConflictsStorage.GetConflictsFor(documentsContext, id));
 
-                    var localDocumentTuple = _database.DocumentsStorage.GetDocumentOrTombstone(documentsContext, id, false);
-                    var local = DocumentConflict.From(documentsContext, localDocumentTuple.Document) ?? DocumentConflict.From(localDocumentTuple.Tombstone);
-                    if (local != null)
-                        conflicts.Add(local);
+                        var localDocumentTuple = _database.DocumentsStorage.GetDocumentOrTombstone(documentsContext, id, false);
+                        var local = DocumentConflict.From(documentsContext, localDocumentTuple.Document) ?? DocumentConflict.From(localDocumentTuple.Tombstone);
+                        if (local != null)
+                            conflicts.Add(local);
 
-                    var resolved = _conflictResolver.ResolveToLatest(conflicts);
-                    _conflictResolver.PutResolvedDocument(documentsContext, resolved, resolvedToLatest: true, conflictedDoc);
+                        var resolved = _conflictResolver.ResolveToLatest(conflicts);
+                        _conflictResolver.PutResolvedDocument(documentsContext, resolved, resolvedToLatest: true, conflictedDoc);
 
-                    return;
+                        return;
+                    }
                 }
 
                 _database.DocumentsStorage.ConflictsStorage.AddConflict(documentsContext, id, lastModifiedTicks, doc, changeVector, collection, flags);
             }
         }
 
-        private bool CheckCollectionEquality(DocumentsOperationContext documentsContext, string id, string collection, long lastModifiedTicks, BlittableJsonReaderObject doc,
-            string changeVector, DocumentFlags flags)
+        private bool CheckCollectionEquality(DocumentsOperationContext documentsContext, string id, string collection)
         {
             var existing = _database.DocumentsStorage.GetDocumentOrTombstone(documentsContext, id, throwOnConflict: false);
 
@@ -115,7 +114,6 @@ namespace Raven.Server.Documents.Replication
                     return false;
             }
 
-            _database.DocumentsStorage.ConflictsStorage.AddConflict(documentsContext, id, lastModifiedTicks, doc, changeVector, collection, flags);
             return true;
         }
 
