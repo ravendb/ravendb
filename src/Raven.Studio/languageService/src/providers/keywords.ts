@@ -51,11 +51,30 @@ const specialFunctions: Pick<autoCompleteWordList, "value" | "caption">[] = [
     {
         value: "exact(",
         caption: "exact(expr)"
+    },
+    {
+        value: "regex(",
+        caption: "regex(field, pattern)"
+    }, 
+    {
+        value: "lucene(",
+        caption: "lucene(field, whereClause, exact = false)"
+    },
+    {
+        value: "exists(", 
+        caption: "exists(field)"
+    },
+    {
+        value: "proximity(",
+        caption: "proximity(whereClause, proximity)"
     }
 ]
 
 const alreadyHandledTokenTypes: number[] = [
     RqlParser.MATH,
+    RqlParser.BETWEEN,
+    RqlParser.IN, 
+    RqlParser.ALL,
     RqlParser.EQUAL,
     RqlParser.METADATA,
     RqlParser.AS,
@@ -66,6 +85,7 @@ const alreadyHandledTokenTypes: number[] = [
     RqlParser.DISTINCT,
     RqlParser.UPDATE,
     RqlParser.JS_SELECT,
+    RqlParser.JS_FUNCTION_DECLARATION,
     ...rootKeywords
 ] 
 
@@ -194,6 +214,36 @@ export class AutocompleteKeywords extends BaseAutocompleteProvider implements Au
         }
     }
 
+    static handleInOperator(): autoCompleteWordList {
+        return {
+            value: "in ()", 
+            caption: "in ()",
+            meta: AUTOCOMPLETE_META.keyword,
+            score: AUTOCOMPLETE_SCORING.keyword,
+            snippet: `in (\${1}) `
+        }
+    }
+
+    static handleBetweenOperator(): autoCompleteWordList {
+        return {
+            value: "between ",
+            caption: "between",
+            meta: AUTOCOMPLETE_META.keyword,
+            score: AUTOCOMPLETE_SCORING.keyword,
+            snippet: `between \${1} and \${2} `
+        }
+    }
+
+    static handleAllOperator(): autoCompleteWordList {
+        return {
+            value: "all in ()", 
+            caption: "all in (...)",
+            meta: AUTOCOMPLETE_META.keyword,
+            score: AUTOCOMPLETE_SCORING.keyword,
+            snippet: `all in (\${1}) `
+        }
+    }
+
     static handleDistinct(): autoCompleteWordList {
         return {
             value: "distinct ",
@@ -208,7 +258,23 @@ export class AutocompleteKeywords extends BaseAutocompleteProvider implements Au
             value: "update ",
             caption: "update",
             score: AUTOCOMPLETE_SCORING.keyword,
-            meta: AUTOCOMPLETE_META.keyword
+            meta: AUTOCOMPLETE_META.keyword,
+            snippet: `update {
+    \${1}        
+}`
+        }
+    }
+    
+    static jsFunctionDeclaration(): autoCompleteWordList {
+        return {
+            caption: "declare function", 
+            value: "declare ", 
+            score: AUTOCOMPLETE_SCORING.function, 
+            meta: AUTOCOMPLETE_META.function, 
+            snippet: `declare function \${1:Name}() {
+    \${0}
+}
+`
         }
     }
     
@@ -302,6 +368,22 @@ export class AutocompleteKeywords extends BaseAutocompleteProvider implements Au
 
         if (candidates.tokens.has(RqlParser.UPDATE) && ctx.queryMetaInfo.queryType === "Update") {
             completions.push(AutocompleteKeywords.handleUpdate());
+        }
+        
+        if (candidates.tokens.has(RqlParser.JS_FUNCTION_DECLARATION)) {
+            completions.push(AutocompleteKeywords.jsFunctionDeclaration());
+        }
+
+        if (candidates.tokens.has(RqlParser.IN)) {
+            completions.push(AutocompleteKeywords.handleInOperator());
+        }
+        
+        if (candidates.tokens.has(RqlParser.ALL)) {
+            completions.push(AutocompleteKeywords.handleAllOperator());
+        }
+
+        if (candidates.tokens.has(RqlParser.BETWEEN)) {
+            completions.push(AutocompleteKeywords.handleBetweenOperator());
         }
         
         completions.push(...AutocompleteKeywords.handleRootKeywords(ctx));

@@ -185,6 +185,50 @@ export class AutoCompleteFields extends BaseAutocompleteProvider implements Auto
         ];
     }
     
+    private collectJsFunctions(rule: CandidateRule, fieldPrefix: string, ctx: AutocompleteContext): autoCompleteWordList[] {
+        if (fieldPrefix) {
+            return [];
+        }
+
+        // only suggest in select stmt
+        if (!rule.ruleList.find(x => x === RqlParser.RULE_selectStatement)) {
+            return [];
+        }
+        
+        return ctx.queryMetaInfo.jsFunctions.map(x => ({
+            caption: x.name,
+            value: x.name,
+            meta: AUTOCOMPLETE_META.function,
+            score: AUTOCOMPLETE_SCORING.function
+        }));
+    }
+    
+    private collectOrderByField(rule: CandidateRule, fieldPrefix: string, ctx: AutocompleteContext): autoCompleteWordList[] {
+        if (fieldPrefix) {
+            return [];
+        }
+
+        // only suggest in order by
+        if (!rule.ruleList.find(x => x === RqlParser.RULE_orderByStatement)) {
+            return [];
+        }
+
+        return [
+            {
+                value: "random()",
+                caption: "random()",
+                meta: AUTOCOMPLETE_META.function,
+                score: AUTOCOMPLETE_SCORING.function
+            },
+            {
+                value: "score()",
+                caption: "score()",
+                meta: AUTOCOMPLETE_META.function,
+                score: AUTOCOMPLETE_SCORING.function
+            }
+        ];
+    }
+    
     async collectAsync(ctx: AutocompleteContext): Promise<autoCompleteWordList[]> {
         const { candidates, scanner, writtenText, queryMetaInfo } = ctx;
         if (candidates.rules.has(RqlParser.RULE_variable)) {
@@ -207,9 +251,7 @@ export class AutoCompleteFields extends BaseAutocompleteProvider implements Auto
 
             const shouldAddPrefix = !writtenText && !fieldPrefix && (prefix || queryMetaInfo.fromAlias || "");
             const effectivePrefixToUse = prefix || queryMetaInfo.fromAlias || "";
-            
-            const groupByFunctions = this.collectGroupByFields(rule, fieldPrefix, ctx);
-            
+
             const filteredFields = filterTokens(writtenText, fields).map(field => ({
                 meta: AUTOCOMPLETE_META.field,
                 score: AUTOCOMPLETE_SCORING.field,
@@ -217,13 +259,25 @@ export class AutoCompleteFields extends BaseAutocompleteProvider implements Auto
                 value: shouldAddPrefix ? effectivePrefixToUse + "." + field : field
             }));
             
+            const groupByFunctions = this.collectGroupByFields(rule, fieldPrefix, ctx);
             const filteredGroupByFunctions = filterTokens(writtenText, groupByFunctions, x => x.value);
             
             const includeFunctions = this.collectIncludeFields(rule, fieldPrefix, ctx);
-            
             const filteredIncludeFunctions = filterTokens(writtenText, includeFunctions, x => x.value);
             
-            return [...filteredFields, ...filteredGroupByFunctions, ...filteredIncludeFunctions];
+            const orderByFunctions = this.collectOrderByField(rule, fieldPrefix, ctx);
+            const filteredOrderByFunctions = filterTokens(writtenText, orderByFunctions, x => x.value);
+            
+            const declaredJsFunctions = this.collectJsFunctions(rule, fieldPrefix, ctx);
+            const filteredJsFunctions = filterTokens(writtenText, declaredJsFunctions, x => x.value);
+            
+            return [
+                ...filteredFields, 
+                ...filteredGroupByFunctions, 
+                ...filteredIncludeFunctions, 
+                ...filteredOrderByFunctions, 
+                ...filteredJsFunctions
+            ];
         }
         
         return [];

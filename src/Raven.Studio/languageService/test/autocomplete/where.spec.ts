@@ -2,7 +2,10 @@
 import {AUTOCOMPLETE_META} from "../../src/providers/common";
 import {EmptyMetadataProvider} from "./EmptyMetadataProvider";
 
-const specialFunctions = ["fuzzy", "search", "facet", "boost", "startsWith", "endsWith", "moreLikeThis", "intersect", "exact"];
+const specialFunctions = [
+    "fuzzy", "search", "facet", "boost", "startsWith", "lucene", "exists",
+    "endsWith", "moreLikeThis", "intersect", "exact", "regex", "proximity"
+];
 
 describe("can complete where", function () {
     it("can complete special functions - collection has fields", async () => {
