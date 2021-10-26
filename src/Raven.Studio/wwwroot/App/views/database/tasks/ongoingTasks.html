@@ -274,8 +274,8 @@
                                 </div>
                             </div>
                             <div class="collapse panel-addon" data-bind="collapse: showDetails">
-                                <div class="padding flex-horizontal">
-                                    <div class="flex-grow">
+                                <div class="padding flex-horizontal flex-wrap">
+                                    <div>
                                         <div class="list-properties">
                                             <div class="property-item">
                                                 <div class="property-name">Task Status:</div>
@@ -307,7 +307,7 @@
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="flex-noshrink">
+                                    <div class="flex-noshrink flex-grow flex-start text-right">
                                         <button class="btn backup-now" data-bind="click: backupNow, enable: isBackupNowEnabled(), visible: isBackupNowVisible(),
                                              css: { 'btn-default': !neverBackedUp(), 'btn-info': backupNowInProgress, 'btn-spinner': backupNowInProgress, 'btn-warning': !backupNowInProgress() && neverBackedUp() },
                                              attr: { 'title':  disabledBackupNowReason() || 'Click to backup the database now' }">
@@ -346,8 +346,8 @@
                                 </div>
                             </div>
                             <div class="collapse panel-addon" data-bind="collapse: showDetails">
-                                <div class="padding flex-horizontal">
-                                    <div class="flex-grow">
+                                <div class="padding flex-horizontal flex-wrap">
+                                    <div>
                                         <div class="list-properties">
                                             <div class="property-item">
                                                 <div class="property-name">Task Status:</div>
@@ -389,7 +389,7 @@
                                                 </div>
                                         </div>
                                     </div>
-                                    <div>
+                                    <div class="flex-noshrink flex-grow flex-start text-right">
                                         <button class="btn btn-default" data-bind="click: refreshSubscriptionInfo" title="Refresh info"><i class="icon-refresh"></i></button>
                                     </div>
                                 </div>
