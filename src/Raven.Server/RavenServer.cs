@@ -2224,7 +2224,10 @@ namespace Raven.Server
             {
                 [nameof(TcpConnectionHeaderResponse.Status)] = status.ToString(),
                 [nameof(TcpConnectionHeaderResponse.Version)] = version,
-                [nameof(TcpConnectionHeaderResponse.DataCompression)] = dataCompression
+                [nameof(TcpConnectionHeaderResponse.LicensedFeatures)] = new DynamicJsonValue
+                {
+                    [nameof(TcpConnectionHeaderResponse.LicensedFeatures.DataCompression)] = dataCompression
+                }
             };
 
             if (error != null)

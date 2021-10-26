@@ -176,6 +176,20 @@ namespace Raven.Client.ServerWide.Tcp
                 ProtocolVersion = version;
             }
 
+            internal SupportedFeatures(SupportedFeatures source)
+            {
+                ProtocolVersion = source.ProtocolVersion;
+                Ping = source.Ping;
+                None = source.None;
+                Drop = source.Drop;
+                Subscription = source.Subscription;
+                Cluster = source.Cluster;
+                Heartbeats = source.Heartbeats;
+                TestConnection = source.TestConnection;
+                Replication = source.Replication;
+                DataCompression = source.DataCompression;
+            }
+
             public PingFeatures Ping { get; set; }
             public NoneFeatures None { get; set; }
             public DropFeatures Drop { get; set; }
@@ -469,9 +483,13 @@ namespace Raven.Client.ServerWide.Tcp
         {
             public int Version;
 
-            public bool DataCompression;
+            public LicensedFeatures LicensedFeatures;
         }
 
+        public class LicensedFeatures
+        {
+            public bool DataCompression;
+        }
 
         public static SupportedStatus OperationVersionSupported(OperationTypes operationType, int version, out int current)
         {

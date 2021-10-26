@@ -769,7 +769,7 @@ namespace Raven.Server.Documents.Replication
                         return new TcpConnectionHeaderMessage.NegotiationResponse
                         {
                             Version = headerResponse.Version,
-                            DataCompression = headerResponse.DataCompression
+                            LicensedFeatures = headerResponse.LicensedFeatures
                         };
 
                     case TcpConnectionStatus.AuthorizationFailed:
@@ -779,8 +779,8 @@ namespace Raven.Server.Documents.Replication
                         {
                             return new TcpConnectionHeaderMessage.NegotiationResponse
                             {
-                                Version = headerResponse.Version, 
-                                DataCompression = headerResponse.DataCompression
+                                Version = headerResponse.Version,
+                                LicensedFeatures = headerResponse.LicensedFeatures
                             };
                         }
 

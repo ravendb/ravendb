@@ -338,7 +338,7 @@ namespace Raven.Client.Documents.Subscriptions
                         return new TcpConnectionHeaderMessage.NegotiationResponse
                         {
                             Version = reply.Version, 
-                            DataCompression = reply.DataCompression
+                            LicensedFeatures = reply.LicensedFeatures
                         };
 
                     case TcpConnectionStatus.AuthorizationFailed:
@@ -350,7 +350,7 @@ namespace Raven.Client.Documents.Subscriptions
                             return new TcpConnectionHeaderMessage.NegotiationResponse
                             {
                                 Version = reply.Version,
-                                DataCompression = reply.DataCompression
+                                LicensedFeatures = reply.LicensedFeatures
                             };
                         }
                         //Kindly request the server to drop the connection
@@ -364,7 +364,7 @@ namespace Raven.Client.Documents.Subscriptions
                 return new TcpConnectionHeaderMessage.NegotiationResponse
                 {
                     Version = reply.Version,
-                    DataCompression = reply.DataCompression
+                    LicensedFeatures = reply.LicensedFeatures
                 };
             }
         }

@@ -31,7 +31,7 @@ namespace Raven.Server.ServerWide.Tcp.Sync
                     SendTcpVersionInfo(context, writer, parameters, current);
                     var response = parameters.ReadResponseAndGetVersionCallback(context, writer, stream, parameters.DestinationUrl);
                     var version = response.Version;
-                    dataCompression = response.DataCompression;
+                    dataCompression = response.LicensedFeatures?.DataCompression ?? false;
 
                     if (Log.IsInfoEnabled)
                     {
@@ -63,9 +63,11 @@ namespace Raven.Server.ServerWide.Tcp.Sync
                 }
 
                 var supportedFeatures = TcpConnectionHeaderMessage.GetSupportedFeaturesFor(parameters.Operation, current);
-                supportedFeatures.DataCompression = dataCompression;
 
-                return supportedFeatures;
+                return new TcpConnectionHeaderMessage.SupportedFeatures(supportedFeatures)
+                {
+                    DataCompression = dataCompression
+                };
             }
         }
 
