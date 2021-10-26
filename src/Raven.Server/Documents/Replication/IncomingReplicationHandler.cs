@@ -14,6 +14,7 @@ using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
+using Raven.Client.Exceptions.Documents;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
 using Raven.Server.Documents.TcpHandlers;
@@ -1400,9 +1401,15 @@ namespace Raven.Server.Documents.Replication
                                         if (resolvedDocument != null)
                                         {
                                             AttachmentsStorage.AssertAttachments(document, item.Flags);
-
-                                            database.DocumentsStorage.Put(context, item.Id, null, resolvedDocument, item.LastModifiedTicks,
-                                                rcvdChangeVector, flags, NonPersistentDocumentFlags.FromReplication);
+                                            try
+                                            {
+                                                database.DocumentsStorage.Put(context, item.Id, null, resolvedDocument, item.LastModifiedTicks,
+                                                    rcvdChangeVector, flags, NonPersistentDocumentFlags.FromReplication);
+                                            }
+                                            catch (DocumentCollectionMismatchException)
+                                            {
+                                                goto case ConflictStatus.Conflict;
+                                            }
                                         }
                                         else
                                         {
