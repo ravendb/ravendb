@@ -67,6 +67,9 @@ namespace Raven.Server.Documents.Replication
                     Flags = flags
                 };
 
+                if (CheckCollectionEquality(documentsContext, id, conflictedDoc.Collection, lastModifiedTicks, doc, changeVector, flags))
+                    return;
+
                 if (TryResolveConflictByScript(
                     documentsContext,
                     conflictedDoc))
@@ -93,6 +96,27 @@ namespace Raven.Server.Documents.Replication
 
                 _database.DocumentsStorage.ConflictsStorage.AddConflict(documentsContext, id, lastModifiedTicks, doc, changeVector, collection, flags);
             }
+        }
+
+        private bool CheckCollectionEquality(DocumentsOperationContext documentsContext, string id, string collection, long lastModifiedTicks, BlittableJsonReaderObject doc,
+            string changeVector, DocumentFlags flags)
+        {
+            var existing = _database.DocumentsStorage.GetDocumentOrTombstone(documentsContext, id, throwOnConflict: false);
+
+            if (existing.Document != null)
+            {
+                if (!existing.Document.TryGetMetadata(out BlittableJsonReaderObject metadata) ||
+                    !metadata.TryGetMember(Client.Constants.Documents.Metadata.Collection, out object res) || collection == res.ToString())
+                    return false;
+            }
+            else
+            {
+                if (existing.Tombstone.Collection == collection)
+                    return false;
+            }
+
+            _database.DocumentsStorage.ConflictsStorage.AddConflict(documentsContext, id, lastModifiedTicks, doc, changeVector, collection, flags);
+            return true;
         }
 
         public static void AssertChangeVectorNotNull(string conflictedChangeVector)
