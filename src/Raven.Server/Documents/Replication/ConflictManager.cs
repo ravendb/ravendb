@@ -104,17 +104,26 @@ namespace Raven.Server.Documents.Replication
 
             if (existing.Document != null)
             {
-                if (existing.Document.TryGetMetadata(out BlittableJsonReaderObject metadata) == false ||
-                    metadata.TryGetMember(Client.Constants.Documents.Metadata.Collection, out object res) == false||
-                    string.Equals(collection,res.ToString(), StringComparison.OrdinalIgnoreCase))
+                if (existing.Document.TryGetMetadata(out BlittableJsonReaderObject metadata) == false)
                     return true;
+                metadata.TryGetMember(Client.Constants.Documents.Metadata.Collection, out object res);
+                return res == null ?
+                    string.Equals(collection, Client.Constants.Documents.Collections.EmptyCollection, StringComparison.OrdinalIgnoreCase) :
+                    string.Equals(collection, res.ToString(), StringComparison.OrdinalIgnoreCase);
             }
-            else
+            if (existing.Tombstone != null)
             {
                 if (string.Equals(existing.Tombstone.Collection,collection, StringComparison.OrdinalIgnoreCase))
                     return true;
+                if (existing.Tombstone.Collection == null)
+                    return string.Equals(collection, Client.Constants.Documents.Collections.EmptyCollection, StringComparison.OrdinalIgnoreCase);
             }
-
+            else
+            {
+                var conflicts = _database.DocumentsStorage.ConflictsStorage.GetConflictsFor(documentsContext, id);
+                //compare to the original document
+                return string.Equals(conflicts.First().Collection, collection, StringComparison.OrdinalIgnoreCase);
+            }
             return false;
         }
 
