@@ -358,10 +358,7 @@ This edge-case has a very slim chance of happening, but still we should not igno
 
         private static Query MaybeCacheQuery(Index index, Query query)
         {
-            if (index.DocumentDatabase.Configuration.Core.FeaturesAvailability != FeaturesAvailability.Experimental)
-                return query;
-            
-            if (index.Configuration.QueryClauseCacheSize.GetValue(SizeUnit.Bytes) == 0) // disabled
+            if (index.Configuration.QueryClauseCacheDisabled)
                 return query;
             return new CachingQuery(query, index, query.ToString());
         }

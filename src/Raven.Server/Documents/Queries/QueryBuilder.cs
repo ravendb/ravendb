@@ -475,9 +475,9 @@ namespace Raven.Server.Documents.Queries
             }
 
             var ticksAligned = ticks - (ticks % TimeSpan.TicksPerDay);
-            if (ticksAligned == ticks) // aligned already on a day boundary
+            if (ticksAligned == ticks ||                      // aligned already on a day boundary
+                index.Configuration.QueryClauseCacheDisabled) // if query clause cache disabled, no point in segmenting query
                 return TranslateOperationOnLong(index, luceneFieldName, ticks, @where.Operator);
-
             var bq = new BooleanQuery();
 
             switch(@where.Operator){
@@ -516,12 +516,17 @@ namespace Raven.Server.Documents.Queries
 
                     if (TryUseTime(index, fieldName, valueFirst, valueSecond, exact, out var ticksFirst, out var ticksSecond))
                     {
-                        return TranslateDateTimeBetween(index, be, fieldName, ticksFirst, ticksSecond);
+                        betweenQuery = index.Configuration.QueryClauseCacheDisabled ?
+                            LuceneQueryHelper.Between(index, luceneFieldName, ticksFirst, be.MinInclusive, ticksSecond, be.MaxInclusive) :
+                            TranslateDateTimeBetween(index, be, fieldName, ticksFirst, ticksSecond);
                     }
-
-                    var valueFirstAsString = GetValueAsString(valueFirst);
-                    var valueSecondAsString = GetValueAsString(valueSecond);
-                    betweenQuery = LuceneQueryHelper.Between(index, luceneFieldName, termType, valueFirstAsString, be.MinInclusive, valueSecondAsString, be.MaxInclusive, exact);
+                    else
+                    {
+                        var valueFirstAsString = GetValueAsString(valueFirst);
+                        var valueSecondAsString = GetValueAsString(valueSecond);
+                        betweenQuery = LuceneQueryHelper.Between(index, luceneFieldName, termType, valueFirstAsString, be.MinInclusive, valueSecondAsString,
+                            be.MaxInclusive, exact);
+                    }
                     break;
                 case LuceneFieldType.Long:
                     var valueFirstAsLong = (long)valueFirst;

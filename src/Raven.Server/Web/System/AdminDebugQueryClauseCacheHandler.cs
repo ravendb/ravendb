@@ -14,7 +14,7 @@ namespace Raven.Server.Web.System
 {
     public class AdminDebugQueryClauseCacheHandler : RequestHandler
     {
-        [RavenAction("/admin/debug/lucene/query-clause-cache", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
+        [RavenAction("/admin/indexes/lucene/query-clause-cache", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
         public async Task QueryClauseCache()
         {
             var entries = new DynamicJsonArray();

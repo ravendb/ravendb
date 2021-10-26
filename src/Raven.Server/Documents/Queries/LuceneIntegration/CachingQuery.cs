@@ -11,6 +11,7 @@ using Sparrow;
 using Sparrow.Collections;
 using Sparrow.LowMemory;
 using Sparrow.Threading;
+using Index = Raven.Server.Documents.Indexes.Index;
 using MemoryCache = Raven.Server.Utils.MemoryCache;
 
 namespace Raven.Server.Documents.Queries.LuceneIntegration
@@ -74,7 +75,7 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
         
         public class IndexReaderCachedQueries
         {
-            public SizeLimitedConcurrentDictionary<QueryCacheKey, DateTime> PreviousClauses = new(500);
+            public SizeLimitedConcurrentDictionary<QueryCacheKey, DateTime> PreviousClauses;
             public ConcurrentSet<string> CachedQueries = new();
             public MemoryCache Cache;
             // This is globally unique, but this value is per reader, so we 
@@ -82,9 +83,10 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
             public string UniqueId;
             public WeakReference WeakSelf;
 
-            public IndexReaderCachedQueries()
+            public IndexReaderCachedQueries(Index index)
             {
                 UniqueId = Guid.NewGuid().ToString();
+                PreviousClauses = new(index.Configuration.QueryClauseCacheRepeatedQueriesCount);
                 WeakSelf = new(this);
             }
 
@@ -166,7 +168,7 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
                 var clauseCache = _parent._index.DocumentDatabase.ServerStore.QueryClauseCache;
                 if (CacheByReader.TryGetValue(reader, out IndexReaderCachedQueries cachedQueries) == false)
                 {
-                    cachedQueries = CacheByReader.GetValue(reader, _ => new IndexReaderCachedQueries
+                    cachedQueries = CacheByReader.GetValue(reader, _ => new IndexReaderCachedQueries(_parent._index)
                     {
                         Cache = clauseCache,
                     });

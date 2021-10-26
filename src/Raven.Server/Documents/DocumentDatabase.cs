@@ -48,7 +48,9 @@ using Sparrow.Json.Sync;
 using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Server;
+using Sparrow.Server.Json.Sync;
 using Sparrow.Server.Meters;
+using Sparrow.Server.Utils;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron;
@@ -117,8 +119,6 @@ namespace Raven.Server.Documents
                 if (configuration.Initialized == false)
                     throw new InvalidOperationException("Cannot create a new document database instance without initialized configuration");
 
-                
-                
                 if (Configuration.Core.RunInMemory == false)
                 {
                     _addToInitLog("Creating db.lock file");

@@ -30,7 +30,8 @@ namespace Raven.Server.Config.Categories
         {
             _root = root;
 
-            QueryClauseCacheSize = new Size(PlatformDetails.Is32Bits ? 32 : 1024, SizeUnit.Megabytes);
+            QueryClauseCacheDisabled = root.Core.FeaturesAvailability != FeaturesAvailability.Experimental;
+            QueryClauseCacheSize = PlatformDetails.Is32Bits ? new Size(32, SizeUnit.Megabytes) : (MemoryInformation.TotalPhysicalMemory / 10);
             MaximumSizePerSegment = new Size(PlatformDetails.Is32Bits ? 128 : 1024, SizeUnit.Megabytes);
             LargeSegmentSizeToMerge = new Size(PlatformDetails.Is32Bits ? 16 : 32, SizeUnit.Megabytes);
 
@@ -153,26 +154,38 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.MapTimeoutInSec", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public TimeSetting MapTimeout { get; protected set; }
 
-        [Description("EXPERT: Maximum size that the query clause cache will utilize for caching partial query clasues, this value is global for the server," +
-                     " but can be set to 0 to disable query clause caching on a particular database or index")]
+        [Description("EXPERT: Maximum size that the query clause cache will utilize for caching partial query clasues, defaults to 10% of the system memory on 64 bits machines.")]
         [DefaultValue(DefaultValueSetInConstructor)]
         [SizeUnit((SizeUnit.Megabytes))]
         [IndexUpdateType(IndexUpdateType.Refresh)]
-        [ConfigurationEntry("Indexing.QueryClauseCacheSizeInMb", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
+        [ConfigurationEntry("Indexing.QueryClauseCache.SizeInMb", ConfigurationEntryScope.ServerWideOnly)]
         public Size QueryClauseCacheSize { get; protected set; }
+        
+        [Description("EXPERT: Disable the query clause cache for a server, database or a single index.")]
+        [DefaultValue(DefaultValueSetInConstructor)]
+        [IndexUpdateType(IndexUpdateType.Refresh)]
+        [ConfigurationEntry("Indexing.QueryClauseCache.Disabled", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
+        public bool QueryClauseCacheDisabled { get; protected set; }
 
         [Description("EXPERT: Frequency to scan the query clause cache for expired values")]
         [DefaultValue(180)]
         [TimeUnit(TimeUnit.Seconds)]
         [IndexUpdateType(IndexUpdateType.Refresh)]
-        [ConfigurationEntry("Indexing.QueryClauseCacheExpirationScanFrequencyInSeconds", ConfigurationEntryScope.ServerWideOnly)]
+        [ConfigurationEntry("Indexing.QueryClauseCache.ExpirationScanFrequencyInSec", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting QueryClauseCacheExpirationScanFrequency { get; protected set; }
         
-        [Description("EXPERT: Frequency to scan the query clause cache for expired values")]
-        [DefaultValue(180)]
+        [Description("EXPERT: The number of recent queries that we'll keep to identify repeated queries (and thus, relevant for caching).")]
+        [DefaultValue(512)]
+        [IndexUpdateType(IndexUpdateType.Refresh)]
+        [ConfigurationEntry("Indexing.QueryClauseCache.RepeatedQueriesCount", ConfigurationEntryScope.ServerWideOnly)]
+        public int QueryClauseCacheRepeatedQueriesCount { get; protected set; }
+
+        
+        [Description("EXPERT: The time frame for a query to repeat itself for us to consider it worth caching.")]
+        [DefaultValue(300)]
         [TimeUnit(TimeUnit.Seconds)]
         [IndexUpdateType(IndexUpdateType.Refresh)]
-        [ConfigurationEntry("Indexing.QueryClauseCacheRepeatedQueriesTimeFrameInSeconds", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
+        [ConfigurationEntry("Indexing.QueryClauseCache.RepeatedQueriesTimeFrameInSec", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public TimeSetting QueryClauseCacheRepeatedQueriesTimeFrame { get; protected set; }
         
         [Description("Maximum number of mapped documents. Cannot be less than 128. By default 'null' - no limit.")]

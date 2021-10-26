@@ -3417,7 +3417,6 @@ namespace Raven.Server.ServerWide
 
         public void LowMemoryOver()
         {
-            throw new NotImplementedException();
         }
     }
 }
