@@ -100,9 +100,9 @@ namespace Raven.Client.Documents.Identity
             }
         }
 
-        public async Task<long> GenerateNextIdForAsync(string tag)
+        public async Task<long> GenerateNextIdForAsync(string collectionName)
         {
-            if (_idGeneratorsByTag.TryGetValue(tag, out var value))
+            if (_idGeneratorsByTag.TryGetValue(collectionName, out var value))
             {
                 return await value.NextIdAsync().ConfigureAwait(false);
             }
@@ -111,11 +111,11 @@ namespace Raven.Client.Documents.Identity
 
             try
             {
-                if (_idGeneratorsByTag.TryGetValue(tag, out value))
+                if (_idGeneratorsByTag.TryGetValue(collectionName, out value))
                     return await value.NextIdAsync().ConfigureAwait(false);
 
-                value = CreateGeneratorFor(tag);
-                _idGeneratorsByTag.TryAdd(tag, value);
+                value = CreateGeneratorFor(collectionName);
+                _idGeneratorsByTag.TryAdd(collectionName, value);
             }
             finally
             {

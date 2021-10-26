@@ -132,10 +132,22 @@ namespace FastTests.Client
 
                     id = store.HiLoIdGenerator.GenerateNextIdForAsync(null, "Products").GetAwaiter().GetResult();
                     Assert.True(productsIds.TryAdd(id));
+
+                    id = store.HiLoIdGenerator.GenerateNextIdForAsync(null, typeof(User)).GetAwaiter().GetResult();
+                    Assert.True(usersIds.TryAdd(id));
+
+                    id = store.HiLoIdGenerator.GenerateNextIdForAsync(null, new Product()).GetAwaiter().GetResult();
+                    Assert.True(productsIds.TryAdd(id));
+
+                    id = store.HiLoIdGenerator.GenerateNextIdForAsync(null, new User()).GetAwaiter().GetResult();
+                    Assert.True(usersIds.TryAdd(id));
+
+                    id = store.HiLoIdGenerator.GenerateNextIdForAsync(null, typeof(Product)).GetAwaiter().GetResult();
+                    Assert.True(productsIds.TryAdd(id));
                 });
 
-                Assert.Equal(count * 2, usersIds.Count);
-                Assert.Equal(count * 2, productsIds.Count);
+                Assert.Equal(count * 4, usersIds.Count);
+                Assert.Equal(count * 4, productsIds.Count);
             }
         }
 

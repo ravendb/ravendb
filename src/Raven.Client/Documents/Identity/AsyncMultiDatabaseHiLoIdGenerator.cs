@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
 using System.Collections.Concurrent;
 using System.Threading.Tasks;
 using Raven.Client.Extensions;
@@ -29,11 +30,23 @@ namespace Raven.Client.Documents.Identity
             return generator.GenerateDocumentIdAsync(entity);
         }
 
-        public Task<long> GenerateNextIdForAsync(string database, string tag)
+        public Task<long> GenerateNextIdForAsync(string database, object entity)
+        {
+            var collectionName = Store.Conventions.GetCollectionName(entity);
+            return GenerateNextIdForAsync(database, collectionName);
+        }
+
+        public Task<long> GenerateNextIdForAsync(string database, Type type)
+        {
+            var collectionName = Store.Conventions.GetCollectionName(type);
+            return GenerateNextIdForAsync(database, collectionName);
+        }
+
+        public Task<long> GenerateNextIdForAsync(string database, string collectionName)
         {
             database = Store.GetDatabase(database);
             var generator = _generators.GetOrAdd(database, GenerateAsyncMultiTypeHiLoFunc);
-            return generator.GenerateNextIdForAsync(tag);
+            return generator.GenerateNextIdForAsync(collectionName);
         }
 
         public virtual AsyncMultiTypeHiLoIdGenerator GenerateAsyncMultiTypeHiLoFunc(string database)
