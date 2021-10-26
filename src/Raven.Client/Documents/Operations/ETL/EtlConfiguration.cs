@@ -58,6 +58,9 @@ namespace Raven.Client.Documents.Operations.ETL
 
             var uniqueNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
+            if (Transforms.Count == 0)
+                throw new InvalidOperationException($"'{nameof(Transforms)}' list cannot be empty.");
+            
             foreach (var script in Transforms)
             {
                 script.Validate(ref errors, EtlType);
