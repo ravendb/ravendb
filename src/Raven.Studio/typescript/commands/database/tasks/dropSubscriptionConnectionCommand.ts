@@ -4,7 +4,7 @@ import endpoints = require("endpoints");
 
 class dropSubscriptionConnectionCommand extends commandBase {
 
-    constructor(private db: database, private taskId: number, private taskName: string) {
+    constructor(private db: database, private taskId: number, private taskName: string, private connectionId: number = undefined) {
         super();
     }
  
@@ -15,7 +15,10 @@ class dropSubscriptionConnectionCommand extends commandBase {
     }
 
     private dropSubscription(): JQueryPromise<void> {
-        const args = { id: this.taskId };
+        const args = { 
+            id: this.taskId,
+            connectionId: this.connectionId
+        };
         const url = endpoints.databases.subscriptions.subscriptionsDrop + this.urlEncodeArgs( args );
 
         return this.post(url, null, this.db); 

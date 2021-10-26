@@ -96,8 +96,8 @@ class editSubscriptionTask extends viewModelBase {
                     this.editedSubscription().liveConnection(false);
                     new subscriptionConnectionDetailsCommand(this.activeDatabase(), args.taskId, args.taskName, this.editedSubscription().responsibleNode().NodeUrl)
                         .execute()
-                        .done((result: Raven.Server.Documents.TcpHandlers.SubscriptionConnectionDetails) => {
-                            this.editedSubscription().liveConnection(!!result.ClientUri);
+                        .done((result: Raven.Server.Documents.TcpHandlers.SubscriptionConnectionsDetails) => {
+                            this.editedSubscription().liveConnection(!!result.Results.length);
                         });
                 })
                 .fail(() => { 
