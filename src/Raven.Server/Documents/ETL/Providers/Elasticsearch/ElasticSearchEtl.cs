@@ -149,11 +149,11 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
         internal static BlittableJsonReaderObject EnsureLowerCasedIndexIdProperty(DocumentsOperationContext context, BlittableJsonReaderObject json,
             ElasticSearchIndexWithRecords index)
         {
-            if (json.TryGet(index.IndexIdProperty, out LazyStringValue idProperty))
+            if (json.TryGet(index.DocumentIdProperty, out LazyStringValue idProperty))
             {
                 using (var old = json)
                 {
-                    json.Modifications = new DynamicJsonValue(json) { [index.IndexIdProperty] = LowerCaseIndexIdProperty(idProperty) };
+                    json.Modifications = new DynamicJsonValue(json) { [index.DocumentIdProperty] = LowerCaseIndexIdProperty(idProperty) };
 
                     json = context.ReadObject(json, "es-etl-load");
                 }
@@ -178,7 +178,7 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
                 .Refresh()
                 .Query(q => q
                     .Terms(p => p
-                        .Field(index.IndexIdProperty)
+                        .Field(index.DocumentIdProperty)
                         .Terms((IEnumerable<string>)idsToDelete))
                 )
             );
@@ -210,7 +210,7 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
                 .Map(m => m
                     .Properties(p => p
                         .Keyword(t => t
-                            .Name(index.IndexIdProperty)))));
+                            .Name(index.DocumentIdProperty)))));
 
             // The request made it to the server but something went wrong in ElasticSearch (query parsing exception, non-existent index, etc)
             if (response.ServerError != null)
