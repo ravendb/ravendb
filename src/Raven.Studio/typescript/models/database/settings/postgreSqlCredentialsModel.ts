@@ -1,9 +1,13 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
+import generateSecretCommand = require("commands/database/secrets/generateSecretCommand");
+import copyToClipboard = require("common/copyToClipboard");
 
 class postgreSqlCredentialsModel {
 
     username = ko.observable<string>();
     password = ko.observable<string>();
+    
+    passwordHidden = ko.observable<boolean>(true);
     
     clearMethod: () => void;
 
@@ -34,6 +38,20 @@ class postgreSqlCredentialsModel {
             userName: this.username,
             password: this.password
         });
+    }
+    
+    generatePassword(): JQueryPromise<string> {
+        return new generateSecretCommand()
+            .execute()
+            .done(secret => this.password(secret.substring(0, 8)));
+    }
+    
+    copyPasswordToClipboard(): void {
+        copyToClipboard.copy(this.password(), "Password has been copied to clipboard");
+    }
+
+    toggleHidden(): void {
+        this.passwordHidden.toggle();
     }
 }
 

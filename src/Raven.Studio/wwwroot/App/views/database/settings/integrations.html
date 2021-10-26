@@ -49,8 +49,22 @@
                         </div>
                         <div class="form-group" data-bind="validationElement: password">
                             <label class="control-label">Password</label>
-                            <div class="flex-grow">
-                                <input class="form-control" data-bind="textInput: password" type="password" placeholder="Enter password">
+                            <div class="input-group flex-grow">
+                                <input class="form-control" placeholder="Enter password"
+                                       data-bind="textInput: password, attr: { type: passwordHidden() ? 'password' : 'text' }" />
+                                <button class="btn btn-default margin-right-xs" data-bind="click: generatePassword" title="Generate password">
+                                    <span>Generate</span>
+                                </button>
+                                <button class="btn btn-default margin-right-xs" data-bind="click: toggleHidden, visible: passwordHidden" title="View hidden characters">
+                                    <i class="icon-preview"></i>
+                                </button>
+                                <button class="btn btn-default margin-right-xs" data-bind="click: toggleHidden, visible: !passwordHidden()" title="Hide characters">
+                                    <i class="icon-preview"></i>
+                                    <!--  TODO: replace above icon with RavenDB-17391 -->
+                                </button>
+                                <button class="btn copy-button" data-bind="click: copyPasswordToClipboard, disable: !password()" title="Copy password to clipboard">
+                                    <i class="icon-copy"></i>
+                                </button>
                             </div>
                         </div>
                     </div>
