@@ -586,7 +586,7 @@ namespace Raven.Server.Smuggler.Documents
                     catch (Exception e)
                     {
                         if (_log.IsInfoEnabled)
-                            _log.Info("Wasn't able to import the Postgre SQL configuration from smuggler file. Skipping.", e);
+                            _log.Info("Wasn't able to import the PostgreSQL configuration from smuggler file. Skipping.", e);
                     }
                 }
 

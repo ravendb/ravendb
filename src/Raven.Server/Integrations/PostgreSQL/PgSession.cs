@@ -10,11 +10,14 @@ using System.Threading.Tasks;
 using Raven.Server.Documents;
 using Raven.Server.Integrations.PostgreSQL.Exceptions;
 using Raven.Server.Integrations.PostgreSQL.Messages;
+using Sparrow.Logging;
 
 namespace Raven.Server.Integrations.PostgreSQL
 {
     public class PgSession
     {
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<PgSession>("Postgres Server");
+
         private readonly TcpClient _client;
         private readonly X509Certificate2 _serverCertificate;
         private readonly int _identifier;
@@ -182,6 +185,9 @@ namespace Raven.Server.Integrations.PostgreSQL
             }
             catch (PgFatalException e)
             {
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"{e.Message} (fatal pg error code {e.ErrorCode})", e);
+
                 await writer.WriteAsync(messageBuilder.ErrorResponse(
                     PgSeverity.Fatal,
                     e.ErrorCode,
@@ -190,6 +196,9 @@ namespace Raven.Server.Integrations.PostgreSQL
             }
             catch (PgErrorException e)
             {
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"{e.Message} (pg error code {e.ErrorCode})", e);
+
                 // Shouldn't get to this point, PgErrorExceptions shouldn't be fatal
                 await writer.WriteAsync(messageBuilder.ErrorResponse(
                     PgSeverity.Error,
@@ -203,6 +212,9 @@ namespace Raven.Server.Integrations.PostgreSQL
             }
             catch (Exception e)
             {
+                if (Logger.IsInfoEnabled)
+                    Logger.Info("Unexpected internal pg error", e);
+
                 try
                 {
                     await writer.WriteAsync(messageBuilder.ErrorResponse(
