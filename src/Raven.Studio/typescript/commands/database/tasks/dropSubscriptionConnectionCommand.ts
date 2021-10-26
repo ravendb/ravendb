@@ -11,7 +11,13 @@ class dropSubscriptionConnectionCommand extends commandBase {
     execute(): JQueryPromise<void> {
         return this.dropSubscription()
             .fail((response: JQueryXHR) => { this.reportError(`Failed to drop subscription: ${this.taskName}`, response.responseText, response.statusText); })
-            .done(() => { this.reportSuccess(`Subscription ${this.taskName} was dropped successfully`); });
+            .done(() => {
+                if (this.connectionId) {
+                    this.reportSuccess(`Subscription connection was dropped successfully`);
+                } else {
+                    this.reportSuccess(`Subscription ${this.taskName} was dropped successfully`);
+                }
+            });
     }
 
     private dropSubscription(): JQueryPromise<void> {
