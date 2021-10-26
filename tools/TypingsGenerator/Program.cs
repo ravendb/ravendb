@@ -426,7 +426,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(SubscriptionTryout));
             scripter.AddType(typeof(DocumentWithException));
             scripter.AddType(typeof(SubscriptionStateWithNodeDetails));
-            scripter.AddType(typeof(SubscriptionConnectionDetails));
+            scripter.AddType(typeof(SubscriptionConnectionsDetails));
             scripter.AddType(typeof(ChangeVectorEntry));
             scripter.AddType(typeof(SubscriptionCreationOptions));
             scripter.AddType(typeof(Constants.Documents.SubscriptionChangeVectorSpecialStates));
