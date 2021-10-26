@@ -1765,7 +1765,7 @@ namespace Raven.Server
                     if (uri.IsDefaultPort == false)
                         port = uri.Port;
 
-                    StartListeners(host, customPort ?? port, status, ListenToNewTcpConnection);
+                    StartListeners(host, customPort ?? port, status, listenToNewTcpConnection);
                 }
             }
 
