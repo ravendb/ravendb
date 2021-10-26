@@ -99,16 +99,11 @@ namespace Raven.Client.Http
                     await ClusterTopologyLocalCache.TrySavingAsync(TopologyHash, command.Result, Conventions, context, CancellationToken.None).ConfigureAwait(false);
 
                     var results = command.Result;
+                    var nodes = ServerNode.CreateFrom(results.Topology);
+
                     var newTopology = new Topology
                     {
-                        Nodes = new List<ServerNode>(
-                            from member in results.Topology.Members
-                            select new ServerNode
-                            {
-                                Url = member.Value,
-                                ClusterTag = member.Key
-                            }
-                        ),
+                        Nodes = nodes,
                         Etag = results.Etag
                     };
 
@@ -166,17 +161,13 @@ namespace Raven.Client.Http
             if (clusterTopology == null)
                 return false;
 
+            var nodes = ServerNode.CreateFrom(clusterTopology.Topology);
+
             _nodeSelector = new NodeSelector(new Topology
             {
-                Nodes = new List<ServerNode>(
-                    from member in clusterTopology.Topology.Members
-                    select new ServerNode
-                    {
-                        Url = member.Value,
-                        ClusterTag = member.Key
-                    }
-                )
+                Nodes = nodes
             });
+
             return true;
         }
     }

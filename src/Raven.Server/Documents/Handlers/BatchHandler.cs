@@ -740,7 +740,7 @@ namespace Raven.Server.Documents.Handlers
                     Debug.Assert(false, "Shouldn't happen - cluster tx run via normal means");
                     return 0;// should never happened
                 }
-
+                Reply.Clear();
                 _disposables.Clear();
 
                 DocumentsStorage.PutOperationResults? lastPutResult = null;
