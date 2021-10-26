@@ -4,7 +4,6 @@ using System.IO;
 using System.IO.Pipelines;
 using System.Net.Security;
 using System.Net.Sockets;
-using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
@@ -17,22 +16,19 @@ namespace Raven.Server.Integrations.PostgreSQL
     public class PgSession
     {
         private readonly TcpClient _client;
-        private readonly RavenServer.CertificateHolder _serverCertificate;
-        private readonly Func<Stream, Task<(Stream, X509Certificate2)>> _authenticateAsServerIfSslNeeded;
+        private readonly X509Certificate2 _serverCertificate;
         private readonly int _identifier;
         private readonly int _processId;
         private readonly DatabasesLandlord _databasesLandlord;
-        private readonly bool _isServerSecured;
         private readonly CancellationToken _token;
         private Dictionary<string, string> _clientOptions;
 
-        public PgSession(TcpClient client,
-            RavenServer.CertificateHolder serverCertificate,
+        public PgSession(
+            TcpClient client,
+            X509Certificate2 serverCertificate,
             int identifier,
             int processId,
             DatabasesLandlord databasesLandlord,
-            bool isServerSecured,
-            Func<Stream, Task<(Stream, X509Certificate2)>> authenticateAsServerIfSslNeeded,
             CancellationToken token)
         {
             _client = client;
@@ -40,14 +36,15 @@ namespace Raven.Server.Integrations.PostgreSQL
             _identifier = identifier;
             _processId = processId;
             _databasesLandlord = databasesLandlord;
-            _isServerSecured = isServerSecured;
-            _authenticateAsServerIfSslNeeded = authenticateAsServerIfSslNeeded;
             _token = token;
             _clientOptions = null;
         }
 
-        private async Task<Stream> HandleInitialMessage(Stream stream, PipeReader reader, PipeWriter writer, MessageBuilder messageBuilder)
+        private async Task<Stream> HandleInitialMessage(Stream stream, MessageBuilder messageBuilder)
         {
+            var reader = PipeReader.Create(stream);
+            var writer = PipeWriter.Create(stream);
+
             var streamToUse = stream;
 
             var messageReader = new MessageReader();
@@ -56,35 +53,27 @@ namespace Raven.Server.Integrations.PostgreSQL
 
             if (initialMessage is SSLRequest)
             {
-                //X509Certificate2 certificate;
-
-                //(stream, certificate) = await _authenticateAsServerIfSslNeeded(stream);
-
-                //if (certificate == null)
-                //{
-                //    await writer.WriteAsync(messageBuilder.SSLResponse(false), _token);
-                //    initialMessage = await messageReader.ReadInitialMessage(reader, _token);
-                //}
-                //else
-                //{
-                //    await writer.WriteAsync(messageBuilder.SSLResponse(true), _token);
-                //    var encryptedReader = PipeReader.Create(stream);
-                //    initialMessage = await messageReader.ReadInitialMessage(encryptedReader, _token);
-                //}
-
-                await writer.WriteAsync(messageBuilder.SSLResponse(true), _token);
-                var sslStream = new SslStream(stream, false, (sender, certificate, chain, errors) => true);
-                await sslStream.AuthenticateAsServerAsync(new SslServerAuthenticationOptions
+                if (_serverCertificate == null)
                 {
-                    ServerCertificate = _serverCertificate.Certificate,
-                    ClientCertificateRequired = false,
-                    EnabledSslProtocols = SslProtocols.Ssl3 | SslProtocols.Tls11 | SslProtocols.Tls12 | SslProtocols.Tls13
-                }, _token);
+                    await writer.WriteAsync(messageBuilder.SSLResponse(false), _token);
+                    initialMessage = await messageReader.ReadInitialMessage(reader, _token);
+                }
+                else
+                {
+                    await writer.WriteAsync(messageBuilder.SSLResponse(true), _token);
+                    var sslStream = new SslStream(stream, false, (sender, certificate, chain, errors) => true);
 
-                streamToUse = sslStream;
+                    await sslStream.AuthenticateAsServerAsync(new SslServerAuthenticationOptions
+                    {
+                        ServerCertificate = _serverCertificate,
+                        ClientCertificateRequired = false
+                    }, _token);
 
-                var encryptedReader = PipeReader.Create(sslStream);
-                initialMessage = await messageReader.ReadInitialMessage(encryptedReader, _token);
+                    streamToUse = sslStream;
+
+                    var encryptedReader = PipeReader.Create(sslStream);
+                    initialMessage = await messageReader.ReadInitialMessage(encryptedReader, _token);
+                }
             }
 
             switch (initialMessage)
@@ -97,20 +86,20 @@ namespace Raven.Server.Integrations.PostgreSQL
                         PgSeverity.Fatal,
                         PgErrorCodes.ProtocolViolation,
                         "SSLRequest received twice"), _token);
-                    return streamToUse;
+                    break;
                 case Cancel cancel: 
                     // TODO: Support Cancel message
                     await writer.WriteAsync(messageBuilder.ErrorResponse(
                         PgSeverity.Fatal,
                         PgErrorCodes.FeatureNotSupported,
                         "Cancel message support not implemented."), _token);
-                    return streamToUse;
+                    break;
                 default:
                     await writer.WriteAsync(messageBuilder.ErrorResponse(
                         PgSeverity.Fatal,
                         PgErrorCodes.ProtocolViolation,
                         "Invalid first message received"), _token);
-                    return streamToUse;
+                    break;
             }
 
             return streamToUse;
@@ -120,16 +109,13 @@ namespace Raven.Server.Integrations.PostgreSQL
         {
             using var _ = _client;
             using var messageBuilder = new MessageBuilder();
-            //todo pfyasu using below
+
             Stream stream = _client.GetStream();
+
+            stream = await HandleInitialMessage(stream, messageBuilder);
 
             var reader = PipeReader.Create(stream);
             var writer = PipeWriter.Create(stream);
-
-            stream = await HandleInitialMessage(stream, reader, writer, messageBuilder);
-
-            reader = PipeReader.Create(stream);
-            writer = PipeWriter.Create(stream);
 
             if (_clientOptions == null) //TODO pfyasu maybe unused when cancel message will be implemented
                 return;
@@ -158,9 +144,10 @@ namespace Raven.Server.Integrations.PostgreSQL
 
             try
             {
-                using var transaction = new PgTransaction(database, new MessageReader(), _clientOptions["user"]);
+                var username = _clientOptions["user"];
+                using var transaction = new PgTransaction(database, new MessageReader(), username);
 
-                if (_isServerSecured)
+                if (_serverCertificate != null)
                 {
                     // Authentication is required only when running in secured mode
 

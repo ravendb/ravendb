@@ -127,12 +127,10 @@ namespace Raven.Server.Integrations.PostgreSQL
             {
                 var session = new PgSession(
                     client,
-                    _server.Certificate,
+                    _server.Certificate.Certificate,
                     identifier,
                     _processId,
                     _server.ServerStore.DatabasesLandlord,
-                    _server.Certificate.Certificate != null,
-                    _server.AuthenticateAsServerIfSslNeeded,
                     _cts.Token);
 
                 await session.Run();
