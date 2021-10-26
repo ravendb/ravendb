@@ -4,7 +4,7 @@ import endpoints = require("endpoints");
 
 class saveIntegrationsCredentialsCommand extends commandBase {
 
-    constructor(private db: database, private credentials: Raven.Server.Integrations.PostgreSQL.Handlers.PostgreSQLNewUser) {
+    constructor(private db: database, private credentials: Raven.Server.Integrations.PostgreSQL.Handlers.User) {
         super();
     }
  
@@ -17,7 +17,7 @@ class saveIntegrationsCredentialsCommand extends commandBase {
     private savePostgreSqlCredentials(): JQueryPromise<void> {
         const saveCredentialsTask = $.Deferred<void>();
         
-        const url = endpoints.databases.postgreSQL.adminIntegrationPostgresqlUser;
+        const url = endpoints.databases.postgreSqlIntegration.adminIntegrationsPostgresqlUser;
         const payload = this.credentials;
 
         this.put(url, JSON.stringify(payload), this.db)
