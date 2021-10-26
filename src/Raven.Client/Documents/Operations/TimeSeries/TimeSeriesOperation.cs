@@ -276,7 +276,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
         private static void ThrowMissingProperty<T>(string prop)
         {
-            throw new InvalidDataException($"Missing '{prop}' property on 'TimeSeriesOperation'");
+            throw new InvalidDataException($"Missing '{prop}' property on TimeSeriesOperation '{typeof(T).Name}'");
         }
 
         public DynamicJsonValue ToJson()

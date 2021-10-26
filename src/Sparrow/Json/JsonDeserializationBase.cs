@@ -613,7 +613,6 @@ namespace Sparrow.Json
             var dic = new Dictionary<string, double[]>(GetStringComparer(jsonDeserializationDictionaryAttribute?.StringComparison ?? StringComparison.OrdinalIgnoreCase));
 
             BlittableJsonReaderObject obj;
-            //should a "null" exist in json? -> not sure that "null" can exist there
             if (json.TryGet(name, out obj) == false || obj == null)
                 return dic;
 
