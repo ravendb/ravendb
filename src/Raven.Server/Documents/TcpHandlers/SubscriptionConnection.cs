@@ -603,7 +603,24 @@ namespace Raven.Server.Documents.TcpHandlers
         private readonly IDisposable _subscriptionConnectionInProgress;
         private readonly (IDisposable ReleaseBuffer, JsonOperationContext.MemoryBuffer Buffer) _copiedBuffer;
         private readonly TcpConnectionHeaderMessage.SupportedFeatures _supportedFeatures;
-        private SubscriptionBatchProcessor _batchProcessor;
+        private SubscriptionFetcher _fetcher;
+        private SubscriptionProcessor _processor;
+
+        private static (SubscriptionProcessor Processor, SubscriptionFetcher Fetcher) CreateProcessorAndFetcher(ServerStore server, DocumentDatabase database, SubscriptionConnection connection, SubscriptionConnectionsState subscriptionConnectionsState)
+        {
+            if (connection.Subscription.Revisions)
+            {
+                var revisionProcessor = new RevisionsSubscriptionProcessor(server, database, connection, subscriptionConnectionsState);
+                var revisionFetcher = new RevisionSubscriptionFetcher(database, subscriptionConnectionsState, connection.Subscription.Collection);
+                revisionFetcher.SetProcessor(revisionProcessor);
+                return (revisionProcessor, revisionFetcher);
+            }
+
+            var processor = new DocumentsSubscriptionProcessor(server, database, connection, subscriptionConnectionsState);
+            var fetcher = new DocumentSubscriptionFetcher(database, subscriptionConnectionsState, connection.Subscription.Collection);
+            fetcher.SetProcessor(processor);
+            return (processor, fetcher);
+        }
 
         private async Task ProcessSubscriptionAsync()
         {
@@ -613,19 +630,17 @@ namespace Raven.Server.Documents.TcpHandlers
                 _logger.Info($"Starting processing documents for subscription {SubscriptionId} received from {TcpConnection.TcpClient.Client.RemoteEndPoint}");
             }
 
-            _batchProcessor = SubscriptionBatchProcessor.Create(TcpConnection.DocumentDatabase, SubscriptionConnectionsState, Subscription);
+            (_processor,_fetcher) = CreateProcessorAndFetcher(TcpConnection.DocumentDatabase.ServerStore, TcpConnection.DocumentDatabase, this, SubscriptionConnectionsState);
 
             using (DisposeOnDisconnect)
-            using (_batchProcessor)
+            using (_fetcher)
             {
                 var replyFromClientTask = GetReplyFromClientAsync();
 
                 string subscriptionChangeVectorBeforeCurrentBatch = SubscriptionState.ChangeVectorForNextBatchStartingPoint;
 
-                var useRevisions = Subscription.Revisions;
-
-                _batchProcessor.SetConnectionInfo(Options, SubscriptionState, TcpConnection.TcpClient.Client.RemoteEndPoint);
-                _batchProcessor.AddScript(SetupFilterAndProjectionScript());
+                _fetcher.SetConnectionInfo(Options, SubscriptionState, TcpConnection.TcpClient.Client.RemoteEndPoint);
+                _fetcher.AddScript(SetupFilterAndProjectionScript());
 
                 while (CancellationTokenSource.IsCancellationRequested == false)
                 {
@@ -662,11 +677,8 @@ namespace Raven.Server.Documents.TcpHandlers
 
                                     using (docsContext.OpenReadTransaction())
                                     {
-                                        var globalEtag = useRevisions
-                                            ? TcpConnection.DocumentDatabase.DocumentsStorage.RevisionsStorage.GetLastRevisionEtag(docsContext, Subscription.Collection)
-                                            : TcpConnection.DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(docsContext.Transaction.InnerTransaction,
-                                                Subscription.Collection);
-
+                                        // TODO : would collection @all_docs work here as expected?
+                                        var globalEtag =_processor.GetLastItemEtag(docsContext, Subscription.Collection);
                                         if (globalEtag > SubscriptionConnectionsState.GetLastEtagSent())
                                         {
                                             _subscriptionConnectionsState.NotifyHasMoreDocs();
@@ -767,32 +779,7 @@ namespace Raven.Server.Documents.TcpHandlers
             {
                 case SubscriptionConnectionClientMessage.MessageType.Acknowledge:
                 {
-                    //pick up docs that weren't sent due to having been processed by this connection and add them to resend
-                    List<DocumentRecord> addDocumentsToResend = null;
-                    using (TcpConnection.DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext docContext))
-                    using (docContext.OpenReadTransaction())
-                    {
-                        foreach (var doc in _batchProcessor.CollectedDocuments)
-                        {
-                            var document = TcpConnection.DocumentDatabase.DocumentsStorage.GetDocumentOrTombstone(docContext, doc.Id, throwOnConflict:false);
-                            if (ShouldAddToResendTable(document, doc.ChangeVector))
-                            {
-                                addDocumentsToResend ??= new List<DocumentRecord>();
-                                addDocumentsToResend.Add(new DocumentRecord
-                                {
-                                    DocumentId = doc.Id,
-                                    ChangeVector = document.Document.ChangeVector
-                                });
-                            }
-                        }
-                    }
-
-                    await _subscriptionConnectionsState.AcknowledgeBatch(this, CurrentBatchId, addDocumentsToResend);
-
-                    if (addDocumentsToResend?.Count > 0)
-                    {
-                        _subscriptionConnectionsState.NotifyHasMoreDocs();
-                    }
+                    await _processor.AcknowledgeBatch(CurrentBatchId);
 
                     Stats.LastAckReceivedAt = TcpConnection.DocumentDatabase.Time.GetUtcNow();
                     Stats.AckRate?.Mark();
@@ -882,9 +869,9 @@ namespace Raven.Server.Documents.TcpHandlers
                             if (_supportedFeatures.Subscription.TimeSeriesIncludes && Subscription.TimeSeriesIncludes != null)
                                 includeTimeSeriesCommand = new IncludeTimeSeriesCommand(docsContext, Subscription.TimeSeriesIncludes.TimeSeries);
 
-                            _batchProcessor.Initialize(clusterOperationContext, docsContext, includeDocumentsCommand);
+                            _fetcher.Initialize(clusterOperationContext, docsContext, includeDocumentsCommand);
 
-                            foreach (var result in _batchProcessor.Fetch())
+                            foreach (var result in _fetcher.Fetch())
                             {
                                 CancellationTokenSource.Token.ThrowIfCancellationRequested();
 
@@ -904,7 +891,7 @@ namespace Raven.Server.Documents.TcpHandlers
                                     continue;
                                 }
                                 anyDocumentsSentInCurrentIteration = true;
-                                _batchProcessor.MarkDocumentSent();
+                                _fetcher.MarkDocumentSent();
 
                                 writer.WriteStartObject();
 
@@ -1031,7 +1018,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
                                 if (ClusterCommandsVersionManager.CurrentClusterMinimalVersion >= 53_000)
                                 {
-                                    CurrentBatchId = await _batchProcessor.Record(lastChangeVectorSentInThisBatch);
+                                    CurrentBatchId = await _processor.RecordBatch(lastChangeVectorSentInThisBatch);
                                 }
 
                                 _subscriptionConnectionsState.LastChangeVectorSent = ChangeVectorUtils.MergeVectors(_subscriptionConnectionsState.LastChangeVectorSent,lastChangeVectorSentInThisBatch);

@@ -254,6 +254,102 @@ namespace SlowTests.Client.Subscriptions
         }
 
         [Fact]
+        public async Task RemoveDeletedDocumentFromResend()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var id = store.Subscriptions.Create<User>();
+                await using (var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(id)
+                {
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5),
+                    Strategy = SubscriptionOpeningStrategy.Concurrent,
+                    MaxDocsPerBatch = 2
+                }))
+                await using (var Subscription2 = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(id)
+                {
+                    Strategy = SubscriptionOpeningStrategy.Concurrent,
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5),
+                    MaxDocsPerBatch = 2
+                }))
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        session.Store(new User(), "users/1");
+                        session.Store(new User(), "users/2");
+                        session.Store(new User(), "users/3");
+                        session.Store(new User(), "users/4");
+                        session.Store(new User(), "users/5");
+                        session.Store(new User(), "users/6");
+                        session.SaveChanges();
+                    }
+
+                    var Con1Docs = new List<string>();
+                    var Con2Docs = new List<string>();
+
+                    var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+                    var mre = new ManualResetEvent(false);
+
+                    var _ = Subscription2.Run(x =>
+                    {
+                        foreach (var item in x.Items)
+                        {
+                            Con2Docs.Add(item.Id);
+                        }
+
+                        mre.Set();
+                        tcs.Task.Wait();
+                    });
+
+                    mre.WaitOne();
+
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        session.Delete("users/1");
+                        await session.StoreAsync(new User (), "users/7");
+                        await session.SaveChangesAsync();
+                    }
+
+                    var t = subscription.Run(x =>
+                    {
+                        foreach (var item in x.Items)
+                        {
+                            Con1Docs.Add(item.Id);
+                        }
+                    });
+
+                    Assert.True(await WaitForValueAsync(() => Task.FromResult(Con2Docs.Count == 2), true, 6000, 100), $"connection 2 has {Con2Docs.Count} docs");
+                    Assert.True(await WaitForValueAsync(() => Task.FromResult(Con1Docs.Count == 5), true, 6000, 100), $"connection 1 has {Con1Docs.Count} docs");
+
+                    Assert.Contains("users/7", Con1Docs);
+                    tcs.SetException(new InvalidOperationException());
+
+                    await WaitForNoExceptionAsync(() => AssertNoLeftovers(store, id));
+                }
+            }
+        }
+
+        public async Task WaitForNoExceptionAsync(Func<Task> task, TimeSpan? timeToWait = null)
+        {
+            timeToWait ??= TimeSpan.FromSeconds(15);
+            var sp = Stopwatch.StartNew();
+            while (true)
+            {
+                try
+                {
+                    await task();
+                    return;
+                }
+                catch
+                {
+                    if (sp.Elapsed > timeToWait)
+                        throw;
+
+                    await Task.Delay(25);
+                }
+            }
+        }
+
+        [Fact]
         public async Task ResendChangedDocument()
         {
             using (var store = GetDocumentStore())
