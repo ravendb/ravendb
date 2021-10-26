@@ -115,8 +115,8 @@
   </ItemGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
-    <PackageReference Include="AWSSDK.Glacier" Version="3.7.0.82" />
-    <PackageReference Include="AWSSDK.S3" Version="3.7.3.15" />
+    <PackageReference Include="AWSSDK.Glacier" Version="3.7.0.86" />
+    <PackageReference Include="AWSSDK.S3" Version="3.7.3.19" />
     <PackageReference Include="Azure.Storage.Blobs" Version="12.10.0" />
     <PackageReference Include="CsvHelper" Version="27.1.1" />
     <PackageReference Include="DasMulli.Win32.ServiceUtils.Signed" Version="1.1.0" />
@@ -146,8 +146,8 @@
     <PackageReference Include="NuGet.PackageManagement" Version="5.11.0" />
     <PackageReference Include="NuGet.Protocol" Version="5.11.0" />
     <PackageReference Include="Oracle.ManagedDataAccess.Core" Version="3.21.3" />
-    <PackageReference Include="NEST" Version="7.15.0" />
-    <PackageReference Include="Portable.BouncyCastle" Version="1.8.10" />
+    <PackageReference Include="NEST" Version="7.15.1" />
+    <PackageReference Include="Portable.BouncyCastle" Version="1.9.0" />
     <PackageReference Include="Parquet.Net" Version="3.9.1" />
     <PackageReference Include="Raven.CodeAnalysis" Version="1.0.11">
       <PrivateAssets>All</PrivateAssets>

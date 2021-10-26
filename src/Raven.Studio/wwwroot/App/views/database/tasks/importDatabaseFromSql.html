@@ -3,7 +3,6 @@
         <div class="panel-body">
             <form class="flex-form" data-bind="submit: nextStep">
                 <h3>Import documents from a SQL database into the current RavenDB database</h3>
-
                 <div class="row">
                     <div class="col-lg-6">
                         <h4>Create new import configuration</h4>
@@ -35,7 +34,7 @@
                                         <textarea class="form-control"
                                                   data-bind="textInput: connectionString" rows="3"
                                                   title="The connection string for the SQL server"
-                                                  placeholder="Enter the complete connection string for the SQL server">                                        
+                                                  placeholder="Enter the complete connection string for the Microsoft SQL Server">
                                         </textarea>
                                         <div>
                                             <small>
@@ -54,7 +53,7 @@
                                         <textarea class="form-control"
                                                   data-bind="textInput: connectionString" rows="3"
                                                   title="The connection string for the MySQL server"
-                                                  placeholder="Enter the complete connection string for the MySQL server">                                        
+                                                  placeholder="Enter the complete connection string for the MySQL Server">
                                         </textarea>
                                         <div>
                                             <small>
@@ -72,8 +71,8 @@
                                     <div class="flex-grow">
                                         <textarea class="form-control"
                                                   data-bind="textInput: connectionString" rows="3"
-                                                  title="The connection string for the NpgSQL server"
-                                                  placeholder="Enter the complete connection string for the NpgSQL server">                                        
+                                                  title="The connection string for the PostgreSQL"
+                                                  placeholder="Enter the complete connection string for the PostgreSQL">
                                         </textarea>
                                         <div>
                                             <small>
@@ -91,8 +90,8 @@
                                     <div class="flex-grow">
                                         <textarea class="form-control"
                                                   data-bind="textInput: connectionString" rows="3"
-                                                  title="The connection string for the Oracle Database server"
-                                                  placeholder="Enter the complete connection string for the Oracle Database server">                                        
+                                                  title="The connection string for the Oracle Database"
+                                                  placeholder="Enter the complete connection string for the Oracle Database">
                                         </textarea>
                                         <div>
                                             <small>
@@ -125,7 +124,6 @@
                                     </button>
                                 </div>
                             </div>
-
                             <div data-bind="collapse: $root.showAdvancedOptions">
                                 <h3>Advanced options</h3>
                                 <div class="form-group">
@@ -143,7 +141,6 @@
                                             Trim suffix from property names:
                                             <input class="form-control suffix-input input-sm" data-bind="textInput: advanced.suffixToTrim" />
                                         </label>
-
                                     </div>
                                 </div>
                                 <div class="form-group">
@@ -162,7 +159,6 @@
                                 </div>
                             </div>
                         </div>
-
                         <div data-bind="with: testConnectionResult">
                             <div class="padding bg-success small" data-bind="visible: Success">
                                 <div>Successfully connected to the server</div>
@@ -177,12 +173,10 @@
                                 </div>
                             </div>
                         </div>
-                        
                     </div>
                     <div class="col-lg-6">
                         <h4>Continue existing migration</h4>
                         <hr />
-
                         <div class="bg-info padding padding-xs margin-bottom"><small><i class="icon-info"></i> Note: Use this option if you have exported migration file</small></div>
                         <div class="row form-group">
                             <div class="col-lg-12">
@@ -207,9 +201,7 @@
             </form>
         </div>
     </div>
-
     <div class="flex-grow flex-vertical modal-root" id="js-second-step" data-bind="if: !inFirstStep()">
-        
             <div class="flex-header flex-horizontal">
                 <div class="panel panel-default flex-grow no-margin">
                     <div class="padding padding-sm flex-horizontal">
@@ -277,7 +269,6 @@
                                     <i title="Transform script is enabled" class="icon-tick text-success"></i>
                                     <span>transform</span>
                                 </div>
-
                             </div>
                             <div data-bind="visible: checked">
                                 <button class="btn btn-default" title="Show incoming links" data-bind="click: $root.showIncomingReferences">
@@ -307,7 +298,6 @@
                         </div>
                     </div>
                 </div>
-
             </div>
             <div class="flex-footer panel-default" data-bind="visible: $root.pageCount() > 1">
                 <div class="panel-body flex-horizontal">
@@ -317,8 +307,6 @@
                     </div>
                 </div>
             </div>
-
-        
             <div id="editTransform" class="panel shadow-style slidein-style" data-bind="visible: itemBeingEdited, with: itemBeingEdited">
                 <div class="padding">
                     <div>
@@ -326,29 +314,24 @@
                             <strong>SQL Table:</strong> <span data-bind="text: tableName"></span>
                         </label>
                     </div>
-
                     <div class="toggle">
                         <input id="customizeQuery" type="checkbox" data-bind="checked: customizeQuery">
                         <label for="customizeQuery">Filter source table records</label>
                     </div>
-
                     <div data-bind="collapse: customizeQuery">
                         <label><strong>SQL Query:</strong></label>
                         <div data-bind="validationElement: query">
                             <pre class="form-control editor"
                                  data-bind="aceEditor: { code: query, fontSize: '14px', lang: $root.aceEditorLangMode(), completer: $root.completer }, validationOptions: { errorsAsTitle: false }, validationElement: query" style="height: 200px;"></pre>
-
                             <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: query">
                                 <div class="help-block" data-bind="validationMessage: query"></div>
                             </div>
                         </div>
                     </div>
-
                     <div class="toggle">
                         <input id="transformResults" type="checkbox" data-bind="checked: transformResults">
                         <label for="transformResults">Transform documents <small class="js-script-popover"><i class="icon-info text-info"></i></small></label>
                     </div>
-
                     <div data-bind="collapse: transformResults">
                         <label>
                             <strong>Script:</strong>
@@ -356,15 +339,12 @@
                         <div data-bind="validationElement: patchScript">
                             <pre class="form-control editor"
                                  data-bind="aceEditor: { code: patchScript, fontSize: '14px', lang: 'ace/mode/javascript' }, validationOptions: { errorsAsTitle: false }, validationElement: patchScript" style="height: 300px;"></pre>
-
                             <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: patchScript">
                                 <div class="help-block" data-bind="validationMessage: patchScript"></div>
                             </div>
                         </div>
                     </div>
-
                     <hr />
-
                     <div class="flex-form">
                         <div class="form-group">
                             <label class="control-label">Test mode:</label>
@@ -394,7 +374,6 @@
                                 </div>
                             </div>
                         </div>
-
                         <div data-bind="foreach: testPrimaryKeys, visible: testMode() === 'ByPrimaryKey'">
                             <div class="form-group" data-bind="validationElement: value">
                                 <label class="control-label" data-bind="text: $parent.primaryKeyColumns()[$index()].sqlName"></label>
@@ -404,9 +383,6 @@
                             </div>
                         </div>
                     </div>
-
-
-
                     <div class="margin-top text-right">
                         <button title="Test" class="btn btn-primary" data-bind="click: $root.runTest, disable: $root.spinners.test, css: { 'btn-spinner': $root.spinners.test }">
                             <i class="icon-rocket"></i><span>Test</span>
@@ -415,7 +391,6 @@
                     </div>
                 </div>
             </div>
-        
     </div>
 </div>
 
@@ -439,7 +414,6 @@
     <div class="references-container">
         <!-- ko foreach: references -->
         <div class="reference-item" data-bind="attr: { 'data-ref-id': id }">
-            
                 <div class="relation" data-bind="visible: type === 'OneToMany'">
                     <div class="key" title="primary key">
                         <span class="key-type primary"><i class="icon-key"></i></span>
@@ -453,7 +427,6 @@
                     <div class="from" title="from foreign key">
                         <span class="text-muted"> <span class="key-type foreign"><i class="icon-key"></i></span></span>
                         <span data-bind="text: joinColumns.join(', ')"></span>
-                        
                     </div>
                     <div class="in">
                         <strong>
@@ -463,13 +436,11 @@
                         </strong>
                     </div>
                 </div>
-
                 <div class="relation" data-bind="visible: type === 'ManyToOne'">
                     <div  class="key" title="foreign key">
                         <span class="key-type foreign"><i class="icon-key"></i></span>
                         <strong>
                             <span data-bind="text: joinColumns.join(', ')"></span>
-                            
                         </strong>
                     </div>
                     <div class="relation-type" title="many-to-one relation">
@@ -488,7 +459,6 @@
                         </strong>
                     </div>
                 </div>
-            
                 <div class="actions-container">
                     <div class="btn-group link-actions">
                         <button class="btn btn-sm btn-default" data-bind="css: { active: action() === 'skip' }, click: _.partial($root.onActionClicked, $data, 'skip')"><i class="icon-skip"></i> <span>skip</span></button>
@@ -515,14 +485,12 @@
                     </div>
                 </div>
         </div>
-        
         <div class="inner-table" data-bind="with: effectiveInnerTable">
             <div data-bind="css: { 'array-container': $parent.type === 'OneToMany'}">
                 <div class="object-container" data-bind="template: { name: 'object-template' }">
                 </div>
             </div>
         </div>
-            
         <!-- /ko -->
     </div>
 </script>
@@ -553,14 +521,12 @@
                 </div>
             </div>
         </div>
-
         <div class="form-group" data-bind="validationElement: maxDocumentsToImportPerTable, visible: testImport">
             <label class="control-label left-indent">Maximum rows to process<br /><small class="text-muted">per SQL table</small></label>
             <div class="flex-grow">
                 <input class="form-control" placeholder="Migration batch size" data-bind="numericInput: maxDocumentsToImportPerTable">
             </div>
         </div>
-
         <div class="flex-horizontal">
             <div class="flex-separator"></div>
             <button class="btn btn-default btn-sm close-panel">

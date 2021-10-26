@@ -148,7 +148,8 @@ namespace SlowTests.Smuggler
                         MentorNode = "A",
                         Name = "Etl",
                         TaskId = 4,
-                        TestMode = true
+                        TestMode = true,
+                        Transforms = new List<Transformation>{new() {Script = "",Collections = new List<string>{"Orders"},Name ="testScript"}}
                     }));
 
                     store1.Maintenance.Send(new AddEtlOperation<SqlConnectionString>(new SqlEtlConfiguration()
@@ -163,7 +164,8 @@ namespace SlowTests.Smuggler
                             },
                         Name = "sql",
                         ParameterizeDeletes = false,
-                        MentorNode = "A"
+                        MentorNode = "A",
+                        Transforms = new List<Transformation>{new() {Script = "",Collections = new List<string>{"Orders"},Name ="testScript"}}
                     }));
                     await store1.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
 
@@ -350,7 +352,8 @@ namespace SlowTests.Smuggler
                         MentorNode = "A",
                         Name = "Etl",
                         TaskId = 4,
-                        TestMode = true
+                        TestMode = true,
+                        Transforms = new List<Transformation>{new() {Script = "",Collections = new List<string>{"Orders"},Name ="testScript"}}
                     }));
 
                     store1.Maintenance.Send(new AddEtlOperation<SqlConnectionString>(new SqlEtlConfiguration()
@@ -365,7 +368,8 @@ namespace SlowTests.Smuggler
                             },
                         Name = "sql",
                         ParameterizeDeletes = false,
-                        MentorNode = "A"
+                        MentorNode = "A",
+                        Transforms = new List<Transformation>{new() {Script = "",Collections = new List<string>{"Orders"},Name ="testScript"}}
                     }));
                     var migrate = new Migrator(new DatabasesMigrationConfiguration
                     {
@@ -744,25 +748,29 @@ namespace SlowTests.Smuggler
                     {
                         ConnectionStringName = "con1",
                         Name = "etl1",
-                        AllowEtlOnNonEncryptedChannel = true
+                        AllowEtlOnNonEncryptedChannel = true,
+                        Transforms = new List<Transformation>{new() {Script = "",Collections = new List<string>{"Orders"},Name ="testScript"}}
                     };
                     var etlConfiguration2 = new RavenEtlConfiguration
                     {
                         ConnectionStringName = "con2",
                         Name = "etl2",
-                        AllowEtlOnNonEncryptedChannel = true
+                        AllowEtlOnNonEncryptedChannel = true,
+                        Transforms = new List<Transformation>{new() {Script = "",Collections = new List<string>{"Orders"},Name ="testScript"}}
                     };
                     var etlConfiguration3 = new RavenEtlConfiguration
                     {
                         ConnectionStringName = "con3",
                         Name = "etl1",
-                        AllowEtlOnNonEncryptedChannel = false
+                        AllowEtlOnNonEncryptedChannel = false,
+                        Transforms = new List<Transformation>{new() {Script = "",Collections = new List<string>{"Orders"},Name ="testScript"}}
                     };
                     var etlConfiguration4 = new RavenEtlConfiguration
                     {
                         ConnectionStringName = "con4",
                         Name = "etl4",
-                        AllowEtlOnNonEncryptedChannel = true
+                        AllowEtlOnNonEncryptedChannel = true,
+                        Transforms = new List<Transformation>{new() {Script = "",Collections = new List<string>{"Orders"},Name ="testScript"}}
                     };
                     WaitForUserToContinueTheTest(store1);
                     await store1.Maintenance.SendAsync(new AddEtlOperation<RavenConnectionString>(etlConfiguration));
@@ -808,6 +816,7 @@ namespace SlowTests.Smuggler
                         ConnectionStringName = "scon1",
                         Name = "setl1",
                         AllowEtlOnNonEncryptedChannel = true,
+                        Transforms = new List<Transformation>{new() {Script = "",Collections = new List<string>{"Orders"},Name ="testScript"}},
                         SqlTables =
                         {
                             new SqlEtlTable {TableName = "Orders", DocumentIdColumn = "Id"},
@@ -820,6 +829,7 @@ namespace SlowTests.Smuggler
                         ConnectionStringName = "scon2",
                         Name = "setl2",
                         AllowEtlOnNonEncryptedChannel = true,
+                        Transforms = new List<Transformation>{new() {Script = "",Collections = new List<string>{"Orders"},Name ="testScript"}},
                         SqlTables =
                         {
                             new SqlEtlTable {TableName = "Orders", DocumentIdColumn = "Id"},
@@ -832,6 +842,7 @@ namespace SlowTests.Smuggler
                         ConnectionStringName = "scon3",
                         Name = "setl1",
                         AllowEtlOnNonEncryptedChannel = true,
+                        Transforms = new List<Transformation>{new() {Script = "",Collections = new List<string>{"Orders"},Name ="testScript"}},
                         SqlTables =
                         {
                             new SqlEtlTable {TableName = "Orders", DocumentIdColumn = "Id"},
@@ -844,6 +855,7 @@ namespace SlowTests.Smuggler
                         ConnectionStringName = "scon4",
                         Name = "setl4",
                         AllowEtlOnNonEncryptedChannel = true,
+                        Transforms = new List<Transformation>{new() {Script = "",Collections = new List<string>{"Orders"},Name ="testScript"}},
                         SqlTables =
                         {
                             new SqlEtlTable {TableName = "Orders", DocumentIdColumn = "Id"},
@@ -1080,7 +1092,8 @@ namespace SlowTests.Smuggler
                         MentorNode = "A",
                         Name = "Etl",
                         TaskId = 4,
-                        TestMode = true
+                    TestMode = true,
+                    Transforms = new List<Transformation>{new() {Script = "",Collections = new List<string>{"Orders"},Name ="testScript"}}
                     }));
 
                     store.Maintenance.Send(new AddEtlOperation<SqlConnectionString>(new SqlEtlConfiguration()
@@ -1095,7 +1108,8 @@ namespace SlowTests.Smuggler
                             },
                         Name = "sql",
                         ParameterizeDeletes = false,
-                        MentorNode = "A"
+                    MentorNode = "A",
+                    Transforms = new List<Transformation>{new() {Script = "",Collections = new List<string>{"Orders"},Name ="testScript"}}
                     }));
 
                     using (var session = store.OpenAsyncSession())
