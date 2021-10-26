@@ -39,7 +39,12 @@ namespace Raven.Server.Integrations.PostgreSQL
                 return rqlQuery;
 
             if (PowerBIQuery.TryParse(queryText, parametersDataTypes, documentDatabase, out var powerBiQuery))
+            {
+                if (documentDatabase.ServerStore.LicenseManager.CanUsePowerBi(withNotification: true, out var licenseLimitException) == false)
+                    throw licenseLimitException;
+
                 return powerBiQuery;
+            }
 
             return new HardcodedQuery(queryText, parametersDataTypes);
         }

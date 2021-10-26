@@ -1514,9 +1514,9 @@ namespace Raven.Server.Commercial
             return false;
         }
 
-        public bool CanUsePowerBi(bool withNotification)
+        public bool CanUsePowerBi(bool withNotification, out LicenseLimitException licenseLimitException)
         {
-            if (IsValid(out _) == false)
+            if (IsValid(out licenseLimitException) == false)
                 return false;
 
             var value = LicenseStatus.HasPowerBI;
@@ -1530,7 +1530,7 @@ namespace Raven.Server.Commercial
             }
 
             const string details = "Your current license doesn't include the Power BI feature";
-            GenerateLicenseLimit(LimitType.PowerBI, details, addNotification: true);
+            licenseLimitException = GenerateLicenseLimit(LimitType.PowerBI, details, addNotification: true);
             return false;
         }
 

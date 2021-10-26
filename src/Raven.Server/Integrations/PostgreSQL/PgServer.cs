@@ -6,6 +6,9 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Server.Config;
+using Raven.Server.Config.Categories;
+using Raven.Server.Exceptions;
 using Sparrow.Logging;
 
 namespace Raven.Server.Integrations.PostgreSQL
@@ -52,16 +55,21 @@ namespace Raven.Server.Integrations.PostgreSQL
             {
                 bool activate = false;
 
-                if (_server.ServerStore.LicenseManager.CanUsePowerBi(withNotification: false))
+                if (_server.ServerStore.LicenseManager.CanUsePowerBi(withNotification: false, out _))
                 {
-                    // TODO are - check is once again with notification enabled on first powerbi query
                     activate = true;
                 }
-                else if (_server.ServerStore.LicenseManager.CanUsePostgreSqlIntegration(withNotification: false))
+                else if (_server.ServerStore.LicenseManager.CanUsePostgreSqlIntegration(withNotification: true))
                 {
-                    // TODO arek - assert experimental feature
-
-                    activate = true;
+                    if (_server.ServerStore.Configuration.Core.FeaturesAvailability == FeaturesAvailability.Experimental)
+                        activate = true;
+                    else
+                    {
+                        if (_logger.IsOperationsEnabled)
+                            _logger.Info($"You have enabled the PostgreSQL integration via '{RavenConfiguration.GetKey(x => x.Integrations.PostgreSql.Enabled)}' configuration but " +
+                                         "this is an experimental feature and the server does not support experimental features. " +
+                                         $"Please enable experimental features by changing '{RavenConfiguration.GetKey(x => x.Core.FeaturesAvailability)}' configuration value to '{nameof(FeaturesAvailability.Experimental)}'.");
+                    }
                 }
 
                 if (activate)
