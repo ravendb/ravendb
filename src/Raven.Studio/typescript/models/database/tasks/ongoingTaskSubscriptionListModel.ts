@@ -26,6 +26,7 @@ class ongoingTaskSubscriptionListModel extends ongoingTaskListModel {
     // Live connection stats
     clients = ko.observableArray<PerConnectionStats>([]);
     clientDetailsIssue = ko.observable<string>(); // null (ok) | client is not connected | failed to get details..
+    subscriptionMode = ko.observable<string>();
     textClass = ko.observable<string>("text-details");
 
     validationGroup: KnockoutValidationGroup;
@@ -78,6 +79,8 @@ class ongoingTaskSubscriptionListModel extends ongoingTaskListModel {
                     .execute()
                     .done((result: Raven.Server.Documents.TcpHandlers.SubscriptionConnectionsDetails) => {
 
+                        this.subscriptionMode(result.SubscriptionMode);
+                        
                         this.clients(result.Results.map(x => ({
                             clientUri: x.ClientUri,
                             strategy: x.Strategy,
