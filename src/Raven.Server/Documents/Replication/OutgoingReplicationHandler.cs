@@ -720,10 +720,17 @@ namespace Raven.Server.Documents.Replication
 
                 _interruptibleRead = new InterruptibleRead(_database.DocumentsStorage.ContextPool, stream);
 
-                //This will either throw or return acceptable protocol version.
-                SupportedFeatures = TcpNegotiation.Sync.NegotiateProtocolVersion(documentsContext, stream, parameters);
-                
-                return Task.FromResult(SupportedFeatures);
+                try
+                {
+                    //This will either throw or return acceptable protocol version.
+                    SupportedFeatures = TcpNegotiation.Sync.NegotiateProtocolVersion(documentsContext, stream, parameters);
+                    return Task.FromResult(SupportedFeatures);
+                }
+                catch
+                {
+                    _interruptibleRead.Dispose();
+                    throw;
+                }
             }
         }
 
