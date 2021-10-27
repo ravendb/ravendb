@@ -25,7 +25,7 @@ class remoteMetadataProvider implements queryCompleterProviders {
     }
 
     collectionFields(collectionName: string, prefix: string, callback: (fields: dictionary<string>) => void): void {
-        if (collectionName === "@all_docs"){
+        if (collectionName === "@all_docs") {
             collectionName = "All Documents";
         }
         const matchedCollection = collectionsTracker.default.collections().find(x => x.name === collectionName);
@@ -33,6 +33,9 @@ class remoteMetadataProvider implements queryCompleterProviders {
             matchedCollection.fetchFields(prefix)
                 .done(result => {
                     if (result) {
+                        if (!prefix) {
+                            result["id()"] = "String";
+                        }
                         callback(result);
                     }
                 });

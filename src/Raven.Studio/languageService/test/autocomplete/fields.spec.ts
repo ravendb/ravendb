@@ -143,4 +143,27 @@ describe("can complete fields", function () {
             }
         });
     });
+    
+    describe("id() field", function() {
+        it("can complete id field in index", async function () {
+            const suggestions = await autocomplete("from index 'Orders/ByCompany' select | ");
+            
+            expect(suggestions.find(x => x.value.startsWith("id()")))
+                .toBeTruthy();
+        });
+        
+        it("can complete id() field in collection query", async function() {
+            const suggestions = await autocomplete("from Orders select | ");
+
+            expect(suggestions.find(x => x.value.startsWith("id()")))
+                .toBeTruthy();
+        });
+
+        it("doesn't complete id() field in collection query - when group by exist", async function() {
+            const suggestions = await autocomplete("from Orders group by Company select | ");
+
+            expect(suggestions.find(x => x.value.startsWith("id()")))
+                .toBeFalsy();
+        });
+    });
 });

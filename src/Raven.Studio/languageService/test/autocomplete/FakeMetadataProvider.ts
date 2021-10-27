@@ -19,7 +19,8 @@ function stubCollectionFields(): Map<string, Map<string, dictionary<string>>> {
         Lines: "ArrayObject",
         OrderedAt: "String",
         ShipTo: "Object",
-        ShipVia: "String"
+        ShipVia: "String",
+        ["id()"]: "String"
     });
     
     insert("Orders", "Lines", {
@@ -37,6 +38,7 @@ function stubCollectionFields(): Map<string, Map<string, dictionary<string>>> {
         PricePerUnit: "Number",
         QuantityPerUnit: "String",
         Supplier: "String",
+        ["id()"]: "String"
     });
     
     return result;
@@ -44,7 +46,7 @@ function stubCollectionFields(): Map<string, Map<string, dictionary<string>>> {
 
 function stubIndexFields(): Map<string, string[]> {
     const result = new Map<string, string[]>();
-    result.set("Orders/ByCompany", ["Company", "Count", "Total"]);
+    result.set("Orders/ByCompany", ["Company", "Count", "Total", "id()"]);
     result.set("Product/Rating", ["Name", "Rating", "TotalVotes", "AllRatings"]);
     result.set("Orders/Totals", ["Employee", "Company", "Total"]);
     return result;
