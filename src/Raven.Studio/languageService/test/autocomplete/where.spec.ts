@@ -66,6 +66,13 @@ describe("can complete where", function () {
         }
     });
     
+    it("doesn't complete suggest in where", async () => {
+        const suggestions = await autocomplete("from Orders where |");
+        
+        expect(suggestions.find(x => x.value.startsWith("suggest(")))
+            .toBeFalsy();
+    });
+    
     describe("and / or ", function () {
         it("can complete and/or in where after predicate", async () => {
             const suggestions = await autocomplete("from Orders where Name == 'Test1' | ");

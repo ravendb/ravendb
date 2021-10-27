@@ -1,4 +1,4 @@
-import { CandidatesCollection } from "antlr4-c3/out/src/CodeCompletionCore";
+import { CandidateRule, CandidatesCollection } from "antlr4-c3/out/src/CodeCompletionCore";
 import { RqlParser } from "../RqlParser";
 import { BaseAutocompleteProvider, filterTokens } from "./baseProvider";
 import { AUTOCOMPLETE_META, AUTOCOMPLETE_SCORING, AutocompleteContext, AutocompleteProvider } from "./common";
@@ -15,7 +15,15 @@ const rootKeywords: number[] = [
     RqlParser.OFFSET
 ];
 
-const specialFunctions: Pick<autoCompleteWordList, "value" | "caption">[] = [
+
+const specialSelectFunctions: Pick<autoCompleteWordList, "value" | "caption">[] = [
+    {
+        value: "suggest(",
+        caption: "suggest(field, terms)"
+    }
+];
+
+const specialWhereFunctions: Pick<autoCompleteWordList, "value" | "caption">[] = [
     {
         value: "fuzzy(",
         caption: "fuzzy(field = value, factor)"
@@ -68,7 +76,7 @@ const specialFunctions: Pick<autoCompleteWordList, "value" | "caption">[] = [
         value: "proximity(",
         caption: "proximity(whereClause, proximity)"
     }
-]
+];
 
 const alreadyHandledTokenTypes: number[] = [
     RqlParser.MATH,
@@ -97,27 +105,57 @@ export class AutocompleteKeywords extends BaseAutocompleteProvider implements Au
     
     static handleSpecialFunctions(candidates: CandidatesCollection, writtenText: string): autoCompleteWordList[] {
         const specialFunctionRule = candidates.rules.get(RqlParser.RULE_specialFunctionName);
+        
+        
         const inWhereSpecialFunction = specialFunctionRule
             && specialFunctionRule.ruleList.length >= 1
             && specialFunctionRule.ruleList[1] === RqlParser.RULE_whereStatement;
 
-        if (!inWhereSpecialFunction) {
-            return [];
+        if (inWhereSpecialFunction) {
+            return AutocompleteKeywords.handleSpecialWhereFunctions(candidates, specialFunctionRule, writtenText);
+        }
+
+        const inSelectSpecialFunction = specialFunctionRule
+            && specialFunctionRule.ruleList.length >= 1
+            && specialFunctionRule.ruleList[1] === RqlParser.RULE_selectStatement;
+
+        if (inSelectSpecialFunction) {
+            return AutocompleteKeywords.handleSpecialSelectFunction(candidates, specialFunctionRule, writtenText);
         }
         
+        return [];
+    } 
+    
+    static handleSpecialWhereFunctions(candidates: CandidatesCollection, rule: CandidateRule, writtenText: string) {
         // check if we are not inside another special function! - we can't nest them
-        const inSpecialFunction = specialFunctionRule.ruleList.find(x => x === RqlParser.RULE_specialParam);
+        const inSpecialFunction = rule.ruleList.find(x => x === RqlParser.RULE_specialParam);
 
         if (inSpecialFunction) {
             return [];
         }
 
-        return filterTokens(writtenText, specialFunctions, x => x.value).map(x => ({
+        return filterTokens(writtenText, specialWhereFunctions, x => x.value).map(x => ({
             ...x,
             score: AUTOCOMPLETE_SCORING.function,
             meta: AUTOCOMPLETE_META.function
         }));
-    } 
+    }
+
+    static handleSpecialSelectFunction(candidates: CandidatesCollection, rule: CandidateRule, writtenText: string) {
+        // check if we are not inside another special function! - we can't nest them
+        const inSpecialFunction = rule.ruleList.find(x => x === RqlParser.RULE_specialParam);
+
+        if (inSpecialFunction) {
+            return [];
+        }
+
+        return filterTokens(writtenText, specialSelectFunctions, x => x.value).map(x => ({
+            ...x,
+            score: AUTOCOMPLETE_SCORING.function,
+            meta: AUTOCOMPLETE_META.function
+        }));
+    }
+    
     
     static handleEqual(writtenText: string): autoCompleteWordList[] {
         if (writtenText.endsWith(".")) {
@@ -327,7 +365,7 @@ export class AutocompleteKeywords extends BaseAutocompleteProvider implements Au
     }
     
     collect(ctx: AutocompleteContext): autoCompleteWordList[] {
-        const { candidates, writtenText, parseTree, parser } = ctx;
+        const { candidates, writtenText, parser } = ctx;
         const completions: autoCompleteWordList[] = [];
                 
         if (candidates.rules.has(RqlParser.RULE_specialFunctionName)) {

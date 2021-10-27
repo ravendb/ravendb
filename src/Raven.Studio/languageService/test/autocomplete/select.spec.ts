@@ -98,6 +98,13 @@ describe("can complete select", function () {
         }
     });
     
+    it("can complete suggest() function in select", async () => {
+        const suggestions = await autocomplete("from Orders select |");
+        
+        expect(suggestions.find(x => x.value.startsWith("suggest(")))
+            .toBeTruthy();
+    });
+    
     it("can complete declared functions in select", async () => {
         const suggestions = await autocomplete("declare function Test1() { } from Orders select |");
         expect(suggestions.find(x => x.value.startsWith("Test1")))

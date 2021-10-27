@@ -247,10 +247,12 @@ export class AutoCompleteFields extends BaseAutocompleteProvider implements Auto
             
             const { source, sourceName, pathWoPrefix, prefix } = AutoCompleteFields.resolvePrefix(fieldPrefix, ctx);
             
-            const fields = await this.getPossibleFields(source, sourceName, pathWoPrefix);
+            const rawFields = await this.getPossibleFields(source, sourceName, pathWoPrefix);
+            
+            const fields = this.filterFields(rawFields, ctx);
 
-            const shouldAddPrefix = !writtenText && !fieldPrefix && (prefix || queryMetaInfo.fromAlias || "");
             const effectivePrefixToUse = prefix || queryMetaInfo.fromAlias || "";
+            const shouldAddPrefix = !writtenText && !fieldPrefix && effectivePrefixToUse;
 
             const filteredFields = filterTokens(writtenText, fields).map(field => ({
                 meta: AUTOCOMPLETE_META.field,
@@ -260,26 +262,36 @@ export class AutoCompleteFields extends BaseAutocompleteProvider implements Auto
             }));
             
             const groupByFunctions = this.collectGroupByFields(rule, fieldPrefix, ctx);
-            const filteredGroupByFunctions = filterTokens(writtenText, groupByFunctions, x => x.value);
-            
             const includeFunctions = this.collectIncludeFields(rule, fieldPrefix, ctx);
-            const filteredIncludeFunctions = filterTokens(writtenText, includeFunctions, x => x.value);
-            
             const orderByFunctions = this.collectOrderByField(rule, fieldPrefix, ctx);
-            const filteredOrderByFunctions = filterTokens(writtenText, orderByFunctions, x => x.value);
-            
             const declaredJsFunctions = this.collectJsFunctions(rule, fieldPrefix, ctx);
-            const filteredJsFunctions = filterTokens(writtenText, declaredJsFunctions, x => x.value);
+            
+            const allFunctions = [
+                ...groupByFunctions, 
+                ...includeFunctions,
+                ...orderByFunctions,
+                ...declaredJsFunctions
+            ];
+            
+            const filteredFunctions = filterTokens(writtenText, allFunctions, x => x.value);
             
             return [
                 ...filteredFields, 
-                ...filteredGroupByFunctions, 
-                ...filteredIncludeFunctions, 
-                ...filteredOrderByFunctions, 
-                ...filteredJsFunctions
+                ...filteredFunctions 
             ];
         }
         
         return [];
+    }
+
+    private filterFields(fields: string[], ctx: AutocompleteContext): string[] {
+        const hasGroupBy = !!ctx.parseTree.groupByStatement();
+        const isCollectionQuery = ctx.queryMetaInfo.querySourceType === "collection";
+
+        if (hasGroupBy && isCollectionQuery) {
+            return fields.filter(x => x !== "id()");
+        }
+        
+        return fields;
     }
 }
