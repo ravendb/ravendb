@@ -367,17 +367,26 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
 
         public void WriteValue(LazyCompressedStringValue value)
         {
-            _manualBlittableJsonDocumentBuilder.WriteValue(value);
+            if (value != null)
+                _manualBlittableJsonDocumentBuilder.WriteValue(value);
+            else
+                _manualBlittableJsonDocumentBuilder.WriteValueNull();
         }
 
         public void WriteValue(LazyStringValue value)
         {
-            _manualBlittableJsonDocumentBuilder.WriteValue(value);
+            if (value != null)
+                _manualBlittableJsonDocumentBuilder.WriteValue(value);
+            else
+                _manualBlittableJsonDocumentBuilder.WriteValueNull();
         }
 
         public void WriteValue(LazyNumberValue value)
         {
-            _manualBlittableJsonDocumentBuilder.WriteValue(value);
+            if (value != null)
+                _manualBlittableJsonDocumentBuilder.WriteValue(value);
+            else
+                _manualBlittableJsonDocumentBuilder.WriteValueNull();
         }
 
         public override void WriteValue(short value)
