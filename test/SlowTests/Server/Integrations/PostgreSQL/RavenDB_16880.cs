@@ -33,7 +33,7 @@ namespace SlowTests.Server.Integrations.PostgreSQL
         };
 
         private const string correctUid = "root";
-        private const string correctPassword = "test";
+        private const string correctPassword = "s3cr3t";
 
         public RavenDB_16880(ITestOutputHelper output) : base(output)
         {
@@ -360,6 +360,53 @@ namespace SlowTests.Server.Integrations.PostgreSQL
             }
         }
 
+        [Fact]
+        public async Task MustNotConnectToToSecuredServerWithoutProvidingValidCredentials()
+        {
+            var certificates = SetupServerAuthentication(postgressSettings);
+            var dbName = GetDatabaseName();
+            var adminCert = RegisterClientCertificate(certificates, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+
+            const string query = "from Employees";
+
+            DoNotReuseServer(postgressSettings);
+
+            using (var store = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+                ModifyDatabaseName = s => dbName,
+            }))
+            {
+                var npgSqlException = await Assert.ThrowsAsync<NpgsqlException>(async () => await Act(store, query, Server, forceSslMode: false));
+
+                Assert.Equal("No password has been provided but the backend requires one (in cleartext)", npgSqlException.Message);
+
+                var pgException = await Assert.ThrowsAsync<PostgresException>(async () => await Act(store, query, Server));
+
+                Assert.Equal("0P000: role \"root\" does not exist", pgException.Message);
+
+                store.Maintenance.Send(new ConfigurePostgreSqlOperation(new PostgreSqlConfiguration
+                {
+                    Authentication = new PostgreSqlAuthenticationConfiguration()
+                    {
+                        Users = new List<PostgreSqlUser>()
+                       {
+                           new PostgreSqlUser()
+                           {
+                               Username = correctUid,
+                               Password = "incorrect_password"
+                           }
+                       }
+                    }
+                }));
+
+                pgException = await Assert.ThrowsAsync<PostgresException>(async () => await Act(store, query, Server));
+
+                Assert.Equal("28P01: password authentication failed for user \"root\"", pgException.Message);
+            }
+        }
+
         private DataTable Select(
             NpgsqlConnection connection,
             string query,
@@ -383,7 +430,7 @@ namespace SlowTests.Server.Integrations.PostgreSQL
             return dt;
         }
 
-        private string GetConnectionString(DocumentStore store, RavenServer server)
+        private string GetConnectionString(DocumentStore store, RavenServer server, bool? forceSslMode = null)
         {
             var uri = new Uri(store.Urls.First());
 
@@ -393,7 +440,7 @@ namespace SlowTests.Server.Integrations.PostgreSQL
 
             string connectionString;
 
-            if (server.Certificate.Certificate == null)
+            if (server.Certificate.Certificate == null || forceSslMode == false)
                 connectionString = $"Host={host};Port={port};Database={database};Uid={correctUid};";
             else
                 connectionString = $"Host={host};Port={port};Database={database};Uid={correctUid};Password={correctPassword};SSL Mode=Prefer;Trust Server Certificate=true";
@@ -410,9 +457,9 @@ namespace SlowTests.Server.Integrations.PostgreSQL
         }
 
 
-        private async Task<DataTable> Act(DocumentStore store, string query, RavenServer server)
+        private async Task<DataTable> Act(DocumentStore store, string query, RavenServer server, bool? forceSslMode = null)
         {
-            var connectionString = GetConnectionString(store, server);
+            var connectionString = GetConnectionString(store, server, forceSslMode);
 
             await using var connection = new NpgsqlConnection(connectionString);
             await connection.OpenAsync();
