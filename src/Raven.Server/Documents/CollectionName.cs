@@ -32,7 +32,6 @@ namespace Raven.Server.Documents
 
     public class CollectionName
     {
-        public const string EmptyCollection = "@empty";
         public const string HiLoCollection = "@hilo";
 
         public static readonly StringSegment EmptyCollectionSegment;
@@ -52,7 +51,7 @@ namespace Raven.Server.Documents
 
         static CollectionName()
         {
-            EmptyCollectionSegment = new StringSegment(EmptyCollection);
+            EmptyCollectionSegment = new StringSegment(Constants.Documents.Collections.EmptyCollection);
             MetadataKeySegment = new StringSegment(Constants.Documents.Metadata.Key);
             MetadataCollectionSegment = new StringSegment(Constants.Documents.Metadata.Collection);
         }
@@ -180,14 +179,14 @@ namespace Raven.Server.Documents
         public static string GetCollectionName(BlittableJsonReaderObject document)
         {
             if (document == null)
-                return EmptyCollection;
+                return Constants.Documents.Collections.EmptyCollection;
 
             document.NoCache = true;
             if (document.TryGet(MetadataKeySegment, out BlittableJsonReaderObject metadata) == false ||
                 metadata.TryGet(MetadataCollectionSegment, out string collectionName) == false ||
                 collectionName == null)
             {
-                collectionName = EmptyCollection;
+                collectionName = Constants.Documents.Collections.EmptyCollection;
             }
 
             return collectionName;
