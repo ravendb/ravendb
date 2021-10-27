@@ -41,16 +41,6 @@ export class RqlQueryVisitor extends AbstractParseTreeVisitor<RqlQueryMetaInfo> 
         return this.visitChildren(ctx);
     }
     
-    visitJsFunction(ctx: JsFunctionContext): RqlQueryMetaInfo {
-        for (const functionName of ctx.JFN_WORD()) {
-            this.meta.jsFunctions.push({
-                name: functionName.text
-            });
-        }
-        
-        return this.visitChildren(ctx);
-    }
-
     visitCollectionByName(ctx: CollectionByNameContext): RqlQueryMetaInfo {
         const alias = ctx.aliasWithOptionalAs()?.aliasName()?.text;
         if (alias) {
@@ -58,6 +48,15 @@ export class RqlQueryVisitor extends AbstractParseTreeVisitor<RqlQueryMetaInfo> 
         }
         this.meta.querySourceType = "collection";
         this.meta.querySourceName = AutocompleteUtils.unquote(ctx.collectionName().text);
+        return this.visitChildren(ctx);
+    }
+
+    visitJsFunction(ctx: JsFunctionContext): RqlQueryMetaInfo {
+        const functionName = ctx.JFN_WORD(0);
+        this.meta.jsFunctions.push({
+            name: functionName.text
+        });
+
         return this.visitChildren(ctx);
     }
     
