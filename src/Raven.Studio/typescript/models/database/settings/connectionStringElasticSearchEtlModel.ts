@@ -18,7 +18,7 @@ class authenticationInfo {
     static authProviders: Array<valueAndLabelItem<authenticationMethod, string>> = [
         { value: "none", label: "No authentication" },
         { value: "basic", label: "Basic" },
-        { value: "apiKey",label: "Api Key" },
+        { value: "apiKey",label: "API Key" },
         { value: "certificate", label: "Certificate" }
     ];
     
