@@ -18,7 +18,6 @@ using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Extensions;
-using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
@@ -35,7 +34,6 @@ using Sparrow.Json.Parsing;
 using Sparrow.Json.Sync;
 using Sparrow.Logging;
 using Sparrow.Server;
-using Sparrow.Server.Json.Sync;
 using Sparrow.Threading;
 using Sparrow.Utils;
 
@@ -720,6 +718,8 @@ namespace Raven.Server.Documents.Replication
                     DestinationServerId = info?.ServerId
                 };
 
+                _interruptibleRead = new InterruptibleRead(_database.DocumentsStorage.ContextPool, stream);
+
                 //This will either throw or return acceptable protocol version.
                 SupportedFeatures = TcpNegotiation.Sync.NegotiateProtocolVersion(documentsContext, stream, parameters);
                 
@@ -729,9 +729,6 @@ namespace Raven.Server.Documents.Replication
 
         private int ReadHeaderResponseAndThrowIfUnAuthorized(JsonOperationContext context, BlittableJsonTextWriter writer, Stream stream, string url)
         {
-            _interruptibleRead?.Dispose();
-            _interruptibleRead = new InterruptibleRead(_database.DocumentsStorage.ContextPool, stream);
-
             const int timeout = 2 * 60 * 1000;
 
             using (var replicationTcpConnectReplyMessage = _interruptibleRead.ParseToMemory(
