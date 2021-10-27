@@ -305,8 +305,8 @@ class connectionStringElasticSearchEtlModel extends connectionStringModel {
         }
     }
 
-    testConnection(urlToTest: discoveryUrl): JQueryPromise<Raven.Server.Web.System.NodeConnectionTestResult> {
-        return new testElasticSearchNodeConnectionCommand(urlToTest.discoveryUrlName(), this.authentication().toDto())
+    testConnection(db: database, urlToTest: discoveryUrl): JQueryPromise<Raven.Server.Web.System.NodeConnectionTestResult> {
+        return new testElasticSearchNodeConnectionCommand(db, urlToTest.discoveryUrlName(), this.authentication().toDto())
             .execute()
             .done((result) => {
                 if (result.Error) {
