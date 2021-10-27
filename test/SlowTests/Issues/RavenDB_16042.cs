@@ -7,6 +7,7 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
+using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.Errors;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Utils;
@@ -62,6 +63,51 @@ namespace SlowTests.Issues
 
                 var index2 = database2.IndexStore.GetIndex(new Products_ByName().IndexName);
                 Assert.IsType(typeof(FaultyInMemoryIndex), index2);
+            }
+        }
+
+        [Fact]
+        public async Task Should_Be_Able_To_Open_Index_Copied_From_Different_Database_When_IndexStartupBehavior_Is_Set_To_ResetAndStart()
+        {
+            var options = new Options
+            {
+                RunInMemory = false,
+                ModifyDatabaseRecord = r =>
+                {
+                    r.Settings[RavenConfiguration.GetKey(x => x.Core.ThrowIfAnyIndexCannotBeOpened)] = "false";
+                    r.Settings[RavenConfiguration.GetKey(x => x.Indexing.ErrorIndexStartupBehavior)] = IndexingConfiguration.IndexStartupBehavior.ResetAndStart.ToString();
+                }
+            };
+
+            using (var store1 = GetDocumentStore(options))
+            using (var store2 = GetDocumentStore(options))
+            {
+                await new Products_ByName().ExecuteAsync(store1);
+                await new Products_ByName().ExecuteAsync(store2);
+
+                var database1 = await GetDocumentDatabaseInstanceFor(store1);
+                var database2 = await GetDocumentDatabaseInstanceFor(store2);
+
+                var indexPath1 = database1.IndexStore.GetIndex(new Products_ByName().IndexName).Configuration.StoragePath.FullPath;
+                var indexPath2 = database2.IndexStore.GetIndex(new Products_ByName().IndexName).Configuration.StoragePath.FullPath;
+
+                Server.ServerStore.DatabasesLandlord.UnloadDirectly(store1.Database);
+                Server.ServerStore.DatabasesLandlord.UnloadDirectly(store2.Database);
+
+                database1 = await GetDocumentDatabaseInstanceFor(store1);
+
+                var index1 = database1.IndexStore.GetIndex(new Products_ByName().IndexName);
+                Assert.IsType(typeof(MapIndex), index1);
+
+                Server.ServerStore.DatabasesLandlord.UnloadDirectly(store1.Database);
+
+                IOExtensions.DeleteDirectory(indexPath2);
+                IOExtensions.MoveDirectory(indexPath1, indexPath2);
+
+                database2 = await GetDocumentDatabaseInstanceFor(store2);
+
+                var index2 = database2.IndexStore.GetIndex(new Products_ByName().IndexName);
+                Assert.IsType(typeof(MapIndex), index2);
             }
         }
 
