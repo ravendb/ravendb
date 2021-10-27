@@ -84,7 +84,7 @@ class ongoingTasks extends viewModelBase {
         this.myNodeTag(this.clusterManager.localNodeTag());
         this.serverWideTasksUrl = appUrl.forServerWideTasks();
         this.canNavigateToServerWideTasks = accessManager.default.isClusterAdminOrClusterNode;
-        this.taskNameToCount = ko.pureComputed<dictionary<number>>(() => {
+        this.taskNameToCount = ko.pureComputed<Record<TasksNamesInUI, number>>(() => {
             return {
                 "External Replication": this.replicationTasks().length,
                 "RavenDB ETL": this.ravenEtlTasks().length,
@@ -93,8 +93,8 @@ class ongoingTasks extends viewModelBase {
                 "Elasticsearch ETL": this.elasticSearchEtlTasks().length,
                 "Backup": this.backupTasks().length,
                 "Subscription": this.subscriptionTasks().length,
-                "Pull Replication Hub": this.replicationHubTasks().length,
-                "Pull Replication Sink": this.replicationSinkTasks().length
+                "Replication Hub": this.replicationHubTasks().length,
+                "Replication Sink": this.replicationSinkTasks().length
             }
         });
     }
