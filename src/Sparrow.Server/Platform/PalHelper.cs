@@ -10,18 +10,11 @@ namespace Sparrow.Server.Platform
         public static void ThrowLastError(PalFlags.FailCodes rc, int lastError, string msg)
         {
             string txt;
+            PalFlags.ErrnoSpecialCodes specialErrnoCodes;
+
             try
             {
-                txt = $"{GetNativeErrorString(lastError, msg, out var specialErrnoCodes)}. FailCode={rc}.";
-
-                if ((specialErrnoCodes & PalFlags.ErrnoSpecialCodes.NoMem) != 0)
-                    throw new OutOfMemoryException(txt);
-
-                if ((specialErrnoCodes & PalFlags.ErrnoSpecialCodes.NoEnt) != 0)
-                    throw new FileNotFoundException(txt);
-
-                if ((specialErrnoCodes & PalFlags.ErrnoSpecialCodes.NoSpc) != 0)
-                    throw new DiskFullException(txt);
+                txt = $"{GetNativeErrorString(lastError, msg, out specialErrnoCodes)}. FailCode={rc}.";
             }
             catch (OutOfMemoryException)
             {
@@ -30,7 +23,17 @@ namespace Sparrow.Server.Platform
             catch (Exception ex)
             {
                 txt = $"{lastError}:=(Failed to rvn_get_error_string - {ex.Message}): {msg}";
+                throw new InvalidOperationException(txt);
             }
+
+            if ((specialErrnoCodes & PalFlags.ErrnoSpecialCodes.NoMem) != 0)
+                throw new OutOfMemoryException(txt);
+
+            if ((specialErrnoCodes & PalFlags.ErrnoSpecialCodes.NoEnt) != 0)
+                throw new FileNotFoundException(txt);
+
+            if ((specialErrnoCodes & PalFlags.ErrnoSpecialCodes.NoSpc) != 0)
+                throw new DiskFullException(txt);
 
             throw new InvalidOperationException(txt);
         }
