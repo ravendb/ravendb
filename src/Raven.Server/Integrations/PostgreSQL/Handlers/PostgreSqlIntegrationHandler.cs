@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
@@ -102,7 +103,7 @@ namespace Raven.Server.Integrations.PostgreSQL.Handlers
 
                     var users = config.Authentication.Users;
 
-                    if (users.Any(x => x.Username == dto.Username))
+                    if (users.Any(x => x.Username.Equals(dto.Username, StringComparison.OrdinalIgnoreCase)))
                     {
                         HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
                         context.Write(writer, new DynamicJsonValue { ["Error"] = $"{dto.Username} username already exists." });

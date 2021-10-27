@@ -1,9 +1,9 @@
-﻿using System.IO.Pipelines;
+﻿using System;
+using System.IO.Pipelines;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.ServerWide;
-using Raven.Server.Integrations.PostgreSQL.Exceptions;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Integrations.PostgreSQL.Messages
@@ -12,9 +12,13 @@ namespace Raven.Server.Integrations.PostgreSQL.Messages
     {
         public string Password;
 
-        private readonly string _errorSeverity = "FATAL";
-        private readonly string _errorCode = "28P01";
-        private string ErrorMessage(string username) => $"password authentication failed for user \"{username}\"";
+        private const string ErrorSeverity = "FATAL";
+        private const string InvalidRoleSpecification = "0P000";
+        private const string InvalidPasswordErrorCode = "28P01";
+
+        private string PasswordAuthFailedErrorMessage(string username) => $"password authentication failed for user \"{username}\"";
+
+        private string RoleDoesNotExistErrorMessage(string username) => $"role \"{username}\" does not exist";
 
         protected override async Task HandleMessage(PgTransaction transaction, MessageBuilder messageBuilder, PipeWriter writer, CancellationToken token)
         {
@@ -28,15 +32,17 @@ namespace Raven.Server.Integrations.PostgreSQL.Messages
 
             var users = databaseRecord?.Integrations?.PostgreSql?.Authentication?.Users;
 
-            if (users == null)
-                throw new PgFatalException(PgErrorCodes.NoDataFound, "Authentication failed");
+            var user = users?.SingleOrDefault(x => x.Username.Equals(transaction.Username, StringComparison.OrdinalIgnoreCase));
 
-            var user = users
-                .SingleOrDefault(x => x.Username == transaction.Username);
-
-            if (user == null || Password.Equals(user.Password) == false)
+            if (user == null)
             {
-                await writer.WriteAsync(messageBuilder.ErrorResponse(_errorSeverity, _errorCode, ErrorMessage(transaction.Username)), token);
+                await writer.WriteAsync(messageBuilder.ErrorResponse(ErrorSeverity, InvalidRoleSpecification, RoleDoesNotExistErrorMessage(transaction.Username)), token);
+                return;
+            }
+            
+            if (Password.Equals(user.Password) == false)
+            {
+                await writer.WriteAsync(messageBuilder.ErrorResponse(ErrorSeverity, InvalidPasswordErrorCode, PasswordAuthFailedErrorMessage(transaction.Username)), token);
                 return;
             }
 
