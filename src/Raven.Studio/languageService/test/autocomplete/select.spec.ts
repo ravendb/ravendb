@@ -103,4 +103,10 @@ describe("can complete select", function () {
         expect(suggestions.find(x => x.value.startsWith("Test1")))
             .toBeTruthy();
     });
+    
+    it("doesn't complete declared function argument names in select", async () => {
+        const suggestions = await autocomplete("declare function Test1(param1) { } from Orders select |");
+        expect(suggestions.find(x => x.value.startsWith("param1")))
+            .toBeFalsy();
+    });
 });
