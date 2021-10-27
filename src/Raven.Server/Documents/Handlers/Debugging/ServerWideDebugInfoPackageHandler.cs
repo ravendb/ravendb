@@ -210,9 +210,9 @@ namespace Raven.Server.Documents.Handlers.Debugging
         {
             var contentDisposition = $"attachment; filename={DateTime.UtcNow:yyyy-MM-dd H:mm:ss} - Node [{ServerStore.NodeTag}].zip";
             HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
-            
+
             var token = CreateOperationToken();
-            
+
             var operationId = GetLongQueryString("operationId", false) ?? ServerStore.Operations.GetNextOperationId();
 
             await ServerStore.Operations.AddOperation(null, "Created debug package for current server only", Operations.Operations.OperationType.DebugPackage, async _ =>
@@ -223,12 +223,12 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     using (var archive = new ZipArchive(ms, ZipArchiveMode.Create, true))
                     {
                         var localEndpointClient = new LocalEndpointClient(Server);
-        
+
                         await WriteServerWide(archive, context, localEndpointClient, _serverWidePrefix, token.Token);
                         await WriteForAllLocalDatabases(archive, context, localEndpointClient, token: token.Token);
                         await WriteLogFile(archive, token.Token);
                     }
-        
+
                     ms.Position = 0;
                     await ms.CopyToAsync(ResponseBodyStream(), token.Token);
                 }
@@ -240,7 +240,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
         private static async Task WriteLogFile(ZipArchive archive, CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
-            
+
             var prefix = $"{_serverWidePrefix}/{DateTime.UtcNow:yyyy-MM-dd H:mm:ss}.txt";
 
             try
@@ -295,17 +295,17 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }
         }
 
-        private async Task WriteServerWide(ZipArchive archive, JsonOperationContext context, LocalEndpointClient localEndpointClient, string prefix,
+        private static async Task WriteServerWide(ZipArchive archive, JsonOperationContext context, LocalEndpointClient localEndpointClient, string prefix,
             CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
-            
+
             //theoretically this could be parallelized,
             //however ZipArchive allows only one archive entry to be open concurrently
             foreach (var route in DebugInfoPackageUtils.Routes.Where(x => x.TypeOfRoute == RouteInformation.RouteType.None))
             {
                 token.ThrowIfCancellationRequested();
-                
+
                 var entryRoute = DebugInfoPackageUtils.GetOutputPathFromRouteInformation(route, prefix);
                 try
                 {
@@ -332,23 +332,23 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }
         }
 
-        private async Task WriteForAllLocalDatabases(ZipArchive archive, JsonOperationContext jsonOperationContext, LocalEndpointClient localEndpointClient, 
+        private async Task WriteForAllLocalDatabases(ZipArchive archive, JsonOperationContext jsonOperationContext, LocalEndpointClient localEndpointClient,
             string prefix = null, CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
-            
+
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext transactionOperationContext))
             using (transactionOperationContext.OpenReadTransaction())
             {
                 foreach (var databaseName in ServerStore.Cluster.GetDatabaseNames(transactionOperationContext))
                 {
                     token.ThrowIfCancellationRequested();
-                    
+
                     using (var rawRecord = ServerStore.Cluster.ReadRawDatabaseRecord(transactionOperationContext, databaseName))
                     {
                         if (rawRecord == null ||
                             rawRecord.Topology.RelevantFor(ServerStore.NodeTag) == false ||
-                            rawRecord.IsDisabled||
+                            rawRecord.IsDisabled ||
                             rawRecord.DatabaseState == DatabaseStateStatus.RestoreInProgress ||
                             IsDatabaseBeingDeleted(ServerStore.NodeTag, rawRecord))
                             continue;
@@ -374,7 +374,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             string databaseName, string path = null, CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
-            
+
             var endpointParameters = new Dictionary<string, Microsoft.Extensions.Primitives.StringValues>
             {
                 {"database", new Microsoft.Extensions.Primitives.StringValues(databaseName)}
