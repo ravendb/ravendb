@@ -9,8 +9,42 @@ import virtualGridController = require("widgets/virtualGrid/virtualGridControlle
 import generalUtils = require("common/generalUtils");
 import awesomeMultiselect = require("common/awesomeMultiselect");
 import getCertificatesCommand = require("commands/auth/getCertificatesCommand");
+import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
+import recentQueriesStorage = require("common/storage/savedQueriesStorage");
+import queryCriteria = require("models/database/query/queryCriteria");
+import databasesManager = require("common/shell/databasesManager");
 
 type trafficChangeType = Raven.Client.Documents.Changes.TrafficWatchChangeType | Raven.Client.ServerWide.Tcp.TcpConnectionHeaderMessage.OperationTypes; 
+
+class runQueryFeature implements columnPreviewFeature {
+    install($tooltip: JQuery, valueProvider: () => any, elementProvider: () => any, containerSelector: string) {
+        $tooltip.on("click", ".run-query", () => {
+            const value = valueProvider();
+
+            const item: Raven.Client.Documents.Changes.TrafficWatchChangeBase = elementProvider();
+            
+            const query = queryCriteria.empty();
+
+            query.queryText(value);
+            query.name("Traffic watch query"); 
+            query.recentQuery(true);
+
+            const queryDto = query.toStorageDto();
+
+            const db = databasesManager.default.getDatabaseByName(item.DatabaseName);
+            
+            recentQueriesStorage.saveAndNavigate(db, queryDto, { newWindow: true });
+        });
+    }
+    
+    syntax(column: virtualColumn, escapedValue: any) {
+        if (column.header === "Custom Info" && escapedValue !== generalUtils.escapeHtml("N/A")) {
+            return `<button class="btn btn-default btn-sm run-query"><i class="icon-query"></i><span>Run Query</span></button>`;    
+        } else {
+            return "";
+        }
+    }
+}
 
 class typeData {
     count = ko.observable<number>(0);
@@ -249,7 +283,7 @@ class trafficWatch extends viewModelBase {
             } else {
                 this.updateDurationStats(filteredDataHttpNoWebSockets);
                 this.updatePercentiles(filteredDataHttpNoWebSockets);
-                }
+            }
         }
     }
                 
@@ -452,6 +486,8 @@ class trafficWatch extends viewModelBase {
             ]
         );
 
+        const runQuery = new runQueryFeature();
+        
         this.columnPreview.install("virtual-grid", ".js-traffic-watch-tooltip",
             (item: Raven.Client.Documents.Changes.TrafficWatchChangeBase, column: textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>,
              e: JQueryEventObject, onValue: (value: any, valueToCopy?: string, wrapValue?: boolean) => void) => {
@@ -464,6 +500,8 @@ class trafficWatch extends viewModelBase {
                 } else if (column.header === "Source") {
                     onValue(this.formatSource(item, true), this.formatSource(item, false), false);
                 }
+            }, {
+                additionalFeatures: [runQuery]
             });
 
         $(".traffic-watch .viewport").on("scroll", () => {
