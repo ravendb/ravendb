@@ -407,6 +407,36 @@ namespace SlowTests.Server.Integrations.PostgreSQL
             }
         }
 
+
+        [Fact]
+        public async Task NpgQueryWithIntegerParametersShouldWork()
+        {
+            const string query = "from 'Products' where PricePerUnit > @p";
+
+            DoNotReuseServer(postgressSettings);
+
+            using (var store = GetDocumentStore())
+            {
+                CreateNorthwindDatabase(store);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    int pricePerUnitConditionValue = 30;
+
+                    var products = await session.Query<Product>().Where(x => x.PricePerUnit > pricePerUnitConditionValue).ToListAsync();
+
+                    var result = await Act(store, query, Server, parameters: new Dictionary<string, (NpgsqlDbType, object)>()
+                    {
+                        {"p", (NpgsqlDbType.Integer, pricePerUnitConditionValue)}
+                    });
+
+                    Assert.NotNull(result);
+                    Assert.NotEmpty(result.Rows);
+                    Assert.Equal(products.Count, result.Rows.Count);
+                }
+            }
+        }
+
         private DataTable Select(
             NpgsqlConnection connection,
             string query,
@@ -457,14 +487,14 @@ namespace SlowTests.Server.Integrations.PostgreSQL
         }
 
 
-        private async Task<DataTable> Act(DocumentStore store, string query, RavenServer server, bool? forceSslMode = null)
+        private async Task<DataTable> Act(DocumentStore store, string query, RavenServer server, bool? forceSslMode = null, Dictionary<string, (NpgsqlDbType, object)> parameters = null)
         {
             var connectionString = GetConnectionString(store, server, forceSslMode);
 
             await using var connection = new NpgsqlConnection(connectionString);
             await connection.OpenAsync();
 
-            var result = Select(connection, query);
+            var result = Select(connection, query, parameters);
 
             await connection.CloseAsync();
             return result;
