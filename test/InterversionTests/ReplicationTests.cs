@@ -52,12 +52,13 @@ namespace InterversionTests
             Assert.True(replicationLoader.OutgoingFailureInfo.Any(ofi => ofi.Value.Errors.Select(x => x.Message).Any(x => x.Contains("TimeSeries"))));
         }
 
-        [Fact]
-        public async Task CanReplicateToOldServerWithLowerReplicationProtocolVersion()
+        [Theory]
+        [InlineData("4.2.117")]
+        [InlineData("5.2.3")]
+        public async Task CanReplicateToOldServerWithLowerReplicationProtocolVersion(string version)
         {
             // https://issues.hibernatingrhinos.com/issue/RavenDB-17346
 
-            const string version = "4.2.117";
             using var oldStore = await GetDocumentStoreAsync(version);
             using var store = GetDocumentStore();
             {
