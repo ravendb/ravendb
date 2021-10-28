@@ -248,9 +248,8 @@ namespace Raven.Server.Documents.Replication
                     {
                         _stream = new ReadWriteCompressedStream(_stream, _buffer);
                         _tcpConnectionOptions.Stream = _stream;
+                        _interruptibleRead = new InterruptibleRead(_database.DocumentsStorage.ContextPool, _stream);
                     }
-
-                    _interruptibleRead = new InterruptibleRead(_database.DocumentsStorage.ContextPool, _stream);
 
                     if (socketResult.SupportedFeatures.Replication.PullReplication)
                     {
@@ -731,15 +730,15 @@ namespace Raven.Server.Documents.Replication
 
                 try
                 {
-                //This will either throw or return acceptable protocol version.
-                SupportedFeatures = TcpNegotiation.Sync.NegotiateProtocolVersion(documentsContext, stream, parameters);
-                return Task.FromResult(SupportedFeatures);
-            }
+                    //This will either throw or return acceptable protocol version.
+                    SupportedFeatures = TcpNegotiation.Sync.NegotiateProtocolVersion(documentsContext, stream, parameters);
+                    return Task.FromResult(SupportedFeatures);
+                }
                 catch
                 {
                     _interruptibleRead.Dispose();
                     throw;
-        }
+                }
             }
         }
 
