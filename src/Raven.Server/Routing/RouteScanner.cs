@@ -8,8 +8,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using Microsoft.AspNetCore.Http;
-using Raven.Server.ServerWide;
 using Raven.Server.Web.System;
 using Sparrow.Platform;
 
@@ -21,7 +19,7 @@ namespace Raven.Server.Routing
     /// </summary>
     public class RouteScanner
     {
-        public readonly static List<RouteInformation> DebugRoutes = Scan(attr =>
+        public static readonly List<RouteInformation> DebugRoutes = Scan(attr =>
             {
                 var isDebugEndpoint = attr.IsDebugInformationEndpoint && attr.Path.Contains("info-package") == false;
 
@@ -29,11 +27,12 @@ namespace Raven.Server.Routing
                     return false;
 
                 return isDebugEndpoint;
-            }).Values.ToList();
+        })
+            .Values
+            .Where(x => x.Method != "OPTIONS")
+            .ToList();
 
-
-        public readonly static Dictionary<string, RouteInformation> AllRoutes = Scan();
-
+        public static readonly Dictionary<string, RouteInformation> AllRoutes = Scan();
 
         public static Dictionary<string, RouteInformation> Scan(Func<RavenActionAttribute, bool> predicate = null)
         {
