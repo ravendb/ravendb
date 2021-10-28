@@ -295,7 +295,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }
         }
 
-        private async Task WriteServerWide(ZipArchive archive, JsonOperationContext context, LocalEndpointClient localEndpointClient, string prefix,
+        private static async Task WriteServerWide(ZipArchive archive, JsonOperationContext context, LocalEndpointClient localEndpointClient, string prefix,
             CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
