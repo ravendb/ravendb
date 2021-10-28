@@ -87,7 +87,7 @@ namespace Raven.Server.Integrations.PostgreSQL
 
                 var pgType = PgType.Parse(dataType);
                 var processedParameter = pgType.FromBytes(parameters.ElementAt(i), dataFormat);
-                Parameters.Add($"p{i + 1}", processedParameter);
+                Parameters.Add((i + 1).ToString(), processedParameter);
             }
         }
     }
