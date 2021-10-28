@@ -1500,6 +1500,12 @@ namespace Raven.Server.ServerWide
                 context.Transaction.InnerTransaction.OpenTable(IdentitiesSchema, Identities).DeleteByPrimaryKeyPrefix(databaseSlice);
             }
 
+            databaseLowered = $"{databaseName.ToLowerInvariant()}{SpecialChars.RecordSeparator}";
+            using (Slice.From(context.Allocator, databaseLowered, out var databaseSlice))
+            {
+                context.Transaction.InnerTransaction.OpenTable(SubscriptionStateSchema, SubscriptionState).DeleteByPrimaryKeyPrefix(databaseSlice);
+            }
+
             // db can be idle when we are deleting it
             serverStore?.IdleDatabases.TryRemove(databaseName, out _);
         }

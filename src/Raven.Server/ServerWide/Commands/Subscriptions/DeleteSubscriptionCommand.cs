@@ -2,6 +2,7 @@
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
+using Raven.Server.Documents.Subscriptions;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -49,7 +50,6 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                 var doc = new BlittableJsonReaderObject(ptr, size, context);
 
                 var subscriptionState = JsonDeserializationClient.SubscriptionState(doc);
-
                 items.DeleteByKey(valueNameLowered);
 
                 if (string.IsNullOrEmpty(subscriptionState.SubscriptionName) == false)
@@ -58,6 +58,13 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                     using (Slice.From(context.Allocator, itemKey.ToLowerInvariant(), out valueNameLowered))
                     {
                         items.DeleteByKey(valueNameLowered);
+                    }
+
+                    using (SubscriptionConnectionsState.GetDatabaseAndSubscriptionPrefix(context, DatabaseName, subscriptionState.SubscriptionId, out var prefix))
+                    {
+                        var subscriptionStateTable = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.SubscriptionStateSchema, ClusterStateMachine.SubscriptionState);
+                        using var _ = Slice.External(context.Allocator, prefix, out var prefixSlice);
+                        subscriptionStateTable.DeleteByPrimaryKeyPrefix(prefixSlice);
                     }
                 }
             }

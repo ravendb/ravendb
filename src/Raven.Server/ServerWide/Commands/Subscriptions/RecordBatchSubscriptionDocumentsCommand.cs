@@ -107,8 +107,13 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                 
                 if (subscriptionState.ChangeVectorForNextBatchStartingPoint != PreviouslyRecordedChangeVector)
                 {
+                    using (SubscriptionConnectionsState.GetDatabaseAndSubscriptionPrefix(context, DatabaseName, SubscriptionId, out var prefix))
+                    {
+                        using var _ = Slice.External(context.Allocator, prefix, out var prefixSlice);
+                        subscriptionStateTable.DeleteByPrimaryKeyPrefix(prefixSlice);
+                    }
+
                     throw new SubscriptionChangeVectorUpdateConcurrencyException($"Can't record subscription with name '{subscriptionName}' due to inconsistency in change vector progress. Probably there was an admin intervention that changed the change vector value. Stored value: {subscriptionState.ChangeVectorForNextBatchStartingPoint}, received value: {PreviouslyRecordedChangeVector}");
-                    //TODO stav: might need to delete entire table if admin changed cv
                 }
 
                 if (shouldUpdateChangeVector)

@@ -29,6 +29,7 @@ using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.TimeSeries;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.Subscriptions.Stats;
+using Raven.Server.Documents.Subscriptions.SubscriptionProcessor;
 using Raven.Server.Json;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
@@ -63,7 +64,7 @@ namespace Raven.Server.Documents.TcpHandlers
     
     public class SubscriptionConnection : IDisposable
     {
-        public const int NonExistentBatch = -1;
+        public const long NonExistentBatch = -1;
         private const int WaitForChangedDocumentsTimeoutInMs = 3000;
         private static readonly StringSegment DataSegment = new StringSegment("Data");
         private static readonly StringSegment IncludesSegment = new StringSegment(nameof(QueryResult.Includes));
@@ -603,24 +604,7 @@ namespace Raven.Server.Documents.TcpHandlers
         private readonly IDisposable _subscriptionConnectionInProgress;
         private readonly (IDisposable ReleaseBuffer, JsonOperationContext.MemoryBuffer Buffer) _copiedBuffer;
         private readonly TcpConnectionHeaderMessage.SupportedFeatures _supportedFeatures;
-        private SubscriptionFetcher _fetcher;
         private SubscriptionProcessor _processor;
-
-        private static (SubscriptionProcessor Processor, SubscriptionFetcher Fetcher) CreateProcessorAndFetcher(ServerStore server, DocumentDatabase database, SubscriptionConnection connection, SubscriptionConnectionsState subscriptionConnectionsState)
-        {
-            if (connection.Subscription.Revisions)
-            {
-                var revisionProcessor = new RevisionsSubscriptionProcessor(server, database, connection, subscriptionConnectionsState);
-                var revisionFetcher = new RevisionSubscriptionFetcher(database, subscriptionConnectionsState, connection.Subscription.Collection);
-                revisionFetcher.SetProcessor(revisionProcessor);
-                return (revisionProcessor, revisionFetcher);
-            }
-
-            var processor = new DocumentsSubscriptionProcessor(server, database, connection, subscriptionConnectionsState);
-            var fetcher = new DocumentSubscriptionFetcher(database, subscriptionConnectionsState, connection.Subscription.Collection);
-            fetcher.SetProcessor(processor);
-            return (processor, fetcher);
-        }
 
         private async Task ProcessSubscriptionAsync()
         {
@@ -630,17 +614,16 @@ namespace Raven.Server.Documents.TcpHandlers
                 _logger.Info($"Starting processing documents for subscription {SubscriptionId} received from {TcpConnection.TcpClient.Client.RemoteEndPoint}");
             }
 
-            (_processor,_fetcher) = CreateProcessorAndFetcher(TcpConnection.DocumentDatabase.ServerStore, TcpConnection.DocumentDatabase, this, SubscriptionConnectionsState);
+            _processor = SubscriptionProcessor.Create(this);
 
             using (DisposeOnDisconnect)
-            using (_fetcher)
+            using (_processor)
             {
                 var replyFromClientTask = GetReplyFromClientAsync();
 
                 string subscriptionChangeVectorBeforeCurrentBatch = SubscriptionState.ChangeVectorForNextBatchStartingPoint;
 
-                _fetcher.SetConnectionInfo(Options, SubscriptionState, TcpConnection.TcpClient.Client.RemoteEndPoint);
-                _fetcher.AddScript(SetupFilterAndProjectionScript());
+                _processor.AddScript(SetupFilterAndProjectionScript());
 
                 while (CancellationTokenSource.IsCancellationRequested == false)
                 {
@@ -677,7 +660,6 @@ namespace Raven.Server.Documents.TcpHandlers
 
                                     using (docsContext.OpenReadTransaction())
                                     {
-                                        // TODO : would collection @all_docs work here as expected?
                                         var globalEtag =_processor.GetLastItemEtag(docsContext, Subscription.Collection);
                                         if (globalEtag > SubscriptionConnectionsState.GetLastEtagSent())
                                         {
@@ -869,9 +851,9 @@ namespace Raven.Server.Documents.TcpHandlers
                             if (_supportedFeatures.Subscription.TimeSeriesIncludes && Subscription.TimeSeriesIncludes != null)
                                 includeTimeSeriesCommand = new IncludeTimeSeriesCommand(docsContext, Subscription.TimeSeriesIncludes.TimeSeries);
 
-                            _fetcher.Initialize(clusterOperationContext, docsContext, includeDocumentsCommand);
+                            _processor.InitializeForNewBatch(clusterOperationContext, docsContext, includeDocumentsCommand);
 
-                            foreach (var result in _fetcher.Fetch())
+                            foreach (var result in _processor.GetBatch())
                             {
                                 CancellationTokenSource.Token.ThrowIfCancellationRequested();
 
@@ -891,7 +873,6 @@ namespace Raven.Server.Documents.TcpHandlers
                                     continue;
                                 }
                                 anyDocumentsSentInCurrentIteration = true;
-                                _fetcher.MarkDocumentSent();
 
                                 writer.WriteStartObject();
 
@@ -1020,6 +1001,15 @@ namespace Raven.Server.Documents.TcpHandlers
                                 {
                                     CurrentBatchId = await _processor.RecordBatch(lastChangeVectorSentInThisBatch);
                                 }
+                                else
+                                {
+                                    //backward comp.
+                                    await TcpConnection.DocumentDatabase.SubscriptionStorage.LegacyAcknowledgeBatchProcessed(
+                                        SubscriptionId,
+                                        Options.SubscriptionName,
+                                        LastSentChangeVectorInThisConnection ?? nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange),
+                                        SubscriptionState.ChangeVectorForNextBatchStartingPoint);
+                                }
 
                                 _subscriptionConnectionsState.LastChangeVectorSent = ChangeVectorUtils.MergeVectors(_subscriptionConnectionsState.LastChangeVectorSent,lastChangeVectorSentInThisBatch);
                                 _subscriptionConnectionsState.PreviouslyRecordedChangeVector = ChangeVectorUtils.MergeVectors(_subscriptionConnectionsState.PreviouslyRecordedChangeVector, lastChangeVectorSentInThisBatch);
@@ -1101,14 +1091,22 @@ namespace Raven.Server.Documents.TcpHandlers
             return false;
         }
 
-        private async Task SendNoopAck()
+        private Task SendNoopAck()
         {
-            await TcpConnection.DocumentDatabase.SubscriptionStorage.AcknowledgeBatchProcessed(
+            if (ClusterCommandsVersionManager.CurrentClusterMinimalVersion >= 53_000)
+            {
+                return TcpConnection.DocumentDatabase.SubscriptionStorage.AcknowledgeBatchProcessed(
+                    SubscriptionId,
+                    Options.SubscriptionName,
+                    nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange),
+                    NonExistentBatch, docsToResend: null);
+            }
+               
+            return TcpConnection.DocumentDatabase.SubscriptionStorage.LegacyAcknowledgeBatchProcessed(
                 SubscriptionId,
                 Options.SubscriptionName,
                 nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange),
-                nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange),
-                NonExistentBatch, null);
+                nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange));
         }
 
         private SubscriptionPatchDocument SetupFilterAndProjectionScript()
