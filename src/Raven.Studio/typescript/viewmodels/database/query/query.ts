@@ -1361,7 +1361,7 @@ class query extends viewModelBase {
 
         criteria.updateUsing(storedQuery);
 
-        this.runQuery();
+        this.runQuery(storedQuery.name);
     }
 
     getRecentQuerySortText(sorts: string[]): string {

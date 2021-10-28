@@ -135,14 +135,14 @@ namespace Raven.Server.Documents.Replication
 
             static void SafelyDispose(IDisposable toDispose)
             {
-            try
-            {
+                try
+                {
                     toDispose?.Dispose();
                 }
                 catch
-            {
-                // explicitly ignoring this
-            }
+                {
+                    // explicitly ignoring this
+                }
             }
         }
     }
