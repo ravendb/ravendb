@@ -225,7 +225,7 @@
                                            requiredAccess: 'DatabaseReadWrite', requiredAccessOptions: { strategy: 'disable' }">
                             <span class="text-warning" data-bind="visible: isPausedState() && !isErrorState()">
                                 <i class="icon-cancel"></i>
-                                <span>Paused until restart</span>
+                                <span>Paused until restart - Local node</span> <!-- TODO check if need to modify this (the local addition) when RavenDB-16345 is done -->  
                             </span>
                             <span data-bind="visible: isNormalState()">
                                 <i class="icon-check"></i>
@@ -237,7 +237,7 @@
                             </span>
                             <span class="text-danger" data-bind="visible: isDisabledState()">
                                 <i class="icon-cancel"></i>
-                                <span>Indexing disabled</span>
+                                <span>Indexing disabled - Local node</span> <!-- TODO check if need to modify this (the local addition) when RavenDB-16345 is done -->  
                             </span>
                             <span class="text-danger" data-bind="visible: isErrorState()">
                                 <i class="icon-danger"></i>
@@ -258,7 +258,7 @@
                             <li data-bind="visible: canBeEnabled()">
                                 <a href="#" data-bind="click: _.partial($root.enableIndex, $data, false), attr: { title: 'Enable indexing on node ' + $root.localNodeTag() }">
                                     <i class="icon-play"></i>
-                                    <span data-bind="text: $root.isCluster() ? 'Enable indexing - Local node' : 'Enable indexing'"></span>
+                                    <span>Enable indexing - Local node</span>
                                 </a>
                             </li>
                             
@@ -273,19 +273,19 @@
                             <li data-bind="visible: canBeDisabled()">
                                 <a href="#" data-bind="click: _.partial($root.disableIndex, $data, false), attr: { title: 'Disable indexing on node ' + $root.localNodeTag() }">
                                     <i class="icon-cancel"></i>
-                                    <span data-bind="text: $root.isCluster() ? 'Disable indexing - Local node' : 'Disable indexing'"></span>
+                                    <span>Disable indexing - Local node</span>
                                 </a>
                             </li>
                             <li data-bind="visible: canBePaused()">
                                 <a href="#" class="text-warning" data-bind="click: $root.pauseUntilRestart" title="Pause until restart">
                                     <i class="icon-pause"></i>
-                                    <span>Pause indexing until restart</span>
+                                    <span>Pause indexing until restart - Local node</span>
                                 </a>
                             </li>
                             <li data-bind="visible: canBeResumed()">
                                 <a href="#" class="text-success" data-bind="click: $root.resumeIndexing" title="Resume indexing">
                                     <i class="icon-play"></i>
-                                    <span>Resume indexing</span>
+                                    <span>Resume indexing - Local node</span>
                                 </a>
                             </li>
                         </ul>
