@@ -1,5 +1,6 @@
 /// <reference path="../tsd.d.ts"/>
 
+
 interface disposable {
     dispose(): void;
 }
@@ -840,4 +841,9 @@ interface iconPlusText {
     text: string;
     textClass: string;
     title: string;
+}
+
+interface columnPreviewFeature {
+    install($tooltip: JQuery, valueProvider: () => any, elementProvider: () => any, containerSelector: string): void;
+    syntax(column: virtualColumn, escapedValue: any): void;
 }

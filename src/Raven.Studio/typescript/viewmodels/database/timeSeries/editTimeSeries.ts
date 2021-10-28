@@ -550,12 +550,7 @@ class editTimeSeries extends viewModelBase {
         query.recentQuery(true);
 
         const queryDto = query.toStorageDto();
-        const recentQueries = recentQueriesStorage.getSavedQueries(this.activeDatabase());
-        recentQueriesStorage.appendQuery(queryDto, ko.observableArray(recentQueries));
-        recentQueriesStorage.storeSavedQueries(this.activeDatabase(), recentQueries);
-
-        const queryUrl = appUrl.forQuery(this.activeDatabase(), queryDto.hash, "&openGraph=true");
-        this.navigate(queryUrl);
+        recentQueriesStorage.saveAndNavigate(this.activeDatabase(), queryDto, { extraParameters: "&openGraph=true" });
     }
 
     private urlForTimeSeriesPolicies() {
