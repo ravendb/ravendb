@@ -12,7 +12,7 @@ using Raven.Server.Integrations.PostgreSQL.Types;
 
 namespace Raven.Server.Integrations.PostgreSQL.PowerBI
 {
-    public class PBIPreviewQuery : RqlQuery
+    public class PowerBIPreviewQuery : RqlQuery
     {
         private readonly List<PgDataRow> _results;
 
@@ -23,7 +23,7 @@ namespace Raven.Server.Integrations.PostgreSQL.PowerBI
         private static readonly Regex SqlRegex = new Regex(@"(?is)^\s*select\s+.*\s+from\s+INFORMATION_SCHEMA.columns\s+where\s+TABLE_SCHEMA\s+=\s+'public'\s+and\s+TABLE_NAME\s*=\s*'(?<table_name>[^']+)'\s+order\s+by\s+TABLE_SCHEMA\s*,\s*TABLE_NAME\s*,\s*ORDINAL_POSITION\s*$",
             RegexOptions.Compiled);
 
-        public PBIPreviewQuery(DocumentDatabase documentDatabase, string tableName)
+        public PowerBIPreviewQuery(DocumentDatabase documentDatabase, string tableName)
             : base($"from '{tableName}'", Array.Empty<int>(), documentDatabase, limit: 1)
         {
             _results = new List<PgDataRow>();
@@ -37,7 +37,7 @@ namespace Raven.Server.Integrations.PostgreSQL.PowerBI
             {
                 var tableName = match.Groups["table_name"].Value;
 
-                pgQuery = new PBIPreviewQuery(documentDatabase, tableName);
+                pgQuery = new PowerBIPreviewQuery(documentDatabase, tableName);
                 return true;
             }
 
