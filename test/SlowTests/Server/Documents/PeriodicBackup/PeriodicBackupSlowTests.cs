@@ -2478,7 +2478,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         if (string.IsNullOrEmpty(status.LocalBackup.Exception))
                             return false;
 
-                        return status.LocalBackup.Exception.StartsWith("System.OperationCanceledException: The operation was canceled.");
+                        return true;
                     }, true, timeout: 66666, interval: 444);
                     Assert.True(val, "Failed to complete the backup in time");
                 }
