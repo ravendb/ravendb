@@ -132,13 +132,13 @@ namespace Raven.Server.Documents.Subscriptions
             }
         }
 
-        public long GetNumberOfResendDocuments()
+        public long GetNumberOfResendDocuments(SubscriptionType type)
         {
             using (DocumentDatabase.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
             {
                 var subscriptionState = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.SubscriptionStateSchema, ClusterStateMachine.SubscriptionState);
-                using (GetDatabaseAndSubscriptionKeyPrefix(context, DocumentDatabase.Name, SubscriptionId, SubscriptionType.Document, out var prefix))
+                using (GetDatabaseAndSubscriptionKeyPrefix(context, DocumentDatabase.Name, SubscriptionId, type, out var prefix))
                 using (Slice.External(context.Allocator, prefix, out var prefixSlice))
                 {
                     return subscriptionState.SeekByPrimaryKeyPrefix(prefixSlice, Slices.Empty, 0).Count();
@@ -198,28 +198,51 @@ namespace Raven.Server.Documents.Subscriptions
             }
         }
 
-        public string GetLastActiveChangeVector(ClusterOperationContext context, string documentId)
+        public class ResendItem
+        {
+            public string Id;
+            public long Batch;
+            public string ChangeVector;
+            public SubscriptionType Type;
+        }
+
+        public IEnumerable<ResendItem> GetResendItems(ClusterOperationContext context)
         {
             var subscriptionState = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.SubscriptionStateSchema, ClusterStateMachine.SubscriptionState);
-            using (GetDatabaseAndSubscriptionAndDocumentKey(context, DocumentDatabase.Name, SubscriptionId, documentId, out var key))
-            using (Slice.External(context.Allocator,key, out var keySlice))
+            using (GetDatabaseAndSubscriptionPrefix(context, DocumentDatabase.Name, SubscriptionId, out var prefix))
+            using (Slice.External(context.Allocator, prefix, out var prefixSlice))
             {
-                if (subscriptionState.ReadByKey(keySlice, out var reader) == false)
-                    return null;
+                var resendItem = new ResendItem();
+             
+                foreach (var item in subscriptionState.SeekByPrimaryKeyPrefix(prefixSlice, Slices.Empty, 0))
+                {
+                    resendItem.Type = (SubscriptionType)item.Key[prefixSlice.Size];
+                    resendItem.Id = item.Value.Reader.ReadStringWithPrefix((int)ClusterStateMachine.SubscriptionStateTable.Key, prefix.Length + 2);
+                    resendItem.ChangeVector = item.Value.Reader.ReadString((int)ClusterStateMachine.SubscriptionStateTable.ChangeVector);
+                    resendItem.Batch = Bits.SwapBytes(item.Value.Reader.ReadLong((int)ClusterStateMachine.SubscriptionStateTable.BatchId));
 
-                return reader.ReadString((int)ClusterStateMachine.SubscriptionStateTable.ChangeVector);
+                    yield return resendItem;
+                }
             }
         }
 
         public Task AcknowledgeBatch(SubscriptionConnection connection, long batchId, List<DocumentRecord> addDocumentsToResend)
         {
-            return connection.TcpConnection.DocumentDatabase.SubscriptionStorage.AcknowledgeBatchProcessed(
+            if (ClusterCommandsVersionManager.CurrentClusterMinimalVersion >= 53_000)
+            {
+                return connection.TcpConnection.DocumentDatabase.SubscriptionStorage.AcknowledgeBatchProcessed(
+                    SubscriptionId,
+                    SubscriptionName,
+                    connection.LastSentChangeVectorInThisConnection ?? nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange),
+                    batchId,
+                    addDocumentsToResend);
+            }
+
+            return connection.TcpConnection.DocumentDatabase.SubscriptionStorage.LegacyAcknowledgeBatchProcessed(
                 SubscriptionId,
                 SubscriptionName,
                 connection.LastSentChangeVectorInThisConnection ?? nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange),
-                "",
-                batchId,
-                addDocumentsToResend);
+                LastChangeVectorSent);
         }
         
         public long GetLastEtagSent()
@@ -230,11 +253,6 @@ namespace Raven.Server.Documents.Subscriptions
         public bool IsSubscriptionActive()
         {
             return _connections.Count != 0;
-        }
-
-        internal Document GetRevision(string changeVector,DocumentsOperationContext context)
-        {
-            return DocumentDatabase.DocumentsStorage.RevisionsStorage.GetRevision(context, changeVector);
         }
 
         public Task<bool> WaitForSubscriptionActiveLock(int millisecondsTimeout)
@@ -524,7 +542,6 @@ namespace Raven.Server.Documents.Subscriptions
 
         private static ByteStringContext<ByteStringMemoryCache>.InternalScope GetDatabaseAndSubscriptionKeyPrefix(ClusterOperationContext context, string database, long subscriptionId, SubscriptionType type, out ByteString prefix)
         {
-
             using var _ = Slice.From(context.Allocator, database.ToLowerInvariant(), out var dbName);
             var rc = context.Allocator.Allocate(dbName.Size + sizeof(byte) + sizeof(long) + sizeof(byte) + sizeof(byte) + sizeof(byte), out prefix);
 
@@ -541,6 +558,25 @@ namespace Raven.Server.Documents.Subscriptions
         public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetDatabaseAndSubscriptionAndRevisionKey(ClusterOperationContext context, string database, long subscriptionId, string currentChangeVector, out ByteString key)
         {
             return GetSubscriptionStateKey(context, database, subscriptionId, currentChangeVector, SubscriptionType.Revision, out key);
+        }
+
+        public static unsafe ByteStringContext<ByteStringMemoryCache>.InternalScope GetDatabaseAndSubscriptionPrefix(ClusterOperationContext context, string database, long subscriptionId, out ByteString prefix)
+        {
+            using var _ = Slice.From(context.Allocator, database.ToLowerInvariant(), out var dbName);
+            var rc = context.Allocator.Allocate(dbName.Size + sizeof(byte) + sizeof(long) + sizeof(byte), out prefix);
+
+            dbName.CopyTo(prefix.Ptr);
+            var position = dbName.Size;
+
+            *(prefix.Ptr + position) = SpecialChars.RecordSeparator;
+            position++;
+
+            *(long*)(prefix.Ptr + position) = subscriptionId;
+            position += sizeof(long);
+
+            *(prefix.Ptr + position) = SpecialChars.RecordSeparator;
+
+            return rc;
         }
 
         public static unsafe ByteStringContext<ByteStringMemoryCache>.InternalScope GetSubscriptionStateKey(ClusterOperationContext context, string database, long subscriptionId, string pk, SubscriptionType type, out ByteString key)

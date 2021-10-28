@@ -12,6 +12,7 @@ using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Subscriptions;
+using Raven.Server.Documents.Subscriptions.SubscriptionProcessor;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Json;
 using Raven.Server.Routing;
@@ -86,18 +87,17 @@ namespace Raven.Server.Documents.Handlers
                 var sp = Stopwatch.StartNew();
                 var timeLimit = TimeSpan.FromSeconds(GetIntValueQueryString("timeLimit", false) ?? 15);
                 var startEtag = cv.Etag;
-                
-                var fetcher = new DummyDocumentSubscriptionFetcher(Database, state, sub.Collection);
-                fetcher.SetConnectionInfo(new SubscriptionWorkerOptions("dummy"), state, new IPEndPoint(HttpContext.Connection.RemoteIpAddress, HttpContext.Connection.RemotePort));
-                fetcher.AddScript(patch);
 
-                using (fetcher)
+                var processor = new TestDocumentsSubscriptionProcessor(Server.ServerStore, Database, state, sub.Collection, new SubscriptionWorkerOptions("dummy"), new IPEndPoint(HttpContext.Connection.RemoteIpAddress, HttpContext.Connection.RemotePort));
+                processor.AddScript(patch);
+
+                using (processor)
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 using (Database.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext clusterOperationContext))
                 using (clusterOperationContext.OpenReadTransaction())
                 using (context.OpenReadTransaction())
                 {
-                    fetcher.Initialize(clusterOperationContext, context, includeCmd);
+                    processor.InitializeForNewBatch(clusterOperationContext, context, includeCmd);
 
                     writer.WriteStartObject();
                     writer.WritePropertyName("Results");
@@ -108,9 +108,9 @@ namespace Raven.Server.Documents.Handlers
                         var first = true;
                         var lastEtag = startEtag;
                         
-                        fetcher.SetStartEtag(startEtag);
+                        processor.SetStartEtag(startEtag);
 
-                        foreach (var itemDetails in fetcher.Fetch())
+                        foreach (var itemDetails in processor.GetBatch())
                         {
                             if (itemDetails.Doc.Data != null)
                             {
