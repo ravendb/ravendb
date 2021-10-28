@@ -9,7 +9,7 @@ using Raven.Server.Integrations.PostgreSQL.Exceptions;
 
 namespace Raven.Server.Integrations.PostgreSQL.PowerBI
 {
-    public static class PBIFetchQuery
+    public static class PowerBIFetchQuery
     {
         /// <summary>
         /// Match an SQL from PowerBI that intends to query a collection. The SQL query may be nested and 

@@ -11,11 +11,11 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Integrations.PostgreSQL.PowerBI
 {
-    public class PBIAllCollectionsQuery : RqlQuery
+    public class PowerBIAllCollectionsQuery : RqlQuery
     {
         private static readonly string TableQuery = "select TABLE_SCHEMA, TABLE_NAME, TABLE_TYPE\nfrom INFORMATION_SCHEMA.tables\nwhere TABLE_SCHEMA not in ('information_schema', 'pg_catalog')\norder by TABLE_SCHEMA, TABLE_NAME".NormalizeLineEndings();
 
-        public PBIAllCollectionsQuery(string queryText, int[] parametersDataTypes, DocumentDatabase documentDatabase)
+        public PowerBIAllCollectionsQuery(string queryText, int[] parametersDataTypes, DocumentDatabase documentDatabase)
             : base(queryText, parametersDataTypes, documentDatabase)
         {
         }
@@ -26,7 +26,7 @@ namespace Raven.Server.Integrations.PostgreSQL.PowerBI
 
             if (queryText.Equals(TableQuery, StringComparison.OrdinalIgnoreCase))
             {
-                pgQuery = new PBIAllCollectionsQuery(queryText, parametersDataTypes, documentDatabase);
+                pgQuery = new PowerBIAllCollectionsQuery(queryText, parametersDataTypes, documentDatabase);
                 return true;
             }
 

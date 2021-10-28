@@ -6,17 +6,17 @@ namespace Raven.Server.Integrations.PostgreSQL.PowerBI
     {
         public static bool TryParse(string queryText, int[] parametersDataTypes, DocumentDatabase documentDatabase, out PgQuery pgQuery)
         {
-            if (PBIFetchQuery.TryParse(queryText, parametersDataTypes, documentDatabase, out pgQuery))
+            if (PowerBIFetchQuery.TryParse(queryText, parametersDataTypes, documentDatabase, out pgQuery))
             {
                 return true;
             }
 
-            if (PBIAllCollectionsQuery.TryParse(queryText, parametersDataTypes, documentDatabase, out pgQuery))
+            if (PowerBIAllCollectionsQuery.TryParse(queryText, parametersDataTypes, documentDatabase, out pgQuery))
             {
                 return true;
             }
 
-            if (PBIPreviewQuery.TryParse(queryText, documentDatabase, out pgQuery))
+            if (PowerBIPreviewQuery.TryParse(queryText, documentDatabase, out pgQuery))
             {
                 return true;
             }
