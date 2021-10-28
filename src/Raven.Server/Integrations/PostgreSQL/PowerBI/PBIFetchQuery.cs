@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using Raven.Client;
 using Raven.Server.Documents;
 using Raven.Server.Integrations.PostgreSQL.Exceptions;
 
@@ -56,80 +57,34 @@ namespace Raven.Server.Integrations.PostgreSQL.PowerBI
             string newRql = null;
             if (rql != null && rql.Success)
             {
-                // TODO: After integration, use Raven.Server's QueryParser instead of this regex so we support more complex RQLs like "select LastName as last" and "select "test""
+                // regular RQL query coming  from 'SQL statement (optional, requires database)' text box in Power BI
 
-                var alias = rql.Groups["alias"].Success ? rql.Groups["alias"].Value : "x";
+                // TODO arek or TODO pfyasu
+                // newRql = RewriteQueryToJsProjectionSoWeWillBeAbleToUseReplace(rql, matches);
 
-                var projectionFields = new Dictionary<string, string>();
-
-                // Get the projection fields from the RQL if provided
-                var simpleSelectKeys = rql.Groups["simple_keys"];
-                var jsSelectFields = rql.Groups["js_fields"];
-
-                if (simpleSelectKeys.Success)
-                {
-                    projectionFields["id()"] = GenerateRqlProjectedFieldValue("id()", alias);
-
-                    foreach (Capture selectField in simpleSelectKeys.Captures)
-                    {
-                        projectionFields[selectField.Value] = GenerateRqlProjectedFieldValue(selectField.Value, alias);
-                    }
-
-                    projectionFields["json()"] = GenerateRqlProjectedFieldValue("json()", alias);
-                }
-                else if (jsSelectFields.Success)
-                {
-                    var jsSelectKeys = rql.Groups["js_keys"];
-                    var jsSelectValues = rql.Groups["js_vals"];
-
-                    projectionFields["id()"] = GenerateRqlProjectedFieldValue("id()", alias);
-
-                    for (var i = 0; i < jsSelectKeys.Captures.Count; i++)
-                    {
-                        var key = jsSelectKeys.Captures[i].Value;
-
-                        if (jsSelectValues.Captures[i].Length == 0)
-                        {
-                            projectionFields[key] = "null";
-                        }
-                        else
-                        {
-                            projectionFields[key] = jsSelectValues.Captures[i].Value;
-                        }
-                    }
-
-                    projectionFields["json()"] = GenerateRqlProjectedFieldValue("json()", alias);
-                }
-
-                // Populate the columns starting from the inner-most SQL
-                for (var i = matches.Count - 1; i >= 0; i--)
-                {
-                    var match = matches[i];
-                    PopulateProjectionFields(match, ref projectionFields, alias);
-                }
-
-                // Note: It's crucial that the order of columns that is specified in the outer SQL is preserved.
-                var orderedProjectionFields = GetOrderedProjectionFields(matches, projectionFields, rql);
-
-                newRql = GenerateProjectedRql(rql, orderedProjectionFields, matches);
+                newRql = rql.Value;
             }
             else if (matches[0].Groups["table_name"].Success)
             {
+                // SQL query coming from selecting an loading entire collection (table)
+
                 if (matches.Count != 1)
                     throw new PgErrorException(PgErrorCodes.StatementTooComplex,
                         "Unexpected PowerBI nested SQL query. Query: " + queryText);
 
-                // Handle generic query
+                var sqlQuery = matches[0];
+
+                string tableName = sqlQuery.Groups["table_name"].Value;
+
                 var alias = "x";
 
                 var projectionFields = new Dictionary<string, string>();
-                PopulateProjectionFields(matches[0], ref projectionFields, alias);
+
+                PopulateProjectionFields(sqlQuery, ref projectionFields, alias);
 
                 var orderedProjectionFields = GetOrderedProjectionFields(matches, projectionFields);
 
-                // TODO: After integration, provide these as parameters to prevent SQL injection (depends on RavenDB-17075)
-                newRql = $"from {matches[0].Groups["table_name"].Value} as {alias} ";
-                newRql += GenerateProjectionString(orderedProjectionFields);
+                newRql = $"from '{tableName}' as {alias} {GenerateJsProjectionString(orderedProjectionFields)}";
             }
 
             if (newRql == null)
@@ -143,7 +98,71 @@ namespace Raven.Server.Integrations.PostgreSQL.PowerBI
             pgQuery = new RqlQuery(newRql, parametersDataTypes, documentDatabase, limit.Success ? int.Parse(limit.Value) : null);
             return true;
         }
-        
+
+        private static string RewriteQueryToJsProjectionSoWeWillBeAbleToUseReplace(Match rql, List<Match> matches)
+        {
+            string newRql;
+            // TODO: After integration, use Raven.Server's QueryParser instead of this regex so we support more complex RQLs like "select LastName as last" and "select "test""
+
+            var alias = rql.Groups["alias"].Success ? rql.Groups["alias"].Value : "x";
+
+            var projectionFields = new Dictionary<string, string>();
+
+            // Get the projection fields from the RQL if provided
+            var simpleSelectKeys = rql.Groups["simple_keys"];
+            var jsSelectFields = rql.Groups["js_fields"];
+
+            if (simpleSelectKeys.Success)
+            {
+                projectionFields[Constants.Documents.Indexing.Fields.DocumentIdFieldName] =
+                    GenerateRqlProjectedFieldValue(Constants.Documents.Indexing.Fields.DocumentIdFieldName, alias);
+
+                foreach (Capture selectField in simpleSelectKeys.Captures)
+                {
+                    projectionFields[selectField.Value] = GenerateRqlProjectedFieldValue(selectField.Value, alias);
+                }
+
+                projectionFields[Constants.Documents.Querying.Fields.PowerBIJsonFieldName] = GenerateRqlProjectedFieldValue(Constants.Documents.Querying.Fields.PowerBIJsonFieldName, alias);
+            }
+            else if (jsSelectFields.Success)
+            {
+                var jsSelectKeys = rql.Groups["js_keys"];
+                var jsSelectValues = rql.Groups["js_vals"];
+
+                projectionFields[Constants.Documents.Indexing.Fields.DocumentIdFieldName] =
+                    GenerateRqlProjectedFieldValue(Constants.Documents.Indexing.Fields.DocumentIdFieldName, alias);
+
+                for (var i = 0; i < jsSelectKeys.Captures.Count; i++)
+                {
+                    var key = jsSelectKeys.Captures[i].Value;
+
+                    if (jsSelectValues.Captures[i].Length == 0)
+                    {
+                        projectionFields[key] = "null";
+                    }
+                    else
+                    {
+                        projectionFields[key] = jsSelectValues.Captures[i].Value;
+                    }
+                }
+
+                projectionFields[Constants.Documents.Querying.Fields.PowerBIJsonFieldName] = GenerateRqlProjectedFieldValue(Constants.Documents.Querying.Fields.PowerBIJsonFieldName, alias);
+            }
+
+            // Populate the columns starting from the inner-most SQL
+            for (var i = matches.Count - 1; i >= 0; i--)
+            {
+                var match = matches[i];
+                PopulateProjectionFields(match, ref projectionFields, alias);
+            }
+
+            // Note: It's crucial that the order of columns that is specified in the outer SQL is preserved.
+            var orderedProjectionFields = GetOrderedProjectionFields(matches, projectionFields, rql);
+
+            newRql = GenerateProjectedRql(rql, orderedProjectionFields, matches);
+            return newRql;
+        }
+
         private static bool TryGetMatches(string queryText, out List<Match> outMatches, out Match rql)
         {
             var matches = new List<Match>();
@@ -264,9 +283,9 @@ namespace Raven.Server.Integrations.PostgreSQL.PowerBI
         {
             var val = $"{alias}[\"{column}\"]";
 
-            if (column.Equals("id()", StringComparison.OrdinalIgnoreCase))
+            if (column.Equals(Constants.Documents.Indexing.Fields.DocumentIdFieldName, StringComparison.OrdinalIgnoreCase))
             {
-                val = $"{alias}[\"@metadata\"][\"@id\"]";
+                val = $"id({alias})";
             }
 
             return val;
@@ -333,7 +352,7 @@ namespace Raven.Server.Integrations.PostgreSQL.PowerBI
             // Insert new select clause
             if (projectionFields.Count != 0)
             {
-                var projection = GenerateProjectionString(projectionFields);
+                var projection = GenerateJsProjectionString(projectionFields);
                 rql.Insert(selectIndex, projection);
             }
 
@@ -358,17 +377,28 @@ namespace Raven.Server.Integrations.PostgreSQL.PowerBI
 
             return fullNewWhere.ToString();
         }
-        private static StringBuilder GenerateProjectionString(IEnumerable<KeyValuePair<string, string>> projectionFields)
+
+        private static StringBuilder GenerateJsProjectionString(IEnumerable<KeyValuePair<string, string>> projectionFields)
         {
-            var projection = new StringBuilder(" select\n{\n");
+            var projection = new StringBuilder("select").AppendLine().AppendLine("{");
+
+            var first = true;
 
             foreach (var (fieldName, fieldValue) in projectionFields)
             {
-                projection.Append($"\t\"{fieldName}\": {fieldValue},\n");
+                if (fieldName == Constants.Documents.Indexing.Fields.DocumentIdFieldName) // we don't want to explicitly include id(x) in the projection, we'll add id() column from Document (if available, map-reduce results don't have it)
+                    continue;
+
+                if (first == false)
+                    projection.AppendLine(",");
+
+                first = false;
+
+                projection.Append($"\t\"{fieldName}\": {fieldValue}");
             }
 
-            projection.Remove(projection.Length - 2, 2);
-            projection.Append("\n}\n");
+            projection.AppendLine();
+            projection.AppendLine("}");
 
             return projection;
         }

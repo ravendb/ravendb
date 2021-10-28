@@ -8,6 +8,7 @@ using Newtonsoft.Json.Linq;
 using Npgsql;
 using NpgsqlTypes;
 using Orders;
+using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
@@ -19,6 +20,7 @@ using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.ServerWide.Operations.Integrations.PostgreSQL;
 using Raven.Server;
 using Raven.Server.Config;
+using Raven.Server.Documents;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -437,6 +439,67 @@ namespace SlowTests.Server.Integrations.PostgreSQL
             }
         }
 
+        [Fact]
+        public async Task CanGetCorrectNumberOfRecordAndFieldNameUsingMapReduceIndex()
+        {
+            const string query = "from index 'Orders/ByCompany'";
+
+            DoNotReuseServer(postgressSettings);
+
+            using (var store = GetDocumentStore())
+            {
+                CreateNorthwindDatabase(store);
+
+                var indexDefinition = new IndexDefinition
+                {
+                    Name = "Orders/ByCompany",
+                    Maps =
+                    {
+                        @"from order in docs.Orders
+select new
+{
+    order.Company,
+    Count = 1,
+    Total = order.Lines.Sum(l => (l.Quantity * l.PricePerUnit) * (1 - l.Discount))
+}"
+                    },
+                    Reduce = @"from result in results
+group result by result.Company 
+into g
+select new
+{
+	Company = g.Key,
+	Count = g.Sum(x => x.Count),
+	Total = g.Sum(x => x.Total)
+}"
+                };
+
+                store.Maintenance.Send(new PutIndexesOperation(indexDefinition));
+                WaitForIndexing(store);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var orders = await session.Advanced
+                        .AsyncRawQuery<JObject>(query)
+                        .ToArrayAsync();
+
+                    var result = await Act(store, query, Server);
+
+                    Assert.NotNull(result);
+                    Assert.NotEmpty(result.Rows);
+                    Assert.Equal(orders.Length, result.Rows.Count);
+
+                    var columnNames = GetColumnNames(result);
+
+                    Assert.Equal(4, columnNames.Count);
+                    Assert.Contains("Company", columnNames);
+                    Assert.Contains("Count", columnNames);
+                    Assert.Contains("Total", columnNames);
+                    Assert.Contains(Constants.Documents.Querying.Fields.PowerBIJsonFieldName, columnNames);
+                }
+            }
+        }
+
         private DataTable Select(
             NpgsqlConnection connection,
             string query,
@@ -503,7 +566,7 @@ namespace SlowTests.Server.Integrations.PostgreSQL
 
         public static void AssertDatabaseCollections(CollectionStatistics expected, DataTable actual)
         {
-            var expectedCollectionNames = expected.Collections.Keys.ToList();
+            var expectedCollectionNames = expected.Collections.Keys.Where(x => CollectionName.IsHiLoCollection(x) == false).ToList();
 
             var actualCollectionNames = actual
                 .AsEnumerable()

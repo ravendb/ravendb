@@ -6,9 +6,12 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client;
+using Raven.Client.Documents.Queries;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Queries;
+using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Integrations.PostgreSQL.Messages;
 using Raven.Server.Integrations.PostgreSQL.Types;
 using Raven.Server.ServerWide;
@@ -51,18 +54,16 @@ namespace Raven.Server.Integrations.PostgreSQL
 
             var indexQuery = new IndexQueryServerSide(QueryString, queryParameters);
 
+            // If limit is 0, fetch one document for the schema generation
+            if (_limit != null)
+            {
+                indexQuery.PageSize = _limit.Value == 0 ? 1 : _limit.Value;
+            }
+
             var documentQueryResult =
                 await DocumentDatabase.QueryRunner.ExecuteQuery(indexQuery, _queryOperationContext, null, OperationCancelToken.None);
 
             _result = documentQueryResult.Results;
-
-            // If limit is 0, fetch one document for the schema generation
-            if (_limit != null)
-            {
-                _result = _result
-                    .Take(_limit.Value == 0 ? 1 : _limit.Value)
-                    .ToList();
-            }
 
             // TODO: Support skipping (check how/if PowerBI sends it, probably using the incremental refresh feature)
             // query.Skip(..)
@@ -74,22 +75,23 @@ namespace Raven.Server.Integrations.PostgreSQL
                 return Array.Empty<PgColumn>();
 
             var resultsFormat = GetDefaultResultsFormat();
-            var sample = _result[0].Data;
+            var sample = _result[0];
 
-            Columns["id()"] = new PgColumn("id()", (short)Columns.Count, PgText.Default, resultsFormat);
+            if (sample.Id != null)
+                Columns[Constants.Documents.Indexing.Fields.DocumentIdFieldName] = new PgColumn(Constants.Documents.Indexing.Fields.DocumentIdFieldName, (short)Columns.Count, PgText.Default, resultsFormat);
 
             BlittableJsonReaderObject.PropertyDetails prop = default;
 
             // Go over sample's columns
-            var properties = sample.GetPropertyNames();
+            var properties = sample.Data.GetPropertyNames();
             for (var i = 0; i < properties.Length; i++)
             {
                 // Using GetPropertyIndex to get the properties in the right order
-                var propIndex = sample.GetPropertyIndex(properties[i]);
-                sample.GetPropertyByIndex(propIndex, ref prop);
+                var propIndex = sample.Data.GetPropertyIndex(properties[i]);
+                sample.Data.GetPropertyByIndex(propIndex, ref prop);
 
                 // Skip this column, will be added later to json() column
-                if (prop.Name == "@metadata")
+                if (prop.Name == Constants.Documents.Metadata.Key)
                     continue;
 
                 PgType pgType = (prop.Token & BlittableJsonReaderBase.TypesMask) switch
@@ -128,13 +130,13 @@ namespace Raven.Server.Integrations.PostgreSQL
                 Columns.TryAdd(prop.Name, new PgColumn(prop.Name, (short)Columns.Count, pgType, resultsFormat));
             }
 
-            if (Columns.TryGetValue("json()", out var jsonColumn))
+            if (Columns.TryGetValue(Constants.Documents.Querying.Fields.PowerBIJsonFieldName, out var jsonColumn))
             {
                 jsonColumn.PgType = PgJson.Default;
             }
             else
             {
-                Columns["json()"] = new PgColumn("json()", (short)Columns.Count, PgJson.Default, resultsFormat);
+                Columns[Constants.Documents.Querying.Fields.PowerBIJsonFieldName] = new PgColumn(Constants.Documents.Querying.Fields.PowerBIJsonFieldName, (short)Columns.Count, PgJson.Default, resultsFormat);
             }
 
             return Columns.Values;
@@ -142,16 +144,19 @@ namespace Raven.Server.Integrations.PostgreSQL
 
         public static bool TryParse(string queryText, int[] parametersDataTypes, DocumentDatabase documentDatabase, out RqlQuery rqlQuery)
         {
-            // TODO: After integration - Use QueryParser to try and parse the query
-            if (queryText.StartsWith("from", StringComparison.CurrentCultureIgnoreCase) ||
-                queryText.StartsWith("/*rql*/", StringComparison.CurrentCultureIgnoreCase))
+            try
             {
-                rqlQuery = new RqlQuery(queryText, parametersDataTypes, documentDatabase);
-                return true;
+                QueryMetadata.ParseQuery(queryText, QueryType.Select, documentDatabase);
+            }
+            catch
+            {
+                rqlQuery = null;
+
+                return false;
             }
 
-            rqlQuery = null;
-            return false;
+            rqlQuery = new RqlQuery(queryText, parametersDataTypes, documentDatabase);
+            return true;
         }
 
         public override async Task Execute(MessageBuilder builder, PipeWriter writer, CancellationToken token)
@@ -177,49 +182,52 @@ namespace Raven.Server.Integrations.PostgreSQL
             try
             {
                 short? idIndex = null;
-                if (Columns.TryGetValue("id()", out var col))
+                if (Columns.TryGetValue(Constants.Documents.Indexing.Fields.DocumentIdFieldName, out var col))
                 {
                     idIndex = col.ColumnIndex;
                 }
 
-                var jsonIndex = Columns["json()"].ColumnIndex;
+                var jsonIndex = Columns[Constants.Documents.Querying.Fields.PowerBIJsonFieldName].ColumnIndex;
 
-                for (int i = 0; i < _result.Count; i++)
+                foreach (var result in _result)
                 {
-                    var result = _result[i].Data;
+                    var jsonResult = result.Data;
+
                     Array.Clear(row, 0, row.Length);
 
-                    if (idIndex != null && 
-                        result.TryGet("@metadata", out BlittableJsonReaderObject metadata) &&
-                        metadata.TryGet("@id", out string id))
+                    if (idIndex != null && result.Id != null)
                     {
-                        row[idIndex.Value] = Encoding.UTF8.GetBytes(id);
+                        row[idIndex.Value] = Encoding.UTF8.GetBytes(result.Id.ToString());
                     }
 
-                    result.Modifications = new DynamicJsonValue(result);
+                    jsonResult.Modifications = new DynamicJsonValue(jsonResult);
+
+                    if (jsonResult.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject _))
+                    {
+                        // remove @metadata
+                        jsonResult.Modifications.Remove(Constants.Documents.Metadata.Key);
+                    }
 
                     foreach (var (key, pgColumn) in Columns)
                     {
-                        var index = result.GetPropertyIndex(key);
+                        var index = jsonResult.GetPropertyIndex(key);
                         if (index == -1)
                             continue;
 
-                        result.GetPropertyByIndex(index, ref prop);
+                        jsonResult.GetPropertyByIndex(index, ref prop);
 
                         var value = GetValueByType(prop, pgColumn);
-                        if (value == null)
-                            continue;
 
                         row[pgColumn.ColumnIndex] = value;
-                        result.Modifications.Remove(key);
+                        jsonResult.Modifications.Remove(key);
                     }
 
-                    if (result.Modifications.Removals.Count != result.Count)
+                    if (jsonResult.Modifications.Removals.Count != jsonResult.Count)
                     {
                         using (DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                         using (context.OpenReadTransaction())
                         {
-                            var modified = context.ReadObject(result, "renew");
+                            var modified = context.ReadObject(jsonResult, "renew");
                             row[jsonIndex] = Encoding.UTF8.GetBytes(modified.ToString());
                         }
                     }
