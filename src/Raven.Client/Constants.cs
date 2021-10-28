@@ -334,6 +334,11 @@ namespace Raven.Client
 
                     public const string AllResults = "@AllResults";
                 }
+
+                public class Fields
+                {
+                    public const string PowerBIJsonFieldName = "json()";
+                }
             }
 
             public class Encryption

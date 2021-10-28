@@ -24,7 +24,7 @@ namespace Raven.Server.Integrations.PostgreSQL.PowerBI
             RegexOptions.Compiled);
 
         public PBIPreviewQuery(DocumentDatabase documentDatabase, string tableName)
-            : base($"from {tableName} limit 1", Array.Empty<int>(), documentDatabase)
+            : base($"from '{tableName}'", Array.Empty<int>(), documentDatabase, limit: 1)
         {
             _results = new List<PgDataRow>();
         }

@@ -13,6 +13,8 @@ namespace Raven.Server.Integrations.PostgreSQL.PowerBI
 {
     public class PBIAllCollectionsQuery : RqlQuery
     {
+        private static readonly string TableQuery = "select TABLE_SCHEMA, TABLE_NAME, TABLE_TYPE\nfrom INFORMATION_SCHEMA.tables\nwhere TABLE_SCHEMA not in ('information_schema', 'pg_catalog')\norder by TABLE_SCHEMA, TABLE_NAME".NormalizeLineEndings();
+
         public PBIAllCollectionsQuery(string queryText, int[] parametersDataTypes, DocumentDatabase documentDatabase)
             : base(queryText, parametersDataTypes, documentDatabase)
         {
@@ -20,10 +22,9 @@ namespace Raven.Server.Integrations.PostgreSQL.PowerBI
 
         public static bool TryParse(string queryText, int[] parametersDataTypes, DocumentDatabase documentDatabase, out PgQuery pgQuery)
         {
-            const string tableQuery = "select TABLE_SCHEMA, TABLE_NAME, TABLE_TYPE\nfrom INFORMATION_SCHEMA.tables\nwhere TABLE_SCHEMA not in ('information_schema', 'pg_catalog')\norder by TABLE_SCHEMA, TABLE_NAME";
+            queryText = queryText.NormalizeLineEndings();
 
-            queryText = queryText.Replace("\r\n", "\n").Replace("\r", "\n");
-            if (queryText.Equals(tableQuery, StringComparison.OrdinalIgnoreCase))
+            if (queryText.Equals(TableQuery, StringComparison.OrdinalIgnoreCase))
             {
                 pgQuery = new PBIAllCollectionsQuery(queryText, parametersDataTypes, documentDatabase);
                 return true;
@@ -33,14 +34,14 @@ namespace Raven.Server.Integrations.PostgreSQL.PowerBI
             return false;
         }
 
-        public override async Task<ICollection<PgColumn>> Init(bool allowMultipleStatements = false)
+        public override Task<ICollection<PgColumn>> Init(bool allowMultipleStatements = false)
         {
-            return new PgColumn[]
+            return Task.FromResult<ICollection<PgColumn>>(new PgColumn[]
             {
                 new("table_schema", 0, PgName.Default, PgFormat.Text),
                 new("table_name", 1, PgName.Default, PgFormat.Text),
                 new("table_type", 2, PgVarchar.Default, PgFormat.Text),
-            };
+            });
         }
 
         public override async Task Execute(MessageBuilder builder, PipeWriter writer, CancellationToken token)
@@ -52,6 +53,9 @@ namespace Raven.Server.Integrations.PostgreSQL.PowerBI
             {
                 foreach (var collection in DocumentDatabase.DocumentsStorage.GetCollections(context))
                 {
+                    if (CollectionName.IsHiLoCollection(collection.Name))
+                        continue;
+
                     collections.Add(collection.Name);
                 }
             }
