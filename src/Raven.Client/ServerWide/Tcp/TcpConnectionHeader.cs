@@ -465,6 +465,14 @@ namespace Raven.Client.ServerWide.Tcp
             Supported
         }
 
+        public class NegotiationResponse
+        {
+            public int Version;
+
+            public bool DataCompression;
+        }
+
+
         public static SupportedStatus OperationVersionSupported(OperationTypes operationType, int version, out int current)
         {
             current = -1;
