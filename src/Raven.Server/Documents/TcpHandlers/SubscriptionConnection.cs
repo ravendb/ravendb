@@ -1008,7 +1008,7 @@ namespace Raven.Server.Documents.TcpHandlers
                                         SubscriptionId,
                                         Options.SubscriptionName,
                                         LastSentChangeVectorInThisConnection ?? nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange),
-                                        SubscriptionState.ChangeVectorForNextBatchStartingPoint);
+                                        SubscriptionConnectionsState.LastChangeVectorSent);
                                 }
 
                                 _subscriptionConnectionsState.LastChangeVectorSent = ChangeVectorUtils.MergeVectors(_subscriptionConnectionsState.LastChangeVectorSent,lastChangeVectorSentInThisBatch);
