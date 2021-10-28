@@ -164,7 +164,7 @@ namespace Raven.Server.Commercial
 
         public bool HasTcpDataCompression => GetValue<bool>("tcpDataCompression");
 
-        public bool HasConcurrentDataSubscriptions => GetValue<bool>("concurrentDataSubscriptions");
+        public bool HasConcurrentDataSubscriptions => GetValue<bool>("concurrentSubscriptions");
 
         public bool HasElasticSearchEtl => GetValue<bool>("elasticSearchEtl");
 
@@ -215,7 +215,7 @@ namespace Raven.Server.Commercial
                 [nameof(HasOlapEtl)] = HasOlapEtl,
                 [nameof(HasReadOnlyCertificates)] = HasReadOnlyCertificates,
                 [nameof(HasTcpDataCompression)] = HasTcpDataCompression,
-                [nameof(HasConcurrentDataSubscriptions)] = CanAutoRenewLetsEncryptCertificate,
+                [nameof(HasConcurrentDataSubscriptions)] = HasConcurrentDataSubscriptions,
                 [nameof(HasElasticSearchEtl)] = HasElasticSearchEtl,
                 [nameof(HasPowerBI)] = HasPowerBI,
                 [nameof(HasPostgreSqlIntegration)] = HasPostgreSqlIntegration
