@@ -425,12 +425,7 @@ class documents extends viewModelBase {
         query.recentQuery(true);
 
         const queryDto = query.toStorageDto();
-        const recentQueries = recentQueriesStorage.getSavedQueries(this.activeDatabase());
-        recentQueriesStorage.appendQuery(queryDto, ko.observableArray(recentQueries));
-        recentQueriesStorage.storeSavedQueries(this.activeDatabase(), recentQueries);
-
-        const queryUrl = appUrl.forQuery(this.activeDatabase(), queryDto.hash);
-        this.navigate(queryUrl);
+        recentQueriesStorage.saveAndNavigate(this.activeDatabase(), queryDto);
     }
 }
 

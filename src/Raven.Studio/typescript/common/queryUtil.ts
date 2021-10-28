@@ -39,7 +39,7 @@ class queryUtil {
     
     static wrapWithSingleQuotes(input: string) {
         if (input.includes("'")) {
-            input = input.replace("'", "''");
+            input = input.replace(/'/g, "''");
         }
         return "'" + input + "'";
     }

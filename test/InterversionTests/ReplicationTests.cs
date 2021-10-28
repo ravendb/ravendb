@@ -52,6 +52,33 @@ namespace InterversionTests
             Assert.True(replicationLoader.OutgoingFailureInfo.Any(ofi => ofi.Value.Errors.Select(x => x.Message).Any(x => x.Contains("TimeSeries"))));
         }
 
+        [Fact]
+        public async Task CanReplicateToOldServerWithLowerReplicationProtocolVersion()
+        {
+            // https://issues.hibernatingrhinos.com/issue/RavenDB-17346
+
+            const string version = "4.2.117";
+            using var oldStore = await GetDocumentStoreAsync(version);
+            using var store = GetDocumentStore();
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Egor" }, "users/1");
+                    await session.SaveChangesAsync();
+                }
+            }
+
+            var externalTask = new ExternalReplication(oldStore.Database.ToLowerInvariant(), "MyConnectionString")
+            {
+                Name = "MyExternalReplication",
+                Url = oldStore.Urls.First()
+            };
+
+            await SetupReplication(store, externalTask);
+
+            Assert.True(WaitForDocument<User>(oldStore, "users/1", u => u.Name == "Egor"));
+        }
+
         private static async Task<ModifyOngoingTaskResult> SetupReplication(IDocumentStore store, ExternalReplicationBase watcher)
         {
             var result = await store.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString

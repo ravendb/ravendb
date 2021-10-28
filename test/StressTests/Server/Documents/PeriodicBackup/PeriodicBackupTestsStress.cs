@@ -79,7 +79,7 @@ namespace StressTests.Server.Documents.PeriodicBackup
                 var tag = responsibleDatabase.PeriodicBackupRunner.WhoseTaskIsIt(taskId);
                 Assert.Equal(server.ServerStore.NodeTag, tag);
 
-                responsibleDatabase.PeriodicBackupRunner.ForTestingPurposesOnly().SimulateActiveByOtherNodeStatus = true;
+                responsibleDatabase.PeriodicBackupRunner.ForTestingPurposesOnly().SimulateActiveByOtherNodeStatus_Reschedule = true;
                 var pb = responsibleDatabase.PeriodicBackupRunner.PeriodicBackups.First();
                 Assert.NotNull(pb);
 

@@ -43,6 +43,8 @@ namespace Raven.Client.Documents
 
         private string _identifier;
 
+        public override IHiLoIdGenerator HiLoIdGenerator => _asyncMultiDbHiLo;
+
         /// <summary>
         /// Gets or sets the identifier for this store.
         /// </summary>
