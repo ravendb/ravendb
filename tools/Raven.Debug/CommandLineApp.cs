@@ -78,6 +78,9 @@ namespace Raven.Debug
                     if (int.TryParse(pidOption.Value(), out var pid) == false)
                         return cmd.ExitWithError($"Could not parse --pid with value '{pidOption.Value()}' to number.");
 
+                    if (pid <= 0)
+                        return cmd.ExitWithError("Process ID must be greater than 0");
+
                     HashSet<uint> threadIds = null;
                     if (threadIdsOption.HasValue())
                     {
