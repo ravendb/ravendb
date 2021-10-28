@@ -33,7 +33,7 @@
     "gulp-zip": "^5.1.0",
     "natives": "^1.1.6",
     "through2": "^4.0.2",
-    "typescript": "^4.2.4"
+    "typescript": "4.2.4"
   },
   "dependencies": {}
 }
