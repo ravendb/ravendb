@@ -3,7 +3,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
@@ -35,7 +34,6 @@ using Sparrow.Json.Parsing;
 using Sparrow.Json.Sync;
 using Sparrow.Logging;
 using Sparrow.Server;
-using Sparrow.Server.Utils;
 using Sparrow.Threading;
 using Sparrow.Utils;
 
@@ -725,7 +723,8 @@ namespace Raven.Server.Documents.Replication
                     ReadResponseAndGetVersionCallback = ReadHeaderResponseAndThrowIfUnAuthorized,
                     Version = TcpConnectionHeaderMessage.ReplicationTcpVersion,
                     AuthorizeInfo = authorizationInfo,
-                    DestinationServerId = info?.ServerId
+                    DestinationServerId = info?.ServerId,
+                    CompressionSupport = _parent._server.LicenseManager.LicenseStatus.HasTcpDataCompression
                 };
 
                 _interruptibleRead = new InterruptibleRead(_database.DocumentsStorage.ContextPool, stream);
@@ -744,7 +743,7 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private int ReadHeaderResponseAndThrowIfUnAuthorized(JsonOperationContext context, BlittableJsonTextWriter writer, Stream stream, string url)
+        private TcpConnectionHeaderMessage.NegotiationResponse ReadHeaderResponseAndThrowIfUnAuthorized(JsonOperationContext context, BlittableJsonTextWriter writer, Stream stream, string url)
         {
             const int timeout = 2 * 60 * 1000;
 
@@ -767,15 +766,24 @@ namespace Raven.Server.Documents.Replication
                 switch (headerResponse.Status)
                 {
                     case TcpConnectionStatus.Ok:
-                        return headerResponse.Version;
+                        return new TcpConnectionHeaderMessage.NegotiationResponse
+                        {
+                            Version = headerResponse.Version,
+                            DataCompression = headerResponse.DataCompression
+                        };
 
                     case TcpConnectionStatus.AuthorizationFailed:
                         throw new AuthorizationException($"{Destination.FromString()} replied with failure {headerResponse.Message}");
                     case TcpConnectionStatus.TcpVersionMismatch:
                         if (headerResponse.Version != TcpNegotiation.OutOfRangeStatus)
                         {
-                            return headerResponse.Version;
+                            return new TcpConnectionHeaderMessage.NegotiationResponse
+                            {
+                                Version = headerResponse.Version, 
+                                DataCompression = headerResponse.DataCompression
+                            };
                         }
+
                         //Kindly request the server to drop the connection
                         SendDropMessage(context, writer, headerResponse);
                         throw new InvalidOperationException($"{Destination.FromString()} replied with failure {headerResponse.Message}");

@@ -22,13 +22,17 @@ namespace Raven.Server.ServerWide.Tcp.Sync
             using (var writer = new BlittableJsonTextWriter(context, stream))
             {
                 var current = parameters.Version;
+                bool dataCompression = false;
                 while (true)
                 {
                     if (parameters.CancellationToken.IsCancellationRequested)
                         throw new OperationCanceledException($"Stopped TCP negotiation for {parameters.Operation} because of cancellation request");
 
                     SendTcpVersionInfo(context, writer, parameters, current);
-                    var version = parameters.ReadResponseAndGetVersionCallback(context, writer, stream, parameters.DestinationUrl);
+                    var response = parameters.ReadResponseAndGetVersionCallback(context, writer, stream, parameters.DestinationUrl);
+                    var version = response.Version;
+                    dataCompression = response.DataCompression;
+
                     if (Log.IsInfoEnabled)
                     {
                         Log.Info($"Read response from {parameters.SourceNodeTag ?? parameters.DestinationUrl} for '{parameters.Operation}', received version is '{version}'");
@@ -57,7 +61,10 @@ namespace Raven.Server.ServerWide.Tcp.Sync
                 {
                     Log.Info($"{parameters.DestinationNodeTag ?? parameters.DestinationUrl} agreed on version '{current}' for {parameters.Operation}.");
                 }
-                return TcpConnectionHeaderMessage.GetSupportedFeaturesFor(parameters.Operation, current);
+
+                var supportedFeatures = TcpConnectionHeaderMessage.GetSupportedFeaturesFor(parameters.Operation, current);
+                supportedFeatures.DataCompression = dataCompression;
+                return supportedFeatures;
             }
         }
 
@@ -75,7 +82,9 @@ namespace Raven.Server.ServerWide.Tcp.Sync
                 [nameof(TcpConnectionHeaderMessage.SourceNodeTag)] = parameters.SourceNodeTag,
                 [nameof(TcpConnectionHeaderMessage.OperationVersion)] = currentVersion,
                 [nameof(TcpConnectionHeaderMessage.AuthorizeInfo)] = parameters.AuthorizeInfo?.ToJson(),
-                [nameof(TcpConnectionHeaderMessage.ServerId)] = parameters.DestinationServerId
+                [nameof(TcpConnectionHeaderMessage.ServerId)] = parameters.DestinationServerId,
+                [nameof(TcpConnectionHeaderMessage.CompressionSupport)] = parameters.CompressionSupport
+
             });
             writer.Flush();
         }

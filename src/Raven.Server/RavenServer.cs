@@ -1932,10 +1932,10 @@ namespace Raven.Server
 
                             var supportedFeatures = TcpConnectionHeaderMessage.GetSupportedFeaturesFor(header.Operation, header.OperationVersion);
 
-                            if (supportedFeatures.DataCompression)
+                            if (supportedFeatures.DataCompression && header.CompressionSupport)
                             {
                                 if (header.Operation == TcpConnectionHeaderMessage.OperationTypes.Replication ||
-                                    (header.Operation == TcpConnectionHeaderMessage.OperationTypes.Subscription && header.CompressionSupport))
+                                    header.Operation == TcpConnectionHeaderMessage.OperationTypes.Subscription)
                                 {
                                     stream = new ReadWriteCompressedStream(stream, buffer);
                                     tcp.Stream = stream;
@@ -2104,10 +2104,12 @@ namespace Raven.Server
 
                 bool authSuccessful = TryAuthorize(Configuration, tcp.Stream, header, tcpClient, out var err, out TcpConnectionStatus statusResult);
                 //At this stage the error is not relevant.
-                
+
+                header.CompressionSupport &= ServerStore.LicenseManager.LicenseStatus.HasTcpDataCompression;
+
                 await RespondToTcpConnection(stream, context, err,
                     authSuccessful ? TcpConnectionStatus.Ok : statusResult,
-                    supported);
+                    supported, dataCompression : header.CompressionSupport);
 
                 tcp.ProtocolVersion = supported;
 
@@ -2216,12 +2218,13 @@ namespace Raven.Server
             }
         }
 
-        private static async ValueTask RespondToTcpConnection(Stream stream, JsonOperationContext context, string error, TcpConnectionStatus status, int version)
+        private static async ValueTask RespondToTcpConnection(Stream stream, JsonOperationContext context, string error, TcpConnectionStatus status, int version, bool dataCompression = false)
         {
             var message = new DynamicJsonValue
             {
                 [nameof(TcpConnectionHeaderResponse.Status)] = status.ToString(),
-                [nameof(TcpConnectionHeaderResponse.Version)] = version
+                [nameof(TcpConnectionHeaderResponse.Version)] = version,
+                [nameof(TcpConnectionHeaderResponse.DataCompression)] = dataCompression
             };
 
             if (error != null)
