@@ -287,7 +287,7 @@ namespace Raven.Server.Documents.Queries.Results
                 key.StartsWith(Constants.TimeSeries.QueryFunction))
             {
                 doc.TimeSeriesStream ??= new TimeSeriesStream();
-                var value = (TimeSeriesRetriever.TimeSeriesRetrieverResult)fieldVal;
+                var value = (TimeSeriesRetriever.TimeSeriesStreamingRetrieverResult)fieldVal;
                 doc.TimeSeriesStream.TimeSeries = value.Stream;
                 doc.TimeSeriesStream.Key = key;
                 Json.BlittableJsonTextWriterExtensions.MergeMetadata(result, value.Metadata);
@@ -327,7 +327,7 @@ namespace Raven.Server.Documents.Queries.Results
                 case Document d:
                     return d;
 
-                case TimeSeriesRetriever.TimeSeriesRetrieverResult ts:
+                case TimeSeriesRetriever.TimeSeriesStreamingRetrieverResult ts:
                     return new Document
                     {
                         Id = doc.Id,
