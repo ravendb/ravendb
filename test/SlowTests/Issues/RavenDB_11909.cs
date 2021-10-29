@@ -8,6 +8,7 @@ using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Raven.Client.ServerWide.Operations.Integrations;
 using Raven.Server.ServerWide;
 using Xunit;
 using Xunit.Abstractions;
@@ -86,7 +87,7 @@ namespace SlowTests.Issues
         [Fact]
         public void ThrowOnDatabaseRecordChanges()
         {
-            const int numberOfFields = 38;
+            const int numberOfFields = 39;
             const int numberOfProperties = 0;
             var tasksList = new List<string>
             {
@@ -114,6 +115,21 @@ namespace SlowTests.Issues
 
             Assert.True(numberOfProperties == properties.Count(),
                 $"New properties has been added to {nameof(DatabaseRecord)} please bump {nameof(numberOfProperties)} and update the {nameof(tasksList)} in {nameof(ClusterStateMachine)}.AddDatabase() and here if necessary");
+
+            var integrationConfigsType = typeof(IntegrationConfigurations);
+
+            const int numberOfIntegrationFields = 1;
+            const int numberOfIntegrationProperties = 0;
+
+            var integrationFields = integrationConfigsType.GetFields().Select(x => x.Name);
+            var integrationProperties = integrationConfigsType.GetProperties().Select(x => x.Name);
+
+            // check if new fields or properties has been added to IntegrationConfigurations inside DatabaseRecord
+            Assert.True(numberOfIntegrationFields == integrationFields.Count(),
+                $"New fields has been added to {nameof(IntegrationConfigurations)} please bump {nameof(numberOfIntegrationFields)} and update the {nameof(tasksList)} in {nameof(ClusterStateMachine)}.AddDatabase() and here if necessary");
+
+            Assert.True(numberOfIntegrationProperties == integrationProperties.Count(),
+                $"New properties has been added to {nameof(IntegrationConfigurations)} please bump {nameof(numberOfIntegrationProperties)} and update the {nameof(tasksList)} in {nameof(ClusterStateMachine)}.AddDatabase() and here if necessary");
         }
     }
 }

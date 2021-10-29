@@ -18,7 +18,7 @@ namespace Raven.Server.Integrations.PostgreSQL.Handlers
 {
     public class PostgreSqlIntegrationHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/admin/integrations/postgresql/users", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        [RavenAction("/databases/*/admin/integrations/postgresql/users", "GET", AuthorizationStatus.DatabaseAdmin)]
         public async Task GetUsernamesList()
         {
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
