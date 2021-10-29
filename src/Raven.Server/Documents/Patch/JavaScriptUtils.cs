@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using Jint;
 using Jint.Native;
@@ -14,6 +15,7 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Static.JavaScript;
 using Raven.Server.Documents.Queries.Results;
+using Raven.Server.Documents.Queries.Results.TimeSeries;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -261,6 +263,17 @@ namespace Raven.Server.Documents.Patch
 
         internal JsValue TranslateToJs(Engine engine, JsonOperationContext context, object o)
         {
+            if (o is TimeSeriesRetriever.TimeSeriesStreamingRetrieverResult tsrr)
+            {
+				// we are passing a streaming value to the JS engine, so we need
+				// to materalize all the results                var results = new DynamicJsonArray(tsrr.Stream);
+                var djv = new DynamicJsonValue
+                {
+                    ["Count"] = results.Count,
+                    ["Results"] = results
+                };
+                return new BlittableObjectInstance(engine, null, context.ReadObject(djv, "MaterializedStreamResults"), null, null, null);
+            }
             if (o is Tuple<Document, Lucene.Net.Documents.Document, IState, Dictionary<string, IndexField>, bool?, ProjectionOptions> t)
             {
                 var d = t.Item1;
