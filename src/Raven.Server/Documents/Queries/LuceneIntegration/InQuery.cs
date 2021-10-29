@@ -66,12 +66,13 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
         {
             private readonly InQuery _parent;
             private readonly Searcher _searcher;
-            private float _queryWeight = 1.0f;
+            private float _queryWeight;
 
             public InQueryWeight(InQuery parent, Searcher searcher)
             {
                 _parent = parent;
                 _searcher = searcher;
+                _queryWeight = parent.Boost;
             }
             public override Lucene.Net.Search.Explanation Explain(IndexReader reader, int doc, IState state)
             {
