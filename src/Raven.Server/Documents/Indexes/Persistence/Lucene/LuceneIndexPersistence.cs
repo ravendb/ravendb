@@ -122,7 +122,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     throw new NotSupportedException(_index.Type.ToString());
             }
 
-            _fields = fields.ToDictionary(x => x.Name, x => x);
+            _fields = fields.ToDictionary(x => x.OriginalName ?? x.Name, x => x);
 
             _indexSearcherHolder = new IndexSearcherHolder(CreateIndexSearcher, _index._indexStorage.DocumentDatabase);
 
@@ -131,7 +131,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 if (!field.Value.HasSuggestions)
                     continue;
 
-                string fieldName = field.Key;
+                string fieldName = field.Value.Name;
                 _suggestionsIndexSearcherHolders[fieldName] = new IndexSearcherHolder(state => new IndexSearcher(_suggestionsDirectories[fieldName], true, state), _index._indexStorage.DocumentDatabase);
             }
 

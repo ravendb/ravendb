@@ -300,7 +300,10 @@ namespace Raven.Server.Documents.Indexes
                 .MapFields
                 .Select(x =>
                 {
-                    var field = AutoIndexField.Create(x.Key, x.Value);
+                    var key = x.Key;
+                    if (key.Length >= 3 && x.Value.IsNameQuoted && key.First() == '\'' && key.Last() == '\'')
+                        key = x.Key[1..(key.Length - 1)];
+                    var field = AutoIndexField.Create(key, x.Value);
 
                     Debug.Assert(x.Value.GroupByArrayBehavior == GroupByArrayBehavior.NotApplicable);
 

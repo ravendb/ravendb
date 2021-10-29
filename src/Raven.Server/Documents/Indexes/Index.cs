@@ -3103,7 +3103,7 @@ namespace Raven.Server.Documents.Indexes
         {
             foreach (var field in metadata.IndexFieldNames)
             {
-                AssertKnownField(field);
+                AssertKnownField(field.OriginalName ?? field.Value);
             }
 
             if (metadata.OrderBy != null)

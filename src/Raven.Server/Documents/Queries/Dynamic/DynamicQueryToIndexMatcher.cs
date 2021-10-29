@@ -204,7 +204,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
             foreach (var field in query.MapFields.Values)
             {
-                if (definition.TryGetField(field.Name, out var indexField))
+                if (definition.TryGetField(field.Name.OriginalName, out var indexField) && field.Name.IsQuoted == indexField.HasQuotedName)
                 {
                     if (field.IsFullTextSearch && indexField.Indexing.HasFlag(AutoFieldIndexing.Search) == false)
                     {

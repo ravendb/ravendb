@@ -128,13 +128,18 @@ namespace Raven.Server.Documents.Indexes
 
             foreach (var field in mapFields)
             {
-                MapFields.Add(field.Name, field);
-
+                string fieldName = field.Name; 
+                if(field is AutoIndexField aif)
+                {
+                    fieldName = aif.OriginalName;
+                }
+                MapFields.Add(fieldName, field);
+                
                 if (field is AutoIndexField autoField)
                 {
                     foreach (var indexField in autoField.ToIndexFields())
                     {
-                        IndexFields.Add(indexField.Name, indexField);
+                        IndexFields.Add(indexField.OriginalName, indexField);
                     }
                 }
                 else if (field is IndexField indexField)

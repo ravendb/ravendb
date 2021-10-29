@@ -145,6 +145,8 @@ namespace Raven.Server.Documents.Indexes
 
         public bool HasQuotedName { get; set; }
 
+        public string OriginalName => HasQuotedName ? $"'{Name}'" : Name;
+
         public AutoFieldIndexing Indexing { get; set; }
 
         public AutoSpatialOptions Spatial { get; set; }
@@ -202,7 +204,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 Indexing = FieldIndexing.Default,
                 Name = Name,
-                OriginalName = HasQuotedName ? originalName : null,
+                OriginalName = originalName,
                 Storage = Storage,
                 HasSuggestions = HasSuggestions
             });

@@ -116,7 +116,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
         }
 
         public void ExtendMappingBasedOn(AutoIndexDefinitionBase definitionOfExistingIndex)
-        {
+        {   //todo maciej !!!!!!
             Debug.Assert(definitionOfExistingIndex is AutoMapIndexDefinition || definitionOfExistingIndex is AutoMapReduceIndexDefinition, "Dynamic queries are handled only by auto indexes");
 
             switch (definitionOfExistingIndex)
@@ -136,7 +136,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 {
                     var indexField = f.As<AutoIndexField>();
 
-                    if (fields.TryGetValue(indexField.Name, out var queryField))
+                    if (fields.TryGetValue(indexField.Name, out var queryField) && indexField.HasQuotedName == queryField.Name.IsQuoted )
                     {
                         var isFullTextSearch = queryField.IsFullTextSearch || indexField.Indexing.HasFlag(AutoFieldIndexing.Search);
                         var isExactSearch = queryField.IsExactSearch || indexField.Indexing.HasFlag(AutoFieldIndexing.Exact);
@@ -156,15 +156,15 @@ namespace Raven.Server.Documents.Queries.Dynamic
                                 isSpecifiedInWhere: queryField.IsSpecifiedInWhere,
                                 isFullTextSearch: isFullTextSearch,
                                 isExactSearch: isExactSearch);
-
-                        fields[queryField.Name] = field;
+                        fields[queryField.Name.OriginalName] = field;
+                       
                     }
                     else
                     {
                         if (isGroupBy)
                             throw new InvalidOperationException("Cannot create new GroupBy field when extending mapping");
-
-                        fields.Add(indexField.Name, DynamicQueryMappingItem.Create(
+                        var keyName = indexField.HasQuotedName ? $"'{indexField.Name}'" : indexField.Name;
+                        fields.Add(keyName, DynamicQueryMappingItem.Create(
                             new QueryFieldName(indexField.Name, indexField.HasQuotedName),
                             indexField.Aggregation,
                             isFullTextSearch: indexField.Indexing.HasFlag(AutoFieldIndexing.Search),
@@ -191,7 +191,8 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 if (field == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
                     continue;
 
-                mapFields[field] = DynamicQueryMappingItem.Create(field, AggregationOperation.None, query.Metadata.WhereFields);
+                
+                mapFields[field.OriginalName] = DynamicQueryMappingItem.Create(field, AggregationOperation.None, query.Metadata.WhereFields);
             }
 
             if (query.Metadata.OrderBy != null)
@@ -207,17 +208,17 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     if (field.Name == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
                         continue;
 
-                    var fieldName = field.Name;
+                    var fieldName = field.Name.OriginalName;
 
 #if FEATURE_CUSTOM_SORTING
                     if (fieldName.Value.StartsWith(Constants.Documents.Indexing.Fields.CustomSortFieldName))
                         continue;
 #endif
 
-                    if (mapFields.ContainsKey(field.Name))
+                    if (mapFields.ContainsKey(field.Name.OriginalName))
                         continue;
 
-                    mapFields.Add(field.Name, DynamicQueryMappingItem.Create(fieldName, field.AggregationOperation));
+                    mapFields.Add(field.Name.OriginalName, DynamicQueryMappingItem.Create(field.Name, field.AggregationOperation));
                 }
             }
 

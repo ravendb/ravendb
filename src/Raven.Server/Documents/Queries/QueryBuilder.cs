@@ -177,7 +177,7 @@ namespace Raven.Server.Documents.Queries
 
                             var (value, valueType) = GetValue(query, metadata, parameters, right, true);
 
-                            var (luceneFieldName, fieldType, termType) = GetLuceneField(fieldName, valueType);
+                            var (luceneFieldName, fieldType, termType) = GetLuceneField(fieldName.OriginalName ?? fieldName, valueType);
 
                             switch (fieldType)
                             {

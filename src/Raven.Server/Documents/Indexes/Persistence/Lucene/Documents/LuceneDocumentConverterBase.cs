@@ -88,7 +88,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         {
             var dictionary = new Dictionary<string, IndexField>(fields.Count, default(OrdinalStringStructComparer));
             foreach (var field in fields)
-                dictionary[field.Name] = field;
+                dictionary[field.OriginalName ?? field.Name] = field;
             _fields = dictionary;
 
             _indexImplicitNull = indexImplicitNull;
@@ -134,7 +134,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         /// </summary>
         public int GetRegularFields<T>(T instance, IndexField field, object value, JsonOperationContext indexContext, out bool shouldSkip, bool nestedArray = false) where T : ILuceneDocumentWrapper
         {
-            var path = field.Name;
+            var path = field.OriginalName ?? field.Name;
 
             var valueType = GetValueType(value);
 
