@@ -23,12 +23,12 @@ namespace SlowTests.Issues
         {
             var path = NewDataPath();
 
-            using (var store = GetDocumentStore(new Options { Path = path, ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Indexing.ErrorIndexStartupBehavior)] = IndexingConfiguration.IndexStartupBehavior.Start.ToString() }))
+            using (var store = GetDocumentStore(new Options { Path = path, ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Indexing.ErrorIndexStartupBehavior)] = IndexingConfiguration.ErrorIndexStartupBehaviorType.Start.ToString() }))
             {
                 await IndexStartupBehaviorTestInternal(store);
             }
 
-            using (var store = GetDocumentStore(new Options { Path = path, ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Indexing.ErrorIndexStartupBehavior)] = IndexingConfiguration.IndexStartupBehavior.ResetAndStart.ToString() }))
+            using (var store = GetDocumentStore(new Options { Path = path, ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Indexing.ErrorIndexStartupBehavior)] = IndexingConfiguration.ErrorIndexStartupBehaviorType.ResetAndStart.ToString() }))
             {
                 await IndexStartupBehaviorTestInternal(store);
             }
