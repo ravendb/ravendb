@@ -68,6 +68,7 @@ namespace Raven.Client.Documents.Subscriptions
             public Dictionary<string, string> Reasons;
         }
 
+        public long ConnectionId { get; set; }
         public MessageType Type { get; set; }
         public ConnectionStatus Status { get; set; }
         public BlittableJsonReaderObject Data { get; set; }

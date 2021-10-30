@@ -313,11 +313,11 @@ namespace Raven.Server.Documents.Subscriptions
 
             foreach (var subscriptionConnection in subscriptionConnectionsState.GetConnections())
             {
-                subscriptionConnectionsState.CancelSingleConnection(subscriptionConnection, ex); //TODO stav: Could cause problems concurrently?
+                subscriptionConnectionsState.CancelSingleConnection(subscriptionConnection, ex);
             }
 
             if (_logger.IsInfoEnabled)
-                _logger.Info($"Subscription with id '{subscriptionId}' and name '{subscriptionConnectionsState.SubscriptionName}' connections were dropped. Reason: {ex.Message}");
+                _logger.Info($"Subscription with id '{subscriptionId}' and name '{subscriptionConnectionsState.SubscriptionName}' connections were dropped.", ex);
 
             return true;
         }
@@ -334,7 +334,7 @@ namespace Raven.Server.Documents.Subscriptions
             subscriptionConnectionsState.DropSingleConnection(connectionToDrop);
             if (_logger.IsInfoEnabled)
                 _logger.Info(
-                    $"Connection with id {connectionId} in subscription with id '{subscriptionId}' and name '{subscriptionConnectionsState.SubscriptionName}' was dropped. Reason: {ex.Message}");
+                    $"Connection with id {connectionId} in subscription with id '{subscriptionId}' and name '{subscriptionConnectionsState.SubscriptionName}' was dropped.", ex);
 
             return true;
         }
@@ -461,7 +461,7 @@ namespace Raven.Server.Documents.Subscriptions
             return subscription;
         }
 
-        public bool TryGetRunningSubscriptionConnection(long subscriptionId, out SubscriptionConnectionsState connections)
+        public bool TryGetRunningSubscriptionConnectionsState(long subscriptionId, out SubscriptionConnectionsState connections)
         {
             connections = null;
 
