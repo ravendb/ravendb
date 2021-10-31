@@ -88,6 +88,15 @@
                 </div>
             </div>
         </div>
+        <div data-bind="if: !isCreatingNewItem()" class="row margin-top margin-top-lg">
+            <div class="col-sm-offset-1 col-sm-1 no-padding-right no-padding-left margin-top">
+                <label class="cmp-xchg-label">Raft Index</label>
+                <small class="cmp-xchg-info"><i class="raft-index-info icon-info text-info"></i></small>
+            </div>
+            <div class="col-sm-10 margin-top">
+                <label class="cmp-xchg-label" data-bind="text: loadedIndex"></label>
+            </div>
+        </div>
     </div>
 </form>
 

@@ -33,7 +33,7 @@ class deleteCompareExchangeProgress extends dialogViewModelBase {
         this.items = items;
         this.total(items.length);
         
-        this.actionDescription = "Deleted " + (this.items.length === 1 ? this.items[0].Key : this.items.length + " values");
+        this.actionDescription = this.items.length === 1 ? `Deleted compare exchange item: ${this.items[0].Key}` : `Deleted ${this.items.length} compare exchange items`;
         
         this.percentage = ko.pureComputed(() => {
             const total = this.total();
