@@ -3421,7 +3421,8 @@ namespace Raven.Server.ServerWide
                     case TcpConnectionStatus.Ok:
                         return new TcpConnectionHeaderMessage.NegotiationResponse
                         {
-                            Version = reply.Version
+                            Version = reply.Version,
+                            LicensedFeatures = reply.LicensedFeatures
                         };
                     case TcpConnectionStatus.AuthorizationFailed:
                         throw new AuthorizationException($"Unable to access  {url} because {reply.Message}");
@@ -3430,7 +3431,8 @@ namespace Raven.Server.ServerWide
                         {
                             return new TcpConnectionHeaderMessage.NegotiationResponse
                             {
-                                Version = reply.Version
+                                Version = reply.Version,
+                                LicensedFeatures = reply.LicensedFeatures
                             };
                         }
                         //Kindly request the server to drop the connection
