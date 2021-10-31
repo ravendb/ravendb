@@ -1930,16 +1930,10 @@ namespace Raven.Server
 
                             header = await NegotiateOperationVersion(stream, buffer, tcpClient, tcpAuditLog, cert, tcp);
 
-                            var supportedFeatures = TcpConnectionHeaderMessage.GetSupportedFeaturesFor(header.Operation, header.OperationVersion);
-
-                            if (supportedFeatures.DataCompression && header.CompressionSupport)
+                            if (ShouldUseDataCompression(header))
                             {
-                                if (header.Operation == TcpConnectionHeaderMessage.OperationTypes.Replication ||
-                                    header.Operation == TcpConnectionHeaderMessage.OperationTypes.Subscription)
-                                {
-                                    stream = new ReadWriteCompressedStream(stream, buffer);
-                                    tcp.Stream = stream;
-                                }
+                                stream = new ReadWriteCompressedStream(stream, buffer);
+                                tcp.Stream = stream;
                             }
 
                             await DispatchTcpConnection(header, tcp, buffer, cert);
@@ -2105,11 +2099,12 @@ namespace Raven.Server
                 bool authSuccessful = TryAuthorize(Configuration, tcp.Stream, header, tcpClient, out var err, out TcpConnectionStatus statusResult);
                 //At this stage the error is not relevant.
 
-                header.CompressionSupport &= ServerStore.LicenseManager.LicenseStatus.HasTcpDataCompression;
+                if (header.LicensedFeatures != null)
+                    header.LicensedFeatures.DataCompression &= ServerStore.LicenseManager.LicenseStatus.HasTcpDataCompression;
 
                 await RespondToTcpConnection(stream, context, err,
                     authSuccessful ? TcpConnectionStatus.Ok : statusResult,
-                    supported, dataCompression : header.CompressionSupport);
+                    supported, licensedFeatures : header.LicensedFeatures);
 
                 tcp.ProtocolVersion = supported;
 
@@ -2218,16 +2213,13 @@ namespace Raven.Server
             }
         }
 
-        private static async ValueTask RespondToTcpConnection(Stream stream, JsonOperationContext context, string error, TcpConnectionStatus status, int version, bool dataCompression = false)
+        private static async ValueTask RespondToTcpConnection(Stream stream, JsonOperationContext context, string error, TcpConnectionStatus status, int version, LicensedFeatures licensedFeatures = null)
         {
             var message = new DynamicJsonValue
             {
                 [nameof(TcpConnectionHeaderResponse.Status)] = status.ToString(),
                 [nameof(TcpConnectionHeaderResponse.Version)] = version,
-                [nameof(TcpConnectionHeaderResponse.LicensedFeatures)] = new DynamicJsonValue
-                {
-                    [nameof(TcpConnectionHeaderResponse.LicensedFeatures.DataCompression)] = dataCompression
-                }
+                [nameof(TcpConnectionHeaderResponse.LicensedFeatures)] = licensedFeatures?.ToJson()
             };
 
             if (error != null)
@@ -2585,6 +2577,16 @@ namespace Raven.Server
                 _authAuditLog.Info(
                     $"Connection from {remoteAddress} with new replication hub ({hub} on {database}) certificate '{certificate.Subject} ({certificate.Thumbprint})' which is not registered in the cluster. " +
                     $"Allowing the connection based on the certificate's Public Key Pinning Hash which is trusted by the replication hub. Old certificate: {replicationHubAccess.Thumbprint} ");
+        }
+
+        private static bool ShouldUseDataCompression(TcpConnectionHeaderMessage header)
+        {
+            var supportedFeatures = TcpConnectionHeaderMessage.GetSupportedFeaturesFor(header.Operation, header.OperationVersion);
+
+            return supportedFeatures.DataCompression && 
+                   header.LicensedFeatures?.DataCompression == true && 
+                   (header.Operation == TcpConnectionHeaderMessage.OperationTypes.Replication || 
+                    header.Operation == TcpConnectionHeaderMessage.OperationTypes.Subscription);
         }
 
         private static void ThrowDatabaseShutdown(DocumentDatabase database)

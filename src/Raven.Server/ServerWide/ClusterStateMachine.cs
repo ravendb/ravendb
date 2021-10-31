@@ -3446,13 +3446,10 @@ namespace Raven.Server.ServerWide
                         throw new InvalidOperationException($"Unable to access  {url} because {reply.Message}");
                     case TcpConnectionStatus.InvalidNetworkTopology:
                         throw new InvalidNetworkTopologyException($"Unable to access {url} because {reply.Message}");
+                    default:
+                        throw new InvalidOperationException($"Unable to read header response, invalid TcpConnectionStatus : {reply.Status}");
                 }
             }
-
-            return new TcpConnectionHeaderMessage.NegotiationResponse
-            {
-                Version = TcpConnectionHeaderMessage.ClusterTcpVersion
-            };
         }
 
         public override async Task<RachisConnection> ConnectToPeer(string url, string tag, X509Certificate2 certificate, CancellationToken token)

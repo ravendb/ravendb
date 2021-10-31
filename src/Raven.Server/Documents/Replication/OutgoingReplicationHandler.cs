@@ -723,7 +723,10 @@ namespace Raven.Server.Documents.Replication
                     Version = TcpConnectionHeaderMessage.ReplicationTcpVersion,
                     AuthorizeInfo = authorizationInfo,
                     DestinationServerId = info?.ServerId,
-                    CompressionSupport = _parent._server.LicenseManager.LicenseStatus.HasTcpDataCompression
+                    LicensedFeatures = new LicensedFeatures
+                    {
+                        DataCompression = _parent._server.LicenseManager.LicenseStatus.HasTcpDataCompression
+                    }
                 };
 
                 _interruptibleRead = new InterruptibleRead(_database.DocumentsStorage.ContextPool, stream);

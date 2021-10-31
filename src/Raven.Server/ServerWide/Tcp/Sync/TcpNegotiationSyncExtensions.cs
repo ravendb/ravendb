@@ -86,7 +86,7 @@ namespace Raven.Server.ServerWide.Tcp.Sync
                 [nameof(TcpConnectionHeaderMessage.OperationVersion)] = currentVersion,
                 [nameof(TcpConnectionHeaderMessage.AuthorizeInfo)] = parameters.AuthorizeInfo?.ToJson(),
                 [nameof(TcpConnectionHeaderMessage.ServerId)] = parameters.DestinationServerId,
-                [nameof(TcpConnectionHeaderMessage.CompressionSupport)] = parameters.CompressionSupport
+                [nameof(TcpConnectionHeaderMessage.LicensedFeatures)] = parameters.LicensedFeatures?.ToJson()
 
             });
             writer.Flush();

@@ -57,7 +57,7 @@ namespace Raven.Client.ServerWide.Tcp
 
         public AuthorizationInfo AuthorizeInfo { get; set; }
 
-        public bool CompressionSupport { get; set; }
+        public LicensedFeatures LicensedFeatures { get; set; }
 
         public DetailedReplicationHubAccess ReplicationHubAccess;
 
@@ -484,11 +484,6 @@ namespace Raven.Client.ServerWide.Tcp
             public int Version;
 
             public LicensedFeatures LicensedFeatures;
-        }
-
-        public class LicensedFeatures
-        {
-            public bool DataCompression;
         }
 
         public static SupportedStatus OperationVersionSupported(OperationTypes operationType, int version, out int current)
