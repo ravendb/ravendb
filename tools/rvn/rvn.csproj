@@ -13,6 +13,7 @@
     <DefineConstants>$(DefineConstants);RVN</DefineConstants>
     <ValidateExecutableReferencesMatchSelfContained>false</ValidateExecutableReferencesMatchSelfContained>
   </PropertyGroup>
+
   <ItemGroup>
     <Compile Include="..\..\src\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
     <Compile Include="..\..\src\Raven.Client\Exceptions\UnsuccessfulFileAccessException.cs" Link="Client\Exceptions\UnsuccessfulFileAccessException.cs" />
@@ -20,6 +21,7 @@
     <Compile Include="..\..\src\Raven.Client\Extensions\MemberInfoExtensions.cs" Link="Client\Extensions\MemberInfoExtensions.cs" />
     <Compile Include="..\..\src\Raven.Client\Extensions\WhoIsLocking.cs" Link="Client\Extensions\WhoIsLocking.cs" />
     <Compile Include="..\..\src\Raven.Server\Commercial\SetupMode.cs" Link="Server\Commercial\SetupMode.cs" />
+    <Compile Include="..\..\src\Raven.Server\Commercial\SetupInfo.cs" Link="Server\Commercial\SetupInfo.cs" />
     <Compile Include="..\..\src\Raven.Server\Config\Attributes\ConfigurationEntryAttribute.cs" Link="Server\Config\Attributes\ConfigurationEntryAttribute.cs" />
     <Compile Include="..\..\src\Raven.Server\Config\Attributes\MinValueAttribute.cs" Link="Server\Config\Attributes\MinValueAttribute.cs" />
     <Compile Include="..\..\src\Raven.Server\Config\Attributes\SizeUnitAttribute.cs" Link="Server\Config\Attributes\SizeUnitAttribute.cs" />
@@ -41,6 +43,14 @@
     <Compile Include="..\..\src\Raven.Server\Utils\IOExtensions.cs" Link="Server\Utils\IOExtensions.cs" />
     <Compile Include="..\..\src\Raven.Server\Utils\Pipes.cs" Link="Server\Utils\Pipes.cs" />
     <Compile Include="..\..\src\Raven.Server\Utils\UrlUtil.cs" Link="Server\Utils\UrlUtil.cs" />
+
+    <Compile Include="..\..\src\Raven.Client\Documents\Operations\OperationState.cs" Link="Client\Documents\Operations\OperationState.cs" />
+    <Compile Include="..\..\src\Raven.Client\Documents\Operations\Configuration\StudioConfiguration.cs" Link="Client\Documents\Operations\Configuration\StudioConfiguration.cs" />
+    <Compile Include="..\..\src\Raven.Client\Documents\Operations\IOperationProgress.cs" Link="Client\Documents\Operations\IOperationProgress.cs" />
+    <Compile Include="..\..\src\Raven.Client\Util\SystemTime.cs" Link="Client\Util\SystemTime.cs" />
+    <Compile Include="..\..\src\Raven.Server\Commercial\License.cs" Link="Server\Commercial\License.cs" />
+    <Compile Include="..\..\src\Raven.Server\Commercial\LicenseType.cs" Link="Server\Commercial\LicenseType.cs" />
+    
   </ItemGroup>
   <ItemGroup Condition="'$(IsAnyOS)' == 'true' OR '$(IsWindows64)' == 'true'">
     <None Include="..\..\libs\libsodium\libsodium.win.x64.dll" Link="libsodium.win.x64.dll">
