@@ -1,11 +1,11 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using McMaster.Extensions.CommandLineUtils;
 using Sparrow.Platform;
-using System.Text.Json;
 using System.Text.RegularExpressions;
-using Newtonsoft.Json;
+using Raven.Server.Commercial;
 using JsonSerializer = Newtonsoft.Json.JsonSerializer;
 
 namespace rvn
@@ -78,13 +78,49 @@ namespace rvn
                     using (StreamReader file = File.OpenText(setupParameters.Value() ?? string.Empty))
                     {
                         JsonSerializer serializer = new();
-                        var rootObj = (CreateSetupDto.Root)serializer.Deserialize(file, typeof(CreateSetupDto.Root));
-                        Debug.Assert(rootObj != null, nameof(rootObj) + " != null");
-                        foreach (var node in rootObj.Setup.Cluster.Nodes)
+                        var root = (CreateSetupDto.Root)serializer.Deserialize(file, typeof(CreateSetupDto.Root));
+                        Debug.Assert(root != null, nameof(root) + " != null");
+                        foreach (var node in root.Setup.Cluster.Nodes)
                         {
                             if (re.IsMatch(node.Node.Tag) == false)
                                 return ExitWithError("Please enter no more than 4 characters.", cmd);
                         }
+
+                        var nodeSetupInfo = new Dictionary<string, SetupInfo.NodeInfo>();
+                        
+                        foreach (var node in root.Setup.Cluster.Nodes)
+                        {
+                            nodeSetupInfo.Add(node.Node.Tag, new SetupInfo.NodeInfo
+                            {
+                                PublicServerUrl = null,
+                                PublicTcpServerUrl = null,
+                                Port = node.Node.HttpPort,
+                                TcpPort = node.Node.TcpPort,
+                                ExternalIpAddress = node.Node.ExternalIp,
+                                ExternalPort = 0,
+                                ExternalTcpPort = 0,
+                                Addresses = new List<string>
+                                {
+                                    node.Node.Ip
+                                }
+                            });
+                        }
+                        
+                        var setupInfo = new SetupInfo
+                        {
+                            EnableExperimentalFeatures = false,
+                            RegisterClientCert = false,
+                            ClientCertNotAfter = null,
+                            License = root.Setup.License,
+                            Email = root.Setup.Email,
+                            Domain = root.Setup.Domain,
+                            RootDomain = root.Setup.RootDomain,
+                            ModifyLocalServer = false,
+                            LocalNodeTag = root.Setup.Cluster.Nodes[0].Node.Tag,
+                            Certificate = null,
+                            Password = root.Setup.Password,
+                            NodeSetupInfos = nodeSetupInfo
+                        };
                     }
 
                     return 0;

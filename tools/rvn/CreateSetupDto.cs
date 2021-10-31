@@ -1,22 +1,11 @@
 ﻿using System.Collections.Generic;
 using System.Text.Json.Serialization;
+using Raven.Server.Commercial;
 
 namespace rvn
 {
     public class CreateSetupDto
     {
-        public class License
-        {
-            [JsonPropertyName("Id")]
-            public string Id;
-
-            [JsonPropertyName("Name")]
-            public string Name;
-
-            [JsonPropertyName("Keys")]
-            public List<string> Keys;
-        }
-
         public class Node
         {
             [JsonPropertyName("Tag")]
@@ -52,11 +41,20 @@ namespace rvn
             [JsonPropertyName("License")]
             public License License;
 
+            [JsonPropertyName("RootDomain")]
+            public string RootDomain;   
+            
             [JsonPropertyName("Domain")]
-            public string Domain;
+            public string Domain;   
+            
+            [JsonPropertyName("Email")]
+            public string Email;
 
             [JsonPropertyName("Cluster")]
             public Cluster Cluster;
+
+            [JsonPropertyName("Password")]
+            public string Password;
         }
 
         public class Root
