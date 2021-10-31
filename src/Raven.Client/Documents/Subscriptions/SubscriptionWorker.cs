@@ -285,7 +285,10 @@ namespace Raven.Client.Documents.Subscriptions
                 DestinationNodeTag = CurrentNodeTag,
                 DestinationUrl = chosenUrl,
                 DestinationServerId = tcpInfo.ServerId,
-                CompressionSupport = compressionSupport
+                LicensedFeatures = new LicensedFeatures
+                {
+                    DataCompression = compressionSupport
+                }
             };
 
             return await TcpNegotiation.NegotiateProtocolVersionAsync(context, stream, parameters).ConfigureAwait(false);

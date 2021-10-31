@@ -96,7 +96,7 @@ namespace Raven.Client.ServerWide.Tcp
                 [nameof(TcpConnectionHeaderMessage.OperationVersion)] = currentVersion,
                 [nameof(TcpConnectionHeaderMessage.AuthorizeInfo)] = parameters.AuthorizeInfo?.ToJson(),
                 [nameof(TcpConnectionHeaderMessage.ServerId)] = parameters.DestinationServerId,
-                [nameof(TcpConnectionHeaderMessage.CompressionSupport)] = parameters.CompressionSupport.ToString()
+                [nameof(TcpConnectionHeaderMessage.LicensedFeatures)] = parameters.LicensedFeatures?.ToJson()
             });
 
             await writer.FlushAsync().ConfigureAwait(false);
@@ -131,6 +131,6 @@ namespace Raven.Client.ServerWide.Tcp
         public string DestinationUrl { get; set; }
         public string DestinationServerId { get; set; }
         public CancellationToken CancellationToken { get; set; }
-        public bool CompressionSupport { get; set; }
+        public LicensedFeatures LicensedFeatures { get; set; }
     }
 }
