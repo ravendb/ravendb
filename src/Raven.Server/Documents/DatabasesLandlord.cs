@@ -348,11 +348,10 @@ namespace Raven.Server.Documents
 
             // We materialize the values here because we close the read transaction
             var record = rawRecord.MaterializedRecord;
-            
-            if (index == -1)
-                context.CloseTransaction(); // other shards use this context we can't close it
 
-            DeleteDatabase(dbName, deletionInProgress, record);
+            context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += _ =>
+                DeleteDatabase(dbName, deletionInProgress, record);
+            
             return true;
         }
 
@@ -853,7 +852,7 @@ namespace Raven.Server.Documents
                             if (rawRecord == null)
                                 return;
 
-                        ShouldDeleteDatabase(context, databaseName.Value, rawRecord, fromReplication);
+                            ShouldDeleteDatabase(context, databaseName.Value, rawRecord, fromReplication);
                         }
                     }
                 }
