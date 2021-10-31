@@ -258,33 +258,44 @@ namespace Raven.Server.ServerWide
 
         public RawDatabaseRecord GetShardedDatabaseRecord(int index)
         {
-            _record.TryGet(nameof(DatabaseRecord.Shards), out BlittableJsonReaderArray array);
-            var name = DatabaseName;
-            var shardedTopology = (BlittableJsonReaderObject)array[index];
-            var shardName = name + "$" + index;
-
-            var settings = new Dictionary<string, string>();
-            foreach (var setting in Settings)
+            string shardName = DatabaseName + "$" + index;
+            try
             {
-                settings.Add(setting.Key, setting.Value);
+                _record.TryGet(nameof(DatabaseRecord.Shards), out BlittableJsonReaderArray array);
+                var name = DatabaseName;
+                var shardedTopology = (BlittableJsonReaderObject)array[index];
+                shardName = name + "$" + index;
+
+                var settings = new Dictionary<string, string>();
+                foreach (var setting in Settings)
+                {
+                    settings.Add(setting.Key, setting.Value);
+                }
+
+                // TODO: get rid of the strings
+                if (settings.TryGetValue("DataDir", out string dir))
+                {
+                    settings["DataDir"] = Path.Combine(dir, shardName);
+                }
+
+                _record.Modifications = new DynamicJsonValue(_record)
+                {
+                    [nameof(DatabaseRecord.DatabaseName)] = shardName,
+                    [nameof(DatabaseRecord.Topology)] = shardedTopology,
+                    [nameof(DatabaseRecord.ShardAllocations)] = null,
+                    [nameof(DatabaseRecord.Shards)] = null,
+                    [nameof(DatabaseRecord.Settings)] = DynamicJsonValue.Convert(settings)
+                };
+
+                return new RawDatabaseRecord(_context, _context.ReadObject(_record, shardName));
             }
-
-            // TODO: get rid of the strings
-            if (settings.TryGetValue("DataDir", out string dir))
+            catch (Exception e)
             {
-                settings["DataDir"] = Path.Combine(dir, shardName);
+                Console.WriteLine(shardName);
+                if (e is AccessViolationException)
+                    throw new AccessViolationException($"Temp Debug Info {shardName}", e);
+                throw;
             }
-
-            _record.Modifications = new DynamicJsonValue(_record)
-            {
-                [nameof(DatabaseRecord.DatabaseName)] = shardName,
-                [nameof(DatabaseRecord.Topology)] = shardedTopology,
-                [nameof(DatabaseRecord.ShardAllocations)] = null,
-                [nameof(DatabaseRecord.Shards)] = null,
-                [nameof(DatabaseRecord.Settings)] = DynamicJsonValue.Convert(settings)
-            };
-
-            return new RawDatabaseRecord(_context, _context.ReadObject(_record, shardName));
         }
 
         public IEnumerable<RawDatabaseRecord> AsShardsOrNormal()
