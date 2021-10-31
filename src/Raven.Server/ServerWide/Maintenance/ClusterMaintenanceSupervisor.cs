@@ -451,7 +451,8 @@ namespace Raven.Server.ServerWide.Maintenance
                         case TcpConnectionStatus.Ok:
                             return new TcpConnectionHeaderMessage.NegotiationResponse
                             {
-                                Version = headerResponse.Version
+                                Version = headerResponse.Version,
+                                LicensedFeatures = headerResponse.LicensedFeatures
                             };
                         case TcpConnectionStatus.AuthorizationFailed:
                             throw new AuthorizationException(
@@ -461,7 +462,8 @@ namespace Raven.Server.ServerWide.Maintenance
                             {
                                 return new TcpConnectionHeaderMessage.NegotiationResponse
                                 {
-                                    Version = headerResponse.Version
+                                    Version = headerResponse.Version,
+                                    LicensedFeatures = headerResponse.LicensedFeatures
                                 };
                             }
                             //Kindly request the server to drop the connection
