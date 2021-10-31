@@ -299,7 +299,7 @@ namespace Raven.Debug.StackTrace
             try
             {
                 var client = new DiagnosticsClient(processId);
-                var providers = new List<EventPipeProvider>()
+                var providers = new List<EventPipeProvider>
                 {
                     new EventPipeProvider("Microsoft-DotNETCore-SampleProfiler", EventLevel.Informational)
                 };
@@ -369,18 +369,12 @@ namespace Raven.Debug.StackTrace
                         }
                     });
 
-                    // For every thread recorded in our trace, print the first stack
                     foreach (var (threadId, samples) in samplesForThread)
                     {
                         var stack = GetStack(samples[0], stackSource);
                         stackTracesByThreadId[threadId] = stack;
                     }
                 }
-            }
-            catch (Exception ex)
-            {
-                Console.Error.WriteLine($"[ERROR] {ex.ToString()}");
-                //return -1;
             }
             finally
             {
