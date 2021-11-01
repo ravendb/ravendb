@@ -690,7 +690,7 @@ namespace SlowTests.Client.Subscriptions
                 finally
                 {
                     Assert.NotNull(ex);
-                    Assert.True(ex is DatabaseDoesNotExistException || ex is SubscriptionDoesNotExistException);
+                    Assert.True(ex is DatabaseDoesNotExistException || ex is SubscriptionDoesNotExistException, ex.ToString());
                     Assert.Contains(
                         ex is SubscriptionDoesNotExistException
                             ? $"Stopping subscription '{subscription.SubscriptionName}' on node A, because database '{store.Database}' is being deleted."
