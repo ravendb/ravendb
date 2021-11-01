@@ -223,6 +223,31 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
+        [RavenAction("/databases/*/subscriptions/resend", "GET", AuthorizationStatus.DatabaseAdmin)]
+        public async Task GetSubscriptionResend()
+        {
+            var subscriptionName = GetStringQueryString("name");
+
+            using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+            using (context.OpenReadTransaction())
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                var subscriptionState = Database
+                    .SubscriptionStorage
+                    .GetSubscriptionFromServerStore(subscriptionName);
+
+                if (subscriptionState == null)
+                {
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                    return;
+                }
+
+                var items = SubscriptionStorage.GetResendItems(context, Database.Name, subscriptionState.SubscriptionId);
+
+                writer.WriteArray("Items", items.Select(i => i.ToJson()), context);
+            }
+        }
+
         [RavenAction("/databases/*/subscriptions/connection-details", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, CorsMode = CorsMode.Cluster)]
         public async Task GetSubscriptionConnectionDetails()
         {
