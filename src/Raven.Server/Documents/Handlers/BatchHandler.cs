@@ -81,7 +81,11 @@ namespace Raven.Server.Documents.Handlers
                 {
                     if (command.IsClusterTransaction)
                     {
-                        var clusterTransactionHandler = new ClusterTransactionRequestProcessor(this, Database.Name, Database.IdentityPartsSeparator);
+                        var topology = ServerStore.LoadDatabaseTopology(Database.Name);
+                        if (topology.Promotables.Contains(ServerStore.NodeTag))
+                            throw new DatabaseNotRelevantException("Cluster transaction can't be handled by a promotable node.");
+                        
+                        var clusterTransactionHandler = new ClusterTransactionRequestProcessor(this, Database.Name, Database.IdentityPartsSeparator, topology);
                         await clusterTransactionHandler.Process(context, command.ParsedCommands);
                         return;
                     }

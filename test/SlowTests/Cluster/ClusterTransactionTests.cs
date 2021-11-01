@@ -1454,6 +1454,12 @@ namespace SlowTests.Cluster
         }
 
         [Fact]
+        public async Task TestCase()
+        {
+            using var store = GetDocumentStore();
+        }
+        
+        [Fact]
         public async Task SessionCompareExchangeCommands()
         {
             await base.SessionCompareExchangeCommands();
