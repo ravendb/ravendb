@@ -1593,7 +1593,6 @@ namespace Raven.Server.Documents.Indexes
                                        $"going to try flushing and syncing the environment to cleanup the storage. " +
                                        $"Will wait for flush for: {timeToWaitInMilliseconds}ms", dfe);
 
-                storageEnvironment.Options.TryCleanupRecycledJournals();
                 FlushAndSync(storageEnvironment, timeToWaitInMilliseconds, true);
                 return;
             }
@@ -1604,6 +1603,7 @@ namespace Raven.Server.Documents.Indexes
             if (State == IndexState.Error)
                 return;
 
+            storageEnvironment.Options.TryCleanupRecycledJournals();
             SetErrorState($"State was changed due to excessive number of disk full errors ({diskFullErrors}).");
         }
 
