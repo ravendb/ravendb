@@ -623,11 +623,6 @@ namespace Raven.Server.Documents.Subscriptions
                     }
 
                     var subscriptionConnectionsState = subscriptionStateKvp.Value;
-                    if (subscriptionState.LastClientConnectionTime == null)
-                    {
-                        DropSubscriptionConnections(subscriptionStateKvp.Key, new SubscriptionClosedException($"The subscription {subscriptionName} was modified, connection must be restarted", canReconnect: true));
-                        continue;
-                    }
 
                     //make sure we only drop old connection and not new ones just arriving with the updated query
                     if (subscriptionConnectionsState != null && subscriptionState.Query != subscriptionConnectionsState.Query)
@@ -636,6 +631,12 @@ namespace Raven.Server.Documents.Subscriptions
                         continue;
                     }
                     
+                    if (subscriptionState.LastClientConnectionTime == null)
+                    {
+                        DropSubscriptionConnections(subscriptionStateKvp.Key, new SubscriptionClosedException($"The subscription {subscriptionName} was modified, connection must be restarted", canReconnect: true));
+                        continue;
+                    }
+
                     var whoseTaskIsIt = _db.WhoseTaskIsIt(databaseRecord.Topology, subscriptionState, subscriptionState);
                     if (whoseTaskIsIt != _serverStore.NodeTag)
                     {
