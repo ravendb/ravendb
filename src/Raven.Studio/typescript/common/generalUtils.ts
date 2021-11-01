@@ -531,6 +531,10 @@ class genUtils {
         });
         return uuid;
     }
+
+    static isRavenDBCode(line: string): boolean {
+        return line.startsWith("Raven") || line.startsWith("Voron") || line.startsWith("Sparrow");
+    }
 } 
 
 export = genUtils;
