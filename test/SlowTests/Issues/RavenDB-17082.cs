@@ -392,6 +392,7 @@ namespace SlowTests.Issues
                 }
             }
         }
+
         [Fact]
         public async Task RemoveRevertFlagAfterNewInfo1()
         {
@@ -619,6 +620,69 @@ namespace SlowTests.Issues
                     var metadata = session.Advanced.GetMetadataFor(foo);
                     var flags = metadata.GetString(Constants.Documents.Metadata.Flags);
                     Assert.DoesNotContain(DocumentFlags.HasCounters.ToString(), flags);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task RevertRevisionWithTimeSeries()
+        {
+            DateTime last = default;
+            using (var store = GetDocumentStore())
+            {
+
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Name1", LastName = "LastName1" }, "users/1");
+                    var ts = session.TimeSeriesFor("users/1", "Toli");
+                    ts.Append(DateTime.Today.AddDays(-1), 10);
+                    await session.SaveChangesAsync();
+                    last = DateTime.UtcNow;
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Name2", LastName = "LastName1" }, "users/1");
+                    var ts = session.TimeSeriesFor("users/1", "Mitzi");
+                    ts.Append(DateTime.Today, 30);
+                    await session.SaveChangesAsync();
+                }
+                WaitForUserToContinueTheTest(store);
+                var db = await GetDocumentDatabaseInstanceFor(store);
+
+                RevertResult result;
+                using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
+                {
+                    result = (RevertResult)await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last, TimeSpan.FromMinutes(60), onProgress: null,
+                        token: token);
+                }
+                WaitForUserToContinueTheTest(store);
+                using (var session = store.OpenAsyncSession())
+                {
+                    var rev = await session.Advanced.Revisions.GetForAsync<User>("users/1");
+                    Assert.Equal(5, rev.Count);
+
+                    Assert.Equal("Name1", rev[0].Name);
+                    var ts = await session.TimeSeriesFor(rev[0], "Toli").GetAsync();
+                    Assert.Equal(1, ts.Length);
+                    Assert.Equal(10, ts[0].Value);
+
+                    ts = await session.TimeSeriesFor(rev[0], "Mitzi").GetAsync();
+                    Assert.Equal(1, ts.Length);
+                    Assert.Equal(30, ts[0].Value);
+
+                    var user = await session.LoadAsync<User>("users/1");
+                    Assert.Equal("Name1", user.Name);
+                    var metadata = session.Advanced.GetMetadataFor(user);
+                    var flags = metadata.GetString(Constants.Documents.Metadata.Flags);
+                    Assert.Contains(DocumentFlags.HasTimeSeries.ToString(), flags);
+                    ts = await session.TimeSeriesFor(user, "Toli").GetAsync();
+                    Assert.Equal(1, ts.Length);
+                    Assert.Equal(10, ts[0].Value);
+                    ts = await session.TimeSeriesFor(user, "Mitzi").GetAsync();
+                    Assert.Equal(1, ts.Length);
+                    Assert.Equal(30, ts[0].Value);
                 }
             }
         }
