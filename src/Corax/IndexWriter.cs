@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Corax.Pipeline;
 using Sparrow.Server;
 using Sparrow.Server.Compression;
 using Voron;
@@ -29,6 +30,7 @@ namespace Corax
 
     public class IndexWriter : IDisposable // single threaded, controlled by caller
     {
+        private readonly Analyzer _analyzer;
         private readonly StorageEnvironment _environment;
         private readonly TransactionPersistentContext _transactionPersistentContext;
         private readonly bool _ownsTransaction;
@@ -65,7 +67,7 @@ namespace Corax
         // The reason why we want to have the transaction open for us is so that we avoid having
         // to explicitly provide the index writer with opening semantics and also every new
         // writer becomes essentially a unit of work which makes reusing assets tracking more explicit.
-        public IndexWriter([NotNull] StorageEnvironment environment)
+        public IndexWriter([NotNull] StorageEnvironment environment, Analyzer analyzer = null)
         {
             _environment = environment;
             _transactionPersistentContext = new TransactionPersistentContext(true);
@@ -73,21 +75,23 @@ namespace Corax
             _ownsTransaction = true;
             _postingListContainerId = Transaction.OpenContainer(PostingListsSlice);
             _entriesContainerId = Transaction.OpenContainer(EntriesContainerSlice);
+            _analyzer = analyzer;
         }
 
-        public IndexWriter([NotNull] Transaction tx)
+        public IndexWriter([NotNull] Transaction tx, Analyzer analyzer = null)
         {
             Transaction = tx;
             _ownsTransaction = false;
             _postingListContainerId = Transaction.OpenContainer(PostingListsSlice);
             _entriesContainerId = Transaction.OpenContainer(EntriesContainerSlice);
+            _analyzer = analyzer;
         }
 
         public long Index(string id, Span<byte> data, Dictionary<Slice, int> knownFields)
         {
             using var _ = Slice.From(Transaction.Allocator, id, out var idSlice);
             return Index(idSlice, data, knownFields);
-        }
+        }                
 
         public long Index(Slice id, Span<byte> data, Dictionary<Slice, int> knownFields)
         {
@@ -104,17 +108,34 @@ namespace Corax
             data.CopyTo(space);
 
             var context = Transaction.Allocator;
-            var entryReader = new IndexEntryReader(data);
+
             //entryReader.DebugDump(knownFields);
 
-            foreach (var (key, tokenField) in knownFields)
-            {
-                if (_buffer.TryGetValue(key, out var field) == false)
-                {
-                    _buffer[key] = field = new Dictionary<Slice, List<long>>(SliceComparer.Instance);
-                }
+            var entryReader = new IndexEntryReader(data);
 
-                InsertToken(context, ref entryReader, tokenField, field, entryId);
+            if (_analyzer == null)
+            {
+                foreach (var (key, tokenField) in knownFields)
+                {
+                    if (_buffer.TryGetValue(key, out var field) == false)
+                    {
+                        _buffer[key] = field = new Dictionary<Slice, List<long>>(SliceComparer.Instance);
+                    }
+
+                    InsertToken(context, ref entryReader, tokenField, field, entryId);
+                }
+            }
+            else
+            {
+                foreach (var (key, tokenField) in knownFields)
+                {
+                    if (_buffer.TryGetValue(key, out var field) == false)
+                    {
+                        _buffer[key] = field = new Dictionary<Slice, List<long>>(SliceComparer.Instance);
+                    }
+
+                    InsertAnalyzedToken(context, ref entryReader, tokenField, field, entryId);
+                }
             }
 
             return entryId;
@@ -125,10 +146,81 @@ namespace Corax
             return Transaction.LowLevelTransaction.RootObjects.ReadInt64(IndexWriter.NumberOfEntriesSlice) ?? 0;
         }
 
+        private unsafe void InsertAnalyzedToken(ByteStringContext context, ref IndexEntryReader entryReader, int tokenField, Dictionary<Slice, List<long>> field, long entryId)
+        {
+            _analyzer.GetOutputBuffersSize(512, out int bufferSize, out int tokenSize);
+
+            byte* tempWordsSpace = stackalloc byte[bufferSize];
+            Token* tempTokenSpace = stackalloc Token[tokenSize];
+
+            var fieldType = entryReader.GetFieldType(tokenField);
+            if (fieldType.HasFlag(IndexEntryFieldType.List))
+            {                                
+                // TODO: For performance we can retrieve the whole thing and execute the analyzer many times in a loop for each token
+                //       that will ensure faster turnaround and more efficient execution. 
+                var iterator = entryReader.ReadMany(tokenField);
+                while (iterator.ReadNext())
+                {                    
+                    // Because of how we store the data, either this is a sequence or a tuple, which also contains a sequence. 
+                    var value = iterator.Sequence;
+
+                    var words = new Span<byte>(tempWordsSpace, bufferSize);
+                    var tokens = new Span<Token>(tempTokenSpace, tokenSize);
+                    _analyzer.Execute(value, ref words, ref tokens);
+
+                    for (int i = 0; i < tokens.Length; i++)
+                    {
+                        ref var token = ref tokens[i];
+
+                        using var _ = Slice.From(context, words.Slice(token.Offset, (int)token.Length), ByteStringType.Mutable, out var slice);
+                        if (field.TryGetValue(slice, out var term) == false)
+                        {
+                            var fieldName = slice.Clone(context);
+                            field[fieldName] = term = new List<long>();
+                        }
+
+                        AddMaybeAvoidDuplicate(term, entryId);
+                    }
+                }
+            }           
+            else if (fieldType.HasFlag(IndexEntryFieldType.Tuple) || fieldType.HasFlag(IndexEntryFieldType.Invalid) == false)
+            {
+                entryReader.Read(tokenField, out var value);
+
+                var words = new Span<byte>(tempWordsSpace, bufferSize);
+                var tokens = new Span<Token>(tempTokenSpace, tokenSize);
+                _analyzer.Execute(value, ref words, ref tokens);
+
+                for (int i = 0; i < tokens.Length; i++)
+                {
+                    ref var token = ref tokens[i];
+
+                    using var _ = Slice.From(context, words.Slice(token.Offset, (int)token.Length), ByteStringType.Mutable, out var slice);
+                    if (field.TryGetValue(slice, out var term) == false)
+                    {
+                        var fieldName = slice.Clone(context);
+                        field[fieldName] = term = new List<long>();
+                    }
+
+                    AddMaybeAvoidDuplicate(term, entryId);
+                }
+            }
+        }        
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        void AddMaybeAvoidDuplicate(List<long> term, long entryId)
+        {
+            // TODO: Do we want to index nulls? If so, how do we do that?
+            if (term.Count > 0 && term[^1] == entryId)
+                return;
+
+            term.Add(entryId);
+        }
+
         private void InsertToken(ByteStringContext context, ref IndexEntryReader entryReader, int tokenField, Dictionary<Slice, List<long>> field, long entryId)
         {
             var fieldType = entryReader.GetFieldType(tokenField);
-            if (fieldType.HasFlag(IndexEntryFieldType.List) && fieldType.HasFlag(IndexEntryFieldType.Tuple))
+            if (fieldType.HasFlag(IndexEntryFieldType.List))
             {
                 var iterator = entryReader.ReadMany(tokenField);
                 while (iterator.ReadNext())
@@ -142,40 +234,27 @@ namespace Corax
                         field[fieldName] = term = new List<long>();
                     }
 
-                    AddMaybeAvoidDuplicate(term);
+                    AddMaybeAvoidDuplicate(term, entryId);
                 }
             }
-            else if (fieldType.HasFlag(IndexEntryFieldType.List))
-            {
-                var iterator = entryReader.ReadMany(tokenField);
-                while (iterator.ReadNext())
-                {
-                    var value = iterator.Sequence;
+            //else if (fieldType.HasFlag(IndexEntryFieldType.List))
+            //{
+            //    var iterator = entryReader.ReadMany(tokenField);
+            //    while (iterator.ReadNext())
+            //    {
+            //        var value = iterator.Sequence;
 
-                    using var _ = Slice.From(context, value, ByteStringType.Mutable, out var slice);
-                    if (field.TryGetValue(slice, out var term) == false)
-                    {
-                        var fieldName = slice.Clone(context);
-                        field[fieldName] = term = new List<long>();
-                    }
+            //        using var _ = Slice.From(context, value, ByteStringType.Mutable, out var slice);
+            //        if (field.TryGetValue(slice, out var term) == false)
+            //        {
+            //            var fieldName = slice.Clone(context);
+            //            field[fieldName] = term = new List<long>();
+            //        }
 
-                    AddMaybeAvoidDuplicate(term);
-                }
-            }
-            else if (fieldType.HasFlag(IndexEntryFieldType.Tuple))
-            {
-                entryReader.Read(tokenField, out var value);
-
-                using var _ = Slice.From(context, value, ByteStringType.Mutable, out var slice);
-                if (field.TryGetValue(slice, out var term) == false)
-                {
-                    var fieldName = slice.Clone(context);
-                    field[fieldName] = term = new List<long>();
-                }
-
-                AddMaybeAvoidDuplicate(term);
-            }
-            else if (fieldType.HasFlag(IndexEntryFieldType.Invalid) == false)
+            //        AddMaybeAvoidDuplicate(term, entryId);
+            //    }
+            //}
+            else if (fieldType.HasFlag(IndexEntryFieldType.Tuple) || fieldType.HasFlag(IndexEntryFieldType.Invalid) == false)
             {
                 entryReader.Read(tokenField, out var value);
 
@@ -186,16 +265,21 @@ namespace Corax
                     field[fieldName] = term = new List<long>();
                 }
 
-                AddMaybeAvoidDuplicate(term);
+                AddMaybeAvoidDuplicate(term, entryId);
             }
+            //else if (fieldType.HasFlag(IndexEntryFieldType.Invalid) == false)
+            //{
+            //    entryReader.Read(tokenField, out var value);
 
-            // TODO: Do we want to index nulls? If so, how do we do that?
-            void AddMaybeAvoidDuplicate(List<long> term)
-            {
-                if (term.Count > 0 && term[^1] == entryId)
-                    return;
-                term.Add(entryId);
-            }
+            //    using var _ = Slice.From(context, value, ByteStringType.Mutable, out var slice);
+            //    if (field.TryGetValue(slice, out var term) == false)
+            //    {
+            //        var fieldName = slice.Clone(context);
+            //        field[fieldName] = term = new List<long>();
+            //    }
+
+            //    AddMaybeAvoidDuplicate(term, entryId);
+            //}
         }
 
         private void DeleteCommit(Dictionary<Slice, int> knownFields, Span<byte> tmpBuf, Tree fieldsTree)

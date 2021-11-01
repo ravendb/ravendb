@@ -140,37 +140,37 @@ namespace Tryouts
         public static void Main()
         {
 
-            //new IndexSearcherTest(new ConsoleTestOutputHelper()).SimpleSortedMatchStatement();
+            new SimplePipelineTest(new ConsoleTestOutputHelper()).BasicInnerAnalyzer();
 
 
             //var parser = new QueryParser();
             //parser.Init("from Dogs where Type = 'Dog' and Age in ('15', '16')");
             //QueryDefinition queryDefinition = new QueryDefinition("Name", parser.Parse());
 
-            using var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly());
+            //using var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly());
 
-            GenerateData(env);
+            //GenerateData(env);
 
-            using var searcher = new IndexSearcher(env);
-            var coraxQueryEvaluator = new CoraxQueryEvaluator(searcher);
+            //using var searcher = new IndexSearcher(env);
+            //var coraxQueryEvaluator = new CoraxQueryEvaluator(searcher);
 
-            var watch = Stopwatch.StartNew();
+            //var watch = Stopwatch.StartNew();
 
-            Span<long> ids = stackalloc long[2048];
-            for ( int i = 0; i < 1000; i++)
-            {
-                var typeTerm = searcher.TermQuery("Type", "Dog");
-                var ageTerm = searcher.StartWithQuery("Age", "1");
-                var andQuery = searcher.And(typeTerm, ageTerm);
-                var query = searcher.OrderByAscending(andQuery, fieldId: 2, take: 16);
+            //Span<long> ids = stackalloc long[2048];
+            //for ( int i = 0; i < 1000; i++)
+            //{
+            //    var typeTerm = searcher.TermQuery("Type", "Dog");
+            //    var ageTerm = searcher.StartWithQuery("Age", "1");
+            //    var andQuery = searcher.And(typeTerm, ageTerm);
+            //    var query = searcher.OrderByAscending(andQuery, fieldId: 2, take: 16);
 
-                while (query.Fill(ids) != 0)
-                    ;
-            }
+            //    while (query.Fill(ids) != 0)
+            //        ;
+            //}
 
-            watch.Stop();
-            Console.WriteLine($"Cost: {watch.ElapsedMilliseconds} ms.");
-            Console.WriteLine($"Cost Per Search: {watch.ElapsedMilliseconds / 1000} ms.");
+            //watch.Stop();
+            //Console.WriteLine($"Cost: {watch.ElapsedMilliseconds} ms.");
+            //Console.WriteLine($"Cost Per Search: {watch.ElapsedMilliseconds / 1000} ms.");
 
 
             //var query = searcher.Search(queryDefinition.Query.Where);
