@@ -1,0 +1,56 @@
+<div class="modal-dialog modal-lg" role="document" id="threadStackTraceDialog">
+    <div class="modal-content">
+        <div class="modal-header">
+            <button class="close" data-dismiss="modal" aria-label="Close"><i class="icon-cancel"></i></button>
+            <h2 class="modal-title">
+                <i class="icon-stack-traces"></i> <!-- TODO replace icon with RavenDB-17430 -->
+                <span>Stack Trace</span>
+            </h2>
+        </div>
+        <div class="modal-body">
+            <div>
+                <div class="margin-top">
+                    <small>Thread ID:</small>
+                    <small class="margin-left margin-left-xs"><strong data-bind="text: threadId"></strong></small>
+                </div>
+                <div>
+                    <small>Thread Name:</small>
+                    <small class="margin-left margin-left-xs"><strong data-bind="text: threadName"></strong></small>
+                </div>
+                <div data-bind="if: threadType() && threadType() !== 'Other'">
+                    <small>Thread Type:</small>
+                    <small class="margin-left margin-left-xs"><strong data-bind="text: threadType"></strong></small>
+                </div>
+                <div>
+                    <small>CPU Usage:</small>
+                    <small class="margin-left margin-left-xs"><strong data-bind="text: cpuUsage"></strong></small>
+                </div>
+                <div>
+                    <small>Stack Trace:</small>
+                    <i class="margin-left" data-bind="visible: spinners.loading(), css: { 'btn-spinner': spinners.loading() }"></i>
+                    <small class="margin-left margin-left-xs"><strong data-bind="if: !stackTrace().length && !spinners.loading()">N/A</strong></small>
+                    <div class="stack-trace">
+                        <div class="padding word-break" data-bind="visible: stackTrace().length">
+                            <!-- ko foreach: stackTrace -->
+                            <small data-bind="visible: !$parent.isUserCode($data)"><span data-bind="text: $data"></span><br></small>
+                            <small data-bind="visible: $parent.isUserCode($data)"><strong data-bind="text: $data"></strong><br></small>
+                            <!-- /ko -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+       <div class="modal-footer margin-bottom">
+               <!-- todo: cancel copy-->
+           <button class="btn btn-default" data-bind="click: close">
+               <i class="icon-cancel"></i><span>Cancel</span>
+           </button>
+           <button class="btn btn-default" data-bind="click: copyStackTrace, enable: stackTrace().length" title="Copy stack trace to clipboard">
+               <i class="icon-copy-to-clipboard"></i><span>Copy</span>
+           </button>
+           <button class="btn btn-primary" data-bind="click: refreshStackTrace, enable: !spinners.loading(), css: { 'btn-spinner': spinners.loading }" title="Click to refresh stack trace">
+               <i class="icon-refresh"></i><span>Refresh</span>
+           </button>
+       </div>
+    </div>
+</div>

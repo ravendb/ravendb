@@ -754,6 +754,19 @@ interface rawStackTraceResponseItem {
     StackTrace: string[];
 }
 
+interface threadStackTraceResponseDto {
+    Results: Array<threadStackTraceResponseItem>;
+    Threads: Array<Raven.Server.Dashboard.ThreadInfo>;
+}
+
+interface threadStackTraceResponseItem {
+    OSThreadId: number,
+    ManagedThreadId: number,
+    IsNative: boolean,
+    ThreadType: string,
+    StackTrace: string[]
+}
+
 type indexStatus = "Normal" | "ErrorOrFaulty" | "Stale" | "Paused" | "Disabled" | "Idle" | "RollingDeployment";
 
 interface MigratorPathConfiguration {

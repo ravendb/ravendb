@@ -1,10 +1,12 @@
 import viewModelBase = require("viewmodels/viewModelBase");
-
+import app = require("durandal/app")
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import generalUtils = require("common/generalUtils");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
+import actionColumn = require("widgets/virtualGrid/columns/actionColumn");
 import getDebugThreadsRunawayCommand = require("commands/database/debug/getDebugThreadsRunawayCommand");
+import threadStackTrace = require("./threadStackTrace");
 
 class debugAdvancedThreadsRuntime extends viewModelBase {
 
@@ -94,7 +96,10 @@ class debugAdvancedThreadsRuntime extends viewModelBase {
         grid.headerVisible(true);
         grid.init(fetcher, () => {
                 return [
-                    new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => x.Name, "Name", "25%", {
+                    new actionColumn<Raven.Server.Dashboard.ThreadInfo>(grid, (x) => this.showStackTrace(x), "Stack",
+                                () => `<i title="Click to view Stack Trace" class="icon-stack-traces"></i>`, "55px"),
+                                // TODO replace above icon with RavenDB-174430
+                    new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => x.Name, "Name", "20%", {
                         sortable: "string"
                     }),
                     new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => `${(x.CpuUsage === 0 ? "0" : generalUtils.formatNumberToStringFixed(x.CpuUsage, 2))}%`, "Current CPU %", "10%", {
@@ -114,7 +119,7 @@ class debugAdvancedThreadsRuntime extends viewModelBase {
                     new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => x.State, "State", "10%", {
                         sortable: "string"
                     }),
-                    new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => x.WaitReason, "Wait reason", "15%")
+                    new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => x.WaitReason, "Wait reason", "10%")
                 ];
             }
         );
@@ -156,6 +161,10 @@ class debugAdvancedThreadsRuntime extends viewModelBase {
         return this.loadThreadsRunaway()
             .done(() => this.gridController().reset(true))
             .always(() => this.spinners.refresh(false));
+    }
+    
+    private showStackTrace(thread: Raven.Server.Dashboard.ThreadInfo) {
+        app.showBootstrapDialog(new threadStackTrace(thread.Id, thread.Name));
     }
 }
 

@@ -708,6 +708,10 @@ class genUtils {
             $(containerSelector).scrollTop(elementTop);
         }
     }
+
+    static isRavenDBCode(line: string): boolean {
+        return line.startsWith("Raven") || line.startsWith("Voron") || line.startsWith("Sparrow");
+    }
 } 
 
 export = genUtils;
