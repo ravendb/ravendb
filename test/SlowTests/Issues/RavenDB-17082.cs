@@ -75,6 +75,8 @@ namespace SlowTests.Issues
                     var flags = metadata.GetString(Constants.Documents.Metadata.Flags);
                     Assert.Contains(DocumentFlags.HasAttachments.ToString(), flags);
                     Assert.Contains(DocumentFlags.HasCounters.ToString(), flags);
+                    Assert.True(metadata.Keys.Contains(Constants.Documents.Metadata.Counters));
+                    Assert.False(metadata.Keys.Contains(Constants.Documents.Metadata.RevisionCounters));
                 }
             }
         }
@@ -331,6 +333,8 @@ namespace SlowTests.Issues
 
                     var user = await session.LoadAsync<User>("users/1");
                     var metadata = session.Advanced.GetMetadataFor(user);
+                    Assert.True(metadata.Keys.Contains(Constants.Documents.Metadata.Counters));
+                    Assert.False(metadata.Keys.Contains(Constants.Documents.Metadata.RevisionCounters));
                     var flags = metadata.GetString(Constants.Documents.Metadata.Flags);
                     Assert.Contains(DocumentFlags.HasCounters.ToString(), flags);
                     var counter = await session.CountersFor(user).GetAllAsync();
@@ -385,6 +389,8 @@ namespace SlowTests.Issues
                     var user = await session.LoadAsync<User>("users/1");
                     var metadata = session.Advanced.GetMetadataFor(user);
                     var flags = metadata.GetString(Constants.Documents.Metadata.Flags);
+                    Assert.True(metadata.Keys.Contains(Constants.Documents.Metadata.Counters));
+                    Assert.False(metadata.Keys.Contains(Constants.Documents.Metadata.RevisionCounters));
                     Assert.Contains(DocumentFlags.HasCounters.ToString(), flags);
                     var counter = await session.CountersFor(user).GetAllAsync();
                     Assert.Equal(1, counter.Count);
@@ -648,7 +654,7 @@ namespace SlowTests.Issues
                     ts.Append(DateTime.Today, 30);
                     await session.SaveChangesAsync();
                 }
-                WaitForUserToContinueTheTest(store);
+
                 var db = await GetDocumentDatabaseInstanceFor(store);
 
                 RevertResult result;
@@ -657,7 +663,7 @@ namespace SlowTests.Issues
                     result = (RevertResult)await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last, TimeSpan.FromMinutes(60), onProgress: null,
                         token: token);
                 }
-                WaitForUserToContinueTheTest(store);
+
                 using (var session = store.OpenAsyncSession())
                 {
                     var rev = await session.Advanced.Revisions.GetForAsync<User>("users/1");
@@ -675,6 +681,8 @@ namespace SlowTests.Issues
                     var user = await session.LoadAsync<User>("users/1");
                     Assert.Equal("Name1", user.Name);
                     var metadata = session.Advanced.GetMetadataFor(user);
+                    Assert.True(metadata.Keys.Contains(Constants.Documents.Metadata.TimeSeries));
+                    Assert.False(metadata.Keys.Contains(Constants.Documents.Metadata.RevisionTimeSeries));
                     var flags = metadata.GetString(Constants.Documents.Metadata.Flags);
                     Assert.Contains(DocumentFlags.HasTimeSeries.ToString(), flags);
                     ts = await session.TimeSeriesFor(user, "Toli").GetAsync();
