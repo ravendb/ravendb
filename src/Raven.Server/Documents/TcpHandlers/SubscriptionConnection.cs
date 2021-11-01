@@ -283,6 +283,9 @@ namespace Raven.Server.Documents.TcpHandlers
 
                 Subscription = ParseSubscriptionQuery(SubscriptionState.Query);
 
+                await TcpConnection.DocumentDatabase.SubscriptionStorage.UpdateClientConnectionTime(SubscriptionState.SubscriptionId,
+                    SubscriptionState.SubscriptionName, SubscriptionState.MentorNode);
+
                 await SendNoopAck();
                 await WriteJsonAsync(new DynamicJsonValue
                 {
@@ -290,9 +293,6 @@ namespace Raven.Server.Documents.TcpHandlers
                     [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.ConnectionStatus),
                     [nameof(SubscriptionConnectionServerMessage.Status)] = nameof(SubscriptionConnectionServerMessage.ConnectionStatus.Accepted)
                 });
-
-                await TcpConnection.DocumentDatabase.SubscriptionStorage.UpdateClientConnectionTime(SubscriptionState.SubscriptionId,
-                    SubscriptionState.SubscriptionName, SubscriptionState.MentorNode);
             }
             catch
             {
@@ -383,7 +383,6 @@ namespace Raven.Server.Documents.TcpHandlers
                 }
                 finally
                 {
-                    _subscriptionConnectionsState?.DropSingleConnection(this);
                     AddToStatusDescription("Finished processing subscription");
                     if (_logger.IsInfoEnabled)
                     {
@@ -661,7 +660,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
                                     using (docsContext.OpenReadTransaction())
                                     {
-                                        var globalEtag =_processor.GetLastItemEtag(docsContext, Subscription.Collection);
+                                        var globalEtag = _processor.GetLastItemEtag(docsContext, Subscription.Collection);
                                         if (globalEtag > SubscriptionConnectionsState.GetLastEtagSent())
                                         {
                                             _subscriptionConnectionsState.NotifyHasMoreDocs();
@@ -685,7 +684,13 @@ namespace Raven.Server.Documents.TcpHandlers
                         }
                         catch (SubscriptionChangeVectorUpdateConcurrencyException e)
                         {
+                            ConnectionException = e;
                             _subscriptionConnectionsState.DropSubscription(e);
+                            throw;
+                        }
+                        catch (SubscriptionException e)
+                        {
+                            ConnectionException = e;
                             throw;
                         }
                         catch (Exception e)

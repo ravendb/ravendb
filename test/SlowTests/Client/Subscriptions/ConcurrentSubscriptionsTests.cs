@@ -421,12 +421,14 @@ namespace SlowTests.Client.Subscriptions
         {
             var db = await GetDocumentDatabaseInstanceFor(store);
 
-            using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-            using (ctx.OpenReadTransaction())
+            await AssertWaitForValueAsync(() =>
             {
-                var leftovers = db.SubscriptionStorage.GetSubscriptionConnectionsState(ctx, id).GetNumberOfResendDocuments(SubscriptionType.Document);
-                Assert.Equal(0L, leftovers);
-            }
+                using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    return Task.FromResult(db.SubscriptionStorage.GetSubscriptionConnectionsState(ctx, id).GetNumberOfResendDocuments(SubscriptionType.Document));
+                }
+            }, 0);
         }
 
         [Fact]
