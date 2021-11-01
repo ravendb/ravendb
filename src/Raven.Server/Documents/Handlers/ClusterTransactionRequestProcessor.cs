@@ -8,28 +8,28 @@ using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Exceptions;
 using Raven.Client.Json;
+using Raven.Client.ServerWide;
 using Raven.Server.Rachis;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
-using Raven.Server.ServerWide.Context;
 using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers
 {
-    public class ClusterTransactionRequestProcessor
+    public abstract class BaseClusterTransactionRequestProcessor
     {
         private readonly RequestHandler _handler;
-        private readonly string _database;
-        private readonly char _identitySeparator;
+        protected readonly string Database;
+        protected readonly char IdentitySeparator;
 
-        public ClusterTransactionRequestProcessor(RequestHandler handler, string database, char identitySeparator)
+        protected BaseClusterTransactionRequestProcessor(RequestHandler handler, string database, char identitySeparator)
         {
             _handler = handler;
-            _database = database;
-            _identitySeparator = identitySeparator;
+            Database = database;
+            IdentitySeparator = identitySeparator;
         }
 
         public async Task Process(JsonOperationContext context, ArraySegment<BatchRequestParser.CommandData> parsedCommands)
@@ -54,12 +54,7 @@ namespace Raven.Server.Documents.Handlers
                 };
 
                 var raftRequestId = _handler.GetRaftRequestIdFromQuery();
-                var clusterTransactionCommand = new ClusterTransactionCommand(
-                    _database,
-                    _identitySeparator,
-                    parsedCommands,
-                    options,
-                    raftRequestId);
+                ClusterTransactionCommand clusterTransactionCommand = CreateClusterTransactionCommand(parsedCommands, options, raftRequestId);
 
                 (long index, object clusterTransactionCommandResult) = await _handler.ServerStore.SendToLeaderAsync(clusterTransactionCommand);
                 if (clusterTransactionCommandResult is List<ClusterTransactionCommand.ClusterTransactionErrorInfo> errors)
@@ -111,6 +106,9 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
+        protected abstract ClusterTransactionCommand CreateClusterTransactionCommand(ArraySegment<BatchRequestParser.CommandData> parsedCommands,
+            ClusterTransactionCommand.ClusterTransactionOptions options, string raftRequestId);
+
         private void CheckBackwardCompatibility(ref bool disableAtomicDocumentWrites)
         {
             if (disableAtomicDocumentWrites)
@@ -126,6 +124,50 @@ namespace Raven.Server.Documents.Handlers
             {
                 disableAtomicDocumentWrites = true;
             }
+        }
+    }
+
+    class ClusterTransactionRequestProcessor : BaseClusterTransactionRequestProcessor
+    {
+        private readonly DatabaseTopology _topology;
+
+        public ClusterTransactionRequestProcessor(RequestHandler handler, string database, char identitySeparator, DatabaseTopology topology) : base(handler, database, identitySeparator)
+        {
+            _topology = topology;
+        }
+
+        protected override ClusterTransactionCommand CreateClusterTransactionCommand(
+            ArraySegment<BatchRequestParser.CommandData> parsedCommands, 
+            ClusterTransactionCommand.ClusterTransactionOptions options, 
+            string raftRequestId)
+        {
+            return new ClusterTransactionCommand(
+                Database,
+                IdentitySeparator,
+                _topology,
+                parsedCommands,
+                options,
+                raftRequestId);
+        }
+    }
+    
+    class ShardClusterTransactionRequestProcessor : BaseClusterTransactionRequestProcessor
+    {
+        public ShardClusterTransactionRequestProcessor(RequestHandler handler, string database, char identitySeparator) : base(handler, database, identitySeparator)
+        {
+        }
+
+        protected override ClusterTransactionCommand CreateClusterTransactionCommand(
+            ArraySegment<BatchRequestParser.CommandData> parsedCommands, 
+            ClusterTransactionCommand.ClusterTransactionOptions options, 
+            string raftRequestId)
+        {
+            return new ClusterTransactionCommand(
+                Database,
+                IdentitySeparator,
+                parsedCommands,
+                options,
+                raftRequestId);
         }
     }
 }
