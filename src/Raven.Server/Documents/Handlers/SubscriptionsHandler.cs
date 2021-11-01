@@ -223,7 +223,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/subscriptions/resend", "GET", AuthorizationStatus.DatabaseAdmin)]
+        [RavenAction("/databases/*/subscriptions/resend", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetSubscriptionResend()
         {
             var subscriptionName = GetStringQueryString("name");
