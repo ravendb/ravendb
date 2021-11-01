@@ -3,10 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Corax;
-using Corax.Queries;
+using Corax.Pipeline;
 using FastTests.Voron;
-using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Linq;
 using Sparrow;
 using Sparrow.Server;
 using Sparrow.Threading;
@@ -84,7 +82,7 @@ namespace FastTests.Corax
         }
 
 
-        private void IndexEntries(IEnumerable<IndexEntry> list)
+        private void IndexEntries(IEnumerable<IndexEntry> list, Analyzer analyzer = null)
         {
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
             Dictionary<Slice, int> knownFields = CreateKnownFields(bsc);
@@ -93,7 +91,7 @@ namespace FastTests.Corax
             using var _ = bsc.Allocate(bufferSize, out ByteString buffer);
 
             {
-                using var indexWriter = new IndexWriter(Env);
+                using var indexWriter = new IndexWriter(Env, analyzer);
                 foreach (var entry in list)
                 {
                     var entryWriter = new IndexEntryWriter(buffer.ToSpan(), knownFields);
@@ -1081,6 +1079,140 @@ namespace FastTests.Corax
                 Span<long> ids = stackalloc long[16];
                 Assert.Equal(1, match.Fill(ids));
                 Assert.Equal(0, match.Fill(ids));
+            }
+        }
+
+        [Theory]
+        [InlineData(new object[] { 100000, 128 })]
+        [InlineData(new object[] { 100000, 2046 })]
+        [InlineData(new object[] { 1000, 8 })]
+        [InlineData(new object[] { 11700, 18 })]
+        [InlineData(new object[] { 11859, 18 })]
+        public void AndInStatementWithLowercaseAnalyzer(int setSize, int stackSize)
+        {
+            var analyzer = Analyzer.Create<KeywordTokenizer, LowerCaseTransformer>();
+
+            setSize = setSize - (setSize % 3);
+
+            var entriesToIndex = new IndexEntry[setSize];
+            for (int i = 0; i < setSize; i++)
+            {
+                var entry = new IndexEntry
+                {
+                    Id = $"entry/{i}",
+                    Content = (i % 3) switch
+                    {
+                        0 => new string[] { "road", "Lake", "mounTain" },
+                        1 => new string[] { "roAd", "mountain" },
+                        2 => new string[] { "sky", "space", "laKe" },
+                    }
+                };
+
+                entriesToIndex[i] = entry;
+            }
+
+            IndexEntries(entriesToIndex, analyzer);
+
+            using var searcher = new IndexSearcher(Env);
+            {
+                var match1 = searcher.InQuery("Content", new() { "lake", "mountain" });
+                var match2 = searcher.TermQuery("Content", "sky");
+                var andMatch = searcher.And(in match1, in match2);
+
+                Span<long> ids = stackalloc long[stackSize];
+                int read;
+                int count = 0;
+                do
+                {
+                    read = andMatch.Fill(ids);
+                    count += read;
+                } while (read != 0);
+
+                Assert.Equal((setSize / 3), count);
+            }
+
+            {
+                var match1 = searcher.TermQuery("Content", "sky");
+                var match2 = searcher.InQuery("Content", new() { "lake", "mountain" });
+                var andMatch = searcher.And(in match1, in match2);
+
+                Span<long> ids = stackalloc long[stackSize];
+                int read;
+                int count = 0;
+                do
+                {
+                    read = andMatch.Fill(ids);
+                    count += read;
+                } while (read != 0);
+
+                Assert.Equal((setSize / 3), count);
+            }
+        }
+
+        [Theory]
+        [InlineData(new object[] { 100000, 128 })]
+        [InlineData(new object[] { 100000, 2046 })]
+        [InlineData(new object[] { 1000, 8 })]
+        [InlineData(new object[] { 11700, 18 })]
+        [InlineData(new object[] { 11859, 18 })]
+        public void AndInStatementAndWhitespaceTokenizer(int setSize, int stackSize)
+        {
+            var analyzer = Analyzer.Create<WhitespaceTokenizer, LowerCaseTransformer>();
+
+            setSize = setSize - (setSize % 3);
+
+            var entriesToIndex = new IndexEntry[setSize];
+            for (int i = 0; i < setSize; i++)
+            {
+                var entry = new IndexEntry
+                {
+                    Id = $"entry/{i}",
+                    Content = (i % 3) switch
+                    {
+                        0 => new string[] { "road Lake mounTain  " },
+                        1 => new string[] { "roAd mountain" },
+                        2 => new string[] { "sky space laKe" },
+                    }
+                };
+
+                entriesToIndex[i] = entry;
+            }
+
+            IndexEntries(entriesToIndex, analyzer);
+
+            using var searcher = new IndexSearcher(Env);
+            {
+                var match1 = searcher.InQuery("Content", new() { "lake", "mountain" });
+                var match2 = searcher.TermQuery("Content", "sky");
+                var andMatch = searcher.And(in match1, in match2);
+
+                Span<long> ids = stackalloc long[stackSize];
+                int read;
+                int count = 0;
+                do
+                {
+                    read = andMatch.Fill(ids);
+                    count += read;
+                } while (read != 0);
+
+                Assert.Equal((setSize / 3), count);
+            }
+
+            {
+                var match1 = searcher.TermQuery("Content", "sky");
+                var match2 = searcher.InQuery("Content", new() { "lake", "mountain" });
+                var andMatch = searcher.And(in match1, in match2);
+
+                Span<long> ids = stackalloc long[stackSize];
+                int read;
+                int count = 0;
+                do
+                {
+                    read = andMatch.Fill(ids);
+                    count += read;
+                } while (read != 0);
+
+                Assert.Equal((setSize / 3), count);
             }
         }
     }
