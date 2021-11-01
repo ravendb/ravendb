@@ -1,24 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
-using FastTests;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Http;
-using Raven.Client.ServerWide.Operations;
-using Raven.Server.Documents;
-using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands.Subscriptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Server;
-using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -706,11 +698,11 @@ namespace SlowTests.Client.Subscriptions
                     await mre1.WaitAsync();
                     await mre2.WaitAsync();
 
-                    store.Subscriptions.DropConnection(worker.SubscriptionName, worker2.ConnectionId);//TODO stav: could have race between ack and drop
+                    store.Subscriptions.DropConnection(worker2.SubscriptionName, worker2.ConnectionId);
                     var db = await GetDocumentDatabaseInstanceFor(store);
                     db.SubscriptionStorage.TryGetRunningSubscriptionConnectionsState(long.Parse(id), out var subscriptionConnectionsState);
                     Assert.Equal(1, subscriptionConnectionsState.GetConnections().Count);
-                    await AssertWaitForTrueAsync(() => Task.FromResult(con1Docs.Count + con2Docs.Count == 6), 6000);
+                    await AssertWaitForTrueAsync(() => Task.FromResult(con1Docs.Count + con2Docs.Count == 6 || con1Docs.Count + con2Docs.Count == 8), 6000);
                     await AssertNoLeftovers(store, id);
                 }
             }

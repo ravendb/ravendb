@@ -254,14 +254,14 @@ namespace Raven.Server.Documents.TcpHandlers
                         {
                             _logger.Info(
                                 $"A connection from IP {TcpConnection.TcpClient.Client.RemoteEndPoint} is starting to wait until previous connection from " +
-                                $"{_subscriptionConnectionsState.GetConnections().First()?.TcpConnection.TcpClient.Client.RemoteEndPoint} is released");
+                                $"{_subscriptionConnectionsState.GetConnectionsAsString()} is released");
                         }
 
                         timeout = TimeSpan.FromMilliseconds(Math.Max(250, (long)_options.TimeToWaitBeforeConnectionRetry.TotalMilliseconds / 2) + random.Next(15, 50));
                         await Task.Delay(timeout);
                         await SendHeartBeat(
                             $"A connection from IP {TcpConnection.TcpClient.Client.RemoteEndPoint} is waiting for Subscription Task that is serving a connection from IP " +
-                            $"{_subscriptionConnectionsState.GetConnections().First()?.TcpConnection.TcpClient.Client.RemoteEndPoint} to be released");
+                            $"{_subscriptionConnectionsState.GetConnectionsAsString()} to be released");
                         shouldRetry = true;
                     }
 
@@ -340,7 +340,7 @@ namespace Raven.Server.Documents.TcpHandlers
                     if (TcpConnection.DocumentDatabase.SubscriptionStorage.TryEnterSemaphore() == false)
                     {
                         throw new SubscriptionClosedException(
-                            $"Cannot open new subscription connection, max amount of concurrent connections reached ({TcpConnection.DocumentDatabase.Configuration.Subscriptions.MaxNumberOfConcurrentConnections})");
+                            $"Cannot open new subscription connection, max amount of concurrent connections reached ({TcpConnection.DocumentDatabase.Configuration.Subscriptions.MaxNumberOfConcurrentConnections}), you can modify the value at 'Subscriptions.MaxNumberOfConcurrentConnections'");
                     }
 
                     try
@@ -361,9 +361,9 @@ namespace Raven.Server.Documents.TcpHandlers
                 catch (Exception e)
                 {
                     if (e is SubscriptionInUseException)
-                        _connectionScope.RecordException(SubscriptionError.ConnectionRejected, e.Message);
+                        _connectionScope.RecordException(SubscriptionError.ConnectionRejected, e.ToString());
                     else
-                        _connectionScope.RecordException(SubscriptionError.Error, e.Message);
+                        _connectionScope.RecordException(SubscriptionError.Error, e.ToString());
 
                     var errorMessage = $"Failed to process subscription {SubscriptionId} / from client {TcpConnection.TcpClient.Client.RemoteEndPoint}";
                     AddToStatusDescription($"{errorMessage}. Sending response to client");
@@ -383,7 +383,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 }
                 finally
                 {
-                    _subscriptionConnectionsState?.DropSingleConnection(this); //TODO stav: _subscriptionConnectionsState might be disposed
+                    _subscriptionConnectionsState?.DropSingleConnection(this);
                     AddToStatusDescription("Finished processing subscription");
                     if (_logger.IsInfoEnabled)
                     {
@@ -690,8 +690,7 @@ namespace Raven.Server.Documents.TcpHandlers
                         }
                         catch (Exception e)
                         {
-                            _subscriptionConnectionsState.DropSingleConnection(this); //TODO stav: could remove this and only rely on outer 'finally' clause to drop the connection
-                            batchScope.RecordException(e.Message);
+                            batchScope.RecordException(e.ToString());
                             throw;
                         }
                     }
@@ -786,28 +785,6 @@ namespace Raven.Server.Documents.TcpHandlers
             return (replyFromClientTask, subscriptionChangeVectorBeforeCurrentBatch);
         }
 
-        private bool ShouldAddToResendTable(DocumentsStorage.DocumentOrTombstone item, string currentChangeVector)
-        {
-            if (item.Document != null)
-            {
-                switch (TcpConnection.DocumentDatabase.DocumentsStorage.GetConflictStatus(item.Document.ChangeVector, currentChangeVector))
-                {
-                    case ConflictStatus.Update:
-                        return true;
-
-                    case ConflictStatus.AlreadyMerged:
-                    case ConflictStatus.Conflict:
-                        return false;
-
-                    default:
-                        throw new InvalidEnumArgumentException();
-                }
-            }
-            // TODO stav: we probably need to delete it from the resend table
-            // we don't send tombstones
-            return false;
-        }
-
         /// <summary>
         /// Iterates on a batch in document collection, process it and send documents if found any match
         /// </summary>
@@ -858,7 +835,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
                             foreach (var result in _processor.GetBatch())
                             {
-                                CancellationTokenSource.Token.ThrowIfCancellationRequested(); //TODO stav: can remove this or might be necessary
+                                CancellationTokenSource.Token.ThrowIfCancellationRequested();
 
                                 lastChangeVectorSentInThisBatch = ChangeVectorUtils.MergeVectors(
                                     lastChangeVectorSentInThisBatch,

@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
@@ -29,7 +30,7 @@ namespace Raven.Server.Documents.Subscriptions
         private readonly SubscriptionStorage _subscriptionStorage;
         private readonly DocumentsStorage _documentsStorage;
         private readonly SubscriptionState _subscriptionState;
-        private ConcurrentSet<SubscriptionConnection> _connections;
+        private readonly ConcurrentSet<SubscriptionConnection> _connections;
         private long _lastConnectionId;
         public Task GetSubscriptionInUseAwaiter => Task.WhenAll(_connections.Select(c => c.SubscriptionConnectionTask));
 
@@ -271,23 +272,30 @@ namespace Raven.Server.Documents.Subscriptions
             {
                 if (IsConcurrent)
                 {
-                    if(incomingConnection.Strategy != SubscriptionOpeningStrategy.Concurrent)
+                    if (incomingConnection.Strategy != SubscriptionOpeningStrategy.Concurrent)
                     {
-                            throw new SubscriptionInUseException(
-                                $"Subscription {incomingConnection.Options.SubscriptionName} is currently concurrent and can only admit connections with a '{nameof(SubscriptionOpeningStrategy.Concurrent)}' {nameof(SubscriptionOpeningStrategy)}. Connection not opened.");
+                        throw new SubscriptionInUseException(
+                            $"Subscription {incomingConnection.Options.SubscriptionName} is currently concurrent and can only admit connections with a '{nameof(SubscriptionOpeningStrategy.Concurrent)}' {nameof(SubscriptionOpeningStrategy)}. Connection not opened.");
                     }
 
                     if (TryAddConnection(incomingConnection) == false)
                     {
                         throw new InvalidOperationException("Could not add a connection to a concurrent subscription. Likely a bug");
                     }
-                    
-                    incomingConnection.ConnectionId = GetNewConnectionId();
                 }
                 else
                 {
+                    if (incomingConnection.Strategy == SubscriptionOpeningStrategy.Concurrent)
+                    {
+                        throw new SubscriptionClosedException(
+                            $"Subscription {incomingConnection.Options.SubscriptionName} is not concurrent and cannot admit connections with a '{nameof(SubscriptionOpeningStrategy.Concurrent)}' {nameof(SubscriptionOpeningStrategy)}. Connection not opened.");
+                    }
+
                     RegisterSingleConnection(incomingConnection);
                 }
+
+                incomingConnection.ConnectionId = GetNewConnectionId();
+
                 return GetDisposingAction();
             }
             catch (SubscriptionException e)
@@ -295,7 +303,6 @@ namespace Raven.Server.Documents.Subscriptions
                 RegisterRejectedConnection(incomingConnection, e);
                 throw;
             }
-            
 
             DisposeOnce<SingleAttempt> GetDisposingAction()
             {
@@ -311,51 +318,67 @@ namespace Raven.Server.Documents.Subscriptions
             }
         }
 
+
         private void RegisterSingleConnection(SubscriptionConnection incomingConnection)
         {
-            lock (this)
+            if (_connections.Count > 1)
             {
-                if (_connections.Count > 1)
+                throw new InvalidOperationException("Non concurrent subscription with more than a single connection. Likely a bug");
+            }
+
+            if (_connections.Count == 1)
+            {
+                var currentConnection = _connections.FirstOrDefault();
+                switch (incomingConnection.Strategy)
                 {
-                    throw new InvalidOperationException("Non concurrent subscription with more than a single connection. Likely a bug");
-                }
-
-                if (_connections.Count == 1)
-                {
-                    var currentConnection = _connections.FirstOrDefault();
-                    switch (incomingConnection.Strategy)
-                    {
-                        case SubscriptionOpeningStrategy.OpenIfFree:
+                    case SubscriptionOpeningStrategy.OpenIfFree:
+                        throw new SubscriptionInUseException(
+                            $"Subscription {currentConnection?.Options.SubscriptionName} is occupied, connection cannot be opened");
+                    case SubscriptionOpeningStrategy.TakeOver:
+                        if (currentConnection?.Strategy == SubscriptionOpeningStrategy.TakeOver)
                             throw new SubscriptionInUseException(
-                                $"Subscription {currentConnection?.Options.SubscriptionName} is occupied, connection cannot be opened");
-                        case SubscriptionOpeningStrategy.TakeOver:
-                            if (currentConnection?.Strategy == SubscriptionOpeningStrategy.TakeOver)
-                                throw new SubscriptionInUseException(
-                                    $"Subscription {currentConnection.Options.SubscriptionName} is already occupied by a TakeOver connection, connection cannot be opened");
+                                $"Subscription {currentConnection.Options.SubscriptionName} is already occupied by a TakeOver connection, connection cannot be opened");
 
-                            if (currentConnection != null)
-                            {
-                                _connections.TryRemove(currentConnection);
-                                CancelSingleConnection(currentConnection, new SubscriptionInUseException("Closed by TakeOver"));
-                            }
+                        if (currentConnection != null)
+                        {
+                            DropSingleConnection(currentConnection, new SubscriptionInUseException("Closed by TakeOver"));
+                        }
 
-                            break;
-                        case SubscriptionOpeningStrategy.WaitForFree:
-                            throw new TimeoutException();
-                        case SubscriptionOpeningStrategy.Concurrent:
-                            throw new SubscriptionInUseException(
-                                $"Subscription {currentConnection?.Options.SubscriptionName} does not accept concurrent connections at the moment, connection cannot be opened");
-                        default:
-                            throw new InvalidOperationException("Unknown subscription open strategy: " +
-                                                                incomingConnection.Strategy);
-                    }
+                        break;
+                    case SubscriptionOpeningStrategy.WaitForFree:
+                        throw new TimeoutException();
+                    case SubscriptionOpeningStrategy.Concurrent:
+                        throw new SubscriptionInUseException(
+                            $"Subscription {currentConnection?.Options.SubscriptionName} does not accept concurrent connections at the moment, connection cannot be opened");
+                    default:
+                        throw new InvalidOperationException("Unknown subscription open strategy: " +
+                                                            incomingConnection.Strategy);
                 }
+            }
+
+            RegisterOneConnection(incomingConnection);
+        }
+
+        private readonly MultipleUseFlag _addingSingleConnection = new MultipleUseFlag();
+
+        private void RegisterOneConnection(SubscriptionConnection incomingConnection)
+        {
+            if (_addingSingleConnection.Raise() == false)
+                throw new TimeoutException();
+
+            try
+            {
+                if (_connections.Count != 0)
+                    throw new TimeoutException();
+
                 if (TryAddConnection(incomingConnection) == false)
                 {
                     throw new InvalidOperationException("Could not add a connection to a subscription. Likely a bug");
                 }
-
-                incomingConnection.ConnectionId = GetNewConnectionId();
+            }
+            finally
+            {
+                _addingSingleConnection.Lower();
             }
         }
 
@@ -422,13 +445,13 @@ namespace Raven.Server.Documents.Subscriptions
             return subscriptionConnectionsDetails;
         }
 
-        public void CancelSingleConnection(SubscriptionConnection connection, SubscriptionException ex)
+        private void CancelSingleConnection(SubscriptionConnection connection, SubscriptionException ex)
         {
-            RegisterRejectedConnection(connection, ex);
-            connection.ConnectionException = ex;
             try
             {
+                connection.ConnectionException = ex;
                 connection.CancellationTokenSource.Cancel();
+                RegisterRejectedConnection(connection, ex);
             }
             catch
             {
@@ -436,11 +459,11 @@ namespace Raven.Server.Documents.Subscriptions
             }
         }
 
-        public void DropSingleConnection(SubscriptionConnection connection)
+        public void DropSingleConnection(SubscriptionConnection connection, SubscriptionException ex = null)
         {
             if (_connections.TryRemove(connection))
             {
-                CancelSingleConnection(connection, new SubscriptionClosedException($"Connection {connection.ClientUri} has closed", canReconnect:false));//TODO stav: will this exception will be thrown?
+                CancelSingleConnection(connection, ex ?? new SubscriptionClosedException($"Connection {connection.ClientUri} has closed", canReconnect: true));
                 NotifyHasMoreDocs(); //upon connection fail, all recorded docs should be resent
             }
         }
@@ -501,6 +524,17 @@ namespace Raven.Server.Documents.Subscriptions
             return _connections.ToList();
         }
 
+        public string GetConnectionsAsString()
+        {
+            StringBuilder sb = null;
+            foreach (var connection in _connections)
+            {
+                sb ??= new StringBuilder();
+                sb.AppendLine($"{connection.TcpConnection.TcpClient.Client.RemoteEndPoint}");
+            }
+            return sb?.ToString();
+        }
+
         public long GetNewConnectionId()
         {
             return Interlocked.Increment(ref _lastConnectionId);
@@ -513,16 +547,9 @@ namespace Raven.Server.Documents.Subscriptions
 
         public void EndConnections()
         {
-            foreach (var conn in _connections)
+            foreach (var connection in _connections)
             {
-                try
-                {
-                    CancelSingleConnection(conn, null);
-                }
-                catch
-                {
-                    // ignored: If we've failed to raise the cancellation token, it means that it's already raised
-                }
+                DropSingleConnection(connection);
             }
         }
         
