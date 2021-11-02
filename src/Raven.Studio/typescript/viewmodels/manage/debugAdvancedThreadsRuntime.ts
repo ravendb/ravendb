@@ -6,7 +6,7 @@ import generalUtils = require("common/generalUtils");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import actionColumn = require("widgets/virtualGrid/columns/actionColumn");
 import getDebugThreadsRunawayCommand = require("commands/database/debug/getDebugThreadsRunawayCommand");
-import threadStackTrace = require("./threadStackTrace");
+import threadStackTrace = require("viewmodels/manage/threadStackTrace");
 
 class debugAdvancedThreadsRuntime extends viewModelBase {
 

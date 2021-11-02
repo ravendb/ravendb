@@ -760,11 +760,11 @@ interface threadStackTraceResponseDto {
 }
 
 interface threadStackTraceResponseItem {
-    OSThreadId: number,
-    ManagedThreadId: number,
-    IsNative: boolean,
-    ThreadType: string,
-    StackTrace: string[]
+    OSThreadId: number;
+    ManagedThreadId: number;
+    IsNative: boolean;
+    ThreadType: string;
+    StackTrace: string[];
 }
 
 type indexStatus = "Normal" | "ErrorOrFaulty" | "Stale" | "Paused" | "Disabled" | "Idle" | "RollingDeployment";
