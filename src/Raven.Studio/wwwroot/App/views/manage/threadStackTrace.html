@@ -33,7 +33,10 @@
                     </div>
                 </div>
                 <div class="panel padding">
-                    <div class="padding" data-bind="css: { panel: stackTrace().length }">
+                    <div class="padding text-center" data-bind="visible: !isThreadAlive()">
+                        Thread is not running.
+                    </div>
+                    <div class="padding" data-bind="css: { panel: stackTrace().length }, visible: isThreadAlive">
                         <div class="text-nowrap stack-trace">
                             <div class="padding padding-xs" data-bind="visible: stackTrace().length">
                                 <!-- ko foreach: stackTrace -->
