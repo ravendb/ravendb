@@ -8,7 +8,7 @@ using Raven.Client.ServerWide.Operations.Integrations.PostgreSQL;
 using Raven.Client.Util;
 using Sparrow.Json;
 
-namespace Raven.Client.Documents.Operations.Integrations
+namespace Raven.Client.Documents.Operations.Integrations.PostgreSQL
 {
     public class ConfigurePostgreSqlOperation : IMaintenanceOperation<ConfigurePostgreSqlOperationResult>
     {
@@ -16,7 +16,7 @@ namespace Raven.Client.Documents.Operations.Integrations
 
         public ConfigurePostgreSqlOperation(PostgreSqlConfiguration configuration)
         {
-            _configuration = configuration;
+            _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
         }
 
         public RavenCommand<ConfigurePostgreSqlOperationResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)

@@ -1528,7 +1528,7 @@ namespace Raven.Server.Commercial
                 DismissLicenseLimit(LimitType.PowerBI);
                 return true;
             }
-
+            
             const string details = "Your current license doesn't include the Power BI feature";
             licenseLimitException = GenerateLicenseLimit(LimitType.PowerBI, details, addNotification: true);
             return false;
