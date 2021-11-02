@@ -46,21 +46,23 @@ class threadStackTrace extends dialogViewModelBase {
                     this.isThreadAlive(true);
                     this.stackTrace(results.Results[0].StackTrace);
                     this.threadType(results.Results[0].ThreadType);
-                    this.cpuUsage(this.getCpuUsage(results.Threads));
+                    const [name, cpu] = this.getInfoFromThreadsList(results.Threads);
+                    this.threadName(name);
+                    this.cpuUsage(cpu);
                 } else {
                     this.isThreadAlive(false);
-                    this.stackTrace([]);
-                    this.threadName("N/A");
-                    this.threadType("N/A");
-                    this.cpuUsage("N/A");
                 }
             })
             .always(() => this.spinners.loading(false));
     }
 
-    getCpuUsage(threadsInfo: Array<Raven.Server.Dashboard.ThreadInfo>): string {
-        const matchedThread = threadsInfo.find(x => x.Id === this.threadId())
-        return matchedThread ? `${(matchedThread.CpuUsage === 0 ? "0" : generalUtils.formatNumberToStringFixed(matchedThread.CpuUsage, 2))}%` : "N/A";
+    getInfoFromThreadsList(threadsList: Array<Raven.Server.Dashboard.ThreadInfo>): [string, string] {
+        const matchedThread = threadsList.find(x => x.Id === this.threadId())
+        
+        const cpu =  matchedThread ? `${(matchedThread.CpuUsage === 0 ? "0" : generalUtils.formatNumberToStringFixed(matchedThread.CpuUsage, 2))}%` : "N/A";
+        const name = matchedThread ? matchedThread.Name : "N/A";
+        
+        return [name, cpu];
     }
     
     copyStackTrace(): void {
