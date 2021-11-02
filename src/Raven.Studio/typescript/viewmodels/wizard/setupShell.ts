@@ -85,7 +85,7 @@ class setupShell extends viewModelBase {
 
             messagePublisher.reportError("Unknown route", "The route " + instruction.fragment + queryString + " doesn't exist, redirecting...");
 
-            location.href = "#welcome";
+            window.location.href = "#welcome";
         });
     }
 

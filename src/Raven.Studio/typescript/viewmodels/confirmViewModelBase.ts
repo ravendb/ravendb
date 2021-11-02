@@ -3,7 +3,7 @@
 import dialog = require("plugins/dialog");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 
-class confirmViewModelBase<T extends confirmDialogResult> extends dialogViewModelBase {
+abstract class confirmViewModelBase<T extends confirmDialogResult> extends dialogViewModelBase {
 
     private alreadyResolved = false;
     result = $.Deferred<T>(); 

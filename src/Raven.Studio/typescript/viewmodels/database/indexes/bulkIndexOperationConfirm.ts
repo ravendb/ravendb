@@ -2,6 +2,9 @@ import confirmViewModelBase = require("viewmodels/confirmViewModelBase");
 import index = require("models/database/index/index");
 
 class bulkIndexOperationConfirm extends confirmViewModelBase<confirmDialogResult> {
+    
+    view = require("views/database/indexes/bulkIndexOperationConfirm.html");
+    
     title: string;
     subTitleHtml: string;
     

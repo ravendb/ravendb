@@ -26,6 +26,7 @@ import popoverUtils = require("common/popoverUtils");
 import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
 import testElasticSearchEtlCommand = require("commands/database/tasks/testElasticSearchEtlCommand");
 import ongoingTaskElasticSearchTransformationModel = require("models/database/tasks/ongoingTaskElasticSearchEtlTransformationModel");
+import { highlight, languages } from "prismjs";
 
 class elasticSearchTaskTestMode {
 
@@ -111,7 +112,7 @@ class elasticSearchTaskTestMode {
                             const metaDto = docDto["@metadata"];
                             documentMetadata.filterMetadata(metaDto);
                             const text = JSON.stringify(docDto, null, 4);
-                            this.loadedDocument(Prism.highlight(text, (Prism.languages as any).javascript));
+                            this.loadedDocument(highlight(text, languages.javascript, "js"));
                             this.loadedDocumentId(doc.getId());
 
                             $('.test-container a[href="#documentPreview"]').tab('show');
@@ -164,6 +165,8 @@ class elasticSearchTaskTestMode {
 }
 
 class editElasticSearchEtlTask extends viewModelBase {
+    
+    view = require("views/database/tasks/editElasticSearchEtlTask.html");
 
     static readonly scriptNamePrefix = "Script_";
     static isApplyToAll = ongoingTaskElasticSearchTransformationModel.isApplyToAll;

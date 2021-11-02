@@ -49,7 +49,7 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: 'databases/status/debug*details',
-            moduleId: 'viewmodels/database/status/debug/statusDebug',
+            moduleId: null,
             title: 'Debug',
             nav: false,
             css: 'icon-debug'

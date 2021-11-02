@@ -60,6 +60,8 @@ module.exports = (env, args) => {
         }),
         new webpack.DefinePlugin({
             "window.ravenStudioRelease": isProductionMode
+            'process.env.NODE_ENV': JSON.stringify('development'),
+            'process.env.NODE_DEBUG': false
         }),
         new webpack.ProvidePlugin({
             ko: "knockout",
@@ -90,11 +92,12 @@ module.exports = (env, args) => {
             main: "./typescript/main.ts",
             "styles": "./wwwroot/Content/css/styles.less",
             "styles-blue": "./wwwroot/Content/css/styles-blue.less",
-            "styles-light": "./wwwroot/Content/css/styles-light.less"
+            "styles-light": "./wwwroot/Content/css/styles-light.less",
+            "rql_worker": path.resolve(__dirname, './languageService/src/index.ts')
         },
         output: {
             path: __dirname + '/wwwroot/dist',
-            filename: isProductionMode ? 'assets/[name].[contenthash:8].js' : 'assets/[name].js',
+            filename: 'assets/[name].js',
             chunkFilename: isProductionMode ? "assets/[name].[contenthash:8].js" : "assets/[name].js",
             publicPath: "/studio/"
         },
@@ -158,7 +161,12 @@ module.exports = (env, args) => {
                 {
                     test: /\.html$/,
                     use: {
-                        loader: 'html-loader'
+                        loader: 'html-loader',
+                        options: {
+                            minimize: {
+                                removeComments: false
+                            }
+                        }
                     }
                 },
                 {
@@ -180,6 +188,9 @@ module.exports = (env, args) => {
         resolve: {
             modules: [path.resolve(__dirname, "../node_modules"), "node_modules"],
             extensions: ['.js', '.ts', '.tsx'],
+            fallback: {
+                fs: false
+            },
             alias: {
                 common: path.resolve(__dirname, 'typescript/common'),
                 models: path.resolve(__dirname, 'typescript/models'),
