@@ -1391,12 +1391,13 @@ namespace SlowTests.Issues
             }));
 
             var file = GetTempFileName();
-            await storeA.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
+            var op = await storeA.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
+            await op.WaitForCompletionAsync();
 
             var accessResults = await storeB.Maintenance.SendAsync(new GetReplicationHubAccessOperation("both"));
             Assert.Empty(accessResults);
 
-            var op = await storeB.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
+            op = await storeB.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
             await op.WaitForCompletionAsync();
 
             accessResults = await storeB.Maintenance.SendAsync(new GetReplicationHubAccessOperation("both"));
