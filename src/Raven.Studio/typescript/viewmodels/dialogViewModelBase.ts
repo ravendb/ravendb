@@ -11,7 +11,7 @@ type dialogViewModelBaseOptions = {
 
 abstract class dialogViewModelBase {
 
-    view: { default: string };
+    abstract view: { default: string };
     
     getView() {
         if (!this.view) {

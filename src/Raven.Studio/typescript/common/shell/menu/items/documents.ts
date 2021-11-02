@@ -75,7 +75,7 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: "databases/cmpXchg/edit",
             title: "Edit Compare Exchange Value",
-            moduleId: "viewmodels/database/cmpXchg/editCmpXchg",
+            moduleId: require("viewmodels/database/cmpXchg/editCmpXchg"),
             nav: false,
             itemRouteToHighlight: "databases/cmpXchg"
         }),
@@ -83,7 +83,7 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
             title: "Conflicts",
             nav: true,
             route: "databases/documents/conflicts",
-            moduleId: "viewmodels/database/conflicts/conflicts",
+            moduleId: require("viewmodels/database/conflicts/conflicts"),
             css: "icon-conflicts",
             dynamicHash: appUrls.conflicts,
             badgeData: collectionsTracker.default.conflictsCount

@@ -98,6 +98,8 @@ class identity {
 }
 
 class identities extends viewModelBase {
+    
+    view = require("views/database/identities/identities.html");
 
     editedIdentityItem = ko.observable<identity>(null);
     isNewIdentity = ko.observable<boolean>(false);

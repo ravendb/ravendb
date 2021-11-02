@@ -27,7 +27,7 @@ abstract class viewModelBase {
     protected isOperatorOrAbove = accessManager.default.isOperatorOrAbove;
     protected isClusterAdminOrClusterNode = accessManager.default.isClusterAdminOrClusterNode;
     
-    view: { default: string };
+    abstract view: { default: string };
     
     getView() {
         if (!this.view) {

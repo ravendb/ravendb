@@ -6,16 +6,14 @@
     "removeComments": false,
     "declaration": false,
     "sourceMap": true,
-    "target": "ES6", 
+    "target": "ES2020", 
     "esModuleInterop": true,
     "moduleResolution": "node",
     "skipLibCheck": true,
     "module": "AMD",
     "lib": [
-      "webworker",
       "DOM",
       "es6",
-      "scripthost"  
     ],
     "typeRoots": [
         "./node_modules/@types",

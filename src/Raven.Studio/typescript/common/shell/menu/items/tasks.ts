@@ -113,7 +113,7 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: 'databases/tasks/editElasticSearchEtlTask',
-            moduleId: 'viewmodels/database/tasks/editElasticSearchEtlTask',
+            moduleId: require('viewmodels/database/tasks/editElasticSearchEtlTask'),
             title: 'Elastic Search ETL Task',
             nav: false,
             dynamicHash: appUrls.editElasticSearchEtlTaskUrl,
