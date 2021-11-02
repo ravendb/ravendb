@@ -32,12 +32,16 @@
                         <small class="margin-left margin-left-xs"><strong data-bind="if: !stackTrace().length && !spinners.loading()">N/A</strong></small>
                     </div>
                 </div>
-                <div class="stack-trace margin-left margin-left-lg">
-                    <div class="padding word-break" data-bind="visible: stackTrace().length">
-                        <!-- ko foreach: stackTrace -->
-                        <small data-bind="visible: !$parent.isUserCode($data)"><span data-bind="text: $data"></span><br></small>
-                        <small data-bind="visible: $parent.isUserCode($data)"><strong data-bind="text: $data"></strong><br></small>
-                        <!-- /ko -->
+                <div class="panel padding">
+                    <div class="padding" data-bind="css: { panel: stackTrace().length }">
+                        <div class="text-nowrap stack-trace">
+                            <div class="padding padding-xs" data-bind="visible: stackTrace().length">
+                                <!-- ko foreach: stackTrace -->
+                                <small data-bind="visible: !$parent.isUserCode($data)"><span data-bind="text: $data"></span><br></small>
+                                <small data-bind="visible: $parent.isUserCode($data)"><strong data-bind="text: $data"></strong><br></small>
+                                <!-- /ko -->
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
