@@ -186,7 +186,7 @@ namespace SlowTests.Server.Integrations.PostgreSQL
                     Name = "Orders/Totals",
                     Maps =
                     {
-                        @"from order in docs.Orders	
+                        @"from order in docs.Orders 
                           select new 
                           { 
                               order.Employee, 
@@ -231,7 +231,7 @@ namespace SlowTests.Server.Integrations.PostgreSQL
                     Name = "Orders/Totals",
                     Maps =
                     {
-                        @"from order in docs.Orders	
+                        @"from order in docs.Orders 
                           select new 
                           { 
                               order.Employee, 
@@ -469,9 +469,9 @@ group result by result.Company
 into g
 select new
 {
-	Company = g.Key,
-	Count = g.Sum(x => x.Count),
-	Total = g.Sum(x => x.Total)
+    Company = g.Key,
+    Count = g.Sum(x => x.Count),
+    Total = g.Sum(x => x.Total)
 }"
                 };
 
