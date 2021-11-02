@@ -74,15 +74,11 @@ namespace Raven.Server.Integrations.PostgreSQL
 
                 if (activate)
                 {
-                    if (Active)
-                        throw new InvalidOperationException("Cannot start PgServer because it is already activated. Should not happen!");
-
-                    Start();
+                    if (Active == false)
+                        Start();
                 }
                 else
-                {
                     Stop();
-                }
             }
             catch (ObjectDisposedException)
             {
