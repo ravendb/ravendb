@@ -11,6 +11,8 @@ class threadStackTrace extends dialogViewModelBase {
     
     cpuUsage = ko.observable<string>();
     stackTrace = ko.observableArray<string>([]);
+
+    isThreadAlive = ko.observable<boolean>();
     
     dialogContainer: Element;
 
@@ -41,11 +43,17 @@ class threadStackTrace extends dialogViewModelBase {
             .execute()
             .done((results: threadStackTraceResponseDto) => {
                 if (results.Results.length) {
+                    this.isThreadAlive(true);
                     this.stackTrace(results.Results[0].StackTrace);
                     this.threadType(results.Results[0].ThreadType);
+                    this.cpuUsage(this.getCpuUsage(results.Threads));
+                } else {
+                    this.isThreadAlive(false);
+                    this.stackTrace([]);
+                    this.threadName("N/A");
+                    this.threadType("N/A");
+                    this.cpuUsage("N/A");
                 }
-                this.cpuUsage(this.getCpuUsage(results.Threads));
-                
             })
             .always(() => this.spinners.loading(false));
     }
