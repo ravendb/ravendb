@@ -36,7 +36,6 @@ class threadStackTrace extends dialogViewModelBase {
 
     private loadStackTrace(threadId: number): JQueryPromise<threadStackTraceResponseDto> {
         this.spinners.loading(true);
-        this.stackTrace([]);
         
         return new getStackTraceForThreadCommand(threadId)
             .execute()
