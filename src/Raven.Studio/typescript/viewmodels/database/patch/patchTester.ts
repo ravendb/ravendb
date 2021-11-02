@@ -17,6 +17,8 @@ import { highlight, languages } from "prismjs";
 type testTabType = "preview" | "loaded" | "modified" | "deleted" | "output";
 
 class patchTester extends viewModelBase {
+    
+    view: any = null;
 
     private db: KnockoutObservable<database>;
 

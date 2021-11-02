@@ -24,6 +24,7 @@ import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
 class editReplicationSinkTask extends viewModelBase {
 
     view = require("views/database/tasks/editReplicationSinkTask.html");
+    connectionStringView = require("views/database/settings/connectionStringRaven.html")
 
     editedSinkTask = ko.observable<ongoingTaskReplicationSinkEditModel>();
     isAddingNewTask = ko.observable<boolean>(true);

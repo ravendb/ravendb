@@ -173,6 +173,7 @@ class sqlTaskTestMode {
 class editSqlEtlTask extends viewModelBase {
 
     view = require("views/database/tasks/editSqlEtlTask.html");
+    connectionStringView = require("views/database/settings/connectionStringSql.html");
 
     static readonly scriptNamePrefix = "Script_";
     static isApplyToAll = ongoingTaskSqlEtlTransformationModel.isApplyToAll;

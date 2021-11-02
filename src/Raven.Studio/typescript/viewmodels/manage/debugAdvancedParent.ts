@@ -1,7 +1,6 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import appUrl = require("common/appUrl");
 import durandalRouter = require("plugins/router");
-import accessManager = require("common/shell/accessManager");
 
 class debugAdvanced {
     
@@ -67,8 +66,10 @@ class debugAdvanced {
             .buildNavigationModel();
 
         this.router.on("router:navigation:attached", (viewModel: viewModelBase) => {
-            const preventGrow = !!(viewModel.constructor as any).preventParentGrow;
-            this.growContainer(!preventGrow);
+            if (viewModel) {
+                const preventGrow = !!(viewModel.constructor as any).preventParentGrow;
+                this.growContainer(!preventGrow);
+            }
         });
     }
 }

@@ -171,6 +171,7 @@ class ravenTaskTestMode {
 class editRavenEtlTask extends viewModelBase {
 
     view = require("views/database/tasks/editRavenEtlTask.html");
+    connectionStringView = require("views/database/settings/connectionStringRaven.html")
     
     static readonly scriptNamePrefix = "Script_";
     static isApplyToAll = ongoingTaskRavenEtlTransformationModel.isApplyToAll;

@@ -18,7 +18,7 @@
             <div data-bind="compose: $root.backupConfigurationView"></div>
         </div>
         <div data-bind="collapse: !hasConfigurationScript()">
-            <div data-bind="compose: 'partial/backupDestinationLocal.html'"></div>
+            <div data-bind="compose: $root.connectionStringOlapView"></div>
         </div>
     </div>
 </div>
