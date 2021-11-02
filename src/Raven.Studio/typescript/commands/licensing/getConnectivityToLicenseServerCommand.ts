@@ -8,7 +8,7 @@ class getConnectivityToLicenseServerCommand extends commandBase {
 
         return this.query<any>(url, null)
             .fail((response: JQueryXHR) => {
-                this.reportError("Failed to get connectivity to license server", response.responseText, response.statusText);
+                this.reportError("No connection to RavenDB License Server", response.responseText, response.statusText);
             });
     }
 }

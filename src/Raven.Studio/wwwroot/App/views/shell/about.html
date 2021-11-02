@@ -84,13 +84,13 @@
                             </div>
                             <div class="big-label">
                                 <div class="content">
-                                    <small>License Connectivity
-                                        <i class="refresh-connectivity icon-refresh margin-left margin-left-sm" title="Click to refresh License Connectivity"
-                                           data-bind="click: refreshConnectivityToLicenseServer, visible: !connectedToLicenseServer(), css: { 'btn-spinner': spinners.connectivityToLicenseServer() }">
+                                    <small>License Server
+                                        <i class="check-connection icon-refresh" title="Click to check connection"
+                                           data-bind="click: checkConnectionToLicenseServer, css: { 'btn-spinner margin-left margin-left-sm': spinners.checkConnectionToLicenseServer() }">
                                         </i>
                                     </small>
-                                    <small class="connected" data-bind="visible: connectedToLicenseServer">Can auto-update</small>
-                                    <small class="not-connected" data-bind="visible: !connectedToLicenseServer()">Cannot auto-update</small>
+                                    <span class="connected" data-bind="visible: connectedToLicenseServer"><i class="icon-check connection-status"></i></span>
+                                    <span class="not-connected" data-bind="visible: !connectedToLicenseServer()"><i class="icon-cancel connection-status"></i></span>
                                 </div>
                             </div>
                         </div>

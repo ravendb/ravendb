@@ -31,12 +31,17 @@
             margin-right: @grid-gutter-width/2;
             margin-top: 2px;
             
-            &.refresh-connectivity {
-                font-size: 18px;
+            &.check-connection {
+                font-size: 16px;
+                cursor: pointer;
             }
             
-            &.refresh-connectivity:hover {
+            &.check-connection:hover {
                 color: @brand-success;
+            }
+            
+            &.connection-status {
+                font-size: 18px;
             }
         }
 
@@ -322,5 +327,13 @@
         .commercial i {
             color: @brand-success-light;
         }
+    }
+
+    .connected {
+        color:  @brand-success;
+    }
+
+    .not-connected {
+        color: @brand-danger;
     }
 }
