@@ -55,7 +55,6 @@ import detectBrowser = require("viewmodels/common/detectBrowser");
 import genUtils = require("common/generalUtils");
 import leafMenuItem = require("common/shell/menu/leafMenuItem");
 import connectionStatus from "models/resources/connectionStatus";
-import { about } from "viewmodels/shell/about";
 
 class shell extends viewModelBase {
 

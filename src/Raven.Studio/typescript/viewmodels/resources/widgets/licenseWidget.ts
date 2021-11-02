@@ -15,6 +15,8 @@ interface serverCertificateInfo {
 
 class licenseWidget extends widget {
 
+    view = require("views/resources/widgets/licenseWidget.html");
+
     refreshIntervalId: number = -1;
     usingHttps = location.protocol === "https:";
     

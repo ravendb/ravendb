@@ -167,6 +167,7 @@ class elasticSearchTaskTestMode {
 class editElasticSearchEtlTask extends viewModelBase {
     
     view = require("views/database/tasks/editElasticSearchEtlTask.html");
+    connectionStringView = require("views/database/settings/connectionStringElasticSearch.html");
 
     static readonly scriptNamePrefix = "Script_";
     static isApplyToAll = ongoingTaskElasticSearchTransformationModel.isApplyToAll;

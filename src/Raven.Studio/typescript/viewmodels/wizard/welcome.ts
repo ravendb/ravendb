@@ -9,9 +9,15 @@ class welcome extends setupStep {
 
     view = require("views/wizard/welcome.html");
    
-    disableLetEncrypt = ko.observable<boolean>(false);
+    disableLetEncrypt = ko.observable<boolean>(false)
     
-    browserAlert = new detectBrowser(false);
+    browserAlert: detectBrowser;
+    
+    constructor() {
+        super();
+        
+        this.browserAlert = new detectBrowser(false);
+    }
     
     activate(args: any) {
         super.activate(args, { shell: true });

@@ -13,7 +13,7 @@ import popoverUtils = require("common/popoverUtils");
 import app = require("durandal/app");
 import feedback from "viewmodels/shell/feedback";
 
-export class about extends viewModelBase {
+class about extends viewModelBase {
 
     view = require("views/shell/about.html");
 
@@ -335,3 +335,6 @@ export class about extends viewModelBase {
             });
 }
 }
+
+
+export = about;
