@@ -669,11 +669,11 @@ namespace SlowTests.Client.Subscriptions
                     var mre1 = new AsyncManualResetEvent();
                     var mre2 = new AsyncManualResetEvent();
 
-                    worker.OnEstablishedSubscriptionConnection += (_) =>
+                    worker.OnEstablishedSubscriptionConnection += () =>
                     {
                         mre1.Set();
                     };
-                    worker2.OnEstablishedSubscriptionConnection += (_) =>
+                    worker2.OnEstablishedSubscriptionConnection += () =>
                     {
                         mre2.Set();
                     };
@@ -700,7 +700,7 @@ namespace SlowTests.Client.Subscriptions
                     await mre1.WaitAsync();
                     await mre2.WaitAsync();
 
-                    store.Subscriptions.DropConnection(worker2.SubscriptionName, worker2.ConnectionId);
+                    store.Subscriptions.DropWorker(worker2);
                     var db = await GetDocumentDatabaseInstanceFor(store);
                     db.SubscriptionStorage.TryGetRunningSubscriptionConnectionsState(long.Parse(id), out var subscriptionConnectionsState);
                     Assert.Equal(1, subscriptionConnectionsState.GetConnections().Count);

@@ -31,7 +31,6 @@ namespace Raven.Server.Documents.Subscriptions
         private readonly DocumentsStorage _documentsStorage;
         private readonly SubscriptionState _subscriptionState;
         private readonly ConcurrentSet<SubscriptionConnection> _connections;
-        private long _lastConnectionId;
         public Task GetSubscriptionInUseAwaiter => Task.WhenAll(_connections.Select(c => c.SubscriptionConnectionTask));
 
         private int _maxConcurrentConnections;
@@ -93,7 +92,6 @@ namespace Raven.Server.Documents.Subscriptions
             _subscriptionState = connection.SubscriptionState;
             _documentsStorage = connection.TcpConnection.DocumentDatabase.DocumentsStorage;
             Query = connection.SubscriptionState.Query;
-            _lastConnectionId = 0;
             _connections = new ConcurrentSet<SubscriptionConnection>();
             IsConcurrent = connection.Strategy == SubscriptionOpeningStrategy.Concurrent;
             
@@ -266,8 +264,6 @@ namespace Raven.Server.Documents.Subscriptions
                     RegisterSingleConnection(incomingConnection);
                 }
 
-                incomingConnection.ConnectionId = GetNewConnectionId();
-
                 return GetDisposingAction();
             }
             catch (SubscriptionException e)
@@ -409,7 +405,7 @@ namespace Raven.Server.Documents.Subscriptions
                     new SubscriptionConnectionDetails
                     {
                         ClientUri = connection.ClientUri,
-                        ConnectionId = connection.ConnectionId,
+                        WorkerId = connection.WorkerId,
                         Strategy = connection.Strategy
                     });
             }
@@ -505,11 +501,6 @@ namespace Raven.Server.Documents.Subscriptions
                 sb.AppendLine($"{connection.TcpConnection.TcpClient.Client.RemoteEndPoint}");
             }
             return sb?.ToString();
-        }
-
-        public long GetNewConnectionId()
-        {
-            return Interlocked.Increment(ref _lastConnectionId);
         }
 
         public override string ToString()
