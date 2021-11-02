@@ -1870,8 +1870,6 @@ namespace Raven.Server.ServerWide
 
         public Task<(long Index, object Result)> ModifyPostgreSqlConfiguration(TransactionOperationContext context, string databaseName, PostgreSqlConfiguration configuration, string raftRequestId)
         {
-            // TODO arek LicenseManager.assertcanusepo
-
             var editPostgreSqlConfiguration = new EditPostgreSqlConfigurationCommand(configuration, databaseName, raftRequestId);
             return SendToLeaderAsync(editPostgreSqlConfiguration);
         }

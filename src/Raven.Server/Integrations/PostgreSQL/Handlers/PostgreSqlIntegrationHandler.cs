@@ -3,10 +3,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using Raven.Client.Exceptions.Commercial;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Integrations.PostgreSQL;
 using Raven.Client.Util;
+using Raven.Server.Config;
+using Raven.Server.Config.Categories;
 using Raven.Server.Documents;
+using Raven.Server.Exceptions;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -21,6 +25,8 @@ namespace Raven.Server.Integrations.PostgreSQL.Handlers
         [RavenAction("/databases/*/admin/integrations/postgresql/users", "GET", AuthorizationStatus.DatabaseAdmin)]
         public async Task GetUsernamesList()
         {
+            AssertCanUsePostgreSqlIntegration();
+
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 DatabaseRecord databaseRecord;
@@ -55,6 +61,8 @@ namespace Raven.Server.Integrations.PostgreSQL.Handlers
         [RavenAction("/databases/*/admin/integrations/postgresql/user", "PUT", AuthorizationStatus.DatabaseAdmin)]
         public async Task AddUser()
         {
+            AssertCanUsePostgreSqlIntegration();
+
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 var newUserRequest = await context.ReadForMemoryAsync(RequestBodyStream(), "PostgreSQLNewUser");
@@ -122,6 +130,8 @@ namespace Raven.Server.Integrations.PostgreSQL.Handlers
         [RavenAction("/databases/*/admin/integrations/postgresql/user", "DELETE", AuthorizationStatus.DatabaseAdmin)]
         public async Task DeleteUser()
         {
+            AssertCanUsePostgreSqlIntegration();
+
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 var username = GetQueryStringValueAndAssertIfSingleAndNotEmpty("username");
@@ -173,7 +183,29 @@ namespace Raven.Server.Integrations.PostgreSQL.Handlers
         [RavenAction("/databases/*/admin/integrations/postgresql/config", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task ConfigPostgreSql()
         {
+            AssertCanUsePostgreSqlIntegration();
+
             await DatabaseConfigurations(ServerStore.ModifyPostgreSqlConfiguration, "read-postgresql-config", GetRaftRequestIdFromQuery());
+        }
+
+        private void AssertCanUsePostgreSqlIntegration()
+        {
+            if (Database.ServerStore.LicenseManager.CanUsePowerBi(false, out _))
+                return;
+
+            if (Database.ServerStore.LicenseManager.CanUsePostgreSqlIntegration(withNotification: true))
+            {
+                if (Database.ServerStore.Configuration.Core.FeaturesAvailability == FeaturesAvailability.Experimental)
+                    return;
+
+                FeaturesAvailabilityException.Throw(
+                    $"You have enabled the PostgreSQL integration via '{RavenConfiguration.GetKey(x => x.Integrations.PostgreSql.Enabled)}' configuration but " +
+                    "this is an experimental feature and the server does not support experimental features. " +
+                    $"Please enable experimental features by changing '{RavenConfiguration.GetKey(x => x.Core.FeaturesAvailability)}' configuration value to '{nameof(FeaturesAvailability.Experimental)}'.");
+
+            }
+
+            throw new LicenseLimitException("You cannot use this feature because your license doesn't allow neither PostgreSQL integration feature nor Power BI");
         }
     }
 }
