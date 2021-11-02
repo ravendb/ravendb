@@ -30,7 +30,7 @@ namespace Raven.Server.Utils
             }
         }
 
-        public ThreadsInfo Calculate()
+        public ThreadsInfo Calculate(HashSet<int> threadIds = null)
         {
             var threadAllocations = NativeMemory.AllThreadStats
                         .GroupBy(x => x.UnmanagedThreadId)
@@ -58,6 +58,9 @@ namespace Raven.Server.Utils
                 double totalCpuUsage = 0;
                 foreach (var thread in processThreads)
                 {
+                    if (threadIds != null && threadIds.Contains(thread.Id) == false)
+                        continue;
+
                     try
                     {
                         var threadTotalProcessorTime = thread.TotalProcessorTime;
