@@ -46,7 +46,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     await Task.Delay((int)wait);
                 }
 
-                var threadStats = threadsUsage.Calculate();
+                var threadStats = threadsUsage.Calculate(threadIds.Select(int.Parse).ToHashSet());
                 result["Threads"] = JArray.FromObject(threadStats.List);
 
                 using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
