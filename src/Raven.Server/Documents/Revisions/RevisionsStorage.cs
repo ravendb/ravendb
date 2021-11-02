@@ -771,7 +771,7 @@ namespace Raven.Server.Documents.Revisions
 
                 revisionEtag = TableValueToEtag((int)RevisionsTable.Etag, ref tvr);
 
-                if (table.IsOwned(tvr.Id) == false) 
+                if (table.IsOwned(tvr.Id) == false)
                 {
                     // We request to delete revision with the wrong collection
                     var revision = TableValueToRevision(context, ref tvr);
@@ -1547,7 +1547,7 @@ namespace Raven.Server.Documents.Revisions
                         InsertNewMetadataInfo(context, documentsStorage, document, collectionName);
 
                         var flag = document.Flags | DocumentFlags.Reverted;
-                        documentsStorage.Put(context, document.Id, null, document.Data, flags: flag.Strip(DocumentFlags.Revision | DocumentFlags.Conflicted | DocumentFlags.Resolved) );
+                        documentsStorage.Put(context, document.Id, null, document.Data, flags: flag.Strip(DocumentFlags.Revision | DocumentFlags.Conflicted | DocumentFlags.Resolved));
                     }
                     else
                     {
@@ -1590,7 +1590,9 @@ namespace Raven.Server.Documents.Revisions
                     metadata.Modifications[flag] = arr;
                     document.Data.Modifications ??= new DynamicJsonValue();
                     document.Data.Modifications[Constants.Documents.Metadata.Key] = metadata;
-                    document.Data = context.ReadObject(document.Data, document.Id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+
+                    using (var old = document.Data)
+                        document.Data = context.ReadObject(document.Data, document.Id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
                 }
             }
 
