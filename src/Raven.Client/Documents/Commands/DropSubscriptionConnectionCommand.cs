@@ -15,9 +15,12 @@ namespace Raven.Client.Documents.Commands
         {
             _name = name;
         }
-        public DropSubscriptionConnectionCommand(string name, string workerId)
+
+        internal DropSubscriptionConnectionCommand(string name, string workerId) : this(name)
         {
-            _name = name;
+            if (string.IsNullOrEmpty(workerId))
+                throw new ArgumentException($"{nameof(workerId)} can't be null or empty");
+
             _workerId = workerId;
         }
 
