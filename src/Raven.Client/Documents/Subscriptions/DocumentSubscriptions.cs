@@ -477,28 +477,28 @@ namespace Raven.Client.Documents.Subscriptions
         }
 
         /// <summary>
-        /// Force server to close current client subscription connection to the server
+        /// Force server to close current subscription worker
         /// </summary>
-        /// <param name="id"></param>
+        /// <param name="worker"></param>
         /// <param name="database"></param>
-        public void DropConnection(string name, long connectionId, string database = null)
+        public void DropWorker<T>(SubscriptionWorker<T> worker, string database = null) where T : class
         {
-            AsyncHelpers.RunSync(() => DropConnectionAsync(name, connectionId, database));
+            AsyncHelpers.RunSync(() => DropWorkerAsync(worker, database));
         }
 
         /// <summary>
-        /// Force server to close current client subscription connection to the server
+        /// Force server to close current subscription worker
         /// </summary>
-        /// <param name="id"></param>
+        /// <param name="worker"></param>
         /// <param name="database"></param>
-        public async Task DropConnectionAsync(string name, long connectionId, string database = null, CancellationToken token = default)
+        public async Task DropWorkerAsync<T>(SubscriptionWorker<T> worker, string database = null, CancellationToken token = default)  where T : class
         {
             database = _store.GetDatabase(database);
 
             var requestExecutor = _store.GetRequestExecutor(database);
             using (requestExecutor.ContextPool.AllocateOperationContext(out var jsonOperationContext))
             {
-                var command = new DropSubscriptionConnectionCommand(name, connectionId);
+                var command = new DropSubscriptionConnectionCommand(worker.SubscriptionName, worker.WorkerId);
                 await requestExecutor.ExecuteAsync(command, jsonOperationContext, sessionInfo: null, token: token).ConfigureAwait(false);
             }
         }

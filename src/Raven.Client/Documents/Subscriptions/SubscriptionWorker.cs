@@ -44,8 +44,6 @@ namespace Raven.Client.Documents.Subscriptions
     public class SubscriptionWorker<T> : IAsyncDisposable, IDisposable where T : class
     {
         public delegate Task AfterAcknowledgmentAction(SubscriptionBatch<T> batch);
-
-        private long _connectionId;
         private readonly Logger _logger;
         private readonly DocumentStore _store;
         private readonly string _dbName;
@@ -58,14 +56,14 @@ namespace Raven.Client.Documents.Subscriptions
         private Stream _stream;
         private int _forcedTopologyUpdateAttempts = 0;
 
-        public long ConnectionId => _connectionId;
+        public string WorkerId => _options.WorkerId;
         /// <summary>
         /// Allows the user to define stuff that happens after the confirm was received from the server
         /// (this way we know we won't get those documents again)
         /// </summary>
         public event AfterAcknowledgmentAction AfterAcknowledgment;
 
-        internal event Action<long> OnEstablishedSubscriptionConnection;
+        internal event Action OnEstablishedSubscriptionConnection;
 
         public event Action<Exception> OnSubscriptionConnectionRetry;
 
@@ -479,13 +477,12 @@ namespace Raven.Client.Documents.Subscriptions
                         if (connectionStatus.Type != SubscriptionConnectionServerMessage.MessageType.ConnectionStatus ||
                             connectionStatus.Status != SubscriptionConnectionServerMessage.ConnectionStatus.Accepted)
                             AssertConnectionState(connectionStatus);
-                        _connectionId = connectionStatus.ConnectionId;
                     }
                     _lastConnectionFailure = null;
                     if (_processingCts.IsCancellationRequested)
                         return;
 
-                    OnEstablishedSubscriptionConnection?.Invoke(_connectionId);
+                    OnEstablishedSubscriptionConnection?.Invoke();
 
                     Task notifiedSubscriber = Task.CompletedTask;
 
@@ -722,7 +719,6 @@ namespace Raven.Client.Documents.Subscriptions
                 }
                 catch (Exception ex)
                 {
-
                     while (_recentExceptions.Count >= 10)
                         _recentExceptions.TryDequeue(out _);
 
