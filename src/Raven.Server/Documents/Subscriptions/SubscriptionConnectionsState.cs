@@ -381,14 +381,12 @@ namespace Raven.Server.Documents.Subscriptions
         {
             var subscriptionConnectionsDetails = new SubscriptionConnectionsDetails
             {
-                Results = new List<SubscriptionConnectionDetails>()
+                Details = new List<SubscriptionConnectionDetails>()
             };
 
-            subscriptionConnectionsDetails.SubscriptionMode = IsConcurrent? "Concurrent" : "Single";
-            
             foreach (var connection in _connections)
             {
-                subscriptionConnectionsDetails.Results.Add(
+                subscriptionConnectionsDetails.Details.Add(
                     new SubscriptionConnectionDetails
                     {
                         ClientUri = connection.ClientUri,

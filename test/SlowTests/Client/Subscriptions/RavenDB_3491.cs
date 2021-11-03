@@ -254,7 +254,7 @@ namespace SlowTests.Client.Subscriptions
                             using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                             using (ctx.OpenReadTransaction())
                             {
-                                return Task.FromResult(db.SubscriptionStorage.GetSubscriptionConnectionsState(ctx, subscriptionName));
+                                return Task.FromResult(db.SubscriptionStorage.GetSubscriptionConnections(ctx, subscriptionName));
                             }
                         });
 

@@ -145,7 +145,7 @@ namespace SlowTests.Client.Subscriptions
                 {
                     var query = WaitForValue(() =>
                     {
-                        var connectionState = db.SubscriptionStorage.GetSubscriptionConnectionsState(ctx, subscriptionState.SubscriptionName);
+                        var connectionState = db.SubscriptionStorage.GetSubscriptionConnections(ctx, subscriptionState.SubscriptionName);
 
                         return connectionState?.GetConnections().First()?.SubscriptionState.Query;
                     }, newQuery);

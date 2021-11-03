@@ -460,7 +460,7 @@ namespace SlowTests.Client.Subscriptions
                     {
                         var query = WaitForValue(() =>
                         {
-                            var connectionState = db.SubscriptionStorage.GetSubscriptionConnectionsState(ctx, state.SubscriptionName);
+                            var connectionState = db.SubscriptionStorage.GetSubscriptionConnections(ctx, state.SubscriptionName);
                             return connectionState?.GetConnections().FirstOrDefault()?.SubscriptionState.Query;
                         }, newQuery);
 
@@ -544,7 +544,7 @@ namespace SlowTests.Client.Subscriptions
                 {
                     var query = WaitForValue(() =>
                     {
-                        var connectionState = db.SubscriptionStorage.GetSubscriptionConnectionsState(ctx, state.SubscriptionName);
+                        var connectionState = db.SubscriptionStorage.GetSubscriptionConnections(ctx, state.SubscriptionName);
 
                         return connectionState?.GetConnections().FirstOrDefault()?.SubscriptionState.Query;
                     }, newQuery);
@@ -635,7 +635,7 @@ namespace SlowTests.Client.Subscriptions
                 {
                     var query = WaitForValue(() =>
                     {
-                        var connectionState = db.SubscriptionStorage.GetSubscriptionConnectionsState(ctx, state.SubscriptionName);
+                        var connectionState = db.SubscriptionStorage.GetSubscriptionConnections(ctx, state.SubscriptionName);
 
                         return connectionState?.GetConnections().FirstOrDefault()?.SubscriptionState.Query;
                     }, newQuery);

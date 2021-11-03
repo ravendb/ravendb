@@ -342,7 +342,7 @@ namespace SlowTests.Client.Subscriptions
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             using (ctx.OpenReadTransaction())
             {
-                var leftovers = db.SubscriptionStorage.GetSubscriptionConnectionsState(ctx, id).GetNumberOfResendDocuments();
+                var leftovers = db.SubscriptionStorage.GetSubscriptionConnections(ctx, id).GetNumberOfResendDocuments();
                 Assert.Equal(0L, leftovers);
             }
         }
@@ -395,7 +395,7 @@ namespace SlowTests.Client.Subscriptions
                     });
 
                     mre.WaitOne();
-                    
+
                     using (var session = store.OpenAsyncSession())
                     {
                         await session.StoreAsync(new User { Name = "Changed" }, "users/1");
