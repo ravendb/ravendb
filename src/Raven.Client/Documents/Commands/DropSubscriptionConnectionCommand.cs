@@ -9,12 +9,10 @@ namespace Raven.Client.Documents.Commands
     public class DropSubscriptionConnectionCommand : RavenCommand
     {
         private readonly string _name;
-        private readonly long? _connectionId;
 
-        public DropSubscriptionConnectionCommand(string name, long? connectionId = null)
+        public DropSubscriptionConnectionCommand(string name)
         {
             _name = name;
-            _connectionId = connectionId;
         }
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
@@ -27,11 +25,6 @@ namespace Raven.Client.Documents.Commands
             if(string.IsNullOrEmpty(_name) == false)
             {
                 path.Append("?name=").Append(Uri.EscapeDataString(_name));
-
-                if (_connectionId.HasValue)
-                {
-                    path.Append("&connectionId=").Append(_connectionId);
-                }
             }
             
             url = path.ToString();

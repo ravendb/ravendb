@@ -481,9 +481,9 @@ namespace Raven.Client.Documents.Subscriptions
         /// </summary>
         /// <param name="id"></param>
         /// <param name="database"></param>
-        public void DropConnection(string name, long connectionId, string database = null)
+        public void DropConnection(string name, string database = null)
         {
-            AsyncHelpers.RunSync(() => DropConnectionAsync(name, connectionId, database));
+            AsyncHelpers.RunSync(() => DropConnectionAsync(name, database));
         }
 
         /// <summary>
@@ -491,33 +491,7 @@ namespace Raven.Client.Documents.Subscriptions
         /// </summary>
         /// <param name="id"></param>
         /// <param name="database"></param>
-        public async Task DropConnectionAsync(string name, long connectionId, string database = null, CancellationToken token = default)
-        {
-            database = _store.GetDatabase(database);
-
-            var requestExecutor = _store.GetRequestExecutor(database);
-            using (requestExecutor.ContextPool.AllocateOperationContext(out var jsonOperationContext))
-            {
-                var command = new DropSubscriptionConnectionCommand(name, connectionId);
-                await requestExecutor.ExecuteAsync(command, jsonOperationContext, sessionInfo: null, token: token).ConfigureAwait(false);
-            }
-        }
-        /// <summary>
-        /// Force server to close all current client subscription connections to the server
-        /// </summary>
-        /// <param name="id"></param>
-        /// <param name="database"></param>
-        public void DropAllConnections(string name, string database = null)
-        {
-            AsyncHelpers.RunSync(() => DropAllConnectionsAsync(name, database));
-        }
-
-        /// <summary>
-        /// Force server to close all current client subscription connections to the server
-        /// </summary>
-        /// <param name="id"></param>
-        /// <param name="database"></param>
-        public async Task DropAllConnectionsAsync(string name, string database = null, CancellationToken token = default)
+        public async Task DropConnectionAsync(string name, string database = null, CancellationToken token = default)
         {
             database = _store.GetDatabase(database);
 

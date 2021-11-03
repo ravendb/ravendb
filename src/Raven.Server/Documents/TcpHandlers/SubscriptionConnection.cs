@@ -1499,15 +1499,13 @@ namespace Raven.Server.Documents.TcpHandlers
     {
         public string ClientUri { get; set; }
         public long ConnectionId { get; set; }
-        public SubscriptionOpeningStrategy? Strategy { get; set; }
         
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
                 [nameof(ClientUri)] = ClientUri,
-                [nameof(ConnectionId)] = ConnectionId,
-                [nameof(Strategy)] = Strategy
+                [nameof(ConnectionId)] = ConnectionId
             };
         }
     }

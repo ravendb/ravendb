@@ -89,7 +89,7 @@ namespace SlowTests.Client.Subscriptions
                 {
                     await Assert.ThrowsAsync<InvalidOperationException>(async () =>
                     {
-                        await unInitializedStore.Subscriptions.DropAllConnectionsAsync(subsName);
+                        await unInitializedStore.Subscriptions.DropConnectionAsync(subsName);
                     });
                 }
             }
