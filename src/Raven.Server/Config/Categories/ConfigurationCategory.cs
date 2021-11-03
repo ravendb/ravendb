@@ -11,6 +11,7 @@ using Microsoft.Extensions.Configuration;
 using Raven.Client.Extensions;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
+using Raven.Server.Extensions;
 using Raven.Server.ServerWide;
 using Sparrow;
 

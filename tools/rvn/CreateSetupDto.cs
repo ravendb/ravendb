@@ -24,16 +24,10 @@ namespace rvn
             public string ExternalIp;
         }
 
-        public class Nodes
-        {
-            [JsonPropertyName("Node")]
-            public Node Node;
-        }
-
         public class Cluster
         {
             [JsonPropertyName("Nodes")]
-            public List<Nodes> Nodes;
+            public List<Node> Nodes;
         }
 
         public class Setup
