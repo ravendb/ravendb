@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
@@ -140,7 +141,7 @@ namespace Raven.Server.Commercial
             // here we explicitly want to refresh the cert, so we don't want it cached
             var cacheKeys = setupInfo.NodeSetupInfos.Select(node => BuildHostName(node.Key, setupInfo.Domain, setupInfo.RootDomain)).ToList();
             acmeClient.ResetCachedCertificate(cacheKeys);
-            var challengeResult = await InitialLetsEncryptChallenge(setupInfo, acmeClient, token);
+            var challengeResult = await LetsEncryptUtils.InitialLetsEncryptChallenge(setupInfo, acmeClient, token);
             if (Logger.IsOperationsEnabled)
                 Logger.Operations($"Updating DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}.{setupInfo.RootDomain.ToLower()}.");
             try
@@ -425,7 +426,7 @@ namespace Raven.Server.Commercial
                 var acmeClient = new LetsEncryptClient(serverStore.Configuration.Core.AcmeUrl);
                 await acmeClient.Init(setupInfo.Email, token);
 
-                var challengeResult = await InitialLetsEncryptChallenge(setupInfo, acmeClient, token);
+                var challengeResult = await LetsEncryptUtils.InitialLetsEncryptChallenge(setupInfo, acmeClient, token);
 
                 progress.Processed++;
                 progress.AddInfo(challengeResult.Challenge != null
@@ -490,7 +491,6 @@ namespace Raven.Server.Commercial
                         progress.SettingsZipFile =
                             await CompleteClusterConfigurationAndGetSettingsZip(context, onProgress, progress, SetupMode.LetsEncrypt, setupInfo, serverStore, token);
                     }
-
                 }
                 catch (Exception e)
                 {
@@ -543,7 +543,7 @@ namespace Raven.Server.Commercial
             await serverStore.Cluster.WaitForIndexNotification(res.Index);
         }
 
-        private static async Task<X509Certificate2> CompleteAuthorizationAndGetCertificate(Action onValidationSuccessful, SetupInfo setupInfo, LetsEncryptClient client,
+        internal static async Task<X509Certificate2> CompleteAuthorizationAndGetCertificate(Action onValidationSuccessful, SetupInfo setupInfo, LetsEncryptClient client,
             (string Challange, LetsEncryptClient.CachedCertificateResult Cache) challengeResult, ServerStore serverStore, CancellationToken token)
         {
             if (challengeResult.Challange == null && challengeResult.Cache != null)
@@ -618,29 +618,6 @@ namespace Raven.Server.Commercial
             return new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
         }
 
-        private static async Task<(string Challenge, LetsEncryptClient.CachedCertificateResult Cache)> InitialLetsEncryptChallenge(
-            SetupInfo setupInfo,
-            LetsEncryptClient client,
-            CancellationToken token)
-        {
-            try
-            {
-                var host = (setupInfo.Domain + "." + setupInfo.RootDomain).ToLowerInvariant();
-                var wildcardHost = "*." + host;
-                if (client.TryGetCachedCertificate(wildcardHost, out var certBytes))
-                    return (null, certBytes);
-
-                var result = await client.NewOrder(new[] {wildcardHost}, token);
-
-                result.TryGetValue(host, out var challenge);
-                // we may already be authorized for this?
-                return (challenge, null);
-            }
-            catch (Exception e)
-            {
-                throw new InvalidOperationException("Failed to receive challenge(s) information from Let's Encrypt.", e);
-            }
-        }
 
         private static void LogErrorAndThrow(Action<IOperationProgress> onProgress, SetupProgressAndResult progress, string msg, Exception e)
         {
@@ -945,7 +922,8 @@ namespace Raven.Server.Commercial
 
             var serverCert = setupInfo.GetX509Certificate();
 
-            var localServerUrl = GetServerUrlFromCertificate(serverCert, setupInfo, setupInfo.LocalNodeTag, localNode.Port, localNode.TcpPort, out _, out _);
+            var localServerUrl =
+                LetsEncryptUtils.GetServerUrlFromCertificate(serverCert, setupInfo, setupInfo.LocalNodeTag, localNode.Port, localNode.TcpPort, out _, out _);
 
             try
             {
@@ -1112,17 +1090,6 @@ namespace Raven.Server.Commercial
             return Uri.CheckHostName(domain) != UriHostNameType.Unknown;
         }
 
-        public static string IndentJsonString(string json)
-        {
-            using (var stringReader = new StringReader(json))
-            using (var stringWriter = new StringWriter())
-            {
-                var jsonReader = new JsonTextReader(stringReader);
-                var jsonWriter = new JsonTextWriter(stringWriter) {Formatting = Formatting.Indented};
-                jsonWriter.WriteToken(jsonReader);
-                return stringWriter.ToString();
-            }
-        }
 
         public static void WriteSettingsJsonLocally(string settingsPath, string json)
         {
@@ -1155,76 +1122,6 @@ namespace Raven.Server.Commercial
             }
         }
 
-        private static string GetServerUrlFromCertificate(X509Certificate2 cert, SetupInfo setupInfo, string nodeTag, int port, int tcpPort, out string publicTcpUrl,
-            out string domain)
-        {
-            publicTcpUrl = null;
-            var node = setupInfo.NodeSetupInfos[nodeTag];
-
-            var cn = cert.GetNameInfo(X509NameType.SimpleName, false);
-            if (cn[0] == '*')
-            {
-                var parts = cn.Split("*.");
-                if (parts.Length != 2)
-                    throw new FormatException($"{cn} is not a valid wildcard name for a certificate.");
-
-                domain = parts[1];
-
-                publicTcpUrl = node.ExternalTcpPort != 0
-                    ? $"tcp://{nodeTag.ToLower()}.{domain}:{node.ExternalTcpPort}"
-                    : $"tcp://{nodeTag.ToLower()}.{domain}:{tcpPort}";
-
-                if (setupInfo.NodeSetupInfos[nodeTag].ExternalPort != 0)
-                    return $"https://{nodeTag.ToLower()}.{domain}:{node.ExternalPort}";
-
-                return port == 443
-                    ? $"https://{nodeTag.ToLower()}.{domain}"
-                    : $"https://{nodeTag.ToLower()}.{domain}:{port}";
-            }
-
-            domain = cn; //default for one node case
-
-            foreach (var value in GetCertificateAlternativeNames(cert))
-            {
-                if (value.StartsWith(nodeTag + ".", StringComparison.OrdinalIgnoreCase) == false)
-                    continue;
-
-                domain = value;
-                break;
-            }
-
-            var url = $"https://{domain}";
-
-            if (node.ExternalPort != 0)
-                url += ":" + node.ExternalPort;
-            else if (port != 443)
-                url += ":" + port;
-
-            publicTcpUrl = node.ExternalTcpPort != 0
-                ? $"tcp://{domain}:{node.ExternalTcpPort}"
-                : $"tcp://{domain}:{tcpPort}";
-
-            node.PublicServerUrl = url;
-            node.PublicTcpServerUrl = publicTcpUrl;
-
-            return url;
-        }
-
-        public static IEnumerable<string> GetCertificateAlternativeNames(X509Certificate2 cert)
-        {
-            // If we have alternative names, find the appropriate url using the node tag
-            var sanNames = cert.Extensions["2.5.29.17"];
-
-            if (sanNames == null)
-                yield break;
-
-            var generalNames = GeneralNames.GetInstance(Asn1Object.FromByteArray(sanNames.RawData));
-
-            foreach (var certHost in generalNames.GetNames())
-            {
-                yield return certHost.Name.ToString();
-            }
-        }
 
         private static async Task CompleteConfigurationForNewNode(
             Action<IOperationProgress> onProgress,
@@ -1386,7 +1283,7 @@ namespace Raven.Server.Commercial
                 progress.AddInfo($"Saving configuration at {serverStore.Configuration.ConfigPath}.");
                 onProgress(progress);
 
-                var indentedJson = IndentJsonString(settingsJsonObject.ToString());
+                var indentedJson = LetsEncryptUtils.IndentJsonString(settingsJsonObject.ToString());
                 WriteSettingsJsonLocally(serverStore.Configuration.ConfigPath, indentedJson);
             }
             catch (Exception e)
@@ -1404,7 +1301,7 @@ namespace Raven.Server.Commercial
             }
         }
 
-        private static async Task<byte[]> CompleteClusterConfigurationAndGetSettingsZip(TransactionOperationContext context, Action<IOperationProgress> onProgress,
+        internal static async Task<byte[]> CompleteClusterConfigurationAndGetSettingsZip(TransactionOperationContext context, Action<IOperationProgress> onProgress,
             SetupProgressAndResult progress, SetupMode setupMode, SetupInfo setupInfo, ServerStore serverStore, CancellationToken token)
         {
             try
@@ -1420,6 +1317,7 @@ namespace Raven.Server.Commercial
                         X509Certificate2 serverCert;
                         string domainFromCert;
                         string publicServerUrl;
+                        RavenServer.CertificateHolder certificateHolder;
 
                         try
                         {
@@ -1428,7 +1326,8 @@ namespace Raven.Server.Commercial
                             serverCert = new X509Certificate2(serverCertBytes, setupInfo.Password, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
 
                             var localNodeTag = setupInfo.LocalNodeTag;
-                            publicServerUrl = GetServerUrlFromCertificate(serverCert, setupInfo, localNodeTag, setupInfo.NodeSetupInfos[localNodeTag].Port,
+                            publicServerUrl = LetsEncryptUtils.GetServerUrlFromCertificate(serverCert, setupInfo, localNodeTag,
+                                setupInfo.NodeSetupInfos[localNodeTag].Port,
                                 setupInfo.NodeSetupInfos[localNodeTag].TcpPort, out _, out domainFromCert);
 
                             try
@@ -1450,10 +1349,10 @@ namespace Raven.Server.Commercial
                                 await serverStore.EnsureNotPassiveAsync(skipLicenseActivation: true);
                                 await serverStore.LicenseManager.ActivateAsync(setupInfo.License, RaftIdGenerator.DontCareId);
                             }
-
-                            serverStore.Server.Certificate =
+                            
+                            certificateHolder = serverStore.Server.Certificate =
                                 SecretProtection.ValidateCertificateAndCreateCertificateHolder("Setup", serverCert, serverCertBytes, setupInfo.Password, serverStore);
-
+                
                             serverStore.HasFixedPort = setupInfo.NodeSetupInfos[localNodeTag].Port != 0;
 
                             foreach (var node in setupInfo.NodeSetupInfos)
@@ -1464,7 +1363,8 @@ namespace Raven.Server.Commercial
                                 progress.AddInfo($"Adding node '{node.Key}' to the cluster.");
                                 onProgress(progress);
 
-                                setupInfo.NodeSetupInfos[node.Key].PublicServerUrl = GetServerUrlFromCertificate(serverCert, setupInfo, node.Key, node.Value.Port,
+                                setupInfo.NodeSetupInfos[node.Key].PublicServerUrl = LetsEncryptUtils.GetServerUrlFromCertificate(serverCert, setupInfo, node.Key,
+                                    node.Value.Port,
                                     node.Value.TcpPort, out _, out _);
 
                                 try
@@ -1495,7 +1395,10 @@ namespace Raven.Server.Commercial
                         {
                             // requires server certificate to be loaded
                             var clientCertificateName = $"{name}.client.certificate";
-                            certBytes = await GenerateCertificateTask(clientCertificateName, serverStore, setupInfo);
+                            var result = await GenerateCertificateTask(clientCertificateName, certificateHolder, setupInfo);
+                            var res = await serverStore.PutValueInClusterAsync(new PutCertificateCommand(result.Item3, result.Item2, RaftIdGenerator.DontCareId));
+                            await serverStore.Cluster.WaitForIndexNotification(res.Index);
+                            certBytes = result.Item1;
                             clientCert = new X509Certificate2(certBytes, (string)null,
                                 X509KeyStorageFlags.Exportable | X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.MachineKeySet);
                         }
@@ -1523,7 +1426,7 @@ namespace Raven.Server.Commercial
                                 await entryStream.WriteAsync(export, 0, export.Length, token);
                             }
 
-                            await AdminCertificatesHandler.WriteCertificateAsPemAsync($"admin.client.certificate.{name}", certBytes, null, archive);
+                            await LetsEncryptUtils.WriteCertificateAsPemAsync($"admin.client.certificate.{name}", certBytes, null, archive);
                         }
                         catch (Exception e)
                         {
@@ -1605,12 +1508,12 @@ namespace Raven.Server.Commercial
                             if (node.Value.Addresses.Count != 0)
                             {
                                 currentNodeSettingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] =
-                                    string.Join(";", node.Value.Addresses.Select(ip => IpAddressToUrl(ip, node.Value.Port)));
+                                    string.Join(";", node.Value.Addresses.Select(ip => LetsEncryptUtils.IpAddressToUrl(ip, node.Value.Port)));
                                 currentNodeSettingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.TcpServerUrls)] =
-                                    string.Join(";", node.Value.Addresses.Select(ip => IpAddressToTcpUrl(ip, node.Value.TcpPort)));
+                                    string.Join(";", node.Value.Addresses.Select(ip => LetsEncryptUtils.IpAddressToTcpUrl(ip, node.Value.TcpPort)));
                             }
 
-                            var httpUrl = GetServerUrlFromCertificate(serverCert, setupInfo, node.Key, node.Value.Port,
+                            var httpUrl = LetsEncryptUtils.GetServerUrlFromCertificate(serverCert, setupInfo, node.Key, node.Value.Port,
                                 node.Value.TcpPort, out var tcpUrl, out var _);
 
                             if (string.IsNullOrEmpty(node.Value.ExternalIpAddress) == false)
@@ -1628,7 +1531,7 @@ namespace Raven.Server.Commercial
 
                             var modifiedJsonObj = context.ReadObject(currentNodeSettingsJson, "modified-settings-json");
 
-                            var indentedJson = IndentJsonString(modifiedJsonObj.ToString());
+                            var indentedJson = LetsEncryptUtils.IndentJsonString(modifiedJsonObj.ToString());
                             if (node.Key == setupInfo.LocalNodeTag && setupInfo.ModifyLocalServer)
                             {
                                 try
@@ -1703,7 +1606,7 @@ namespace Raven.Server.Commercial
 
                             var modifiedJsonObj = context.ReadObject(settings.ToJson(), "setup-json");
 
-                            var indentedJson = IndentJsonString(modifiedJsonObj.ToString());
+                            var indentedJson = LetsEncryptUtils.IndentJsonString(modifiedJsonObj.ToString());
 
                             var entry = archive.CreateEntry("setup.json");
                             entry.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
@@ -1731,21 +1634,6 @@ namespace Raven.Server.Commercial
             }
         }
 
-        private static string IpAddressToUrl(string address, int port)
-        {
-            var url = "https://" + address;
-            if (port != 443)
-                url += ":" + port;
-            return url;
-        }
-
-        private static string IpAddressToTcpUrl(string address, int port)
-        {
-            var url = "tcp://" + address;
-            if (port != 0)
-                url += ":" + port;
-            return url;
-        }
 
         public static void RegisterClientCertInOs(Action<IOperationProgress> onProgress, SetupProgressAndResult progress, X509Certificate2 clientCert)
         {
@@ -2089,13 +1977,14 @@ namespace Raven.Server.Commercial
         }
 
 // Duplicate of AdminCertificatesHandler.GenerateCertificateInternal stripped from authz checks, used by an unauthenticated client during setup only
-        public static async Task<byte[]> GenerateCertificateTask(string name, ServerStore serverStore, SetupInfo setupInfo)
+        public static async Task<(byte[], CertificateDefinition , string )> GenerateCertificateTask(string name,
+            RavenServer.CertificateHolder certificate, SetupInfo setupInfo)
         {
-            if (serverStore.Server.Certificate?.Certificate == null)
+            if (certificate?.Certificate == null)
                 throw new InvalidOperationException($"Cannot generate the client certificate '{name}' because the server certificate is not loaded.");
 
             // this creates a client certificate which is signed by the current server certificate
-            var selfSignedCertificate = CertificateUtils.CreateSelfSignedClientCertificate(name, serverStore.Server.Certificate, out var certBytes,
+            var selfSignedCertificate = CertificateUtils.CreateSelfSignedClientCertificate(name, certificate, out var certBytes,
                 setupInfo.ClientCertNotAfter ?? DateTime.UtcNow.Date.AddYears(5));
 
             var newCertDef = new CertificateDefinition
@@ -2111,10 +2000,8 @@ namespace Raven.Server.Commercial
                 NotBefore = selfSignedCertificate.NotBefore
             };
 
-            var res = await serverStore.PutValueInClusterAsync(new PutCertificateCommand(selfSignedCertificate.Thumbprint, newCertDef, RaftIdGenerator.DontCareId));
-            await serverStore.Cluster.WaitForIndexNotification(res.Index);
-
-            return certBytes;
+       
+            return (certBytes, newCertDef,selfSignedCertificate.Thumbprint);
         }
     }
 }
