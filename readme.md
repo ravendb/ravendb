@@ -35,7 +35,7 @@ If you have any questions, or need further assistance, you can [contact us direc
 Please check where to report an issue in our [contribution guidelines](./CONTRIBUTING.md#reporting-an-issue).
 
 ## RavenDB Developer Community Group
-If you have any questions please visit our [community group](http://groups.google.com/group/ravendb/). The solutions for the most common challenges are available. You are welcome to join!
+If you have any questions please visit our [discussions page](https://github.com/ravendb/ravendb/discussions) or check [Google community group archive](http://groups.google.com/group/ravendb/). The solutions for the most common challenges are available. You are welcome to join!
 
 ## Pull Requests
 Please check how to submit a Pull Request in our [contribution guidelines](./CONTRIBUTING.md#submitting-a-pull-request).
