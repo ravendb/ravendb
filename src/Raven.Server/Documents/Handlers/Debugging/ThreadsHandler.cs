@@ -27,7 +27,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             if (PlatformDetails.RunningOnMacOsx)
                 throw new NotSupportedException("Capturing live stack traces is not supported by RavenDB on MacOSX");
 
-            var threadIds = GetStringValuesQueryString("threadId", required: false);
+            var threadIdsAsString = GetStringValuesQueryString("threadId", required: false);
             var includeStackObjects = GetBoolValueQueryString("includeStackObjects", required: false) ?? false;
 
             var sp = Stopwatch.StartNew();
@@ -35,7 +35,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
             using (var sw = new StringWriter())
             {
-                OutputResultToStream(sw, threadIds.ToHashSet(), includeStackObjects);
+                OutputResultToStream(sw, threadIdsAsString.ToHashSet(), includeStackObjects);
 
                 var result = JObject.Parse(sw.GetStringBuilder().ToString());
 
@@ -46,7 +46,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     await Task.Delay((int)wait);
                 }
 
-                var threadStats = threadsUsage.Calculate(threadIds.Select(int.Parse).ToHashSet());
+                var threadStats = threadsUsage.Calculate(threadIdsAsString.Count == 0 ? null : threadIdsAsString.Select(int.Parse).ToHashSet());
                 result["Threads"] = JArray.FromObject(threadStats.List);
 
                 using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
