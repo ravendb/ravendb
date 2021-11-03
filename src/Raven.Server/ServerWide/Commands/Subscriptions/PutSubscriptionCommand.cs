@@ -14,7 +14,6 @@ using Raven.Server.Documents.Replication;
 using Raven.Server.Rachis;
 using Voron.Impl.Paging;
 using Raven.Client.Json.Serialization;
-using Raven.Server.Documents.Subscriptions;
 
 namespace Raven.Server.ServerWide.Commands.Subscriptions
 {
@@ -87,16 +86,6 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                         else
                         {
                             AssertValidChangeVector();
-                            if (InitialChangeVector != existingSubscriptionState.ChangeVectorForNextBatchStartingPoint)
-                            {
-                                // modified by the admin
-                                var subscriptionStateTable = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.SubscriptionStateSchema, ClusterStateMachine.SubscriptionState);
-                                using (SubscriptionConnectionsState.GetDatabaseAndSubscriptionPrefix(context, DatabaseName, subscriptionId, out var prefix))
-                                {
-                                    using var _ = Slice.External(context.Allocator, prefix, out var prefixSlice);
-                                    subscriptionStateTable.DeleteByPrimaryKeyPrefix(prefixSlice);
-                                }
-                            }
                         }
                     }
                     else
