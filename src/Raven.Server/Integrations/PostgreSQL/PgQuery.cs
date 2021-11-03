@@ -9,11 +9,14 @@ using Raven.Server.Integrations.PostgreSQL.Exceptions;
 using Raven.Server.Integrations.PostgreSQL.Messages;
 using Raven.Server.Integrations.PostgreSQL.PowerBI;
 using Raven.Server.Integrations.PostgreSQL.Types;
+using Sparrow.Logging;
 
 namespace Raven.Server.Integrations.PostgreSQL
 {
     public abstract class PgQuery : IDisposable
     {
+        private static Logger _log = LoggingSource.Instance.GetLogger<PgQuery>("Postgres Server");
+
         protected readonly string QueryString;
         public readonly int[] ParametersDataTypes;
         protected readonly bool IsEmptyQuery;
@@ -35,18 +38,28 @@ namespace Raven.Server.Integrations.PostgreSQL
         {
             queryText = queryText.Trim();
 
-            if (RqlQuery.TryParse(queryText, parametersDataTypes, documentDatabase, out var rqlQuery))
-                return rqlQuery;
-
-            if (PowerBIQuery.TryParse(queryText, parametersDataTypes, documentDatabase, out var powerBiQuery))
+            try
             {
-                if (documentDatabase.ServerStore.LicenseManager.CanUsePowerBi(withNotification: true, out var licenseLimitException) == false)
-                    throw licenseLimitException;
+                if (RqlQuery.TryParse(queryText, parametersDataTypes, documentDatabase, out var rqlQuery))
+                    return rqlQuery;
 
-                return powerBiQuery;
+                if (PowerBIQuery.TryParse(queryText, parametersDataTypes, documentDatabase, out var powerBiQuery))
+                {
+                    if (documentDatabase.ServerStore.LicenseManager.CanUsePowerBi(withNotification: true, out var licenseLimitException) == false)
+                        throw licenseLimitException;
+
+                    return powerBiQuery;
+                }
+
+                return new HardcodedQuery(queryText, parametersDataTypes);
             }
+            catch (Exception e)
+            {
+                if (_log.IsInfoEnabled)
+                    _log.Info($"Failed to create instance of {nameof(PgQuery)}:{Environment.NewLine}{queryText}", e);
 
-            return new HardcodedQuery(queryText, parametersDataTypes);
+                throw;
+            }
         }
 
         protected PgFormat GetDefaultResultsFormat()

@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
-using Raven.Client;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Queries;
+using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Integrations.PostgreSQL.Exceptions;
 
 namespace Raven.Server.Integrations.PostgreSQL.PowerBI
@@ -48,21 +47,21 @@ namespace Raven.Server.Integrations.PostgreSQL.PowerBI
         public static bool TryParse(string queryText, int[] parametersDataTypes, DocumentDatabase documentDatabase, out PgQuery pgQuery)
         {
             // Match queries sent by PowerBI, either RQL queries wrapped in an SQL statement OR generic SQL queries
-            if (!TryGetMatches(queryText, out var matches, out var rql))
+            if (TryGetMatches(queryText, out var matches, out var rql) == false)
             {
                 pgQuery = null;
                 return false;
             }
 
+            Dictionary<string, ReplaceColumnValue> replaceValues = GetReplaceValues(matches);
+
             string newRql = null;
-            if (rql != null && rql.Success)
+
+            if (rql != null)
             {
-                // regular RQL query coming  from 'SQL statement (optional, requires database)' text box in Power BI
+                // RQL query coming  from 'SQL statement (optional, requires database)' text box in Power BI
 
-                // TODO arek or TODO pfyasu
-                // newRql = RewriteQueryToJsProjectionSoWeWillBeAbleToUseReplace(rql, matches);
-
-                newRql = rql.Value;
+                newRql = rql.QueryText;
             }
             else if (matches[0].Groups["table_name"].Success)
             {
@@ -76,15 +75,7 @@ namespace Raven.Server.Integrations.PostgreSQL.PowerBI
 
                 string tableName = sqlQuery.Groups["table_name"].Value;
 
-                var alias = "x";
-
-                var projectionFields = new Dictionary<string, string>();
-
-                PopulateProjectionFields(sqlQuery, ref projectionFields, alias);
-
-                var orderedProjectionFields = GetOrderedProjectionFields(matches, projectionFields);
-
-                newRql = $"from '{tableName}' as {alias} {GenerateJsProjectionString(orderedProjectionFields)}";
+                newRql = $"from '{tableName}'";
             }
 
             if (newRql == null)
@@ -95,75 +86,41 @@ namespace Raven.Server.Integrations.PostgreSQL.PowerBI
 
             var limit = matches[0].Groups["limit"];
 
-            pgQuery = new RqlQuery(newRql, parametersDataTypes, documentDatabase, limit.Success ? int.Parse(limit.Value) : null);
+            pgQuery = new PowerBIRqlQuery(newRql, parametersDataTypes, documentDatabase, replaceValues, limit.Success ? int.Parse(limit.Value) : null);
+
             return true;
         }
 
-        private static string RewriteQueryToJsProjectionSoWeWillBeAbleToUseReplace(Match rql, List<Match> matches)
+        private static Dictionary<string, ReplaceColumnValue> GetReplaceValues(List<Match> matches)
         {
-            string newRql;
-            // TODO: After integration, use Raven.Server's QueryParser instead of this regex so we support more complex RQLs like "select LastName as last" and "select "test""
+            Dictionary<string, ReplaceColumnValue> replaceValues = null;
 
-            var alias = rql.Groups["alias"].Success ? rql.Groups["alias"].Value : "x";
-
-            var projectionFields = new Dictionary<string, string>();
-
-            // Get the projection fields from the RQL if provided
-            var simpleSelectKeys = rql.Groups["simple_keys"];
-            var jsSelectFields = rql.Groups["js_fields"];
-
-            if (simpleSelectKeys.Success)
+            foreach (var matchToCheck in matches)
             {
-                projectionFields[Constants.Documents.Indexing.Fields.DocumentIdFieldName] =
-                    GenerateRqlProjectedFieldValue(Constants.Documents.Indexing.Fields.DocumentIdFieldName, alias);
+                var replaceGroup = matchToCheck.Groups["replace"];
 
-                foreach (Capture selectField in simpleSelectKeys.Captures)
+                if (replaceGroup.Success)
                 {
-                    projectionFields[selectField.Value] = GenerateRqlProjectedFieldValue(selectField.Value, alias);
-                }
-
-                projectionFields[Constants.Documents.Querying.Fields.PowerBIJsonFieldName] = GenerateRqlProjectedFieldValue(Constants.Documents.Querying.Fields.PowerBIJsonFieldName, alias);
-            }
-            else if (jsSelectFields.Success)
-            {
-                var jsSelectKeys = rql.Groups["js_keys"];
-                var jsSelectValues = rql.Groups["js_vals"];
-
-                projectionFields[Constants.Documents.Indexing.Fields.DocumentIdFieldName] =
-                    GenerateRqlProjectedFieldValue(Constants.Documents.Indexing.Fields.DocumentIdFieldName, alias);
-
-                for (var i = 0; i < jsSelectKeys.Captures.Count; i++)
-                {
-                    var key = jsSelectKeys.Captures[i].Value;
-
-                    if (jsSelectValues.Captures[i].Length == 0)
+                    if (string.IsNullOrEmpty(replaceGroup.Value) == false)
                     {
-                        projectionFields[key] = "null";
-                    }
-                    else
-                    {
-                        projectionFields[key] = jsSelectValues.Captures[i].Value;
+                        // Populate the replace columns starting from the inner-most SQL
+
+                        replaceValues = new Dictionary<string, ReplaceColumnValue>();
+
+                        for (var i = matches.Count - 1; i >= 0; i--)
+                        {
+                            replaceValues = GetReplaces(matches[i], ref replaceValues);
+                        }
+
+                        break;
                     }
                 }
-
-                projectionFields[Constants.Documents.Querying.Fields.PowerBIJsonFieldName] = GenerateRqlProjectedFieldValue(Constants.Documents.Querying.Fields.PowerBIJsonFieldName, alias);
             }
 
-            // Populate the columns starting from the inner-most SQL
-            for (var i = matches.Count - 1; i >= 0; i--)
-            {
-                var match = matches[i];
-                PopulateProjectionFields(match, ref projectionFields, alias);
-            }
-
-            // Note: It's crucial that the order of columns that is specified in the outer SQL is preserved.
-            var orderedProjectionFields = GetOrderedProjectionFields(matches, projectionFields, rql);
-
-            newRql = GenerateProjectedRql(rql, orderedProjectionFields, matches);
-            return newRql;
+            return replaceValues;
         }
 
-        private static bool TryGetMatches(string queryText, out List<Match> outMatches, out Match rql)
+        private static bool TryGetMatches(string queryText, out List<Match> outMatches, out Query rql)
         {
             var matches = new List<Match>();
             var queryToMatch = queryText;
@@ -192,48 +149,7 @@ namespace Raven.Server.Integrations.PostgreSQL.PowerBI
             return true;
         }
 
-        private static List<KeyValuePair<string, string>> GetOrderedProjectionFields(IEnumerable<Match> matches, IReadOnlyDictionary<string, string> projectionFields, Match rql = null)
-        {
-            var orderedProjectionFields = new List<KeyValuePair<string, string>>();
-
-            // Get the order from the outermost SELECT
-            ICollection<Capture> orderedColumns = Array.Empty<Capture>();
-            foreach (var match in matches)
-            {
-                orderedColumns = match.Groups["all_columns"].Captures;
-                if (orderedColumns.Count != 0)
-                    break;
-            }
-
-            // If none captured use the RQL projection order
-            if (rql != null && orderedColumns.Count == 0)
-            {
-                if (rql.Groups["simple_keys"].Success)
-                    orderedColumns = rql.Groups["simple_keys"].Captures;
-                else if (rql.Groups["js_keys"].Success)
-                    orderedColumns = rql.Groups["js_keys"].Captures;
-            }
-
-            // If there's no RQL projection order use orderedColumns
-            if (orderedColumns.Count == 0)
-            {
-                return projectionFields.ToList();
-            }
-
-            foreach (var column in orderedColumns)
-            {
-                orderedProjectionFields.Add(projectionFields.TryGetValue(column.Value, out var val)
-                    ? new KeyValuePair<string, string>(column.Value, val)
-                    : new KeyValuePair<string, string>(column.Value, "null"));
-            }
-
-            return orderedProjectionFields;
-        }
-
-        private static void PopulateProjectionFields(
-            Match match,
-            ref Dictionary<string, string> projectionFields,
-            string alias)
+        private static Dictionary<string, ReplaceColumnValue> GetReplaces(Match match, ref Dictionary<string, ReplaceColumnValue> replaces)
         {
             var destColumns = match.Groups["dest_columns"].Captures;
             var srcColumns = match.Groups["src_columns"].Captures;
@@ -241,172 +157,42 @@ namespace Raven.Server.Integrations.PostgreSQL.PowerBI
             var replaceInputs = match.Groups["replace_inputs"].Captures;
             var replaceTexts = match.Groups["replace_texts"].Captures;
 
-            var alreadyPopulatedByPreviousLayer = projectionFields.Count != 0;
-
             var replaceIndex = 0;
             for (var i = 0; i < destColumns.Count; i++)
             {
                 var destColumn = destColumns[i].Value;
                 var srcColumn = srcColumns[i].Value;
 
-                var destColumnVal = "";
-
-                // Try using the source column if it exists yet
-                if (projectionFields.TryGetValue(srcColumn, out string val))
-                {
-                    destColumnVal = val;
-                }
-                else
-                {
-                    // Don't create new fields without a source when projectionFields is 
-                    // already populated from a previous SQL/RQL layer
-                    if (alreadyPopulatedByPreviousLayer)
-                    {
-                        continue;
-                    }
-
-                    destColumnVal = GenerateRqlProjectedFieldValue(srcColumn, alias);
-                }
-
                 if (replace[i].Value.Length != 0)
                 {
-                    destColumnVal = $"({destColumnVal}).toString()" +
-                        $".replace(\"{replaceInputs[replaceIndex].Value}\", \"{replaceTexts[replaceIndex].Value}\")";
+                    replaces[srcColumn] = new ReplaceColumnValue
+                    {
+                        DstColumnName = destColumn,
+                        SrcColumnName = srcColumn,
+                        OldValue = replaceInputs[replaceIndex].Value,
+                        NewValue = replaceTexts[replaceIndex].Value,
+                    };
+
                     replaceIndex++;
                 }
-
-                projectionFields[destColumn] = destColumnVal;
             }
+
+            return replaces;
         }
 
-        private static string GenerateRqlProjectedFieldValue(string column, string alias)
+        private static bool IsRql(string queryText, out Query query)
         {
-            var val = $"{alias}[\"{column}\"]";
-
-            if (column.Equals(Constants.Documents.Indexing.Fields.DocumentIdFieldName, StringComparison.OrdinalIgnoreCase))
+            try
             {
-                val = $"id({alias})";
+                query = QueryMetadata.ParseQuery(queryText, QueryType.Select);
+            }
+            catch
+            {
+                query = null;
+                return false;
             }
 
-            return val;
-        }
-
-        private static string GenerateProjectedRql(Match rqlMatch, List<KeyValuePair<string, string>> projectionFields, ICollection<Match> sqlMatches)
-        {
-            var rql = new StringBuilder(rqlMatch.Value);
-
-            var collection = rqlMatch.Groups["collection"];
-            var alias = rqlMatch.Groups["alias"];
-            var where = rqlMatch.Groups["where"];
-            var select = rqlMatch.Groups["select"];
-
-            var aliasIndex = alias.Success ? (alias.Index + alias.Length) : (collection.Index + collection.Length);
-            var aliasLength = alias.Length;
-
-            var whereIndex = where.Success ? where.Index : (aliasIndex + aliasLength);
-            var whereLength = where.Length;
-
-            var selectIndex = select.Success ? select.Index : (whereIndex + whereLength);
-
-            // Insert alias clause if doesn't exist
-            if (alias.Success == false)
-            {
-                const string newAliasClause = " as x";
-                rql.Insert(collection.Index + collection.Length, newAliasClause);
-
-                aliasLength = newAliasClause.Length;
-                whereIndex += newAliasClause.Length;
-                selectIndex += newAliasClause.Length;
-            }
-
-            // Insert new where clause
-            var fullNewWhere = CombineSqlMatchesWhereClause(sqlMatches);
-            if (fullNewWhere.Length != 0)
-            {
-                fullNewWhere = WhereColumnRegex.Replace(fullNewWhere, "${column}");
-                fullNewWhere = WhereOperatorRegex.Replace(fullNewWhere, (m) =>
-                {
-                    if (OperatorMap.TryGetValue(m.Value, out var val))
-                        return val;
-
-                    return m.Value;
-                });
-
-                if (where.Success)
-                    fullNewWhere = $"\nand\n\t({fullNewWhere})\n";
-                else
-                    fullNewWhere = $" where\n{fullNewWhere}\n";
-
-                rql.Insert(whereIndex + whereLength, fullNewWhere);
-
-                whereLength += fullNewWhere.Length;
-                selectIndex += fullNewWhere.Length;
-            }
-
-            // Remove existing select clause
-            if (select.Success)
-            {
-                rql.Remove(selectIndex, select.Length);
-            }
-
-            // Insert new select clause
-            if (projectionFields.Count != 0)
-            {
-                var projection = GenerateJsProjectionString(projectionFields);
-                rql.Insert(selectIndex, projection);
-            }
-
-            return rql.ToString();
-        }
-
-        private static string CombineSqlMatchesWhereClause(IEnumerable<Match> sqlMatches)
-        {
-            // Note: Filtering of projected columns is not supported
-            var fullNewWhere = new StringBuilder();
-            foreach (var match in sqlMatches)
-            {
-                var sqlWhere = match.Groups["where"];
-                if (!sqlWhere.Success)
-                    continue;
-
-                if (fullNewWhere.Length != 0)
-                    fullNewWhere.Append("\nand\n\t");
-
-                fullNewWhere.Append($"(\n\t{sqlWhere.Value}\n)");
-            }
-
-            return fullNewWhere.ToString();
-        }
-
-        private static StringBuilder GenerateJsProjectionString(IEnumerable<KeyValuePair<string, string>> projectionFields)
-        {
-            var projection = new StringBuilder("select").AppendLine().AppendLine("{");
-
-            var first = true;
-
-            foreach (var (fieldName, fieldValue) in projectionFields)
-            {
-                if (fieldName == Constants.Documents.Indexing.Fields.DocumentIdFieldName) // we don't want to explicitly include id(x) in the projection, we'll add id() column from Document (if available, map-reduce results don't have it)
-                    continue;
-
-                if (first == false)
-                    projection.AppendLine(",");
-
-                first = false;
-
-                projection.Append($"\t\"{fieldName}\": {fieldValue}");
-            }
-
-            projection.AppendLine();
-            projection.AppendLine("}");
-
-            return projection;
-        }
-
-        private static bool IsRql(string queryToMatch, out Match rql)
-        {
-            rql = RqlRegex.Match(queryToMatch);
-            return rql.Success;
+            return true;
         }
     }
 }
