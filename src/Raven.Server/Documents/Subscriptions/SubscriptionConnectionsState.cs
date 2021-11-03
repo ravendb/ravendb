@@ -11,16 +11,12 @@ using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Util;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.TcpHandlers;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands.Subscriptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Sparrow.Binary;
 using Sparrow.Collections;
 using Sparrow.Server;
-using Sparrow.Server.Utils;
 using Sparrow.Threading;
-using Voron;
 
 namespace Raven.Server.Documents.Subscriptions
 {
@@ -57,7 +53,7 @@ namespace Raven.Server.Documents.Subscriptions
         private readonly SemaphoreSlim _subscriptionActivelyWorkingLock;
 
         public string LastChangeVectorSent;
-
+        
         public string PreviouslyRecordedChangeVector;
         public SubscriptionConnectionsState(string subscriptionName, long subscriptionId, SubscriptionStorage storage, SubscriptionConnection connection)
         {
@@ -79,126 +75,67 @@ namespace Raven.Server.Documents.Subscriptions
             _subscriptionActivelyWorkingLock = new SemaphoreSlim(1);
             LastChangeVectorSent = connection.SubscriptionState.ChangeVectorForNextBatchStartingPoint;
             PreviouslyRecordedChangeVector = LastChangeVectorSent;
+            Console.WriteLine($"Creating concurrent subscription. Starting from cv {LastChangeVectorSent}");
         }
 
-        public IEnumerable<(Document Doc, Exception Exception)> GetNextBatch(ClusterOperationContext clusterOperationContext, SubscriptionDocumentsFetcher fetcher,
+        public IEnumerable<(Document Doc, Exception Exception)> GetNextBatch(SubscriptionConnection connection, SubscriptionDocumentsFetcher fetcher,
             DocumentsOperationContext docsContext, IncludeDocumentsCommand includesCmd)
         {
-            return fetcher.GetDataToSend(clusterOperationContext, docsContext, includesCmd, GetLastEtagSent());
+            int docsAmount = 0;
+            var clusterStateMachine = _documentsStorage.DocumentDatabase.ServerStore.Cluster;
+            using (_documentsStorage.DocumentDatabase.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext clusterOperationContext))
+            using (clusterOperationContext.OpenReadTransaction())
+            {
+                foreach ((Document doc, Exception ex) in fetcher.GetDataToSend(clusterOperationContext, docsContext, includesCmd, GetLastEtagSent()))
+                {
+                    if (docsAmount >= connection.Options.MaxDocsPerBatch)
+                    {
+                        yield break;
+                    }
+                    
+                    if (clusterStateMachine.IsDocumentInActiveBatch(clusterOperationContext, connection.TcpConnection.DocumentDatabase.Name, SubscriptionId, doc.Id,
+                        _connections.Select(conn => conn.CurrentBatchId).ToHashSet()))
+                    {
+                        continue;
+                    }
+
+                    docsAmount++;
+                    yield return (doc, ex);
+                }
+            }
         }
 
         public IEnumerable<DocumentRecord> GetDocumentsFromResend(ClusterOperationContext clusterOperationContext)
         {
-            return GetDocumentsFromResend(clusterOperationContext, _connections.Select(conn => conn.CurrentBatchId).ToHashSet());
+            var clusterStateMachine = _documentsStorage.DocumentDatabase.ServerStore.Cluster;
+            return clusterStateMachine.GetDocumentsFromResend(clusterOperationContext,
+                DocumentDatabase.Name, SubscriptionId, _connections.Select(conn => conn.CurrentBatchId).ToHashSet());
         }
 
         public IEnumerable<RevisionRecord> GetRevisionsFromResend(ClusterOperationContext clusterOperationContext)
         {
-            return GetRevisionsFromResend(clusterOperationContext, _connections.Select(conn => conn.CurrentBatchId).ToHashSet());
+            var clusterStateMachine = _documentsStorage.DocumentDatabase.ServerStore.Cluster;
+            return clusterStateMachine.GetRevisionsFromResend(clusterOperationContext,
+                DocumentDatabase.Name, SubscriptionId, _connections.Select(conn => conn.CurrentBatchId).ToHashSet());
         }
 
-        public IEnumerable<DocumentRecord> GetDocumentsFromResend(ClusterOperationContext context, HashSet<long> activeBatches)
+        public Task AcknowledgeBatch(SubscriptionConnection connection, long batchId, HashSet<string> addDocumentsToResend)
         {
-            var subscriptionState = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.SubscriptionStateSchema, ClusterStateMachine.SubscriptionState);
-            using (GetDatabaseAndSubscriptionKeyPrefix(context, DocumentDatabase.Name, SubscriptionId, SubscriptionType.Document, out var prefix))
-            using(Slice.External(context.Allocator, prefix, out var prefixSlice))
+            Task ackTask;
+            lock (this)
             {
-                foreach (var (_, tvh) in subscriptionState.SeekByPrimaryKeyPrefix(prefixSlice, Slices.Empty, 0))
-                {
-                    long batchId = Bits.SwapBytes(tvh.Reader.ReadLong((int)ClusterStateMachine.SubscriptionStateTable.BatchId));
-
-                    if (activeBatches.Contains(batchId))
-                        continue;
-
-                    var id = tvh.Reader.ReadStringWithPrefix((int)ClusterStateMachine.SubscriptionStateTable.Key, prefix.Length);
-                    var cv = tvh.Reader.ReadString((int)ClusterStateMachine.SubscriptionStateTable.ChangeVector);
-                    
-                    yield return new DocumentRecord
-                    {
-                        DocumentId = id,
-                        ChangeVector = cv
-                    };
-                }
+                ackTask = connection.TcpConnection.DocumentDatabase.SubscriptionStorage.AcknowledgeBatchProcessed(
+                    SubscriptionId,
+                    SubscriptionName,
+                    connection.LastSentChangeVectorInThisConnection ?? nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange),
+                    "",
+                    batchId,
+                    addDocumentsToResend);
             }
-        }
-
-        public IEnumerable<RevisionRecord> GetRevisionsFromResend(ClusterOperationContext context, HashSet<long> activeBatches)
-        {
-            var subscriptionState = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.SubscriptionStateSchema, ClusterStateMachine.SubscriptionState);
-            using (GetDatabaseAndSubscriptionKeyPrefix(context, DocumentDatabase.Name, SubscriptionId, SubscriptionType.Revision, out var prefix))
-            using (Slice.External(context.Allocator, prefix, out var prefixSlice))
-            {
-                foreach (var (_, tvh) in subscriptionState.SeekByPrimaryKeyPrefix(prefixSlice, Slices.Empty, 0))
-                {
-                    var batchId = Bits.SwapBytes(tvh.Reader.ReadLong((int)ClusterStateMachine.SubscriptionStateTable.BatchId));
-                    if (activeBatches.Contains(batchId))
-                        continue;
-
-                    string current = tvh.Reader.ReadStringWithPrefix((int)ClusterStateMachine.SubscriptionStateTable.Key, prefix.Length);
-                    string previous = tvh.Reader.ReadString((int)ClusterStateMachine.SubscriptionStateTable.ChangeVector);
-                    
-                    yield return new RevisionRecord
-                    {
-                        Current = current,
-                        Previous = previous
-                    };
-                }
-            }
-        }
-
-        public bool IsDocumentInActiveBatch(ClusterOperationContext context, string documentId, HashSet<long> activeBatches)
-        {
-            var subscriptionState = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.SubscriptionStateSchema, ClusterStateMachine.SubscriptionState);
-            using (GetDatabaseAndSubscriptionAndDocumentKey(context, DocumentDatabase.Name, SubscriptionId, documentId, out var key))
-            using (Slice.External(context.Allocator,key, out var keySlice))
-            {
-                if (subscriptionState.ReadByKey(keySlice, out var reader) == false)
-                    return false;
-
-                var batchId = Bits.SwapBytes(reader.ReadLong((int)ClusterStateMachine.SubscriptionStateTable.BatchId));
-                return activeBatches.Contains(batchId);
-            }
+            return ackTask;
         }
         
-        public bool IsRevisionInActiveBatch(ClusterOperationContext context, string current, HashSet<long> activeBatches)
-        {
-            var subscriptionState = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.SubscriptionStateSchema, ClusterStateMachine.SubscriptionState);
-            using (GetDatabaseAndSubscriptionAndRevisionKey(context, DocumentDatabase.Name, SubscriptionId, current, out var key))
-            using (Slice.External(context.Allocator,key, out var keySlice))
-            {
-                if (subscriptionState.ReadByKey(keySlice, out var reader) == false)
-                    return false;
-
-                var batchId = Bits.SwapBytes(reader.ReadLong((int)ClusterStateMachine.SubscriptionStateTable.BatchId));
-                return activeBatches.Contains(batchId);
-            }
-        }
-
-        public string GetLastActiveChangeVector(ClusterOperationContext context, string documentId)
-        {
-            var subscriptionState = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.SubscriptionStateSchema, ClusterStateMachine.SubscriptionState);
-            using (GetDatabaseAndSubscriptionAndDocumentKey(context, DocumentDatabase.Name, SubscriptionId, documentId, out var key))
-            using (Slice.External(context.Allocator,key, out var keySlice))
-            {
-                if (subscriptionState.ReadByKey(keySlice, out var reader) == false)
-                    return null;
-
-                return reader.ReadString((int)ClusterStateMachine.SubscriptionStateTable.ChangeVector);
-            }
-        }
-
-        public Task AcknowledgeBatch(SubscriptionConnection connection, long batchId, List<DocumentRecord> addDocumentsToResend)
-        {
-            return connection.TcpConnection.DocumentDatabase.SubscriptionStorage.AcknowledgeBatchProcessed(
-                SubscriptionId,
-                SubscriptionName,
-                connection.LastSentChangeVectorInThisConnection ?? nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange),
-                "",
-                batchId,
-                addDocumentsToResend);
-        }
-        
-        public long GetLastEtagSent()
+        private long GetLastEtagSent()
         {
             return ChangeVectorUtils.GetEtagById(LastChangeVectorSent, _documentsStorage.DocumentDatabase.DbBase64Id);
         }
@@ -207,6 +144,16 @@ namespace Raven.Server.Documents.Subscriptions
         {
             return _connections.Count != 0;
         }
+        
+        public enum DocumentState
+        {
+            Updated,
+            Unchanged,
+            Conflicted,
+            Deleted
+        }
+        
+        
 
         internal Document GetRevision(string changeVector,DocumentsOperationContext context)
         {
@@ -306,6 +253,7 @@ namespace Raven.Server.Documents.Subscriptions
                                                                 incomingConnection.Strategy);
                     }
                 }
+                Console.WriteLine($"Registered connection {incomingConnection.TcpConnection.TcpClient.Client.RemoteEndPoint}");
                 if (TryAddConnection(incomingConnection) == false)
                 {
                     throw new InvalidOperationException("Could not add a connection to a subscription. Likely a bug");
@@ -391,6 +339,7 @@ namespace Raven.Server.Documents.Subscriptions
         {
             if (_connections.Contains(connection))
             {
+                Console.WriteLine("\nDropping connection\n");
                 try
                 {
                     _connections.TryRemove(connection);
@@ -440,6 +389,7 @@ namespace Raven.Server.Documents.Subscriptions
 
         public void NotifyHasMoreDocs()
         {
+            Console.WriteLine("Has More Docs");
             _waitForMoreDocuments.Set();
         }
 
@@ -489,71 +439,6 @@ namespace Raven.Server.Documents.Subscriptions
             {
                 // ignored: If we've failed to raise the cancellation token, it means that it's already raised
             }
-        }
-
-        private static ByteStringContext<ByteStringMemoryCache>.InternalScope GetDatabaseAndSubscriptionKeyPrefix(ClusterOperationContext context, string database, long subscriptionId, SubscriptionType type, out ByteString prefix)
-        {
-
-            using var _ = Slice.From(context.Allocator, database.ToLowerInvariant(), out var dbName);
-            var rc = context.Allocator.Allocate(dbName.Size + sizeof(byte) + sizeof(long) + sizeof(byte) + sizeof(byte) + sizeof(byte), out prefix);
-
-            PopulatePrefix(subscriptionId, type, ref prefix, ref dbName, out var __);
-
-            return rc;
-        }
-
-        public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetDatabaseAndSubscriptionAndDocumentKey(ClusterOperationContext context, string database, long subscriptionId, string documentId, out ByteString key)
-        {
-            return GetSubscriptionStateKey(context, database, subscriptionId, documentId, SubscriptionType.Document, out key);
-        }
-
-        public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetDatabaseAndSubscriptionAndRevisionKey(ClusterOperationContext context, string database, long subscriptionId, string currentChangeVector, out ByteString key)
-        {
-            return GetSubscriptionStateKey(context, database, subscriptionId, currentChangeVector, SubscriptionType.Revision, out key);
-        }
-
-        public static unsafe ByteStringContext<ByteStringMemoryCache>.InternalScope GetSubscriptionStateKey(ClusterOperationContext context, string database, long subscriptionId, string pk, SubscriptionType type, out ByteString key)
-        {
-            switch (type)
-            {
-                case SubscriptionType.Document:
-                    pk = pk.ToLowerInvariant();
-                    break;
-                case SubscriptionType.Revision:
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(type), type, null);
-            }
-
-            using var _ = Slice.From(context.Allocator, database.ToLowerInvariant(), out var dbName);
-            using var __ = Slice.From(context.Allocator, pk, out var pkSlice);
-            var rc = context.Allocator.Allocate(dbName.Size + sizeof(byte) + sizeof(long) + sizeof(byte) + sizeof(byte) + sizeof(byte) + pkSlice.Size, out key);
-
-            PopulatePrefix(subscriptionId, type, ref key, ref dbName, out int position);
-
-            pkSlice.CopyTo(key.Ptr + position);
-            return rc;
-        }
-        
-        private static unsafe void PopulatePrefix(long subscriptionId, SubscriptionType type, ref ByteString prefix, ref Slice dbName, out int position)
-        {
-            dbName.CopyTo(prefix.Ptr);
-            position = dbName.Size;
-
-            *(prefix.Ptr + position) = SpecialChars.RecordSeparator;
-            position++;
-
-            *(long*)(prefix.Ptr + position) = subscriptionId;
-            position += sizeof(long);
-
-            *(prefix.Ptr + position) = SpecialChars.RecordSeparator;
-            position++;
-
-            *(prefix.Ptr + position) = (byte)type;
-            position++;
-
-            *(prefix.Ptr + position) = SpecialChars.RecordSeparator;
-            position++;
         }
     }
 }

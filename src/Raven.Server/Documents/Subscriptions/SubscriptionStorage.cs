@@ -103,26 +103,26 @@ namespace Raven.Server.Documents.Subscriptions
             return subscriptionState;
         }
 
-        public async Task<long> RecordBatchRevisions(long subscriptionId, string subscriptionName, List<RevisionRecord> list, string previouslyRecordedChangeVector, string lastRecordedChangeVector)
+        public async Task<long> RecordBatchDocuments(long subscriptionId, string subscriptionName, Dictionary<string, DocumentRecord> docsInBatch, string previouslyRecordedChangeVector, string lastRecordedChangeVector)
         {
+            var list = new List<DocumentRecord>();
+            foreach (var document in docsInBatch)
+            {
+                list.Add(new DocumentRecord
+                {
+                    DocumentId = document.Key,
+                    ChangeVector = document.Value.ChangeVector
+                });
+            }
+
             var command = new RecordBatchSubscriptionDocumentsCommand(_db.Name, subscriptionId, subscriptionName, list, previouslyRecordedChangeVector, lastRecordedChangeVector, _serverStore.NodeTag, _serverStore.LicenseManager.HasHighlyAvailableTasks(), RaftIdGenerator.NewId());
             var (etag, _) = await _serverStore.SendToLeaderAsync(command);
             await _db.RachisLogIndexNotifications.WaitForIndexNotification(etag, _serverStore.Engine.OperationTimeout);
             return etag;
         }
 
-        public async Task<long> RecordBatchDocuments(long subscriptionId, string subscriptionName, List<DocumentRecord> list, string previouslyRecordedChangeVector, string lastRecordedChangeVector)
+        public async Task AcknowledgeBatchProcessed(long subscriptionId, string name, string changeVector, string previousChangeVector, long batchId, HashSet<string> docsToResend)
         {
-            var command = new RecordBatchSubscriptionDocumentsCommand(_db.Name, subscriptionId, subscriptionName, list, previouslyRecordedChangeVector, lastRecordedChangeVector, _serverStore.NodeTag, _serverStore.LicenseManager.HasHighlyAvailableTasks(), RaftIdGenerator.NewId());
-            var (etag, _) = await _serverStore.SendToLeaderAsync(command);
-            await _db.RachisLogIndexNotifications.WaitForIndexNotification(etag, _serverStore.Engine.OperationTimeout);
-            return etag;
-        }
-        
-        public async Task AcknowledgeBatchProcessed(long subscriptionId, string name, string changeVector, string previousChangeVector, long batchId, List<DocumentRecord> docsToResend)
-        {
-            long? batch = ClusterCommandsVersionManager.CurrentClusterMinimalVersion >= 53_000 ? batchId : null;
-
             var command = new AcknowledgeSubscriptionBatchCommand(_db.Name, RaftIdGenerator.NewId())
             {
                 ChangeVector = changeVector,
@@ -132,7 +132,7 @@ namespace Raven.Server.Documents.Subscriptions
                 SubscriptionName = name,
                 LastTimeServerMadeProgressWithDocuments = DateTime.UtcNow,
                 LastKnownSubscriptionChangeVector = previousChangeVector,
-                BatchId = batch,
+                BatchId = batchId,
                 DatabaseName = _db.Name,
                 DocumentsToResend = docsToResend
             };

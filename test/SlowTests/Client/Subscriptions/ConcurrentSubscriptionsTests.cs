@@ -70,6 +70,7 @@ namespace SlowTests.Client.Subscriptions
                         foreach (var item in x.Items)
                         {
                             Con1Docs.Add(item.Id);
+                            Console.WriteLine("connection 1: "+item.Id);
                         }
                     });
                     
@@ -78,6 +79,7 @@ namespace SlowTests.Client.Subscriptions
                         foreach (var item in x.Items)
                         {
                             Con2Docs.Add(item.Id);
+                            Console.WriteLine("connection 2: " + item.Id);
                         }
                     });
 
@@ -119,117 +121,31 @@ namespace SlowTests.Client.Subscriptions
                     var Con1Docs = new List<string>();
                     var Con2Docs = new List<string>();
 
-                    var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-                    var mre = new ManualResetEvent(false);
+                    Subscription2.ForTestingPurposesOnly().CloseThisWorkerBeforeAck = 2;
+                    Subscription2.ForTestingPurposesOnly().mre.Reset();
 
                     var _ = Subscription2.Run(x =>
                     {
                         foreach (var item in x.Items)
                         {
                             Con2Docs.Add(item.Id);
+                            Console.WriteLine("connection 2: " + item.Id);
                         }
-
-                        mre.Set();
-                        tcs.Task.Wait();
                     });
-
-                    mre.WaitOne();
-
+                    
                     var t = subscription.Run(x =>
                     {
                         foreach (var item in x.Items)
                         {
                             Con1Docs.Add(item.Id);
+                            Console.WriteLine("connection 1: " + item.Id);
                         }
                     });
                     
                     Assert.True(await WaitForValueAsync(() => Task.FromResult(Con2Docs.Count == 2), true, 6000, 100), $"connection 2 has {Con2Docs.Count} docs");
-                    Assert.True(await WaitForValueAsync(() => Task.FromResult(Con1Docs.Count == 4), true, 6000, 100), $"connection 1 has {Con1Docs.Count} docs");
-                    tcs.SetException(new InvalidOperationException());
-                    await Subscription2.DisposeAsync(waitForSubscriptionTask: true);
-
+                    Console.WriteLine("assert1");
                     Assert.True(await WaitForValueAsync(() => Task.FromResult(Con1Docs.Count == 6), true, 6000, 100), $"connection 1 has {Con1Docs.Count} docs");
-                }
-            }
-        }
-
-        [Fact]
-        public async Task ResendChangedDocument()
-        {
-            using (var store = GetDocumentStore())
-            {
-                var id = store.Subscriptions.Create<User>();
-                await using (var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(id)
-                {
-                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5),
-                    Strategy = SubscriptionOpeningStrategy.Concurrent,
-                    MaxDocsPerBatch = 2
-                }))
-                await using (var Subscription2 = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(id)
-                {
-                    Strategy = SubscriptionOpeningStrategy.Concurrent,
-                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5),
-                    MaxDocsPerBatch = 2
-                }))
-                {
-                    using (var session = store.OpenSession())
-                    {
-                        session.Store(new User(), "users/1");
-                        session.Store(new User(), "users/2");
-                        session.Store(new User(), "users/3");
-                        session.Store(new User(), "users/4");
-                        session.Store(new User(), "users/5");
-                        session.Store(new User(), "users/6");
-                        session.SaveChanges();
-                    }
-
-                    var Con1Docs = new List<string>();
-                    var Con2Docs = new List<string>();
-
-                    var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-                    var mre = new ManualResetEvent(false);
-
-                    var _ = Subscription2.Run(x =>
-                    {
-                        foreach (var item in x.Items)
-                        {
-                            Con2Docs.Add(item.Id);
-                        }
-
-                        mre.Set();
-                        tcs.Task.Wait();
-                    });
-
-                    mre.WaitOne();
-
-                    using (var session = store.OpenAsyncSession())
-                    {
-                        await session.StoreAsync(new User {Name = "Changed"}, "users/1");
-                        await session.StoreAsync(new User (), "users/7");
-                        await session.SaveChangesAsync();
-                    }
-
-                    var gotIt = false;
-                    var t = subscription.Run(x =>
-                    {
-                        foreach (var item in x.Items)
-                        {
-                            Con1Docs.Add(item.Id);
-                            if (item.Result.Name == "Changed")
-                            {
-                                gotIt = true;
-                            }
-                        }
-                    });
-
-                    Assert.True(await WaitForValueAsync(() => Task.FromResult(Con2Docs.Count == 2), true, 6000, 100), $"connection 2 has {Con2Docs.Count} docs");
-                    Assert.True(await WaitForValueAsync(() => Task.FromResult(Con1Docs.Count == 5), true, 6000, 100), $"connection 1 has {Con1Docs.Count} docs");
-
-                    Assert.Contains("users/7", Con1Docs);
-                    tcs.SetException(new InvalidOperationException());
-
-                    Assert.True(await WaitForValueAsync(() => Task.FromResult(gotIt), true), $"updated document didn't arrived");
-
+                    Console.WriteLine("assert2");
                 }
             }
         }
@@ -349,6 +265,7 @@ namespace SlowTests.Client.Subscriptions
                                 //var nodeA = cluster.Nodes.Single(s => s.ServerStore.NodeTag == "A");
                                 //DisposeServerAndWaitForFinishOfDisposal(nodeA.ServerStore.Server);
                                 isDown = true;
+                                Console.WriteLine("A went down (con1)");
                                 mre.Set();
                             }
 
@@ -368,6 +285,7 @@ namespace SlowTests.Client.Subscriptions
                             {
                                 //var nodeA = cluster.Nodes.Single(s => s.ServerStore.NodeTag == "A");
                                 //DisposeServerAndWaitForFinishOfDisposal(nodeA.ServerStore.Server);
+                                Console.WriteLine("A went down (con2)");
                                 isDown = true;
                                 mre.Set();
                             }
@@ -392,6 +310,7 @@ namespace SlowTests.Client.Subscriptions
                         //if (first || isDown)
                         {
                             Con1Docs.Add(item.Id);
+                            Console.WriteLine("connection 1: " + item.Id);
                         }
                     }
                 });
@@ -409,12 +328,15 @@ namespace SlowTests.Client.Subscriptions
                         //if (first || isDown)
                         {
                             Con2Docs.Add(item.Id);
+                            Console.WriteLine("connection 2: " + item.Id);
                         }
                     }
                 });
 
                 await AssertWaitForTrueAsync(() => Task.FromResult(Con1Docs.Count + Con2Docs.Count == 6), 6000, 100);
                 //await AssertWaitForTrueAsync(() => Task.FromResult(ackCounter >= 3), 6000, 100);
+
+                Console.WriteLine("DONE");
             }
         }
 

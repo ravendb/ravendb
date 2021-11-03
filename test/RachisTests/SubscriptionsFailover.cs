@@ -86,10 +86,8 @@ namespace RachisTests
                 reachedMaxDocCountInBatchMre.Reset();
 
                 var sp = Stopwatch.StartNew();
-
-                WaitForUserToContinueTheTest(store);
-
                 var fallenNode = await KillServerWhereSubscriptionWorks(defaultDatabase, subscription.SubscriptionName);
+                Console.WriteLine($"\nNode {fallenNode} is down\n");
 
                 await GenerateDocuments(store);
 
@@ -103,6 +101,7 @@ namespace RachisTests
                 reachedMaxDocCountInBatchMre.Reset();
 
                 fallenNode = await KillServerWhereSubscriptionWorks(defaultDatabase, subscription.SubscriptionName);
+                Console.WriteLine($"\nNode {fallenNode} is down\n");
 
                 await GenerateDocuments(store);
 

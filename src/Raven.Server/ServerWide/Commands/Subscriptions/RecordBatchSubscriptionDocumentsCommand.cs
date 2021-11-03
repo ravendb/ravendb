@@ -1,32 +1,40 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using Newtonsoft.Json.Converters;
 using Raven.Client;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
-using Raven.Server.Documents.Subscriptions;
+using Raven.Server.Documents;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Server;
+using Sparrow.Server.Utils;
 using Voron;
 using Voron.Data.Tables;
 
 namespace Raven.Server.ServerWide.Commands.Subscriptions
 {
+    //TODO: versioning for commands
     public class RecordBatchSubscriptionDocumentsCommand : UpdateValueForDatabaseCommand
     {
         public long SubscriptionId;
         public string SubscriptionName;
         public string CurrentChangeVector;
         public string PreviouslyRecordedChangeVector;
-        public string NodeTag;
-        public bool HasHighlyAvailableTasks;
         public List<DocumentRecord> Documents;
         public List<RevisionRecord> Revisions;
+        public string NodeTag;
+        public bool HasHighlyAvailableTasks;
+        
 
         public RecordBatchSubscriptionDocumentsCommand()
         {
@@ -115,6 +123,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                     subscriptionState.ChangeVectorForNextBatchStartingPoint =
                         ChangeVectorUtils.MergeVectors(CurrentChangeVector, subscriptionState.ChangeVectorForNextBatchStartingPoint);
                     subscriptionState.NodeTag = NodeTag;
+                    Console.WriteLine($"\nUpdating subState from cv: {CurrentChangeVector} \n    to {subscriptionState.ChangeVectorForNextBatchStartingPoint}\n");
                     using (var obj = context.ReadObject(subscriptionState.ToJson(), "subscription"))
                     {
                         ClusterStateMachine.UpdateValue(index, items, valueNameLowered, valueName, obj);
@@ -122,9 +131,10 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                 }
             }
 
+            Console.WriteLine("Recording these docs:");
             foreach (var documentRecord in Documents)
             {
-                using (SubscriptionConnectionsState.GetDatabaseAndSubscriptionAndDocumentKey(context, DatabaseName, SubscriptionId, documentRecord.DocumentId, out var key))
+                using (ClusterStateMachine.GetDatabaseAndSubscriptionAndDocumentKey(context, DatabaseName, SubscriptionId, documentRecord.DocumentId, out var key))
                 using (subscriptionStateTable.Allocate(out var tvb))
                 {
                     using var _ = Slice.External(context.Allocator, key, out var keySlice);
@@ -133,13 +143,14 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                     tvb.Add(keySlice);
                     tvb.Add(changeVectorSlice);
                     tvb.Add(Bits.SwapBytes(index)); // batch id
+                    tvb.Add((byte)ItemType.Document);
 
                     subscriptionStateTable.Set(tvb);
                 }
             }
             foreach (var revisionRecord in Revisions)
             {
-                using (SubscriptionConnectionsState.GetDatabaseAndSubscriptionAndRevisionKey(context, DatabaseName, SubscriptionId, revisionRecord.Current, out var key))
+                using (ClusterStateMachine.GetDatabaseAndSubscriptionAndDocumentKey(context, DatabaseName, SubscriptionId, revisionRecord.Current, out var key))
                 using (subscriptionStateTable.Allocate(out var tvb))
                 {
                     using var _ = Slice.External(context.Allocator, key, out var keySlice);
@@ -148,10 +159,13 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                     tvb.Add(keySlice);
                     tvb.Add(changeVectorSlice); //prev change vector
                     tvb.Add(Bits.SwapBytes(index)); // batch id
+                    tvb.Add((byte)ItemType.Revision);
 
                     subscriptionStateTable.Set(tvb);
                 }
             }
+
+            Console.WriteLine("Finished recording docs.");
         }
         
         public override string GetItemId()
@@ -207,7 +221,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         }
     }
 
-    public enum SubscriptionType : byte
+    public enum ItemType : byte
     {
         None = 0,
         Document = 1,
