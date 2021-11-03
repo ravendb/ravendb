@@ -19,7 +19,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Sockets;
-//using System.Reflection.Metadata.Ecma335;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
@@ -405,7 +404,7 @@ namespace Raven.Client.Documents.Subscriptions
 
                 case SubscriptionConnectionServerMessage.ConnectionStatus.InUse:
                     throw new SubscriptionInUseException(
-                            $"Subscription With Id '{_options.SubscriptionName}' cannot be opened, because it's in use and the connection strategy is {_options.Strategy}");
+                        $"Subscription With Id '{_options.SubscriptionName}' cannot be opened, because it's in use and the connection strategy is {_options.Strategy}");
                 case SubscriptionConnectionServerMessage.ConnectionStatus.Closed:
                     bool canReconnect = false;
                     connectionStatus.Data?.TryGet(nameof(SubscriptionClosedException.CanReconnect), out canReconnect);
@@ -541,15 +540,6 @@ namespace Raven.Client.Documents.Subscriptions
                             {
                                 if (tcpStream != null) //possibly prevent ObjectDisposedException
                                 {
-                                    if (_forTestingPurposes?.CloseThisWorkerBeforeAck == 2)
-                                    {
-                                        //_forTestingPurposes.mre.Wait();
-                                        Console.WriteLine($"closed.");
-                                        throw new RavenException("Simulated Exception to close subscription");
-                                    }
-
-                                    Console.WriteLine($"batch with docs {String.Join(",", batch.Items.Select(i => i.Id))} is closing..");
-
                                     await SendAckAsync(lastReceivedChangeVector, tcpStream, context, _processingCts.Token).ConfigureAwait(false);
                                 }
                             }
@@ -721,7 +711,6 @@ namespace Raven.Client.Documents.Subscriptions
                 }
                 catch (Exception ex)
                 {
-
                     while (_recentExceptions.Count >= 10)
                         _recentExceptions.TryDequeue(out _);
 
@@ -916,8 +905,6 @@ namespace Raven.Client.Documents.Subscriptions
         internal class TestingStuff
         {
             internal bool SimulateUnexpectedException;
-            internal int CloseThisWorkerBeforeAck;
-            internal ManualResetEventSlim mre = new ();
         }
     }
 }

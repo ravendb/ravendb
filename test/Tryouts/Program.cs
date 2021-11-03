@@ -3,8 +3,6 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using FastTests.Blittable;
 using FastTests.Client;
-using RachisTests;
-using SlowTests.Client.Subscriptions;
 using SlowTests.Issues;
 using SlowTests.MailingList;
 using SlowTests.Rolling;
@@ -30,11 +28,9 @@ namespace Tryouts
                 try
                 {
                     using (var testOutputHelper = new ConsoleTestOutputHelper())
-                    //using (var test = new RollingIndexesClusterTests(testOutputHelper))
-                    using (var test = new SubscriptionsFailover(testOutputHelper))
+                    using (var test = new RollingIndexesClusterTests(testOutputHelper))
                     {
-                        //await test.RemoveNodeFromDatabaseGroupWhileRollingDeployment();
-                        await test.DistributedRevisionsSubscription(5);
+                         await test.RemoveNodeFromDatabaseGroupWhileRollingDeployment();
                     }
                 }
                 catch (Exception e)

@@ -1,12 +1,9 @@
 ﻿using System;
-using System.Collections;
-using System.Collections.Generic;
 using Raven.Client;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.ServerWide;
-using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -21,9 +18,6 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         public string NodeTag;
         public bool HasHighlyAvailableTasks;
         public DateTime LastTimeServerMadeProgressWithDocuments;
-        public long BatchId;
-        public HashSet<string> DocumentsToResend;
-        public HashSet<string> RevisionsToResend;
 
         // for serialization
         private AcknowledgeSubscriptionBatchCommand() { }
@@ -46,7 +40,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                 throw new SubscriptionDoesNotExistException($"Subscription with name '{subscriptionName}' does not exist");
 
             var subscription = JsonDeserializationCluster.SubscriptionState(existingValue);
-            Console.WriteLine($"\nAcknowledging cv {ChangeVector}\n");
+
             var topology = record.Topology;
             var lastResponsibleNode = GetLastResponsibleNode(HasHighlyAvailableTasks, topology, NodeTag);
             var appropriateNode = topology.WhoseTaskIsIt(RachisState.Follower, subscription, lastResponsibleNode);
@@ -65,10 +59,14 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             {
                 return context.ReadObject(existingValue, SubscriptionName);
             }
-            
+
+            if (LastKnownSubscriptionChangeVector != subscription.ChangeVectorForNextBatchStartingPoint)
+                throw new SubscriptionChangeVectorUpdateConcurrencyException($"Can't acknowledge subscription with name '{subscriptionName}' due to inconsistency in change vector progress. Probably there was an admin intervention that changed the change vector value. Stored value: {subscription.ChangeVectorForNextBatchStartingPoint}, received value: {LastKnownSubscriptionChangeVector}");
+
+            subscription.ChangeVectorForNextBatchStartingPoint = ChangeVector;
             subscription.NodeTag = NodeTag;
             subscription.LastBatchAckTime = LastTimeServerMadeProgressWithDocuments;
-            
+
             return context.ReadObject(subscription.ToJson(), subscriptionName);
         }
 
@@ -98,15 +96,6 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             json[nameof(HasHighlyAvailableTasks)] = HasHighlyAvailableTasks;
             json[nameof(LastTimeServerMadeProgressWithDocuments)] = LastTimeServerMadeProgressWithDocuments;
             json[nameof(LastKnownSubscriptionChangeVector)] = LastKnownSubscriptionChangeVector;
-            json[nameof(BatchId)] = BatchId;
-            if (DocumentsToResend != null)
-                json[nameof(DocumentsToResend)] = new DynamicJsonArray(DocumentsToResend);
-            else
-                json[nameof(DocumentsToResend)] = new DynamicJsonArray();
-            if (RevisionsToResend != null)
-                json[nameof(RevisionsToResend)] = new DynamicJsonArray(RevisionsToResend);
-            else
-                json[nameof(RevisionsToResend)] = new DynamicJsonArray();
         }
 
         public override string AdditionalDebugInformation(Exception exception)

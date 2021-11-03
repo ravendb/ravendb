@@ -51,7 +51,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             {
                 if (items.ReadByKey(valueNameLowered, out var tvr) == false)
                 {
-                    throw new RachisApplyException($"Cannot find subscription {SubscriptionName} @ {DatabaseName}");
+                    throw new RachisApplyException($"Cannot find subscription {index}");
                 }
 
                 var ptr = tvr.Read(2, out int size);

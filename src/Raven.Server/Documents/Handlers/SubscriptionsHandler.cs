@@ -54,9 +54,7 @@ namespace Raven.Server.Documents.Handlers
                 };
 
                 var fetcher = new SubscriptionDocumentsFetcher(Database, int.MaxValue, -0x42,
-                    new IPEndPoint(HttpContext.Connection.RemoteIpAddress, HttpContext.Connection.RemotePort), sub.Collection, sub.Revisions, state, patch, null);
-
-                //TODO stav: fix this endpoint. fetcher's last argument is null
+                    new IPEndPoint(HttpContext.Connection.RemoteIpAddress, HttpContext.Connection.RemotePort), sub.Collection, sub.Revisions, state, patch);
 
                 var includeCmd = new IncludeDocumentsCommand(Database.DocumentsStorage, context, sub.Includes, isProjection: patch != null);
 
@@ -90,10 +88,8 @@ namespace Raven.Server.Documents.Handlers
                 var sp = Stopwatch.StartNew();
                 var timeLimit = TimeSpan.FromSeconds(GetIntValueQueryString("timeLimit", false) ?? 15);
                 var startEtag = cv.Etag;
-                
+
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                using (Database.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext clusterOperationContext))
-                using (clusterOperationContext.OpenReadTransaction())
                 using (context.OpenReadTransaction())
                 {
                     writer.WriteStartObject();
@@ -104,7 +100,7 @@ namespace Raven.Server.Documents.Handlers
                     {
                         var first = true;
                         var lastEtag = startEtag;
-                        foreach (var itemDetails in fetcher.GetDataToSend(clusterOperationContext, context, includeCmd, startEtag))
+                        foreach (var itemDetails in fetcher.GetDataToSend(context, includeCmd, startEtag))
                         {
                             if (itemDetails.Doc.Data != null)
                             {
@@ -232,18 +228,16 @@ namespace Raven.Server.Documents.Handlers
                     return;
                 }
 
-                var subscriptionConnections = Database.SubscriptionStorage.GetSubscriptionConnections(context, subscriptionName);
+                var state = Database.SubscriptionStorage.GetSubscriptionConnection(context, subscriptionName);
 
-                var details = subscriptionConnections.GetSubscriptionConnectionsDetails();
-                if (subscriptionConnections.IsConcurrent == false)
+                var subscriptionConnectionDetails = new SubscriptionConnectionDetails
                 {
-                    context.Write(writer, details.Details.First().ToJson());
-                    return;
-                }
+                    ClientUri = state?.Connection?.ClientUri,
+                    Strategy = state?.Connection?.Strategy
+                };
 
-                //TODO: return all connections' details
-
-                context.Write(writer, details.ToJson());
+                context.Write(writer, subscriptionConnectionDetails.ToJson());
+                return;
             }
         }
 
@@ -397,7 +391,7 @@ namespace Raven.Server.Documents.Handlers
 
                 if (subscription != null)
                 {
-                    if (Database.SubscriptionStorage.DropSubscriptionConnections(subscription.SubscriptionId,
+                    if (Database.SubscriptionStorage.DropSubscriptionConnection(subscription.SubscriptionId,
                             new SubscriptionClosedException("Dropped by API request")) == false)
                     {
                         HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;

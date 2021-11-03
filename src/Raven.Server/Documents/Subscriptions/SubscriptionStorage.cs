@@ -32,8 +32,7 @@ namespace Raven.Server.Documents.Subscriptions
     {
         private readonly DocumentDatabase _db;
         private readonly ServerStore _serverStore;
-        
-        private readonly ConcurrentDictionary<long, SubscriptionConnectionsState> _subscriptions = new ();
+        private readonly ConcurrentDictionary<long, SubscriptionConnectionState> _subscriptionConnectionStates = new ConcurrentDictionary<long, SubscriptionConnectionState>();
         private readonly Logger _logger;
         private readonly SemaphoreSlim _concurrentConnectionsSemiSemaphore;
 
@@ -55,7 +54,7 @@ namespace Raven.Server.Documents.Subscriptions
         public void Dispose()
         {
             var aggregator = new ExceptionAggregator(_logger, "Error disposing SubscriptionStorage");
-            foreach (var state in _subscriptions.Values)
+            foreach (var state in _subscriptionConnectionStates.Values)
             {
                 aggregator.Execute(state.Dispose);
                 aggregator.Execute(_concurrentConnectionsSemiSemaphore.Dispose);
@@ -96,50 +95,30 @@ namespace Raven.Server.Documents.Subscriptions
             return etag;
         }
 
-        public SubscriptionConnectionsState OpenSubscription(SubscriptionConnection connection)
+        public SubscriptionConnectionState OpenSubscription(SubscriptionConnection connection)
         {
-            var subscriptionState = _subscriptions.GetOrAdd(connection.SubscriptionId,
-                subscriptionId => new SubscriptionConnectionsState(connection.Options.SubscriptionName, subscriptionId ,this, connection));
+            var subscriptionState = _subscriptionConnectionStates.GetOrAdd(connection.SubscriptionId,
+                subscriptionId => new SubscriptionConnectionState(subscriptionId, connection.Options.SubscriptionName, this));
             return subscriptionState;
         }
 
-        public async Task<long> RecordBatchDocuments(long subscriptionId, string subscriptionName, Dictionary<string, DocumentRecord> docsInBatch, string previouslyRecordedChangeVector, string lastRecordedChangeVector)
-        {
-            var list = new List<DocumentRecord>();
-            foreach (var document in docsInBatch)
-            {
-                list.Add(new DocumentRecord
-                {
-                    DocumentId = document.Key,
-                    ChangeVector = document.Value.ChangeVector
-                });
-            }
-
-            var command = new RecordBatchSubscriptionDocumentsCommand(_db.Name, subscriptionId, subscriptionName, list, previouslyRecordedChangeVector, lastRecordedChangeVector, _serverStore.NodeTag, _serverStore.LicenseManager.HasHighlyAvailableTasks(), RaftIdGenerator.NewId());
-            var (etag, _) = await _serverStore.SendToLeaderAsync(command);
-            await _db.RachisLogIndexNotifications.WaitForIndexNotification(etag, _serverStore.Engine.OperationTimeout);
-            return etag;
-        }
-
-        public async Task AcknowledgeBatchProcessed(long subscriptionId, string name, string changeVector, string previousChangeVector, long batchId, HashSet<string> docsToResend)
+        public async Task AcknowledgeBatchProcessed(long id, string name, string changeVector, string previousChangeVector)
         {
             var command = new AcknowledgeSubscriptionBatchCommand(_db.Name, RaftIdGenerator.NewId())
             {
                 ChangeVector = changeVector,
                 NodeTag = _serverStore.NodeTag,
                 HasHighlyAvailableTasks = _serverStore.LicenseManager.HasHighlyAvailableTasks(),
-                SubscriptionId = subscriptionId,
+                SubscriptionId = id,
                 SubscriptionName = name,
                 LastTimeServerMadeProgressWithDocuments = DateTime.UtcNow,
-                LastKnownSubscriptionChangeVector = previousChangeVector,
-                BatchId = batchId,
-                DatabaseName = _db.Name,
-                DocumentsToResend = docsToResend
+                LastKnownSubscriptionChangeVector = previousChangeVector
             };
 
             var (etag, _) = await _serverStore.SendToLeaderAsync(command);
             await _db.RachisLogIndexNotifications.WaitForIndexNotification(etag, _serverStore.Engine.OperationTimeout);
         }
+
 
         public async Task UpdateClientConnectionTime(long id, string name, string mentorNode = null)
         {
@@ -289,22 +268,34 @@ namespace Raven.Server.Documents.Subscriptions
             await _db.RachisLogIndexNotifications.WaitForIndexNotification(etag, _serverStore.Engine.OperationTimeout);
         }
 
-        public bool DropSubscriptionConnections(long subscriptionId, SubscriptionException ex)
+        public bool DropSubscriptionConnection(long subscriptionId, SubscriptionException ex)
         {
-            if (_subscriptions.TryRemove(subscriptionId, out SubscriptionConnectionsState subscriptionConnectionsState) == false)
+            if (_subscriptionConnectionStates.TryGetValue(subscriptionId, out SubscriptionConnectionState subscriptionConnectionState) == false)
                 return false;
 
-            foreach (var subscriptionConnection in subscriptionConnectionsState.GetConnections())
+            var subscriptionConnection = subscriptionConnectionState.Connection;
+
+            if (subscriptionConnection != null)
             {
-                subscriptionConnectionsState.CancelSingleConnection(subscriptionConnection, ex); //TODO stav: Could cause problems concurrently?
+                subscriptionConnectionState.RegisterRejectedConnection(subscriptionConnection, ex);
+                subscriptionConnection.ConnectionException = ex;
+                
+                try
+                {
+                    subscriptionConnection.CancellationTokenSource.Cancel();
+                }
+                catch
+                {
+                    // ignored
+                }
             }
 
             if (_logger.IsInfoEnabled)
-                _logger.Info($"Subscription with id '{subscriptionId}' and name '{subscriptionConnectionsState.SubscriptionName}' connections were dropped. Reason: {ex.Message}");
+                _logger.Info($"Subscription with id '{subscriptionId}' and name '{subscriptionConnectionState.SubscriptionName}' connection was dropped. Reason: {ex.Message}");
 
             return true;
         }
-        
+
         public IEnumerable<SubscriptionGeneralDataAndStats> GetAllSubscriptions(TransactionOperationContext serverStoreContext, bool history, int start, int take)
         {
             foreach (var keyValue in ClusterStateMachine.ReadValuesStartingWith(serverStoreContext, SubscriptionState.SubscriptionPrefix(_db.Name)))
@@ -344,11 +335,14 @@ namespace Raven.Server.Documents.Subscriptions
 
         public IEnumerable<SubscriptionGeneralDataAndStats> GetAllRunningSubscriptions(TransactionOperationContext context, bool history, int start, int take)
         {
-            foreach (var kvp in _subscriptions)
+
+            foreach (var kvp in _subscriptionConnectionStates)
             {
-                var subscriptionConnectionsState = kvp.Value;
-                
-                if (subscriptionConnectionsState.IsSubscriptionActive() == false)
+                var subscriptionState = kvp.Value;
+
+                var subscriptionStateConnection = subscriptionState.Connection;
+
+                if (subscriptionStateConnection == null)
                     continue;
 
                 if (start > 0)
@@ -360,8 +354,8 @@ namespace Raven.Server.Documents.Subscriptions
                 if (take-- <= 0)
                     yield break;
 
-                var subscriptionData = GetSubscriptionFromServerStore(context, subscriptionConnectionsState.SubscriptionName);
-                GetRunningSubscriptionInternal(history, subscriptionData, subscriptionConnectionsState);
+                var subscriptionData = GetSubscriptionFromServerStore(context, subscriptionStateConnection.Options.SubscriptionName);
+                GetRunningSubscriptionInternal(history, subscriptionData, subscriptionState);
                 yield return subscriptionData;
             }
         }
@@ -382,6 +376,7 @@ namespace Raven.Server.Documents.Subscriptions
             {
                 throw new ArgumentNullException("Must receive either subscription id or subscription name in order to provide subscription data");
             }
+
 
             GetSubscriptionInternal(subscription, history);
 
@@ -417,32 +412,33 @@ namespace Raven.Server.Documents.Subscriptions
                 throw new ArgumentNullException("Must receive either subscription id or subscription name in order to provide subscription data");
             }
 
-            if (_subscriptions.TryGetValue(subscription.SubscriptionId, out SubscriptionConnectionsState subscriptionConnectionsState) == false)
+            if (_subscriptionConnectionStates.TryGetValue(subscription.SubscriptionId, out SubscriptionConnectionState subscriptionConnectionState) == false)
                 return null;
 
-            if (subscriptionConnectionsState?.IsSubscriptionActive() == false)
+            if (subscriptionConnectionState.Connection == null)
                 return null;
 
-            GetRunningSubscriptionInternal(history, subscription, subscriptionConnectionsState);
+            GetRunningSubscriptionInternal(history, subscription, subscriptionConnectionState);
             return subscription;
         }
 
-        public bool TryGetRunningSubscriptionConnection(long subscriptionId, out SubscriptionConnectionsState connections)
+        public bool TryGetRunningSubscriptionConnection(long subscriptionId, out SubscriptionConnection connection)
         {
-            connections = null;
+            connection = null;
 
-            if (_subscriptions.TryGetValue(subscriptionId, out var concurrentSubscription) == false)
-                return false;
-            
-            if (concurrentSubscription == null)
+            if (_subscriptionConnectionStates.TryGetValue(subscriptionId, out var state) == false)
                 return false;
 
-            connections = concurrentSubscription;
+            var stateConnection = state.Connection;
+            if (stateConnection == null)
+                return false;
+
+            connection = stateConnection;
 
             return true;
         }
 
-        public SubscriptionConnectionsState GetSubscriptionConnections(TransactionOperationContext context, string subscriptionName)
+        public SubscriptionConnectionState GetSubscriptionConnection(TransactionOperationContext context, string subscriptionName)
         {
             var subscriptionBlittable = _serverStore.Cluster.Read(context, SubscriptionState.GenerateSubscriptionItemKeyName(_db.Name, subscriptionName));
             if (subscriptionBlittable == null)
@@ -450,16 +446,15 @@ namespace Raven.Server.Documents.Subscriptions
 
             var subscriptionState = JsonDeserializationClient.SubscriptionState(subscriptionBlittable);
 
-            if (_subscriptions.TryGetValue(subscriptionState.SubscriptionId, out SubscriptionConnectionsState concurrentSubscription) == false)
+            if (_subscriptionConnectionStates.TryGetValue(subscriptionState.SubscriptionId, out SubscriptionConnectionState subscriptionConnection) == false)
                 return null;
 
-            return concurrentSubscription;
+            return subscriptionConnection;
         }
 
         public class SubscriptionGeneralDataAndStats : SubscriptionState
         {
-            public List<SubscriptionConnection> Connections;
-            public SubscriptionConnection Connection => Connections?.FirstOrDefault();
+            public SubscriptionConnection Connection;
             public IEnumerable<SubscriptionConnection> RecentConnections;
             public IEnumerable<SubscriptionConnection> RecentRejectedConnections;
 
@@ -481,7 +476,7 @@ namespace Raven.Server.Documents.Subscriptions
 
         public long GetRunningCount()
         {
-            return _subscriptions.Count(x => x.Value.IsSubscriptionActive());
+            return _subscriptionConnectionStates.Count(x => x.Value.Connection != null);
         }
 
         public long GetAllSubscriptionsCount()
@@ -494,27 +489,27 @@ namespace Raven.Server.Documents.Subscriptions
             }
         }
 
-        private static void SetSubscriptionHistory(SubscriptionConnectionsState subscriptionConnectionsState, SubscriptionGeneralDataAndStats subscriptionData)
+        private static void SetSubscriptionHistory(SubscriptionConnectionState subscriptionConnectionState, SubscriptionGeneralDataAndStats subscriptionData)
         {
-            subscriptionData.RecentConnections = subscriptionConnectionsState.RecentConnections;
-            subscriptionData.RecentRejectedConnections = subscriptionConnectionsState.RecentRejectedConnections;
+            subscriptionData.RecentConnections = subscriptionConnectionState.RecentConnections;
+            subscriptionData.RecentRejectedConnections = subscriptionConnectionState.RecentRejectedConnections;
         }
 
-        private static void GetRunningSubscriptionInternal(bool history, SubscriptionGeneralDataAndStats subscriptionData, SubscriptionConnectionsState subscriptionConnectionsState)
+        private static void GetRunningSubscriptionInternal(bool history, SubscriptionGeneralDataAndStats subscriptionData, SubscriptionConnectionState subscriptionConnectionState)
         {
-            subscriptionData.Connections = subscriptionConnectionsState.GetConnections();
+            subscriptionData.Connection = subscriptionConnectionState.Connection;
             if (history) // Only valid for this node
-                SetSubscriptionHistory(subscriptionConnectionsState, subscriptionData);
+                SetSubscriptionHistory(subscriptionConnectionState, subscriptionData);
         }
 
         private void GetSubscriptionInternal(SubscriptionGeneralDataAndStats subscriptionData, bool history)
         {
-            if (_subscriptions.TryGetValue(subscriptionData.SubscriptionId, out SubscriptionConnectionsState concurrentSubscription))
+            if (_subscriptionConnectionStates.TryGetValue(subscriptionData.SubscriptionId, out SubscriptionConnectionState subscriptionConnectionState))
             {
-                subscriptionData.Connections = concurrentSubscription.GetConnections();
+                subscriptionData.Connection = subscriptionConnectionState.Connection;
 
                 if (history)//Only valid if this is my subscription
-                    SetSubscriptionHistory(concurrentSubscription, subscriptionData);
+                    SetSubscriptionHistory(subscriptionConnectionState, subscriptionData);
             }
         }
 
@@ -523,43 +518,49 @@ namespace Raven.Server.Documents.Subscriptions
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                //checks which subscriptions should be dropped because of the database record change
-                foreach (var subscriptionStateKvp in _subscriptions)
+                foreach (var subscriptionStateKvp in _subscriptionConnectionStates)
                 {
-                    var subscriptionName = subscriptionStateKvp.Value.SubscriptionName;
+                    var subscriptionName = subscriptionStateKvp.Value.Connection?.Options?.SubscriptionName;
                     if (subscriptionName == null)
                         continue;
-                    
+
                     var subscriptionBlittable = _serverStore.Cluster.Read(context, SubscriptionState.GenerateSubscriptionItemKeyName(databaseRecord.DatabaseName, subscriptionName));
                     if (subscriptionBlittable == null)
                     {
-                        DropSubscriptionConnections(subscriptionStateKvp.Key, new SubscriptionDoesNotExistException($"The subscription {subscriptionName} had been deleted"));
+                        DropSubscriptionConnection(subscriptionStateKvp.Key, new SubscriptionDoesNotExistException($"The subscription {subscriptionName} had been deleted"));
                         continue;
                     }
 
                     var subscriptionState = JsonDeserializationClient.SubscriptionState(subscriptionBlittable);
                     if (subscriptionState.Disabled)
                     {
-                        DropSubscriptionConnections(subscriptionStateKvp.Key, new SubscriptionClosedException($"The subscription {subscriptionName} is disabled and cannot be used until enabled"));
+                        DropSubscriptionConnection(subscriptionStateKvp.Key, new SubscriptionClosedException($"The subscription {subscriptionName} is disabled and cannot be used until enabled"));
                         continue;
                     }
 
-                    //make sure we only drop old connection and not new ones just arriving with the updated query
-                    SubscriptionConnectionsState subscriptionConnectionsState = subscriptionStateKvp.Value;
-                    if (subscriptionConnectionsState != null && subscriptionState.Query != subscriptionConnectionsState.Query)
+                    SubscriptionConnection connection = subscriptionStateKvp.Value.Connection;
+                    if (connection != null && subscriptionState.Query != connection.SubscriptionState.Query)
                     {
-                        DropSubscriptionConnections(subscriptionStateKvp.Key, new SubscriptionClosedException($"The subscription {subscriptionName} query has been modified, connection must be restarted", canReconnect: true));
+                        DropSubscriptionConnection(subscriptionStateKvp.Key, new SubscriptionClosedException($"The subscription {subscriptionName} query has been modified, connection must be restarted", canReconnect: true));
                         continue;
                     }
-                    
+
                     var whoseTaskIsIt = _db.WhoseTaskIsIt(databaseRecord.Topology, subscriptionState, subscriptionState);
                     if (whoseTaskIsIt != _serverStore.NodeTag)
                     {
-                        DropSubscriptionConnections(subscriptionStateKvp.Key,
-                            new SubscriptionDoesNotBelongToNodeException("Subscription operation was stopped, because it's now under a different server's responsibility"));
+                        DropSubscriptionConnection(subscriptionStateKvp.Key,
+                            new SubscriptionDoesNotBelongToNodeException("Subscription operation was stopped, because it's now under different server's responsibility"));
                     }
                 }
             }
+        }
+
+        public Task GetSubscriptionConnectionInUseAwaiter(long subscriptionId)
+        {
+            if (_subscriptionConnectionStates.TryGetValue(subscriptionId, out SubscriptionConnectionState state) == false)
+                return Task.CompletedTask;
+
+            return state.ConnectionInUse.WaitAsync();
         }
 
         public bool TryEnterSemaphore()
@@ -577,28 +578,28 @@ namespace Raven.Server.Documents.Subscriptions
             var maxTaskLifeTime = _db.Is32Bits ? TimeSpan.FromHours(12) : TimeSpan.FromDays(2);
             var oldestPossibleIdleSubscription = SystemTime.UtcNow - maxTaskLifeTime;
 
-            foreach (var kvp in _subscriptions)
+            foreach (var state in _subscriptionConnectionStates)
             {
-                if (kvp.Value.IsSubscriptionActive())
+                if (state.Value.Connection != null)
                     continue;
 
-                var recentConnection = kvp.Value.MostRecentEndedConnection();
+                var recentConnection = state.Value.MostRecentEndedConnection();
 
                 if (recentConnection != null && recentConnection.Stats.LastMessageSentAt < oldestPossibleIdleSubscription)
                 {
-                    _subscriptions.Remove(kvp.Key, out _);
+                    _subscriptionConnectionStates.Remove(state.Key, out _);
                 }
             }
         }
 
         public void LowMemory(LowMemorySeverity lowMemorySeverity)
         {
-            foreach (var state in _subscriptions)
+            foreach (var state in _subscriptionConnectionStates)
             {
-                if (state.Value.GetConnections().Count != 0)
+                if (state.Value.Connection != null)
                     continue;
 
-                _subscriptions.Remove(state.Key, out _);
+                _subscriptionConnectionStates.Remove(state.Key, out _);
             }
         }
 

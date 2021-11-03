@@ -21,7 +21,6 @@ using Raven.Server;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Sparrow.Server;
@@ -52,7 +51,6 @@ namespace RachisTests
         [InlineData(20)]
         public async Task ContinueFromThePointIStopped(int batchSize)
         {
-            DebuggerAttachedTimeout.DisableLongTimespan = true;
             const int nodesAmount = 5;
             var (_, leader) = await CreateRaftCluster(nodesAmount);
 
@@ -86,8 +84,7 @@ namespace RachisTests
                 reachedMaxDocCountInBatchMre.Reset();
 
                 var sp = Stopwatch.StartNew();
-                var fallenNode = await KillServerWhereSubscriptionWorks(defaultDatabase, subscription.SubscriptionName);
-                Console.WriteLine($"\nNode {fallenNode} is down\n");
+                await KillServerWhereSubscriptionWorks(defaultDatabase, subscription.SubscriptionName);
 
                 await GenerateDocuments(store);
 
@@ -100,73 +97,7 @@ namespace RachisTests
                 usersCountInAck.Clear();
                 reachedMaxDocCountInBatchMre.Reset();
 
-                fallenNode = await KillServerWhereSubscriptionWorks(defaultDatabase, subscription.SubscriptionName);
-                Console.WriteLine($"\nNode {fallenNode} is down\n");
-
-                await GenerateDocuments(store);
-
-                Assert.True(await Task.WhenAny(subsTask, reachedMaxDocCountInBatchMre.WaitAsync(_reasonableWaitTime)).WaitAsync(_reasonableWaitTime), $"3. Reached in batch {usersCountInBatch.Count}/10");
-                Assert.True(await Task.WhenAny(subsTask, reachedMaxDocCountInAckMre.WaitAsync(_reasonableWaitTime)).WaitAsync(_reasonableWaitTime), $"3. Reached in ack {usersCountInAck.Count}/10");
-                Assert.False(subsTask.IsFaulted, subsTask?.Exception?.ToString());
-            }
-        }
-        [Theory]
-        [InlineData(1, 20)]
-        [InlineData(5, 10)]
-        [InlineData(10, 5)]
-        [InlineData(20, 2)]
-        public async Task ContinueFromThePointIStoppedConcurrentSubscription(int batchSize, int numberOfConnections)
-        {
-            DebuggerAttachedTimeout.DisableLongTimespan = true;
-            const int nodesAmount = 5;
-            var (_, leader) = await CreateRaftCluster(nodesAmount);
-
-            var defaultDatabase = "ContinueFromThePointIStopped";
-
-            await CreateDatabaseInCluster(defaultDatabase, nodesAmount, leader.WebUrl).ConfigureAwait(false);
-
-            using (var store = new DocumentStore
-            {
-                Urls = new[] { leader.WebUrl },
-                Database = defaultDatabase
-            }.Initialize())
-            {
-                var usersCountInAck = new List<User>();
-                var reachedMaxDocCountInAckMre = new AsyncManualResetEvent();
-                var usersCountInBatch = new List<User>();
-                var reachedMaxDocCountInBatchMre = new AsyncManualResetEvent();
-
-                await GenerateDocuments(store);
-
-                (var subscription, var subsTask) = await CreateAndInitiateSubscription(store, defaultDatabase, usersCountInAck, reachedMaxDocCountInAckMre, usersCountInBatch, reachedMaxDocCountInBatchMre, batchSize, numberOfConnections);
-
-                Assert.True(await Task.WhenAny(subsTask, reachedMaxDocCountInBatchMre.WaitAsync(_reasonableWaitTime)).WaitAsync(_reasonableWaitTime), $"1. Reached in batch {usersCountInBatch.Count}/10");
-                Assert.True(await Task.WhenAny(subsTask, reachedMaxDocCountInAckMre.WaitAsync(_reasonableWaitTime)).WaitAsync(_reasonableWaitTime), $"1. Reached in ack {usersCountInAck.Count}/10");
-
-                Assert.False(subsTask.IsFaulted, subsTask?.Exception?.ToString());
-
-                usersCountInBatch.Clear();
-                reachedMaxDocCountInAckMre.Reset();
-                usersCountInAck.Clear();
-                reachedMaxDocCountInBatchMre.Reset();
-
-                var sp = Stopwatch.StartNew();
-                var fallenNode = await KillServerWhereSubscriptionWorks(defaultDatabase, subscription.SubscriptionName);
-                Console.WriteLine($"\nNode {fallenNode} is down\n");
-
-                await GenerateDocuments(store);
-
-                Assert.True(await Task.WhenAny(subsTask, reachedMaxDocCountInBatchMre.WaitAsync(_reasonableWaitTime)).WaitAsync(_reasonableWaitTime), $"2. Reached in batch {usersCountInBatch.Count}/10");
-                Assert.True(await Task.WhenAny(subsTask, reachedMaxDocCountInAckMre.WaitAsync(_reasonableWaitTime)).WaitAsync(_reasonableWaitTime), $"2. Reached in ack {usersCountInAck.Count}/10");
-                Assert.False(subsTask.IsFaulted, subsTask?.Exception?.ToString());
-
-                usersCountInBatch.Clear();
-                reachedMaxDocCountInAckMre.Reset();
-                usersCountInAck.Clear();
-                reachedMaxDocCountInBatchMre.Reset();
-
-                fallenNode = await KillServerWhereSubscriptionWorks(defaultDatabase, subscription.SubscriptionName);
-                Console.WriteLine($"\nNode {fallenNode} is down\n");
+                await KillServerWhereSubscriptionWorks(defaultDatabase, subscription.SubscriptionName);
 
                 await GenerateDocuments(store);
 
@@ -569,7 +500,7 @@ namespace RachisTests
         }
 
         private async Task<(SubscriptionWorker<User> worker, Task subsTask)> CreateAndInitiateSubscription(IDocumentStore store, string defaultDatabase, List<User> usersCountInAck, 
-            AsyncManualResetEvent reachedMaxDocCountInAckMre, List<User> usersCountInBatch, AsyncManualResetEvent reachedMaxDocCountInBatchMre, int batchSize, int numberOfConnections = 1, string mentor = null)
+            AsyncManualResetEvent reachedMaxDocCountInAckMre, List<User> usersCountInBatch, AsyncManualResetEvent reachedMaxDocCountInBatchMre, int batchSize, string mentor = null)
         {
             var proggress = new SubscriptionProggress()
             {
@@ -580,59 +511,11 @@ namespace RachisTests
                 MentorNode = mentor
             }).ConfigureAwait(false);
 
-            SubscriptionWorker<User> subscription;
-            List<Task> subTasks = new();
-            do
+            var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(subscriptionName)
             {
-                subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(subscriptionName)
-                {
-                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(500), 
-                    MaxDocsPerBatch = batchSize,
-                    Strategy = numberOfConnections > 1 ? SubscriptionOpeningStrategy.Concurrent : SubscriptionOpeningStrategy.OpenIfFree
-                });
-
-                subscription.AfterAcknowledgment += b =>
-                {
-                    try
-                    {
-                        foreach (var item in b.Items)
-                        {
-                            var x = item.Result;
-                            int curId = 0;
-                            var afterSlash = x.Id.Substring(x.Id.LastIndexOf("/", StringComparison.OrdinalIgnoreCase) + 1);
-                            curId = int.Parse(afterSlash.Substring(0, afterSlash.Length - 2));
-                            Assert.True(curId >= proggress.MaxId);
-                            usersCountInAck.Add(x);
-                            proggress.MaxId = curId;
-                        }
-
-                        Console.WriteLine("\nusersCountInAck: " + usersCountInAck.Count + "\n");
-                        if (usersCountInAck.Count == 10)
-                        {
-                            reachedMaxDocCountInAckMre.Set();
-                        }
-                    }
-                    catch (Exception)
-                    {
-                    }
-
-                    return Task.CompletedTask;
-                };
-                
-                subTasks.Add(subscription.Run(batch =>
-                {
-                    foreach (var item in batch.Items)
-                    {
-                        usersCountInBatch.Add(item.Result);
-                        if (usersCountInBatch.Count == 10)
-                        {
-                            reachedMaxDocCountInBatchMre.Set();
-                        }
-                    }
-                }));
-                numberOfConnections--;
-            } while (numberOfConnections > 0);
-
+                TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(500),
+                MaxDocsPerBatch = batchSize
+            });
             var subscripitonState = await store.Subscriptions.GetSubscriptionStateAsync(subscriptionName, store.Database);
             var getDatabaseTopologyCommand = new GetDatabaseRecordOperation(defaultDatabase);
             var record = await store.Maintenance.Server.SendAsync(getDatabaseTopologyCommand).ConfigureAwait(false);
@@ -646,10 +529,47 @@ namespace RachisTests
             {
                 Assert.Equal(mentor, record.Topology.WhoseTaskIsIt(RachisState.Follower, subscripitonState, null));
             }
-            
+
+            subscription.AfterAcknowledgment += b =>
+            {
+                try
+                {
+                    foreach (var item in b.Items)
+                    {
+                        var x = item.Result;
+                        int curId = 0;
+                        var afterSlash = x.Id.Substring(x.Id.LastIndexOf("/", StringComparison.OrdinalIgnoreCase) + 1);
+                        curId = int.Parse(afterSlash.Substring(0, afterSlash.Length - 2));
+                        Assert.True(curId >= proggress.MaxId);
+                        usersCountInAck.Add(x);
+                        proggress.MaxId = curId;
+                    }
+                    if (usersCountInAck.Count == 10)
+                    {
+                        reachedMaxDocCountInAckMre.Set();
+                    }
+                }
+                catch (Exception)
+                {
+                }
+                return Task.CompletedTask;
+            };
+
+            var task = subscription.Run(batch =>
+            {
+                foreach (var item in batch.Items)
+                {
+                    usersCountInBatch.Add(item.Result);
+                    if (usersCountInBatch.Count == 10)
+                    {
+                        reachedMaxDocCountInBatchMre.Set();
+                    }
+                }
+            });
+
             //await Task.WhenAny(task, Task.Delay(_reasonableWaitTime)).ConfigureAwait(false);
 
-            return (subscription, Task.WhenAll(subTasks));
+            return (subscription, task);
         }
 
         private async Task<string> KillServerWhereSubscriptionWorks(string defaultDatabase, string subscriptionName)

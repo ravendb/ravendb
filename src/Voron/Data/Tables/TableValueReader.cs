@@ -5,8 +5,6 @@
 // -----------------------------------------------------------------------
 
 using System;
-using System.Diagnostics;
-using System.Text;
 using Sparrow.Json;
 
 namespace Voron.Data.Tables
@@ -47,25 +45,6 @@ namespace Voron.Data.Tables
         public int Count { get; }
 
         public byte* Pointer { get; }
-
-        public long ReadLong(int index)
-        {
-            long l = *(long*)Read(index, out var size);
-            Debug.Assert(sizeof(long) == size);
-            return l;
-        }
-
-        public string ReadString(int index)
-        {
-            byte* read = Read(index, out var size);
-            return Encoding.UTF8.GetString(read, size);
-        }
-
-        public string ReadStringWithPrefix(int index, int bytesToSkip)
-        {
-            byte* read = Read(index, out var size);
-            return Encoding.UTF8.GetString(read + bytesToSkip, size - bytesToSkip);
-        }
 
         public byte* Read(int index, out int size)
         {

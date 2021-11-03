@@ -21,7 +21,6 @@ namespace Raven.Client.Documents.Subscriptions
         public string NodeTag { get; set; }
         public DateTime? LastBatchAckTime { get; set; }  // Last time server made some progress with the subscriptions docs  
         public DateTime? LastClientConnectionTime { get; set; } // Last time any client has connected to server (connection dead or alive)
-        
         public bool Disabled { get; set; }
 
         public ulong GetTaskKey()
@@ -51,7 +50,7 @@ namespace Raven.Client.Documents.Subscriptions
 
         public virtual DynamicJsonValue ToJson()
         {
-            var djv = new DynamicJsonValue
+            return new DynamicJsonValue
             {
                 [nameof(Query)] = Query,
                 [nameof(ChangeVectorForNextBatchStartingPoint)] = ChangeVectorForNextBatchStartingPoint,
@@ -63,8 +62,6 @@ namespace Raven.Client.Documents.Subscriptions
                 [nameof(LastClientConnectionTime)] = LastClientConnectionTime,
                 [nameof(Disabled)] = Disabled
             };
-
-            return djv;
         }
 
         public static string GenerateSubscriptionItemKeyName(string databaseName, string subscriptionName)

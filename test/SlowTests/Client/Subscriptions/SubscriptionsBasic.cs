@@ -460,8 +460,8 @@ namespace SlowTests.Client.Subscriptions
                     {
                         var query = WaitForValue(() =>
                         {
-                            var connectionState = db.SubscriptionStorage.GetSubscriptionConnections(ctx, state.SubscriptionName);
-                            return connectionState?.GetConnections().FirstOrDefault()?.SubscriptionState.Query;
+                            var connectionState = db.SubscriptionStorage.GetSubscriptionConnection(ctx, state.SubscriptionName);
+                            return connectionState?.Connection?.SubscriptionState.Query;
                         }, newQuery);
 
                         Assert.Equal(newQuery, query);
@@ -544,9 +544,9 @@ namespace SlowTests.Client.Subscriptions
                 {
                     var query = WaitForValue(() =>
                     {
-                        var connectionState = db.SubscriptionStorage.GetSubscriptionConnections(ctx, state.SubscriptionName);
+                        var connectionState = db.SubscriptionStorage.GetSubscriptionConnection(ctx, state.SubscriptionName);
 
-                        return connectionState?.GetConnections().FirstOrDefault()?.SubscriptionState.Query;
+                        return connectionState?.Connection?.SubscriptionState.Query;
                     }, newQuery);
 
                     Assert.Equal(newQuery, query);
@@ -635,9 +635,9 @@ namespace SlowTests.Client.Subscriptions
                 {
                     var query = WaitForValue(() =>
                     {
-                        var connectionState = db.SubscriptionStorage.GetSubscriptionConnections(ctx, state.SubscriptionName);
+                        var connectionState = db.SubscriptionStorage.GetSubscriptionConnection(ctx, state.SubscriptionName);
 
-                        return connectionState?.GetConnections().FirstOrDefault()?.SubscriptionState.Query;
+                        return connectionState?.Connection?.SubscriptionState.Query;
                     }, newQuery);
 
                     Assert.Equal(newQuery, query);

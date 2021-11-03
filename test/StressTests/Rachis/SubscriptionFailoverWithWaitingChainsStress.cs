@@ -468,7 +468,7 @@ namespace StressTests.Rachis
 
                         if (subscription == null)
                             continue;
-                        db.SubscriptionStorage.DropSubscriptionConnections(subscription.SubscriptionId,
+                        db.SubscriptionStorage.DropSubscriptionConnection(subscription.SubscriptionId,
                             new SubscriptionClosedException("Dropped by Test"));
                     }
                 }

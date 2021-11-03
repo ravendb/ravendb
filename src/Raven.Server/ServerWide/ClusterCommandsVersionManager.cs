@@ -69,7 +69,6 @@ namespace Raven.Server.ServerWide
             [nameof(UpdateExternalReplicationStateCommand)] = Base40CommandsVersion,
             [nameof(UpdateTopologyCommand)] = Base40CommandsVersion,
             [nameof(AcknowledgeSubscriptionBatchCommand)] = Base40CommandsVersion,
-            [nameof(RecordBatchSubscriptionDocumentsCommand)] = Base40CommandsVersion,
             [nameof(DeleteSubscriptionCommand)] = Base40CommandsVersion,
             [nameof(PutSubscriptionCommand)] = Base40CommandsVersion,
             [nameof(ToggleSubscriptionStateCommand)] = Base40CommandsVersion,

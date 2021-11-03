@@ -107,7 +107,6 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                     {
                         ClusterStateMachine.UpdateValue(index, items, valueNameLowered, valueName, receivedSubscriptionState);
                     }
-                    
                     tryToSetName = false;
                 }
             }
