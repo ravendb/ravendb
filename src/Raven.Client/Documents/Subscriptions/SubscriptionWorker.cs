@@ -63,7 +63,7 @@ namespace Raven.Client.Documents.Subscriptions
         /// </summary>
         public event AfterAcknowledgmentAction AfterAcknowledgment;
 
-        internal event Action OnEstablishedSubscriptionConnection;
+        public event Action OnEstablishedSubscriptionConnection;
 
         public event Action<Exception> OnSubscriptionConnectionRetry;
 

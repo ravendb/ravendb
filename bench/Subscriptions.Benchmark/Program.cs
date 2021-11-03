@@ -8,9 +8,14 @@ namespace Subscriptions.Benchmark
 {
     public class Program
     {
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
+            await CompareSingleConcurrent();
+            //TestSingleConnectionSubscription(args);
+        }
 
+        public static async Task TestSingleConnectionSubscription(string[] args)
+        {
             var paramDictionary = new Dictionary<string, string>(StringComparer.CurrentCultureIgnoreCase);
             foreach (var arg in args)
             {
@@ -20,7 +25,6 @@ namespace Subscriptions.Benchmark
 
             if (paramDictionary.Count == 6)
             {
-
                 string url = paramDictionary["url"];
                 int batchSize = Int32.Parse(paramDictionary["batch"]);
                 int innerParallelism = Int32.Parse(paramDictionary["ipar"]);
@@ -152,9 +156,20 @@ namespace Subscriptions.Benchmark
                     canProcceedToStressHandle.Dispose();
                 }
             }
-
         }
 
+        public static async Task CompareSingleConcurrent()
+        {
+            var collection = "Orders";
+            
+            var concurrentBenchRevision = new ConcurrentSubscriptionBenchmark(4096, "http://127.0.0.1:8081/", "freeDB", collection);
+            await concurrentBenchRevision.PerformBenchmark(10, 1, true, true); // revision subscription with script
 
+            var concurrentBenchDocsWithScript = new ConcurrentSubscriptionBenchmark(4096, "http://127.0.0.1:8081/", "freeDB", collection);
+            await concurrentBenchDocsWithScript.PerformBenchmark(10, 1, true, false); //docs subscription with script
+
+            var concurrentBenchDocsNoScript = new ConcurrentSubscriptionBenchmark(4096, "http://127.0.0.1:8081/", "freeDB", collection);
+            await concurrentBenchDocsNoScript.PerformBenchmark(10, 1, false, false); //docs subscription without script
+        }
     }
 }
