@@ -87,7 +87,7 @@ namespace Raven.Server.Documents.Handlers
                 var timeLimit = TimeSpan.FromSeconds(GetIntValueQueryString("timeLimit", false) ?? 15);
                 var startEtag = cv.Etag;
                 
-                var fetcher = new DummyDocumentSubscriptionFetcher(Database, state, sub.Collection);
+                var fetcher = new DummyDocumentSubscriptionBatchProcessor(Database, state, sub.Collection);
                 fetcher.SetConnectionInfo(new SubscriptionWorkerOptions("dummy"), state, new IPEndPoint(HttpContext.Connection.RemoteIpAddress, HttpContext.Connection.RemotePort));
                 fetcher.AddScript(patch);
 

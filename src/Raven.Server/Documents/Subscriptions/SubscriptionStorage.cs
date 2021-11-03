@@ -111,11 +111,9 @@ namespace Raven.Server.Documents.Subscriptions
             return etag;
         }
 
-        public async Task<long> RecordBatchDocuments(long subscriptionId, string subscriptionName, List<DocumentRecord> list, List<string> deleted,
-            string previouslyRecordedChangeVector, string lastRecordedChangeVector)
+        public async Task<long> RecordBatchDocuments(long subscriptionId, string subscriptionName, List<DocumentRecord> list, string previouslyRecordedChangeVector, string lastRecordedChangeVector)
         {
             var command = new RecordBatchSubscriptionDocumentsCommand(_db.Name, subscriptionId, subscriptionName, list, previouslyRecordedChangeVector, lastRecordedChangeVector, _serverStore.NodeTag, _serverStore.LicenseManager.HasHighlyAvailableTasks(), RaftIdGenerator.NewId());
-            command.Deleted = deleted;
             var (etag, _) = await _serverStore.SendToLeaderAsync(command);
             await _db.RachisLogIndexNotifications.WaitForIndexNotification(etag, _serverStore.Engine.OperationTimeout);
             return etag;

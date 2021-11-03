@@ -24,42 +24,23 @@ using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Subscriptions
 {
-    public abstract class SubscriptionFetcher<T, TProcessor> : SubscriptionFetcher where TProcessor : SubscriptionProcessor
+    public class CollectedDocument
+    {
+        public string Id;
+        public string ChangeVector;
+        public string PreviousChangeVector;
+    }
+
+    public abstract class SubscriptionBatchProcessor<T> : SubscriptionBatchProcessor
     {
         protected Logger Logger;
 
-        protected SubscriptionFetcher(DocumentDatabase database, SubscriptionConnectionsState subscriptionConnectionsState, string collection) : base(database, subscriptionConnectionsState, collection)
+        protected SubscriptionBatchProcessor(DocumentDatabase database, SubscriptionConnectionsState subscriptionConnectionsState, string collection) : base(database, subscriptionConnectionsState, collection)
         {
-            Logger = LoggingSource.Instance.GetLogger<SubscriptionFetcher<T, TProcessor>>(Database.Name);
+            Logger = LoggingSource.Instance.GetLogger<SubscriptionBatchProcessor<T>>(Database.Name);
         }
 
-        protected abstract bool ShouldSend(T item, out string reason, out Exception exception, out Document result);
-
-        protected TProcessor Processor;
-
-        public void SetProcessor(TProcessor processor) => Processor = processor;
-
-        protected (Document Doc, Exception Exception) GetBatchItem(T item)
-        {
-            if (ShouldSend(item, out var reason, out var exception, out var result))
-            {
-                if (IncludesCmd != null && Run != null)
-                    IncludesCmd.AddRange(Run.Includes, result.Id);
-
-                return (result, null);
-            }
-
-            if (Logger.IsInfoEnabled) 
-                Logger.Info(reason, exception);
-
-            if (exception != null)
-                return (result, exception);
-
-            result.Data = null;
-            return (result, null);
-        }
-
-        protected bool SuccessfulSend(Document doc, Exception exception) => doc.Data != null && exception == null;
+        protected abstract bool ShouldSend(T item, out string reason, out Exception exception);
 
         protected abstract IEnumerable<T> FetchByEtag();
 
@@ -88,7 +69,7 @@ namespace Raven.Server.Documents.Subscriptions
         }
     }
 
-    public abstract class SubscriptionFetcher : IDisposable
+    public abstract class SubscriptionBatchProcessor : IDisposable
     {
         protected readonly DocumentDatabase Database;
         protected readonly SubscriptionConnectionsState SubscriptionConnectionsState;
@@ -97,7 +78,17 @@ namespace Raven.Server.Documents.Subscriptions
 
         protected readonly Size MaximumAllowedMemory;
 
-        protected SubscriptionFetcher(DocumentDatabase database, SubscriptionConnectionsState subscriptionConnectionsState, string collection)
+        public List<CollectedDocument> CollectedDocuments;
+
+        public static SubscriptionBatchProcessor Create(DocumentDatabase database, SubscriptionConnectionsState subscriptionConnectionsState, SubscriptionConnection.ParsedSubscription subscription)
+        {
+            if (subscription.Revisions)
+                return new RevisionSubscriptionBatchProcessor(database, subscriptionConnectionsState, subscription.Collection);
+
+            return new DocumentSubscriptionBatchProcessor(database, subscriptionConnectionsState, subscription.Collection);
+        }
+
+        protected SubscriptionBatchProcessor(DocumentDatabase database, SubscriptionConnectionsState subscriptionConnectionsState, string collection)
         {
             Database = database;
             SubscriptionConnectionsState = subscriptionConnectionsState;
@@ -110,7 +101,7 @@ namespace Raven.Server.Documents.Subscriptions
         protected SubscriptionState Subscription;
         protected EndPoint RemoteEndpoint;
         protected SubscriptionWorkerOptions Options;
-
+        
         protected int BatchSize => Options.MaxDocsPerBatch;
 
         public void SetConnectionInfo(SubscriptionWorkerOptions options, SubscriptionState subscription, EndPoint endpoint)
@@ -158,10 +149,24 @@ namespace Raven.Server.Documents.Subscriptions
             Active = SubscriptionConnectionsState.GetConnections().Select(conn => conn.CurrentBatchId).ToHashSet();
             StartEtag = SubscriptionConnectionsState.GetLastEtagSent();
 
+            CollectedDocuments ??= new List<CollectedDocument>();
+            CollectedDocuments?.Clear();
             DocSent = false;
         }
-        
+
         public abstract IEnumerable<(Document Doc, Exception Exception)> Fetch();
+
+        public abstract Task<long> Record(string lastChangeVectorSentInThisBatch);
+
+        protected Task<long> RecordEmptyBatch(string lastChangeVectorSentInThisBatch)
+        {
+            return Database.SubscriptionStorage.RecordBatchDocuments(
+                SubscriptionId,
+                SubscriptionConnectionsState.SubscriptionName,
+                new List<DocumentRecord>(),
+                SubscriptionConnectionsState.PreviouslyRecordedChangeVector,
+                lastChangeVectorSentInThisBatch);
+        }
 
         protected enum FetchingOrigin
         {
@@ -211,18 +216,17 @@ namespace Raven.Server.Documents.Subscriptions
         }
     }
 
-    public class RevisionSubscriptionFetcher : SubscriptionFetcher<(Document Previous, Document Current), RevisionsSubscriptionProcessor>
+    public class RevisionSubscriptionBatchProcessor : SubscriptionBatchProcessor<(Document Previous, Document Current)>
     {
-        public RevisionSubscriptionFetcher(DocumentDatabase database, SubscriptionConnectionsState subscriptionConnectionsState, string collection) : base(database, subscriptionConnectionsState, collection)
+        public RevisionSubscriptionBatchProcessor(DocumentDatabase database, SubscriptionConnectionsState subscriptionConnectionsState, string collection) : base(database, subscriptionConnectionsState, collection)
         {
         
         }
 
-        protected override bool ShouldSend((Document Previous, Document Current) item, out string reason, out Exception exception, out Document result)
+        protected override bool ShouldSend((Document Previous, Document Current) item, out string reason, out Exception exception)
         {
             exception = null;
             reason = null;
-            result = item.Current;
 
             if (FetchingFrom == FetchingOrigin.Storage)
             {
@@ -252,7 +256,7 @@ namespace Raven.Server.Documents.Subscriptions
                 ["Previous"] = item.Previous?.Data
             }, item.Current.Id);
 
-            result.Data = transformResult;
+            item.Current.Data = transformResult;
 
             if (Patch == null)
                 return true;
@@ -263,10 +267,10 @@ namespace Raven.Server.Documents.Subscriptions
             try
             {
                 InitializeScript();
-                var match = Patch.MatchCriteria(Run, DocsContext, transformResult, ProjectionMetadataModifier.Instance, ref result.Data);
-                if (match == false)
+                var result = Patch.MatchCriteria(Run, DocsContext, transformResult, ProjectionMetadataModifier.Instance, ref item.Current.Data);
+                if (result == false)
                 {
-                    result.Data = null;
+                    item.Current.Data = null;
                     reason = $"{item.Current.Id} filtered by criteria";
                     return false;
                 }
@@ -311,8 +315,6 @@ namespace Raven.Server.Documents.Subscriptions
 
             Size size = default;
             var numberOfDocs = 0;
-            
-            Processor.BatchItems.Clear();
 
             foreach (var item in GetEnumerator())
             {
@@ -325,20 +327,40 @@ namespace Raven.Server.Documents.Subscriptions
                 using (item.Current)
                 using (item.Previous)
                 {
-                    var result = GetBatchItem(item);
-                    using (result.Doc)
+                    if (ShouldSend(item, out var reason, out var exception))
                     {
-                        if (SuccessfulSend(result.Doc,result.Exception))
+                        CollectedDocuments?.Add(new CollectedDocument
                         {
-                            Processor.BatchItems.Add(new RevisionRecord
-                            {
-                                Current = item.Current.ChangeVector,
-                                Previous = item.Previous?.ChangeVector
-                            });
+                            Id = item.Current.Id,
+                            ChangeVector = item.Current.ChangeVector,
+                            PreviousChangeVector = item.Previous?.ChangeVector
+                        });
+
+                        if (IncludesCmd != null && Run != null)
+                            IncludesCmd.AddRange(Run.Includes, item.Current.Id);
+
+                        yield return (item.Current, null);
+                    }
+                    else
+                    {
+                        if (Logger.IsInfoEnabled)
+                        {
+                            Logger.Info(reason, exception);
                         }
 
-                        yield return result;
+                        if (exception != null)
+                        {
+                            yield return (item.Current, exception);
+                        }
+                        else
+                        {
+                            item.Current.Data = null;
+                            yield return (item.Current, null);
+                        }
                     }
+
+                    item.Current.Data?.Dispose(); 
+                    item.Current.Data = null;
 
                     if (size + DocsContext.Transaction.InnerTransaction.LowLevelTransaction.AdditionalMemoryUsageSize >= MaximumAllowedMemory)
                         yield break;
@@ -348,11 +370,28 @@ namespace Raven.Server.Documents.Subscriptions
                 }
             }
         }
+
+        public override Task<long> Record(string lastChangeVectorSentInThisBatch)
+        {
+            if (CollectedDocuments == null || CollectedDocuments.Count == 0)
+                return RecordEmptyBatch(lastChangeVectorSentInThisBatch);
+
+            var revisions = CollectedDocuments.Select(x => new RevisionRecord {Current = x.ChangeVector, Previous = x.PreviousChangeVector}).ToList();
+            CollectedDocuments.Clear();
+
+            return Database.SubscriptionStorage.RecordBatchRevisions(
+                SubscriptionId,
+                SubscriptionConnectionsState.SubscriptionName,
+                revisions,
+                SubscriptionConnectionsState.PreviouslyRecordedChangeVector,
+                lastChangeVectorSentInThisBatch);
+        }
     }
 
-    public class DocumentSubscriptionFetcher : SubscriptionFetcher<Document, DocumentsSubscriptionProcessor>
+    public class DocumentSubscriptionBatchProcessor : SubscriptionBatchProcessor<Document>
     {
-        public DocumentSubscriptionFetcher(DocumentDatabase database, SubscriptionConnectionsState subscriptionConnectionsState, string collection) : 
+        
+        public DocumentSubscriptionBatchProcessor(DocumentDatabase database, SubscriptionConnectionsState subscriptionConnectionsState, string collection) : 
             base(database, subscriptionConnectionsState, collection)
         {
         }
@@ -362,29 +401,44 @@ namespace Raven.Server.Documents.Subscriptions
             Size size = default;
             var numberOfDocs = 0;
 
-            Processor.ItemsToRemoveFromResend.Clear();
-            Processor.BatchItems.Clear();
-
             foreach (var item in GetEnumerator())
             {
-                using (item)
+                using (item.Data)
                 {
                     size += new Size(item.Data?.Size ?? 0, SizeUnit.Bytes);
-
-                    var result = GetBatchItem(item);
-                    using (result.Doc)
+                    if (ShouldSend(item, out var reason, out var exception))
                     {
-                        if (SuccessfulSend(result.Doc,result.Exception))
+                        if (IncludesCmd != null && Run != null)
+                            IncludesCmd.AddRange(Run.Includes, item.Id);
+
+                        CollectedDocuments?.Add(new CollectedDocument
                         {
-                            Processor.AddItem(new DocumentRecord
-                            {
-                                DocumentId = result.Doc.Id,
-                                ChangeVector = result.Doc.ChangeVector,
-                            });
+                            Id = item.Id,
+                            ChangeVector = item.ChangeVector,
+                        });
+
+                        yield return (item, null);
+                    }
+                    else
+                    {
+                        if (Logger.IsInfoEnabled)
+                        {
+                            Logger.Info(reason, exception);
                         }
 
-                        yield return result;
+                        if (exception != null)
+                        {
+                            yield return (item, exception);
+                        }
+                        else
+                        {
+                            item.Data = null;
+                            yield return (item, null);
+                        }
                     }
+
+                    item.Data?.Dispose();
+                    item.Data = null;
 
                     if (size + DocsContext.Transaction.InnerTransaction.LowLevelTransaction.AdditionalMemoryUsageSize >= MaximumAllowedMemory)
                         yield break;
@@ -395,11 +449,10 @@ namespace Raven.Server.Documents.Subscriptions
             }
         }
 
-        protected override bool ShouldSend(Document item, out string reason, out Exception exception, out Document result)
+        protected override bool ShouldSend(Document item, out string reason, out Exception exception)
         {
             exception = null;
             reason = null;
-            result = item;
 
             if (FetchingFrom == FetchingOrigin.Storage)
             {
@@ -423,7 +476,7 @@ namespace Raven.Server.Documents.Subscriptions
             if (FetchingFrom == FetchingOrigin.Resend)
             {
                 var current = Database.DocumentsStorage.GetDocumentOrTombstone(DocsContext, item.Id, throwOnConflict: false);
-                if (ShouldFetchFromResend(item.Id, current, item.ChangeVector) == false)
+                if (ShouldFetchFromResend(current, item.ChangeVector) == false)
                 {
                     item.ChangeVector = string.Empty;
                     reason = $"Skip {item.Id} from resend";
@@ -431,9 +484,9 @@ namespace Raven.Server.Documents.Subscriptions
                 }
 
                 Debug.Assert(current.Document != null, "Document does not exist");
-                result.Data = current.Document.Data;
-                result.Etag = current.Document.Etag;
-                result.ChangeVector = current.Document.ChangeVector;
+                item.Data = current.Document.Data;
+                item.Etag = current.Document.Etag;
+                item.ChangeVector = current.Document.ChangeVector;
             }
 
             if (Patch == null)
@@ -442,11 +495,11 @@ namespace Raven.Server.Documents.Subscriptions
             try
             {
                 InitializeScript();
-                var match = Patch.MatchCriteria(Run, DocsContext, item, ProjectionMetadataModifier.Instance, ref result.Data);
+                var result = Patch.MatchCriteria(Run, DocsContext, item, ProjectionMetadataModifier.Instance, ref item.Data);
 
-                if (match == false)
+                if (result == false)
                 {
-                    result.Data = null;
+                    item.Data = null;
                     reason = $"{item.Id} filtered out by criteria";
                     return false;
                 }
@@ -459,6 +512,19 @@ namespace Raven.Server.Documents.Subscriptions
                 reason = $"Criteria script threw exception for subscription {SubscriptionId} connected to {RemoteEndpoint} for document id {item.Id}";
                 return false;
             }
+        }
+
+        public override Task<long> Record(string lastChangeVectorSentInThisBatch)
+        {
+            if (CollectedDocuments == null || CollectedDocuments.Count == 0)
+                return RecordEmptyBatch(lastChangeVectorSentInThisBatch);
+
+            return Database.SubscriptionStorage.RecordBatchDocuments(
+                SubscriptionId,
+                SubscriptionConnectionsState.SubscriptionName,
+                CollectedDocuments.Select(x=> new DocumentRecord{DocumentId = x.Id, ChangeVector = x.ChangeVector}).ToList(),
+                SubscriptionConnectionsState.PreviouslyRecordedChangeVector,
+                lastChangeVectorSentInThisBatch);
         }
 
         protected override IEnumerable<Document> FetchByEtag()
@@ -489,14 +555,12 @@ namespace Raven.Server.Documents.Subscriptions
             }
         }
 
-        private bool ShouldFetchFromResend(string id, DocumentsStorage.DocumentOrTombstone item, string currentChangeVector)
+        private bool ShouldFetchFromResend(DocumentsStorage.DocumentOrTombstone item, string currentChangeVector)
         {
-            if (item.Document == null)
-            {
-                // the document was delete while it was processed by the client
-                Processor.ItemsToRemoveFromResend.Add(id);
+            // TODO stav: we probably need to delete it from the resend table
+            // we don't send tombstones
+            if (item.Document == null) 
                 return false;
-            } 
 
             switch (Database.DocumentsStorage.GetConflictStatus(item.Document.ChangeVector, currentChangeVector))
             {
@@ -517,9 +581,9 @@ namespace Raven.Server.Documents.Subscriptions
         }
     }
 
-    public class DummyDocumentSubscriptionFetcher : DocumentSubscriptionFetcher
+    public class DummyDocumentSubscriptionBatchProcessor : DocumentSubscriptionBatchProcessor
     {
-        public DummyDocumentSubscriptionFetcher(DocumentDatabase database, SubscriptionState state, string collection) : 
+        public DummyDocumentSubscriptionBatchProcessor(DocumentDatabase database, SubscriptionState state, string collection) : 
             base(database, SubscriptionConnectionsState.CreateDummyState(database.DocumentsStorage, state), collection)
         {
         }
@@ -537,6 +601,11 @@ namespace Raven.Server.Documents.Subscriptions
         public void SetStartEtag(long etag)
         {
             StartEtag = etag;
+        }
+
+        public override Task<long> Record(string lastChangeVectorSentInThisBatch)
+        {
+            return Task.FromResult(-1L);
         }
     }
 }

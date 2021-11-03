@@ -26,7 +26,6 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         public string NodeTag;
         public bool HasHighlyAvailableTasks;
         public List<DocumentRecord> Documents;
-        public List<string> Deleted;
         public List<RevisionRecord> Revisions;
 
         public RecordBatchSubscriptionDocumentsCommand()
@@ -123,15 +122,6 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                 }
             }
 
-            foreach (var deletedId in Deleted)
-            {
-                using (SubscriptionConnectionsState.GetDatabaseAndSubscriptionAndDocumentKey(context, DatabaseName, SubscriptionId, deletedId, out var key))
-                {
-                    using var _ = Slice.External(context.Allocator, key, out var keySlice);
-                    subscriptionStateTable.DeleteByKey(keySlice);
-                }
-            }
-
             foreach (var documentRecord in Documents)
             {
                 using (SubscriptionConnectionsState.GetDatabaseAndSubscriptionAndDocumentKey(context, DatabaseName, SubscriptionId, documentRecord.DocumentId, out var key))
@@ -181,8 +171,6 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                 json[nameof(Documents)] = new DynamicJsonArray(Documents);
             if(Revisions != null)
                 json[nameof(Revisions)] = new DynamicJsonArray(Revisions);
-            if(Deleted != null)
-                json[nameof(Deleted)] = new DynamicJsonArray(Deleted);
         }
 
         protected override BlittableJsonReaderObject GetUpdatedValue(long index, RawDatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue)
@@ -190,13 +178,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             throw new System.NotImplementedException();
         }
     }
-
-    public abstract class SubscriptionRecord
-    {
-
-    }
-
-    public class DocumentRecord : SubscriptionRecord, IDynamicJsonValueConvertible
+    public class DocumentRecord : IDynamicJsonValueConvertible
     {
         public string DocumentId;
         public string ChangeVector;
@@ -211,7 +193,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         }
     }
 
-    public class RevisionRecord : SubscriptionRecord, IDynamicJsonValueConvertible
+    public class RevisionRecord : IDynamicJsonValueConvertible
     {
         public string Previous;
         public string Current;
