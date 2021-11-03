@@ -902,9 +902,8 @@ namespace Raven.Server.Documents.TcpHandlers
 
                                     continue;
                                 }
-                                anyDocumentsSentInCurrentIteration = true;
-                                _batchProcessor.MarkDocumentSent();
 
+                                anyDocumentsSentInCurrentIteration = true;
                                 writer.WriteStartObject();
 
                                 writer.WritePropertyName(docsContext.GetLazyStringForFieldWithCaching(TypeSegment));
