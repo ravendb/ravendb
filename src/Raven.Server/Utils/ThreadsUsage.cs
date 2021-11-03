@@ -56,9 +56,11 @@ namespace Raven.Server.Utils
 
                 var threadTimesInfo = new Dictionary<int, long>();
                 double totalCpuUsage = 0;
+                var hasThreadIds = threadIds != null && threadIds.Count > 0;
+
                 foreach (var thread in processThreads)
                 {
-                    if (threadIds != null && threadIds.Contains(thread.Id) == false)
+                    if (hasThreadIds && threadIds.Contains(thread.Id) == false)
                         continue;
 
                     try
