@@ -665,7 +665,7 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [Fact(Skip = "RavenDB-15919, need to change the test, since we update the ChangeVectorForNextBatchStartingPoint upon fetching and not acking")]
+        [Fact]
         public async Task ShouldStopPullingDocsAndCloseSubscriptionOnSubscriberErrorByDefault()
         {
             using (var store = GetDocumentStore())

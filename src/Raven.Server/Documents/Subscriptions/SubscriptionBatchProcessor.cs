@@ -221,7 +221,7 @@ namespace Raven.Server.Documents.Subscriptions
             exception = null;
             reason = null;
 
-            if (FetchingFrom == FetchingOrigin.Storage)
+            if (FetchingFrom == FetchingOrigin.Resend)
             {
                 var conflictStatus = ChangeVectorUtils.GetConflictStatus(
                     remoteAsString: item.Current.ChangeVector,
@@ -260,13 +260,14 @@ namespace Raven.Server.Documents.Subscriptions
             try
             {
                 InitializeScript();
-                var result = Patch.MatchCriteria(Run, DocsContext, transformResult, ProjectionMetadataModifier.Instance, ref item.Current.Data);
+                var result = Patch.MatchCriteria(Run, DocsContext, transformResult, ProjectionMetadataModifier.Instance, ref transformResult);
                 if (result == false)
                 {
                     reason = $"{item.Current.Id} filtered by criteria";
                     return false;
                 }
 
+                item.Current.Data = transformResult;
                 return true;
             }
             catch (Exception ex)
@@ -328,7 +329,7 @@ namespace Raven.Server.Documents.Subscriptions
                             PreviousChangeVector = item.Previous?.ChangeVector
                         });
 
-                        yield return (item.Current, null);
+                        yield return (item.Current, exception);
                     }
                     else
                     {
@@ -368,13 +369,10 @@ namespace Raven.Server.Documents.Subscriptions
             if (CollectedDocuments == null || CollectedDocuments.Count == 0)
                 return RecordEmptyBatch(lastChangeVectorSentInThisBatch);
 
-            var revisions = CollectedDocuments.Select(x => new RevisionRecord {Current = x.ChangeVector, Previous = x.PreviousChangeVector}).ToList();
-            CollectedDocuments.Clear();
-
             return Database.SubscriptionStorage.RecordBatchRevisions(
                 SubscriptionId,
                 SubscriptionConnectionsState.SubscriptionName,
-                revisions,
+                CollectedDocuments.Select(x=> new RevisionRecord{Current= x.ChangeVector, Previous= x.PreviousChangeVector}).ToList(),
                 SubscriptionConnectionsState.PreviouslyRecordedChangeVector,
                 lastChangeVectorSentInThisBatch);
         }
@@ -436,6 +434,7 @@ namespace Raven.Server.Documents.Subscriptions
 
         protected override bool ShouldSend(Document item, out string reason, out Exception exception)
         {
+            BlittableJsonReaderObject transformResult = null;
             exception = null;
             reason = null;
 
@@ -464,7 +463,7 @@ namespace Raven.Server.Documents.Subscriptions
             try
             {
                 InitializeScript();
-                var result = Patch.MatchCriteria(Run, DocsContext, item, ProjectionMetadataModifier.Instance, ref item.Data);
+                var result = Patch.MatchCriteria(Run, DocsContext, item, ProjectionMetadataModifier.Instance, ref transformResult);
 
                 if (result == false)
                 {
@@ -472,6 +471,7 @@ namespace Raven.Server.Documents.Subscriptions
                     return false;
                 }
                 
+                item.Data = transformResult;
                 return true;
             }
             catch (Exception ex)
