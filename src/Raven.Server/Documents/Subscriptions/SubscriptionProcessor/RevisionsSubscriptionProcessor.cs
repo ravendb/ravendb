@@ -14,7 +14,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
 {
-     public class RevisionsSubscriptionProcessor : SubscriptionProcessor<(Document Previous, Document Current)>
+    public class RevisionsSubscriptionProcessor : SubscriptionProcessor<(Document Previous, Document Current)>
     {
         public RevisionsSubscriptionProcessor(ServerStore server, DocumentDatabase database, SubscriptionConnection connection) :
             base(server, database, connection)
@@ -31,7 +31,7 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
 
             Size size = default;
             var numberOfDocs = 0;
-            
+
             BatchItems.Clear();
 
             foreach (var item in Fetcher.GetEnumerator())
@@ -55,16 +55,18 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
                                 Current = item.Current.ChangeVector,
                                 Previous = item.Previous?.ChangeVector
                             });
+
+                            yield return result;
+
+                            if (size + DocsContext.Transaction.InnerTransaction.LowLevelTransaction.AdditionalMemoryUsageSize >= MaximumAllowedMemory)
+                                yield break;
+
+                            if (++numberOfDocs >= BatchSize)
+                                yield break;
                         }
-
-                        yield return result;
+                        else
+                            yield return result;
                     }
-
-                    if (size + DocsContext.Transaction.InnerTransaction.LowLevelTransaction.AdditionalMemoryUsageSize >= MaximumAllowedMemory)
-                        yield break;
-
-                    if (++numberOfDocs >= BatchSize)
-                        yield break;
                 }
             }
         }

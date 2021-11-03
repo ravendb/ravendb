@@ -43,16 +43,18 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
                                 DocumentId = result.Doc.Id,
                                 ChangeVector = result.Doc.ChangeVector,
                             });
+
+                            yield return result;
+
+                            if (size + DocsContext.Transaction.InnerTransaction.LowLevelTransaction.AdditionalMemoryUsageSize >= MaximumAllowedMemory)
+                                yield break;
+
+                            if (++numberOfDocs >= BatchSize)
+                                yield break;
                         }
-
-                        yield return result;
+                        else
+                            yield return result;
                     }
-
-                    if (size + DocsContext.Transaction.InnerTransaction.LowLevelTransaction.AdditionalMemoryUsageSize >= MaximumAllowedMemory)
-                        yield break;
-
-                    if (++numberOfDocs >= BatchSize)
-                        yield break;
                 }
             }
         }
