@@ -285,6 +285,16 @@ class editCmpXchg extends viewModelBase {
                 html: true,
                 placement: "bottom"
             });
+        
+        popoverUtils.longWithHover($(".raft-index-info"),
+            {
+                content: `<ul class="margin-top margin-top-xs margin-right">
+                              <li><small>The Raft Index indicates the <strong>Value's version</strong>.</small></li>
+                              <li><small>Used for concurrency control.</small></li>
+                          </ul>`,
+                html: true,
+                placement: "bottom"
+            });
     }
 
     compositionComplete() {
@@ -326,7 +336,7 @@ class editCmpXchg extends viewModelBase {
         if (valueWarnings.length || metadataWarnings.length) {
             const viewModel = new editorWarningsConfirm("Compare Exchange",
                 [{ source: "Value", warnings: valueWarnings }, { source: "Metadata", warnings: metadataWarnings }],
-                (warning, source)  => {
+                (warning, source) => {
                     const editor = source === "Value" ? this.valueEditor() : this.metadataEditor();
                     // gotoLine is not zero based so we add 1
                     editor.contentEditor.gotoLine(warning.row + 1, warning.column, true);
