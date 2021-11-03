@@ -295,6 +295,9 @@ namespace Raven.Server.ServerWide
                 string errorMessage;
                 switch (type)
                 {
+                    case ("RecordBatchSubscriptionDocumentsCommand"):
+                        break;
+
                     case nameof(ClusterTransactionCommand):
                         var errors = ExecuteClusterTransaction(context, cmd, index);
                         if (errors != null)
