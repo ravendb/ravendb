@@ -1725,7 +1725,7 @@ namespace Raven.Server.Commercial
 
                     var modifiedJsonObj = context.ReadObject(settingsJson, "modified-settings-json");
 
-                    var indentedJson = SetupManager.IndentJsonString(modifiedJsonObj.ToString());
+                    var indentedJson = LetsEncryptUtils.IndentJsonString(modifiedJsonObj.ToString());
                     SetupManager.WriteSettingsJsonLocally(settingsPath, indentedJson);
                 }
                 _eulaAcceptedButHasPendingRestart = true;
